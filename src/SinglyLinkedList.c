@@ -103,6 +103,28 @@ sll_t *sll_push(sll_t *sll, void *data) {
     return sll;
 }
 
+void *sll_pop(sll_t *sll) {
+    /* Not checking arguments */
+
+    if (sll->size == 0) {
+        return NULL;
+    }
+
+    sll_node_t *head = sll->head;
+    void *data = head->data;
+    sll->head = head->next;
+
+    if (sll->tail == head) {
+        sll->tail = NULL;
+    }
+
+    sll->size--;
+
+    free(head);
+
+    return data;
+}
+
 sll_t *sll_move_first(sll_t *dst, sll_t *src, const uint64_t n) {
     /* Not checking arguments */
 

@@ -424,7 +424,7 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
                               }, &counter), QPTPool_enqueue_WAIT);
 
     // need to make sure only work item got popped off
-    while (!counter) {
+    while (counter < 1) {
         sched_yield();
     }
 
@@ -501,7 +501,7 @@ TEST(QueuePerThreadPool, not_enough_deferred) {
                                    }, &counter), QPTPool_enqueue_WAIT);
 
     // need to make sure this work item got popped off
-    while (!counter) {
+    while (counter < 1) {
         sched_yield();
     }
 
@@ -515,7 +515,7 @@ TEST(QueuePerThreadPool, not_enough_deferred) {
               QPTPool_enqueue_WAIT);
 
     // wait until thread 1 runs
-    while (counter < 1) {
+    while (counter < 2) {
         sched_yield();
     }
 
@@ -524,7 +524,7 @@ TEST(QueuePerThreadPool, not_enough_deferred) {
               QPTPool_enqueue_WAIT);
 
     // wait until thread 1 is complete
-    while (counter < 2) {
+    while (counter < 3) {
         sched_yield();
     }
 
@@ -535,6 +535,111 @@ TEST(QueuePerThreadPool, not_enough_deferred) {
 
     const uint64_t expected = 4;
     EXPECT_EQ(counter, expected);
+    EXPECT_EQ(QPTPool_threads_started(pool),   expected);
+    EXPECT_EQ(QPTPool_threads_completed(pool), expected);
+
+    QPTPool_destroy(pool);
+}
+
+TEST(QueuePerThreadPool, steal_active) {
+    std::size_t counter = 0;
+
+    // macOS doesn't seem to like std::mutex
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    QPTPool_t *pool = QPTPool_init(2, &mutex);
+    ASSERT_NE(pool, nullptr);
+    ASSERT_EQ(QPTPool_set_steal(pool, 1, 2), 0);
+
+    // prevent thread 0 from completing
+    pthread_mutex_lock(&mutex);
+
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
+                                   [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
+                                       pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
+
+                                       increment_counter(ctx, id, data, args);
+
+                                       pthread_mutex_lock(mutex);
+                                       pthread_mutex_unlock(mutex);
+                                       return 0;
+                                   }, &counter), QPTPool_enqueue_WAIT);
+
+    struct Data {
+        std::size_t *counter;
+        pthread_mutex_t mutex;
+        std::size_t value;
+
+        Data(std::size_t *counter)
+            : counter(counter),
+              mutex(PTHREAD_MUTEX_INITIALIZER),
+              value(0)
+            {}
+    };
+
+    struct Data data(&counter);
+
+    const std::size_t EXPECTED_VALUE = 1234;
+    const std::size_t BAD_VALUE      = 5678;
+
+    // thread 0: queue up work that will be claimed by thread 0, but will never run in thread 0
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
+                                   [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
+                                       struct Data *d = static_cast<struct Data *>(data);
+
+                                       increment_counter(ctx, id, d->counter, args);
+
+                                       pthread_mutex_lock(&d->mutex);
+                                       if (d->value == 0) {
+                                           d->value = EXPECTED_VALUE;
+                                       }
+                                       pthread_mutex_unlock(&d->mutex);
+
+                                       return 0;
+                                   }, &data), QPTPool_enqueue_WAIT);
+
+    // thread 0: need second work item to be queued for steal fraction of 1/2 to steal 1
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
+                                   [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
+                                       struct Data *d = static_cast<struct Data *>(data);
+
+                                       increment_counter(ctx, id, d->counter, args);
+
+                                       pthread_mutex_lock(&d->mutex);
+                                       if (d->value == 0) {
+                                           d->value = BAD_VALUE;
+                                       }
+                                       pthread_mutex_unlock(&d->mutex);
+
+                                       return 0;
+                                   }, &data), QPTPool_enqueue_WAIT);
+
+    // start the thread pool, causing thread 0 to take all work items, but get stuck on the
+    // first work item, not letting the rest of the work items run
+    ASSERT_EQ(QPTPool_start(pool), 0);
+
+    // need to make sure the first work item started
+    while (counter < 1) {
+        sched_yield();
+    }
+
+    // push to thread 1, so after it completes, it steals the first item from thread 0's active queue
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 1, QPTPool_enqueue_WAIT, increment_counter, &counter),
+              QPTPool_enqueue_WAIT);
+
+    // wait for thread 1's original work item and the stolen work item to finish
+    while (counter < 3) {
+        sched_yield();
+    }
+
+    // let thread 0 finish
+    pthread_mutex_unlock(&mutex);
+
+    QPTPool_wait(pool);
+
+    const uint64_t expected = 4;
+    EXPECT_EQ(counter, expected);
+    EXPECT_EQ(data.value, EXPECTED_VALUE);
     EXPECT_EQ(QPTPool_threads_started(pool),   expected);
     EXPECT_EQ(QPTPool_threads_completed(pool), expected);
 

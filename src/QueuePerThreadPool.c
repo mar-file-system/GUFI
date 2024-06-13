@@ -76,6 +76,9 @@ typedef enum {
 
 /* The context for a single thread in QPTPool */
 typedef struct QPTPoolThreadData {
+    sll_t active;          /* work items that have already been claimed by this thread */
+    pthread_mutex_t active_mutex;
+
     sll_t waiting;         /* generally push into this queue */
     sll_t deferred;        /* push into here if waiting queue is too big; pop when waiting queue is empty */
     pthread_mutex_t mutex;
@@ -163,6 +166,49 @@ static uint64_t steal_work(QPTPool_t *ctx, const size_t id,
     return 0;
 }
 
+/*
+ * QueuePerThreadPool normally claims an entire work queue at once
+ * instead of popping them off one at a time. This reduces the
+ * contention on the work queues. However, this scheme makes it
+ * possible to cause starvation when a work item takes a long time to
+ * complete and has more work items queued up after it, all of which
+ * have already been claimed and are not in the waiting or deferred
+ * queues.
+ *
+ * This function attempts to prevent starvation by stealing work that
+ * has already been claimed, reproducing the effect of threads popping
+ * off individual work items. This function is only called after the
+ * waiting and deferred queues have been checked and found to be
+ * empty, and so should not be called frequently.
+ */
+static uint64_t steal_active(QPTPool_t *ctx, const size_t id,
+                             const size_t start, const size_t end) {
+    QPTPoolThreadData_t *tw = &ctx->data[id];
+
+    for(size_t i = start; i < end; i++) {
+        if (i == id) {
+            continue;
+        }
+
+        QPTPoolThreadData_t *target = &ctx->data[i];
+
+        if (pthread_mutex_trylock(&target->active_mutex) == 0) {
+            if (target->active.size) {
+                const uint64_t active = target->active.size * ctx->steal.num / ctx->steal.denom;
+                if (active) {
+                    sll_move_first(&tw->waiting, &target->active, active);
+                    pthread_mutex_unlock(&target->active_mutex);
+                    return active;
+                }
+            }
+
+            pthread_mutex_unlock(&target->active_mutex);
+        }
+    }
+
+    return 0;
+}
+
 static void *worker_function(void *args) {
     timestamp_create_start(wf);
 
@@ -176,10 +222,6 @@ static void *worker_function(void *args) {
     QPTPoolThreadData_t *tw = &ctx->data[id];
 
     while (1) {
-        timestamp_create_start(wf_sll_init);
-        sll_t being_processed; /* don't bother initializing */
-        timestamp_set_end(wf_sll_init);
-
         timestamp_create_start(wf_tw_mutex_lock);
         pthread_mutex_lock(&tw->mutex);
         timestamp_set_end(wf_tw_mutex_lock);
@@ -197,7 +239,19 @@ static void *worker_function(void *args) {
             !tw->waiting.size && !tw->deferred.size &&
             ctx->incomplete) {
             if (steal_work(ctx, id, tw->steal_from, ctx->nthreads) == 0) {
-                steal_work(ctx, id, 0, tw->steal_from);
+                if (steal_work(ctx, id, 0, tw->steal_from) == 0) {
+                    /*
+                     * if still can't find anything, try the active queue
+                     *
+                     * this should only be called if there is some
+                     * work that is taking so long that the rest of
+                     * the threads have run out of work, so this
+                     * should not happen too often
+                     */
+                    if (steal_active(ctx, id, tw->steal_from, ctx->nthreads) == 0) {
+                        steal_active(ctx, id, 0, tw->steal_from);
+                    }
+                }
             }
 
             tw->steal_from = (tw->steal_from + 1) % ctx->nthreads;
@@ -232,18 +286,20 @@ static void *worker_function(void *args) {
 
         /* move entire queue into work and clear out queue */
         timestamp_create_start(wf_move_queue);
+        pthread_mutex_lock(&tw->active_mutex);
         if (tw->waiting.size) {
-            sll_move(&being_processed, &tw->waiting);
+            sll_move(&tw->active, &tw->waiting);
         }
         else {
-            sll_move(&being_processed, &tw->deferred);
+            sll_move(&tw->active, &tw->deferred);
         }
+        pthread_mutex_unlock(&tw->active_mutex);
         timestamp_set_end(wf_move_queue);
 
         #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
         pthread_mutex_lock(&ctx->mutex);
         pthread_mutex_lock(&print_mutex);
-        tw->waiting.size = being_processed.size;
+        tw->waiting.size = tw->active.size;
 
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
@@ -269,19 +325,35 @@ static void *worker_function(void *args) {
         /* process all work */
         size_t work_count = 0;
 
+        /*
+         * pop work item off before it is processed so that if another
+         * thread steals from the active queue, the current active
+         * work will not be re-run
+         *
+         * this has the side effect of moving 2 frees into the loop
+         * instead of batching all of them after processing the work
+         *
+         * tradeoffs:
+         *     more locking
+         *     delayed work
+         *     lower memory utilization
+         */
         timestamp_create_start(wf_get_queue_head);
-        sll_node_t *w = sll_head_node(&being_processed);
+        pthread_mutex_lock(&tw->active_mutex);
+        struct queue_item *qi = (struct queue_item *) sll_pop(&tw->active);
+        pthread_mutex_unlock(&tw->active_mutex);
         timestamp_end_print(ctx->debug_buffers, id, "wf_get_queue_head", wf_get_queue_head);
 
-        while (w) {
+        while (qi) {
             timestamp_create_start(wf_process_work);
-            struct queue_item *qi = sll_node_data(w);
-
             tw->threads_successful += !qi->func(ctx, id, qi->work, ctx->args);
+            free(qi);
             timestamp_end_print(ctx->debug_buffers, id, "wf_process_work", wf_process_work);
 
             timestamp_create_start(wf_next_work);
-            w = sll_next_node(w);
+            pthread_mutex_lock(&tw->active_mutex);
+            qi = (struct queue_item *) sll_pop(&tw->active);
+            pthread_mutex_unlock(&tw->active_mutex);
             timestamp_end_print(ctx->debug_buffers, id, "wf_next_work", wf_next_work);
 
             work_count++;
@@ -290,7 +362,6 @@ static void *worker_function(void *args) {
         timestamp_set_end(wf_process_queue);
 
         timestamp_create_start(wf_cleanup);
-        sll_destroy(&being_processed, free);
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
@@ -299,7 +370,6 @@ static void *worker_function(void *args) {
         timestamp_set_end(wf_cleanup);
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        timestamp_print(ctx->debug_buffers, id, "wf_sll_init",       wf_sll_init);
         timestamp_print(ctx->debug_buffers, id, "wf_tw_mutex_lock",  wf_tw_mutex_lock);
         timestamp_print(ctx->debug_buffers, id, "wf_ctx_mutex_lock", wf_ctx_mutex_lock);
         timestamp_print(ctx->debug_buffers, id, "wf_wait",           wf_wait);
@@ -366,6 +436,8 @@ QPTPool_t *QPTPool_init(const size_t nthreads, void *args) {
     /* set up thread data, but not threads */
     for(size_t i = 0; i < nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];
+        sll_init(&data->active);
+        pthread_mutex_init(&data->active_mutex, NULL);
         sll_init(&data->waiting);
         sll_init(&data->deferred);
         pthread_mutex_init(&data->mutex, NULL);
@@ -702,6 +774,8 @@ void QPTPool_destroy(QPTPool_t *ctx) {
          */
         sll_destroy(&data->deferred, free);
         sll_destroy(&data->waiting, free);
+        pthread_mutex_destroy(&data->active_mutex);
+        sll_destroy(&data->active, free);
     }
 
     pthread_mutex_destroy(&ctx->mutex);

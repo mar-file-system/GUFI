@@ -104,6 +104,52 @@ TEST(SinglyLinkedList, push) {
     sll_destroy(&sll, nullptr);
 }
 
+TEST(SinglyLinkedList, pop) {
+    const size_t count = 5;
+
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+    EXPECT_EQ(sll.head, nullptr);
+    EXPECT_EQ(sll.tail, nullptr);
+
+    void *data = &sll;
+
+    for(size_t items = 1; items <= count; items++)  {
+        // push items
+        for(size_t i = 1; i <= items; i++) {
+            EXPECT_EQ(&sll, sll_push(&sll, data));
+        }
+        EXPECT_EQ(sll.size, items);
+
+        // pop all but the last item
+        for(size_t i = 1; i < items; i++) {
+            void *popped = sll_pop(&sll);
+            EXPECT_EQ(popped, data);
+
+            EXPECT_NE(sll.head, nullptr);
+            EXPECT_NE(sll.tail, nullptr);
+            EXPECT_EQ(sll.size, items - i);
+        }
+
+        EXPECT_EQ(sll.head, sll.tail);
+        EXPECT_EQ(sll.size, (size_t) 1);
+
+        // pop last item
+        void *popped = sll_pop(&sll);
+        EXPECT_EQ(popped, data);
+
+        // head and tail are NULL
+        EXPECT_EQ(sll.head, nullptr);
+        EXPECT_EQ(sll.tail, nullptr);
+        EXPECT_EQ(sll.size, (size_t) 0);
+    }
+
+    // pop from empty list
+    EXPECT_EQ(sll_pop(&sll), nullptr);
+
+    sll_destroy(&sll, nullptr);
+}
+
 TEST(SinglyLinkedList, move_first) {
     for(uint64_t i = 0; i < 5; i++) {
         /* push 3 items into src */
