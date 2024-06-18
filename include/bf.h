@@ -238,9 +238,8 @@ struct input {
    /* compress work items (if compression library was found) */
    int compress;
 
-   /* used when indexing (-q) */
-   trie_t *map_external;      /* full path -> attach name */
-   size_t map_external_count; /* only keeps track of unique full paths */
+   /* check if a listed external db is valid when indexing (-q) */
+   int check_extdb_valid;
 
    /* used when querying (-Q) */
    sll_t external_attach;     /* list of eus_t */

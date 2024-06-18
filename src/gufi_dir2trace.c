@@ -62,8 +62,9 @@ OF SUCH DAMAGE.
 
 
 
-#include <errno.h>
 #include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -105,43 +106,84 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     return 0;
 }
 
-static int track_external(struct input *in,
-                          struct work *child,
-                          void *args) {
+static size_t track_external(struct input *in,
+                             struct work *child,
+                             void *args) {
     FILE *file = (FILE *) args;
 
-    if (!trie_search(in->map_external, child->name + child->name_len - child->basename_len,
-                     child->basename_len, NULL)) {
+    int extdb_list = open(child->name, O_RDONLY);
+    if (extdb_list < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not open user external database list in %s: %s (%d)\n",
+                child->name, strerror(err), err);
         return 0;
     }
 
-    int rc = 1;
+    size_t rc = 0;
 
-    /* open the path to make sure it eventually resolves to a file */
-    sqlite3 *extdb = opendb(child->name, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
-    char *err = NULL;
+    char *line = NULL;
+    size_t len = 0;
+    off_t offset = 0;
+    while (getline_fd(&line, &len, extdb_list, &offset, 512) > 0) {
+        char extdb_path_stack[MAXPATH];
+        char *extdb_path = line;
 
-    /* make sure this file is a sqlite3 db */
-    /* can probably skip this check */
-    if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
-        char track_sql[MAXSQL];
-        SNPRINTF(track_sql, sizeof(track_sql),
-                 "INSERT INTO " EXTERNAL_DBS_PWD " VALUES ('%s', '%s');",
-                 EXTERNAL_TYPE_USER_DB.data, child->name);
+        /* resolve relative paths */
+        if (line[0] != '/')  {
+            char path[MAXPATH];
+            SNFORMAT_S(path, sizeof(path), 2,
+                       child->name, child->name_len - child->basename_len,
+                       /* basename does not include slash, so don't need to add another one */
+                       line, len);
 
-        if (externaltofile(file, in->delim, child->name) < 3) {
-            fprintf(stderr, "Warning: Could not track requested external db: %s: %s\n",
-                    child->name, err);
-            rc = 0;
+            if (!realpath(path, extdb_path_stack)) {
+                const int err = errno;
+                fprintf(stderr, "Error: Could not resolve external database path %s: %s (%d)\n",
+                        path, strerror(err), err);
+                free(line);
+                line = NULL;
+                continue;
+            }
+
+            extdb_path = extdb_path_stack;
         }
+
+        /* open the path to make sure it eventually resolves to a file */
+        sqlite3 *extdb = opendb(extdb_path, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
+        char *err = NULL;
+
+        if (in->check_extdb_valid) {
+            /* make sure this file is a sqlite3 db */
+            if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
+                char track_sql[MAXSQL];
+                SNPRINTF(track_sql, sizeof(track_sql),
+                         "INSERT INTO " EXTERNAL_DBS_PWD " VALUES ('%s', '%s');",
+                         EXTERNAL_TYPE_USER_DB.data, extdb_path);
+
+                externaltofile(file, in->delim, extdb_path);
+                rc++;
+            }
+            else {
+                fprintf(stderr, "Warning: Not tracking requested external db: %s: %s\n",
+                        extdb_path, err);
+                sqlite3_free(err);
+            }
+
+            closedb(extdb);
+        }
+        else {
+            externaltofile(file, in->delim, extdb_path);
+            rc++;
+        }
+
+        free(line);
+        line = NULL;
     }
-    else {
-        fprintf(stderr, "Warning: Not tracking requested external db: %s: %s\n",
-                child->name, err);
-        rc = 0;
-    }
-    sqlite3_free(err);
-    closedb(extdb);
+
+    free(line);
+    line = NULL;
+
+    close(extdb_list);
 
     return rc;
 }
@@ -288,7 +330,7 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:C:" COMPRESS_OPT "q:", 2, "input_dir... output_prefix", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:C:" COMPRESS_OPT "q", 2, "input_dir... output_prefix", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0) {

@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "external.h"
 #include "utils.h"
 
 int zeroit(struct sum *summary)
@@ -519,7 +520,8 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             }
 
             /* process external databases (not xattrs) */
-            if (process_external_db) {
+            if (process_external_db &&
+                (strncmp(dir_child->d_name, EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0)) {
                 ctrs.external_dbs += process_external_db(in, &child, external_db_args);
             }
         }

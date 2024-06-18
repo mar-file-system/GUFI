@@ -106,9 +106,9 @@ int shortpath(const char *name, char *nameout, char *endname);
 /* descend */
 typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
 
-/* returns 1 for success, 0 for failure */
-typedef int (*process_external_db_f)(struct input *in,
-                                     struct work *child, void *args);
+/* returns number of external databases tracked */
+typedef size_t (*process_external_db_f)(struct input *in,
+                                        struct work *child, void *args);
 
 struct descend_counters {
     size_t dirs;

@@ -66,6 +66,8 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 OUTPUT="external_databases.out"
 
+EXTERNAL_GUFI="external.gufi"
+
 # common table name
 TABLE="user_table"
 
@@ -104,9 +106,22 @@ echo "# create in-source-tree user db files and fill in tables"
 echo
 
 # ${SRCDIR} has both faction1 and faction2 files
+(
+    echo "${FACTION1_DB}"
+    echo "${FACTION2_DB}"
+) > "${SRCDIR}/${EXTERNAL_GUFI}"
 # ${SRCDIR}/directory has matches for the directory and a file
+(
+    echo "${FACTION1_DB}"
+) > "${SRCDIR}/directory/${EXTERNAL_GUFI}"
 # ${SRCDIR}/directory/subdirectory has matches for the directory and a file
+(
+    echo "${FACTION2_DB}"
+) > "${SRCDIR}/directory/subdirectory/${EXTERNAL_GUFI}"
 # ${SRCDIR}/leaf_directory has a faction1 db, but no matches (maybe a file was deleted from the index)
+(
+    echo "${FACTION1_DB}"
+) > "${SRCDIR}/leaf_directory/${EXTERNAL_GUFI}"
 
 echo "#########################################"
 run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
@@ -136,7 +151,7 @@ echo
 
 run_sort "find \"${SRCDIR}\""
 
-run_no_sort "${GUFI_DIR2INDEX} -x -q \"${FACTION1_DB}\" -q \"${FACTION2_DB}\" \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
+run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
 
 # fix timestamps
 "${SQLITE3}" "${INDEXROOT}/db.db"                        "UPDATE summary SET mtime = '17';"

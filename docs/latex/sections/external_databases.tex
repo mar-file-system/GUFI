@@ -63,11 +63,7 @@
 \subsection{External Databases}
 In addition to extended attributes, users may place SQLite3 database
 files into the source file system to be indexed and attached into GUFI
-for querying\footnote{An alternative method might be to allow for
-users to place simple text files of known names into the source
-filesystem for automatic indexing. This would remove the requirement
-that the administrator for the index knows what external database file
-names exist.}. This effectively allows for users to associate and
+for querying. This effectively allows for users to associate and
 query aribitrary data with filesystem metadata.
 
 The extended attribute code uses the more generic external database
@@ -75,25 +71,21 @@ infrastructure to track the extended attributes that were not rolled
 in.
 
 \subsubsection{Usage}
-In order to index a set of external database files that serve the same
-purpose, they should have the same basename that will be discovered
-during indexing by passing \texttt{-q} to \gufidirindex or
-\gufidirtrace.
+All external database files for a set of data should have the same
+basename. The files should be listed in a simple text file called
+``external.gufi'' that is in the directory where a subset of the data
+will be joined with GUFI data. If the path is relative, it will be
+concatentated with the parent directory's path to produce an absolute
+path.
 
-For example, if SQLite3 files with the name ``external.db" are placed
-into various directories in the source filesystem, the call to index
-the source tree should look like:
+\texttt{-q} may be passed in during indexing in order to verify that
+an entry listed in ``external.gufi'' is indeed a database file.
 
-\hspace*{\fill} \gufidirindex \texttt{-q "external.db" "ext" ...} \hspace*{\fill}
+One more more additional database files, referred to as the
+``schema template", or ``template", containing a copy of the same
+schema as each external database table should be maintained somewhere
+for usage when querying. The template file should generally have empty
+tables, but nothing prevents non-empty tables from being provided.
 
-which will result in each ``external.db" file being attached with the
-name ``ext".
-
-An additional database file, referred to as the ``schema template", or
-``template", containing a copy of the ``external.db" schema should be
-maintained somewhere for usage when querying. This template file
-should generally have empty tables, but nothing prevents non-empty
-files from being provided.
-
-Note that the external databases will also be included as an entry in
-the index (this may change in the future).
+Note that ``external.gufi'' will also be included as an entry in the
+index (this may change in the future).

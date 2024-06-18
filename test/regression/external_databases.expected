@@ -50,18 +50,22 @@ prefix/1KB
 prefix/1MB
 prefix/directory
 prefix/directory/executable
+prefix/directory/external.gufi
 prefix/directory/faction1.db
 prefix/directory/readonly
 prefix/directory/subdirectory
 prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/external.gufi
 prefix/directory/subdirectory/faction2.db
 prefix/directory/subdirectory/repeat_name
 prefix/directory/writable
 prefix/empty_directory
+prefix/external.gufi
 prefix/faction1.db
 prefix/faction2.db
 prefix/file_symlink
 prefix/leaf_directory
+prefix/leaf_directory/external.gufi
 prefix/leaf_directory/faction1.db
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
@@ -70,10 +74,10 @@ prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
-$ gufi_dir2index -x -q "faction1.db" -q "faction2.db" "prefix" "prefix"
+$ gufi_dir2index -x "prefix" "prefix"
 Creating GUFI Index prefix with 1 threads
 Total Dirs:          6
-Total Files:         19
+Total Files:         23
 
 $ sqlite3 "prefix/db.db"                        "UPDATE external_dbs_pwd SET pinode = '17'"
 
@@ -112,18 +116,22 @@ prefix/.hidden|f|
 prefix/1KB|f|
 prefix/1MB|f|faction1 1MB file
 prefix/directory/executable|f|faction1 executable file
+prefix/directory/external.gufi|f|
 prefix/directory/faction1.db|f|
 prefix/directory/readonly|f|
 prefix/directory/subdirectory/directory_symlink|l|
+prefix/directory/subdirectory/external.gufi|f|
 prefix/directory/subdirectory/faction2.db|f|
 prefix/directory/subdirectory/repeat_name|f|
 prefix/directory/subdirectory|d|
 prefix/directory/writable|f|
 prefix/directory|d|faction1 directory
 prefix/empty_directory|d|
+prefix/external.gufi|f|
 prefix/faction1.db|f|
 prefix/faction2.db|f|
 prefix/file_symlink|l|
+prefix/leaf_directory/external.gufi|f|
 prefix/leaf_directory/faction1.db|f|
 prefix/leaf_directory/leaf_file1|f|faction1 leaf file 1
 prefix/leaf_directory/leaf_file2|f|
@@ -141,9 +149,11 @@ prefix/.hidden|f|||
 prefix/1KB|f|||
 prefix/1MB|f|user.size|1MB|faction1 1MB file
 prefix/directory/executable|f|||faction1 executable file
+prefix/directory/external.gufi|f|||
 prefix/directory/faction1.db|f|||
 prefix/directory/readonly|f|||
 prefix/directory/subdirectory/directory_symlink|l|||
+prefix/directory/subdirectory/external.gufi|f|||
 prefix/directory/subdirectory/faction2.db|f|||
 prefix/directory/subdirectory/repeat_name|f|||
 prefix/directory/subdirectory|d|user.name|sub|
@@ -151,9 +161,11 @@ prefix/directory/subdirectory|d|user.type|dir|
 prefix/directory/writable|f|||
 prefix/directory|d|||faction1 directory
 prefix/empty_directory|d|||
+prefix/external.gufi|f|||
 prefix/faction1.db|f|||
 prefix/faction2.db|f|||
 prefix/file_symlink|l|||
+prefix/leaf_directory/external.gufi|f|||
 prefix/leaf_directory/faction1.db|f|||
 prefix/leaf_directory/leaf_file1|f|user.name1|value1|faction1 leaf file 1
 prefix/leaf_directory/leaf_file1|f|user.name2|value2|faction1 leaf file 1
@@ -176,18 +188,22 @@ prefix/.hidden|f|
 prefix/1KB|f|faction2 1KB file
 prefix/1MB|f|
 prefix/directory/executable|f|
+prefix/directory/external.gufi|f|
 prefix/directory/faction1.db|f|
 prefix/directory/readonly|f|
 prefix/directory/subdirectory/directory_symlink|l|
+prefix/directory/subdirectory/external.gufi|f|
 prefix/directory/subdirectory/faction2.db|f|
 prefix/directory/subdirectory/repeat_name|f|
 prefix/directory/subdirectory|d|faction2 subdirectory
 prefix/directory/writable|f|
 prefix/directory|d|
 prefix/empty_directory|d|
+prefix/external.gufi|f|
 prefix/faction1.db|f|
 prefix/faction2.db|f|
 prefix/file_symlink|l|
+prefix/leaf_directory/external.gufi|f|
 prefix/leaf_directory/faction1.db|f|
 prefix/leaf_directory/leaf_file1|f|
 prefix/leaf_directory/leaf_file2|f|
@@ -205,9 +221,11 @@ prefix/.hidden|f|||
 prefix/1KB|f|||faction2 1KB file
 prefix/1MB|f|user.size|1MB|
 prefix/directory/executable|f|||
+prefix/directory/external.gufi|f|||
 prefix/directory/faction1.db|f|||
 prefix/directory/readonly|f|||
 prefix/directory/subdirectory/directory_symlink|l|||
+prefix/directory/subdirectory/external.gufi|f|||
 prefix/directory/subdirectory/faction2.db|f|||
 prefix/directory/subdirectory/repeat_name|f|||
 prefix/directory/subdirectory|d|user.name|sub|faction2 subdirectory
@@ -215,9 +233,11 @@ prefix/directory/subdirectory|d|user.type|dir|faction2 subdirectory
 prefix/directory/writable|f|||
 prefix/directory|d|||
 prefix/empty_directory|d|||
+prefix/external.gufi|f|||
 prefix/faction1.db|f|||
 prefix/faction2.db|f|||
 prefix/file_symlink|l|||
+prefix/leaf_directory/external.gufi|f|||
 prefix/leaf_directory/faction1.db|f|||
 prefix/leaf_directory/leaf_file1|f|user.name1|value1|
 prefix/leaf_directory/leaf_file1|f|user.name2|value2|
@@ -240,18 +260,22 @@ prefix/.hidden|f||
 prefix/1KB|f||faction2 1KB file
 prefix/1MB|f|faction1 1MB file|
 prefix/directory/executable|f|faction1 executable file|
+prefix/directory/external.gufi|f||
 prefix/directory/faction1.db|f||
 prefix/directory/readonly|f||
 prefix/directory/subdirectory/directory_symlink|l||
+prefix/directory/subdirectory/external.gufi|f||
 prefix/directory/subdirectory/faction2.db|f||
 prefix/directory/subdirectory/repeat_name|f||
 prefix/directory/subdirectory|d||faction2 subdirectory
 prefix/directory/writable|f||
 prefix/directory|d|faction1 directory|
 prefix/empty_directory|d||
+prefix/external.gufi|f||
 prefix/faction1.db|f||
 prefix/faction2.db|f||
 prefix/file_symlink|l||
+prefix/leaf_directory/external.gufi|f||
 prefix/leaf_directory/faction1.db|f||
 prefix/leaf_directory/leaf_file1|f|faction1 leaf file 1|
 prefix/leaf_directory/leaf_file2|f||
@@ -269,9 +293,11 @@ prefix/.hidden|f||||
 prefix/1KB|f||||faction2 1KB file
 prefix/1MB|f|user.size|1MB|faction1 1MB file|
 prefix/directory/executable|f|||faction1 executable file|
+prefix/directory/external.gufi|f||||
 prefix/directory/faction1.db|f||||
 prefix/directory/readonly|f||||
 prefix/directory/subdirectory/directory_symlink|l||||
+prefix/directory/subdirectory/external.gufi|f||||
 prefix/directory/subdirectory/faction2.db|f||||
 prefix/directory/subdirectory/repeat_name|f||||
 prefix/directory/subdirectory|d|user.name|sub||faction2 subdirectory
@@ -279,9 +305,11 @@ prefix/directory/subdirectory|d|user.type|dir||faction2 subdirectory
 prefix/directory/writable|f||||
 prefix/directory|d|||faction1 directory|
 prefix/empty_directory|d||||
+prefix/external.gufi|f||||
 prefix/faction1.db|f||||
 prefix/faction2.db|f||||
 prefix/file_symlink|l||||
+prefix/leaf_directory/external.gufi|f||||
 prefix/leaf_directory/faction1.db|f||||
 prefix/leaf_directory/leaf_file1|f|user.name1|value1|faction1 leaf file 1|
 prefix/leaf_directory/leaf_file1|f|user.name2|value2|faction1 leaf file 1|
@@ -315,10 +343,10 @@ Can Roll Up:                 6
         average:          0.83
     Files/Links:
         min:                 0
-        max:                 8
-        median:           3.00
-        sum:                19
-        average:          3.17
+        max:                 9
+        median:           4.00
+        sum:                23
+        average:          3.83
     Level:
         min:                 0
         max:                 2
@@ -327,9 +355,9 @@ Can Roll Up:                 6
         average:          1.00
     Successful:              6
     Failed:                  0
-Files/Links:    19
+Files/Links:    23
 Directories:    6 (1 empty)
-Total:          25
+Total:          29
 Remaining Dirs: 1 (16.67%)
 
 $ sqlite3 "prefix/db.db" "SELECT * FROM external_dbs;"
@@ -357,18 +385,22 @@ prefix/.hidden|f|
 prefix/1KB|f|
 prefix/1MB|f|faction1 1MB file
 prefix/directory/executable|f|faction1 executable file
+prefix/directory/external.gufi|f|
 prefix/directory/faction1.db|f|
 prefix/directory/readonly|f|
 prefix/directory/subdirectory/directory_symlink|l|
+prefix/directory/subdirectory/external.gufi|f|
 prefix/directory/subdirectory/faction2.db|f|
 prefix/directory/subdirectory/repeat_name|f|
 prefix/directory/subdirectory|d|
 prefix/directory/writable|f|
 prefix/directory|d|
 prefix/empty_directory|d|
+prefix/external.gufi|f|
 prefix/faction1.db|f|
 prefix/faction2.db|f|
 prefix/file_symlink|l|
+prefix/leaf_directory/external.gufi|f|
 prefix/leaf_directory/faction1.db|f|
 prefix/leaf_directory/leaf_file1|f|faction1 leaf file 1
 prefix/leaf_directory/leaf_file2|f|
@@ -386,9 +418,11 @@ prefix/.hidden|f|||
 prefix/1KB|f|||
 prefix/1MB|f|user.size|1MB|faction1 1MB file
 prefix/directory/executable|f|||faction1 executable file
+prefix/directory/external.gufi|f|||
 prefix/directory/faction1.db|f|||
 prefix/directory/readonly|f|||
 prefix/directory/subdirectory/directory_symlink|l|||
+prefix/directory/subdirectory/external.gufi|f|||
 prefix/directory/subdirectory/faction2.db|f|||
 prefix/directory/subdirectory/repeat_name|f|||
 prefix/directory/subdirectory|d|user.name|sub|
@@ -396,9 +430,11 @@ prefix/directory/subdirectory|d|user.type|dir|
 prefix/directory/writable|f|||
 prefix/directory|d|||
 prefix/empty_directory|d|||
+prefix/external.gufi|f|||
 prefix/faction1.db|f|||
 prefix/faction2.db|f|||
 prefix/file_symlink|l|||
+prefix/leaf_directory/external.gufi|f|||
 prefix/leaf_directory/faction1.db|f|||
 prefix/leaf_directory/leaf_file1|f|user.name1|value1|faction1 leaf file 1
 prefix/leaf_directory/leaf_file1|f|user.name2|value2|faction1 leaf file 1
@@ -421,18 +457,22 @@ prefix/.hidden|f|
 prefix/1KB|f|faction2 1KB file
 prefix/1MB|f|
 prefix/directory/executable|f|
+prefix/directory/external.gufi|f|
 prefix/directory/faction1.db|f|
 prefix/directory/readonly|f|
 prefix/directory/subdirectory/directory_symlink|l|
+prefix/directory/subdirectory/external.gufi|f|
 prefix/directory/subdirectory/faction2.db|f|
 prefix/directory/subdirectory/repeat_name|f|
 prefix/directory/subdirectory|d|
 prefix/directory/writable|f|
 prefix/directory|d|
 prefix/empty_directory|d|
+prefix/external.gufi|f|
 prefix/faction1.db|f|
 prefix/faction2.db|f|
 prefix/file_symlink|l|
+prefix/leaf_directory/external.gufi|f|
 prefix/leaf_directory/faction1.db|f|
 prefix/leaf_directory/leaf_file1|f|
 prefix/leaf_directory/leaf_file2|f|
@@ -450,9 +490,11 @@ prefix/.hidden|f|||
 prefix/1KB|f|||faction2 1KB file
 prefix/1MB|f|user.size|1MB|
 prefix/directory/executable|f|||
+prefix/directory/external.gufi|f|||
 prefix/directory/faction1.db|f|||
 prefix/directory/readonly|f|||
 prefix/directory/subdirectory/directory_symlink|l|||
+prefix/directory/subdirectory/external.gufi|f|||
 prefix/directory/subdirectory/faction2.db|f|||
 prefix/directory/subdirectory/repeat_name|f|||
 prefix/directory/subdirectory|d|user.name|sub|
@@ -460,9 +502,11 @@ prefix/directory/subdirectory|d|user.type|dir|
 prefix/directory/writable|f|||
 prefix/directory|d|||
 prefix/empty_directory|d|||
+prefix/external.gufi|f|||
 prefix/faction1.db|f|||
 prefix/faction2.db|f|||
 prefix/file_symlink|l|||
+prefix/leaf_directory/external.gufi|f|||
 prefix/leaf_directory/faction1.db|f|||
 prefix/leaf_directory/leaf_file1|f|user.name1|value1|
 prefix/leaf_directory/leaf_file1|f|user.name2|value2|
@@ -485,18 +529,22 @@ prefix/.hidden|f||
 prefix/1KB|f||faction2 1KB file
 prefix/1MB|f|faction1 1MB file|
 prefix/directory/executable|f|faction1 executable file|
+prefix/directory/external.gufi|f||
 prefix/directory/faction1.db|f||
 prefix/directory/readonly|f||
 prefix/directory/subdirectory/directory_symlink|l||
+prefix/directory/subdirectory/external.gufi|f||
 prefix/directory/subdirectory/faction2.db|f||
 prefix/directory/subdirectory/repeat_name|f||
 prefix/directory/subdirectory|d||
 prefix/directory/writable|f||
 prefix/directory|d||
 prefix/empty_directory|d||
+prefix/external.gufi|f||
 prefix/faction1.db|f||
 prefix/faction2.db|f||
 prefix/file_symlink|l||
+prefix/leaf_directory/external.gufi|f||
 prefix/leaf_directory/faction1.db|f||
 prefix/leaf_directory/leaf_file1|f|faction1 leaf file 1|
 prefix/leaf_directory/leaf_file2|f||
@@ -514,9 +562,11 @@ prefix/.hidden|f||||
 prefix/1KB|f||||faction2 1KB file
 prefix/1MB|f|user.size|1MB|faction1 1MB file|
 prefix/directory/executable|f|||faction1 executable file|
+prefix/directory/external.gufi|f||||
 prefix/directory/faction1.db|f||||
 prefix/directory/readonly|f||||
 prefix/directory/subdirectory/directory_symlink|l||||
+prefix/directory/subdirectory/external.gufi|f||||
 prefix/directory/subdirectory/faction2.db|f||||
 prefix/directory/subdirectory/repeat_name|f||||
 prefix/directory/subdirectory|d|user.name|sub||
@@ -524,9 +574,11 @@ prefix/directory/subdirectory|d|user.type|dir||
 prefix/directory/writable|f||||
 prefix/directory|d||||
 prefix/empty_directory|d||||
+prefix/external.gufi|f||||
 prefix/faction1.db|f||||
 prefix/faction2.db|f||||
 prefix/file_symlink|l||||
+prefix/leaf_directory/external.gufi|f||||
 prefix/leaf_directory/faction1.db|f||||
 prefix/leaf_directory/leaf_file1|f|user.name1|value1|faction1 leaf file 1|
 prefix/leaf_directory/leaf_file1|f|user.name2|value2|faction1 leaf file 1|

@@ -181,6 +181,8 @@ AWK="@AWK@"
 DIFF="@DIFF@"
 GREP="@GREP@"
 
+PWD="$(pwd)"
+
 # common strings that need replacing
 replace() {
     sed "
@@ -228,6 +230,7 @@ replace() {
     s/${SEARCH//\//\\/}/${SRCDIR//\//\\/}/g;
     s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
     s/${CONFIG//\//\\/}/\\/etc\\/GUFI\\/config/g;
+    s/${PWD//\//\\/}\\///g;
 
     s/${AWK//\//\\/}/awk/g;
     s/${DIFF//\//\\/}/diff/g;

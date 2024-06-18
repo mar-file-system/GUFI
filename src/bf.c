@@ -108,8 +108,6 @@ struct input *input_init(struct input *in) {
         trie_insert(in->skip, ".",  1, NULL, NULL);
         trie_insert(in->skip, "..", 2, NULL, NULL);
 
-        in->map_external            = trie_alloc();
-
         sll_init(&in->external_attach);
     }
 
@@ -119,7 +117,6 @@ struct input *input_init(struct input *in) {
 void input_fini(struct input *in) {
     if (in) {
         sll_destroy(&in->external_attach, free);
-        trie_free(in->map_external);
         trie_free(in->skip);
     }
 }
@@ -181,7 +178,7 @@ void print_help(const char* prog_name,
       case 'M': printf("  -M <bytes>             target memory footprint"); break;
       case 'C': printf("  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
       case 'e': printf("  -e                     compress work items"); break;
-      case 'q': printf("  -q <basename>          Basename of file to keep track of during indexing"); break;
+      case 'q': printf("  -q                     check that external databases are valid before tracking during indexing"); break;
       case 'Q': printf("  -Q <basename>\n"
                        "     <table>\n"
                        "     <template>.<table>\n"
@@ -240,7 +237,7 @@ void show_input(struct input* in, int retval) {
    printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
    printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
    printf("in.compress                 = %d\n",            in->compress);
-   printf("in.external_db_count        = %zu\n",           in->map_external_count);
+   printf("in.check_extdb_valid        = %d\n",            in->check_extdb_valid);
    size_t i = 0;
    sll_loop(&in->external_attach, node) {
        eus_t *eus = (eus_t *) sll_node_data(node);
@@ -483,14 +480,8 @@ int parse_cmd_line(int         argc,
           in->compress = 1;
           break;
 
-      case 'q':               // file basename -> attach name
-          {
-              refstr_t basename;
-              INSTALL_STR(&basename, optarg);
-
-              in->map_external_count += !trie_search(in->map_external, basename.data, basename.len, NULL);
-              trie_insert(in->map_external, basename.data, basename.len, NULL, NULL);
-          }
+      case 'q':
+          in->check_extdb_valid = 1;
           break;
 
       case 'Q':

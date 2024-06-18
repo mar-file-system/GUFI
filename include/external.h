@@ -76,6 +76,10 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+/* name of file that user can create to list external databases to track */
+#define EXTERNAL_DB_USER_FILE      "external.gufi"
+#define EXTERNAL_DB_USER_FILE_LEN  (sizeof(EXTERNAL_DB_USER_FILE) - 1)
+
 /*
  *
  * these tables/views only exist in db.db and list
@@ -85,21 +89,26 @@ extern "C" {
  * matter the usage of the external databases
  */
 
+/* table */
 #define EXTERNAL_DBS_PWD           "external_dbs_pwd"    /* *.db files found during indexing */
 extern const char EXTERNAL_DBS_PWD_CREATE[];
 extern const char EXTERNAL_DBS_PWD_INSERT[];
 
+/* table */
 #define EXTERNAL_DBS_ROLLUP        "external_dbs_rollup" /* *.db files brought up during rollup */
 extern const char EXTERNAL_DBS_ROLLUP_CREATE[];
 extern const char EXTERNAL_DBS_ROLLUP_INSERT[];
 
+/* view */
 #define EXTERNAL_DBS               "external_dbs"
 #define EXTERNAL_DBS_LEN           (sizeof(EXTERNAL_DBS) - 1)
 
+/* column value */
 #define EXTERNAL_TYPE_XATTR_NAME   "xattrs"
 #define EXTERNAL_TYPE_XATTR_LEN    (sizeof(EXTERNAL_TYPE_XATTR_NAME) - 1)
 extern const refstr_t EXTERNAL_TYPE_XATTR;               /* convenience struct */
 
+/* column value */
 #define EXTERNAL_TYPE_USER_DB_NAME "user_db"
 #define EXTERNAL_TYPE_USER_DB_LEN  (sizeof(EXTERNAL_TYPE_USER_DB_NAME) - 1)
 extern const refstr_t EXTERNAL_TYPE_USER_DB;             /* convenience struct */
