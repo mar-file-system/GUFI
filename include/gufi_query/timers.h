@@ -71,7 +71,7 @@ OF SUCH DAMAGE.
 
 #include "OutputBuffers.h"
 #include "SinglyLinkedList.h"
-#include "debug.h"
+#include "../debug.h"
 
 /* ************************************************************************* */
 /* global/pool variables */

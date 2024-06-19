@@ -75,6 +75,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "external.h"
 #include "gufi_query/PoolArgs.h"
+#include "gufi_query/debug.h"
 #include "gufi_query/external.h"
 #include "gufi_query/gqw.h"
 #include "gufi_query/process_queries.h"

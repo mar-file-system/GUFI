@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "config.h"
+#include "external.h"
 #include "trie.h"
 
 #ifdef __cplusplus
@@ -106,10 +107,6 @@ int shortpath(const char *name, char *nameout, char *endname);
 /* descend */
 typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
 
-/* returns number of external databases tracked */
-typedef size_t (*process_external_db_f)(struct input *in,
-                                        struct work *child, void *args);
-
 struct descend_counters {
     size_t dirs;
     size_t dirs_insitu;
@@ -126,7 +123,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
             DIR *dir, trie_t *skip, const int skip_db, const int stat_entries,
             QPTPoolFunc_t processdir, process_nondir_f processnondir, void *nondir_args,
-            process_external_db_f process_external_db, void *external_db_args,
+            external_process_db_f process_external_db, void *external_db_args,
             struct descend_counters *counters);
 
 /* ******************************************************* */

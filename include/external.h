@@ -66,10 +66,10 @@ OF SUCH DAMAGE.
 #define EXTERNAL_H
 
 #include <stdlib.h>
+#include <sqlite3.h> /* instead of dbutils.h to simplify dependency tree */
 
 #include "SinglyLinkedList.h"
 #include "bf.h"
-#include "dbutils.h"
 #include "trie.h"
 
 #ifdef __cplusplus
@@ -113,17 +113,20 @@ extern const refstr_t EXTERNAL_TYPE_XATTR;               /* convenience struct *
 #define EXTERNAL_TYPE_USER_DB_LEN  (sizeof(EXTERNAL_TYPE_USER_DB_NAME) - 1)
 extern const refstr_t EXTERNAL_TYPE_USER_DB;             /* convenience struct */
 
-#define EXTERNAL_ATTACH_PREFIX "extdb"
+#define EXTERNAL_ATTACH_PREFIX     "extdb"
 
 int create_external_tables(const char *name, sqlite3 *db, void *args);
 
-size_t external_create_query(char *sql,         const size_t sql_size,
-                             const char *cols,  const size_t cols_len,
-                             const char *table, const size_t table_len,
-                             const refstr_t *type,
-                             const refstr_t *extra);
-
 int external_insert(sqlite3 *db, const char *type, const long long int pinode, const char *filename);
+
+typedef int (*external_process_db_f)(struct input *in, void *args,
+                                     const long long int pinode,
+                                     const char *filename);
+
+size_t external_read_file(struct input *in,
+                          struct work *child,
+                          external_process_db_f func,
+                          void *args);
 
 /*
  * external_concatenate

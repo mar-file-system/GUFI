@@ -106,86 +106,12 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     return 0;
 }
 
-static size_t track_external(struct input *in,
-                             struct work *child,
-                             void *args) {
-    FILE *file = (FILE *) args;
-
-    int extdb_list = open(child->name, O_RDONLY);
-    if (extdb_list < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open user external database list in %s: %s (%d)\n",
-                child->name, strerror(err), err);
-        return 0;
-    }
-
-    size_t rc = 0;
-
-    char *line = NULL;
-    size_t len = 0;
-    off_t offset = 0;
-    while (getline_fd(&line, &len, extdb_list, &offset, 512) > 0) {
-        char extdb_path_stack[MAXPATH];
-        char *extdb_path = line;
-
-        /* resolve relative paths */
-        if (line[0] != '/')  {
-            char path[MAXPATH];
-            SNFORMAT_S(path, sizeof(path), 2,
-                       child->name, child->name_len - child->basename_len,
-                       /* basename does not include slash, so don't need to add another one */
-                       line, len);
-
-            if (!realpath(path, extdb_path_stack)) {
-                const int err = errno;
-                fprintf(stderr, "Error: Could not resolve external database path %s: %s (%d)\n",
-                        path, strerror(err), err);
-                free(line);
-                line = NULL;
-                continue;
-            }
-
-            extdb_path = extdb_path_stack;
-        }
-
-        /* open the path to make sure it eventually resolves to a file */
-        sqlite3 *extdb = opendb(extdb_path, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
-        char *err = NULL;
-
-        if (in->check_extdb_valid) {
-            /* make sure this file is a sqlite3 db */
-            if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
-                char track_sql[MAXSQL];
-                SNPRINTF(track_sql, sizeof(track_sql),
-                         "INSERT INTO " EXTERNAL_DBS_PWD " VALUES ('%s', '%s');",
-                         EXTERNAL_TYPE_USER_DB.data, extdb_path);
-
-                externaltofile(file, in->delim, extdb_path);
-                rc++;
-            }
-            else {
-                fprintf(stderr, "Warning: Not tracking requested external db: %s: %s\n",
-                        extdb_path, err);
-                sqlite3_free(err);
-            }
-
-            closedb(extdb);
-        }
-        else {
-            externaltofile(file, in->delim, extdb_path);
-            rc++;
-        }
-
-        free(line);
-        line = NULL;
-    }
-
-    free(line);
-    line = NULL;
-
-    close(extdb_list);
-
-    return rc;
+static int process_external(struct input *in, void *args,
+                            const long long int pinode,
+                            const char *filename) {
+    (void) pinode;
+    externaltofile((FILE *) args, in->delim, filename);
+    return 0;
 }
 
 /* process the work under one directory (no recursion) */
@@ -243,7 +169,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             in, work, ed.statuso.st_ino,
             dir, pa->in.skip, 0, 0,
             processdir, process_nondir, &nda,
-            track_external, pa->outfiles[id],
+            process_external, pa->outfiles[id],
             &ctrs);
 
   cleanup:

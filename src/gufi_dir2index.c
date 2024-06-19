@@ -63,7 +63,6 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
-#include <fcntl.h>
 #include <dirent.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -154,80 +153,11 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     return 0;
 }
 
-static size_t track_external(struct input *in,
-                             struct work *child,
-                             void *args) {
-    sqlite3 *db = (sqlite3 *) args;
-
-    int extdb_list = open(child->name, O_RDONLY);
-    if (extdb_list < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open user external database list in %s: %s (%d)\n",
-                child->name, strerror(err), err);
-        return 0;
-    }
-
-    size_t rc = 0;
-
-    char *line = NULL;
-    size_t len = 0;
-    off_t offset = 0;
-    while (getline_fd(&line, &len, extdb_list, &offset, 512) > 0) {
-        char extdb_path_stack[MAXPATH];
-        char *extdb_path = line;
-
-        /* resolve relative paths */
-        if (line[0] != '/')  {
-            char path[MAXPATH];
-            SNFORMAT_S(path, sizeof(path), 2,
-                       child->name, child->name_len - child->basename_len,
-                       /* basename does not include slash, so don't need to add another one */
-                       line, len);
-
-            if (!realpath(path, extdb_path_stack)) {
-                const int err = errno;
-                fprintf(stderr, "Error: Could not resolve external database path %s: %s (%d)\n",
-                        path, strerror(err), err);
-                free(line);
-                line = NULL;
-                continue;
-            }
-
-            extdb_path = extdb_path_stack;
-        }
-
-        if (in->check_extdb_valid) {
-            /* open the path to make sure it eventually resolves to a file */
-            sqlite3 *extdb = opendb(extdb_path, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
-            char *err = NULL;
-
-            /* make sure this file is a sqlite3 db */
-            /* can probably skip this check */
-            if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
-                rc += !external_insert(db, EXTERNAL_TYPE_USER_DB.data, child->pinode, extdb_path);
-            }
-            else {
-                fprintf(stderr, "Warning: Not tracking requested external db: %s: %s\n",
-                        extdb_path, err);
-                sqlite3_free(err);
-            }
-
-            closedb(extdb);
-        }
-        else {
-            rc += !external_insert(db, EXTERNAL_TYPE_USER_DB.data, child->pinode, extdb_path);
-        }
-
-        free(line);
-        line = NULL;
-    }
-
-    free(line);
-    line = NULL;
-
-    close(extdb_list);
-
-    return rc;
+static int process_external(struct input *in, void *args,
+                            const long long int pinode,
+                            const char *filename) {
+    (void) in;
+    return external_insert((sqlite3 *) args, EXTERNAL_TYPE_USER_DB_NAME, pinode, filename);
 }
 
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
@@ -318,7 +248,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     descend(ctx, id, pa, in, nda.work, nda.ed.statuso.st_ino, dir,
             in->skip, 0, 0,
             processdir, process_nondir, &nda,
-            track_external, nda.db,
+            process_external, nda.db,
             &ctrs);
     stopdb(nda.db);
 

@@ -392,7 +392,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
             DIR *dir, trie_t *skip_names, const int skip_db, const int stat_entries,
             QPTPoolFunc_t processdir, process_nondir_f processnondir, void *nondir_args,
-            process_external_db_f process_external_db, void *external_db_args,
+            external_process_db_f process_external_db, void *external_db_args,
             struct descend_counters *counters) {
     if (!work) {
         return 1;
@@ -522,7 +522,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             /* process external databases (not xattrs) */
             if (process_external_db &&
                 (strncmp(dir_child->d_name, EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0)) {
-                ctrs.external_dbs += process_external_db(in, &child, external_db_args);
+                ctrs.external_dbs += external_read_file(in, &child, process_external_db, external_db_args);
             }
         }
     }
