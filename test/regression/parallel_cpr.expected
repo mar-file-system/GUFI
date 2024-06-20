@@ -1,0 +1,121 @@
+$ parallel_cpr -h
+usage: parallel_cpr [options] src... dst
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -n <threads>           number of threads
+  -x                     index/query xattrs
+
+src...     directory to copy
+dst        directory to copy place sources under
+
+
+$ parallel_cpr -n 2 "prefix" "copy"
+
+$ compare <(find "prefix") <(find "copy/prefix") 
+prefix                                              prefix
+prefix/.hidden                                      prefix/.hidden
+prefix/1KB                                          prefix/1KB
+prefix/1MB                                          prefix/1MB
+prefix/directory                                    prefix/directory
+prefix/directory/executable                         prefix/directory/executable
+prefix/directory/readonly                           prefix/directory/readonly
+prefix/directory/subdirectory                       prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink     prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name           prefix/directory/subdirectory/repeat_name
+prefix/directory/writable                           prefix/directory/writable
+prefix/empty_directory                              prefix/empty_directory
+prefix/file_symlink                                 prefix/file_symlink
+prefix/leaf_directory                               prefix/leaf_directory
+prefix/leaf_directory/leaf_file1                    prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2                    prefix/leaf_directory/leaf_file2
+prefix/old_file                                     prefix/old_file
+prefix/repeat_name                                  prefix/repeat_name
+prefix/unusual#? directory ,                        prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#        prefix/unusual#? directory ,/unusual, name?#
+
+$ rm -rf "copy"
+
+$ parallel_cpr -n 2 -x "prefix" "copy"
+
+$ compare xattrs of "prefix"
+$ compare xattrs of "prefix/.hidden"
+$ compare xattrs of "prefix/1KB"
+$ compare xattrs of "prefix/1MB"
+# file: prefix/1MB                                  # file: prefix/1MB
+user.size="1MB"                                     user.size="1MB"
+
+$ compare xattrs of "prefix/directory"
+$ compare xattrs of "prefix/directory/executable"
+$ compare xattrs of "prefix/directory/readonly"
+$ compare xattrs of "prefix/directory/subdirectory"
+# file: prefix/directory/subdirectory               # file: prefix/directory/subdirectory
+user.name="sub"                                     user.name="sub"
+user.type="dir"                                     user.type="dir"
+
+$ compare xattrs of "prefix/directory/subdirectory/directory_symlink"
+# file: prefix/directory/subdirectory/directory_    # file: prefix/directory/subdirectory/directory_
+user.name="sub"                                     user.name="sub"
+user.type="dir"                                     user.type="dir"
+
+$ compare xattrs of "prefix/directory/subdirectory/repeat_name"
+$ compare xattrs of "prefix/directory/writable"
+$ compare xattrs of "prefix/empty_directory"
+$ compare xattrs of "prefix/file_symlink"
+$ compare xattrs of "prefix/leaf_directory"
+# file: prefix/leaf_directory                       # file: prefix/leaf_directory
+user.name="leaf"                                    user.name="leaf"
+user.type="dir"                                     user.type="dir"
+
+$ compare xattrs of "prefix/leaf_directory/leaf_file1"
+# file: prefix/leaf_directory/leaf_file1            # file: prefix/leaf_directory/leaf_file1
+user.name1="value1"                                 user.name1="value1"
+user.name2="value2"                                 user.name2="value2"
+user.name3="value3"                                 user.name3="value3"
+
+$ compare xattrs of "prefix/leaf_directory/leaf_file2"
+# file: prefix/leaf_directory/leaf_file2            # file: prefix/leaf_directory/leaf_file2
+user.name4="value4"                                 user.name4="value4"
+user.name5="value5"                                 user.name5="value5"
+user.name6="value6"                                 user.name6="value6"
+
+$ compare xattrs of "prefix/old_file"
+$ compare xattrs of "prefix/repeat_name"
+$ compare xattrs of "prefix/unusual#? directory ,"
+$ compare xattrs of "prefix/unusual#? directory ,/unusual, name?#"
+$ rm -rf "copy"
+
+$ parallel_cpr    "prefix/leaf_directory/leaf_file1" "copy"
+
+$ parallel_cpr -x "prefix/leaf_directory/leaf_file2" "copy"
+
+$ parallel_cpr    "prefix/file_symlink"              "copy"
+
+$ find "copy" -not -type d
+copy/file_symlink
+copy/leaf_file1
+copy/leaf_file2
+
+$ getfattr -d -m ".*" -- "copy/leaf_file1"
+
+$ getfattr -d -m ".*" -- "copy/leaf_file2"
+# file: copy/leaf_file2
+user.name4="value4"
+user.name5="value5"
+user.name6="value6"
+
+
+$ readlink "copy/file_symlink"
+prefix/1KB
+
+$ rm -rf "copy"
+
+$ parallel_cpr "prefix" "prefix"
+Not copying into itself: "prefix" -> "prefix"
+
+$ parallel_cpr "prefix" "prefix/directory"
+Not copying into itself: "prefix" -> "prefix/directory"
+
+$ parallel_cpr /dev/null "copy"
+Not copying "/dev/null"
+

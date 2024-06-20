@@ -159,6 +159,7 @@ struct xattrs {
 
 /* sets up and clean up internal structure only, not the pointer itself */
 int xattrs_setup(struct xattrs *xattrs);
+int xattrs_alloc(struct xattrs *xattrs);
 void xattrs_cleanup(struct xattrs *xattrs);
 
 /* filesystem xattr interactions */

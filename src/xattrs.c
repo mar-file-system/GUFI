@@ -143,12 +143,12 @@ int xattrs_setup(struct xattrs *xattrs) {
 }
 
 /* here to be the opposite function of xattrs_cleanup */
-static int xattrs_alloc(struct xattrs *xattrs) {
+int xattrs_alloc(struct xattrs *xattrs) {
     if (!xattrs || xattrs->pairs) {
         return 1;
     }
 
-    xattrs->pairs = malloc(sizeof(struct xattr) * xattrs->count);
+    xattrs->pairs = calloc(xattrs->count, sizeof(struct xattr));
     return !xattrs->pairs;
 }
 

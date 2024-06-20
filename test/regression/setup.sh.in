@@ -168,6 +168,7 @@ GUFI_TREESUMMARY_ALL="@CMAKE_BINARY_DIR@/src/gufi_treesummary_all"
 GUFI_UNROLLUP="@CMAKE_BINARY_DIR@/src/gufi_unrollup"
 LONGITUDINAL_SNAPSHOT="@CMAKE_BINARY_DIR@/contrib/longitudinal_snapshot.py"
 OLDBIGFILES="@CMAKE_BINARY_DIR@/examples/oldbigfiles"
+PARALLEL_CPR="@CMAKE_BINARY_DIR@/src/parallel_cpr"
 PARALLEL_RMR="@CMAKE_BINARY_DIR@/src/parallel_rmr"
 QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
@@ -212,6 +213,7 @@ replace() {
     s/${GUFI_UNROLLUP//\//\\/}/gufi_unrollup/g;
     s/${LONGITUDINAL_SNAPSHOT//\//\\/}/longitudinal_snapshot.py/g;
     s/${OLDBIGFILES//\//\\/}/oldbigfiles/g;
+    s/${PARALLEL_CPR//\//\\/}/parallel_cpr/g;
     s/${PARALLEL_RMR//\//\\/}/parallel_rmr/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
     s/${SPLIT_TRACE//\//\\/}/split_trace/g;

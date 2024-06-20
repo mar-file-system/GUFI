@@ -176,6 +176,7 @@ set(C_SOURCES
   gufi_treesummary.c
   gufi_treesummary_all.c
   gufi_unrollup.c
+  parallel_cpr.c
   parallel_rmr.c
   querydbs.c
 )
