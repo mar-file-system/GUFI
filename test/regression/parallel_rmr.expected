@@ -15,7 +15,7 @@ empty_directory
 leaf_directory
 unusual#? directory ,
 
-$ parallel_rmr "prefix/directory" "prefix/empty_directory" "prefix/leaf_directory"
+$ parallel_rmr -n 2 "prefix/directory" "prefix/empty_directory" "prefix/leaf_directory"
 
 $ ls -1 prefix
 db.db

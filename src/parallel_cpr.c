@@ -360,7 +360,7 @@ static int setup(const refstr_t *dst) {
 
 static void sub_help(void) {
    printf("src...     directory to copy\n");
-   printf("dst        directory to copy place sources under\n");
+   printf("dst        directory to place sources under\n");
    printf("\n");
 }
 

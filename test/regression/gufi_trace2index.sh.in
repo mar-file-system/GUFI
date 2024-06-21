@@ -139,7 +139,7 @@ echo
 # generate trace with good directory line and bad file line
 # only need the first delimiter to trigger error
 (
-    echo "${SRCDIR}${DELIM}d${DELIM}"
+    head -n 1 "${TRACE}" | sed 's/[0-9]\+/0/g'
     echo "${SRCDIR}/1KB${BADDELIM}f${BADDELIM}"
 ) > "${BADTRACE}"
 

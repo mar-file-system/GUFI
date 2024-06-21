@@ -195,7 +195,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     thread_timestamp_end(lstat_db_call);
 
     if (rc != 0) {
-        goto out_free;
+        goto close_dir;
     }
 
     if (gqw->work.level >= in->min_level) {
@@ -429,6 +429,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
     thread_timestamp_end(utime_call);
 
+  close_dir:
+    ;
     thread_timestamp_start(ts.tts, closedir_call);
     closedir(dir);
     thread_timestamp_end(closedir_call);

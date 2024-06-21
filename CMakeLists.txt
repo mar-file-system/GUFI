@@ -198,24 +198,13 @@ if (POLICY CMP0109)
   cmake_policy(SET CMP0109 NEW)
 endif()
 
-# find an executable dependency
-function(find_exec_dependency var exec)
-  find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
+# find a required executable dependency
+function(find_exec_dependency var)
+  # REQUIRED option was not added until 3.18
+  find_program(${var} NAMES ${ARGN})
   if (${var})
-    message(STATUS "Found ${exec}: ${${var}}")
-  else ()
-    # try alternative
-    if (${ARGC} GREATER 2)
-      message(WARNING "${exec} not found. Trying alternative: ${ARGV2}")
-      find_program(${var} ${ARGV2})   # REQUIRED option was not added until 3.18
-    endif()
-
-    if (${var})
-      message(STATUS "Found alternative to ${exec}: ${${var}}")
-    endif()
-  endif()
-
-  if (NOT ${var})
+    message(STATUS "Found ${var}: ${${var}}")
+  else()
     message(FATAL_ERROR "Required program ${var} not found.")
   endif()
 endfunction()

@@ -69,7 +69,7 @@ OUTPUT="parallel_rmr.out"
 (
 run_no_sort "${PARALLEL_RMR} -h"
 run_sort    "ls -1 ${INDEXROOT}"
-run_no_sort "${PARALLEL_RMR} \"${INDEXROOT}/directory\" \"${INDEXROOT}/empty_directory\" \"${INDEXROOT}/leaf_directory\""
+run_no_sort "${PARALLEL_RMR} -n ${THREADS} \"${INDEXROOT}/directory\" \"${INDEXROOT}/empty_directory\" \"${INDEXROOT}/leaf_directory\""
 run_sort    "ls -1 ${INDEXROOT}"
 ) | tee "${OUTPUT}"
 

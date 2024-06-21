@@ -131,10 +131,14 @@ static struct row *row_init(const int trace, const size_t first_delim, char *lin
     return row;
 }
 
-static void row_destroy(struct row *row) {
+static void row_destroy(struct row **ref) {
     /* Not checking arguments */
+
+    struct row *row = *ref;
     free(row->line);
     free(row);
+
+    *ref = NULL;
 }
 
 #ifdef DEBUG
@@ -233,7 +237,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
-        row_destroy(w);
+        row_destroy(&w);
         return 1;
     }
     timestamp_set_end(dupdir);
@@ -442,7 +446,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     timestamp_create_start(row_destroy);
-    row_destroy(w);
+    row_destroy(&w);
     timestamp_set_end(row_destroy);
 
     #ifdef DEBUG
@@ -559,11 +563,10 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
          */
         if (!first_delim) {
             free(line);
-            line = NULL;
-            size = 0;
-            len = 0;
+            row_destroy(&work);
             fprintf(stderr, "Scout encountered bad line ending at %s offset %jd\n",
                     sa->tracename, (intmax_t) offset);
+            free(sa);
             return 1;
         }
 

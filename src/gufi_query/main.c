@@ -111,10 +111,13 @@ int main(int argc, char *argv[])
     int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:" COMPRESS_OPT "Q:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&in);
         return EXIT_FAILURE;
+    }
 
     if (validate_inputs(&in) != 0) {
+        input_fini(&in);
         return EXIT_FAILURE;
     }
 

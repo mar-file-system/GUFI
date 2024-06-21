@@ -7,7 +7,7 @@ options:
   -x                     index/query xattrs
 
 src...     directory to copy
-dst        directory to copy place sources under
+dst        directory to place sources under
 
 
 $ parallel_cpr -n 2 "prefix" "copy"
