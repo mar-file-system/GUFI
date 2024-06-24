@@ -130,9 +130,15 @@ run_no_sort "readlink \"${CPR_ROOT}/file_symlink\""
 run_no_sort "rm -rf \"${CPR_ROOT}\""
 
 set +e
-run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\" \"${SRCDIR}\""
-run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\" \"${SRCDIR}/directory\""
-run_no_sort "${PARALLEL_CPR} /dev/null \"${CPR_ROOT}\""
+# copy into self
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}\""
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}/directory\""
+
+# non-existant source
+run_no_sort "${PARALLEL_CPR} \"${BADTRACE}\" \"${CPR_ROOT}\""
+
+# non-directory/link/file source
+run_no_sort "${PARALLEL_CPR} /dev/null       \"${CPR_ROOT}\""
 set -e
 ) | tee "${OUTPUT}"
 

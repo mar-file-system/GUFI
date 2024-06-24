@@ -231,6 +231,7 @@ size_t external_read_file(struct input *in,
                         path, strerror(err), err);
                 free(line);
                 line = NULL;
+                len = 0;
                 continue;
             }
 

@@ -112,6 +112,13 @@ struct work_data {
     struct entry_data ed;
 };
 
+#define print_error_and_goto(msg, path, label)      \
+    const int err = errno;                          \
+    fprintf(stderr, "Error: %s \"%s\": %s (%d)\n",  \
+            msg, path, strerror(err), err);         \
+    rc = 1;                                         \
+    goto label
+
 /* copy a single file in a single thread */
 /* TODO: if file is too big, split up copy */
 static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
@@ -127,39 +134,23 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct stat st;
     if (lstat(work->name, &st) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not lstat file \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
-        rc = 1;
-        goto cleanup;
+        print_error_and_goto("Could not lstat file", work->name, cleanup);
     }
 
     const int src_fd = open(work->name, O_RDONLY);
     if (src_fd < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open file \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
-        rc = 1;
-        goto cleanup;
+        print_error_and_goto("Could not open file", work->name, cleanup);
     }
 
     str_t dst = create_dst_name(in, work);
 
     const int dst_fd = open(dst.data, O_CREAT | O_WRONLY, st.st_mode);
     if (dst_fd < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open file \"%s\": %s (%d)\n",
-                dst.data, strerror(err), err);
-        rc = 1;
-        goto free_name;
+        print_error_and_goto("Could not opent file", dst.data, free_name);
     }
 
     if (copyfd(src_fd, 0, dst_fd, 0, st.st_size) != st.st_size) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not copy file \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
-        rc = 1;
-        goto free_name;
+        print_error_and_goto("Could not copy file", work->name, free_name);
     }
 
     rc = set_xattrs(dst.data, &ed->xattrs);
@@ -182,15 +173,6 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 static int cpr_link(struct work *work, struct entry_data *ed, struct input *in) {
     int rc = 0;
 
-    struct stat st;
-    if (lstat(work->name, &st) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not lstat link \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
-        rc = 1;
-        goto cleanup;
-    }
-
     /* need to give users ability to force overwriting of links */
 
     str_t dst = create_dst_name(in, work);
@@ -198,20 +180,13 @@ static int cpr_link(struct work *work, struct entry_data *ed, struct input *in) 
     /* see man 2 readlink */
     const ssize_t len = readlink(work->name, ed->linkname, sizeof(ed->linkname));
     if ((len < 0) || (len == sizeof(ed->linkname))) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not readlink \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
-        rc = 1;
-        goto cleanup;
+        print_error_and_goto("Could not readlink", work->name, cleanup);
     }
 
     ed->linkname[len] = '\0';
 
     if (symlink(ed->linkname, dst.data) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not create link \"%s\": %s (%d)\n",
-                dst.data, strerror(err), err);
-        rc = 1;
+        print_error_and_goto("Could not create link", dst.data, cleanup);
     }
 
   cleanup:
@@ -261,41 +236,25 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     DIR *dir = opendir(work->name);
     if (!dir) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
-        rc = 1;
-        goto cleanup;
+        print_error_and_goto("Could not open_directory", work->name, cleanup);
     }
 
     struct stat st;
     if (lstat(work->name, &st) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not lstat directory \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
-        rc = 1;
-        goto cleanup;
+        print_error_and_goto("Could not lstat directory", work->name, cleanup);
     }
 
     str_t dst = create_dst_name(in, work);
 
     /* ensure parent directory exists before processing children */
     if (mkdir(dst.data, st.st_mode & 0777) != 0) {
-        const int err = errno;
-        if (err != EEXIST) {
-            fprintf(stderr, "Error: Could not create directory \"%s\": %s (%d)\n",
-                    dst.data, strerror(err), err);
-            rc = 1;
-            goto cleanup;
+        if (errno != EEXIST) {
+            print_error_and_goto("Could not create directory", dst.data, cleanup);
         }
     }
 
     if (chown(dst.data, st.st_uid, st.st_gid) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not chown directory \"%s\": %s (%d)\n",
-                dst.data, strerror(err), err);
-        rc = 1;
-        goto cleanup;
+        print_error_and_goto("Could not chown directory", dst.data, cleanup);
     }
 
     struct QPTPool_vals qptp_vals = {

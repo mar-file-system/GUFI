@@ -110,12 +110,15 @@ prefix/1KB
 
 $ rm -rf "copy"
 
-$ parallel_cpr "prefix" "prefix"
+$ parallel_cpr "prefix"   "prefix"
 Not copying into itself: "prefix" -> "prefix"
 
-$ parallel_cpr "prefix" "prefix/directory"
+$ parallel_cpr "prefix"   "prefix/directory"
 Not copying into itself: "prefix" -> "prefix/directory"
 
-$ parallel_cpr /dev/null "copy"
+$ parallel_cpr "badtrace" "copy"
+Error: Cannot lstat "badtrace": No such file or directory (2)
+
+$ parallel_cpr /dev/null       "copy"
 Not copying "/dev/null"
 

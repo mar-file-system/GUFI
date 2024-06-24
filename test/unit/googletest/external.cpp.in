@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include <cstddef>
+#include <cstdlib>
 
 #include <gtest/gtest.h>
 
@@ -73,6 +74,50 @@ static size_t bad_filename(char **dst, const size_t dst_size,
                            const char *, const size_t,
                            void *) {
     return SNPRINTF(*dst, dst_size, "@CMAKE_BINARY_DIR@");
+}
+
+TEST(external, read_file) {
+    const char DEVNULL[] = "/dev/null";
+    const std::size_t DEVNULL_LEN = strlen(DEVNULL);
+
+    struct input in;
+    in.check_extdb_valid = true;
+
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    char filename[] = "XXXXXX";
+    const int fd = mkstemp(filename);
+    ASSERT_GE(fd, 0);
+    EXPECT_EQ(strncpy(work.name, filename, 6), work.name);
+    EXPECT_EQ(write(fd, DEVNULL, DEVNULL_LEN), (ssize_t) DEVNULL_LEN);
+    EXPECT_EQ(write(fd, "\n", (std::size_t) 1), (ssize_t) 1);
+
+    char extdb_filename[] = "XXXXXX";
+    const int extdb_fd = mkstemp(extdb_filename);
+    ASSERT_GE(extdb_fd, 0);
+    EXPECT_EQ(close(extdb_fd), 0);
+    EXPECT_EQ(remove(extdb_filename), 0);
+    EXPECT_EQ(write(fd, extdb_filename, (std::size_t) 6), (ssize_t) 6);
+    EXPECT_EQ(write(fd, "\n", (std::size_t) 1), (ssize_t) 1);
+
+    EXPECT_EQ(close(fd), 0);
+
+    EXPECT_EQ(external_read_file(&in, &work,
+                                 [](struct input *, void *,
+                                    const long long int,
+                                    const char *) -> int { return 0; },
+                                 nullptr),
+              (std::size_t) 1);
+
+    EXPECT_EQ(remove(filename), 0);
+
+    EXPECT_EQ(external_read_file(&in, &work,
+                                 [](struct input *, void *,
+                                    const long long int,
+                                    const char *) -> int { return 0; },
+                                 nullptr),
+              (std::size_t) 0);
 }
 
 TEST(external, concatenate) {
@@ -144,8 +189,8 @@ TEST(external, concatenate) {
 
     external_concatenate_cleanup(db, drop_view,
                                  &type,
-                                 NULL,
-                                 NULL, NULL
+                                 nullptr,
+                                 nullptr, nullptr
                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                  , &query_count
                                  #endif
@@ -176,8 +221,8 @@ TEST(external, concatenate) {
 
     external_concatenate_cleanup(db, drop_view,
                                  &type,
-                                 NULL,
-                                 NULL, NULL
+                                 nullptr,
+                                 nullptr, nullptr
                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                  , &query_count
                                  #endif
@@ -201,6 +246,28 @@ TEST(external, concatenate) {
 
     external_concatenate_cleanup(db, drop_view,
                                  &type,
+                                 nullptr,
+                                 nullptr, nullptr
+                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                 , &query_count
+                                 #endif
+        );
+
+    sqlite3_close(db);
+
+    // drop view but bad db
+    external_concatenate_cleanup(nullptr, drop_view,
+                                 &type,
+                                 nullptr,
+                                 nullptr, nullptr
+                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                 , &query_count
+                                 #endif
+        );
+
+    // no drop view, drop type but bad db
+    external_concatenate_cleanup(nullptr, drop_view,
+                                 &type,
                                  NULL,
                                  NULL, NULL
                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -208,5 +275,14 @@ TEST(external, concatenate) {
                                  #endif
         );
 
-    sqlite3_close(db);
+
+    // no drop view, no type
+    external_concatenate_cleanup(db, nullptr,
+                                 nullptr,
+                                 nullptr,
+                                 nullptr, nullptr
+                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                 , &query_count
+                                 #endif
+        );
 }
