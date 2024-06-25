@@ -98,90 +98,103 @@ trap cleanup_exit EXIT
 
 cleanup
 
-(
 setup() {
-run_no_sort "${GENERATETREE} \"${SRCDIR}\""
+    cleanup_exit
 
-echo "# create in-source-tree user db files and fill in tables"
-echo
+    run_no_sort "${GENERATETREE} \"${SRCDIR}\""
 
-# ${SRCDIR} has both faction1 and faction2 files
-(
-    echo "${FACTION1_DB}"
-    echo "${FACTION2_DB}"
-) > "${SRCDIR}/${EXTERNAL_GUFI}"
-# ${SRCDIR}/directory has matches for the directory and a file
-(
-    echo "${FACTION1_DB}"
-) > "${SRCDIR}/directory/${EXTERNAL_GUFI}"
-# ${SRCDIR}/directory/subdirectory has matches for the directory and a file
-(
-    echo "${FACTION2_DB}"
-) > "${SRCDIR}/directory/subdirectory/${EXTERNAL_GUFI}"
-# ${SRCDIR}/leaf_directory has a faction1 db, but no matches (maybe a file was deleted from the index)
-(
-    echo "${FACTION1_DB}"
-) > "${SRCDIR}/leaf_directory/${EXTERNAL_GUFI}"
+    echo "# create empty template for providing default data"
+    run_no_sort "${SQLITE3} \"${FACTION1_TEMPLATE_DB}\" \"${FACTION1_CREATE_TABLE}\""
 
-echo "#########################################"
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('${BASENAME}', 'd', 'faction1 root directory');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('old_file', 'f', 'faction1 old file data');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('1MB', 'f', 'faction1 1MB file');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('repeat_name', 'f', 'faction1 repeat_name');\""
-echo "#########################################"
-run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('directory', 'd', 'faction1 directory');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('executable', 'f', 'faction1 executable file');\""
-echo "#########################################"
-run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('no match', 'f', 'this should not show up in the index');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('leaf_file1', 'f', 'faction1 leaf file 1');\""
-echo "#########################################"
-echo
-echo "#########################################"
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"${FACTION2_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('${BASENAME}', 'd', 'faction2 root directory');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('1KB', 'f', 'faction2 1KB file');\""
-echo "#########################################"
-run_no_sort "${SQLITE3} \"${SRCDIR}/directory/subdirectory/${FACTION2_DB}\" \"${FACTION2_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/directory/subdirectory/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('subdirectory', 'd', 'faction2 subdirectory');\""
-echo "#########################################"
-echo
+    echo "# create empty template for providing default data"
+    run_no_sort "${SQLITE3} \"${FACTION2_TEMPLATE_DB}\" \"${FACTION2_CREATE_TABLE}\""
 
-run_sort "find \"${SRCDIR}\""
+    echo "# create in-source-tree user db files and fill in tables"
+    echo
 
-run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
+    # ${SRCDIR} has both faction1 and faction2 files
+    (
+        echo "${FACTION1_DB}"
+        echo "${FACTION2_DB}"
+    ) > "${SRCDIR}/${EXTERNAL_GUFI}"
+    # ${SRCDIR}/directory has matches for the directory and a file
+    (
+        echo "${FACTION1_DB}"
+    ) > "${SRCDIR}/directory/${EXTERNAL_GUFI}"
+    # ${SRCDIR}/directory/subdirectory has matches for the directory and a file
+    (
+        echo "${FACTION2_DB}"
+    ) > "${SRCDIR}/directory/subdirectory/${EXTERNAL_GUFI}"
+    # ${SRCDIR}/leaf_directory has a faction1 db, but no matches (maybe a file was deleted from the index)
+    (
+        echo "${FACTION1_DB}"
+    ) > "${SRCDIR}/leaf_directory/${EXTERNAL_GUFI}"
 
-# fix timestamps
-"${SQLITE3}" "${INDEXROOT}/db.db"                        "UPDATE summary SET mtime = '17';"
-"${SQLITE3}" "${INDEXROOT}/directory/db.db"              "UPDATE summary SET mtime = '7';"
-"${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE summary SET mtime = '6';"
-"${SQLITE3}" "${INDEXROOT}/leaf_directory/db.db"         "UPDATE summary SET mtime = '13';"
+    echo "#########################################"
+    run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('${BASENAME}', 'd', 'faction1 root directory');\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('old_file', 'f', 'faction1 old file data');\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('1MB', 'f', 'faction1 1MB file');\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('repeat_name', 'f', 'faction1 repeat_name');\""
+    echo "#########################################"
+    run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('directory', 'd', 'faction1 directory');\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('executable', 'f', 'faction1 executable file');\""
+    echo "#########################################"
+    run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('no match', 'f', 'this should not show up in the index');\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('leaf_file1', 'f', 'faction1 leaf file 1');\""
+    echo "#########################################"
+    echo
+    echo "#########################################"
+    run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"${FACTION2_CREATE_TABLE}\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('${BASENAME}', 'd', 'faction2 root directory');\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('1KB', 'f', 'faction2 1KB file');\""
+    echo "#########################################"
+    run_no_sort "${SQLITE3} \"${SRCDIR}/directory/subdirectory/${FACTION2_DB}\" \"${FACTION2_CREATE_TABLE}\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/directory/subdirectory/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('subdirectory', 'd', 'faction2 subdirectory');\""
+    echo "#########################################"
+    echo
 
-clean_index "${INDEXROOT}" 0
+    run_sort "find \"${SRCDIR}\""
+}
 
-# fix pinode in external_dbs
-run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                        \"UPDATE external_dbs_pwd SET pinode = '17'\""
-run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"              \"UPDATE external_dbs_pwd SET pinode = '7'\""
-run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"UPDATE external_dbs_pwd SET pinode = '6'\""
-run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"         \"UPDATE external_dbs_pwd SET pinode = '13'\""
+direct_index() {
+    # generate index directly from source tree
+    "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}"
+}
 
-# output from these point to the source tree, not the index
-# (output was mangled with test text cleanup)
-SELECT_EXTERNAL_DBS="SELECT pinode, filename FROM external_dbs;"
-run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                        \"${SELECT_EXTERNAL_DBS}\""
-run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"              \"${SELECT_EXTERNAL_DBS}\""
-run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"${SELECT_EXTERNAL_DBS}\""
-run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"         \"${SELECT_EXTERNAL_DBS}\""
+indirect_index() {
+    # test with index generate with trace files
+    "${GUFI_DIR2TRACE}"   -d "${DELIM}" -x "${SRCDIR}"  "${TRACE}"
+    "${GUFI_TRACE2INDEX}" -d "${DELIM}"    "${TRACE}.0" "${SEARCH}"
+}
 
-echo "# insert an external db that should not show up in queries"
-run_no_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\" \"INSERT INTO external_dbs_pwd (type, filename) VALUES ('user_db', 'this should not show up when querying');\""
+fix_index() {
+    # fix timestamps
+    "${SQLITE3}" "${INDEXROOT}/db.db"                        "UPDATE summary SET mtime = '17';"
+    "${SQLITE3}" "${INDEXROOT}/directory/db.db"              "UPDATE summary SET mtime = '7';"
+    "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE summary SET mtime = '6';"
+    "${SQLITE3}" "${INDEXROOT}/leaf_directory/db.db"         "UPDATE summary SET mtime = '13';"
 
-echo "# create empty template for providing default data"
-run_no_sort "${SQLITE3} \"${FACTION1_TEMPLATE_DB}\" \"${FACTION1_CREATE_TABLE}\""
-echo "# create empty template for providing default data"
-run_no_sort "${SQLITE3} \"${FACTION2_TEMPLATE_DB}\" \"${FACTION2_CREATE_TABLE}\""
+    clean_index "${INDEXROOT}" 0
+
+    # fix pinode in external_dbs
+    run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                        \"UPDATE external_dbs_pwd SET pinode = '17'\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"              \"UPDATE external_dbs_pwd SET pinode = '7'\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"UPDATE external_dbs_pwd SET pinode = '6'\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"         \"UPDATE external_dbs_pwd SET pinode = '13'\""
+
+    # output from these point to the source tree, not the index
+    # (output was mangled with test text cleanup)
+    SELECT_EXTERNAL_DBS="SELECT pinode, filename FROM external_dbs;"
+    run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                        \"${SELECT_EXTERNAL_DBS}\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"              \"${SELECT_EXTERNAL_DBS}\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"${SELECT_EXTERNAL_DBS}\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"         \"${SELECT_EXTERNAL_DBS}\""
+
+    echo "# insert an external db that should not show up in queries"
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\" \"INSERT INTO external_dbs_pwd (type, filename) VALUES ('user_db', 'this should not show up when querying');\""
 }
 
 do_tests() {
@@ -248,16 +261,33 @@ do_tests() {
              "\"${INDEXROOT}\""
 }
 
-setup
-do_tests
+rollup() {
+    run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" | sed '/Started/d; /Took /d;'
 
-run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" | sed '/Started/d; /Took /d;'
+    run_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"SELECT * FROM external_dbs;\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"SELECT * FROM external_dbs_pwd;\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"SELECT * FROM external_dbs_rollup;\""
+}
 
-run_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"SELECT * FROM external_dbs;\""
-run_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"SELECT * FROM external_dbs_pwd;\""
-run_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"SELECT * FROM external_dbs_rollup;\""
+(
+    setup
+    direct_index 2>&1 >/dev/null; echo "# Create Index"
+    fix_index
+    do_tests
+    rollup
+    do_tests
+) |& tee "${OUTPUT}"
 
-do_tests
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/external_databases.expected "${OUTPUT}"
+rm "${OUTPUT}"
+
+(
+    setup
+    indirect_index 2>&1 >/dev/null; echo "# Create Index"
+    fix_index
+    do_tests
+    rollup
+    do_tests
 ) |& tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/external_databases.expected "${OUTPUT}"

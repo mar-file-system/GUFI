@@ -1,5 +1,11 @@
 $ generatetree "prefix"
 
+# create empty template for providing default data
+$ sqlite3 "template.faction1" "CREATE TABLE user_table(name TEXT, type TEXT, data TEXT);"
+
+# create empty template for providing default data
+$ sqlite3 "template.faction2" "CREATE TABLE user_table(name TEXT, type TEXT, data TEXT);"
+
 # create in-source-tree user db files and fill in tables
 
 #########################################
@@ -74,11 +80,7 @@ prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
-$ gufi_dir2index -x "prefix" "prefix"
-Creating GUFI Index prefix with 1 threads
-Total Dirs:          6
-Total Files:         23
-
+# Create Index
 $ sqlite3 "prefix/db.db"                        "UPDATE external_dbs_pwd SET pinode = '17'"
 
 $ sqlite3 "prefix/directory/db.db"              "UPDATE external_dbs_pwd SET pinode = '7'"
@@ -102,12 +104,6 @@ $ sqlite3 "prefix/leaf_directory/db.db"         "SELECT pinode, filename FROM ex
 
 # insert an external db that should not show up in queries
 $ sqlite3 "prefix/leaf_directory/db.db" "INSERT INTO external_dbs_pwd (type, filename) VALUES ('user_db', 'this should not show up when querying');"
-
-# create empty template for providing default data
-$ sqlite3 "template.faction1" "CREATE TABLE user_table(name TEXT, type TEXT, data TEXT);"
-
-# create empty template for providing default data
-$ sqlite3 "template.faction2" "CREATE TABLE user_table(name TEXT, type TEXT, data TEXT);"
 
 # get faction1 user data
 # SELECT rpath(), type, faction1 user data

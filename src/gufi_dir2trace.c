@@ -110,7 +110,16 @@ static int process_external(struct input *in, void *args,
                             const long long int pinode,
                             const char *filename) {
     (void) pinode;
-    externaltofile((FILE *) args, in->delim, filename);
+
+    char fullpath[MAXPATH];
+    if (!realpath(filename, fullpath)) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not resolve path of %s: %s (%d)",
+                filename, strerror(err), err);
+        return 1;
+    }
+
+    externaltofile((FILE *) args, in->delim, fullpath);
     return 0;
 }
 

@@ -301,7 +301,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             if (row_ed.type == 'e') {
                 /* insert right here (instead of bulk inserting) since this is likely to be very rare */
                 timestamp_set_start(external_db);
-                external_insert(db, dir.name, dir.pinode, row.name + row.name_len - row.basename_len);
+                external_insert(db, EXTERNAL_TYPE_USER_DB_NAME, ed.statuso.st_ino, row.name);
                 timestamp_set_end(external_db);
             }
             else {

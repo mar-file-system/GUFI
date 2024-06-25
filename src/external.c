@@ -83,7 +83,7 @@ const char EXTERNAL_DBS_PWD_INSERT[] =
 
 const char EXTERNAL_DBS_ROLLUP_CREATE[] =
     "DROP TABLE IF EXISTS " EXTERNAL_DBS_ROLLUP ";"
-    "CREATE TABLE " EXTERNAL_DBS_ROLLUP "(type TEXT, pinode TEXT, filename TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, filename));";
+    "CREATE TABLE " EXTERNAL_DBS_ROLLUP "(type TEXT, pinode TEXT, filename TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, pinode, filename));";
 
 const char EXTERNAL_DBS_ROLLUP_INSERT[] =
     "INSERT INTO " EXTERNAL_DBS_ROLLUP " VALUES (@type, pinode, @filename, @mode, @uid, @gid);";
@@ -152,11 +152,11 @@ static size_t external_create_query(char *sql,         const size_t sql_size,
 
 int external_insert(sqlite3 *db, const char *type, const long long int pinode, const char *filename) {
     char sql[MAXSQL];
-    SNPRINTF(sql, sizeof(sql),
-             "INSERT INTO " EXTERNAL_DBS_PWD " (type, pinode, filename) "
-             "VALUES "
-             "('%s', '%lld', '%s');",
-             type, pinode, filename);
+    sqlite3_snprintf(sizeof(sql), sql,
+                     "INSERT INTO " EXTERNAL_DBS_PWD " (type, pinode, filename) "
+                     "VALUES "
+                     "(%Q, '%lld', %Q);",
+                     type, pinode, filename);
 
     char *err = NULL;
     if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
@@ -286,10 +286,10 @@ int external_concatenate(sqlite3 *db,
         /* find external databases of given type */
         char get_mappings[MAXSQL];
         const size_t get_mappings_len = external_create_query(get_mappings, sizeof(get_mappings),
-                                                                "filename", 8,
-                                                                EXTERNAL_DBS, EXTERNAL_DBS_LEN,
-                                                                type,
-                                                                extra);
+                                                              "filename", 8,
+                                                              EXTERNAL_DBS, EXTERNAL_DBS_LEN,
+                                                              type,
+                                                              extra);
 
         /* step through each external file recorded in the main database */
         sqlite3_stmt *res = NULL;
