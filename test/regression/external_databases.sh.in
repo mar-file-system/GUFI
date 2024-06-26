@@ -161,13 +161,13 @@ setup() {
 
 direct_index() {
     # generate index directly from source tree
-    "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}"
+    "${GUFI_DIR2INDEX}" -q -x "${SRCDIR}" "${SEARCH}"
 }
 
 indirect_index() {
     # test with index generate with trace files
-    "${GUFI_DIR2TRACE}"   -d "${DELIM}" -x "${SRCDIR}"  "${TRACE}"
-    "${GUFI_TRACE2INDEX}" -d "${DELIM}"    "${TRACE}.0" "${SEARCH}"
+    "${GUFI_DIR2TRACE}"   -d "${DELIM}" -q -x "${SRCDIR}"  "${TRACE}"
+    "${GUFI_TRACE2INDEX}" -d "${DELIM}"       "${TRACE}.0" "${SEARCH}"
 }
 
 fix_index() {
