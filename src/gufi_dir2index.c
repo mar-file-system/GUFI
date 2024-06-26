@@ -117,6 +117,13 @@ struct NonDirArgs {
     sll_t xattr_db_list;
 };
 
+static int process_external(struct input *in, void *args,
+                            const long long int pinode,
+                            const char *filename) {
+    (void) in;
+    return external_insert((sqlite3 *) args, EXTERNAL_TYPE_USER_DB_NAME, pinode, filename);
+}
+
 static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NonDirArgs *nda = (struct NonDirArgs *) args;
     struct input *in = nda->in;
@@ -150,14 +157,12 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     /* add entry + xattr names into bulk insert */
     insertdbgo(entry, ed, nda->entries_res);
 
-    return 0;
-}
+    if (strncmp(entry->name + entry->name_len - entry->basename_len,
+                EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
+        external_read_file(in, entry, process_external, nda->db);
+    }
 
-static int process_external(struct input *in, void *args,
-                            const long long int pinode,
-                            const char *filename) {
-    (void) in;
-    return external_insert((sqlite3 *) args, EXTERNAL_TYPE_USER_DB_NAME, pinode, filename);
+    return 0;
 }
 
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
@@ -248,7 +253,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     descend(ctx, id, pa, in, nda.work, nda.ed.statuso.st_ino, dir,
             in->skip, 0, 0,
             processdir, process_nondir, &nda,
-            process_external, nda.db,
             &ctrs);
     stopdb(nda.db);
 

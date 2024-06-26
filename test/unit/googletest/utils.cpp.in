@@ -657,7 +657,6 @@ TEST(descend, builddir) {
     EXPECT_EQ(descend(nullptr, 0, nullptr, nullptr, nullptr, 0, nullptr,
                       nullptr, 0, 0,
                       nullptr, nullptr, nullptr,
-                      nullptr, nullptr,
                       nullptr), 1);
 
     // work->level == in->max_level - not descending
@@ -665,7 +664,6 @@ TEST(descend, builddir) {
         EXPECT_EQ(descend(nullptr, 0, nullptr, &in, &work, 0, dir,
                           nullptr, 0, 0,
                           nullptr,
-                          nullptr, nullptr,
                           nullptr, nullptr,
                           &ctrs), 0);
 
@@ -686,7 +684,6 @@ TEST(descend, builddir) {
                               return 0;
                           },
                           nullptr, nullptr,
-                          nullptr, nullptr,
                           &ctrs), 0);
 
         EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
@@ -706,7 +703,6 @@ TEST(descend, builddir) {
                               return 0;
                           },
                           nullptr, nullptr,
-                          nullptr, nullptr,
                           &ctrs), 0);
 
         EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
@@ -724,7 +720,6 @@ TEST(descend, builddir) {
                               free(data);
                               return 0;
                           },
-                          nullptr, nullptr,
                           nullptr, nullptr,
                           &ctrs), 0);
 
@@ -747,7 +742,6 @@ TEST(descend, builddir) {
                               }
                               return 0;
                           },
-                          nullptr, nullptr,
                           nullptr, nullptr,
                           &ctrs), 0);
 

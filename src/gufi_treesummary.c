@@ -194,7 +194,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                         &pa->in, passmywork, ed.statuso.st_ino,
                         dir, pa->in.skip, 0, 0,
                         processdir, NULL, NULL,
-                        NULL, NULL,
                         NULL);
 
                 /* add summary data from this directory */

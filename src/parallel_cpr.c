@@ -270,7 +270,6 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             0, /* don't stat */
             cpr_dir,
             enqueue_nondir, &qptp_vals,
-            NULL, NULL,
             NULL);
 
     if (in->process_xattrs) {

@@ -66,10 +66,10 @@ OF SUCH DAMAGE.
 #define EXTERNAL_H
 
 #include <stdlib.h>
-#include <sqlite3.h> /* instead of dbutils.h to simplify dependency tree */
 
 #include "SinglyLinkedList.h"
 #include "bf.h"
+#include "dbutils.h"
 #include "trie.h"
 
 #ifdef __cplusplus
