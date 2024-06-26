@@ -75,21 +75,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        img: [ "centos:7", "centos:8", "rockylinux:8", "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
+        img: [ "centos:8", "rockylinux:8", "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
       fail-fast: true
     container:
       image: ${{ matrix.img }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-${{ matrix.img }}
-
-    - name: CentOS 7 Prerequisites
-      if:   matrix.img == 'centos:7'
-      run:  contrib/CI/centos7.sh
 
     - name: CentOS 8 Prerequisites
       if:   matrix.img == 'centos:8'
@@ -120,9 +116,9 @@ jobs:
         os: [ "macos-12", "macos-14" ]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ matrix.os }}
@@ -146,9 +142,9 @@ jobs:
     steps:
     - run: git config --global core.autocrlf input
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: C:\cygwin
         key:  ${{ runner.os }}-cygwin

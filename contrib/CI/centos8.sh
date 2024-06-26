@@ -71,7 +71,7 @@ sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /
 yum -y install epel-release
 
 # install libraries
-yum -y install fuse-devel libattr pcre2-devel zlib-devel
+yum -y install fuse-devel libattr libidn pcre2-devel zlib-devel
 
 # install required packages
 yum -y install attr autoconf clang cmake3 diffutils fuse git make patch pkgconfig python3 sudo

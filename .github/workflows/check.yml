@@ -74,7 +74,7 @@ jobs:
   ShellCheck:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install ShellCheck
       run:  sudo apt -y install shellcheck
@@ -85,9 +85,9 @@ jobs:
   Pylint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-pylint
@@ -111,17 +111,17 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     container:
-      image: centos:7
+      image: centos:8
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-cmake-3.1.0
 
-    - name: CentOS 7 Prerequisites
-      run:  contrib/CI/centos7.sh
+    - name: CentOS 8 Prerequisites
+      run:  contrib/CI/centos8.sh
 
     - name: Install CMake 3.1.0
       run:  contrib/CI/cmake3.1.0.sh
@@ -147,9 +147,9 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-debug-prints
@@ -192,9 +192,9 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-test-directory
@@ -221,9 +221,9 @@ jobs:
         PRINT_PER_THREAD_STATS:    [ "On", "Off" ]
         PRINT_QPTPOOL_QUEUE_SIZE:  [ "On", "Off" ]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-debug-prints
@@ -253,9 +253,9 @@ jobs:
     container:
       image: ubuntu:24.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-memcheck
@@ -281,9 +281,9 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-debug-prints
