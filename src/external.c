@@ -174,13 +174,30 @@ static int check_is_db(const int check_extdb_valid, const char *path) {
     int rc = !check_extdb_valid;
 
     if (check_extdb_valid) {
-        /* open the path to make sure it eventually resolves to a file */
+        struct stat st;
+        if (stat(path, &st) != 0) { /* not lstat */
+            const int err = errno;
+            fprintf(stderr, "Error: Could not stat external database path %s: %s (%d)\n",
+                    path, strerror(err), err);
+            return 0;
+        }
+
+        /* character devices will pass */
+        if (!S_ISREG(st.st_mode)) {
+            fprintf(stderr, "Error: %s is not a file\n",
+                    path);
+            return 0;
+        }
+
         sqlite3 *extdb = opendb(path, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
         if (extdb) {
-            /* make sure this file is a sqlite3 db */
-            /* can probably skip this check */
+            /*
+             * make sure this file is a sqlite3 db
+             *
+             * empty files will pass
+             */
             char *err = NULL;
-            if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
+            if (sqlite3_exec(extdb, "PRAGMA quick_check;", NULL, NULL, &err) == SQLITE_OK) {
                 rc = 1;
             }
             else {
@@ -217,7 +234,10 @@ size_t external_read_file(struct input *in,
         char extdb_path_stack[MAXPATH];
         char *extdb_path = line;
 
-        /* resolve relative paths */
+        /*
+         * even if not checking paths for valid dbs, paths still must
+         * resolve to absolute paths
+         */
         if (line[0] != '/')  {
             char path[MAXPATH];
             SNFORMAT_S(path, sizeof(path), 2,

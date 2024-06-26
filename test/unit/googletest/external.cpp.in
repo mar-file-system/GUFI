@@ -77,32 +77,102 @@ static size_t bad_filename(char **dst, const size_t dst_size,
 }
 
 TEST(external, read_file) {
-    const char DEVNULL[] = "/dev/null";
-    const std::size_t DEVNULL_LEN = strlen(DEVNULL);
-
-    struct input in;
-    in.check_extdb_valid = true;
-
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
+    // user external db list
     char filename[] = "XXXXXX";
     const int fd = mkstemp(filename);
     ASSERT_GE(fd, 0);
-    EXPECT_EQ(strncpy(work.name, filename, 6), work.name);
-    EXPECT_EQ(write(fd, DEVNULL, DEVNULL_LEN), (ssize_t) DEVNULL_LEN);
-    EXPECT_EQ(write(fd, "\n", (std::size_t) 1), (ssize_t) 1);
 
-    char extdb_filename[] = "XXXXXX";
-    const int extdb_fd = mkstemp(extdb_filename);
-    ASSERT_GE(extdb_fd, 0);
-    EXPECT_EQ(close(extdb_fd), 0);
-    EXPECT_EQ(remove(extdb_filename), 0);
-    EXPECT_EQ(write(fd, extdb_filename, (std::size_t) 6), (ssize_t) 6);
-    EXPECT_EQ(write(fd, "\n", (std::size_t) 1), (ssize_t) 1);
+    // create bad relative path (bad path)
+    {
+        char bad_rel_path[] = "XXXXXX";   // full path fails to resolve in external_read_file
+        const int bad_rel_path_fd = mkstemp(bad_rel_path);
+        ASSERT_GE(bad_rel_path_fd, 0);
+        EXPECT_EQ(close(bad_rel_path_fd), 0);
+        EXPECT_EQ(remove(bad_rel_path), 0);
+
+        // add to list
+        EXPECT_EQ(write(fd, bad_rel_path, (std::size_t) 6), (ssize_t) 6);
+        EXPECT_EQ(write(fd, "\n",         (std::size_t) 1), (ssize_t) 1);
+    }
+
+    // create bad absolute path (bad path)
+    {
+        char bad_rel_path[] = "XXXXXX";
+        const int bad_rel_path_fd = mkstemp(bad_rel_path);
+        ASSERT_GE(bad_rel_path_fd, 0);
+        EXPECT_EQ(close(bad_rel_path_fd), 0);
+
+        char bad_abs_path[MAXPATH];       // get full path to bypass call to realpath(3)
+        EXPECT_EQ(realpath(bad_rel_path, bad_abs_path), bad_abs_path);
+
+        EXPECT_EQ(remove(bad_rel_path), 0);
+
+        const std::size_t len = strlen(bad_abs_path);
+
+        // add to list
+        EXPECT_EQ(write(fd, bad_abs_path, len),     (ssize_t) len);
+        EXPECT_EQ(write(fd, "\n", (std::size_t) 1), (ssize_t) 1);
+    }
+
+    // add /dev/null to list (good path, not a file)
+    {
+        static const char DEVNULL[] = "/dev/null";
+        static const std::size_t DEVNULL_LEN = sizeof(DEVNULL) - 1;
+
+        // add to list
+        EXPECT_EQ(write(fd, DEVNULL, DEVNULL_LEN),  (ssize_t) DEVNULL_LEN);
+        EXPECT_EQ(write(fd, "\n", (std::size_t) 1), (ssize_t) 1);
+    }
+
+    // create file with contents (good path, not a db)
+    char not_db_filename[] = "XXXXXX";
+    {
+        const int not_db_fd = mkstemp(not_db_filename);
+        ASSERT_GE(not_db_fd, 0);
+        EXPECT_EQ(write(not_db_fd, not_db_filename, (std::size_t) 6), (ssize_t) 6);
+        EXPECT_EQ(close(not_db_fd), 0);
+
+        // add to list
+        EXPECT_EQ(write(fd, not_db_filename, (std::size_t) 6), (ssize_t) 6);
+        EXPECT_EQ(write(fd, "\n",            (std::size_t) 1), (ssize_t) 1);
+    }
+
+    // create db file (good path, is a db)
+    char dbname[] = "XXXXXX";
+    {
+        const int db_fd = mkstemp(dbname);
+        ASSERT_GE(db_fd, 0);
+        EXPECT_EQ(close(db_fd), 0);
+        EXPECT_EQ(remove(dbname), 0);
+
+        sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 0, nullptr, nullptr);
+        ASSERT_NE(db, nullptr);
+        closedb(db);
+
+        // add to list
+        EXPECT_EQ(write(fd, dbname, (std::size_t) 6), (ssize_t) 6);
+        EXPECT_EQ(write(fd, "\n",   (std::size_t) 1), (ssize_t) 1);
+    }
 
     EXPECT_EQ(close(fd), 0);
 
+    struct input in;
+
+    struct work work;
+    memset(&work, 0, sizeof(work));
+    EXPECT_EQ(strncpy(work.name, filename, 6), work.name);
+
+    // skip checking path is valid db
+    in.check_extdb_valid = false;
+    EXPECT_EQ(external_read_file(&in, &work,
+                                 [](struct input *, void *,
+                                    const long long int,
+                                    const char *) -> int { return 0; },
+                                 nullptr),
+              (std::size_t) 4); // bad relative path does not pass
+
+    // check that path is valid db
+    in.check_extdb_valid = true;
     EXPECT_EQ(external_read_file(&in, &work,
                                  [](struct input *, void *,
                                     const long long int,
@@ -110,8 +180,14 @@ TEST(external, read_file) {
                                  nullptr),
               (std::size_t) 1);
 
+    // no need for good files any more
+    EXPECT_EQ(remove(not_db_filename), 0);
+    EXPECT_EQ(remove(dbname), 0);
+
+    // remove file list
     EXPECT_EQ(remove(filename), 0);
 
+    // error early
     EXPECT_EQ(external_read_file(&in, &work,
                                  [](struct input *, void *,
                                     const long long int,
