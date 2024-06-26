@@ -178,7 +178,10 @@ endif()
 if (CMAKE_VERSION VERSION_GREATER "3.12.0")
   find_package(Python REQUIRED COMPONENTS Interpreter)
 else()
-  find_program(Python python REQUIRED)
+  find_program(Python NAMES python python3 python2) # REQUIRED option was not added until 3.18
+  if (NOT Python)
+    message(FATAL_ERROR "Python not found")
+  endif()
   execute_process(COMMAND ${Python} --version
     OUTPUT_VARIABLE Python_VERSION_STDOUT
     ERROR_VARIABLE Python_VERSION_STDERR
