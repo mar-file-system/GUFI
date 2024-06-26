@@ -262,7 +262,10 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (recs > 0) {
             size_t extdb_count = 0; /* shared between xattrs and external databases */
 
-            /* always set up xattrs view */
+            /*
+             * if xattr processing is enabled, then the xattrs view was
+             * not created in PoolArgs_init, so have to create it here
+             */
             if (in->process_xattrs) {
                 setup_xattrs_views(in, db,
                                    &gqw->work,

@@ -301,7 +301,7 @@ static int setup(const refstr_t *dst) {
     SNFORMAT_S(path, dst->len + 1, 1,
                dst->data, dst->len);
 
-    int rc = mkpath(path, mode ^ 0777, uid, gid);
+    int rc = mkpath(path, ~mode & 0777, uid, gid);
     const int err = errno;
 
     free(path);
@@ -359,6 +359,7 @@ int main(int argc, char * argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
+        free((char *) real_dst);
         input_fini(&in);
         return EXIT_FAILURE;
     }
