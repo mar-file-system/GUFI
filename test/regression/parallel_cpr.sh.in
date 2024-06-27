@@ -125,6 +125,12 @@ run_no_sort "getfattr -d -m \".*\" -- \"${CPR_ROOT}/leaf_file1\""
 run_no_sort "getfattr -d -m \".*\" -- \"${CPR_ROOT}/leaf_file2\""
 run_no_sort "readlink \"${CPR_ROOT}/file_symlink\""
 
+run_no_sort "rm -rf \"${CPR_ROOT}\""
+
+# copy to existing directory
+mkdir "${CPR_ROOT}"
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${CPR_ROOT}\""
+
 # errors
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
@@ -139,6 +145,9 @@ run_no_sort "${PARALLEL_CPR} \"${BADTRACE}\" \"${CPR_ROOT}\""
 
 # non-directory/link/file source
 run_no_sort "${PARALLEL_CPR} /dev/null       \"${CPR_ROOT}\""
+
+# directory to file
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}/old_file\""
 set -e
 ) | tee "${OUTPUT}"
 

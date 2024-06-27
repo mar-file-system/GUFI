@@ -285,12 +285,12 @@ int dupdir(const char *path, struct stat *stat) {
         }
         else if (err == EEXIST) {
             struct stat st;
-            if ((lstat(copy, &st) != 0) || !S_ISDIR(st.st_mode))  {
-                return 1;
+            if ((lstat(copy, &st) != 0) || !S_ISDIR(st.st_mode)) {
+                return err;
             }
         }
-        else if (err != EEXIST) {
-            return 1;
+        else {
+            return err;
         }
     }
     chmod(copy, stat->st_mode);

@@ -244,6 +244,10 @@ Error: Missing -I
 $ gufi_query -O outdb                                         -K "create;"              "prefix"
 Error: Missing -I
 
+# Missing -I (external databases)
+$ gufi_query -Q "external" "user" "data" "base"                                   "prefix"
+External databases require template files attached with -I
+
 # Missing -J (aggregate, stdout)
 $ gufi_query            -I "create" -S "insert;" -E "insert;" -K "create;" -G "query;"  "prefix"
 Error: Missing -J

@@ -146,7 +146,7 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     const int dst_fd = open(dst.data, O_CREAT | O_WRONLY, st.st_mode);
     if (dst_fd < 0) {
-        print_error_and_goto("Could not opent file", dst.data, free_name);
+        print_error_and_goto("Could not open file", dst.data, free_name);
     }
 
     if (copyfd(src_fd, 0, dst_fd, 0, st.st_size) != st.st_size) {
@@ -291,31 +291,16 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 }
 
 static int setup(const refstr_t *dst) {
-    const mode_t mode = umask(0);
-    const uid_t uid = geteuid();
-    const uid_t gid = getegid();
+    struct stat st;
+    st.st_mode = umask(0);
+    st.st_uid = geteuid();
+    st.st_gid = getegid();
 
-    umask(mode); /* reset umask */
+    umask(st.st_mode); /* reset umask */
 
-    /* should copy because mkpath modifies the string */
-    char *path = malloc(dst->len + 1);
-    SNFORMAT_S(path, dst->len + 1, 1,
-               dst->data, dst->len);
+    st.st_mode = ~st.st_mode & 0777;
 
-    int rc = mkpath(path, ~mode & 0777, uid, gid);
-    const int err = errno;
-
-    free(path);
-
-    if (rc != 0) {
-        if (err != EEXIST) {
-            return err;
-        }
-
-        rc = 0;
-    }
-
-    return rc;
+    return dupdir(dst->data, &st);
 }
 
 static void sub_help(void) {
@@ -339,7 +324,10 @@ int main(int argc, char * argv[]) {
         INSTALL_STR(&in.nameto, argv[argc - 1]);
     }
 
-    if (setup(&in.nameto) != 0) {
+    int rc = setup(&in.nameto);
+    if (rc != 0) {
+        fprintf(stderr, "Error: Cannot copy to \"%s\": %s (%d)\n",
+                in.nameto.data, strerror(rc), rc);
         input_fini(&in);
         return EXIT_FAILURE;
     }
@@ -364,8 +352,6 @@ int main(int argc, char * argv[]) {
         input_fini(&in);
         return EXIT_FAILURE;
     }
-
-    int rc = 0;
 
     argc--;
     for(int i = idx; i < argc; i++) {

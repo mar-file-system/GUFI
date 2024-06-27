@@ -135,7 +135,7 @@ int validate_inputs(struct input *in) {
     /* -Q requires -I */
     if (sll_get_size(&in->external_attach)) {
         if (!in->sql.init.len) {
-            fprintf(stderr, "External databases require template files attached with -I [%s]\n", in->sql.init.data);
+            fprintf(stderr, "External databases require template files attached with -I\n");
             return -1;
         }
     }

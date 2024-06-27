@@ -514,7 +514,7 @@ TEST(dupdir, fileasdir) {
     child_stat.st_uid = geteuid();
     child_stat.st_gid = getegid();
 
-    EXPECT_EQ(dupdir(child, &child_stat), 1);
+    EXPECT_NE(dupdir(child, &child_stat), 0);
     EXPECT_EQ(remove(parent), 0);
 }
 
@@ -860,6 +860,7 @@ TEST(setup_directory_skip, file) {
     const std::string skip_dirs[] = {
         "skip0",
         "skip1",
+        "skip0", // duplicate
     };
 
     char skip_name[] = "XXXXXX";
@@ -879,7 +880,7 @@ TEST(setup_directory_skip, file) {
 
     trie_t *skip = trie_alloc();
     ASSERT_NE(skip, nullptr);
-    EXPECT_EQ(setup_directory_skip(skip, skip_name), (ssize_t) (sizeof(skip_dirs) / sizeof(skip_dirs[0])));
+    EXPECT_EQ(setup_directory_skip(skip, skip_name), (ssize_t) (sizeof(skip_dirs) / sizeof(skip_dirs[0])) - 1);
     for(std::string const & skip_dir : skip_dirs) {
         EXPECT_EQ(trie_search(skip, skip_dir.c_str(), skip_dir.size(), nullptr), 1);
     }

@@ -95,8 +95,11 @@ TEST(trie, insert_empty) {
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    trie_insert(root, buf, 0, nullptr, nullptr);
+    trie_insert(root, buf, 0, nullptr, [](void *) {});
+    EXPECT_EQ(trie_search(root, buf, 0, nullptr), 1);
 
+    // replace previous value, running user free fucntion
+    trie_insert(root, buf, 0, nullptr, nullptr);
     EXPECT_EQ(trie_search(root, buf, 0, nullptr), 1);
 
     trie_free(root);
@@ -140,13 +143,19 @@ TEST(trie, delete) {
     {
         /* insert long string and sub string */
         trie_insert(root, str, str_len, nullptr, nullptr);
-        trie_insert(root, str, sub_len, nullptr, nullptr);
+        trie_insert(root, str, sub_len, nullptr, [](void *) {});
         EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
         EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 1);
 
         /* shorter string is deleted, but the longer string remains */
         EXPECT_EQ(trie_delete(root, str, sub_len), 0);
         EXPECT_NE(root, nullptr);
+
+        /* insert and remove sub string again without a free user function */
+        trie_insert(root, str, sub_len, nullptr, nullptr);
+        EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 1);
+        EXPECT_EQ(trie_delete(root, str, sub_len), 0);
+
         EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
         EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 0);
     }

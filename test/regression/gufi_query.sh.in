@@ -127,6 +127,9 @@ run_no_sort "${GUFI_QUERY} -o outfile                                       -K \
 echo "# Missing -I (aggregating, outdb)"
 run_no_sort "${GUFI_QUERY} -O outdb                                         -K \"create;\"              \"${INDEXROOT}\""
 
+echo "# Missing -I (external databases)"
+run_no_sort "${GUFI_QUERY} -Q \"external\" \"user\" \"data\" \"base\"                                   \"${INDEXROOT}\""
+
 echo "# Missing -J (aggregate, stdout)"
 run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
 

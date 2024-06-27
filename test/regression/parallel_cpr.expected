@@ -110,6 +110,10 @@ prefix/1KB
 
 $ rm -rf "copy"
 
+$ parallel_cpr "prefix"   "copy"
+
+$ rm -rf "copy"
+
 $ parallel_cpr "prefix"   "prefix"
 Not copying into itself: "prefix" -> "prefix"
 
@@ -121,4 +125,7 @@ Error: Cannot lstat "badtrace": No such file or directory (2)
 
 $ parallel_cpr /dev/null       "copy"
 Not copying "/dev/null"
+
+$ parallel_cpr "prefix"   "prefix/old_file"
+Error: Cannot copy to "prefix/old_file": File exists (17)
 
