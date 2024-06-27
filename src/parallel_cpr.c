@@ -249,12 +249,12 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* ensure parent directory exists before processing children */
     if (mkdir(dst.data, st.st_mode & 0777) != 0) {
         if (errno != EEXIST) {
-            print_error_and_goto("Could not create directory", dst.data, cleanup);
+            print_error_and_goto("Could not create directory", dst.data, free_dst);
         }
     }
 
     if (chown(dst.data, st.st_uid, st.st_gid) != 0) {
-        print_error_and_goto("Could not chown directory", dst.data, cleanup);
+        print_error_and_goto("Could not chown directory", dst.data, free_dst);
     }
 
     struct QPTPool_vals qptp_vals = {
@@ -280,8 +280,10 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         xattrs_cleanup(&xattrs);
     }
 
-  cleanup:
+  free_dst:
     free(dst.data);
+
+  cleanup:
     closedir(dir);
     free(work);
 
