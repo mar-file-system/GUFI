@@ -689,23 +689,19 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     return 0;
 }
 
-static int get_str_callback(void *args, int count, char **data, char **columns) {
+static int get_2_strs(void *args, int count, char **data, char **columns) {
     (void) count;
     (void) columns;
 
-    char **str = (char **) args;
+    char **strs = (char **) args;
 
-    if (data[0]) {
-        const size_t len = strlen(data[0]) + 2; /* + 2 for quotation marks */
-        *str = malloc(len + 1);
-        SNFORMAT_S(*str, len + 1, 3,
+    for(int i = 0; i < 2; i++) {
+        const size_t len = strlen(data[i]) + 2; /* + 2 for quotation marks */
+        strs[i] = malloc(len + 1);
+        SNFORMAT_S(strs[i], len + 1, 3,
                    "'", (size_t) 1,
-                   data[0], len - 2,
+                   data[i], len - 2,
                    "'", (size_t) 1);
-    }
-    else {
-        *str = malloc(5);
-        snprintf(*str, 5, "NULL");
     }
 
     return 0;
@@ -720,22 +716,16 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
 
     char *err = NULL;
 
-    char *inode = NULL;
-    if (sqlite3_exec(sdb, "SELECT inode FROM " SUMMARY " WHERE isroot == 1;",
-                     get_str_callback, &inode, &err) != SQLITE_OK ) {
+    char *ip[2] = {NULL, NULL};
+    if (sqlite3_exec(sdb, "SELECT inode, pinode FROM " SUMMARY " WHERE isroot == 1;",
+                     get_2_strs, ip, &err) != SQLITE_OK) {
         fprintf(stderr, "Could not get inode from %s: %s\n", SUMMARY, err);
         sqlite3_free(err);
         return 1;
     }
 
-    char *pinode = NULL;
-    if (sqlite3_exec(sdb, "SELECT pinode FROM " SUMMARY " WHERE isroot == 1;",
-                     get_str_callback, &pinode, &err) != SQLITE_OK ) {
-        fprintf(stderr, "Could not get inode from %s: %s\n", SUMMARY, err);
-        free(inode);
-        sqlite3_free(err);
-        return 1;
-    }
+    char *inode  = ip[0];
+    char *pinode = ip[1];
 
     char sqlstmt[MAXSQL];
     SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%s, %s, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",

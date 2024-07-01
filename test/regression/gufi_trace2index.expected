@@ -22,11 +22,11 @@ Total Files:         14
 $ gufi_trace2index -d "|" trace.0 trace.1 "prefix"
 Creating GUFI Index prefix with 1 threads
 Dirs:                6 (1 empty)
-Files:               14
-Total:               20
+Files:               15
+Total:               21
 
 Total Dirs:          6
-Total Files:         14
+Total Files:         15
 
 Source Directory:
     prefix
@@ -76,11 +76,11 @@ GUFI Index:
 $ gufi_trace2index -d "|" -n "2" "empty_last_dir.trace" "prefix"
 Creating GUFI Index prefix with 2 threads
 Dirs:                7 (2 empty)
-Files:               14
-Total:               21
+Files:               15
+Total:               22
 
 Total Dirs:          7
-Total Files:         14
+Total Files:         15
 
 # bad trace path
 $ gufi_trace2index -d "|" -n "2" "" "prefix"
