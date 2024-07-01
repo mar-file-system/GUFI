@@ -89,6 +89,9 @@ run_no_sort "${GUFI_DIR2TRACE}"
 # generate the tree
 @CMAKE_CURRENT_BINARY_DIR@/generatetree.sh "${SRCDIR}"
 
+# add an external db
+echo "/external/db" > "${SRCDIR}/external.gufi"
+
 # generate the trace
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
@@ -98,20 +101,20 @@ echo "Expecting ${THREADS} trace files. Found ${found}."
 
 # count lines
 # shellcheck disable=SC2016
-trace_lines=$(cat "${TRACES[@]}" | wc -l | @AWK@ '{print $1}')
+trace_lines=$(cat "${TRACES[@]}" | wc -l | @AWK@ '{print $1 - 1}')
 contents=$(find "${SRCDIR}")
 # shellcheck disable=SC2016
 content_lines=$(echo "${contents}" | wc -l | @AWK@ '{print $1}')
 echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
 # count separators
-columns=$(sed "s/[^${DELIM}]//g" "${TRACES[@]}" | @AWK@ '{ print length }' | sort | uniq)
+columns=$(sed "/^.*${DELIM}e${DELIM}$/d; s/[^${DELIM}]//g;" "${TRACES[@]}" | @AWK@ '{ print length }' | sort | uniq)
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
 src=$(find "${SRCDIR}" | sort)
 # shellcheck disable=SC2016
-lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | sed "s/\\/\\//\\//g" | sort)
+lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | sed "/\\/external\\/db/d; s/\\/\\//\\//g;" | sort)
 
 echo "Source Directory:"
 # shellcheck disable=SC2016
@@ -142,7 +145,7 @@ echo "# skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}\" \"${SRCDIR}\" \"${TRACE}\""
 
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}'"
+run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}' | sed '/\\/external\\/db/d;'"
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""

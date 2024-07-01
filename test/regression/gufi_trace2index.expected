@@ -22,11 +22,11 @@ Total Files:         14
 $ gufi_trace2index -d "|" trace.0 trace.1 "prefix"
 Creating GUFI Index prefix with 1 threads
 Dirs:                6 (1 empty)
-Files:               14
-Total:               20
+Files:               15
+Total:               21
 
 Total Dirs:          6
-Total Files:         14
+Total Files:         15
 
 Source Directory:
     prefix
