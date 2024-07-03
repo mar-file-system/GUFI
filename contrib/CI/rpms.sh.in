@@ -64,7 +64,7 @@
 set -e
 
 # install rpmbuild
-yum install -y rpm-build
+dnf install -y rpm-build
 
 # reconfigure CMake
 cmake @CMAKE_SOURCE_DIR@
@@ -73,19 +73,19 @@ cmake @CMAKE_SOURCE_DIR@
 make package
 
 # install the RPM
-yum install -y gufi-server-*.rpm
+dnf install -y gufi-server-*.rpm
 
 # compare the configuration files
 @DIFF@ server.example "$(dirname @CONFIG_FILE@)/server.example"
 
 # uninstall GUFI-Server
-yum autoremove -y GUFI-Server
+dnf autoremove -y GUFI-Server
 
 # upgrade pip to get the latest Python dependencies
 @PYTHON_INTERPRETER@ -m pip install --upgrade pip
 
 # install the client RPM
-yum install -y gufi-client-*.rpm
+dnf install -y gufi-client-*.rpm
 
 # compare the configuration files
 @DIFF@ client.example "$(dirname @CONFIG_FILE@)/client.example"

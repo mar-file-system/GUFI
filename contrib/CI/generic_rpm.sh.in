@@ -64,7 +64,7 @@
 set -e
 
 # install rpmbuild
-yum install -y rpm-build
+dnf install -y rpm-build
 
 # reconfigure CMake
 cmake @CMAKE_SOURCE_DIR@
@@ -73,7 +73,7 @@ cmake @CMAKE_SOURCE_DIR@
 make package
 
 # install the RPM
-yum install -y gufi-*.rpm
+dnf install -y gufi-*.rpm
 
 # compare the configuration files
 @DIFF@ server.example "$(dirname @CONFIG_FILE@)/server.example"

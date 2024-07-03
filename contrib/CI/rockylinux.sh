@@ -68,7 +68,7 @@ set -e
 dnf -y install epel-release
 
 # install libraries
-dnf -y install fuse-devel libattr-devel pcre2-devel zlib-devel
+dnf -y --enablerepo=devel install fuse-devel libattr-devel pcre2-devel zlib-devel
 
 # install required packages
-dnf -y install attr autoconf clang cmake3 findutils fuse git make patch pkgconfig python3 sudo
+dnf -y install attr autoconf clang cmake3 findutils fuse git make patch pkgconfig python3 python3-pip sudo

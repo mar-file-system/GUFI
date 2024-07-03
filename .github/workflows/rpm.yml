@@ -77,7 +77,7 @@ jobs:
       matrix:
         client: [ Off, On ]
     container:
-      image: centos:8
+      image: rockylinux:9
     steps:
     - uses: actions/checkout@v4
 
@@ -86,8 +86,8 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-Client-${{ matrix.client }}
 
-    - name: CentOS 8 Prerequisites
-      run:  contrib/CI/centos8.sh
+    - name: Rocky Linux Prerequisites
+      run:  contrib/CI/rockylinux.sh
 
     - name: Configure CMake
       run:  |
