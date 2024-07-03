@@ -70,7 +70,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Ubuntu:20.04 Prerequisites
+    - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install LaTeX

@@ -72,7 +72,7 @@ env:
 
 jobs:
   CodeCoverage:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
@@ -81,7 +81,7 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-CodeCoverage
 
-    - name: Ubuntu 20.04 Prerequisites
+    - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install matplotlib
