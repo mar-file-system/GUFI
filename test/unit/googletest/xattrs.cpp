@@ -98,6 +98,14 @@ static void check_contents(struct xattrs &xattrs) {
     }
 }
 
+TEST(xattrs, alloc) {
+    EXPECT_EQ(xattrs_alloc(nullptr), 1);
+
+    struct xattrs xattrs;
+    xattrs.pairs = (xattr *) (uintptr_t) 1;
+    EXPECT_EQ(xattrs_alloc(&xattrs), 1);
+}
+
 TEST(xattrs, get) {
     char name[] = "XXXXXX";
     const int fd = mkstemp(name);

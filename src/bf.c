@@ -486,7 +486,7 @@ int parse_cmd_line(int         argc,
 
       case 'Q':
           {
-              eus_t *user = malloc(sizeof(*user));
+              eus_t *user = calloc(1, sizeof(*user));
 
               INSTALL_STR(&user->basename, optarg);
 

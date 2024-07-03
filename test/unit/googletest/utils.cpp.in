@@ -514,7 +514,8 @@ TEST(dupdir, fileasdir) {
     child_stat.st_uid = geteuid();
     child_stat.st_gid = getegid();
 
-    EXPECT_NE(dupdir(child, &child_stat), 0);
+    EXPECT_NE(dupdir(parent, &child_stat), 0);
+    EXPECT_NE(dupdir(child,  &child_stat), 0);
     EXPECT_EQ(remove(parent), 0);
 }
 

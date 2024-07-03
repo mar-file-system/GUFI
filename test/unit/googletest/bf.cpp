@@ -68,6 +68,7 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "dbutils.h"
+#include "external.h"
 
 static const std::string exec = "exec"; // argv[0]
 
@@ -117,6 +118,11 @@ static const std::string C = "-C"; static const std::string C_arg = "1";
 #if HAVE_ZLIB
 static const std::string e = "-e";
 #endif
+static const std::string q = "-q";
+static const std::string Q = "-Q"; static const std::string Q_arg0 = "extdb";
+                                   static const std::string Q_arg1 = "table";
+                                   static const std::string Q_arg2 = "template.table";
+                                   static const std::string Q_arg3 = "view";
 
 static bool operator==(const refstr_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -130,109 +136,127 @@ static bool operator==(const refstr_t &refstr, const std::string &str) {
     return (str.compare(0, refstr.len, refstr.data, refstr.len) == 0);
 }
 
+TEST(input, nullptr) {
+    EXPECT_EQ(input_init(nullptr), nullptr);
+    EXPECT_NO_THROW(input_fini(nullptr));
+}
+
 static void check_input(struct input *in, const bool helped,
                         const bool flags, const bool options) {
-    EXPECT_EQ(in->helped,                      static_cast<int>(helped));
+    EXPECT_EQ(in->helped,                             static_cast<int>(helped));
 
     if (flags) {
-        EXPECT_EQ(in->process_xattrs,          1);
-        EXPECT_EQ(in->printing,                1);
-        EXPECT_EQ(in->printdir,                1);
-        EXPECT_EQ(in->printheader,             1);
-        EXPECT_EQ(in->printrows,               1);
-        EXPECT_EQ(in->buildindex,              1);
-        EXPECT_EQ(in->andor,                   1);
-        EXPECT_EQ(in->insertfl,                1);
-        EXPECT_EQ(in->insertdir,               1);
-        EXPECT_EQ(in->suspectd,                1);
-        EXPECT_EQ(in->suspectfl,               1);
-        EXPECT_EQ(in->keep_matime,             1);
-        EXPECT_EQ(in->open_flags,              SQLITE_OPEN_READWRITE);
-        EXPECT_EQ(in->terse,                   1);
-        EXPECT_EQ(in->dry_run,                 1);
+        EXPECT_EQ(in->process_xattrs,                 1);
+        EXPECT_EQ(in->printing,                       1);
+        EXPECT_EQ(in->printdir,                       1);
+        EXPECT_EQ(in->printheader,                    1);
+        EXPECT_EQ(in->printrows,                      1);
+        EXPECT_EQ(in->buildindex,                     1);
+        EXPECT_EQ(in->andor,                          1);
+        EXPECT_EQ(in->insertfl,                       1);
+        EXPECT_EQ(in->insertdir,                      1);
+        EXPECT_EQ(in->suspectd,                       1);
+        EXPECT_EQ(in->suspectfl,                      1);
+        EXPECT_EQ(in->keep_matime,                    1);
+        EXPECT_EQ(in->open_flags,                     SQLITE_OPEN_READWRITE);
+        EXPECT_EQ(in->terse,                          1);
+        EXPECT_EQ(in->dry_run,                        1);
         #if HAVE_ZLIB
-        EXPECT_EQ(in->compress,                1);
+        EXPECT_EQ(in->compress,                       1);
         #endif
+        EXPECT_EQ(in->check_extdb_valid,              1);
     }
     else {
-        EXPECT_EQ(in->process_xattrs,          0);
-        EXPECT_EQ(in->printing,                0);
-        EXPECT_EQ(in->printdir,                0);
-        EXPECT_EQ(in->printheader,             0);
-        EXPECT_EQ(in->printrows,               0);
-        EXPECT_EQ(in->buildindex,              0);
-        EXPECT_EQ(in->andor,                   0);
-        EXPECT_EQ(in->insertfl,                0);
-        EXPECT_EQ(in->insertdir,               0);
-        EXPECT_EQ(in->suspectd,                0);
-        EXPECT_EQ(in->suspectfl,               0);
-        EXPECT_EQ(in->keep_matime,             0);
-        EXPECT_EQ(in->open_flags,              SQLITE_OPEN_READONLY);
-        EXPECT_EQ(in->terse,                   0);
-        EXPECT_EQ(in->dry_run,                 0);
+        EXPECT_EQ(in->process_xattrs,                 0);
+        EXPECT_EQ(in->printing,                       0);
+        EXPECT_EQ(in->printdir,                       0);
+        EXPECT_EQ(in->printheader,                    0);
+        EXPECT_EQ(in->printrows,                      0);
+        EXPECT_EQ(in->buildindex,                     0);
+        EXPECT_EQ(in->andor,                          0);
+        EXPECT_EQ(in->insertfl,                       0);
+        EXPECT_EQ(in->insertdir,                      0);
+        EXPECT_EQ(in->suspectd,                       0);
+        EXPECT_EQ(in->suspectfl,                      0);
+        EXPECT_EQ(in->keep_matime,                    0);
+        EXPECT_EQ(in->open_flags,                     SQLITE_OPEN_READONLY);
+        EXPECT_EQ(in->terse,                          0);
+        EXPECT_EQ(in->dry_run,                        0);
         #if HAVE_ZLIB
-        EXPECT_EQ(in->compress,                0);
+        EXPECT_EQ(in->compress,                       0);
         #endif
+        EXPECT_EQ(in->check_extdb_valid,              0);
     }
 
     if (options) {
-        EXPECT_EQ(in->maxthreads,              (std::size_t) 1);
-        EXPECT_EQ(in->delim,                   '|');
-        EXPECT_EQ(in->nameto,                  t_arg);
-        EXPECT_EQ(in->name,                    i_arg);
+        EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);
+        EXPECT_EQ(in->delim,                          '|');
+        EXPECT_EQ(in->nameto,                         t_arg);
+        EXPECT_EQ(in->name,                           i_arg);
         // not checking -o and -O here
-        EXPECT_EQ(in->sql.init,                I_arg);
-        EXPECT_EQ(in->sql.tsum,                T_arg);
-        EXPECT_EQ(in->sql.sum,                 S_arg);
-        EXPECT_EQ(in->sql.ent,                 E_arg);
-        EXPECT_EQ(in->sql.fin,                 F_arg);
-        EXPECT_EQ(in->insuspect.data,          W_arg.c_str());
-        EXPECT_EQ(in->suspectfile,             1);
-        EXPECT_EQ(in->suspectmethod,           1);
-        EXPECT_EQ(in->stride,                  1);
-        EXPECT_EQ(in->suspecttime,             1);
-        EXPECT_EQ(in->min_level,               (std::size_t) 1);
-        EXPECT_EQ(in->max_level,               (std::size_t) 1);
-        EXPECT_EQ(in->sql.intermediate,        J_arg);
-        EXPECT_EQ(in->sql.init_agg,            K_arg);
-        EXPECT_EQ(in->sql.agg,                 G_arg);
-        EXPECT_EQ(in->output_buffer_size,      (std::size_t) 1);
-        EXPECT_EQ(in->format,                  f_arg);
-        EXPECT_EQ(in->max_in_dir,              (std::size_t) 1);
-        EXPECT_NE(in->skip,                    nullptr);
-        EXPECT_EQ(in->target_memory_footprint, (std::size_t) 1);
-        EXPECT_EQ(in->subdir_limit,            (std::size_t) 1);
+        EXPECT_EQ(in->sql.init,                       I_arg);
+        EXPECT_EQ(in->sql.tsum,                       T_arg);
+        EXPECT_EQ(in->sql.sum,                        S_arg);
+        EXPECT_EQ(in->sql.ent,                        E_arg);
+        EXPECT_EQ(in->sql.fin,                        F_arg);
+        EXPECT_EQ(in->insuspect.data,                 W_arg.c_str());
+        EXPECT_EQ(in->suspectfile,                    1);
+        EXPECT_EQ(in->suspectmethod,                  1);
+        EXPECT_EQ(in->stride,                         1);
+        EXPECT_EQ(in->suspecttime,                    1);
+        EXPECT_EQ(in->min_level,                      (std::size_t) 1);
+        EXPECT_EQ(in->max_level,                      (std::size_t) 1);
+        EXPECT_EQ(in->sql.intermediate,               J_arg);
+        EXPECT_EQ(in->sql.init_agg,                   K_arg);
+        EXPECT_EQ(in->sql.agg,                        G_arg);
+        EXPECT_EQ(in->output_buffer_size,             (std::size_t) 1);
+        EXPECT_EQ(in->format,                         f_arg);
+        EXPECT_EQ(in->max_in_dir,                     (std::size_t) 1);
+        EXPECT_NE(in->skip,                           nullptr);
+        EXPECT_EQ(in->target_memory_footprint,        (std::size_t) 1);
+        EXPECT_EQ(in->subdir_limit,                   (std::size_t) 1);
+        EXPECT_EQ(sll_get_size(&in->external_attach), (std::size_t) 1);
+
+        sll_node_t *head = sll_head_node(&in->external_attach);
+        EXPECT_NE(head,                               nullptr);
+        eus_t *eus = (eus_t *) sll_node_data(head);
+        EXPECT_NE(eus,                                nullptr);
+        EXPECT_EQ(eus->basename.data,                 Q_arg0);
+        EXPECT_EQ(eus->table.data,                    Q_arg1);
+        EXPECT_EQ(eus->template_table.data,           Q_arg2);
+        EXPECT_EQ(eus->view.data,                     Q_arg3);
     }
     else {
         const std::string empty = "";
 
-        EXPECT_EQ(in->maxthreads,              (std::size_t) 1);
-        EXPECT_EQ(in->delim,                   fielddelim);
-        EXPECT_EQ(in->nameto,                  empty);
-        EXPECT_EQ(in->name,                    empty);
-        EXPECT_EQ(in->output,                  STDOUT);
-        EXPECT_EQ(in->outname,                 empty);
-        EXPECT_EQ(in->sql.init,                empty);
-        EXPECT_EQ(in->sql.tsum,                empty);
-        EXPECT_EQ(in->sql.sum,                 empty);
-        EXPECT_EQ(in->sql.ent,                 empty);
-        EXPECT_EQ(in->sql.fin,                 empty);
-        EXPECT_EQ(in->insuspect.data,          nullptr);
-        EXPECT_EQ(in->suspectfile,             0);
-        EXPECT_EQ(in->suspectmethod,           0);
-        EXPECT_EQ(in->stride,                  0);
-        EXPECT_EQ(in->suspecttime,             0);
-        EXPECT_EQ(in->min_level,               (std::size_t) 0);
-        EXPECT_EQ(in->max_level,               (std::size_t) -1);
-        EXPECT_EQ(in->sql.intermediate,        empty);
-        EXPECT_EQ(in->sql.init_agg,            empty);
-        EXPECT_EQ(in->sql.agg,                 empty);
-        EXPECT_EQ(in->output_buffer_size,      (std::size_t) 4096);
-        EXPECT_EQ(in->format,                  empty);
-        EXPECT_EQ(in->max_in_dir,              (std::size_t) 0);
-        EXPECT_NE(in->skip,                    nullptr);
-        EXPECT_EQ(in->target_memory_footprint, (std::size_t) 0);
-        EXPECT_EQ(in->subdir_limit,            (std::size_t) 0);
+        EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);
+        EXPECT_EQ(in->delim,                          fielddelim);
+        EXPECT_EQ(in->nameto,                         empty);
+        EXPECT_EQ(in->name,                           empty);
+        EXPECT_EQ(in->output,                         STDOUT);
+        EXPECT_EQ(in->outname,                        empty);
+        EXPECT_EQ(in->sql.init,                       empty);
+        EXPECT_EQ(in->sql.tsum,                       empty);
+        EXPECT_EQ(in->sql.sum,                        empty);
+        EXPECT_EQ(in->sql.ent,                        empty);
+        EXPECT_EQ(in->sql.fin,                        empty);
+        EXPECT_EQ(in->insuspect.data,                 nullptr);
+        EXPECT_EQ(in->suspectfile,                    0);
+        EXPECT_EQ(in->suspectmethod,                  0);
+        EXPECT_EQ(in->stride,                         0);
+        EXPECT_EQ(in->suspecttime,                    0);
+        EXPECT_EQ(in->min_level,                      (std::size_t) 0);
+        EXPECT_EQ(in->max_level,                      (std::size_t) -1);
+        EXPECT_EQ(in->sql.intermediate,               empty);
+        EXPECT_EQ(in->sql.init_agg,                   empty);
+        EXPECT_EQ(in->sql.agg,                        empty);
+        EXPECT_EQ(in->output_buffer_size,             (std::size_t) 4096);
+        EXPECT_EQ(in->format,                         empty);
+        EXPECT_EQ(in->max_in_dir,                     (std::size_t) 0);
+        EXPECT_NE(in->skip,                           nullptr);
+        EXPECT_EQ(in->target_memory_footprint,        (std::size_t) 0);
+        EXPECT_EQ(in->subdir_limit,                   (std::size_t) 0);
+        EXPECT_EQ(sll_get_size(&in->external_attach), (std::size_t) 0);
     }
 }
 
@@ -262,7 +286,7 @@ TEST(parse_cmd_line, help) {
 }
 
 TEST(parse_cmd_line, debug) {
-    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT;
+    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:";
 
     const char *argv[] = {
         exec.c_str(),
@@ -309,6 +333,8 @@ TEST(parse_cmd_line, debug) {
         #ifdef HAVE_ZLIB
         e.c_str(),
         #endif
+        q.c_str(),
+        Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
@@ -329,7 +355,7 @@ TEST(parse_cmd_line, debug) {
 }
 
 TEST(parse_cmd_line, flags) {
-    const char opts[] = "xpPNVbarRYZmwjX" COMPRESS_OPT;
+    const char opts[] = "xpPNVbarRYZmwjX" COMPRESS_OPT "q";
 
     const char *argv[] = {
         exec.c_str(),
@@ -351,6 +377,7 @@ TEST(parse_cmd_line, flags) {
         #ifdef HAVE_ZLIB
         e.c_str(),
         #endif
+        q.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
@@ -363,7 +390,7 @@ TEST(parse_cmd_line, flags) {
 }
 
 TEST(parse_cmd_line, options) {
-    const char opts[] = "n:d:i:t:I:T:S:E:F:W:A:g:c:y:z:J:K:G:B:f:L:k:M:C:";
+    const char opts[] = "n:d:i:t:I:T:S:E:F:W:A:g:c:y:z:J:K:G:B:f:L:k:M:C:Q:";
 
     const char *argv[] = {
         exec.c_str(),
@@ -391,6 +418,7 @@ TEST(parse_cmd_line, options) {
         // k.c_str(), k_arg.c_str(),
         M.c_str(), M_arg.c_str(),
         C.c_str(), C_arg.c_str(),
+        Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
