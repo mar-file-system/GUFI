@@ -403,6 +403,34 @@ void closedb(sqlite3 *db)
     sqlite3_close(db);
 }
 
+int copy_columns_callback(void *args, int count, char **data, char **columns) {
+    (void) columns;
+
+    /*
+     * strs should have space for at least count columns
+     *
+     * make sure to initialize strs[i] to NULL or good values
+     */
+    char **strs = (char **) args;
+
+    for(int i = 0; i < count; i++) {
+        if (!data[i]) {
+            continue;
+        }
+
+        const size_t len = strlen(data[i]);
+
+        if (!strs[i]) {
+            strs[i] = malloc(len + 1);
+        }
+
+        SNFORMAT_S(strs[i], len + 1, 1,
+                   data[i], len);
+    }
+
+    return 0;
+}
+
 void insertdbfin(sqlite3_stmt *res)
 {
     sqlite3_finalize(res);
@@ -689,24 +717,6 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     return 0;
 }
 
-static int get_2_strs(void *args, int count, char **data, char **columns) {
-    (void) count;
-    (void) columns;
-
-    char **strs = (char **) args;
-
-    for(int i = 0; i < 2; i++) {
-        const size_t len = strlen(data[i]) + 2; /* + 2 for quotation marks */
-        strs[i] = malloc(len + 1);
-        SNFORMAT_S(strs[i], len + 1, 3,
-                   "'", (size_t) 1,
-                   data[i], len - 2,
-                   "'", (size_t) 1);
-    }
-
-    return 0;
-}
-
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid)
 {
     int depth = 0;
@@ -718,7 +728,7 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
 
     char *ip[2] = {NULL, NULL};
     if (sqlite3_exec(sdb, "SELECT inode, pinode FROM " SUMMARY " WHERE isroot == 1;",
-                     get_2_strs, ip, &err) != SQLITE_OK) {
+                     copy_columns_callback, ip, &err) != SQLITE_OK) {
         fprintf(stderr, "Could not get inode from %s: %s\n", SUMMARY, err);
         sqlite3_free(err);
         return 1;
@@ -728,14 +738,14 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     char *pinode = ip[1];
 
     char sqlstmt[MAXSQL];
-    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%s, %s, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
+    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES ('%s', '%s', %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
              inode, pinode, su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize, su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totzero, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks, su->totxattr, depth, su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4, su->maxossint4, su->totossint4, su->totextdbs, rectype, uid, gid);
 
     free(pinode);
     free(inode);
 
     err = NULL;
-    if (sqlite3_exec(sdb, sqlstmt, 0, 0, &err) != SQLITE_OK ) {
+    if (sqlite3_exec(sdb, sqlstmt, NULL, NULL, &err) != SQLITE_OK ) {
         fprintf(stderr, "SQL error on insert (treesummary): %s %s\n", err, sqlstmt);
         sqlite3_free(err);
     }

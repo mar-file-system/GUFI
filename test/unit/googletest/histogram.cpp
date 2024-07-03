@@ -88,17 +88,6 @@ static void setup_db(sqlite3 **db) {
                                nullptr, nullptr), SQLITE_OK);   \
     } while (0)
 
-static int get_str(void *args, int, char **data, char **) {
-    if (data[0]) {
-        char **output = static_cast <char **> (args);
-        const std::size_t len = strlen(data[0]);
-        *output = (char *) malloc(len + 1);
-        memcpy(*output, data[0], len);
-        (*output)[len] = '\0';
-    }
-    return 0;
-}
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -175,9 +164,9 @@ static void test_log2_hist(const std::vector <std::string> &types,
             insert(db, "value", value);
         }
 
-        char *hist_str = nullptr;
+        char *hist_str = {nullptr};
         ASSERT_EQ(sqlite3_exec(db, "SELECT log2_hist(value, 3) FROM test;",
-                               get_str, &hist_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
         log2_hist *hist = log2_hist_parse(hist_str);
@@ -209,7 +198,7 @@ TEST(histogram, log2) {
 
         char *hist_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT log2_hist(value, 3) FROM test;",
-                               get_str, &hist_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
         log2_hist *hist = log2_hist_parse(hist_str);
@@ -255,7 +244,7 @@ TEST(histogram, mode) {
     {
         char *hist_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT mode_hist(mode) FROM test;",
-                               get_str, &hist_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
 
         mode_hist *hist = mode_hist_parse(hist_str);
         ASSERT_NE(hist, nullptr);
@@ -284,7 +273,7 @@ TEST(histogram, mode) {
     {
         char *hist_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT mode_hist(mode) FROM test;",
-                               get_str, &hist_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
 
         mode_hist *hist = mode_hist_parse(hist_str);
         ASSERT_NE(hist, nullptr);
@@ -325,7 +314,7 @@ TEST(histogram, time) {
     // nothing in buckets
     {
         char *hist_str = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, select, get_str, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, select, copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
         time_hist *hist = time_hist_parse(hist_str);
@@ -352,7 +341,7 @@ TEST(histogram, time) {
     // normal usage
     {
         char *hist_str = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, select, get_str, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, select, copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
         time_hist *hist = time_hist_parse(hist_str);
@@ -430,7 +419,7 @@ TEST(histogram, category) {
     {
         char *hist_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0) FROM test;",
-                               get_str, &hist_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
         category_hist_t *hist = category_hist_parse(hist_str);
@@ -450,7 +439,7 @@ TEST(histogram, category) {
     {
         char *hist_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1) FROM test;",
-                               get_str, &hist_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
         // normal usage
@@ -483,7 +472,7 @@ TEST(histogram, category) {
         hist_str = nullptr;
 
         ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0) FROM test;",
-                               get_str, &hist_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
         // normal usage
@@ -541,12 +530,12 @@ TEST(histogram, category) {
     {
         char *with = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1) FROM test;",
-                               get_str, &with, nullptr), SQLITE_OK);
+                               copy_columns_callback, &with, nullptr), SQLITE_OK);
         ASSERT_NE(with, nullptr);
 
         char *without = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0) FROM test;",
-                               get_str, &without, nullptr), SQLITE_OK);
+                               copy_columns_callback, &without, nullptr), SQLITE_OK);
         ASSERT_NE(without, nullptr);
 
         category_hist_t *w_hist = category_hist_parse(with);
@@ -579,7 +568,7 @@ TEST(histogram, category) {
 
         char *combined_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist_combine(str) FROM hists;",
-                               get_str, &combined_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &combined_str, nullptr), SQLITE_OK);
 
         category_hist_t *sql_sum = category_hist_parse(combined_str);
         check_combined(sql_sum);
@@ -613,7 +602,7 @@ TEST(histogram, mode_count) {
     {
         char *mc_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT mode_count(category) FROM test;",
-                               get_str, &mc_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &mc_str, nullptr), SQLITE_OK);
         ASSERT_EQ(mc_str, nullptr);
     }
 
@@ -625,7 +614,7 @@ TEST(histogram, mode_count) {
 
         char *mc_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT mode_count(category) FROM test;",
-                               get_str, &mc_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &mc_str, nullptr), SQLITE_OK);
         ASSERT_EQ(mc_str, nullptr);
 
         mode_count *mc = mode_count_parse(mc_str);
@@ -645,7 +634,7 @@ TEST(histogram, mode_count) {
 
         char *mc_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT mode_count(category) FROM test;",
-                               get_str, &mc_str, nullptr), SQLITE_OK);
+                               copy_columns_callback, &mc_str, nullptr), SQLITE_OK);
         ASSERT_NE(mc_str, nullptr);
 
         mode_count *mc = mode_count_parse(mc_str);

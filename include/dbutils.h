@@ -178,6 +178,8 @@ int stopdb(sqlite3 *db);
 
 void closedb(sqlite3 *db);
 
+int copy_columns_callback(void *args, int count, char **data, char **columns);
+
 void insertdbfin(sqlite3_stmt *res);
 
 sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli);
