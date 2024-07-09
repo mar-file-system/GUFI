@@ -290,8 +290,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 sll_init(&dir_inodes);
                 if (sqlite3_exec(db, "SELECT inode FROM " ATTACH_NAME "." SUMMARY ";",
                                  collect_dir_inodes, &dir_inodes, &err) != SQLITE_OK) {
-                    fprintf(stderr, "Error: Could not pull directory inodes: %s\n", err);
-                    sqlite3_free(err);
+                    sqlite_print_err_and_free(err, stderr, "Error: Could not pull directory inodes: %s\n", err);
                     err = NULL;
                     /* ignore errors (still have to descend) */
                 }

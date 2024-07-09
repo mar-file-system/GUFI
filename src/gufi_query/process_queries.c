@@ -297,8 +297,9 @@ int process_queries(PoolArgs_t *pa,
         if (sqlite3_create_function(db, "subdirs", 2, SQLITE_UTF8,
                                     subdirs_walked_count, &subdirs,
                                     NULL, NULL) != SQLITE_OK) {
-            fprintf(stderr, "Warning: Could not create subdirs_walked function: %s (%d)\n",
-                    sqlite3_errmsg(db), sqlite3_errcode(db));
+            sqlite_print_err_and_free(NULL, stderr,
+                                      "Warning: Could not create subdirs_walked function: %s (%d)\n",
+                                      sqlite3_errmsg(db), sqlite3_errcode(db));
         }
 
         char shortname[MAXPATH];

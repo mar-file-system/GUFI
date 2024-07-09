@@ -219,8 +219,7 @@ int main(int argc, char *argv[])
 
    /* create the view */
    if (sqlite3_exec(db, create_view, NULL, NULL, &err) != SQLITE_OK) {
-       fprintf(stderr, "Error: Cannot create view with databases: %s\n", err);
-       sqlite3_free(err);
+       sqlite_print_err_and_free(err, stderr, "Error: Cannot create view with databases: %s\n", err);
        rc = EXIT_FAILURE;
        goto detach;
    }
@@ -234,8 +233,7 @@ int main(int argc, char *argv[])
        printf("query returned %zu records\n", ca.rows);
    }
    else {
-       fprintf(stderr, "Error: User query failed: %s\n", err);
-       sqlite3_free(err);
+       sqlite_print_err_and_free(err, stderr, "Error: User query failed: %s\n", err);
        rc = EXIT_FAILURE;
    }
 

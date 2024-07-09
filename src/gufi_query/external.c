@@ -139,9 +139,7 @@ int create_extdb_views_noiter(sqlite3 *db) {
                      "CREATE TEMP VIEW " EVRXSUMMARY  " AS SELECT * FROM " VRXSUMMARY  ";"
                      "CREATE TEMP VIEW " EVRXPENTRIES " AS SELECT * FROM " VRXPENTRIES ";",
                      NULL, NULL, &err) != SQLITE_OK) {
-        fprintf(stderr, "Warning: Could not create partition views for attaching with external databases: %s\n",
-                err);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Warning: Could not create partition views for attaching with external databases: %s\n", err);
     }
     return !!err;
 }
@@ -162,9 +160,7 @@ void create_extdb_views_iter(sqlite3 *db, const char *dir_inode) {
 
     char *err = NULL;
     if (sqlite3_exec(db, extdb_views, NULL, NULL, &err) != SQLITE_OK) {
-        fprintf(stderr, "Warning: Could not create partition views for attaching with external databases: %s\n",
-                err);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Warning: Could not create partition views for attaching with external databases: %s\n", err);
     }
 }
 
@@ -181,9 +177,7 @@ void drop_extdb_views(sqlite3 *db) {
                      "DROP VIEW " EPENTRIES    ";"
                      "DROP VIEW " ESUMMARY     ";",
                      NULL, NULL, &err) != SQLITE_OK) {
-        fprintf(stderr, "Warning: Could not drop views for attaching with external databases: %s\n",
-                err);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Warning: Could not drop views for attaching with external databases: %s\n", err);
     }
 }
 
@@ -234,9 +228,7 @@ void detach_extdbs(struct input *in, sqlite3 *db,
         else {
             char *err = NULL;
             if (sqlite3_exec(db, drop_extdb_view, NULL, NULL, &err) != SQLITE_OK) {
-                fprintf(stderr, "Could not drop view %s: %s\n",
-                        user->view.data, err);
-                sqlite3_free(err);
+                sqlite_print_err_and_free(err, stderr, "Could not drop view %s: %s\n", user->view.data, err);
             }
         }
     }

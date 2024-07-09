@@ -86,8 +86,7 @@ int main(int argc, char *argv[]) {
     char *err = NULL;
     for(int i = 2; i < argc; i++) {
         if (sqlite3_exec(db, argv[i], NULL, NULL, &err) != SQLITE_OK) {
-            fprintf(stderr, "Error: SQL error: %s\n", err);
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "Error: SQL error: %s\n", err);
             break;
         }
     }

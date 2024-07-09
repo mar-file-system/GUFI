@@ -160,9 +160,7 @@ int external_insert(sqlite3 *db, const char *type, const long long int pinode, c
 
     char *err = NULL;
     if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-        fprintf(stderr, "Warning: Could not insert requested external db: %s: %s\n",
-                filename, err);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Warning: Could not insert requested external db: %s: %s\n", filename, err);
         return 1;
     }
 
@@ -201,9 +199,7 @@ static int check_is_db(const int check_extdb_valid, const char *path) {
                 rc = 1;
             }
             else {
-                fprintf(stderr, "Warning: %s is not a db: %s\n",
-                        path, err);
-                sqlite3_free(err);
+                sqlite_print_err_and_free(err, stderr, "Warning: %s is not a db: %s\n", path, err);
             }
 
             closedb(extdb);
@@ -318,8 +314,7 @@ int external_concatenate(sqlite3 *db,
         (*query_count)++;
         #endif
         if (rc != SQLITE_OK) {
-            fprintf(stderr, "Error: Could not get external file names from table '%s': '%s': err %s (%d)\n",
-                    EXTERNAL_DBS, get_mappings, sqlite3_errmsg(db), rc);
+            sqlite_print_err_and_free(NULL, stderr, "Error: Could not get external file names from table '%s': '%s': err %s (%d)\n", EXTERNAL_DBS, get_mappings, sqlite3_errmsg(db), rc);
             return -1;
         }
 
@@ -374,9 +369,7 @@ int external_concatenate(sqlite3 *db,
     (*query_count)++;
     #endif
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Create external data view \"%s\" failed: %s: %s\n",
-                viewname->data, err, unioncmd);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Error: Create external data view \"%s\" failed: %s: %s\n", viewname->data, err, unioncmd);
         return -1;
     }
 
@@ -421,8 +414,7 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
         (*query_count)++;
         #endif
         if (rc != SQLITE_OK) {
-            fprintf(stderr, "Warning: Could not drop view: %s\n", err);
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "Warning: Could not drop view: %s\n", err);
         }
     }
 
@@ -446,8 +438,7 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
         (*query_count)++;
         #endif
         if (rc != SQLITE_OK) {
-            fprintf(stderr, "Warning: Could not detach external database: %s\n", err);
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "Warning: Could not detach external database: %s\n", err);
         }
     }
 }

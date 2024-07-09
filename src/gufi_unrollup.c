@@ -177,8 +177,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                          xattrs_rollup_cleanup,
                          &name,
                          &err) != SQLITE_OK) {
-            fprintf(stderr, "Could not remove roll up data from \"%s\": %s\n", work->name, err);
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "Could not remove roll up data from \"%s\": %s\n", work->name, err);
             rc = 1;
         }
         err = NULL;

@@ -233,6 +233,8 @@ int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns);
 size_t sqlite_uri_path(char *dst, size_t dst_size,
                        const char *src, size_t *src_len);
 
+void sqlite_print_err_and_free(char *err, FILE *stream, char *format, ...);
+
 int get_rollupscore(sqlite3 *db, int *rollupscore);
 
 int treesummary_exists_callback(void *args, int count, char **data, char **columns);

@@ -377,8 +377,7 @@ static int get_nondirs(const char *name, sqlite3 *dst, size_t *subnondir_count) 
     const int exec_rc = sqlite3_exec(dst, "SELECT COUNT(*) FROM pentries",
                                      add_entries_count, subnondir_count, &err);
     if (exec_rc != SQLITE_OK) {
-        fprintf(stderr, "Warning: Failed to get entries row count from \"%s\": %s\n", name, err);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Warning: Failed to get entries row count from \"%s\": %s\n", name, err);
     }
     return exec_rc;
 }
@@ -431,9 +430,7 @@ static int check_children(struct RollUp *rollup, struct Permissions *curr,
         timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "close_child_db", close_child_db);
 
         if (rc != SQLITE_OK) {
-            fprintf(stderr, "Error: Could not get permissions of child directory \"%s\": %s\n", child->data.name, err);
-
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "Error: Could not get permissions of child directory \"%s\": %s\n", child->data.name, err);
             break;
         }
 
@@ -544,7 +541,7 @@ static int can_rollup(struct input *in,
     timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "get_perms", get_perms);
 
     if (exec_rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Could not get permissions of current directory \"%s\": %s\n", rollup->data.name, err);
+        sqlite_print_err_and_free(err, stderr, "Error: Could not get permissions of current directory \"%s\": %s\n", rollup->data.name, err);
         legal = 0;
         goto end_can_rollup;
     }
@@ -667,9 +664,7 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
     char *err = NULL;
     int rc = sqlite3_exec(xattr_db, insert, NULL, NULL, &err);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Failed to copy \"%s\" xattrs into " XATTRS_ROLLUP " of %s: %s\n",
-                child_xattr_db_name, xattr_db_name, err);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Error: Failed to copy \"%s\" xattrs into " XATTRS_ROLLUP " of %s: %s\n", child_xattr_db_name, xattr_db_name, err);
     }
 
     closedb(xattr_db);
@@ -730,9 +725,7 @@ static int do_rollup(struct RollUp *rollup,
     timestamp_end_print(timestamp_buffers, id, "setup", setup);
 
     if (exec_rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Failed to set up database for rollup: \"%s\": %s\n",
-                rollup->data.name, err);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Error: Failed to set up database for rollup: \"%s\": %s\n", rollup->data.name, err);
         rc = -1;
         goto end_rollup;
     }
@@ -770,9 +763,7 @@ static int do_rollup(struct RollUp *rollup,
             exec_rc = sqlite3_exec(dst, rollup_subdir, rollup_external_xattrs, &ca, &err);
             timestamp_end_print(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
             if (exec_rc != SQLITE_OK) {
-                fprintf(stderr, "Error: Failed to copy subdir \"%s\" into current database: %s\n",
-                        child->name, err);
-                sqlite3_free(err);
+                sqlite_print_err_and_free(err, stderr, "Error: Failed to copy subdir \"%s\" into current database: %s\n", child->name, err);
             }
         }
 

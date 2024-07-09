@@ -87,10 +87,9 @@ void querydb(struct work *work,
         present_user_path(dbname, dbname_len,
                           &work->root_parent, work->root_basename_len, &work->orig_root,
                           buf, sizeof(buf));
-        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, buf, query);
+        sqlite_print_err_and_free(err, stderr, "Error: %s: %s: \"%s\"\n", err, buf, query);
     }
 #endif
-    sqlite3_free(err);
 
     *rc = args.rows;
 }

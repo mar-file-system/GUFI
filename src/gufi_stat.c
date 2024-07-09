@@ -468,8 +468,7 @@ static int process_path(const char *path, FILE *out, const char *format) {
             }
         }
         else {
-            fprintf(stderr, "gufi_stat: failed to query database in '%s': %s\n", path, err);
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "gufi_stat: failed to query database in '%s': %s\n", path, err);
             rc = 1;
         }
     }

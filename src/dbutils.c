@@ -155,8 +155,7 @@ static sqlite3 *attachdb_internal(const char *attach, sqlite3 *db, const char *d
     char *err = NULL;
     if (sqlite3_exec(db, attach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
         if (print_err) {
-            fprintf(stderr, "Cannot attach database as \"%s\": %s\n", dbn, err);
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "Cannot attach database as \"%s\": %s\n", dbn, err);
         }
         return NULL;
     }
@@ -201,8 +200,7 @@ sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql, const i
     char *err = NULL;
     if (sqlite3_exec(db, sql, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
         if (print_err) {
-            fprintf(stderr, "Cannot detach database: %s %s\n", name, err);
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "Cannot detach database: %s %s\n", name, err);
         }
         return NULL;
     }
@@ -222,9 +220,7 @@ int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, co
     char *err = NULL;
     const int rc = sqlite3_exec(db, sql, NULL, NULL, &err);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "%s:%d SQL error while executing '%s' on %s: '%s' (%d)\n",
-                __FILE__, __LINE__, sql_name, name, err, rc);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "%s:%d SQL error while executing '%s' on %s: '%s' (%d)\n", __FILE__, __LINE__, sql_name, name, err, rc);
     }
     return rc;
 }
@@ -260,7 +256,7 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
 
     if (sqlite3_open_v2(name, &db, flags | SQLITE_OPEN_URI, GUFI_SQLITE_VFS) != SQLITE_OK) {
         if (!(flags & SQLITE_OPEN_CREATE)) {
-            fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
+            sqlite_print_err_and_free(NULL, stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
         }
         sqlite3_close(db); /* close db even if it didn't open to avoid memory leaks */
         return NULL;
@@ -283,7 +279,7 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
 
     if (!(flags & SQLITE_OPEN_READONLY) && modifydb_func) {
         if (modifydb_func(name, db, modifydb_args) != 0) {
-            fprintf(stderr, "Cannot modify database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
+            sqlite_print_err_and_free(NULL, stderr, "Cannot modify database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
             sqlite3_close(db);
             return NULL;
         }
@@ -303,8 +299,7 @@ int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
     const char *sqlstmt = ts_str[ts];
     sqlite3_stmt *res = NULL;
     if (sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, NULL) != SQLITE_OK) {
-        fprintf(stderr, "SQL error on query: %s, name: %s, err: %s\n",
-                sqlstmt,name,sqlite3_errmsg(db));
+        sqlite_print_err_and_free(NULL, stderr, "SQL error on query: %s, name: %s, err: %s\n", sqlstmt, name, sqlite3_errmsg(db));
         return 1;
     }
 
@@ -382,9 +377,8 @@ int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
 int startdb(sqlite3 *db)
 {
     char *err = NULL;
-    if (sqlite3_exec(db, "BEGIN TRANSACTION", NULL , NULL, &err) != SQLITE_OK) {
-        printf("begin transaction issue %s\n", err);
-        sqlite3_free(err);
+    if (sqlite3_exec(db, "BEGIN TRANSACTION;", NULL , NULL, &err) != SQLITE_OK) {
+        sqlite_print_err_and_free(err, stderr, "begin transaction issue %s\n", err);
     }
     return !err;
 }
@@ -392,9 +386,8 @@ int startdb(sqlite3 *db)
 int stopdb(sqlite3 *db)
 {
     char *err = NULL;
-    if (sqlite3_exec(db, "END TRANSACTION", NULL, NULL, &err) != SQLITE_OK) {
-        printf("end transaction issue %s\n", err);
-        sqlite3_free(err);
+    if (sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, &err) != SQLITE_OK) {
+        sqlite_print_err_and_free(err, stderr, "end transaction issue %s\n", err);
     }
     return !err;
 }
@@ -446,9 +439,8 @@ sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli)
     // WARNING: passing length-arg that is longer than SQL text
     error = sqlite3_prepare_v2(db, sqli, MAXSQL, &reso, &tail);
     if (error != SQLITE_OK) {
-          fprintf(stderr, "SQL error on insertdbprep: error %d %s err %s\n",
-                  error, sqli, sqlite3_errmsg(db));
-          return NULL;
+        sqlite_print_err_and_free(NULL, stderr, "SQL error on insertdbprep: error %d %s err %s\n", error, sqli, sqlite3_errmsg(db));
+        return NULL;
     }
     return reso;
 }
@@ -501,8 +493,7 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
 
     const int error = sqlite3_step(res);
     if (error != SQLITE_DONE) {
-        fprintf(stderr, "SQL insertdbgo step: %s error %d err %s\n",
-                pwork->name, error, sqlite3_errstr(error));
+        sqlite_print_err_and_free(NULL, stderr, "SQL insertdbgo step: %s error %d err %s\n", pwork->name, error, sqlite3_errstr(error));
         rc = 1;
     }
 
@@ -730,8 +721,7 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     char *ip[2] = {NULL, NULL};
     if (sqlite3_exec(sdb, "SELECT inode, pinode FROM " SUMMARY " WHERE isroot == 1;",
                      copy_columns_callback, ip, &err) != SQLITE_OK) {
-        fprintf(stderr, "Could not get inode from %s: %s\n", SUMMARY, err);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Could not get inode from %s: %s\n", SUMMARY, err);
         return 1;
     }
 
@@ -747,8 +737,7 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
 
     err = NULL;
     if (sqlite3_exec(sdb, sqlstmt, NULL, NULL, &err) != SQLITE_OK ) {
-        fprintf(stderr, "SQL error on insert (treesummary): %s %s\n", err, sqlstmt);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "SQL error on insert (treesummary): %s %s\n", err, sqlstmt);
     }
 
     return !!err;
@@ -1378,7 +1367,7 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
 
     if (chmod(filename, xdb->st.st_mode) != 0) {
         const int err = errno;
-        fprintf(stderr, "Warning: Unable to set permissions for %s: %d\n", filename, err);
+        fprintf(stderr, "Warning: Unable to set permissions for %s: %s (%d)\n", filename, strerror(err), err);
     }
 
     xdb->db = opendb(filename, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
@@ -1463,9 +1452,7 @@ int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
              }
         }
         else {
-            fprintf(stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n",
-                    fullpath, err_msg);
-            sqlite3_free(err_msg);
+            sqlite_print_err_and_free(err_msg, stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n", fullpath, err_msg);
             rc = 1;
         }
     }
@@ -1528,6 +1515,15 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
     return d;
 }
 
+void sqlite_print_err_and_free(char *err, FILE *stream, char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(stream, format, args);
+    va_end(args);
+
+    sqlite3_free(err);
+}
+
 static int get_rollupscore_callback(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
     return !(sscanf(data[0], "%d", (int *) args) == 1);
@@ -1537,8 +1533,7 @@ int get_rollupscore(sqlite3 *db, int *rollupscore) {
     char *err = NULL;
     if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1;",
                      get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
-        fprintf(stderr, "Could not get rollupscore: %s\n", err);
-        sqlite3_free(err);
+        sqlite_print_err_and_free(err, stderr, "Could not get rollupscore: %s\n", err);
         return 1;
     }
 
@@ -1590,9 +1585,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
 
         char *err = NULL;
         if (sqlite3_exec(db, TREESUMMARY_ROLLUP_COMPUTE_INSERT, NULL, NULL, &err) != SQLITE_OK) {
-            fprintf(stderr, "Error: Failed to compute treesummary for \"%s\": %s\n",
-                    dirname, err);
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "Error: Failed to compute treesummary for \"%s\": %s\n", dirname, err);
             return 1;
         }
 
@@ -1641,9 +1634,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
             tsumit(&sum, &tsum);
         }
         else {
-            fprintf(stderr, "Warning: Failed to check for existance of treesummary table in child \"%s\": %s\n",
-                    subdir->name, err);
-            sqlite3_free(err);
+            sqlite_print_err_and_free(err, stderr, "Warning: Failed to check for existance of treesummary table in child \"%s\": %s\n", subdir->name, err);
         }
 
         closedb(child_db);
