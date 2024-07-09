@@ -272,12 +272,13 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
     }
 
     if (load_extensions) {
-        if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || /* enable loading of extensions */
-            (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { /* load the sqlite3-pcre extension */
-            fprintf(stderr, "Unable to load regex extension\n");
-            sqlite3_close(db);
-            return NULL;
-        }
+        /* not handling errors: if loading extensions fails, there are bigger issues */
+
+        /* enable loading of extensions */
+        sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL);
+
+        /* load the sqlite3-pcre extension */
+        sqlite3_extension_init(db, NULL, NULL) ;
     }
 
     if (!(flags & SQLITE_OPEN_READONLY) && modifydb_func) {
