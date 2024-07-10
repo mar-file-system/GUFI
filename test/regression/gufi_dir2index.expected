@@ -248,3 +248,8 @@ prefix/unusual#? directory ,/unusual, name?#
 $ gufi_dir2index -n 2 -k "skip.bad" "prefix" "prefix"
 Error: Cannot open skip file "skip.bad"
 
+# bad thread count
+$ gufi_dir2index -n 18446744073709551615 "prefix" "prefix"
+"prefix" Already exists!
+Error: Failed to start thread pool
+

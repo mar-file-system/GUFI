@@ -77,7 +77,7 @@ struct OutputBuffer *OutputBuffer_init(struct OutputBuffer *obuf, const size_t c
     obuf->filled = 0;
     obuf->count = 0;
 
-    return obuf;
+    return obuf->buf?obuf:NULL;
 }
 
 size_t OutputBuffer_write(struct OutputBuffer *obuf, const void *buf, const size_t size, const int increment_count) {
@@ -119,6 +119,9 @@ struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size
     obufs->mutex = global_mutex;
     obufs->count = 0;
     obufs->buffers = calloc(count, sizeof(struct OutputBuffer));
+    if (!obufs->buffers) {
+        return NULL;
+    }
 
     for(size_t i = 0; i < count; i++) {
         if (!OutputBuffer_init(&obufs->buffers[i], capacity)) {

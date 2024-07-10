@@ -73,7 +73,7 @@ GUFI Index:
     prefix/unusual#? directory ,/unusual, name?#
 
 # create index from a trace file whose last item is an empty directory
-$ gufi_trace2index -d "|" -n "2" "empty_last_dir.trace" "prefix"
+$ gufi_trace2index -d "|" -n 2 "empty_last_dir.trace" "prefix"
 Creating GUFI Index prefix with 2 threads
 Dirs:                7 (2 empty)
 Files:               15
@@ -83,17 +83,17 @@ Total Dirs:          7
 Total Files:         15
 
 # bad trace path
-$ gufi_trace2index -d "|" -n "2" "" "prefix"
+$ gufi_trace2index -d "|" -n 2 "" "prefix"
 Could not open "": No such file or directory (2)
 Failed to open trace file for each thread
 
 # bad index path
-$ gufi_trace2index -d "|" -n "2" "trace" "prefix/1KB" 2> >(sort)
+$ gufi_trace2index -d "|" -n 2 "trace" "prefix/1KB" 2> >(sort)
 Could not create directory prefix/1KB
 
 
 # empty trace
-$ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
+$ gufi_trace2index -d "|" -n 2 "badtrace" "prefix"
 Could not get the first line of the trace
 Creating GUFI Index prefix with 2 threads
 Total Dirs:          0
@@ -101,7 +101,7 @@ Total Files:         0
 
 
 # cannot find delimiter of first line
-$ gufi_trace2index -d "?" -n "2" "trace" "prefix"
+$ gufi_trace2index -d "?" -n 2 "trace" "prefix"
 Could not find the specified delimiter
 Creating GUFI Index prefix with 2 threads
 Total Dirs:          0
@@ -109,7 +109,7 @@ Total Files:         0
 
 
 # first line does not start with a directory
-$ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
+$ gufi_trace2index -d "|" -n 2 "badtrace" "prefix"
 First line of trace is not a directory
 Creating GUFI Index prefix with 2 threads
 Total Dirs:          0
@@ -117,9 +117,13 @@ Total Files:         0
 
 
 # file delimiter not found
-$ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
+$ gufi_trace2index -d "|" -n 2 "badtrace" "prefix"
 Scout encountered bad line ending at badtrace offset 62
 Creating GUFI Index prefix with 2 threads
 Total Dirs:          0
 Total Files:         0
+
+# bad thread count
+$ gufi_dir2trace -n 18446744073709551615 "prefix" "trace"
+Could not allocate space for 18446744073709551615 files
 

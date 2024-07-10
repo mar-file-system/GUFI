@@ -138,6 +138,9 @@ rm -r "${SEARCH}"
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
 "${GUFI_ROLLUP}" -L 3 "${SEARCH}"
 do_tests
+
+echo "# bad thread count"
+run_no_sort "${GUFI_ROLLUP} -n 18446744073709551615 \"${SEARCH}\""
 ) | remove_indexing_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_rollup.expected "${OUTPUT}"

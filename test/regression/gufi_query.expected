@@ -39,7 +39,7 @@ GUFI_index        find GUFI index here
 $ gufi_query "prefix"
 
 # Get only directories
-$ gufi_query -d " " -S "SELECT name FROM vrsummary;" "prefix"
+$ gufi_query -d " " -n 2 -S "SELECT name FROM vrsummary;" "prefix"
 directory
 empty_directory
 leaf_directory
@@ -48,7 +48,7 @@ subdirectory
 unusual#? directory ,
 
 # Get only non-directories
-$ gufi_query -d " " -E "SELECT name FROM vrpentries;" "prefix"
+$ gufi_query -d " " -n 2 -E "SELECT name FROM vrpentries;" "prefix"
 .hidden
 1KB
 1MB
@@ -65,7 +65,7 @@ unusual, name?#
 writable
 
 # Get all directory and non-directory names
-$ gufi_query -d " " -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix"
+$ gufi_query -d " " -n 2 -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix"
 .hidden
 1KB
 1MB
@@ -88,7 +88,7 @@ unusual, name?#
 writable
 
 # Get number of subdirectories
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "prefix"
+$ gufi_query -d " " -n 2 -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "prefix"
 prefix 4
 prefix/directory 1
 prefix/directory/subdirectory 0
@@ -97,7 +97,7 @@ prefix/leaf_directory 0
 prefix/unusual#? directory , 0
 
 # Get relative paths of all directories and non-directories ascending names
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix"
+$ gufi_query -d " " -n 2 -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix"
 prefix
 prefix/.hidden
 prefix/1KB
@@ -120,7 +120,7 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # Get relative paths of all directories and non-directories descending names
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
+$ gufi_query -d " " -n 2 -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
 prefix/unusual#? directory ,/unusual, name?#
 prefix/unusual#? directory ,
 prefix/repeat_name
@@ -143,7 +143,7 @@ prefix/.hidden
 prefix
 
 # Get relative paths of all directories and non-directories ascending sizes (files only)
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
+$ gufi_query -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
 prefix/old_file
 prefix/directory/executable
 prefix/directory/readonly
@@ -158,7 +158,7 @@ prefix/1KB
 prefix/1MB
 
 # Get relative paths of all directories and non-directories descending sizes (files only)
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
+$ gufi_query -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
 prefix/1MB
 prefix/1KB
 prefix/unusual#? directory ,/unusual, name?#
@@ -173,7 +173,7 @@ prefix/directory/executable
 prefix/old_file
 
 # Get all directory and non-directory names not in directory
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -k "skip" "prefix"
+$ gufi_query -d " " -n 2 -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -k "skip" "prefix"
 prefix
 prefix/.hidden
 prefix/1KB
@@ -189,7 +189,7 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # Get all directory and non-directory names and their xattrs
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, xattr_name, xattr_value FROM vrxpentries;" -x "prefix"
+$ gufi_query -d " " -n 2 -S "SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, xattr_name, xattr_value FROM vrxpentries;" -x "prefix"
 prefix
 prefix/.hidden
 prefix/1KB
@@ -278,6 +278,10 @@ Error: Cannot open skip file "skip.bad"
 
 # Bad path
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" ""
+
+# Bad thread count
+$ gufi_query -n 18446744073709551615 "prefix"
+Error: Could not allocate 18446744073709551615 thread structures
 
 #####################################
 # Extra Inputs                      #

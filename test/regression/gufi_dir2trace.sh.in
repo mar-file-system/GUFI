@@ -149,6 +149,9 @@ run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}' | sed '/\\/exte
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""
+
+echo "# bad thread count"
+run_no_sort "${GUFI_DIR2TRACE} -n 18446744073709551615 \"${SRCDIR}\" \"${TRACE}\""
 ) | remove_indexing_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${OUTPUT}"

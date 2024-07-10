@@ -116,27 +116,27 @@ cat "${TRACES[@]}" > "${TRACE}"
     @GREP@ "^.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | sed 's/empty_directory/empty_directory2/g;'
 ) > "${EMPTY_LAST_DIR_TRACE}"
 echo "# create index from a trace file whose last item is an empty directory"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${EMPTY_LAST_DIR_TRACE}\" \"${SEARCH}\""
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${EMPTY_LAST_DIR_TRACE}\" \"${SEARCH}\""
 
 echo "# bad trace path"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"\" \"${SEARCH}\""
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"\" \"${SEARCH}\""
 
 echo "# bad index path"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${SRCDIR}/1KB\" 2> >(sort)"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${TRACE}\" \"${SRCDIR}/1KB\" 2> >(sort)"
 echo
 
 echo "# empty trace"
 true > "${BADTRACE}"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${SEARCH}\""
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
 echo
 
 echo "# cannot find delimiter of first line"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${SEARCH}\""
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\""
 echo
 
 echo "# first line does not start with a directory"
 tail -n -1 "${TRACE}" > "${BADTRACE}"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${SEARCH}\""
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
 echo
 
 # generate trace with good directory line and bad file line
@@ -147,7 +147,10 @@ echo
 ) > "${BADTRACE}"
 
 echo "# file delimiter not found"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${SEARCH}\""
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
+
+echo "# bad thread count"
+run_no_sort "${GUFI_DIR2TRACE} -n 18446744073709551615 \"${SRCDIR}\" \"${TRACE}\""
 ) | remove_indexing_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2index.expected "${OUTPUT}"

@@ -127,3 +127,7 @@ prefix/unusual#? directory ,/unusual, name?#
 $ gufi_dir2trace -d "|" -n 2 -k "skip.bad" "prefix" "trace"
 Error: Cannot open skip file "skip.bad"
 
+# bad thread count
+$ gufi_dir2trace -n 18446744073709551615 "prefix" "trace"
+Could not allocate space for 18446744073709551615 files
+

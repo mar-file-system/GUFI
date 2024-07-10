@@ -928,6 +928,15 @@ int main(int argc, char *argv[]) {
     #endif
 
     pa.stats = calloc(pa.in.maxthreads, sizeof(struct RollUpStats));
+    if (!pa.stats) {
+        fprintf(stderr, "Could not allocate %zu stat buffers\n", pa.in.maxthreads);
+        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+        timestamp_print_destroy(timestamp_buffers);
+        #endif
+        input_fini(&pa.in);
+        return EXIT_FAILURE;
+    }
+
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
         sll_init(&pa.stats[i].not_processed);
         sll_init(&pa.stats[i].not_rolled_up);

@@ -1476,3 +1476,7 @@ root 5
 $ gufi_stats -c total-dircount prefix
 69
 
+# bad thread count
+$ gufi_rollup -n 18446744073709551615 "prefix"
+Could not allocate 18446744073709551615 stat buffers
+

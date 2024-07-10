@@ -201,6 +201,10 @@ static int outfiles_fin(FILE **files, const size_t end) {
 static FILE **outfiles_init(const char *prefix, const size_t count) {
     /* Not checking arguments */
     FILE **files = calloc(count, sizeof(FILE *));
+    if (!files) {
+        fprintf(stderr, "Could not allocate space for %zu files\n", count);
+        return NULL;
+    }
 
     for(size_t i = 0; i < count; i++) {
         char outname[MAXPATH];

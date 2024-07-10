@@ -144,6 +144,10 @@ run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${SEARCH}\""
+
+echo "# bad thread count"
+run_no_sort "${GUFI_DIR2INDEX} -n 18446744073709551615 \"${SRCDIR}\" \"${SEARCH}\""
+
 ) | remove_indexing_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"

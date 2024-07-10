@@ -68,6 +68,7 @@ OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -166,7 +167,7 @@ int print_timer(struct OutputBuffers *obufs, const size_t id,
     (void) obs##_static_mutex;                                          \
     if (!OutputBuffers_init(obs, count, capacity, obs##_mutex_ptr)) {   \
         fprintf(stderr, "Error: Could not initialize OutputBuffers\n"); \
-        return -1;                                                      \
+        return EXIT_FAILURE;                                            \
     }
 
 #define timestamp_print(obs, id, str, name)                             \
