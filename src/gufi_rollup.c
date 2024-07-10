@@ -700,6 +700,7 @@ static int do_rollup(struct RollUp *rollup,
 
     char setup[] =
         /* clear out old rollup data */
+        "DROP INDEX IF EXISTS " SUMMARY "_idx;"
         "DELETE FROM " PENTRIES_ROLLUP ";"
         "DELETE FROM " SUMMARY " WHERE isroot != 1;"
         "DELETE FROM " TREESUMMARY ";"
@@ -850,6 +851,16 @@ static int rollup(void *args timestamp_sig) {
             }
             else {
                 ds->success = (do_rollup(dir, ds, dst, &pa->xattr_template timestamp_args) == 0);
+
+                /* index summary.inode to make rollup views faster to query */
+                if (ds->success) {
+                    char *err = NULL;
+                    if (sqlite3_exec(dst,
+                                     "CREATE INDEX " SUMMARY "_idx ON " SUMMARY "(inode);",
+                                     NULL, NULL, &err) != SQLITE_OK) {
+                        sqlite_print_err_and_free(err, stderr, "Warning: Could not create roll up index at \"%s\": %s\n", dir->data.name, err);
+                    }
+                }
             }
 
             dir->rolledup = ds->success;

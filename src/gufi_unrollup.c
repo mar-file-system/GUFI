@@ -160,6 +160,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         char *err = NULL;
         if (sqlite3_exec(db,
                          "BEGIN TRANSACTION;"
+                         "DROP INDEX IF EXISTS " SUMMARY "_idx;"
                          "DELETE FROM " PENTRIES_ROLLUP ";"
                          "DELETE FROM " SUMMARY " WHERE isroot != 1;"
                          "UPDATE " SUMMARY " SET rollupscore = 0 WHERE isroot == 1;"
