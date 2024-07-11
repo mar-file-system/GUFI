@@ -61,17 +61,33 @@
 
 
 
+# build and install sqlite-vec
+
 set -e
 
-# Point to appropriate repos, current is no longer supported
-sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
-sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+# install sqlite3 first
+"${SCRIPT_PATH}/sqlite3.sh"
 
-# install Extra Tools for Enterprise Linux (EPEL)
-yum -y install epel-release
+# Assume all paths exist
 
-# install libraries
-yum -y install fuse-devel libattr libidn pcre2-devel zlib-devel
+vec_name="sqlite-vec"
+vec_prefix="${INSTALL_DIR}/${vec_name}"
+if [[ ! -d "${vec_prefix}" ]]; then
+    vec_build="${BUILD_DIR}/sqlite-vec-main"
+    if [[ ! -d "${vec_build}" ]]; then
+        vec_tarball="${DOWNLOAD_DIR}/sqlite-vec.tar.gz"
+        if [[ ! -f "${vec_tarball}" ]]; then
+            wget https://github.com/asg017/sqlite-vec/archive/main.tar.gz -O "${vec_tarball}"
+        fi
 
-# install required packages
-yum -y install attr autoconf clang cmake3 diffutils fuse gettext git make patch pkgconfig python3 sudo
+        tar -xf "${vec_tarball}" -C "${BUILD_DIR}"
+        patch -p1 -d "${vec_build}" < "${SCRIPT_PATH}/sqlite-vec.patch"
+        ln -sf "${INSTALL_DIR}/sqlite3/include" "${vec_build}/vendor"
+    fi
+
+    cd "${vec_build}"
+    make -j "${THREADS}" static
+    mkdir -p "${vec_prefix}/include" "${vec_prefix}/lib"
+    cp -f sqlite-vec.h "${vec_prefix}/include"
+    cp -f dist/libsqlite_vec0.a "${vec_prefix}/lib"
+fi

@@ -82,6 +82,7 @@ apt -y install \
     autoconf \
     clang \
     cmake \
+    gettext \
     git \
     patch \
     pkg-config \
