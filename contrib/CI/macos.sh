@@ -73,7 +73,7 @@ brew --prefix grep
 echo "$(brew --prefix)/opt/grep/libexec/gnubin" >> "${GITHUB_PATH}"
 
 # install required packages
-brew install autoconf coreutils cmake pcre2 python
+brew install autoconf coreutils cmake gettext pcre2 python
 
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
