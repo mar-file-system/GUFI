@@ -1,0 +1,90 @@
+diff --git a/Makefile b/Makefile
+index 4630a97..9607d4e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -94,10 +94,11 @@ $(TARGET_LOADABLE): sqlite-vec.c sqlite-vec.h $(prefix)
+ 		-Ivendor/ \
+ 		-O3 \
+ 		$(CFLAGS) \
+-		$< -o $@
++		$< -o $@ \
++		-lm
+ 
+ $(TARGET_STATIC): sqlite-vec.c sqlite-vec.h $(prefix) $(OBJS_DIR)
+-	$(CC) -Ivendor/ -Ivendor/vec $(CFLAGS) -DSQLITE_CORE \
++	$(CC) -Ivendor/ $(CFLAGS) \
+ 	-O3 -c  $< -o $(OBJS_DIR)/vec.o
+ 	$(AR) rcs $@ $(OBJS_DIR)/vec.o
+ 
+@@ -106,7 +107,7 @@ $(TARGET_STATIC_H): sqlite-vec.h $(prefix)
+ 
+ 
+ $(OBJS_DIR)/sqlite3.o: vendor/sqlite3.c $(OBJS_DIR)
+-	$(CC) -c -g3 -O3 -DSQLITE_EXTRA_INIT=core_init -DSQLITE_CORE -DSQLITE_ENABLE_STMT_SCANSTATUS -DSQLITE_ENABLE_BYTECODE_VTAB -DSQLITE_ENABLE_EXPLAIN_COMMENTS -I./vendor $< -o $@
++	$(CC) -c -g3 -O3 -I./vendor $< -o $@
+ 
+ $(LIBS_DIR)/sqlite3.a: $(OBJS_DIR)/sqlite3.o $(LIBS_DIR)
+ 	$(AR) rcs $@ $<
+@@ -117,7 +118,6 @@ $(BUILD_DIR)/shell-new.c: vendor/shell.c $(BUILD_DIR)
+ $(OBJS_DIR)/shell.o: $(BUILD_DIR)/shell-new.c $(OBJS_DIR)
+ 	$(CC) -c -g3 -O3 \
+ 		-I./vendor \
+-		-DSQLITE_ENABLE_STMT_SCANSTATUS -DSQLITE_ENABLE_BYTECODE_VTAB -DSQLITE_ENABLE_EXPLAIN_COMMENTS \
+ 		-DEXTRA_TODO="\"CUSTOMBUILD:sqlite-vec\n\"" \
+ 		$< -o $@
+ 
+@@ -134,14 +134,9 @@ $(LIBS_DIR)/sqlite-vec.a: $(OBJS_DIR)/sqlite-vec.o $(LIBS_DIR)
+ $(TARGET_CLI): sqlite-vec.h $(LIBS_DIR)/sqlite-vec.a $(LIBS_DIR)/shell.a $(LIBS_DIR)/sqlite3.a examples/sqlite3-cli/core_init.c $(prefix)
+ 	$(CC) -g3  \
+ 	-Ivendor/ -I./ \
+-	-DSQLITE_CORE \
+-	-DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_FTS4 \
+-	-DSQLITE_ENABLE_STMT_SCANSTATUS -DSQLITE_ENABLE_BYTECODE_VTAB -DSQLITE_ENABLE_EXPLAIN_COMMENTS \
+-	-DSQLITE_EXTRA_INIT=core_init \
+ 	$(CFLAGS) \
+-	-ldl -lm \
+-	examples/sqlite3-cli/core_init.c $(LIBS_DIR)/shell.a $(LIBS_DIR)/sqlite3.a $(LIBS_DIR)/sqlite-vec.a -o $@
+-
++	$(LIBS_DIR)/shell.a $(LIBS_DIR)/sqlite3.a $(LIBS_DIR)/sqlite-vec.a -o $@ \
++	-ldl -lm -pthread
+ 
+ sqlite-vec.h: sqlite-vec.h.tmpl VERSION
+ 	VERSION=$(shell cat VERSION) \
+diff --git a/sqlite-vec.c b/sqlite-vec.c
+index 7aa3b64..2e062b7 100644
+--- a/sqlite-vec.c
++++ b/sqlite-vec.c
+@@ -53,18 +53,6 @@ SQLITE_EXTENSION_INIT1
+ #define LONGDOUBLE_TYPE long double
+ #endif
+ 
+-#ifndef _WIN32
+-#ifndef __EMSCRIPTEN__
+-#ifndef __COSMOPOLITAN__
+-#ifndef __wasi__
+-typedef u_int8_t uint8_t;
+-typedef u_int16_t uint16_t;
+-typedef u_int64_t uint64_t;
+-#endif
+-#endif
+-#endif
+-#endif
+-
+ typedef int8_t i8;
+ typedef uint8_t u8;
+ typedef int16_t i16;
+diff --git a/sqlite-vec.h.tmpl b/sqlite-vec.h.tmpl
+index 2496d63..fea4d05 100644
+--- a/sqlite-vec.h.tmpl
++++ b/sqlite-vec.h.tmpl
+@@ -1,6 +1,10 @@
+ #ifndef SQLITE_VEC_H
+ #define SQLITE_VEC_H
+ 
++#ifndef SQLITE_CORE
++#define SQLITE_CORE
++#endif
++
+ #include "sqlite3ext.h"
+ 
+ #define SQLITE_VEC_VERSION "v${VERSION}"

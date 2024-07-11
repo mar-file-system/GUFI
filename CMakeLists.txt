@@ -370,13 +370,16 @@ set(COMMON_INCLUDES
   ${CMAKE_SOURCE_DIR}/include
   ${XATTR_INCLUDEDIR}
   ${DEP_INSTALL_PREFIX}/sqlite3/include
-  ${DEP_INSTALL_PREFIX}/sqlite3-pcre)
+  ${DEP_INSTALL_PREFIX}/sqlite3-pcre
+  ${DEP_INSTALL_PREFIX}/sqlite-vec/include
+)
 
 include_directories(${COMMON_INCLUDES})
 
 # set of libraries needed by the final binaries
 set(COMMON_LIBRARIES
   GUFI
+  ${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libsqlite_vec0.a
   ${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
   ${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
   ${PCRE2_LDFLAGS}

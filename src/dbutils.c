@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #include "pcre.h"
+#include "sqlite-vec.h"
 
 #include "BottomUp.h"
 #include "dbutils.h"
@@ -278,6 +279,9 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
 
         /* load the sqlite3-pcre extension */
         sqlite3_extension_init(db, NULL, NULL) ;
+
+        /* load the sqlite-vec extension */
+        sqlite3_vec_init(db, NULL, NULL);
     }
 
     if (!(flags & SQLITE_OPEN_READONLY) && modifydb_func) {

@@ -152,7 +152,7 @@ jobs:
     - name: Install Cygwin
       uses: cygwin/cygwin-install-action@master
       with:
-        packages: attr autoconf cmake clang git libattr1 libiconv-devel libintl-devel libpcre2-devel make patch pkg-config python3 python39 python39-pip zlib-devel
+        packages: attr autoconf clang cmake git libattr1 libiconv-devel libintl-devel libpcre2-devel make patch pkg-config python3 python39 python39-pip zlib-devel
 
     - name: Set Up Python3
       run:  ln -sf /usr/bin/python3.9 /usr/bin/python3
