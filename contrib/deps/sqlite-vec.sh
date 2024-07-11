@@ -61,34 +61,33 @@
 
 
 
+# build and install sqlite-vec
+
 set -e
 
-# Set Timezone to skip an interactive prompt when running apt-get update
-TZ=America/Denver
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# install sqlite3 first
+"${SCRIPT_PATH}/sqlite3.sh"
 
-apt update
+# Assume all paths exist
 
-# install libraries
-apt -y install \
-    libattr1-dev \
-    libfuse-dev \
-    libpcre2-dev \
-    zlib1g-dev
+vec_name="sqlite-vec"
+vec_prefix="${INSTALL_DIR}/${vec_name}"
+if [[ ! -d "${vec_prefix}" ]]; then
+    vec_build="${BUILD_DIR}/sqlite-vec-main"
+    if [[ ! -d "${vec_build}" ]]; then
+        vec_tarball="${DOWNLOAD_DIR}/sqlite-vec.tar.gz"
+        if [[ ! -f "${vec_tarball}" ]]; then
+            wget https://github.com/asg017/sqlite-vec/archive/main.tar.gz -O "${vec_tarball}"
+        fi
 
-# install required packages
-apt -y install \
-    attr \
-    autoconf \
-    clang \
-    cmake \
-    gettext \
-    git \
-    patch \
-    pkg-config \
-    python3 \
-    python3-pip \
-    sudo
+        tar -xf "${vec_tarball}" -C "${BUILD_DIR}"
+        patch -p1 -d "${vec_build}" < "${SCRIPT_PATH}/sqlite-vec.patch"
+        ln -sf "${INSTALL_DIR}/sqlite3/include" "${vec_build}/vendor"
+    fi
 
-# install pip packages
-PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install sqlalchemy
+    cd "${vec_build}"
+    make -j "${THREADS}" static
+    mkdir -p "${vec_prefix}/include" "${vec_prefix}/lib"
+    cp -f sqlite-vec.h "${vec_prefix}/include"
+    cp -f dist/libsqlite_vec0.a "${vec_prefix}/lib"
+fi
