@@ -155,6 +155,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   endif()
 endif()
 
+if (CYGWIN)
+  set(DEP_AI OFF)
+else()
+  set(DEP_AI ON CACHE BOOL "Whether or not to build and link with SQLite AI modules")
+endif()
+
 # Only enable C++ if support is found
 include(CheckLanguage)
 check_language(CXX)
@@ -342,6 +348,9 @@ if (DEP_USE_JEMALLOC)
     set(JEMALLOC "${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a")
   endif()
 endif()
+if (DEP_AI)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --AI)
+endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}" "${CMAKE_VERSION}" "${CMAKE_SYSTEM_NAME}")
 
 # Find zlib
@@ -424,20 +433,27 @@ endif()
 set(COMMON_INCLUDES
   ${CMAKE_SOURCE_DIR}/include
   ${XATTR_INCLUDEDIR}
-  ${DEP_INSTALL_PREFIX}/sqlite3/include
-  ${DEP_INSTALL_PREFIX}/sqlite3-pcre)
-
-include_directories(${COMMON_INCLUDES})
+  "${DEP_INSTALL_PREFIX}/sqlite3/include"
+  "${DEP_INSTALL_PREFIX}/sqlite3-pcre"
+)
 
 # set of libraries needed by the final binaries
 set(COMMON_LIBRARIES
   GUFI
-  ${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
-  ${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
+  "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a"
+  "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a"
   ${PCRE2_LDFLAGS}
-  Threads::Threads
-  m
 )
+
+if (DEP_AI)
+  list(APPEND COMMON_INCLUDES
+    "${DEP_INSTALL_PREFIX}/sqlite-vec/include"
+  )
+
+  list(APPEND COMMON_LIBRARIES
+    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libsqlite_vec0.a"
+  )
+endif()
 
 if (ZLIB_FOUND)
   list(APPEND COMMON_LIBRARIES
@@ -452,8 +468,12 @@ if (DEP_USE_JEMALLOC)
 endif()
 
 list(APPEND COMMON_LIBRARIES
+  Threads::Threads
+  m
   dl
 )
+
+include_directories(${COMMON_INCLUDES})
 
 # enable "make test"
 enable_testing()

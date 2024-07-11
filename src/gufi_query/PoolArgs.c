@@ -65,6 +65,10 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
+#if HAVE_AI
+#include "sqlite-vec.h"
+#endif
+
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/external.h"
 
@@ -109,15 +113,22 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             fprintf(stderr, "Warning: Could not add functions to sqlite\n");
         }
 
-        const int runvt_rc = sqlite3_runvt_init(ta->outdb, NULL, NULL);
-        if (runvt_rc != SQLITE_OK) {
-            fprintf(stderr, "Error: Could not initialize runvt: %s (%d)\n",
-                    sqlite3_errstr(runvt_rc), runvt_rc);
+        char *err = NULL;
+
+        if (sqlite3_runvt_init(ta->outdb, &err, NULL) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr, "Error: Could not initialize runvt: %s\n", err);
             break;
         }
 
+        #if HAVE_AI
+        /* load the sqlite-vec extension */
+        if (sqlite3_vec_init(ta->outdb, &err, NULL) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr, "Error: Could not initialize sqlite3-vec: %s\n", err);
+            break;
+        }
+        #endif
+
         /* create empty xattr tables to UNION to */
-        char *err = NULL;
         if (sqlite3_exec(ta->outdb, XATTRS_TEMPLATE_CREATE,
                          NULL, NULL, &err) != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr, "Error: Could create xattr template \"%s\" on %s: %s\n", in->sql.init.data, ta->dbname, err);

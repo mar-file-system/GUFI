@@ -72,4 +72,4 @@ brew install grep
 echo "$(brew --prefix grep)/libexec/gnubin" >> "${GITHUB_PATH}"
 
 # install required packages
-brew install autoconf cmake diffutils gnu-sed pcre2 python
+brew install autoconf cmake diffutils gettext gnu-sed pcre2 python

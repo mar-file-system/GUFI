@@ -65,6 +65,10 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
+#if HAVE_AI
+#include "sqlite-vec.h"
+#endif
+
 #include "OutputBuffers.h"
 #include "dbutils.h"
 #include "print.h"
@@ -97,6 +101,11 @@ int main(int argc, char *argv[]) {
     sqlite3_gufivt_init(db, NULL, NULL);
 
     sqlite3_runvt_init(db, NULL, NULL);
+
+    #if HAVE_AI
+    /* load the sqlite-vec extension */
+    sqlite3_vec_init(db, NULL, NULL);
+    #endif
 
     /* no buffering */
     struct OutputBuffer ob;

@@ -83,6 +83,7 @@ apt -y install \
     bsdmainutils \
     clang \
     cmake \
+    gettext \
     git \
     patch \
     pkg-config \

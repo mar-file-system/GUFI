@@ -1,4 +1,4 @@
-#!/usr/bin/env ash
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,38 +61,33 @@
 
 
 
+# build and install sqlite-vec
+
 set -e
 
-apk update
+# install sqlite3 first
+"${SCRIPT_PATH}/sqlite3.sh"
 
-# install libraries
-apk add \
-    attr-dev \
-    fuse3-dev \
-    jemalloc-dev \
-    jemalloc-static \
-    pcre2-dev \
-    zlib-dev
+# Assume all paths exist
 
-# install required packages
-apk add \
-    attr \
-    autoconf \
-    bash \
-    bash-completion \
-    clang20 \
-    cmake \
-    diffutils \
-    gettext-envsubst \
-    git \
-    make \
-    openmp \
-    patch \
-    pkgconf \
-    py3-pip \
-    python3 \
-    sudo \
-    util-linux-misc
+vec_name="sqlite-vec"
+vec_prefix="${INSTALL_DIR}/${vec_name}"
+if [[ ! -d "${vec_prefix}" ]]; then
+    vec_build="${BUILD_DIR}/sqlite-vec-main"
+    if [[ ! -d "${vec_build}" ]]; then
+        vec_tarball="${DOWNLOAD_DIR}/sqlite-vec.tar.gz"
+        if [[ ! -f "${vec_tarball}" ]]; then
+            wget https://github.com/asg017/sqlite-vec/archive/main.tar.gz -O "${vec_tarball}"
+        fi
 
-ln -s /usr/bin/clang-20   /usr/bin/clang
-ln -s /usr/bin/clang++-20 /usr/bin/clang++
+        tar -xf "${vec_tarball}" -C "${BUILD_DIR}"
+        patch -p1 -d "${vec_build}" < "${SCRIPT_PATH}/sqlite-vec.patch"
+        ln -sf "${INSTALL_DIR}/sqlite3/include" "${vec_build}/vendor"
+    fi
+
+    cd "${vec_build}"
+    make -j "${THREADS}" static
+    mkdir -p "${vec_prefix}/include" "${vec_prefix}/lib"
+    cp -f sqlite-vec.h "${vec_prefix}/include"
+    cp -f dist/libsqlite_vec0.a "${vec_prefix}/lib"
+fi

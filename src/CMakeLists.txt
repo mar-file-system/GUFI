@@ -162,6 +162,11 @@ build_and_install("${BIN}" TRUE ${C_SOURCES})
 # this is the gufi_stat binary that operates on indexes directly
 build_and_install_one("${BIN}" TRUE gufi_stat_bin gufi_stat.c)
 
+# gufi_sqlite3 loads AI extensions
+if (DEP_AI)
+  target_compile_definitions(gufi_sqlite3 PUBLIC -DHAVE_AI=1)
+endif()
+
 # gufi_query is split up into multiple files
 add_library(gufi_query_lib OBJECT
   gufi_query/PoolArgs.c
@@ -174,6 +179,10 @@ add_library(gufi_query_lib OBJECT
   gufi_query/query.c
   gufi_query/query_formatting.c
 )
+
+if (DEP_AI)
+  set_property(SOURCE gufi_query/PoolArgs.c APPEND_STRING PROPERTY COMPILE_FLAGS -DHAVE_AI=1)
+endif()
 
 add_dependencies(gufi_query_lib GUFI)
 target_compile_definitions(gufi_query_lib PUBLIC SQLITE_CORE)
