@@ -63,19 +63,50 @@ OF SUCH DAMAGE.
 
 
 #include <stdlib.h>
+#include <string.h>
 
+#include "OutputBuffers.h"
 #include "dbutils.h"
 #include "histogram.h"
+#include "print.h"
+
+static void sub_help(void) {
+    printf("db                       db file path\n");
+    printf("SQL                      SQL statements to run\n");
+    printf("\n");
+    printf("If no SQL statements are passed in, will read from stdin\n");
+    printf("\n");
+}
 
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
-        fprintf(stderr, "Syntax: %s db [sql]...\n", argv[0]);
+    struct input in;
+    int idx = parse_cmd_line(argc, argv, "hd:", 0, "[db [SQL]...]", &in);
+    if (in.helped)
+        sub_help();
+    if (idx < 0) {
+        input_fini(&in);
         return EXIT_FAILURE;
     }
 
-    const char *dbname = argv[1];
+    const int args_left = argc - idx;
 
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 1, NULL, NULL);
+    sqlite3 *db = NULL;;
+
+    /* create in-memory db and read from stdin */
+    if (args_left == 0) {
+        db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 1, NULL, NULL);
+    }
+    /* open db file */
+    else if (args_left > 1) {
+        const char *dbname = argv[idx++];
+        db = opendb(dbname,     SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 1, NULL, NULL);
+    }
+    else {
+        print_help(argv[0], "hd:", "[db [SQL]...]");
+        sub_help();
+        return EXIT_FAILURE;
+    }
+
     if (!db) {
         return EXIT_FAILURE;
     }
@@ -83,11 +114,38 @@ int main(int argc, char *argv[]) {
     addqueryfuncs(db);
     addhistfuncs(db);
 
+    /* no buffering */
+    struct OutputBuffer ob;
+    memset(&ob, 0, sizeof(ob));
+
+    PrintArgs_t pa = {
+        .output_buffer = &ob,
+        .delim = in.delim,
+        .mutex = NULL,
+        .outfile = stdout,
+        .rows = 0,
+    };
+
     char *err = NULL;
-    for(int i = 2; i < argc; i++) {
-        if (sqlite3_exec(db, argv[i], NULL, NULL, &err) != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Error: SQL error: %s\n", err);
-            break;
+
+    /* if using in-memory db or no SQL statements following db path, read from stdin */
+    if (args_left < 2) {
+        char *line = NULL;
+        size_t len = 0;
+        while (getline(&line, &len, stdin) != -1) {
+            if (sqlite3_exec(db, line, print_parallel, &pa, &err) != SQLITE_OK) {
+                sqlite_print_err_and_free(err, stderr, "Error: SQL error: %s\n", err);
+                break;
+            }
+        }
+        free(line);
+    }
+    else {
+        for(int i = idx; i < argc; i++) {
+            if (sqlite3_exec(db, argv[i], print_parallel, &pa, &err) != SQLITE_OK) {
+                sqlite_print_err_and_free(err, stderr, "Error: SQL error: %s\n", err);
+                break;
+            }
         }
     }
 
