@@ -77,6 +77,9 @@ OF SUCH DAMAGE.
 #include "external.h"
 #include "histogram.h"
 
+static const char SQLITE_MEMORY_ARRAY[] = ":memory:";
+const char *SQLITE_MEMORY = SQLITE_MEMORY_ARRAY;
+
 const char READDIRPLUS_CREATE[] =
     DROP_TABLE(READDIRPLUS)
     "CREATE TABLE " READDIRPLUS "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, suspect INT64);";

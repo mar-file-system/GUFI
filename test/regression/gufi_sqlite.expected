@@ -1,0 +1,48 @@
+# gufi_sqlite help
+$ gufi_sqlite -h
+usage: gufi_sqlite [options] [db [SQL]...]
+options:
+  -h                     help
+  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
+
+db                       db file path
+SQL                      SQL statements to run
+
+If no SQL statements are passed in, will read from stdin
+Dot commands are not supported
+
+
+# new db file + argv
+$ gufi_sqlite "test.db" "CREATE TABLE new_table(i INT);" "INSERT INTO new_table VALUES (0), (1), (2);"
+
+# existing db file + argv
+$ gufi_sqlite "test.db" "SELECT * FROM new_table ORDER BY i DESC;"
+2
+1
+0
+
+$ rm -f "test.db"
+
+# new db file + stdin
+$ (echo "CREATE TABLE new_table(i INT);"; echo "INSERT INTO new_table VALUES (3), (4), (5);") | gufi_sqlite "test.db"
+
+# existing db file + stdin
+$ echo "SELECT * FROM new_table ORDER BY i DESC;" | gufi_sqlite "test.db"
+5
+4
+3
+
+# in-memory db
+$ (echo "CREATE TABLE new_table(i INT);"; echo "INSERT INTO new_table VALUES (6), (7), (8);"; echo "SELECT * FROM new_table ORDER BY i DESC;") | gufi_sqlite
+8
+7
+6
+
+# directory as db
+$ gufi_sqlite "prefix"
+Error: Could not open database file "prefix"
+
+# bad SQL
+$ (echo "CREATE TABLE;") | gufi_sqlite
+Error: SQL error: near ";": syntax error
+

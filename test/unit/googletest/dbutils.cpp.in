@@ -92,7 +92,7 @@ TEST(create_treesummary_tables, nullptr) {
 
 TEST(set_db_pragmas, good) {
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI, nullptr), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI, nullptr), SQLITE_OK);
     EXPECT_EQ(set_db_pragmas(db), 0);
     EXPECT_EQ(sqlite3_close(db), SQLITE_OK);
 }
@@ -116,7 +116,7 @@ TEST(opendb, bad_path) {
 }
 
 TEST(opendb, bad_modify_db) {
-    sqlite3 *db = opendb(":memory:", SQLITE_OPEN_READWRITE, 0, 0,
+    sqlite3 *db = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE, 0, 0,
                          [](const char *, sqlite3 *, void *){ return 1; }, nullptr);
     EXPECT_EQ(db, nullptr);
 }
@@ -172,7 +172,7 @@ TEST(addqueryfuncs, path) {
     work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.orig_root.data, dirname);
 
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
     ASSERT_EQ(addqueryfuncs_with_context(db, &work), 0);
 
@@ -196,7 +196,7 @@ TEST(addqueryfuncs, epath) {
     work.basename_len = strlen(dirname);
 
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
     ASSERT_EQ(addqueryfuncs_with_context(db, &work), 0);
 
@@ -215,7 +215,7 @@ TEST(addqueryfuncs, fpath) {
     work.fullpath = nullptr;
 
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
     ASSERT_EQ(addqueryfuncs_with_context(db, &work), 0);
     EXPECT_EQ(sqlite3_exec(db, "SELECT fpath();", nullptr, nullptr, nullptr), SQLITE_OK);
@@ -249,7 +249,7 @@ TEST(addqueryfuncs, rpath) {
     work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.orig_root.data, dirname);
 
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
     ASSERT_EQ(addqueryfuncs_with_context(db, &work), 0);
 
@@ -280,7 +280,7 @@ TEST(addqueryfuncs, uidtouser) {
     ASSERT_EQ(result, &pwd);
 
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);
@@ -310,7 +310,7 @@ TEST(addqueryfuncs, gidtogroup) {
     ASSERT_EQ(result, &grp);
 
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);
@@ -330,7 +330,7 @@ TEST(addqueryfuncs, gidtogroup) {
 
 TEST(addqueryfuncs, modetotxt) {
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);
@@ -357,7 +357,7 @@ TEST(addqueryfuncs, modetotxt) {
 
 TEST(addqueryfuncs, strftime) {
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);
@@ -394,7 +394,7 @@ static const char SIZE[] = {'K',    // 10
 
 TEST(addqueryfuncs, blocksize) {
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);
@@ -458,7 +458,7 @@ TEST(addqueryfuncs, blocksize) {
 
 TEST(addqueryfuncs, human_readable_size) {
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);
@@ -496,7 +496,7 @@ TEST(addqueryfuncs, level) {
     memset(&work, 0, sizeof(work));
 
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     for(work.level = 0; work.level < 10; work.level++) {
@@ -522,7 +522,7 @@ TEST(addqueryfuncs, starting_point) {
     work.orig_root.len = strlen(work.orig_root.data);
 
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs_with_context(db, &work), 0);
@@ -538,7 +538,7 @@ TEST(addqueryfuncs, starting_point) {
 
 TEST(addqueryfuncs, basename) {
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);
@@ -583,7 +583,7 @@ static int double_callback(void *arg, int, char **data, char **) {
 
 TEST(addqueryfuncs, stdevs) {
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);
@@ -616,7 +616,7 @@ TEST(addqueryfuncs, stdevs) {
 
 TEST(addqueryfuncs, stdevp) {
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);
@@ -649,7 +649,7 @@ TEST(addqueryfuncs, stdevp) {
 
 TEST(addqueryfuncs, median) {
     sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
     ASSERT_EQ(addqueryfuncs(db), 0);

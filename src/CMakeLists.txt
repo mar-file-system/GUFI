@@ -172,6 +172,7 @@ set(C_SOURCES
   gufi_dir2index.c
   gufi_dir2trace.c
   gufi_rollup.c
+  gufi_sqlite.c           # simple wrapper around sqlite3 to enable GUFI modifications
   gufi_trace2index.c
   gufi_treesummary.c
   gufi_treesummary_all.c

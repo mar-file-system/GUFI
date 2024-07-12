@@ -80,6 +80,8 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+extern const char *SQLITE_MEMORY;
+
 #if defined(__APPLE__) || defined(__linux__)
 #define GUFI_SQLITE_VFS       "unix-none"
 #elif defined(__CYGWIN__)

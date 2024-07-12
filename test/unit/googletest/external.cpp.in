@@ -243,7 +243,7 @@ TEST(external, concatenate) {
         );
     EXPECT_EQ(rc, -1);
 
-    sqlite3 *db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0,
+    sqlite3 *db = opendb(SQLITE_MEMORY, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0,
                          create_external_tables, nullptr);
     ASSERT_NE(db, nullptr);
 

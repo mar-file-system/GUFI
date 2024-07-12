@@ -72,7 +72,7 @@ OF SUCH DAMAGE.
 #include "histogram.h"
 
 static void setup_db(sqlite3 **db) {
-    ASSERT_EQ(sqlite3_open(":memory:", db), SQLITE_OK);
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, db), SQLITE_OK);
     ASSERT_NE(*db, nullptr);
     ASSERT_EQ(addhistfuncs(*db), 1);
 }

@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 
     const size_t tablename_len = strlen(tablename);
 
-    if (!(db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL))) {
+    if (!(db = opendb(SQLITE_MEMORY, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL))) {
         fprintf(stderr, "Error: Unable to open in-memory database.\n");
         return EXIT_FAILURE;
     }

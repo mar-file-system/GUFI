@@ -196,7 +196,7 @@ TEST(gufi_query, aggregate_outputs) {
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* directory, not file */
 
     in.output = OUTDB;
-    in.outname.data = ":memory:";
+    in.outname.data = SQLITE_MEMORY;
     in.outname.len = strlen(in.outname.data);
     in.sql.init_agg.data = "CREATE TABLE aggregate();";
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr);

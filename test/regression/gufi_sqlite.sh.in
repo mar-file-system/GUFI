@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,109 +61,63 @@
 
 
 
-cmake_minimum_required(VERSION 3.1.0)
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-set(CONTRIB_SOURCES
-  gendir.c                # simple source tree generator
-  split_trace.c           # utility for spliting large traces into smaller files for parallel processing
-  treediff.c              # walk two trees and print the names that don't match
-)
+OUTPUT="gufi_sqlite.out"
 
-# potentially useful C++ executables
-if (CMAKE_CXX_COMPILER)
-  list(APPEND CONTRIB_SOURCES
-    make_testindex.cpp    # a more complex index generator
-    verifytraceintree.cpp
-  )
+DBNAME="test.db"
 
-  add_executable(verifytrace verifytrace.cpp)
-endif()
+cleanup() {
+    rm -rf "${DBNAME}"
+}
 
-# build C/C++ sources that depend on libGUFI
-foreach(SOURCE ${CONTRIB_SOURCES})
-  # NAME_WE removes the directory and the longest extension
-  get_filename_component(TARGET "${SOURCE}" NAME_WE)
-  add_executable("${TARGET}" "${SOURCE}")
-  target_link_libraries("${TARGET}" ${COMMON_LIBRARIES})
-endforeach()
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
 
-set(CHECKSTYLE)
+trap cleanup_exit EXIT
 
-# add 'make shellcheck'
-find_program(SHELLCHECK shellcheck)
-if (SHELLCHECK)
-  message(STATUS "Found shellcheck: ${SHELLCHECK}")
-  configure_file(shellcheck.sh shellcheck.sh @ONLY)
-  add_custom_target(shellcheck
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/shellcheck.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE shellcheck)
-else()
-  message(STATUS "shellcheck not found")
-endif()
+cleanup
 
-# add 'make pylint'
-find_program(PYLINT pylint)
-if (PYLINT)
-  message(STATUS "Found pylint: ${PYLINT}")
-  configure_file(pylint.sh pylint.sh @ONLY)
-  add_custom_target(pylint
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/pylint.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE pylint)
-else()
-  message(STATUS "pylint not found")
-endif()
+(
+echo "# ${GUFI_SQLITE} help" | replace
+run_no_sort "${GUFI_SQLITE} -h"
 
-# add 'make checkstyle'
-if (CHECKSTYLE)
-  message(STATUS "checkstyle will run: ${CHECKSTYLE}")
-  add_custom_target(checkstyle
-    DEPENDS ${CHECKSTYLE})
-else()
-  message(STATUS "checkstyle disabled")
-endif()
+echo "# new db file + argv"
+run_no_sort "${GUFI_SQLITE} \"${DBNAME}\"" \
+            "\"CREATE TABLE new_table(i INT);\"" \
+            "\"INSERT INTO new_table VALUES (0), (1), (2);\""
 
-# potentially useful scripts
-set(USEFUL
-  canned_queries.sh
-  gentrace.py
-  hashes.py
-  longitudinal_snapshot.py
-  trace_anonymizer.py
-)
+echo "# existing db file + argv"
+run_no_sort "${GUFI_SQLITE} \"${DBNAME}\"" \
+            "\"SELECT * FROM new_table ORDER BY i DESC;\""
 
-foreach(file ${USEFUL})
-    configure_file("${file}" "${file}" @ONLY)
-endforeach()
+run_no_sort "rm -f \"${DBNAME}\""
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_subdirectory(debug)
-endif()
+echo "# new db file + stdin"
+run_no_sort "(echo \"CREATE TABLE new_table(i INT);\";" \
+            "echo \"INSERT INTO new_table VALUES (3), (4), (5);\") |" \
+            "${GUFI_SQLITE} \"${DBNAME}\""
 
-add_subdirectory(CI)
-if (GIT_FOUND)
-  # git -C <path>
-  set(GIT_PERFORMANCE_VERSION "1.8.5")
+echo "# existing db file + stdin"
+run_no_sort "echo \"SELECT * FROM new_table ORDER BY i DESC;\" |" \
+            "${GUFI_SQLITE} \"${DBNAME}\""
 
-  if (CMAKE_VERSION GREATER "3.14")
-    set(GIT_VERSION "${GIT_VERSION_STRING}")
-  else()
-    execute_process(COMMAND ${GIT_EXECUTABLE} --version
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-      OUTPUT_VARIABLE GIT_VERSION_STRING
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX MATCH "[0-9]+\.[0-9]+(\.[0-9]+)?" GIT_VERSION "${GIT_VERSION_STRING}")
-  endif()
-  message(STATUS "git version: ${GIT_VERSION}")
+echo "# in-memory db"
+run_no_sort "(echo \"CREATE TABLE new_table(i INT);\";" \
+            "echo \"INSERT INTO new_table VALUES (6), (7), (8);\";" \
+            "echo \"SELECT * FROM new_table ORDER BY i DESC;\") |" \
+            "${GUFI_SQLITE}"
 
-  # VERSION_GREATER_EQUAL was introduced in CMake 3.7
-  if (GIT_VERSION VERSION_LESS GIT_PERFORMANCE_VERSION)
-    message(STATUS "Not adding performance history framework (need git 1.8.5+)")
-  else()
-    if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND PRINT_CUMULATIVE_TIMES)
-      message(STATUS "Adding performance history framework")
-      add_subdirectory(performance)
-    else()
-      message(STATUS "Not adding performance history framework (need PRINT_CUMULATIVE_TIMES enabled)")
-    endif()
-  endif()
-endif()
+echo "# directory as db"
+run_no_sort "${GUFI_SQLITE} \"${SEARCH}\""
+
+echo "# bad SQL"
+run_no_sort "(echo \"CREATE TABLE;\") |" \
+            "${GUFI_SQLITE}"
+) |& tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_sqlite.expected "${OUTPUT}"
+rm "${OUTPUT}"

@@ -75,6 +75,7 @@ static void sub_help(void) {
     printf("SQL                      SQL statements to run\n");
     printf("\n");
     printf("If no SQL statements are passed in, will read from stdin\n");
+    printf("Dot commands are not supported\n");
     printf("\n");
 }
 
@@ -89,25 +90,12 @@ int main(int argc, char *argv[]) {
     }
 
     const int args_left = argc - idx;
-
-    sqlite3 *db = NULL;;
-
-    /* create in-memory db and read from stdin */
-    if (args_left == 0) {
-        db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 1, NULL, NULL);
-    }
-    /* open db file */
-    else if (args_left > 1) {
-        const char *dbname = argv[idx++];
-        db = opendb(dbname,     SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 1, NULL, NULL);
-    }
-    else {
-        print_help(argv[0], "hd:", "[db [SQL]...]");
-        sub_help();
-        return EXIT_FAILURE;
-    }
-
+    const char *dbname = (args_left == 0)?SQLITE_MEMORY:argv[idx++];
+    sqlite3 *db = opendb(dbname,
+                         SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
+                         0, 1, NULL, NULL);
     if (!db) {
+        fprintf(stderr, "Error: Could not open database file \"%s\"\n", dbname);
         return EXIT_FAILURE;
     }
 
