@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
 
     QPTPool_t *pool = QPTPool_init(threads, prefix);
     if (QPTPool_start(pool) != 0) {
-        fprintf(stderr, "Error: Failed to start thread pool\n");
+        fprintf(stderr, "Error: Failed to start thread pool with %zu threads\n", threads);
         QPTPool_destroy(pool);
         close(fd);
         return 1;

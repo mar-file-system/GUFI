@@ -144,7 +144,7 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     str_t dst = create_dst_name(in, work);
 
-    const int dst_fd = open(dst.data, O_CREAT | O_WRONLY, st.st_mode);
+    const int dst_fd = open(dst.data, O_CREAT | O_WRONLY | O_TRUNC, st.st_mode);
     if (dst_fd < 0) {
         print_error_and_goto("Could not open file", dst.data, free_name);
     }

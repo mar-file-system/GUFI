@@ -152,6 +152,8 @@ echo d
 echo "# Missing delimiter"
 run_no_sort "${SPLIT_TRACE} \"${BADTRACE}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\"" | replace
 
+echo "# Bad thread count"
+run_no_sort "${SPLIT_TRACE} \"${BADTRACE}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\" 18446744073709551615" | replace
 ) | remove_indexing_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/split_trace.expected "${OUTPUT}"

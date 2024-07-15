@@ -376,6 +376,7 @@ int main(int argc, char *argv[]) {
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     if (!OutputBuffers_init(&pa.obufs, pa.in.maxthreads, pa.in.output_buffer_size, &mutex)) {
+        fprintf(stderr, "Error: Could not initialize %zu output buffers\n", pa.in.maxthreads);
         rc = 1;
         goto done;
     }

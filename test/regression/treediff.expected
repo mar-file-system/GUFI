@@ -48,3 +48,7 @@ Error: Could not stat right directory "": No such file or directory (2)
 $ treediff -k "" "prefix" "prefix"
 Error: Cannot open skip file ""
 
+# Bad thread count
+$ treediff -n 18446744073709551615 "prefix" "prefix"
+Error: Could not initialize 18446744073709551615 output buffers
+

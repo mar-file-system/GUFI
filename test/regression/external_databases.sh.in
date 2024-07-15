@@ -206,7 +206,7 @@ do_tests() {
              "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
              "-S \"SELECT rpath(evrsummary.sname, evrsummary.sroll), evrsummary.type, ${FACTION1_VIEW}.data FROM evrsummary LEFT JOIN ${FACTION1_VIEW} ON (evrsummary.name == ${FACTION1_VIEW}.name) AND (evrsummary.type == ${FACTION1_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrpentries.sname, evrpentries.sroll) || '/' || evrpentries.name, evrpentries.type, ${FACTION1_VIEW}.data FROM evrpentries LEFT JOIN ${FACTION1_VIEW} ON (evrpentries.name == ${FACTION1_VIEW}.name) AND (evrpentries.type == ${FACTION1_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
+             "\"${SEARCH}\""
 
     echo "# again, but with xattrs"
     echo "# SELECT rpath(), type, xattr_name, xattr_value, faction1 user data"
@@ -217,7 +217,7 @@ do_tests() {
              "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
              "-S \"SELECT rpath(evrxsummary.sname, evrxsummary.sroll), evrxsummary.type, evrxsummary.xattr_name, evrxsummary.xattr_value, ${FACTION1_VIEW}.data FROM evrxsummary LEFT JOIN ${FACTION1_VIEW} ON (evrxsummary.name == ${FACTION1_VIEW}.name) AND (evrxsummary.type == ${FACTION1_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrxpentries.sname, evrxpentries.sroll) || '/' || evrxpentries.name, evrxpentries.type, evrxpentries.xattr_name, evrxpentries.xattr_value, ${FACTION1_VIEW}.data FROM evrxpentries LEFT JOIN ${FACTION1_VIEW} ON (evrxpentries.name == ${FACTION1_VIEW}.name) AND (evrxpentries.type == ${FACTION1_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
+             "\"${SEARCH}\""
 
     echo "# get faction2 user data"
     echo "# SELECT rpath(), type, faction2 user data"
@@ -227,7 +227,7 @@ do_tests() {
              "-Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
              "-S \"SELECT rpath(evrsummary.sname, evrsummary.sroll), evrsummary.type, ${FACTION2_VIEW}.data FROM evrsummary LEFT JOIN ${FACTION2_VIEW} ON (evrsummary.name == ${FACTION2_VIEW}.name) AND (evrsummary.type == ${FACTION2_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrpentries.sname, evrpentries.sroll) || '/' || evrpentries.name, evrpentries.type, ${FACTION2_VIEW}.data FROM evrpentries LEFT JOIN ${FACTION2_VIEW} ON (evrpentries.name == ${FACTION2_VIEW}.name) AND (evrpentries.type == ${FACTION2_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
+             "\"${SEARCH}\""
 
     echo "# again, but with xattrs"
     echo "# SELECT rpath(), type, xattr_name, xattr_value, faction2 user data"
@@ -238,7 +238,7 @@ do_tests() {
              "-Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
              "-S \"SELECT rpath(evrxsummary.sname, evrxsummary.sroll), evrxsummary.type, evrxsummary.xattr_name, evrxsummary.xattr_value, ${FACTION2_VIEW}.data FROM evrxsummary LEFT JOIN ${FACTION2_VIEW} ON (evrxsummary.name == ${FACTION2_VIEW}.name) AND (evrxsummary.type == ${FACTION2_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrxpentries.sname, evrxpentries.sroll) || '/' || evrxpentries.name, evrxpentries.type, evrxpentries.xattr_name, evrxpentries.xattr_value, ${FACTION2_VIEW}.data FROM evrxpentries LEFT JOIN ${FACTION2_VIEW} ON (evrxpentries.name == ${FACTION2_VIEW}.name) AND (evrxpentries.type == ${FACTION2_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
+             "\"${SEARCH}\""
 
     echo "# get faction1 and faction2 user data at the same time"
     echo "# SELECT rpath(), type, faction1 user data, faction2 user data"
@@ -248,7 +248,7 @@ do_tests() {
              "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" -Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
              "-S \"SELECT rpath(evrsummary.sname, evrsummary.sroll), evrsummary.type, ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrsummary LEFT JOIN ${FACTION1_VIEW} ON (evrsummary.name == ${FACTION1_VIEW}.name) AND (evrsummary.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrsummary.name == ${FACTION2_VIEW}.name) AND (evrsummary.type == ${FACTION2_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrpentries.sname, evrpentries.sroll) || '/' || evrpentries.name, evrpentries.type, ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrpentries LEFT JOIN ${FACTION1_VIEW} ON (evrpentries.name == ${FACTION1_VIEW}.name) AND (evrpentries.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrpentries.name == ${FACTION2_VIEW}.name) AND (evrpentries.type == ${FACTION2_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
+             "\"${SEARCH}\""
 
     echo "# again, but with xattrs"
     echo "# SELECT rpath(), type, xattr_name, xattr_value, faction1 user data, faction2 user data"
@@ -258,7 +258,7 @@ do_tests() {
              "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}'; ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\" -Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" -Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
              "-S \"SELECT rpath(evrxsummary.sname, evrxsummary.sroll), evrxsummary.type, evrxsummary.xattr_name, evrxsummary.xattr_value, ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrxsummary LEFT JOIN ${FACTION1_VIEW} ON (evrxsummary.name == ${FACTION1_VIEW}.name) AND (evrxsummary.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrxsummary.name == ${FACTION2_VIEW}.name) AND (evrxsummary.type == ${FACTION2_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrxpentries.sname, evrxpentries.sroll) || '/' || evrxpentries.name, evrxpentries.type, evrxpentries.xattr_name, evrxpentries.xattr_value,  ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrxpentries LEFT JOIN ${FACTION1_VIEW} ON (evrxpentries.name == ${FACTION1_VIEW}.name) AND (evrxpentries.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrxpentries.name == ${FACTION2_VIEW}.name) AND (evrxpentries.type == ${FACTION2_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
+             "\"${SEARCH}\""
 }
 
 rollup() {

@@ -33,3 +33,7 @@ Error: Invalid thread count: |
 $ split_trace "badtrace" "|" "4" "split"
 Error: Line at offset 4 does not have a delimiter
 
+# Bad thread count
+$ split_trace "badtrace" "|" "4" "split" 18446744073709551615
+Error: Failed to start thread pool with 18446744073709551615 threads
+

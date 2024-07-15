@@ -89,13 +89,15 @@ static int rm_dir(void *args timestamp_sig) {
     sll_loop(&dir->subnondirs, node) {
         struct BottomUp * entry = (struct BottomUp *) sll_node_data(node);
         if (unlink(entry->name) != 0) {
-            fprintf(stderr, "Warning: Failed to delete \"%s\": %s\n", entry->name, strerror(errno));
+            const int err = errno;
+            fprintf(stderr, "Warning: Failed to delete \"%s\": %s\n", entry->name, strerror(err));
             rc = 1;
         }
     }
 
     if (rmdir(dir->name) != 0) {
-        fprintf(stderr, "Warning: Failed to remove \"%s\": %s\n", dir->name, strerror(errno));
+        const int err = errno;
+        fprintf(stderr, "Warning: Failed to remove \"%s\": %s\n", dir->name, strerror(err));
         return 1;
     }
 
