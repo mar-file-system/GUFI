@@ -254,7 +254,7 @@ int set_db_pragmas(sqlite3 *db) {
 }
 
 sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
-                int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args) {
+                modifydb_func modifydb, void *modifydb_args) {
     sqlite3 *db = NULL;
 
     if (sqlite3_open_v2(name, &db, flags | SQLITE_OPEN_URI, GUFI_SQLITE_VFS) != SQLITE_OK) {
@@ -280,11 +280,18 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
         sqlite3_extension_init(db, NULL, NULL) ;
     }
 
-    if (!(flags & SQLITE_OPEN_READONLY) && modifydb_func) {
-        if (modifydb_func(name, db, modifydb_args) != 0) {
-            sqlite_print_err_and_free(NULL, stderr, "Cannot modify database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
+    if (modifydb) {
+        if (flags & SQLITE_OPEN_READONLY) {
+            fprintf(stderr, "Database %s opened in READONLY mode, but a modifydb function was provided", name);
             sqlite3_close(db);
             return NULL;
+        }
+        else {
+            if (modifydb(name, db, modifydb_args) != 0) {
+                sqlite_print_err_and_free(NULL, stderr, "Cannot modify database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
+                sqlite3_close(db);
+                return NULL;
+            }
         }
     }
 
@@ -1413,6 +1420,18 @@ static int count_pwd(void *args, int count, char **data, char **columns) {
     sscanf(data[0], "%zu", xattr_count); /* skip check */
     return 0;
 }
+
+const char ROLLUP_CLEANUP[] =
+    "DROP INDEX IF EXISTS " SUMMARY "_idx;"
+    "DELETE FROM " PENTRIES_ROLLUP ";"
+    "DELETE FROM " SUMMARY " WHERE isroot != 1;"
+    "DELETE FROM " XATTRS_ROLLUP ";"
+    "SELECT filename FROM " EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
+    "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
+    "VACUUM;"
+    "UPDATE " SUMMARY " SET rollupscore = 0;"; /* keep this last to allow it to be modified easily */
+
+const size_t ROLLUP_CLEANUP_SIZE = sizeof(ROLLUP_CLEANUP);
 
 /* Delete all entries in the XATTR_ROLLUP table */
 int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {

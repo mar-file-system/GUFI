@@ -158,26 +158,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         };
 
         char *err = NULL;
-        if (sqlite3_exec(db,
-                         "BEGIN TRANSACTION;"
-                         "DROP INDEX IF EXISTS " SUMMARY "_idx;"
-                         "DELETE FROM " PENTRIES_ROLLUP ";"
-                         "DELETE FROM " SUMMARY " WHERE isroot != 1;"
-                         "UPDATE " SUMMARY " SET rollupscore = 0 WHERE isroot == 1;"
-                         "DELETE FROM " XATTRS_ROLLUP ";"
-                         "SELECT filename FROM " EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
-                         "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
-                         "END TRANSACTION;"
-                         /*
-                          * not removing tree summary table since it is useful
-                          * and there's no way to tell if the tree summary table
-                          * existed before roll up (can add a column if necessary)
-                          * (maybe make removing the tree summary table optional?)
-                          */
-                         "VACUUM;",
-                         xattrs_rollup_cleanup,
-                         &name,
-                         &err) != SQLITE_OK) {
+        if (sqlite3_exec(db, ROLLUP_CLEANUP, xattrs_rollup_cleanup, &name, &err) != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr, "Could not remove roll up data from \"%s\": %s\n", work->name, err);
             rc = 1;
         }

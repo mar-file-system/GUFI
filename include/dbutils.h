@@ -169,8 +169,10 @@ int create_treesummary_tables(const char *name, sqlite3 *db, void *args);
 
 int set_db_pragmas(sqlite3 *db);
 
+typedef int (*modifydb_func)(const char *name, sqlite3 *db, void *args);
+
 sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
-                int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args);
+                modifydb_func modifydb, void *modifydb_args);
 
 int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts);
 
@@ -238,6 +240,9 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
 void sqlite_print_err_and_free(char *err, FILE *stream, char *format, ...);
 
 int get_rollupscore(sqlite3 *db, int *rollupscore);
+
+extern const char   ROLLUP_CLEANUP[];
+extern const size_t ROLLUP_CLEANUP_SIZE;
 
 int treesummary_exists_callback(void *args, int count, char **data, char **columns);
 

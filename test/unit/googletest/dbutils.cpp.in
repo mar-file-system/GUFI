@@ -115,6 +115,12 @@ TEST(opendb, bad_path) {
     }
 }
 
+TEST(opendb, modify_readonly_db) {
+    sqlite3 *db = opendb(SQLITE_MEMORY, SQLITE_OPEN_READONLY, 0, 0,
+                         [](const char *, sqlite3 *, void *){ return 0; }, nullptr);
+    EXPECT_EQ(db, nullptr);
+}
+
 TEST(opendb, bad_modify_db) {
     sqlite3 *db = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE, 0, 0,
                          [](const char *, sqlite3 *, void *){ return 1; }, nullptr);

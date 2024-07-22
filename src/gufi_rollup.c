@@ -698,22 +698,19 @@ static int do_rollup(struct RollUp *rollup,
     char *err = NULL;
     int exec_rc = SQLITE_OK;
 
-    char setup[] =
-        /* clear out old rollup data */
-        "DROP INDEX IF EXISTS " SUMMARY "_idx;"
-        "DELETE FROM " PENTRIES_ROLLUP ";"
-        "DELETE FROM " SUMMARY " WHERE isroot != 1;"
-        "DELETE FROM " TREESUMMARY ";"
-        "DELETE FROM " XATTRS_ROLLUP ";"
+    /*
+     * clear out old rollup data
+     *
+     * treesummary table is not cleared here - it was cleared when the
+     * db was opened
+     */
+    char setup[ROLLUP_CLEANUP_SIZE];
+    memcpy(setup, ROLLUP_CLEANUP, ROLLUP_CLEANUP_SIZE);
 
-        /* select all external xattr db names for cleanup in callback */
-        "SELECT filename FROM " EXTERNAL_DBS " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
-
-        "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
-
-        /* set the rollup score in the SQL statement */
-        "UPDATE " SUMMARY " SET rollupscore = 0;";
-
+    /*
+     * set rollup score here instead of running 2 SQL statements
+     * setting it to 0 here and then to 1 during copying
+     */
     setup[sizeof(setup) - sizeof("0;")] += ds->score;
 
     refstr_t name = {
@@ -827,6 +824,13 @@ static int rollup(void *args timestamp_sig) {
     ds->score = 0;
     ds->success = 1;
 
+    int openflag = SQLITE_OPEN_READWRITE;
+    modifydb_func modifydb = create_treesummary_tables;
+    if (in->dry_run) {
+        openflag = SQLITE_OPEN_READONLY;
+        modifydb = NULL;
+    }
+
     timestamp_end_print(timestamp_buffers, id, "setup", setup);
 
     /*
@@ -835,7 +839,7 @@ static int rollup(void *args timestamp_sig) {
      * always create the treesummary table
      */
     timestamp_create_start(open_curr_db);
-    sqlite3 *dst = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, create_treesummary_tables, NULL);
+    sqlite3 *dst = opendb(dbname, openflag, 1, 0, modifydb, NULL);
     timestamp_end_print(timestamp_buffers, id, "opendb", open_curr_db);
 
     /* can attempt to roll up */
