@@ -129,6 +129,10 @@ struct queue_item {
     void *work;
 };
 
+static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
+    return (lhs > rhs)?lhs:rhs;
+}
+
 /* loop through neighbors, look for work, take some portion of a queue */
 static uint64_t steal_work(QPTPool_t *ctx, const size_t id,
                            const size_t start, const size_t end) {
@@ -143,21 +147,19 @@ static uint64_t steal_work(QPTPool_t *ctx, const size_t id,
 
         if (pthread_mutex_trylock(&target->mutex) == 0) {
             if (target->waiting.size) {
-                const uint64_t waiting = target->waiting.size * ctx->steal.num / ctx->steal.denom;
-                if (waiting) {
-                    sll_move_first(&tw->waiting, &target->waiting, waiting);
-                    pthread_mutex_unlock(&target->mutex);
-                    return waiting;
-                }
+                /* always take at least 1 */
+                const uint64_t waiting = max(target->waiting.size * ctx->steal.num / ctx->steal.denom, 1);
+                sll_move_first(&tw->waiting, &target->waiting, waiting);
+                pthread_mutex_unlock(&target->mutex);
+                return waiting;
             }
 
             if (target->deferred.size) {
-                const uint64_t deferred = target->deferred.size * ctx->steal.num / ctx->steal.denom;
-                if (deferred) {
-                    sll_move_first(&tw->waiting, &target->deferred, deferred);
-                    pthread_mutex_unlock(&target->mutex);
-                    return deferred;
-                }
+                /* always take at least 1 */
+                const uint64_t deferred = max(target->deferred.size * ctx->steal.num / ctx->steal.denom, 1);
+                sll_move_first(&tw->waiting, &target->deferred, deferred);
+                pthread_mutex_unlock(&target->mutex);
+                return deferred;
             }
             pthread_mutex_unlock(&target->mutex);
         }
@@ -194,12 +196,11 @@ static uint64_t steal_active(QPTPool_t *ctx, const size_t id,
 
         if (pthread_mutex_trylock(&target->active_mutex) == 0) {
             if (target->active.size) {
-                const uint64_t active = target->active.size * ctx->steal.num / ctx->steal.denom;
-                if (active) {
-                    sll_move_first(&tw->waiting, &target->active, active);
-                    pthread_mutex_unlock(&target->active_mutex);
-                    return active;
-                }
+                /* always take at least 1 */
+                const uint64_t active = max(target->active.size * ctx->steal.num / ctx->steal.denom, 1);
+                sll_move_first(&tw->waiting, &target->active, active);
+                pthread_mutex_unlock(&target->active_mutex);
+                return active;
             }
 
             pthread_mutex_unlock(&target->active_mutex);

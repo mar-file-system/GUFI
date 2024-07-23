@@ -397,7 +397,8 @@ TEST(QueuePerThreadPool, custom_next) {
     delete [] values;
 }
 
-static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
+static void test_steal(const QPTPool_enqueue_dst queue, const bool find,
+                       const int src, const int dst) {
     std::size_t counter = 0;
 
     // macOS doesn't seem to like std::mutex
@@ -411,9 +412,9 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
     ASSERT_EQ(QPTPool_set_steal(pool, 1, 1), 0);
     ASSERT_EQ(QPTPool_start(pool), 0);
 
-    // prevent thread 0 from completing
+    // prevent thread src from completing
     pthread_mutex_lock(&mutex);
-    EXPECT_EQ(QPTPool_enqueue(pool, 0,
+    EXPECT_EQ(QPTPool_enqueue(pool, src,
                               [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
                                   increment_counter(ctx, id, data, args);
 
@@ -431,26 +432,26 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
     uint64_t expected = 1;
 
     if (find) {
-        // thread 0; put a work item in the designated queue for stealing
-        EXPECT_EQ(QPTPool_enqueue_here(pool, 0, queue, increment_counter, &counter),
+        // thread src; put a work item in the designated queue for stealing
+        EXPECT_EQ(QPTPool_enqueue_here(pool, src, queue, increment_counter, &counter),
                   queue);
 
-        // thread 1; gets 1 work item and triggers stealing 1 work item from queue being tested
-        EXPECT_EQ(QPTPool_enqueue_here(pool, 1, QPTPool_enqueue_WAIT, increment_counter, &counter),
+        // thread dst; gets 1 work item and triggers stealing 1 work item from src
+        EXPECT_EQ(QPTPool_enqueue_here(pool, dst, QPTPool_enqueue_WAIT, increment_counter, &counter),
                   QPTPool_enqueue_WAIT);
 
         expected += 2;
     }
     else {
-        // thread 1 will look in both queues and not find anything to steal
+        // thread dst will look in both queues and not find anything to steal
     }
 
-    // wait for thread 1 to run its work (and stolen work item)
+    // wait for thread dst to run its work (and stolen work item)
     while (counter < expected) {
         sched_yield();
     }
 
-    // unlock thread 0 so that it can complete
+    // unlock thread src so that it can complete
     pthread_mutex_unlock(&mutex);
 
     QPTPool_wait(pool);
@@ -464,81 +465,22 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
 
 TEST(QueuePerThreadPool, steal_nothing) {
     // same test
-    test_steal(QPTPool_enqueue_WAIT,     false);
-    test_steal(QPTPool_enqueue_DEFERRED, false);
+    test_steal(QPTPool_enqueue_WAIT,     false, 0, 1);
+    test_steal(QPTPool_enqueue_DEFERRED, false, 0, 1);
+
+    // same test
+    test_steal(QPTPool_enqueue_WAIT,     false, 1, 0);
+    test_steal(QPTPool_enqueue_DEFERRED, false, 1, 0);
 }
 
 TEST(QueuePerThreadPool, steal_waiting) {
-    test_steal(QPTPool_enqueue_WAIT,     true);
+    test_steal(QPTPool_enqueue_WAIT,     true, 0, 1);
+    test_steal(QPTPool_enqueue_WAIT,     true, 1, 0);
 }
 
 TEST(QueuePerThreadPool, steal_deferred) {
-    test_steal(QPTPool_enqueue_DEFERRED, true);
-}
-
-TEST(QueuePerThreadPool, not_enough_deferred) {
-    std::size_t counter = 0;
-
-    // macOS doesn't seem to like std::mutex
-    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-    QPTPool_t *pool = QPTPool_init(2, &mutex);
-    ASSERT_NE(pool, nullptr);
-    ASSERT_EQ(QPTPool_set_queue_limit(pool, 2), 0);
-    ASSERT_EQ(QPTPool_set_steal(pool, 1, 2), 0);
-    ASSERT_EQ(QPTPool_start(pool), 0);
-
-    // prevent thread 0 from completing
-    pthread_mutex_lock(&mutex);
-    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
-                                   [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
-                                       increment_counter(ctx, id, data, args);
-
-                                       pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
-                                       pthread_mutex_lock(mutex);
-                                       pthread_mutex_unlock(mutex);
-                                       return 0;
-                                   }, &counter), QPTPool_enqueue_WAIT);
-
-    // need to make sure this work item got popped off
-    while (counter < 1) {
-        sched_yield();
-    }
-
-    // thread 0: put work in deferred queue
-    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_DEFERRED, increment_counter, &counter),
-              QPTPool_enqueue_DEFERRED);
-
-    // thread 1: add work so that it triggers searching for work to steal
-    //           (but fails because there's not enough to steal)
-    EXPECT_EQ(QPTPool_enqueue_here(pool, 1, QPTPool_enqueue_WAIT, increment_counter, &counter),
-              QPTPool_enqueue_WAIT);
-
-    // wait until thread 1 runs
-    while (counter < 2) {
-        sched_yield();
-    }
-
-    // thread 1: add a second work item to make sure thread 1 had time to attempt to steal work
-    EXPECT_EQ(QPTPool_enqueue_here(pool, 1, QPTPool_enqueue_WAIT, increment_counter, &counter),
-              QPTPool_enqueue_WAIT);
-
-    // wait until thread 1 is complete
-    while (counter < 3) {
-        sched_yield();
-    }
-
-    // let thread 0 finish
-    pthread_mutex_unlock(&mutex);
-
-    QPTPool_wait(pool);
-
-    const uint64_t expected = 4;
-    EXPECT_EQ(counter, expected);
-    EXPECT_EQ(QPTPool_threads_started(pool),   expected);
-    EXPECT_EQ(QPTPool_threads_completed(pool), expected);
-
-    QPTPool_destroy(pool);
+    test_steal(QPTPool_enqueue_DEFERRED, true, 0, 1);
+    test_steal(QPTPool_enqueue_DEFERRED, true, 1, 0);
 }
 
 TEST(QueuePerThreadPool, steal_active) {
