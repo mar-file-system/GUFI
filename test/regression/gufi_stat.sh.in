@@ -89,7 +89,7 @@ echo "# first line of default print"
 for entry in "${fixed_size[@]}"
 do
     ${GUFI_STAT} "${BASENAME}/${entry}" | head -n 1
-done | remove_root
+done
 echo
 
 echo "# first two columns of terse format"
@@ -97,7 +97,7 @@ for entry in "${fixed_size[@]}"
 do
     # shellcheck disable=SC2016
     ${GUFI_STAT} --terse "${BASENAME}/${entry}" | @AWK@ '{ print $1 " " $2 }'
-done | remove_root | sort
+done | sort
 echo
 
 run_no_sort "${GUFI_STAT} --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' \"${BASENAME}/${fixed_size[0]}\""

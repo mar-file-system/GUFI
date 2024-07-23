@@ -40,7 +40,7 @@ Index Everything:
         prefix/unusual#? directory ,
         prefix/unusual#? directory ,/unusual, name?#
 
-    Creating GUFI Index prefix with 1 threads
+    Creating GUFI Index search with 1 threads
     Total Dirs:          6
     Total Files:         14
 
@@ -70,7 +70,7 @@ Index up to level 0:
     Source Directory:
         prefix
 
-    Creating GUFI Index prefix with 1 threads
+    Creating GUFI Index search with 1 threads
     Total Dirs:          1
     Total Files:         0
 
@@ -91,7 +91,7 @@ Index up to level 1:
         prefix/repeat_name
         prefix/unusual#? directory ,
 
-    Creating GUFI Index prefix with 1 threads
+    Creating GUFI Index search with 1 threads
     Total Dirs:          5
     Total Files:         6
 
@@ -129,7 +129,7 @@ Index up to level 2:
         prefix/unusual#? directory ,
         prefix/unusual#? directory ,/unusual, name?#
 
-    Creating GUFI Index prefix with 1 threads
+    Creating GUFI Index search with 1 threads
     Total Dirs:          6
     Total Files:         12
 
@@ -176,7 +176,7 @@ Index up to level 3:
         prefix/unusual#? directory ,
         prefix/unusual#? directory ,/unusual, name?#
 
-    Creating GUFI Index prefix with 1 threads
+    Creating GUFI Index search with 1 threads
     Total Dirs:          6
     Total Files:         14
 
@@ -209,9 +209,9 @@ $ gufi_dir2index -n 2 "prefix" "prefix/1KB"
 Destination path is not a directory "prefix/1KB"
 
 # source path is file
-$ gufi_dir2index -n 2 "prefix/1KB" "prefix"
+$ gufi_dir2index -n 2 "prefix/1KB" "search"
 Source path is not a directory "prefix/1KB"
-Creating GUFI Index prefix with 2 threads
+Creating GUFI Index search with 2 threads
 Total Dirs:          0
 Total Files:         0
 
@@ -223,9 +223,9 @@ Total Dirs:          0
 Total Files:         0
 
 # skip file
-$ gufi_dir2index -n 2 -k "skip" "prefix" "prefix"
-"prefix" Already exists!
-Creating GUFI Index prefix with 2 threads
+$ gufi_dir2index -n 2 -k "skip" "prefix" "search"
+"search" Already exists!
+Creating GUFI Index search with 2 threads
 Total Dirs:          4
 Total Files:         9
 
@@ -245,11 +245,11 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # bad skip file
-$ gufi_dir2index -n 2 -k "skip.bad" "prefix" "prefix"
+$ gufi_dir2index -n 2 -k "skip.bad" "prefix" "search"
 Error: Cannot open skip file "skip.bad"
 
 # bad thread count
-$ gufi_dir2index -n 18446744073709551615 "prefix" "prefix"
-"prefix" Already exists!
+$ gufi_dir2index -n 18446744073709551615 "prefix" "search"
+"search" Already exists!
 Error: Failed to start thread pool
 

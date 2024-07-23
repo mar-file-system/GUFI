@@ -158,7 +158,7 @@ GUFI_GETFATTR="${GUFI_TOOL} getfattr"
 GUFI_LS="${GUFI_TOOL} ls"
 GUFI_QUERY="@CMAKE_BINARY_DIR@/src/gufi_query"
 GUFI_ROLLUP="@CMAKE_BINARY_DIR@/src/gufi_rollup"
-GUFI_SQLITE="@CMAKE_BINARY_DIR@/src/gufi_sqlite"
+GUFI_SQLITE3="@CMAKE_BINARY_DIR@/src/gufi_sqlite3"
 GUFI_STAT="${GUFI_TOOL} stat"
 GUFI_STATS="${GUFI_TOOL} stats"
 GUFI_STAT_BIN="@CMAKE_BINARY_DIR@/src/gufi_stat_bin"
@@ -203,7 +203,7 @@ replace() {
     s/${GUFI_LS//\//\\/}/gufi_ls/g;
     s/${GUFI_QUERY//\//\\/}/gufi_query/g;
     s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
-    s/${GUFI_SQLITE//\//\\/}/gufi_sqlite/g
+    s/${GUFI_SQLITE3//\//\\/}/gufi_sqlite3/g
     s/${GUFI_STAT//\//\\/}/gufi_stat/g
     s/${GUFI_STATS//\//\\/}/gufi_stats/g;
     s/${GUFI_STAT_BIN//\//\\/}/gufi_stat_bin/g
@@ -228,8 +228,6 @@ replace() {
     /-e                          compress work items/d;
     /Started [0-9]* threads. Successfully completed [0-9]* threads./d;
 
-    s/${SEARCH//\//\\/}\\///g;
-    s/${SEARCH//\//\\/}/${SRCDIR//\//\\/}/g;
     s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
     s/${CONFIG//\//\\/}/\\/etc\\/GUFI\\/config/g;
     s/${PWD//\//\\/}\\///g;
@@ -245,11 +243,6 @@ replace() {
 # argparse help output changes slightly between versions
 replace_argparse() {
     sed 's/optional arguments/options/g; s/\[paths \[paths ...\]\]/\[paths ...\]/g;'
-}
-
-remove_root() {
-    REALSRCDIR="$(realpath ${SRCDIR})"
-    sed "s/${REALSRCDIR//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g;"
 }
 
 run_sort() {

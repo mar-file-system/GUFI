@@ -100,7 +100,7 @@ echo "# first line of default print"
 for entry in "${fixed_size[@]}"
 do
     "${GUFI_STAT_BIN}" "${INDEXROOT}/${entry}" | head -n 1
-done | remove_root
+done
 echo
 
 echo "# first two columns of terse format"
@@ -108,7 +108,7 @@ for entry in "${fixed_size[@]}"
 do
     # shellcheck disable=SC2016
     "${GUFI_STAT_BIN}" -j "${INDEXROOT}/${entry}" | @AWK@ '{ print $1 " " $2 }'
-done | remove_root | sort
+done | sort
 echo
 
 echo "# custom print format"
@@ -122,7 +122,7 @@ echo "# custom print format"
     do
         "${GUFI_STAT_BIN}" -f '%-60N %60n %+60N %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
     done
-) | remove_root | sort
+) | sort
 echo
 
 echo "# bad print format specifier"
@@ -132,7 +132,7 @@ echo
 for entry in "${symlinks[@]}"
 do
     "${GUFI_STAT_BIN}" -f '%N %n %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
-done | remove_root
+done
 echo
 
 echo "# escape character parsing"

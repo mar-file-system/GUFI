@@ -12,36 +12,36 @@ rhs               starting path of tree used on right hand side of this comparis
 
 
 # Compare against the same tree
-$ treediff "prefix" "prefix"
+$ treediff "search" "search"
 
 # Compare against source tree
 $ treediff "prefix" "prefix"
 
-$ mv "directory" "new_name"
+$ mv "prefix/directory" "prefix/new_name"
 
 # Create directory that will come after "unusual#? directory ," to run cleanup code
-$ mkdir "xyz"
+$ mkdir "prefix/xyz"
 
 # Compare different trees
 $ treediff "prefix" "prefix"
-directory
-new_name
-xyz
+prefix/directory
+prefix/new_name
+prefix/xyz
 
 $ treediff "prefix" "prefix"
-directory
-new_name
-xyz
+prefix/directory
+prefix/new_name
+prefix/xyz
 
 # Not enough levels to show differences
 $ treediff -z 0 "prefix" "prefix"
 
 # Bad left hand path
-$ treediff "" "prefix"
+$ treediff "" "search"
 Error: Could not stat left directory "": No such file or directory (2)
 
 # Bad right hand path
-$ treediff "prefix" ""
+$ treediff "search" ""
 Error: Could not stat right directory "": No such file or directory (2)
 
 # Bad skip

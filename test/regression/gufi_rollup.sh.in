@@ -133,6 +133,17 @@ do_tests() {
 "${GUFI_ROLLUP}" "${SEARCH}"
 do_tests
 
+orig=$("${GUFI_QUERY}" -d "|" -z 1 -T "SELECT totsubdirs, totfiles, totlinks, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, totxattr,  totextdbs, rectype FROM treesummary;" "${INDEXROOT}/ugo")
+
+run_no_sort "${GUFI_TREESUMMARY} \"${INDEXROOT}/ugo\"" | sed 's/time [0-9]\+/time 0/g; s/maxsubdirsize [0-9]\+/maxsubdirsize 0/g;'
+
+regen=$("${GUFI_QUERY}" -d "|" -z 1 -T "SELECT totsubdirs, totfiles, totlinks, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, totxattr, totextdbs, rectype FROM treesummary;" "${INDEXROOT}/ugo")
+
+echo "# Compare treesummary to regenerated treesummary"
+# shellcheck disable=SC2000
+echo "$(echo ${orig} | wc -c) bytes vs $(echo ${regen} | wc -c) bytes"
+@DIFF@ <(echo "${orig}") <(echo "${regen}") && echo "No difference"
+
 rm -r "${SEARCH}"
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"

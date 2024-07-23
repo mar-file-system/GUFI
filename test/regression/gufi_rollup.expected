@@ -11,11 +11,11 @@ options:
 GUFI_index        GUFI index to roll up
 
 
-Creating GUFI Index prefix with 1 threads
+Creating GUFI Index search with 1 threads
 Total Dirs:          69
 Total Files:         96
 Roots:
-    prefix
+    search
 
 Thread Pool Size:            1
 Files/Links Limit:           0
@@ -67,16 +67,16 @@ Files/Links:    96
 Directories:    70 (22 empty)
 Total:          166
 Remaining Dirs: 18 (25.71%)
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "prefix" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "search" | wc -l
 69
 
-$ gufi_query -d " " -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | wc -l
+$ gufi_query -d " " -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search" | wc -l
 96
 
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search" | wc -l
 165
 
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "prefix"
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "search"
 prefix 4
 prefix/o+rx 4
 prefix/o+rx/o+rx 3
@@ -715,11 +715,34 @@ root 5
 $ gufi_stats -c total-dircount prefix
 69
 
-Creating GUFI Index prefix with 1 threads
+$ gufi_treesummary "prefix/ugo"
+totals:
+totfiles 24 totlinks 0
+totsize 0
+minuid 0 maxuid 0 mingid 0 maxgid 0
+minsize 0 maxsize 0
+totzero 24 totltk 24 totmtk 0 totltm 24 totmtm 0 totmtg 0 totmtt 0
+minctime 0 maxctime 0
+minmtime 0 maxmtime 0
+minatime 0 maxatime 0
+minblocks 0 maxblocks 0
+totxattr 0
+mincrtime 0 maxcrtime 0
+minossint1 0 maxossint1 0 totossint1 0
+minossint2 0 maxossint2 0 totossint2 0
+minossint3 0 maxossint3 0 totossint3 0
+minossint4 0 maxossint4 0 totossint4 0
+totsubdirs 16 maxsubdirfiles 3 maxsubdirlinks 0 maxsubdirsize 0
+totextdbs 0
+
+# Compare treesummary to regenerated treesummary
+103 bytes vs 103 bytes
+No difference
+Creating GUFI Index search with 1 threads
 Total Dirs:          69
 Total Files:         96
 Roots:
-    prefix
+    search
 
 Thread Pool Size:            1
 Files/Links Limit:           3
@@ -776,16 +799,16 @@ Files/Links:    96
 Directories:    70 (22 empty)
 Total:          166
 Remaining Dirs: 70 (100.00%)
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "prefix" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "search" | wc -l
 69
 
-$ gufi_query -d " " -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | wc -l
+$ gufi_query -d " " -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search" | wc -l
 96
 
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search" | wc -l
 165
 
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "prefix"
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "search"
 prefix 4
 prefix/o+rx 4
 prefix/o+rx/o+rx 3
@@ -1477,6 +1500,6 @@ $ gufi_stats -c total-dircount prefix
 69
 
 # bad thread count
-$ gufi_rollup -n 18446744073709551615 "prefix"
+$ gufi_rollup -n 18446744073709551615 "search"
 Could not allocate 18446744073709551615 stat buffers
 

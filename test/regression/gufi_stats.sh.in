@@ -185,7 +185,7 @@ then
     run "${GUFI_STATS}    median-leaf-links \"${BASENAME}\""
     run "${GUFI_STATS}    median-leaf-size \"${BASENAME}\""
 fi
-) |& remove_root | tee "${OUTPUT}"
+) |& tee "${OUTPUT}"
 
 EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
 ACTUAL="${EXPECTED}.actual"

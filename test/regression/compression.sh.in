@@ -106,7 +106,7 @@ compare_output() {
     compare_output "${INDEXROOT}"
     compare_output "${D2I}/${BASENAME}"
     compare_output "${T2I}/${BASENAME}"
-) | remove_indexing_time | replace | remove_root | tee "${OUTPUT}"
+) | remove_indexing_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/compression.expected "${OUTPUT}"
 rm "${OUTPUT}"

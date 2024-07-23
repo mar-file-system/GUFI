@@ -9,8 +9,8 @@ options:
 GUFI_index        GUFI index to unroll up
 
 
-$ gufi_dir2index -x "prefix" "prefix"
-Creating GUFI Index prefix with 1 threads
+$ gufi_dir2index -x "prefix" "search"
+Creating GUFI Index search with 1 threads
 Total Dirs:          69
 Total Files:         96
 

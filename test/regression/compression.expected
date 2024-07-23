@@ -1,5 +1,5 @@
-$ "gufi_dir2index"   -x -e "prefix" "prefix.d2i"
-Creating GUFI Index prefix.d2i with 1 threads
+$ "gufi_dir2index"   -x -e "prefix" "search.d2i"
+Creating GUFI Index search.d2i with 1 threads
 Total Dirs:          6
 Total Files:         14
 
@@ -8,8 +8,8 @@ Creating GUFI Traces trace with 1 threads
 Total Dirs:          6
 Total Files:         14
 
-$ "gufi_trace2index"       "trace.0" "prefix.t2i"
-Creating GUFI Index prefix.t2i with 1 threads
+$ "gufi_trace2index"       "trace.0" "search.t2i"
+Creating GUFI Index search.t2i with 1 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
@@ -59,7 +59,7 @@ unusual#? directory , 16 16
 unusual, name?# 15 15
 writable 3 3' | remove_e)
 
-$ diff <(echo '$ "gufi_query" -d " "    -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix.d2i/prefix"
+$ diff <(echo '$ "gufi_query" -d " "    -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "search.d2i/prefix"
 .hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576
@@ -79,7 +79,7 @@ repeat_name 5 5
 subdirectory 6 6
 unusual#? directory , 16 16
 unusual, name?# 15 15
-writable 3 3') <(echo '$ "gufi_query" -d " " -e -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix.d2i/prefix"
+writable 3 3') <(echo '$ "gufi_query" -d " " -e -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "search.d2i/prefix"
 .hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576
@@ -101,7 +101,7 @@ unusual#? directory , 16 16
 unusual, name?# 15 15
 writable 3 3' | remove_e)
 
-$ diff <(echo '$ "gufi_query" -d " "    -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix.t2i/prefix"
+$ diff <(echo '$ "gufi_query" -d " "    -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "search.t2i/prefix"
 .hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576
@@ -121,7 +121,7 @@ repeat_name 5 5
 subdirectory 6 6
 unusual#? directory , 16 16
 unusual, name?# 15 15
-writable 3 3') <(echo '$ "gufi_query" -d " " -e -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix.t2i/prefix"
+writable 3 3') <(echo '$ "gufi_query" -d " " -e -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "search.t2i/prefix"
 .hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576

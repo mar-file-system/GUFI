@@ -1,5 +1,5 @@
-$ gufi_dir2index -x "prefix" "prefix"
-Creating GUFI Index prefix with 1 threads
+$ gufi_dir2index -x "prefix" "search"
+Creating GUFI Index search with 1 threads
 Total Dirs:          6
 Total Files:         25
 
@@ -41,8 +41,8 @@ Creating GUFI Traces trace with 1 threads
 Total Dirs:          6
 Total Files:         25
 
-$ gufi_trace2index "trace.0" "prefix"
-Creating GUFI Index prefix with 1 threads
+$ gufi_trace2index "trace.0" "search"
+Creating GUFI Index search with 1 threads
 Dirs:                6 (1 empty)
 Files:               25
 Total:               31

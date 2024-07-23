@@ -90,7 +90,7 @@ run_no_sort "${GENERATETREE} ${SRCDIR}"
 # generate the trace
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
-# add an external db
+# add an external db (does not exist on filesystem, so won't show up during comparison)
 echo "external_db${DELIM}e${DELIM}" >> "${TRACES[0]}"
 
 # generate the index

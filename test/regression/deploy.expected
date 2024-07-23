@@ -3,7 +3,7 @@ $ cat "/etc/GUFI/config"
 Threads=1
 Query=gufi_query
 Stat=gufi_stat_bin
-IndexRoot=prefix
+IndexRoot=search
 OutputBuffer=4096
 
 $ gufi_find
@@ -50,10 +50,10 @@ prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
-# Current set of indexes are placed under common directory "prefix"
-# Expose "prefix" to users via a symlink
-$ ln -sv "prefix" "user_path"
-'user_path' -> 'prefix'
+# Current set of indexes are placed under common directory "search"
+# Expose "search" to users via a symlink
+$ ln -sv "search" "user_path"
+'user_path' -> 'search'
 
 # Allow users to query via consistent "user_path" in the config file
 $ cat "/etc/GUFI/config"
@@ -125,15 +125,15 @@ user_path/prefix/empty_directory
 user_path/prefix/leaf_directory
 user_path/prefix/unusual#? directory ,
 
-# Create a "new" index at "prefix2"
-$ cp -r "prefix" "prefix2"
+# Create a "new" index at "search2"
+$ cp -r "search" "search2"
 
-# Change "prefix2" to distinguish it from "prefix"
-$ rm -r "prefix2/prefix/directory" "prefix2/prefix/leaf_directory"
+# Change "search2" to distinguish it from "search"
+$ rm -r "search2/prefix/directory" "search2/prefix/leaf_directory"
 
 # Pivot to new set of indexes without changing the path that users see
-$ ln -snfv "prefix2" "user_path"
-'user_path' -> 'prefix2'
+$ ln -snfv "search2" "user_path"
+'user_path' -> 'search2'
 
 $ gufi_find
 user_path/prefix

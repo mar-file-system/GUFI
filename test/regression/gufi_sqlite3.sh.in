@@ -64,7 +64,7 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-OUTPUT="gufi_sqlite.out"
+OUTPUT="gufi_sqlite3.out"
 
 DBNAME="test.db"
 
@@ -82,16 +82,16 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-echo "# ${GUFI_SQLITE} help" | replace
-run_no_sort "${GUFI_SQLITE} -h"
+echo "# ${GUFI_SQLITE3} help" | replace
+run_no_sort "${GUFI_SQLITE3} -h"
 
 echo "# new db file + argv"
-run_no_sort "${GUFI_SQLITE} \"${DBNAME}\"" \
+run_no_sort "${GUFI_SQLITE3} \"${DBNAME}\"" \
             "\"CREATE TABLE new_table(i INT);\"" \
             "\"INSERT INTO new_table VALUES (0), (1), (2);\""
 
 echo "# existing db file + argv"
-run_no_sort "${GUFI_SQLITE} \"${DBNAME}\"" \
+run_no_sort "${GUFI_SQLITE3} \"${DBNAME}\"" \
             "\"SELECT * FROM new_table ORDER BY i DESC;\""
 
 run_no_sort "rm -f \"${DBNAME}\""
@@ -99,25 +99,25 @@ run_no_sort "rm -f \"${DBNAME}\""
 echo "# new db file + stdin"
 run_no_sort "(echo \"CREATE TABLE new_table(i INT);\";" \
             "echo \"INSERT INTO new_table VALUES (3), (4), (5);\") |" \
-            "${GUFI_SQLITE} \"${DBNAME}\""
+            "${GUFI_SQLITE3} \"${DBNAME}\""
 
 echo "# existing db file + stdin"
 run_no_sort "echo \"SELECT * FROM new_table ORDER BY i DESC;\" |" \
-            "${GUFI_SQLITE} \"${DBNAME}\""
+            "${GUFI_SQLITE3} \"${DBNAME}\""
 
 echo "# in-memory db"
 run_no_sort "(echo \"CREATE TABLE new_table(i INT);\";" \
             "echo \"INSERT INTO new_table VALUES (6), (7), (8);\";" \
             "echo \"SELECT * FROM new_table ORDER BY i DESC;\") |" \
-            "${GUFI_SQLITE}"
+            "${GUFI_SQLITE3}"
 
 echo "# directory as db"
-run_no_sort "${GUFI_SQLITE} \"${SEARCH}\""
+run_no_sort "${GUFI_SQLITE3} \"${SEARCH}\""
 
 echo "# bad SQL"
 run_no_sort "(echo \"CREATE TABLE;\") |" \
-            "${GUFI_SQLITE}"
+            "${GUFI_SQLITE3}"
 ) |& tee "${OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_sqlite.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_sqlite3.expected "${OUTPUT}"
 rm "${OUTPUT}"

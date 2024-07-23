@@ -74,7 +74,7 @@ foreach(NAME ${CORE})
 endforeach()
 
 set(BINARIES
-  gufi_sqlite
+  gufi_sqlite3
   gufi_dir2index
   gufi_dir2trace
   gufi_trace2index

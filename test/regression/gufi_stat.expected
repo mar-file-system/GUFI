@@ -17,32 +17,32 @@ options:
   --verbose, -V         Show the gufi_query being executed
 
 # first line of default print
-  File: '.hidden'
-  File: '1KB'
-  File: '1MB'
-  File: 'directory/executable'
-  File: 'directory/readonly'
-  File: 'directory/subdirectory/repeat_name'
-  File: 'directory/writable'
-  File: 'leaf_directory/leaf_file1'
-  File: 'leaf_directory/leaf_file2'
-  File: 'old_file'
-  File: 'repeat_name'
-  File: 'unusual#? directory ,/unusual, name?#'
+  File: 'prefix/.hidden'
+  File: 'prefix/1KB'
+  File: 'prefix/1MB'
+  File: 'prefix/directory/executable'
+  File: 'prefix/directory/readonly'
+  File: 'prefix/directory/subdirectory/repeat_name'
+  File: 'prefix/directory/writable'
+  File: 'prefix/leaf_directory/leaf_file1'
+  File: 'prefix/leaf_directory/leaf_file2'
+  File: 'prefix/old_file'
+  File: 'prefix/repeat_name'
+  File: 'prefix/unusual#? directory ,/unusual, name?#'
 
 # first two columns of terse format
-.hidden 10
-1KB 1024
-1MB 1048576
-directory/executable 1
-directory/readonly 2
-directory/subdirectory/repeat_name 5
-directory/writable 3
-leaf_directory/leaf_file1 11
-leaf_directory/leaf_file2 12
-old_file 0
-repeat_name 14
-unusual#? directory
+prefix/.hidden 10
+prefix/1KB 1024
+prefix/1MB 1048576
+prefix/directory/executable 1
+prefix/directory/readonly 2
+prefix/directory/subdirectory/repeat_name 5
+prefix/directory/writable 3
+prefix/leaf_directory/leaf_file1 11
+prefix/leaf_directory/leaf_file2 12
+prefix/old_file 0
+prefix/repeat_name 14
+prefix/unusual#? directory
 
 $ gufi_stat --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "prefix/.hidden"
 'prefix/.hidden' prefix/.hidden 664 -rw-rw-r-- ? ? 81b4 regular file   10 - 0 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10

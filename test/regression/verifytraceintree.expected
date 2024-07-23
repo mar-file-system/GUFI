@@ -12,8 +12,8 @@ Total Dirs:          6
 Total Files:         14
 
 # generate the index
-$ gufi_trace2index -d "|" "trace" "prefix"
-Creating GUFI Index prefix with 1 threads
+$ gufi_trace2index -d "|" "trace" "search"
+Creating GUFI Index search with 1 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
@@ -28,7 +28,7 @@ Total Dirs:          6
 Total Files:         14
 
 # missing trace (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Could not open file badtrace
 badtrace Fail
 
@@ -37,23 +37,23 @@ $ verifytraceintree
 Syntax: verifytraceintree trace delim GUFI_tree [threads]
 
 # bad thread count (Fail)
-$ verifytraceintree "badtrace" "|" "prefix" threads
+$ verifytraceintree "badtrace" "|" "search" threads
 Error: Bad thread count: threads
 
 # verify that all entries in the trace can be found in the GUFI tree (Pass)
-$ verifytraceintree "trace" "|" "prefix"
+$ verifytraceintree "trace" "|" "search"
 Dirs:  5 (0 empty)
 Files: 14
 Total: 19
 trace Pass
 
 # first line bad delimiter (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Could not find delimiter of first line
 badtrace Fail
 
 # second line bad delimiter (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Could not find delimiter of next line
 Dirs:  1 (0 empty)
 Files: 0
@@ -61,19 +61,19 @@ Total: 1
 badtrace Fail
 
 # first line is not a directory (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 First line of trace is not a directory
 badtrace Fail
 
 # directory add trailing slashes (Pass)
-$ verifytraceintree "trace.copy" "|" "prefix"
+$ verifytraceintree "trace.copy" "|" "search"
 Dirs:  5 (0 empty)
 Files: 14
 Total: 19
 trace.copy Pass
 
 # directory does not exist (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Dirs:  5 (0 empty)
 Files: 14
 Total: 19
@@ -81,7 +81,7 @@ Source path listed in trace doesn't exist: prefix/directory/subdir
 badtrace Fail
 
 # path exists, but is not directory (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Dirs:  5 (0 empty)
 Files: 13
 Total: 18
@@ -89,7 +89,7 @@ Source path listed in trace is not a directory: prefix/.hidden
 badtrace Fail
 
 # directory permission mismatch (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Dirs:  5 (0 empty)
 Files: 14
 Total: 19
@@ -97,7 +97,7 @@ Permission mismatch on directory: prefix
 badtrace Fail
 
 # directory uid mismatch (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Dirs:  5 (0 empty)
 Files: 14
 Total: 19
@@ -105,7 +105,7 @@ UID mismatch on directory: prefix
 badtrace Fail
 
 # directory gid mismatch (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Dirs:  5 (0 empty)
 Files: 14
 Total: 19
@@ -113,7 +113,7 @@ GID mismatch on directory: prefix
 badtrace Fail
 
 # missing db.db (Fail)
-$ verifytraceintree "trace" "|" "prefix"
+$ verifytraceintree "trace" "|" "search"
 Dirs:  5 (0 empty)
 Files: 14
 Total: 19
@@ -121,7 +121,7 @@ Could not open database file: prefix/db.db
 trace Fail
 
 # non-directory name mismatch (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Did not find entry with name "an_old_file" in prefix/db.db
 Did not get 6 matching entries.
 Dirs:  5 (0 empty)
@@ -130,7 +130,7 @@ Total: 19
 badtrace Fail
 
 # non-directory permissions mismatch (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Dirs:  5 (0 empty)
 Files: 14
 Total: 19
@@ -143,7 +143,7 @@ Did not get 6 matching entries.
 badtrace Fail
 
 # non-directory uid mismatch (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Did not get 6 matching entries.
 Dirs:  5 (0 empty)
 Files: 14
@@ -156,7 +156,7 @@ UID mismatch on entry "repeat_name" in prefix/db.db
 badtrace Fail
 
 # non-directory gid mismatch (Fail)
-$ verifytraceintree "badtrace" "|" "prefix"
+$ verifytraceintree "badtrace" "|" "search"
 Did not get 6 matching entries.
 Dirs:  5 (0 empty)
 Files: 14
@@ -169,7 +169,7 @@ Total: 19
 badtrace Fail
 
 # empty line (Pass)
-$ verifytraceintree "trace.copy" "|" "prefix"
+$ verifytraceintree "trace.copy" "|" "search"
 Dirs:  5 (0 empty)
 Files: 14
 Total: 19

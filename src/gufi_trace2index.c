@@ -546,6 +546,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     size_t file_count = 0;
     size_t dir_count = 0;
     size_t empty = 0;
+    size_t external = 0;
 
     /* don't free line - the pointer is now owned by work */
 
@@ -574,7 +575,10 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
         if (first_delim[1] == 'd') {
             dir_count++;
 
+            /* external dbs do not contribue to entry count, but are needed to loop correctly when processing directory */
             empty += !work->entries;
+            work->entries += external;
+            external = 0;
 
             /* put the previous work on the queue */
             QPTPool_enqueue(ctx, id, processdir, work);
@@ -584,8 +588,13 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
         }
         /* ignore non-directories */
         else {
-            work->entries++;
-            file_count++;
+            if (first_delim[1] == 'e') {
+                external++;
+            }
+            else {
+                work->entries++;
+                file_count++;
+            }
 
             /* this line is not needed */
             free(line);
@@ -601,7 +610,10 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
 
     /* handle the last work item */
     dir_count++;
+    /* external dbs do not contribue to entry count, but are needed to loop correctly when processing directory */
     empty += !work->entries;
+    work->entries += external;
+
     QPTPool_enqueue(ctx, id, processdir, work);
 
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);

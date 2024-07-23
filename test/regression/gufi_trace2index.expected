@@ -19,14 +19,14 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          6
 Total Files:         14
 
-$ gufi_trace2index -d "|" trace.0 trace.1 "prefix"
-Creating GUFI Index prefix with 1 threads
+$ gufi_trace2index -d "|" trace.0 trace.1 "search"
+Creating GUFI Index search with 1 threads
 Dirs:                6 (1 empty)
-Files:               15
-Total:               21
+Files:               14
+Total:               20
 
 Total Dirs:          6
-Total Files:         15
+Total Files:         14
 
 Source Directory:
     prefix
@@ -73,17 +73,17 @@ GUFI Index:
     prefix/unusual#? directory ,/unusual, name?#
 
 # create index from a trace file whose last item is an empty directory
-$ gufi_trace2index -d "|" -n 2 "empty_last_dir.trace" "prefix"
-Creating GUFI Index prefix with 2 threads
+$ gufi_trace2index -d "|" -n 2 "empty_last_dir.trace" "search"
+Creating GUFI Index search with 2 threads
 Dirs:                7 (2 empty)
-Files:               15
-Total:               22
+Files:               14
+Total:               21
 
 Total Dirs:          7
-Total Files:         15
+Total Files:         14
 
 # bad trace path
-$ gufi_trace2index -d "|" -n 2 "" "prefix"
+$ gufi_trace2index -d "|" -n 2 "" "search"
 Could not open "": No such file or directory (2)
 Failed to open trace file for each thread
 
@@ -93,33 +93,33 @@ Could not create directory prefix/1KB
 
 
 # empty trace
-$ gufi_trace2index -d "|" -n 2 "badtrace" "prefix"
+$ gufi_trace2index -d "|" -n 2 "badtrace" "search"
 Could not get the first line of the trace
-Creating GUFI Index prefix with 2 threads
+Creating GUFI Index search with 2 threads
 Total Dirs:          0
 Total Files:         0
 
 
 # cannot find delimiter of first line
-$ gufi_trace2index -d "?" -n 2 "trace" "prefix"
+$ gufi_trace2index -d "?" -n 2 "trace" "search"
 Could not find the specified delimiter
-Creating GUFI Index prefix with 2 threads
+Creating GUFI Index search with 2 threads
 Total Dirs:          0
 Total Files:         0
 
 
 # first line does not start with a directory
-$ gufi_trace2index -d "|" -n 2 "badtrace" "prefix"
+$ gufi_trace2index -d "|" -n 2 "badtrace" "search"
 First line of trace is not a directory
-Creating GUFI Index prefix with 2 threads
+Creating GUFI Index search with 2 threads
 Total Dirs:          0
 Total Files:         0
 
 
 # file delimiter not found
-$ gufi_trace2index -d "|" -n 2 "badtrace" "prefix"
+$ gufi_trace2index -d "|" -n 2 "badtrace" "search"
 Scout encountered bad line ending at badtrace offset 62
-Creating GUFI Index prefix with 2 threads
+Creating GUFI Index search with 2 threads
 Total Dirs:          0
 Total Files:         0
 

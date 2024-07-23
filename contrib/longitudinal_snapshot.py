@@ -693,7 +693,7 @@ def create_longitudinal_snapshot(args):
                                     log2_name_len_bucket_count)
 
     cmd = [
-        '@CMAKE_BINARY_DIR@/src/gufi_sqlite',
+        '@CMAKE_BINARY_DIR@/src/gufi_sqlite3',
 
         args.outdb,
 

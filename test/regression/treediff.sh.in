@@ -98,7 +98,7 @@ run_sort "${TREEDIFF} -k \"\" \"${SRCDIR}\" \"${INDEXROOT}\""
 
 echo "# Bad thread count"
 run_sort "${TREEDIFF} -n 18446744073709551615 \"${SRCDIR}\" \"${INDEXROOT}\""
-) | remove_root | tee "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/treediff.expected "${OUTPUT}"
 rm "${OUTPUT}"
