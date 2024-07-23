@@ -390,6 +390,11 @@ TEST(shortpath, split) {
     EXPECT_EQ(shortpath(LAST, dst, endname), 0);
     EXPECT_STREQ(dst, "");
     EXPECT_STREQ(endname, LAST);
+
+    // empty string
+    EXPECT_EQ(shortpath("", dst, endname), 0);
+    EXPECT_STREQ(dst, "");
+    EXPECT_STREQ(endname, "");
 }
 
 TEST(dupdir, parentfirst) {

@@ -561,7 +561,7 @@ TEST(histogram, category) {
     {
         ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hists(str TEXT);",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hists  SELECT category_hist(category, 1) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hists SELECT category_hist(category, 1) FROM test;",
                                nullptr, nullptr, nullptr), SQLITE_OK);
         ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hists SELECT category_hist(category, 0) FROM test;",
                                nullptr, nullptr, nullptr), SQLITE_OK);
@@ -574,6 +574,20 @@ TEST(histogram, category) {
         check_combined(sql_sum);
 
         category_hist_free(sql_sum);
+
+        free(combined_str);
+    }
+
+    // empty histogram
+    {
+        char *combined_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist_combine(NULL) FROM hists;",
+                               copy_columns_callback, &combined_str, nullptr), SQLITE_OK);
+        EXPECT_NE(combined_str, nullptr);
+
+        category_hist_t *empty = category_hist_parse(combined_str);
+        EXPECT_EQ(empty->count, (std::size_t) 0);
+        category_hist_free(empty);
 
         free(combined_str);
     }
