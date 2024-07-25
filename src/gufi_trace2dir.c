@@ -115,10 +115,10 @@ static int process_entries(struct input *in,
                 }
             }
             break;
-        case 'd':
-        default:
-            fprintf(stderr, "Bad entry type: %c\n", ed->type);
-            return 1;
+        /* case 'd': */
+        /* default: */
+        /*     fprintf(stderr, "Bad entry type: %c\n", ed->type); */
+        /*     return 1; */
     }
 
     return 0;

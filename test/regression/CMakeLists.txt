@@ -77,6 +77,8 @@ set(BINARIES
   gufi_sqlite3
   gufi_dir2index
   gufi_dir2trace
+  gufi_index2dir
+  gufi_trace2dir
   gufi_trace2index
   gufi_treesummary
   gufi_treesummary_all

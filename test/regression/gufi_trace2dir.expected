@@ -1,0 +1,56 @@
+# gufi_trace2dir help
+$ gufi_trace2dir
+usage: gufi_trace2dir [options] trace_file... output_dir
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -n <threads>           number of threads
+  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
+
+input_dir         walk this GUFI index to produce a tree
+output_dir        reconstruct the tree under here
+
+
+$ gufi_dir2trace -d "|" -n 2 "prefix" "trace"
+Creating GUFI Traces trace with 2 threads
+Total Dirs:          6
+Total Files:         14
+
+$ gufi_trace2dir -d "|" -n 2 trace.0 trace.1 "reconstructed"
+Dirs:                6 (1 empty)
+Files:               14
+Total:               20
+
+
+$ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s/reconstructed\///g" | sort)
+
+$ rm -rf "reconstructed"
+
+# reconstruct tree with an external database record
+$ gufi_trace2dir -d "|" -n 2 trace "reconstructed"
+Dirs:                6 (1 empty)
+Files:               14
+Total:               20
+
+
+$ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s/reconstructed\///g" | sort)
+
+$ gufi_trace2dir badtrace "reconstructed"
+Could not open "badtrace": No such file or directory (2)
+Failed to open trace file for each thread
+
+$ gufi_trace2dir trace.0 trace.1 "prefix/old_file"
+Could not create directory prefix/old_file
+
+$ rm -rf "reconstructed/prefix/directory/readonly"
+
+$ gufi_trace2dir -d "|" trace "reconstructed"
+Dupdir failure: "reconstructed/prefix/old_file/dir": Not a directory (20)
+Dirs:                7 (2 empty)
+Files:               14
+Total:               21
+
+
+$ gufi_trace2dir -n 18446744073709551615 trace.0 trace.1 "reconstructed"
+Error: Failed to start thread pool
+

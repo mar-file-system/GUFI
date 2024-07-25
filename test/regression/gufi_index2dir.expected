@@ -1,0 +1,29 @@
+# gufi_index2dir help
+$ gufi_index2dir
+usage: gufi_index2dir [options] input_dir output_dir
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -n <threads>           number of threads
+
+input_dir         walk this GUFI index to produce a tree
+output_dir        reconstruct the tree under here
+
+
+$ gufi_index2dir -n 2 "prefix" "reconstructed"
+
+$ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s/reconstructed\///g" | sort)
+
+$ gufi_index2dir -n 2 "prefix" "."
+You are putting the tree in the index directory
+"." Already exists!
+
+$ gufi_index2dir -n 2 "prefix/db.db" "reconstructed"
+Source path is not a directory "prefix/db.db"
+
+$ gufi_index2dir -n 2 "prefix" ""
+No output path specified
+
+$ gufi_index2dir -n 18446744073709551615 "prefix" "reconstructed"
+Error: Failed to start thread pool
+

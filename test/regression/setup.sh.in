@@ -155,6 +155,7 @@ GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
 GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
 GUFI_FIND="${GUFI_TOOL} find"
 GUFI_GETFATTR="${GUFI_TOOL} getfattr"
+GUFI_INDEX2DIR="@CMAKE_BINARY_DIR@/src/gufi_index2dir"
 GUFI_LS="${GUFI_TOOL} ls"
 GUFI_QUERY="@CMAKE_BINARY_DIR@/src/gufi_query"
 GUFI_ROLLUP="@CMAKE_BINARY_DIR@/src/gufi_rollup"
@@ -162,6 +163,7 @@ GUFI_SQLITE3="@CMAKE_BINARY_DIR@/src/gufi_sqlite3"
 GUFI_STAT="${GUFI_TOOL} stat"
 GUFI_STATS="${GUFI_TOOL} stats"
 GUFI_STAT_BIN="@CMAKE_BINARY_DIR@/src/gufi_stat_bin"
+GUFI_TRACE2DIR="@CMAKE_BINARY_DIR@/src/gufi_trace2dir"
 GUFI_TRACE2INDEX="@CMAKE_BINARY_DIR@/src/gufi_trace2index"
 GUFI_TREESUMMARY="@CMAKE_BINARY_DIR@/src/gufi_treesummary"
 GUFI_TREESUMMARY_ALL="@CMAKE_BINARY_DIR@/src/gufi_treesummary_all"
@@ -200,6 +202,7 @@ replace() {
     s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g;
     s/${GUFI_FIND//\//\\/}/gufi_find/g;
     s/${GUFI_GETFATTR//\//\\/}/gufi_getfattr/g;
+    s/${GUFI_INDEX2DIR//\//\\/}/gufi_index2dir/g;
     s/${GUFI_LS//\//\\/}/gufi_ls/g;
     s/${GUFI_QUERY//\//\\/}/gufi_query/g;
     s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
@@ -207,6 +210,7 @@ replace() {
     s/${GUFI_STAT//\//\\/}/gufi_stat/g
     s/${GUFI_STATS//\//\\/}/gufi_stats/g;
     s/${GUFI_STAT_BIN//\//\\/}/gufi_stat_bin/g
+    s/${GUFI_TRACE2DIR//\//\\/}/gufi_trace2dir/g;
     s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g;
     s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
     s/${GUFI_TREESUMMARY_ALL//\//\\/}/gufi_treesummary_all/g;

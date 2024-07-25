@@ -164,10 +164,10 @@ static int process_entries(void *args, int count, char **data, char **columns) {
                 }
             }
             break;
-        case 'd':
-        default:
-            fprintf(stderr, "Bad entry type: %c\n", type);
-            return 1;
+        /* case 'd': */
+        /* default: */
+        /*     fprintf(stderr, "Bad entry type: %c\n", type); */
+        /*     return 1; */
     }
 
     return 0;
@@ -267,9 +267,10 @@ struct work *validate_inputs(struct PoolArgs *pa) {
 
     SNPRINTF(expathtst, MAXPATH, "%s/%s", pa->in.nameto.data, pa->in.name.data);
     realpath(expathtst, expathout);
-    realpath(pa->in.name. data,expathin);
+    realpath(pa->in.name.data, expathin);
+
     if (!strcmp(expathin, expathout)) {
-        fprintf(stderr,"You are putting the index dbs in input directory\n");
+        fprintf(stderr,"You are putting the tree in the index directory\n");
     }
 
     struct work *root = (struct work *) calloc(1, sizeof(struct work));

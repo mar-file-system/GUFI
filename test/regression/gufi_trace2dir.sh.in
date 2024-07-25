@@ -62,14 +62,13 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-OUTPUT="gufi_dir2trace.out"
-
-NEWDIR="$(mktemp -d 'XXXXXX')"
+OUTPUT="gufi_trace2dir.out"
+DST="reconstructed"
 
 cleanup() {
-    rm -rf "${NEWDIR}"
+    rm -rf "${DST}"
 }
 
 cleanup_exit() {
@@ -82,76 +81,44 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-echo "# ${GUFI_DIR2TRACE} help" | replace
-run_no_sort "${GUFI_DIR2TRACE}"
+echo "# ${GUFI_TRACE2DIR} help" | replace
+run_no_sort "${GUFI_TRACE2DIR}"
 
-# generate the tree
-@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh "${SRCDIR}"
-
-# add an external db
-echo "/external/db" > "${SRCDIR}/external.gufi"
-
-# generate the trace
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
-
-# count output files
-found=$(find "${TRACES[@]}" | wc -l)
-echo "Expecting ${THREADS} trace files. Found ${found}."
-
-# count lines
-# shellcheck disable=SC2016
-trace_lines=$(cat "${TRACES[@]}" | wc -l | @AWK@ '{print $1 - 1}')
-contents=$(find "${SRCDIR}")
-# shellcheck disable=SC2016
-content_lines=$(echo "${contents}" | wc -l | @AWK@ '{print $1}')
-echo "Expecting ${content_lines} lines. Got ${trace_lines}."
-
-# count separators
-columns=$(sed "/^.*${DELIM}e${DELIM}$/d; s/[^${DELIM}]//g;" "${TRACES[@]}" | @AWK@ '{ print length }' | sort | uniq)
-echo "Expecting 23 columns per row. Got ${columns}."
-
-# compare names
-src=$(find "${SRCDIR}" | sort)
-# shellcheck disable=SC2016
-lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | sed "/\\/external\\/db/d; s/\\/\\//\\//g;" | sort)
-
-echo "Source Directory:"
-# shellcheck disable=SC2016
-echo "${src}"   | @AWK@ '{ print "    " $1 }'
-echo "Trace File:"
-# shellcheck disable=SC2016
-echo "${lines}" | @AWK@ '{ print "    " $1 }'
-echo
-
-run_no_sort "mkdir \"${SRCDIR}.0\""
-echo "# target is directory"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}\" \"${SRCDIR}\""
-run_no_sort "rm -r \"${SRCDIR}.0\""
-
-echo "# source path is file"
-# shellcheck disable=SC2046,SC2086
-FULLTRACEPATH="$(dirname $(realpath ${TRACE}))"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}/1KB\" \"${TRACE}\"" | sed "s/${FULLTRACEPATH//\//\\/}\\///g;"
-
-echo "# empty source path"
-rm "${TRACES[@]}"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${TRACE}\""
-
-echo "# nonexistant trace directory"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${NEWDIR}/baddir/${TRACE}\"" | sed "s/${NEWDIR}\\///g"
-
-echo "# skip file"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}\" \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}\" \"${TRACE}\""
 
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}' | sed '/\\/external\\/db/d;'"
+run_no_sort "${GUFI_TRACE2DIR} -d \"${DELIM}\" -n ${THREADS} ${TRACES[@]} \"${DST}\""
 
-echo "# bad skip file"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
 
-echo "# bad thread count"
-run_no_sort "${GUFI_DIR2TRACE} -n 18446744073709551615 \"${SRCDIR}\" \"${TRACE}\""
+(
+cat "${TRACES[@]}"
+echo "${DELIM}e"
+) > "${TRACE}"
+
+run_no_sort "rm -rf \"${DST}\""
+
+echo "# reconstruct tree with an external database record"
+run_no_sort "${GUFI_TRACE2DIR} -d \"${DELIM}\" -n ${THREADS} ${TRACE} \"${DST}\""
+
+run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+
+# bad inputs
+
+run_no_sort "${GUFI_TRACE2DIR} ${BADTRACE} \"${DST}\""
+
+# shellcheck disable=SC2145
+run_no_sort "${GUFI_TRACE2DIR} ${TRACES[@]} \"${SRCDIR}/old_file\""
+
+# bad dupdir
+run_no_sort "rm -rf \"${DST}/${SRCDIR}/directory/readonly\""
+# shellcheck disable=SC2094
+head -n 1 "${TRACE}" | sed "s/^.*${DELIM}d${DELIM}/${SRCDIR//\//\\/}\\/old_file\\/dir${DELIM}d${DELIM}/g" >> "${TRACE}"
+run_no_sort "${GUFI_TRACE2DIR} -d \"${DELIM}\" ${TRACE} \"${DST}\""
+
+# shellcheck disable=SC2145
+run_no_sort "${GUFI_TRACE2DIR} -n 18446744073709551615 ${TRACES[@]} \"${DST}\""
 ) | remove_indexing_time | tee "${OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2dir.expected "${OUTPUT}"
 rm "${OUTPUT}"
