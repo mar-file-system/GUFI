@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <utime.h>
 
 #include "external.h"
 #include "utils.h"
@@ -850,4 +851,32 @@ size_t present_user_path(const char *curr, size_t curr_len,
     return SNFORMAT_S(buf, len, 2,
                       orig_root->data, orig_root->len,
                       curr + prefix, curr_len - prefix);
+}
+
+/* print errors, but keep going */
+void set_metadata(const char *path, struct stat *st) {
+    if (chmod(path, st->st_mode) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error running chmod on %s: %s (%d)\n",
+                path, strerror(err), err);
+    }
+
+    if (chown(path, st->st_uid, st->st_gid) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error running chown on %s: %s (%d)\n",
+                path, strerror(err), err);
+    }
+
+    /* TODO: set xattrs */
+
+    /* set atime and mtime */
+    struct utimbuf ut = {
+        .actime = st->st_atime,
+        .modtime = st->st_mtime,
+    };
+    if (utime(path, &ut) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error setting atime and utime of %s: %s (%d)\n",
+                path, strerror(err), err);
+    }
 }

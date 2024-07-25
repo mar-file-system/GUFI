@@ -74,8 +74,6 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "utils.h"
 
-const size_t GETLINE_DEFAULT_SIZE = 256; /* magic number */
-
 struct Range {
     int fd;
     off_t start, end; /* [start, end) */

@@ -67,7 +67,9 @@ OF SUCH DAMAGE.
 
 #include <stdio.h>
 
+#include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "debug.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,6 +84,45 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
 /* convert a formatted string to a work struct or attach name */
 int linetowork(char *line, const size_t len, const char delim,
                struct work *work, struct entry_data *ed);
+
+int *open_traces(char **trace_names, size_t trace_count);
+void close_traces(int *traces, size_t trace_count);
+
+/* Data stored during first pass of input file */
+struct row {
+    int trace;
+    size_t first_delim;
+    char *line;
+    size_t len;
+    off_t offset;
+    size_t entries;
+};
+
+struct row *row_init(const int trace, const size_t first_delim, char *line,
+                     const size_t len, const long offset);
+void row_destroy(struct row **ref);
+
+struct ScoutTraceArgs {
+    struct input *in;  /* reference to PoolArgs */
+    char *tracename;
+    int trace;         /* file descriptor */
+
+    /* data argument will be a struct row */
+    QPTPoolFunc_t processdir;
+
+    /* everything below is locked with print_mutex from debug.h */
+
+    size_t *remaining; /* number of scouts still running */
+
+    /* sum of counts from all trace files */
+    uint64_t *time;
+    size_t *files;
+    size_t *dirs;
+    size_t *empty;     /* number of directories without files/links
+                        * can still have child directories */
+};
+
+int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
 
 #ifdef __cplusplus
 }

@@ -96,6 +96,10 @@ Could not create directory prefix/1KB
 $ gufi_trace2index -d "|" -n 2 "badtrace" "search"
 Could not get the first line of the trace
 Creating GUFI Index search with 2 threads
+Dirs:                0 (0 empty)
+Files:               0
+Total:               0
+
 Total Dirs:          0
 Total Files:         0
 
@@ -104,6 +108,10 @@ Total Files:         0
 $ gufi_trace2index -d "?" -n 2 "trace" "search"
 Could not find the specified delimiter
 Creating GUFI Index search with 2 threads
+Dirs:                0 (0 empty)
+Files:               0
+Total:               0
+
 Total Dirs:          0
 Total Files:         0
 
@@ -112,6 +120,10 @@ Total Files:         0
 $ gufi_trace2index -d "|" -n 2 "badtrace" "search"
 First line of trace is not a directory
 Creating GUFI Index search with 2 threads
+Dirs:                0 (0 empty)
+Files:               0
+Total:               0
+
 Total Dirs:          0
 Total Files:         0
 
@@ -120,6 +132,10 @@ Total Files:         0
 $ gufi_trace2index -d "|" -n 2 "badtrace" "search"
 Scout encountered bad line ending at badtrace offset 62
 Creating GUFI Index search with 2 threads
+Dirs:                0 (0 empty)
+Files:               0
+Total:               0
+
 Total Dirs:          0
 Total Files:         0
 

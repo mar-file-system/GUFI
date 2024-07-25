@@ -63,7 +63,6 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
-#include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,63 +82,12 @@ OF SUCH DAMAGE.
 struct OutputBuffers debug_output_buffers;
 #endif
 
-#define GETLINE_DEFAULT_SIZE 750 /* magic number */
-
-struct ScoutArgs {
-    struct input *in;  /* reference to PoolArgs */
-    char *tracename;
-    int trace;         /* file descriptor */
-
-    /* everything below is locked with print_mutex from debug.h */
-
-    size_t *remaining; /* number of scouts still running */
-
-    /* sum of counts from all trace files */
-    uint64_t *time;
-    size_t *files;
-    size_t *dirs;
-    size_t *empty;     /* number of directories without files/links
-                        * can still have child directories */
-};
-
 /* global to pool - passed around in "args" argument */
 struct PoolArgs {
     struct input in;
     struct template_db db;
     struct template_db xattr;
 };
-
-/* Data stored during first pass of input file */
-struct row {
-    int trace;
-    size_t first_delim;
-    char *line;
-    size_t len;
-    off_t offset;
-    size_t entries;
-};
-
-static struct row *row_init(const int trace, const size_t first_delim, char *line,
-                            const size_t len, const long offset) {
-    struct row *row = malloc(sizeof(struct row));
-    row->trace = trace;
-    row->first_delim = first_delim;
-    row->line = line; /* takes ownership of line */
-    row->len = len;
-    row->offset = offset;
-    row->entries = 0;
-    return row;
-}
-
-static void row_destroy(struct row **ref) {
-    /* Not checking arguments */
-
-    struct row *row = *ref;
-    free(row->line);
-    free(row);
-
-    *ref = NULL;
-}
 
 #ifdef DEBUG
 
@@ -233,6 +181,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                                          "/", (size_t) 1,
                                          w->line, w->first_delim);
 
+    /* have to dupdir here because directories can show up in any order */
     if (dupdir(topath, &ed.statuso)) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
@@ -380,7 +329,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
 
         timestamp_create_start(free);
-        free(line);
+        free(line); /* reuse line and only alloc+free once */
         timestamp_set_end(free);
         timestamp_set_end(read_entries);
 
@@ -496,180 +445,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return !db;
 }
 
-/* Read ahead to figure out where files under directories start */
-static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct start_end scouting;
-    clock_gettime(CLOCK_MONOTONIC, &scouting.start);
-
-    /* skip argument checking */
-    struct ScoutArgs *sa = (struct ScoutArgs *) data;
-    struct input *in = sa->in;
-
-    (void) id; (void) args;
-
-    char *line = NULL;
-    size_t size = 0;
-    ssize_t len = 0;
-    off_t offset = 0;
-
-    /* keep current directory while finding next directory */
-    /* in order to find out whether or not the current */
-    /* directory has files in it */
-
-    /* empty trace */
-    if ((len = getline_fd(&line, &size, sa->trace, &offset, GETLINE_DEFAULT_SIZE)) < 1) {
-        free(line);
-        free(sa);
-        fprintf(stderr, "Could not get the first line of the trace\n");
-        return 1;
-    }
-
-    /* find a delimiter */
-    char *first_delim = memchr(line, in->delim, len);
-    if (!first_delim) {
-        free(line);
-        free(sa);
-        fprintf(stderr, "Could not find the specified delimiter\n");
-        return 1;
-    }
-
-    /* make sure the first line is a directory */
-    if (first_delim[1] != 'd') {
-        free(line);
-        free(sa);
-        fprintf(stderr, "First line of trace is not a directory\n");
-        return 1;
-    }
-
-    struct row *work = row_init(sa->trace, first_delim - line, line, len, offset);
-
-    size_t file_count = 0;
-    size_t dir_count = 0;
-    size_t empty = 0;
-    size_t external = 0;
-
-    /* don't free line - the pointer is now owned by work */
-
-    /* have getline allocate a new buffer */
-    line = NULL;
-    size = 0;
-    len = 0;
-    while ((len = getline_fd(&line, &size, sa->trace, &offset, GETLINE_DEFAULT_SIZE)) > 0) {
-        first_delim = memchr(line, in->delim, len);
-
-        /*
-         * if got bad line, have to stop here or else processdir will
-         * not know where this directory ends and will try to parse
-         * bad line
-         */
-        if (!first_delim) {
-            free(line);
-            row_destroy(&work);
-            fprintf(stderr, "Scout encountered bad line ending at %s offset %jd\n",
-                    sa->tracename, (intmax_t) offset);
-            free(sa);
-            return 1;
-        }
-
-        /* push directories onto queues */
-        if (first_delim[1] == 'd') {
-            dir_count++;
-
-            /* external dbs do not contribue to entry count, but are needed to loop correctly when processing directory */
-            empty += !work->entries;
-            work->entries += external;
-            external = 0;
-
-            /* put the previous work on the queue */
-            QPTPool_enqueue(ctx, id, processdir, work);
-
-            /* put the current line into a new work item */
-            work = row_init(sa->trace, first_delim - line, line, len, offset);
-        }
-        /* ignore non-directories */
-        else {
-            if (first_delim[1] == 'e') {
-                external++;
-            }
-            else {
-                work->entries++;
-                file_count++;
-            }
-
-            /* this line is not needed */
-            free(line);
-        }
-
-        /* have getline allocate a new buffer */
-        line = NULL;
-        size = 0;
-        len = 0;
-    }
-
-    free(line);
-
-    /* handle the last work item */
-    dir_count++;
-    /* external dbs do not contribue to entry count, but are needed to loop correctly when processing directory */
-    empty += !work->entries;
-    work->entries += external;
-
-    QPTPool_enqueue(ctx, id, processdir, work);
-
-    clock_gettime(CLOCK_MONOTONIC, &scouting.end);
-
-    pthread_mutex_lock(&print_mutex);
-    *sa->time += nsec(&scouting);
-    *sa->files += file_count;
-    *sa->dirs += dir_count;
-    *sa->empty += empty;
-
-    (*sa->remaining)--;
-
-    /* print here to print as early as possible instead of after thread pool completes */
-    if ((*sa->remaining) == 0) {
-        fprintf(stdout, "Scouts took total of %.2Lf seconds\n", sec(*sa->time));
-        fprintf(stdout, "Dirs:                %zu (%zu empty)\n", *sa->dirs, *sa->empty);
-        fprintf(stdout, "Files:               %zu\n", *sa->files);
-        fprintf(stdout, "Total:               %zu\n", *sa->files + *sa->dirs);
-        fprintf(stdout, "\n");
-    }
-    pthread_mutex_unlock(&print_mutex);
-
-    free(sa);
-
-    return 0;
-}
-
 static void sub_help(void) {
    printf("trace_file...     parse one or more trace files to produce the GUFI index\n");
    printf("output_dir        build GUFI index here\n");
    printf("\n");
 }
 
-static void close_traces(int *traces, size_t trace_count) {
-    for(size_t i = 0; i < trace_count; i++) {
-        close(traces[i]);
-    }
-    free(traces);
-}
-
-static int *open_traces(char **trace_names, size_t trace_count) {
-    int *traces = (int *) calloc(trace_count, sizeof(int));
-    if (traces) {
-        for(size_t i = 0; i < trace_count; i++) {
-            traces[i] = open(trace_names[i], O_RDONLY);
-            if (traces[i] < 0) {
-                const int err = errno;
-                fprintf(stderr, "Could not open \"%s\": %s (%d)\n", trace_names[i], strerror(err), err);
-                close_traces(traces, i);
-                return NULL;
-            }
-        }
-    }
-
-    return traces;
-}
 
 int main(int argc, char *argv[]) {
     /* have to call clock_gettime explicitly to get start time and epoch */
@@ -764,18 +545,19 @@ int main(int argc, char *argv[]) {
     size_t empty = 0;
     for(size_t i = 0; i < trace_count; i++) {
         /* freed by scout_function */
-        struct ScoutArgs *sa = malloc(sizeof(struct ScoutArgs));
-        sa->in = &pa.in;
-        sa->tracename = argv[idx + i];
-        sa->trace = traces[i];
-        sa->remaining = &remaining;
-        sa->time = &scout_time;
-        sa->files = &files;
-        sa->dirs = &dirs;
-        sa->empty = &empty;
+        struct ScoutTraceArgs *sta = malloc(sizeof(struct ScoutTraceArgs));
+        sta->in = &pa.in;
+        sta->tracename = argv[idx + i];
+        sta->trace = traces[i];
+        sta->processdir = processdir;
+        sta->remaining = &remaining;
+        sta->time = &scout_time;
+        sta->files = &files;
+        sta->dirs = &dirs;
+        sta->empty = &empty;
 
         /* scout_function pushes more work into the queue */
-        QPTPool_enqueue(pool, 0, scout_function, sa);
+        QPTPool_enqueue(pool, 0, scout_trace, sta);
     }
 
     QPTPool_wait(pool);

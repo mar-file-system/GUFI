@@ -83,6 +83,7 @@ extern "C" {
 #define MAXSTRIDE 1000000000   /* maximum records per stripe */
 #define DBNAME "db.db"
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
+#define GETLINE_DEFAULT_SIZE 750 /* magic number */
 
 struct sum {
   long long int totfiles;

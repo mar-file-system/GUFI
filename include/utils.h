@@ -161,6 +161,9 @@ size_t present_user_path(const char *path, size_t path_len,
                          refstr_t *root_parent, const size_t root_basename_len, refstr_t *orig_root,
                          char *buf, size_t len);
 
+/* set metadata on given path */
+void set_metadata(const char *path, struct stat *st);
+
 #ifdef __cplusplus
 }
 #endif
