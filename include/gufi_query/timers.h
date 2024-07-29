@@ -201,18 +201,6 @@ typedef struct timestamps {
 
 void timestamps_init(timestamps_t *ts, struct timespec *zero);
 
-#if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-#define thread_timestamp_start(tts, name)           \
-    struct start_end *name = &tts[tts_##name];      \
-    clock_gettime(CLOCK_MONOTONIC, &(name)->start);
-
-#define thread_timestamp_end(name)                  \
-    clock_gettime(CLOCK_MONOTONIC, &(name)->end);
-#else
-#define thread_timestamp_start(tts, name)
-#define thread_timestamp_end(name)
-#endif
-
 void timestamps_print(struct OutputBuffers *obs, const size_t id,
                       timestamps_t *ts, void *dir, void *db);
 void timestamps_sum(total_time_t *tt, timestamps_t *ts);

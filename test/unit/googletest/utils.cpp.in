@@ -1137,3 +1137,27 @@ TEST(copyfd, bad) {
     EXPECT_EQ(close(src), 0);
     EXPECT_EQ(remove(srcname), 0);
 }
+
+TEST(set_metadata, bad) {
+    char dir[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(dir), nullptr);
+
+    char path[MAXPATH];
+    snprintf(path, sizeof(path), "%s/file", dir);
+
+    struct stat st;
+    memset(&st, 0, sizeof(st));
+
+    struct xattrs xattrs;
+    xattrs_setup(&xattrs);
+    xattrs.count = 1;
+    xattrs_alloc(&xattrs);
+    xattrs.pairs[0].name_len  = snprintf(xattrs.pairs[0].name,  sizeof(xattrs.pairs[0].name),  "xattr_name");
+    xattrs.pairs[0].value_len = snprintf(xattrs.pairs[0].value, sizeof(xattrs.pairs[0].value), "xattr_value");
+
+    EXPECT_NO_THROW(set_metadata(path, &st, &xattrs));
+
+    xattrs_cleanup(&xattrs);
+
+    EXPECT_EQ(rmdir(dir), 0);
+}

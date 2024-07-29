@@ -102,7 +102,7 @@ static int process_entries(struct input *in,
             }
             close(fd);
 
-            set_metadata(path, &ed->statuso);
+            set_metadata(path, &ed->statuso, &ed->xattrs);
 
             break;
         case 'l':
@@ -153,6 +153,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
+        xattrs_cleanup(&ed.xattrs);
         row_destroy(&w);
         return 1;
     }
@@ -172,16 +173,19 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         linetowork(line, len, in->delim, &row, &row_ed);
 
         if (row_ed.type == 'e') {
+            xattrs_cleanup(&row_ed.xattrs);
             continue;
         }
 
         process_entries(in, &row, &row_ed);
+        xattrs_cleanup(&row_ed.xattrs);
     }
 
     free(line); /* reuse line and only alloc+free once */
 
-    set_metadata(topath, &ed.statuso);
+    set_metadata(topath, &ed.statuso, &ed.xattrs);
 
+    xattrs_cleanup(&ed.xattrs);
     row_destroy(&w);
     return 0;
 }
@@ -194,7 +198,7 @@ void sub_help(void) {
 
 int main(int argc, char * argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:d:", 2, "trace_file... output_dir", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:d:x", 2, "trace_file... output_dir", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0) {

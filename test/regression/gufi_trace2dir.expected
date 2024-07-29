@@ -6,28 +6,33 @@ options:
   -H                     show assigned input values (debugging)
   -n <threads>           number of threads
   -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
+  -x                     index/query xattrs
 
 input_dir         walk this GUFI index to produce a tree
 output_dir        reconstruct the tree under here
 
 
-$ gufi_dir2trace -d "|" -n 2 "prefix" "trace"
+$ gufi_dir2trace -n 2 -d "|" -x "prefix" "trace"
 Creating GUFI Traces trace with 2 threads
 Total Dirs:          6
 Total Files:         14
 
-$ gufi_trace2dir -d "|" -n 2 trace.0 trace.1 "reconstructed"
+$ gufi_trace2dir -n 2 -d "|" -x trace.0 trace.1 "reconstructed"
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
 
 
+# Diff Trees
 $ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s/reconstructed\///g" | sort)
+
+# Diff xattrs
+$ diff <(find "prefix" -exec getfattr -m ".*" -d {} \; | sort) <(find reconstructed/* -exec getfattr -m ".*" -d {} \; | sed "s/reconstructed\///g" | sort)
 
 $ rm -rf "reconstructed"
 
 # reconstruct tree with an external database record
-$ gufi_trace2dir -d "|" -n 2 trace "reconstructed"
+$ gufi_trace2dir -n 2 -d "|" -x trace "reconstructed"
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20

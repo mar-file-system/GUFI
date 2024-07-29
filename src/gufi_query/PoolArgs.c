@@ -66,7 +66,6 @@ OF SUCH DAMAGE.
 
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/external.h"
-#include "gufi_query/xattrs.h"
 
 int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex) {
     /* Not checking arguments */
@@ -143,7 +142,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             setup_xattrs_views(in, ta->outdb,
                                NULL, &extdb_count
                                #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                               , &ts
+                               , &ts.tts[tts_xattrprep_call]
                                #endif
                                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                , &ta->queries

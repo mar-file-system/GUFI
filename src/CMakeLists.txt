@@ -200,7 +200,6 @@ add_library(gufi_query_lib OBJECT
   gufi_query/query.c
   gufi_query/timers.c
   gufi_query/validate_inputs.c
-  gufi_query/xattrs.c
 )
 
 add_dependencies(gufi_query_lib GUFI)

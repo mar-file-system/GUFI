@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "external.h"
 #include "utils.h"
 #include "xattrs.h"
 
@@ -83,7 +84,7 @@ struct PoolArgs {
 };
 
 static const char SELECT_SUMMARY[] =
-    "SELECT mode, uid, gid, atime, mtime, xattr_names FROM " SUMMARY " WHERE isroot == 1;";
+    "SELECT inode, mode, uid, gid, atime, mtime, xattr_names, LENGTH(xattr_names) FROM " SUMMARY " WHERE isroot == 1;";
 
 /*
  * entries not pentries because not using rolled up data
@@ -91,28 +92,96 @@ static const char SELECT_SUMMARY[] =
  * size is not selected because created file is not filled
  */
 static const char SELECT_ENTRIES[] =
-    "SELECT name, type, mode, uid, gid, atime, mtime, linkname, xattr_names FROM " ENTRIES ";";
+    "SELECT name, type, inode, mode, uid, gid, atime, mtime, linkname, xattr_names, LENGTH(xattr_names) FROM " ENTRIES ";";
 
-struct CallbackArgs {
+struct DirCallbackArgs {
+    struct input *in;
     const char *nameto;
     size_t nameto_len;
+    sqlite3 *db;
 };
+
+/* get single xattr pair */
+static int get_xattr(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
+    struct xattrs *xattrs = (struct xattrs *) args;
+    struct xattr  *xattr  = &xattrs->pairs[xattrs->count];
+
+    const char *name  = data[0];
+    const char *value = data[1];
+
+    xattr->name_len  = SNFORMAT_S(xattr->name,  sizeof(xattr->name),  1, name,  strlen(name));
+    xattr->value_len = SNFORMAT_S(xattr->value, sizeof(xattr->value), 1, value, strlen(value));
+    xattrs->name_len += xattr->name_len;
+    xattrs->len += xattr->name_len + xattr->value_len;
+    xattrs->count++;
+
+    return 0;
+}
+
+/* get all xattrs pairs for this entry */
+static void get_xattrs(struct DirCallbackArgs *dcba,
+                       const char *name,
+                       const char *inode,
+                       const char *view,
+                       const char *xattr_names, const size_t xattr_names_len,
+                       struct xattrs *xattrs) {
+    if (!xattr_names || !xattr_names_len) {
+        return;
+    }
+
+    for(size_t i = 0; i < xattr_names_len; i++) {
+        if (xattr_names[i] == XATTRDELIM) {
+            xattrs->count++;
+        }
+    }
+
+    xattrs_alloc(xattrs);
+
+    xattrs->count = 0; /* use this as the index when filling in */
+
+    char xattrs_sql[MAXSQL];
+    SNPRINTF(xattrs_sql, sizeof(xattrs_sql),
+             "SELECT xattr_name, xattr_value FROM %s WHERE inode == %s;", view, inode);
+
+    char *err = NULL;
+    if (sqlite3_exec(dcba->db, xattrs_sql, get_xattr, xattrs, &err) != SQLITE_OK) {
+        sqlite_print_err_and_free(err, stderr, "Could get xattrs of %s: %s\n", name, err);
+    }
+
+    /* skip double checking xattrs->count matches first count */
+}
 
 static int process_summary(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
-    struct CallbackArgs *cba = (struct CallbackArgs *) args;
+    struct DirCallbackArgs *dcba = (struct DirCallbackArgs *) args;
 
     struct stat st;
     int64_t t;
-    sscanf(data[0],  "%" STAT_mode, &st.st_mode);
-    sscanf(data[1],  "%" STAT_uid,  &st.st_uid);
-    sscanf(data[2],  "%" STAT_gid,  &st.st_gid);
-    sscanf(data[3],  "%" PRId64,    &t); st.st_atime = t;
-    sscanf(data[4],  "%" PRId64,    &t); st.st_mtime = t;
-    /* char *xattr_names = data[5]; */
+    size_t xattr_names_len = 0;
+    const char *inode = data[0];
+    /* sscanf(data[0], "%" STAT_inode, &st.st_ino); */
+    sscanf(data[1], "%" STAT_mode,  &st.st_mode);
+    sscanf(data[2], "%" STAT_uid,   &st.st_uid);
+    sscanf(data[3], "%" STAT_gid,   &st.st_gid);
+    sscanf(data[4], "%" PRId64,     &t); st.st_atime = t;
+    sscanf(data[5], "%" PRId64,     &t); st.st_mtime = t;
+    char *xattr_names = data[6];
+    sscanf(data[7], "%zu",         &xattr_names_len);
 
-    set_metadata(cba->nameto, &st);
+    struct xattrs xattrs;
+    xattrs_setup(&xattrs);
+
+    if (dcba->in->process_xattrs) {
+        get_xattrs(dcba, dcba->nameto, inode, XSUMMARY,
+                   xattr_names, xattr_names_len, &xattrs);
+    }
+
+    set_metadata(dcba->nameto, &st, &xattrs);
+
+    xattrs_cleanup(&xattrs);
 
     return 0;
 }
@@ -120,14 +189,14 @@ static int process_summary(void *args, int count, char **data, char **columns) {
 static int process_entries(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
-    struct CallbackArgs *cba = (struct CallbackArgs *) args;
+    struct DirCallbackArgs *dcba = (struct DirCallbackArgs *) args;
 
     const char *name = data[0];
     const char type = data[1][0];
 
     char entry[MAXPATH];
     SNFORMAT_S(entry, sizeof(entry), 3,
-               cba->nameto, cba->nameto_len,
+               dcba->nameto, dcba->nameto_len,
                "/", (size_t) 1,
                name, strlen(name));
 
@@ -136,12 +205,17 @@ static int process_entries(void *args, int count, char **data, char **columns) {
             ;
             struct stat st;
             int64_t t;
-            sscanf(data[2],  "%" STAT_mode, &st.st_mode);
-            sscanf(data[3],  "%" STAT_uid,  &st.st_uid);
-            sscanf(data[4],  "%" STAT_gid,  &st.st_gid);
-            sscanf(data[5],  "%" PRId64,    &t); st.st_atime = t;
-            sscanf(data[6],  "%" PRId64,    &t); st.st_mtime = t;
-            /* char *xattr_names = data[8]; */
+            size_t xattr_names_len = 0;
+            const char *inode = data[2];
+            /* sscanf(data[2], "%" STAT_ino,  &st.st_ino); */
+            sscanf(data[3], "%" STAT_mode, &st.st_mode);
+            sscanf(data[4], "%" STAT_uid,  &st.st_uid);
+            sscanf(data[5], "%" STAT_gid,  &st.st_gid);
+            sscanf(data[6], "%" PRId64,    &t); st.st_atime = t;
+            sscanf(data[7], "%" PRId64,    &t); st.st_mtime = t;
+            /* const char *linkname = data[8]; */
+            char *xattr_names = data[9];
+            sscanf(data[10], "%zu",         &xattr_names_len);
 
             int fd = open(entry, O_WRONLY | O_TRUNC | O_CREAT, st.st_mode);
             if (fd < 0) {
@@ -150,12 +224,22 @@ static int process_entries(void *args, int count, char **data, char **columns) {
             }
             close(fd);
 
-            set_metadata(entry, &st);
+            struct xattrs xattrs;
+            xattrs_setup(&xattrs);
+
+            if (dcba->in->process_xattrs) {
+                get_xattrs(dcba, entry, inode, XENTRIES,
+                           xattr_names, xattr_names_len, &xattrs);
+            }
+
+            set_metadata(entry, &st, &xattrs);
+
+            xattrs_cleanup(&xattrs);
 
             break;
         case 'l':
             ;
-            const char *linkname = data[7];
+            const char *linkname = data[8];
             if (symlink(linkname, entry) < 0) {
                 const int err = errno;
                 if (err != EEXIST) {
@@ -228,20 +312,55 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
         goto cleanup;
     }
 
-    struct CallbackArgs cba = {
+    size_t ext_xattrs = 0;
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    size_t queries = 0;
+    #endif
+
+    if (pa->in.process_xattrs) {
+        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+        struct start_end xattrprep_call; /* not used after setup_xattrs_views */
+        #endif
+        setup_xattrs_views(&pa->in, db,
+                           work, &ext_xattrs
+                           #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                           , &xattrprep_call
+                           #endif
+                           #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                           , &queries
+                           #endif
+            );
+    }
+
+    struct DirCallbackArgs dcba = {
+        .in = &pa->in,
         .nameto = topath,
         .nameto_len = topath_len,
+        .db = db,
     };
 
     char *err = NULL;
-    if (sqlite3_exec(db, SELECT_ENTRIES, process_entries, &cba, &err) != SQLITE_OK) {
+    if (sqlite3_exec(db, SELECT_ENTRIES, process_entries, &dcba, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Could create entries at %s: %s\n", topath, err);
         rc = 1;
     }
 
-    if (sqlite3_exec(db, SELECT_SUMMARY, process_summary, &cba, &err) != SQLITE_OK) {
+    if (sqlite3_exec(db, SELECT_SUMMARY, process_summary, &dcba, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Could set directory metadata at %s: %s\n", topath, err);
         rc = 1;
+    }
+
+    if (pa->in.process_xattrs) {
+        external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
+                                     &EXTERNAL_TYPE_XATTR,
+                                     NULL,
+                                     external_decrement_attachname,
+                                     &ext_xattrs
+                                     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                     , &queries
+                                     #endif
+            );
     }
 
     /* ignore errors */
@@ -351,7 +470,7 @@ void sub_help(void) {
 
 int main(int argc, char * argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:", 2, "input_dir output_dir", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:x", 2, "input_dir output_dir", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0) {

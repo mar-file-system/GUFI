@@ -84,11 +84,17 @@ cleanup
 echo "# ${GUFI_INDEX2DIR} help" | replace
 run_no_sort "${GUFI_INDEX2DIR}"
 
-run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}\" \"${DST}\""
+run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} -x \"${INDEXROOT}\" \"${DST}\""
 
+echo "# Diff Trees"
 run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
 
+echo "# Diff xattrs"
+run_no_sort "diff <(find \"${SRCDIR}\" -exec getfattr -m \".*\" -d {} \; | sort) <(find ${DST}/* -exec getfattr -m \".*\" -d {} \; | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+
 # bad inputs
+
+run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}\" \"${DST}/${SRCDIR}/old_file\""
 
 rm -rf "${SRCDIR}" "${DST}"
 run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}\" \"$(dirname ${DST})\""

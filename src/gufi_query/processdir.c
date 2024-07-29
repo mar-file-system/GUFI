@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "compress.h"
 #include "dbutils.h"
+#include "debug.h"
 #include "external.h"
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/debug.h"
@@ -82,7 +83,6 @@ OF SUCH DAMAGE.
 #include "gufi_query/processdir.h"
 #include "gufi_query/query.h"
 #include "gufi_query/timers.h"
-#include "gufi_query/xattrs.h"
 #include "print.h"
 #include "utils.h"
 
@@ -178,7 +178,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #endif
 
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
-    thread_timestamp_start(ts.tts, opendir_call);
+    thread_timestamp_start(opendir_call, &ts.tts[tts_opendir_call]);
     dir = opendir(gqw->work.name);
     thread_timestamp_end(opendir_call);
 
@@ -188,7 +188,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     int rc = 0;
-    thread_timestamp_start(ts.tts, lstat_db_call);
+    thread_timestamp_start(lstat_db_call, &ts.tts[tts_lstat_db_call]);
     if (in->keep_matime) {
         rc = save_matime(gqw, dbpath, sizeof(dbpath), &dbtime);
     }
@@ -200,7 +200,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (gqw->work.level >= in->min_level) {
         #if OPENDB
-        thread_timestamp_start(ts.tts, attachdb_call);
+        thread_timestamp_start(attachdb_call, &ts.tts[tts_attachdb_call]);
         db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
         thread_timestamp_end(attachdb_call);
         increment_query_count(ta);
@@ -208,7 +208,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
         #ifdef ADDQUERYFUNCS
-        thread_timestamp_start(ts.tts, addqueryfuncs_call);
+        thread_timestamp_start(addqueryfuncs_call, &ts.tts[tts_addqueryfuncs_call]);
         if (db) {
             if (addqueryfuncs_with_context(db, &gqw->work) != 0) {
                 fprintf(stderr, "Could not add functions to sqlite\n");
@@ -234,7 +234,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             /* if this is OR, as well as no-sql-to-run, skip this query */
             if (in->andor == AND) {
                 /* make sure the treesummary table exists */
-                thread_timestamp_start(ts.tts, sqltsumcheck);
+                thread_timestamp_start(sqltsumcheck, &ts.tts[tts_sqltsumcheck]);
                 querydb(&gqw->work, dbname, dbname_len, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
                         "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
                         pa, id, count_rows, &recs);
@@ -245,7 +245,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 }
                 else {
                     /* run in->sql.tsum */
-                    thread_timestamp_start(ts.tts, sqltsum);
+                    thread_timestamp_start(sqltsum, &ts.tts[tts_sqltsum]);
                     querydb(&gqw->work, dbname, dbname_len, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
                     thread_timestamp_end(sqltsum);
                     increment_query_count(ta);
@@ -271,7 +271,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                                    &gqw->work,
                                    &extdb_count
                                    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                                   , &ts
+                                   , &ts.tts[tts_xattrprep_call]
                                    #endif
                                    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                    , &ta->queries
@@ -393,7 +393,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             /* drop xattrs view */
             if (in->process_xattrs) {
-                thread_timestamp_start(ts.tts, xattrdone_call);
+                thread_timestamp_start(xattrdone_call, &ts.tts[tts_xattrdone_call]);
                 external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
                                              &EXTERNAL_TYPE_XATTR,
                                              NULL,
@@ -414,7 +414,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     #ifdef OPENDB
-    thread_timestamp_start(ts.tts, detachdb_call);
+    thread_timestamp_start(detachdb_call, &ts.tts[tts_detachdb_call]);
     if (db) {
         detachdb_cached(dbname, db, pa->detach, 1);
         increment_query_count(ta);
@@ -423,7 +423,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #endif
 
     /* restore mtime and atime */
-    thread_timestamp_start(ts.tts, utime_call);
+    thread_timestamp_start(utime_call, &ts.tts[tts_utime_call]);
     if (db) {
         if (in->keep_matime) {
             restore_matime(dbpath, &dbtime);
@@ -433,14 +433,14 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
   close_dir:
     ;
-    thread_timestamp_start(ts.tts, closedir_call);
+    thread_timestamp_start(closedir_call, &ts.tts[tts_closedir_call]);
     closedir(dir);
     thread_timestamp_end(closedir_call);
 
   out_free:
     ;
 
-    thread_timestamp_start(ts.tts, free_work);
+    thread_timestamp_start(free_work, &ts.tts[tts_free_work]);
     free(gqw->work.fullpath);
     free_struct(gqw, data, 0);
     thread_timestamp_end(free_work);

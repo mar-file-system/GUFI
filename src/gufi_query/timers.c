@@ -120,7 +120,7 @@ static void print_descend(struct OutputBuffers *obufs, const size_t id,
 
 void timestamps_print(struct OutputBuffers *obs, const size_t id,
                       timestamps_t *ts, void *dir, void *db) {
-    thread_timestamp_start(ts->tts, output_timestamps);
+    thread_timestamp_start(output_timestamps, &ts->tts[tts_output_timestamps]);
     print_timer          (obs, id, "opendir",            &ts->tts[tts_opendir_call]);
     if (dir) {
         print_timer      (obs, id, "lstat_db",           &ts->tts[tts_lstat_db_call]);

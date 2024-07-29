@@ -190,6 +190,18 @@ int print_timer(struct OutputBuffers *obufs, const size_t id,
 
 #endif /* PER_THREAD_STATS */
 
+#if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+#define thread_timestamp_start(name, se)            \
+    struct start_end *name = se;                    \
+    clock_gettime(CLOCK_MONOTONIC, &(name)->start);
+
+#define thread_timestamp_end(name)                  \
+    clock_gettime(CLOCK_MONOTONIC, &(name)->end);
+#else
+#define thread_timestamp_start(tts, name)
+#define thread_timestamp_end(name)
+#endif /* CUMULATIVE_TIMES || PER_THREAD_STATS */
+
 #ifdef __cplusplus
 }
 #endif

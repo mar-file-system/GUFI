@@ -84,12 +84,16 @@ cleanup
 echo "# ${GUFI_TRACE2DIR} help" | replace
 run_no_sort "${GUFI_TRACE2DIR}"
 
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_DIR2TRACE} -n ${THREADS} -d \"${DELIM}\" -x \"${SRCDIR}\" \"${TRACE}\""
 
 # shellcheck disable=SC2145
-run_no_sort "${GUFI_TRACE2DIR} -d \"${DELIM}\" -n ${THREADS} ${TRACES[@]} \"${DST}\""
+run_no_sort "${GUFI_TRACE2DIR} -n ${THREADS} -d \"${DELIM}\" -x ${TRACES[@]} \"${DST}\""
 
+echo "# Diff Trees"
 run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+
+echo "# Diff xattrs"
+run_no_sort "diff <(find \"${SRCDIR}\" -exec getfattr -m \".*\" -d {} \; | sort) <(find ${DST}/* -exec getfattr -m \".*\" -d {} \; | sed \"s/${DST//\//\\/}\\///g\" | sort)"
 
 (
 cat "${TRACES[@]}"
@@ -99,7 +103,7 @@ echo "${DELIM}e"
 run_no_sort "rm -rf \"${DST}\""
 
 echo "# reconstruct tree with an external database record"
-run_no_sort "${GUFI_TRACE2DIR} -d \"${DELIM}\" -n ${THREADS} ${TRACE} \"${DST}\""
+run_no_sort "${GUFI_TRACE2DIR} -n ${THREADS} -d \"${DELIM}\" -x ${TRACE} \"${DST}\""
 
 run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
 

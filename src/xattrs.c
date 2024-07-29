@@ -156,6 +156,7 @@ void xattrs_cleanup(struct xattrs *xattrs) {
     /* Not checking argument */
 
     free(xattrs->pairs);
+    xattrs->pairs = NULL;
 }
 
 /* ************************************************** */

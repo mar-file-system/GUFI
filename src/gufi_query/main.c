@@ -80,7 +80,6 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 #include "gufi_query/aggregate.h"
-#include "gufi_query/debug.h"
 #include "gufi_query/gqw.h"
 #include "gufi_query/processdir.h"
 #include "gufi_query/timers.h"

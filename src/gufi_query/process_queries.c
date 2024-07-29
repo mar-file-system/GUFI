@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #include "dbutils.h"
+#include "debug.h"
 #include "external.h"
 #include "gufi_query/debug.h"
 #include "gufi_query/process_queries.h"
@@ -264,7 +265,7 @@ int process_queries(PoolArgs_t *pa,
          * ignore errors - if the db wasn't opened, or if
          * summary is missing the columns, keep descending
          */
-        thread_timestamp_start(ts->tts, get_rollupscore_call);
+        thread_timestamp_start(get_rollupscore_call, &ts->tts[tts_get_rollupscore_call]);
         int rollupscore = 0;
         if (db) {
             get_rollupscore(db, &rollupscore);
@@ -274,7 +275,7 @@ int process_queries(PoolArgs_t *pa,
 
         /* push subdirectories into the queue */
         if (rollupscore == 0) {
-            thread_timestamp_start(ts->tts, descend_call);
+            thread_timestamp_start(descend_call, &ts->tts[tts_descend_call]);
             *subdirs_walked_count =
                 descend2(ctx, id, gqw, dir, in->skip, processdir, in->max_level, in->compress
                          #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
@@ -312,7 +313,7 @@ int process_queries(PoolArgs_t *pa,
         if (in->sql.sum.len) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
             /* put in the path relative to the user's input */
-            thread_timestamp_start(ts->tts, sqlsum);
+            thread_timestamp_start(sqlsum, &ts->tts[tts_sqlsum]);
             querydb(&gqw->work, dbname, dbname_len, db, in->sql.sum.data, pa, id, print_parallel, &recs);
             thread_timestamp_end(sqlsum);
             increment_query_count(ta);
@@ -325,7 +326,7 @@ int process_queries(PoolArgs_t *pa,
         /* if we have recs (or are running an OR) query the entries table */
         if (recs > 0) {
             if (in->sql.ent.len) {
-                thread_timestamp_start(ts->tts, sqlent);
+                thread_timestamp_start(sqlent, &ts->tts[tts_sqlent]);
                 querydb(&gqw->work, dbname, dbname_len, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
                 thread_timestamp_end(sqlent);
                 increment_query_count(ta);

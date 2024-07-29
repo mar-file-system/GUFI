@@ -5,14 +5,23 @@ options:
   -h                     help
   -H                     show assigned input values (debugging)
   -n <threads>           number of threads
+  -x                     index/query xattrs
 
 input_dir         walk this GUFI index to produce a tree
 output_dir        reconstruct the tree under here
 
 
-$ gufi_index2dir -n 2 "prefix" "reconstructed"
+$ gufi_index2dir -n 2 -x "prefix" "reconstructed"
 
+# Diff Trees
 $ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s/reconstructed\///g" | sort)
+
+# Diff xattrs
+$ diff <(find "prefix" -exec getfattr -m ".*" -d {} \; | sort) <(find reconstructed/* -exec getfattr -m ".*" -d {} \; | sed "s/reconstructed\///g" | sort)
+
+$ gufi_index2dir -n 2 "prefix" "reconstructed/prefix/old_file"
+"reconstructed/prefix/old_file" Already exists!
+Destination path is not a directory "reconstructed/prefix/old_file"
 
 $ gufi_index2dir -n 2 "prefix" "."
 You are putting the tree in the index directory

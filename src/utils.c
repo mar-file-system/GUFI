@@ -854,7 +854,9 @@ size_t present_user_path(const char *curr, size_t curr_len,
 }
 
 /* print errors, but keep going */
-void set_metadata(const char *path, struct stat *st) {
+void set_metadata(const char *path, struct stat *st,
+                  struct xattrs *xattrs) {
+    /* Not checking arguments */
     if (chmod(path, st->st_mode) != 0) {
         const int err = errno;
         fprintf(stderr, "Error running chmod on %s: %s (%d)\n",
@@ -867,7 +869,14 @@ void set_metadata(const char *path, struct stat *st) {
                 path, strerror(err), err);
     }
 
-    /* TODO: set xattrs */
+    for(size_t i = 0; i < xattrs->count; i++) {
+        struct xattr *xattr = &xattrs->pairs[i];
+        if (SETXATTR(path, xattr->name, xattr->value, xattr->value_len) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error running setxattr on %s: %s (%d)\n",
+                    path, strerror(err), err);
+        }
+    }
 
     /* set atime and mtime */
     struct utimbuf ut = {
@@ -876,7 +885,7 @@ void set_metadata(const char *path, struct stat *st) {
     };
     if (utime(path, &ut) != 0) {
         const int err = errno;
-        fprintf(stderr, "Error setting atime and utime of %s: %s (%d)\n",
+        fprintf(stderr, "Error setting atime and mtime of %s: %s (%d)\n",
                 path, strerror(err), err);
     }
 }

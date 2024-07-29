@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "config.h"
 #include "trie.h"
+#include "xattrs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -162,7 +163,7 @@ size_t present_user_path(const char *path, size_t path_len,
                          char *buf, size_t len);
 
 /* set metadata on given path */
-void set_metadata(const char *path, struct stat *st);
+void set_metadata(const char *path, struct stat *st, struct xattrs *xattrs);
 
 #ifdef __cplusplus
 }
