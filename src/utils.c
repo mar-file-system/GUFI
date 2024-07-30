@@ -435,7 +435,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
 
             if (stat_entries) {
                 /* get the child's metadata */
-                if (lstat(child.name, &child_ed.statuso) < 0) {
+                if (lstat(child.name, &child_ed.statuso) != 0) {
                     continue;
                 }
             }
@@ -451,7 +451,17 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                     case DT_REG:
                         child_ed.statuso.st_mode = S_IFREG;
                         break;
+                    case DT_FIFO:
+                    case DT_SOCK:
+                    case DT_CHR:
+                    case DT_BLK:
+                        break;
+                    case DT_UNKNOWN:
                     default:
+                        /* some filesystems don't support d_type - fall back to calling lstat */
+                        if (lstat(child.name, &child_ed.statuso) != 0) {
+                            continue;
+                        }
                         break;
                 }
             }
