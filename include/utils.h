@@ -121,7 +121,7 @@ struct descend_counters {
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
-            DIR *dir, trie_t *skip, const int skip_db, const int stat_entries,
+            DIR *dir, trie_t *skip, const int skip_db,
             QPTPoolFunc_t processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters);
 

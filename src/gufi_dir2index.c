@@ -128,8 +128,10 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     struct NonDirArgs *nda = (struct NonDirArgs *) args;
     struct input *in = nda->in;
 
-    if (lstat(entry->name, &ed->statuso) != 0) {
-        return 1;
+    if (!ed->lstat_called) {
+        if (lstat(entry->name, &ed->statuso) != 0) {
+            return 1;
+        }
     }
 
     if (ed->type == 'l') {
@@ -251,7 +253,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct descend_counters ctrs;
     startdb(nda.db);
     descend(ctx, id, pa, in, nda.work, nda.ed.statuso.st_ino, dir,
-            in->skip, 0, 0,
+            in->skip, 0,
             processdir, process_nondir, &nda,
             &ctrs);
     stopdb(nda.db);

@@ -132,9 +132,13 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     int rc = 0;
 
-    struct stat st;
-    if (lstat(work->name, &st) != 0) {
-        print_error_and_goto("Could not lstat file", work->name, cleanup);
+    struct stat *st = &ed->statuso;
+    struct stat st_stack;
+    if (!ed->lstat_called) {
+        if (lstat(work->name, &st_stack) != 0) {
+            print_error_and_goto("Could not lstat file", work->name, cleanup);
+        }
+        st = &st_stack;
     }
 
     const int src_fd = open(work->name, O_RDONLY);
@@ -144,12 +148,12 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     str_t dst = create_dst_name(in, work);
 
-    const int dst_fd = open(dst.data, O_CREAT | O_WRONLY | O_TRUNC, st.st_mode);
+    const int dst_fd = open(dst.data, O_CREAT | O_WRONLY | O_TRUNC, st->st_mode);
     if (dst_fd < 0) {
         print_error_and_goto("Could not open file", dst.data, free_name);
     }
 
-    if (copyfd(src_fd, 0, dst_fd, 0, st.st_size) != st.st_size) {
+    if (copyfd(src_fd, 0, dst_fd, 0, st->st_size) != st->st_size) {
         print_error_and_goto("Could not copy file", work->name, free_name);
     }
 
@@ -267,7 +271,6 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     descend(ctx, id, args, in,
             work, st.st_ino, dir,
             in->skip, 0,
-            0, /* don't stat */
             cpr_dir,
             enqueue_nondir, &qptp_vals,
             NULL);

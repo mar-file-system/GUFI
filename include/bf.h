@@ -303,6 +303,7 @@ struct work {
 struct entry_data {
    char          type;
    char          linkname[MAXPATH];
+   uint8_t       lstat_called;
    struct stat   statuso;
    long long int offset;
    struct xattrs xattrs;

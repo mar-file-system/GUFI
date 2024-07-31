@@ -62,10 +62,8 @@ OF SUCH DAMAGE.
 
 
 
-#include <ctype.h>              /* isprint() */
 #include <errno.h>
 #include <limits.h>
-#include <pthread.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -391,7 +389,7 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
-            DIR *dir, trie_t *skip_names, const int skip_db, const int stat_entries,
+            DIR *dir, trie_t *skip_names, const int skip_db,
             QPTPoolFunc_t processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters) {
     if (!work) {
@@ -433,37 +431,30 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             child.root_parent = work->root_parent;
             child.pinode = inode;
 
-            if (stat_entries) {
-                /* get the child's metadata */
-                if (lstat(child.name, &child_ed.statuso) != 0) {
-                    continue;
-                }
-            }
-            else {
-                /* only get the child's type - processing thread should stat */
-                switch (dir_child->d_type) {
-                    case DT_DIR:
-                        child_ed.statuso.st_mode = S_IFDIR;
-                        break;
-                    case DT_LNK:
-                        child_ed.statuso.st_mode = S_IFLNK;
-                        break;
-                    case DT_REG:
-                        child_ed.statuso.st_mode = S_IFREG;
-                        break;
-                    case DT_FIFO:
-                    case DT_SOCK:
-                    case DT_CHR:
-                    case DT_BLK:
-                        break;
-                    case DT_UNKNOWN:
-                    default:
-                        /* some filesystems don't support d_type - fall back to calling lstat */
-                        if (lstat(child.name, &child_ed.statuso) != 0) {
-                            continue;
-                        }
-                        break;
-                }
+            switch (dir_child->d_type) {
+                case DT_DIR:
+                    child_ed.statuso.st_mode = S_IFDIR;
+                    break;
+                case DT_LNK:
+                    child_ed.statuso.st_mode = S_IFLNK;
+                    break;
+                case DT_REG:
+                    child_ed.statuso.st_mode = S_IFREG;
+                    break;
+                case DT_FIFO:
+                case DT_SOCK:
+                case DT_CHR:
+                case DT_BLK:
+                    break;
+                case DT_UNKNOWN:
+                default:
+                    /* some filesystems don't support d_type - fall back to calling lstat */
+                    if (lstat(child.name, &child_ed.statuso) != 0) {
+                        continue;
+                    }
+
+                    child_ed.lstat_called = 1;
+                    break;
             }
 
             /* push subdirectories onto the queue */
@@ -501,7 +492,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             /* non directories */
             else if (S_ISLNK(child_ed.statuso.st_mode)) {
                 child_ed.type = 'l';
-                if (stat_entries) {
+                if (child_ed.lstat_called) {
                     readlink(child.name, child_ed.linkname, MAXPATH);
                 }
             }

@@ -105,17 +105,23 @@ static int process_external(struct input *in, void *args,
 
 static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NondirArgs *nda = (struct NondirArgs *) args;
-    if (lstat(entry->name, &ed->statuso) == 0) {
+    if (!ed->lstat_called) {
+        if (lstat(entry->name, &ed->statuso) != 0) {
+            return 0;
+        }
+
         if (ed->type == 'l') {
             readlink(entry->name, ed->linkname, MAXPATH);
         }
-        worktofile(nda->fp, nda->in->delim, entry->root_parent.len, entry, ed);
-
-        if (strncmp(entry->name + entry->name_len - entry->basename_len,
-                    EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
-            external_read_file(nda->in, entry, process_external, nda->fp);
-        }
     }
+
+    worktofile(nda->fp, nda->in->delim, entry->root_parent.len, entry, ed);
+
+    if (strncmp(entry->name + entry->name_len - entry->basename_len,
+                EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
+        external_read_file(nda->in, entry, process_external, nda->fp);
+    }
+
     return 0;
 }
 
@@ -172,7 +178,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct descend_counters ctrs;
     descend(ctx, id, pa,
             in, work, ed.statuso.st_ino,
-            dir, pa->in.skip, 0, 0,
+            dir, pa->in.skip, 0,
             processdir, process_nondir, &nda,
             &ctrs);
 
