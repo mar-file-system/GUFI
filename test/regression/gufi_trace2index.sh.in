@@ -66,9 +66,11 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 OUTPUT="gufi_trace2index.out"
 EMPTY_LAST_DIR_TRACE="empty_last_dir.trace"
+BIG_DIR_TRACE="big.dir.trace"
+BIG_DIR_INDEX="big.dir.index"
 
 cleanup() {
-    rm -rf "${EMPTY_LAST_DIR_TRACE}"
+    rm -rf "${EMPTY_LAST_DIR_TRACE}" "${BIG_DIR_TRACE}" "${BIG_DIR_INDEX}"
 }
 
 cleanup_exit() {
@@ -111,6 +113,24 @@ echo
 
 cat "${TRACES[@]}" > "${TRACE}"
 
+# ###########################################################
+# big directory (see gufi_trace2index.c)
+(
+    row=$(grep "^${SRCDIR}/old_file${DELIM}f${DELIM}" "${TRACE}" | awk -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
+
+    grep "^${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
+    for (( i = 0; i <= 100000; i++ )) # 100K + 1
+    do
+        echo -n "${SRCDIR}/${i}"
+        echo "${row}"
+    done
+) > "${BIG_DIR_TRACE}"
+
+echo "# create index with a directory containing a lot of files "
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\"" "${BIG_DIR_TRACE}" "\"${BIG_DIR_INDEX}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT COUNT(*) FROM entries;\" \"${BIG_DIR_INDEX}/${SRCDIR}\""
+# ###########################################################
+
 (
     cat "${TRACE}"
     @GREP@ "^.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | sed 's/empty_directory/empty_directory2/g;'
@@ -135,7 +155,7 @@ run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \
 echo
 
 echo "# first line does not start with a directory"
-tail -n -1 "${TRACE}" > "${BADTRACE}"
+grep "^.*${DELIM}f${DELIM}" "${TRACE}" | tail -n -1 > "${BADTRACE}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
 echo
 

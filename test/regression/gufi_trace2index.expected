@@ -72,6 +72,19 @@ GUFI Index:
     prefix/unusual#? directory ,
     prefix/unusual#? directory ,/unusual, name?#
 
+# create index with a directory containing a lot of files 
+$ gufi_trace2index -d "|" big.dir.trace "big.dir.index"
+Creating GUFI Index big.dir.index with 1 threads
+Dirs:                1 (0 empty)
+Files:               100001
+Total:               100002
+
+Total Dirs:          1
+Total Files:         100001
+
+$ gufi_query -d " " -E "SELECT COUNT(*) FROM entries;" "big.dir.index/prefix"
+100001
+
 # create index from a trace file whose last item is an empty directory
 $ gufi_trace2index -d "|" -n 2 "empty_last_dir.trace" "search"
 Creating GUFI Index search with 2 threads
