@@ -80,6 +80,11 @@ run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | sed '/^Started .*$/d'
 echo "# Query treesummary tables"
 run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
 echo
+
+rm -rf "${SEARCH}/db.db"
+
+echo "# Missing db.db"
+run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\"" | sed '/^Started .*$/d'
 ) |& replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary_all.expected "${OUTPUT}"

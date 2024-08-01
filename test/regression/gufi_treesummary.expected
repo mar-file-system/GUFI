@@ -138,3 +138,7 @@ totzero 0 totltk 0 totmtk 0 totltm 0 totmtm 0 totmtg 0 totmtt 0
 totxattr 0
 totextdbs 0
 
+# Bad thread count
+$ gufi_treesummary -n 18446744073709551615 "prefix"
+Error: Failed to start thread pool
+

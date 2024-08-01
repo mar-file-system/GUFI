@@ -147,7 +147,6 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"
 
 echo "# bad thread count"
 run_no_sort "${GUFI_DIR2INDEX} -n 18446744073709551615 \"${SRCDIR}\" \"${SEARCH}\""
-
 ) | remove_indexing_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"

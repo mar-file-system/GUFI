@@ -94,7 +94,7 @@ run_no_sort "${PARALLEL_CPR} -h"
 
 "${GENERATETREE}" "${SRCDIR}"
 
-run_no_sort "${PARALLEL_CPR} -n ${THREADS} \"${SRCDIR}\" \"${CPR_ROOT}\"" || true
+run_no_sort "${PARALLEL_CPR} -n ${THREADS} \"${SRCDIR}\" \"${CPR_ROOT}\""
 
 echo "$ compare <(find \"${SRCDIR}\") <(find \"${CPR_ROOT}/${SRCDIR}\") "
 @DIFF@ ${DIFF_FLAGS} <(find "${SRCDIR}" | sort) <(find "${CPR_ROOT}/${SRCDIR}" | sed 's/copy\///g' | sort)
@@ -135,7 +135,6 @@ run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${CPR_ROOT}\""
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
 
-set +e
 # copy into self
 run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}\""
 run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}/directory\""
@@ -148,7 +147,10 @@ run_no_sort "${PARALLEL_CPR} /dev/null       \"${CPR_ROOT}\""
 
 # directory to file
 run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}/old_file\""
-set -e
+
+# bad thread count
+run_no_sort "${PARALLEL_CPR} -n 18446744073709551615 \"${SRCDIR}\" \"${CPR_ROOT}\""
+
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/parallel_cpr.expected "${OUTPUT}"

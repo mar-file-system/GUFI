@@ -21,3 +21,6 @@ $ ls -1 prefix
 db.db
 unusual#? directory ,
 
+$ parallel_rmr -n 18446744073709551615 "prefix"
+Error: Failed to start thread pool
+

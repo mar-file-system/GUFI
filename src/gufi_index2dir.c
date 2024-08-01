@@ -127,7 +127,8 @@ static void get_xattrs(struct DirCallbackArgs *dcba,
                        const char *view,
                        const char *xattr_names, const size_t xattr_names_len,
                        struct xattrs *xattrs) {
-    if (!xattr_names || !xattr_names_len) {
+    /* xattr_names never returns NULL */
+    if (!xattr_names_len) {
         return;
     }
 
@@ -392,41 +393,21 @@ struct work *validate_inputs(struct PoolArgs *pa) {
         fprintf(stderr,"You are putting the tree in the index directory\n");
     }
 
-    struct work *root = (struct work *) calloc(1, sizeof(struct work));
-    if (!root) {
-        fprintf(stderr, "Could not allocate root struct\n");
-        return NULL;
-    }
-
-    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1,
-                                pa->in.name.data, pa->in.name.len);
-
     // get input path metadata
     struct stat src_st;
-    if (lstat(root->name, &src_st) < 0) {
+    if (lstat(pa->in.name.data, &src_st) < 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", pa->in.name.data);
-        free(root);
         return NULL;
     }
 
     // check that the source path is a directory
     if (!S_ISDIR(src_st.st_mode)) {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", pa->in.name.data);
-        free(root);
-        return NULL;
-    }
-
-    // check if the source directory can be accessed
-    if (access(root->name, R_OK | X_OK) != 0) {
-        fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                root->name, strerror(errno));
-        free(root);
         return NULL;
     }
 
     if (!pa->in.nameto.len) {
         fprintf(stderr, "No output path specified\n");
-        free(root);
         return NULL;
     }
 
@@ -438,7 +419,6 @@ struct work *validate_inputs(struct PoolArgs *pa) {
         // if the destination path is not a directory (error)
         if (!S_ISDIR(dst_st.st_mode)) {
             fprintf(stderr, "Destination path is not a directory \"%s\"\n", pa->in.nameto.data);
-            free(root);
             return NULL;
         }
     }
@@ -453,11 +433,17 @@ struct work *validate_inputs(struct PoolArgs *pa) {
                pa->in.name.data + pa->src_dirname_len, pa->in.name.len - pa->src_dirname_len);
     if (dupdir(dst_path, &src_st)) {
         fprintf(stderr, "Could not create %s under %s\n", pa->in.name.data, pa->in.nameto.data);
-        free(root);
         return NULL;
     }
 
-    root->level = 0;
+    struct work *root = (struct work *) calloc(1, sizeof(struct work));
+    if (!root) {
+        fprintf(stderr, "Could not allocate root struct\n");
+        return NULL;
+    }
+
+    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1,
+                                pa->in.name.data, pa->in.name.len);
 
     return root;
 }

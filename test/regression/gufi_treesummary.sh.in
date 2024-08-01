@@ -161,6 +161,10 @@ echo
 echo "# Bad path"
 remove_extra "${GUFI_TREESUMMARY} \"${INDEXROOT}/1KB\""
 echo
+
+echo "# Bad thread count"
+remove_extra "${GUFI_TREESUMMARY} -n 18446744073709551615 \"${INDEXROOT}\""
+echo
 ) |& replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary.expected "${OUTPUT}"

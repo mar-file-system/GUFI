@@ -71,6 +71,8 @@ run_no_sort "${PARALLEL_RMR} -h"
 run_sort    "ls -1 ${INDEXROOT}"
 run_no_sort "${PARALLEL_RMR} -n ${THREADS} \"${INDEXROOT}/directory\" \"${INDEXROOT}/empty_directory\" \"${INDEXROOT}/leaf_directory\""
 run_sort    "ls -1 ${INDEXROOT}"
+
+run_no_sort "${PARALLEL_RMR} -n 18446744073709551615 \"${INDEXROOT}\""
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/parallel_rmr.expected "${OUTPUT}"

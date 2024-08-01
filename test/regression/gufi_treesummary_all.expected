@@ -25,3 +25,7 @@ prefix/leaf_directory 0 2 0 2 0
 prefix/unusual#? directory , 0 1 0 1 0
 
 
+# Missing db.db
+$ gufi_treesummary_all "search"
+Cannot open database: search/db.db unable to open database file rc 14
+

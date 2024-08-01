@@ -346,7 +346,6 @@ int main(int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
 
-    /* provide a function to print if PRINT is set */
     QPTPool_t *pool = QPTPool_init(in.maxthreads, &in);
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");

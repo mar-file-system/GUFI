@@ -129,3 +129,6 @@ Not copying "/dev/null"
 $ parallel_cpr "prefix"   "prefix/old_file"
 Error: Cannot copy to "prefix/old_file": File exists (17)
 
+$ parallel_cpr -n 18446744073709551615 "prefix" "copy"
+Error: Failed to start thread pool
+

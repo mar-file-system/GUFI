@@ -282,7 +282,7 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
 
     if (modifydb) {
         if (flags & SQLITE_OPEN_READONLY) {
-            fprintf(stderr, "Database %s opened in READONLY mode, but a modifydb function was provided", name);
+            fprintf(stderr, "Database %s opened in READONLY mode, but a modifydb function was provided\n", name);
             sqlite3_close(db);
             return NULL;
         }
