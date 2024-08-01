@@ -184,13 +184,24 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id,
 QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTPool_enqueue_dst_t queue,
                                            QPTPoolFunc_t func, void *new_work);
 
+/* Wait for all work to be processed but do not clean up threads */
+uint64_t QPTPool_wait(QPTPool_t *ctx);
+
+/* Wait for all but count work items to be processed and do not clean up threads */
+uint64_t QPTPool_wait_lte(QPTPool_t *ctx, const uint64_t count);
+
 /*
- * Wait for all work to be processed and join threads
+ * Join threads after all threads have stopped
+ *
+ * If QPTPool_start is called QPTPool_stop must be
+ * called before QPTPool_destroy to clean up properly.
+ * QPTPool_wait does not have to be called before
+ * QPTPool_stop.
  *
  * This is separate from QPTPool_destroy to allow for
  * collecting of stats before destroying context.
  */
-void QPTPool_wait(QPTPool_t *ctx);
+void QPTPool_stop(QPTPool_t *ctx);
 
 /* utility functions */
 

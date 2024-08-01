@@ -250,7 +250,7 @@ int main(int argc, char * argv[]) {
     }
 
     QPTPool_enqueue(pool, 0, generate_level, root);
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
     QPTPool_destroy(pool);
 
     clock_gettime(CLOCK_MONOTONIC, &generation.end);

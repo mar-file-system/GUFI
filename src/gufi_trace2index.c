@@ -560,7 +560,7 @@ int main(int argc, char *argv[]) {
         QPTPool_enqueue(pool, 0, scout_trace, sta);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     clock_gettime(CLOCK_MONOTONIC, &main_func.end);
     const long double processtime = sec(nsec(&main_func));

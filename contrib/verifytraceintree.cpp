@@ -460,7 +460,7 @@ int main(int argc, char *argv[]) {
     // start scouting function to push work onto queues
     QPTPool_enqueue(ctx, 0, scout_function, trace);
 
-    QPTPool_wait(ctx);
+    QPTPool_stop(ctx);
     QPTPool_destroy(ctx);
 
     std::cout << argv[1] << " " << (correct?"Pass":"Fail")  << std::endl;

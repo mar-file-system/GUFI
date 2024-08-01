@@ -401,7 +401,7 @@ int main(int argc, char *argv[]) {
     QPTPool_enqueue(pool, 0, processdir, cp);
 
   cleanup_qptp:
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
     QPTPool_destroy(pool);
 
     OutputBuffers_flush_to_single(&pa.obufs, stdout);

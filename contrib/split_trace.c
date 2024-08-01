@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
         QPTPool_enqueue(pool, 0, copy_range, range);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
     QPTPool_destroy(pool);
 
     close(fd);

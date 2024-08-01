@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     const size_t thread_count = QPTPool_threads_completed(pool);

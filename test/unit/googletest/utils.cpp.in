@@ -739,7 +739,7 @@ TEST(descend, builddir) {
         EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
     QPTPool_destroy(pool);
 
     EXPECT_EQ(closedir(dir),    0);

@@ -331,7 +331,7 @@ int main(int argc, char *argv[]) {
 
         i++;
     }
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     const long double processtime = sec(nsec(&after_init));

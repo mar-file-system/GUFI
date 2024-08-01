@@ -344,7 +344,7 @@ int main(int argc, char *argv[]) {
     root->name_len = trailing_non_match_index(root->name, root->name_len, "/", 1);
 
     QPTPool_enqueue(pool, 0, processdir, root);
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
     QPTPool_destroy(pool);
 
     compute_treesummary(&pa);

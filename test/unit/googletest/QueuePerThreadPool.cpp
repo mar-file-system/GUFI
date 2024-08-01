@@ -91,7 +91,7 @@ TEST(QueuePerThreadPool, null) {
     QPTPool_t *pool = QPTPool_init(0, nullptr);
     EXPECT_EQ(pool, nullptr);
     EXPECT_NO_THROW(QPTPool_start(pool));
-    EXPECT_NO_THROW(QPTPool_wait(pool));
+    EXPECT_NO_THROW(QPTPool_stop(pool));
     EXPECT_EQ(QPTPool_threads_started(pool), (uint64_t) 0);
     EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 0);
     EXPECT_NO_THROW(QPTPool_destroy(pool));
@@ -123,7 +123,7 @@ TEST(QueuePerThreadPool, bad_start) {
     // already started
     setup_pool(THREADS, nullptr);
     EXPECT_EQ(QPTPool_start(pool), 1);
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
     QPTPool_destroy(pool);
 }
 
@@ -132,7 +132,7 @@ TEST(QueuePerThreadPool, bad_start) {
 TEST(QueuePerThreadPool, no_start) {
     void *work = ::operator new(1);
 
-    // not calling QPTPool_wait
+    // not calling QPTPool_stop
     {
         QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
 
@@ -145,7 +145,7 @@ TEST(QueuePerThreadPool, no_start) {
         QPTPool_destroy(pool);
     }
 
-    // calling QPTPool_wait
+    // calling QPTPool_stop
     {
         QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
 
@@ -157,10 +157,10 @@ TEST(QueuePerThreadPool, no_start) {
 
         // wait even though start was not called
         // should not cause invalid thread joins
-        QPTPool_wait(pool);
+        QPTPool_stop(pool);
 
         // calling wait more times does not hurt
-        QPTPool_wait(pool);
+        QPTPool_stop(pool);
 
         QPTPool_destroy(pool);
     }
@@ -172,15 +172,15 @@ TEST(QueuePerThreadPool, no_start) {
 TEST(QueuePerThreadPool, no_work) {
     {
         setup_pool(THREADS, nullptr);
-        QPTPool_wait(pool);
+        QPTPool_stop(pool);
         QPTPool_destroy(pool);
     }
 
     // calling wait more times does not hurt
     {
         setup_pool(THREADS, nullptr);
-        QPTPool_wait(pool);
-        QPTPool_wait(pool);
+        QPTPool_stop(pool);
+        QPTPool_stop(pool);
         QPTPool_destroy(pool);
     }
 }
@@ -194,7 +194,7 @@ TEST(QueuePerThreadPool, restart) {
     for(std::size_t i = 0; i < 3; i++) {
         ASSERT_EQ(QPTPool_start(pool), 0);
         EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);
-        QPTPool_wait(pool);
+        QPTPool_stop(pool);
         EXPECT_EQ(counter, (i + 1));
     }
 
@@ -226,7 +226,7 @@ TEST(QueuePerThreadPool, enqueue_external) {
                         }, work);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     for(std::size_t i = 0; i < WORK_COUNT; i++) {
         EXPECT_EQ(values[i], i);
@@ -276,7 +276,7 @@ TEST(QueuePerThreadPool, enqueue_internal) {
     zero->values = values;
 
     QPTPool_enqueue(pool, 0, recursive, zero);
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     for(std::size_t i = 0; i < WORK_COUNT; i++) {
         EXPECT_EQ(values[i], i);
@@ -310,12 +310,53 @@ TEST(QueuePerThreadPool, enqueue_here) {
     EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_DEFERRED, return_data, nullptr),
               QPTPool_enqueue_DEFERRED);
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 2);
     EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 2);
 
     QPTPool_destroy(pool);
+}
+
+TEST(QueuePerThreadPool, wait) {
+    // macOS doesn't seem to like std::mutex
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    QPTPool_t *pool = QPTPool_init(THREADS, &mutex);
+    ASSERT_NE(pool, nullptr);
+
+    const uint64_t PUSH = 10;
+    const uint64_t WAIT = 5;
+
+    std::size_t counter = 0;
+    for(uint64_t i = 0; i < PUSH; i++) {
+        QPTPool_enqueue(pool, 0,
+                        [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
+                            pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
+
+                            increment_counter(ctx, id, data, args);
+
+                            pthread_mutex_lock(mutex);
+                            pthread_mutex_unlock(mutex);
+                            return 0;
+                    }, &counter);
+    }
+
+    /* not running yet, so will return all work enqueued/remaining in the pool */
+    EXPECT_EQ(QPTPool_wait_lte(pool, WAIT), PUSH);
+
+    ASSERT_EQ(QPTPool_start(pool), 0);
+
+    /* wait for pool to have at most WAIT items left */
+    EXPECT_LE(QPTPool_wait_lte(pool, WAIT), WAIT);
+
+    /* wait for all work to complete */
+    EXPECT_EQ(QPTPool_wait(pool), (uint64_t) 0);
+
+    QPTPool_stop(pool);
+    QPTPool_destroy(pool);
+
+    EXPECT_EQ(QPTPool_wait(nullptr), (uint64_t) 0);
 }
 
 TEST(QueuePerThreadPool, threads_started) {
@@ -325,7 +366,7 @@ TEST(QueuePerThreadPool, threads_started) {
         QPTPool_enqueue(pool, i % THREADS, return_data, (void *) (uintptr_t) 1);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     EXPECT_EQ(QPTPool_threads_started(pool),   WORK_COUNT);
     EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 0);
@@ -340,7 +381,7 @@ TEST(QueuePerThreadPool, threads_completed) {
         QPTPool_enqueue(pool, i % THREADS, return_data, nullptr);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     EXPECT_EQ(QPTPool_threads_started(pool),   WORK_COUNT);
     EXPECT_EQ(QPTPool_threads_completed(pool), WORK_COUNT);
@@ -376,7 +417,7 @@ TEST(QueuePerThreadPool, custom_next) {
                         work);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     EXPECT_EQ(QPTPool_threads_started(pool), WORK_COUNT);
 
@@ -454,7 +495,7 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find,
     // unlock thread src so that it can complete
     pthread_mutex_unlock(&mutex);
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     EXPECT_EQ(counter, expected);
     EXPECT_EQ(QPTPool_threads_started(pool),   expected);
@@ -577,7 +618,7 @@ TEST(QueuePerThreadPool, steal_active) {
     // let thread 0 finish
     pthread_mutex_unlock(&mutex);
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     const uint64_t expected = 4;
     EXPECT_EQ(counter, expected);
@@ -598,7 +639,7 @@ TEST(QueuePerThreadPool, prop_next) {
     {
         setup_pool(THREADS, nullptr);
         EXPECT_EQ(QPTPool_set_next(pool, test_next_func, nullptr), 1);
-        QPTPool_wait(pool);
+        QPTPool_stop(pool);
         QPTPool_destroy(pool);
     }
 
@@ -627,7 +668,7 @@ TEST(QueuePerThreadPool, prop_queue_limit) {
     {
         setup_pool(THREADS, nullptr);
         EXPECT_EQ(QPTPool_set_queue_limit(pool,    queue_limit), 1);
-        QPTPool_wait(pool);
+        QPTPool_stop(pool);
         QPTPool_destroy(pool);
     }
 
@@ -653,7 +694,7 @@ TEST(QueuePerThreadPool, prop_steal) {
     {
         setup_pool(THREADS, nullptr);
         EXPECT_EQ(QPTPool_set_steal(pool,    num, denom), 1);
-        QPTPool_wait(pool);
+        QPTPool_stop(pool);
         QPTPool_destroy(pool);
     }
 
@@ -680,7 +721,7 @@ TEST(QueuePerThreadPool, prop_debug_buffers) {
     {
         setup_pool(THREADS, nullptr);
         EXPECT_EQ(QPTPool_set_debug_buffers(pool, nullptr), 1);
-        QPTPool_wait(pool);
+        QPTPool_stop(pool);
         QPTPool_destroy(pool);
     }
 

@@ -418,7 +418,7 @@ int main(int argc, char * argv[]) {
         }
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
     const uint64_t threads_started   = QPTPool_threads_started(pool);
     const uint64_t threads_completed = QPTPool_threads_completed(pool);
     QPTPool_destroy(pool);

@@ -107,6 +107,7 @@ struct QPTPool {
     } next;
 
     pthread_mutex_t mutex;
+    pthread_cond_t cv;
     QPTPoolState_t state;
     uint64_t incomplete;
 
@@ -367,6 +368,7 @@ static void *worker_function(void *args) {
 
         pthread_mutex_lock(&ctx->mutex);
         ctx->incomplete -= work_count;
+        pthread_cond_broadcast(&ctx->cv);
         pthread_mutex_unlock(&ctx->mutex);
         timestamp_set_end(wf_cleanup);
 
@@ -404,52 +406,11 @@ static size_t QPTPool_round_robin(const size_t id, const size_t prev, const size
 }
 
 QPTPool_t *QPTPool_init(const size_t nthreads, void *args) {
-    if (!nthreads) {
-        return NULL;
-    }
-
-    QPTPool_t *ctx = malloc(sizeof(QPTPool_t));
-    if (!ctx) {
-        return NULL;
-    }
-
-    ctx->nthreads = nthreads;
-    ctx->queue_limit = 0;
-    ctx->steal.num = 0;
-    ctx->steal.denom = 0;
-    ctx->args = args;
-    ctx->next.func = QPTPool_round_robin;
-    ctx->next.args = NULL;
-    pthread_mutex_init(&ctx->mutex, NULL);
-    ctx->state = INITIALIZED;
-    ctx->incomplete = 0;
-
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    ctx->debug_buffers = NULL;
-    #endif
-
-    ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
-    if (!ctx->data) {
-        free(ctx);
-        return NULL;
-    }
-
-    /* set up thread data, but not threads */
-    for(size_t i = 0; i < nthreads; i++) {
-        QPTPoolThreadData_t *data = &ctx->data[i];
-        sll_init(&data->active);
-        pthread_mutex_init(&data->active_mutex, NULL);
-        sll_init(&data->waiting);
-        sll_init(&data->deferred);
-        pthread_mutex_init(&data->mutex, NULL);
-        pthread_cond_init(&data->cv, NULL);
-        data->next_queue = i;
-        data->steal_from = i;
-        data->threads_started = 0;
-        data->threads_successful = 0;
-    }
-
-    return ctx;
+    return QPTPool_init_with_props(nthreads, args, NULL, NULL, 0, 0, 0
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , NULL
+                                   #endif
+    );
 }
 
 int QPTPool_set_next(QPTPool_t *ctx, QPTPoolNextFunc_t func, void *args) {
@@ -589,16 +550,50 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
                                    , struct OutputBuffers *debug_buffers
                                    #endif
     ) {
-    QPTPool_t *ctx = QPTPool_init(nthreads, args);
-    if ((next_func && QPTPool_set_next(ctx, next_func, next_args)) ||
-        QPTPool_set_queue_limit(ctx, queue_limit) ||
-        QPTPool_set_steal(ctx, steal_num, steal_denom)
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        || QPTPool_set_debug_buffers(ctx, debug_buffers)
-        #endif
-        ) {
-            QPTPool_destroy(ctx);
-            ctx = NULL;
+    if (!nthreads) {
+        return NULL;
+    }
+
+    QPTPool_t *ctx = malloc(sizeof(QPTPool_t));
+    if (!ctx) {
+        return NULL;
+    }
+
+    ctx->nthreads = nthreads;
+    ctx->queue_limit = queue_limit;
+    ctx->steal.num = steal_num;
+    ctx->steal.denom = steal_denom;
+    ctx->args = args;
+    ctx->next.func = next_func?next_func:QPTPool_round_robin;
+    ctx->next.args = next_args;
+    pthread_mutex_init(&ctx->mutex, NULL);
+    pthread_cond_init(&ctx->cv, NULL);
+    ctx->state = INITIALIZED;
+    ctx->incomplete = 0;
+
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    ctx->debug_buffers = debug_buffers;
+    #endif
+
+    ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
+    if (!ctx->data) {
+        free(ctx);
+        return NULL;
+    }
+
+    /* set up thread data, but not threads */
+    for(size_t i = 0; i < nthreads; i++) {
+        QPTPoolThreadData_t *data = &ctx->data[i];
+        sll_init(&data->active);
+        pthread_mutex_init(&data->active_mutex, NULL);
+        sll_init(&data->waiting);
+        sll_init(&data->deferred);
+        pthread_mutex_init(&data->mutex, NULL);
+        pthread_cond_init(&data->cv, NULL);
+        data->next_queue = i;
+        data->steal_from = i;
+        data->threads_started = 0;
+        data->threads_successful = 0;
     }
 
     return ctx;
@@ -629,7 +624,7 @@ int QPTPool_start(QPTPool_t *ctx) {
     pthread_mutex_unlock(&ctx->mutex);
 
     if (started != ctx->nthreads) {
-        QPTPool_wait(ctx);
+        QPTPool_stop(ctx);
         return 1;
     }
 
@@ -706,10 +701,39 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTP
     return queue;
 }
 
-void QPTPool_wait(QPTPool_t *ctx) {
+uint64_t QPTPool_wait(QPTPool_t *ctx) {
+    return QPTPool_wait_lte(ctx, 0);
+}
+
+uint64_t QPTPool_wait_lte(QPTPool_t *ctx, const uint64_t count) {
+    if (!ctx) {
+        return 0;
+    }
+
+    pthread_mutex_lock(&ctx->mutex);
+
+    while ((ctx->state == RUNNING) &&
+           (ctx->incomplete > count)) {
+        pthread_cond_wait(&ctx->cv, &ctx->mutex);
+    }
+
+    const uint64_t incomplete = ctx->incomplete;
+
+    pthread_mutex_unlock(&ctx->mutex);
+
+    /*
+     * if returned value is larger than count,
+     * then this was called before QPTPool_start
+     */
+    return incomplete;
+}
+
+void QPTPool_stop(QPTPool_t *ctx) {
     if (!ctx) {
         return;
     }
+
+    /* no need to call QPTPool_wait - just wait for threads to stop */
 
     pthread_mutex_lock(&ctx->mutex);
     const QPTPoolState_t prev = ctx->state;
@@ -779,6 +803,7 @@ void QPTPool_destroy(QPTPool_t *ctx) {
         sll_destroy(&data->active, free);
     }
 
+    pthread_cond_destroy(&ctx->cv);
     pthread_mutex_destroy(&ctx->mutex);
     free(ctx->data);
     free(ctx);

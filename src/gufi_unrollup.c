@@ -238,7 +238,7 @@ int main(int argc, char *argv[]) {
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, mywork);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
     QPTPool_destroy(pool);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)

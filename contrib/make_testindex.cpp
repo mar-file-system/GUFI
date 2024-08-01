@@ -1090,7 +1090,7 @@ int main(int argc, char *argv[]) {
         QPTPool_enqueue(pool, offset % settings.threads, generatedir <std::knuth_b, std::minstd_rand, std::normal_distribution <double> >, args);
     }
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     struct timespec end = {};
     clock_gettime(CLOCK_MONOTONIC, &end);

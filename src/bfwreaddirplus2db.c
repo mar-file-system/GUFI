@@ -713,7 +713,7 @@ int main(int argc, char *argv[]) {
 
     processinit(&pa, pool);
 
-    QPTPool_wait(pool);
+    QPTPool_stop(pool);
 
     QPTPool_destroy(pool);
 

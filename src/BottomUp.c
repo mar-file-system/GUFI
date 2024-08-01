@@ -425,9 +425,9 @@ int parallel_bottomup(char **root_names, const size_t root_count,
     }
     timestamp_end_print(ua.timestamp_buffers, thread_count, "enqueue_roots", enqueue_roots);
 
-    timestamp_create_start(qptpool_wait);
-    QPTPool_wait(pool);
-    timestamp_end_print(ua.timestamp_buffers, thread_count, "wait_for_threads", qptpool_wait);
+    timestamp_create_start(qptpool_stop);
+    QPTPool_stop(pool);
+    timestamp_end_print(ua.timestamp_buffers, thread_count, "wait_for_threads", qptpool_stop);
 
     const size_t threads_started = QPTPool_threads_started(pool);
     const size_t threads_completed = QPTPool_threads_completed(pool);
