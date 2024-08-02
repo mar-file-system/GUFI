@@ -339,8 +339,7 @@ int main(int argc, char *argv[]) {
         zeroit(&pa.sums[i]);
     }
 
-    struct work *root = calloc(1, sizeof(struct work));
-    root->name_len = SNFORMAT_S(root->name, sizeof(root->name), 1, pa.in.name.data, pa.in.name.len);
+    struct work *root = new_work_with_name("", pa.in.name.data);
     root->name_len = trailing_non_match_index(root->name, root->name_len, "/", 1);
 
     QPTPool_enqueue(pool, 0, processdir, root);

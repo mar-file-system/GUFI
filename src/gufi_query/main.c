@@ -214,24 +214,24 @@ int main(int argc, char *argv[])
         }
 
         gqw_t *root = calloc(1, sizeof(gqw_t));
+        root->work = new_work_with_name("", realpaths[i - idx]);
 
         /* keep original user input */
-        root->work.orig_root.data = argv[i];
-        root->work.orig_root.len = argvi_len;
+        root->work->orig_root.data = argv[i];
+        root->work->orig_root.len = argvi_len;
 
          /* set initial work item directory to realpath(argv[i]) */
         size_t rp_len = strlen(realpaths[i - idx]);
-        root->work.name_len = SNFORMAT_S(root->work.name, MAXPATH, 1, realpaths[i - idx], rp_len);
         root->sqlite3_name_len = sqlite_uri_path(root->sqlite3_name, MAXPATH, realpaths[i - idx], &rp_len);
 
         /* parent of input path */
-        root->work.root_parent.data = realpaths[i - idx];
-        root->work.root_parent.len  = trailing_match_index(root->work.root_parent.data, root->work.name_len, "/", 1);
+        root->work->root_parent.data = realpaths[i - idx];
+        root->work->root_parent.len  = trailing_match_index(root->work->root_parent.data, root->work->name_len, "/", 1);
 
-        ((char *) root->work.root_parent.data)[root->work.root_parent.len] = '\0';
-        root->work.basename_len = root->work.name_len - root->work.root_parent.len;
+        ((char *) root->work->root_parent.data)[root->work->root_parent.len] = '\0';
+        root->work->basename_len = root->work->name_len - root->work->root_parent.len;
 
-        root->work.root_basename_len = root->work.basename_len;
+        root->work->root_basename_len = root->work->basename_len;
 
         /* push the path onto the queue (no compression) */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);

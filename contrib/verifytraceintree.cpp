@@ -187,7 +187,7 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         // parse the line to check other values
         char buf[MAXPATH] = {};
         memcpy(buf, sa->line.c_str(), sa->line.size());
-        struct work work;
+        struct work *work;
         struct entry_data ed;
         linetowork(buf, sa->line.size(), csa->delim, &work, &ed);
         xattrs_cleanup(&ed.xattrs);
@@ -268,13 +268,13 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         // parse the line
         char buf[MAXPATH] = {};
         memcpy(buf, line.c_str(), line.size());
-        struct work work;
+        struct work *work;
         struct entry_data ed;
         linetowork(buf, line.size(), csa->delim, &work, &ed);
         xattrs_cleanup(&ed.xattrs);
 
         // extract the basename from the entry name
-        char *bufbase = basename(work.name);
+        char *bufbase = basename(work->name);
 
         // query the database for the current entry
         char sql[MAXSQL];

@@ -69,7 +69,9 @@ OF SUCH DAMAGE.
 
 /* additional data gufi_query needs */
 typedef struct gufi_query_work {
-    struct work work;
+    compressed_t comp;
+    /* TODO: make this inline? */
+    struct work *work;
 
     /*
      * some characters need to be converted for sqlite3,

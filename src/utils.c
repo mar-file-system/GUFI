@@ -424,6 +424,65 @@ static int work_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **
 }
 
 /*
+ * Returns size of a dynamically sized struct work_packed.
+ *
+ * Size of base struct plus size of stored name plus NUL terminator.
+ */
+size_t struct_work_size(struct work *w) {
+    return sizeof(struct work) + w->name_len + 1;
+}
+
+/*
+ * Allocates a new struct work on the heap with enough room to
+ * fit the given `basename` with an optional `prefix`.
+ *
+ * Initializes the following fields:
+ *   - name
+ *   - name_len
+ */
+struct work *new_work_with_name(const char *prefix, const char *basename) {
+    struct work *w;
+
+    size_t prefix_len;
+    if (*prefix == '\0') {
+        prefix_len = 0;
+    } else {
+        /* Account for added '/' divider when there is a prefix. */
+        prefix_len = strnlen(prefix, MAXPATH) + 1;
+    }
+
+    size_t base_len = strnlen(basename, MAXPATH - prefix_len);
+
+    /* Extra plus 1 for terminating NUL. */
+    size_t name_total = prefix_len + base_len + 1;
+
+    w = calloc(1, sizeof *w + name_total);
+    if (w == NULL) {
+        /*
+         * If we can't allocate memory, we can't make any useful progress,
+         * so just bail.
+         */
+        fprintf(stderr, "Failed to allocate memory for struct work.\n");
+        exit(1);
+    }
+
+    if (*prefix == '\0') {
+        w->name_len = SNFORMAT_S(w->name, name_total, 1,
+                                 basename, base_len);
+    } else {
+        w->name_len = SNFORMAT_S(w->name, name_total, 3,
+                                 prefix, prefix_len - 1,
+                                 "/", (size_t) 1,
+                                 basename, base_len);
+    }
+
+    // TODO: should this initialize basename length?
+    // check how many callers use / need that...
+
+    return w;
+}
+
+/*
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function.
  *
@@ -435,6 +494,13 @@ static int work_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **
  *
  * if a child file/link is selected for external tracking, add
  * it to EXTERNAL_DBS_PWD in addition to ENTRIES.
+ *
+ * Ownership of struct work:
+ *  - if descend() allocates a struct work using new_work_with_name(), and it is
+ *    passed off to a processdir or processnondir function, then that function
+ *    takes ownership of that struct work and must eventually free() it.
+ * - if descend() does not pass of a new struct work to anyone, then it retains
+ *   ownership and free()s it.
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
@@ -468,22 +534,16 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 continue;
             }
 
-            struct work child;
-            memset(&child, 0, sizeof(child));
+            struct work *child = new_work_with_name(work->name, dir_child->d_name);
 
             struct entry_data child_ed;
             memset(&child_ed, 0, sizeof(child_ed));
             child_ed.parent_fd = -1;
 
-            /* get child path */
-            child.name_len = SNFORMAT_S(child.name, MAXPATH, 3,
-                                        work->name, work->name_len,
-                                        "/", (size_t) 1,
-                                        dir_child->d_name, len);
-            child.basename_len = len;
-            child.level = next_level;
-            child.root_parent = work->root_parent;
-            child.pinode = inode;
+            child->basename_len = len;
+            child->level = next_level;
+            child->root_parent = work->root_parent;
+            child->pinode = inode;
 
             switch (dir_child->d_type) {
                 case DT_DIR:
@@ -503,7 +563,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 case DT_UNKNOWN:
                 default:
                     /* some filesystems don't support d_type - fall back to calling lstat */
-                    if (lstat(child.name, &child_ed.statuso) != 0) {
+                    if (lstat(child->name, &child_ed.statuso) != 0) {
                         continue;
                     }
 
@@ -516,7 +576,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 child_ed.type = 'd';
 
                 if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
-                    struct work *copy = compress_struct(in->compress, &child, sizeof(child));
+                    struct work *copy = compress_struct(in->compress, child, struct_work_size(child));
                     QPTPool_enqueue_swappable(ctx, id, processdir, copy,
                                               work_serialize_and_free, work_alloc_and_deserialize);
                 }
@@ -535,8 +595,8 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                      *
                      * Return value should probably be used.
                      */
-                    child.recursion_level = recursion_level;
-                    processdir(ctx, id, &child, args);
+                    child->recursion_level = recursion_level;
+                    processdir(ctx, id, child, args);
                     ctrs.dirs_insitu++;
                 }
 
@@ -548,7 +608,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             else if (S_ISLNK(child_ed.statuso.st_mode)) {
                 child_ed.type = 'l';
                 if (child_ed.lstat_called) {
-                    readlink(child.name, child_ed.linkname, MAXPATH);
+                    readlink(child->name, child_ed.linkname, MAXPATH);
                 }
             }
             else if (S_ISREG(child_ed.statuso.st_mode)) {
@@ -564,16 +624,18 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             if (processnondir) {
                 if (in->process_xattrs) {
                     xattrs_setup(&child_ed.xattrs);
-                    xattrs_get(child.name, &child_ed.xattrs);
+                    xattrs_get(child->name, &child_ed.xattrs);
                 }
 
                 child_ed.parent_fd = d_fd;
-                processnondir(&child, &child_ed, nondir_args);
+                processnondir(child, &child_ed, nondir_args);
                 ctrs.nondirs_processed++;
 
                 if (in->process_xattrs) {
                     xattrs_cleanup(&child_ed.xattrs);
                 }
+            } else {
+                free(child);
             }
         }
     }

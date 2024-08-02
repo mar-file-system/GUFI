@@ -158,13 +158,12 @@ TEST(external, read_file) {
 
     struct input in;
 
-    struct work work;
-    memset(&work, 0, sizeof(work));
-    EXPECT_EQ(strncpy(work.name, filename, 7), work.name);
+    struct work *work = new_work_with_name("", filename);
+    work->basename_len = work->name_len;
 
     // skip checking path is valid db
     in.check_extdb_valid = false;
-    EXPECT_EQ(external_read_file(&in, &work,
+    EXPECT_EQ(external_read_file(&in, work,
                                  [](struct input *, void *,
                                     const long long int,
                                     const char *) -> int { return 0; },
@@ -173,7 +172,7 @@ TEST(external, read_file) {
 
     // check that path is valid db
     in.check_extdb_valid = true;
-    EXPECT_EQ(external_read_file(&in, &work,
+    EXPECT_EQ(external_read_file(&in, work,
                                  [](struct input *, void *,
                                     const long long int,
                                     const char *) -> int { return 0; },
@@ -188,12 +187,14 @@ TEST(external, read_file) {
     EXPECT_EQ(remove(filename), 0);
 
     // error early
-    EXPECT_EQ(external_read_file(&in, &work,
+    EXPECT_EQ(external_read_file(&in, work,
                                  [](struct input *, void *,
                                     const long long int,
                                     const char *) -> int { return 0; },
                                  nullptr),
               (std::size_t) 0);
+
+    free(work);
 }
 
 TEST(external, concatenate) {

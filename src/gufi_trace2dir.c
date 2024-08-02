@@ -135,7 +135,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct row *w = (struct row *) data;
     const int trace = w->trace;
 
-    struct work dir; /* name and name_len are not used */
+    // TODO: see if there is a better way to do this
+    struct work *dir; /* name and name_len are not used */
     struct entry_data ed;
 
     /* parse the directory data */
@@ -167,9 +168,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             break;
         }
 
-        struct work row;
+        struct work *row;
         struct entry_data row_ed;
 
+        // TODO: can linetowork be changed to use realloc to avoid malloc() + free() looping?
         linetowork(line, len, in->delim, &row, &row_ed);
 
         if (row_ed.type == 'e') {
@@ -177,11 +179,13 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             continue;
         }
 
-        process_entries(in, &row, &row_ed);
+        process_entries(in, row, &row_ed);
         xattrs_cleanup(&row_ed.xattrs);
+        free(row);
     }
 
     free(line); /* reuse line and only alloc+free once */
+    free(dir);
 
     set_metadata(topath, &ed.statuso, &ed.xattrs);
 

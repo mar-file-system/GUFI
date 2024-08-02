@@ -134,14 +134,15 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct input *in = &pa->in;
-    struct work work_src;
     struct work *work = (struct work *) data;
     struct entry_data ed;
     int rc = 0;
 
     if (work->compressed.yes) {
-        work = &work_src;
-        decompress_struct((void **) &work, data, sizeof(work_src));
+        struct work *work_src;
+        // TODO; check error
+        decompress_struct((void **) &work_src, work);
+        work = work_src;
     }
 
     DIR *dir = opendir(work->name);
@@ -240,9 +241,7 @@ static FILE **outfiles_init(const char *prefix, const size_t count) {
     return files;
 }
 
-static int validate_source(const char *path, struct work *work) {
-    memset(work, 0, sizeof(*work));
-
+static int validate_source(const char *path, struct work **work) {
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) < 0) {
@@ -256,9 +255,12 @@ static int validate_source(const char *path, struct work *work) {
         return 1;
     }
 
-    work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, path, strlen(path));
-    work->root_parent.data = path;
-    work->root_parent.len = dirname_len(path, work->name_len);
+    struct work *new_work = new_work_with_name("", path);
+
+    new_work->root_parent.data = path;
+    new_work->root_parent.len = dirname_len(path, new_work->name_len);
+
+    *work = new_work;
 
     return 0;
 }
@@ -323,12 +325,12 @@ int main(int argc, char *argv[]) {
         }
 
         /* get first work item by validating source path */
-        struct work root;
+        struct work *root;
         if (validate_source(roots[i], &root) != 0) {
             continue;
         }
 
-        struct work *copy = compress_struct(pa.in.compress, &root, sizeof(root));
+        struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
         QPTPool_enqueue(pool, 0, processdir, copy);
 
         i++;

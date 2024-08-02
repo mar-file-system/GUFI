@@ -156,9 +156,8 @@ TEST(summary, sumit_file) {
     struct sum summary;
     ASSERT_EQ(zeroit(&summary), 0);
 
-    struct work pwork;
+    struct work *pwork = new_work_with_name("", "");
     struct entry_data ed;
-    memset(&pwork, 0, sizeof(pwork));
     memset(&ed, 0, sizeof(ed));
 
     ed.type              = 'f';
@@ -169,7 +168,7 @@ TEST(summary, sumit_file) {
     ed.statuso.st_mtime  = dist(gen);
     ed.statuso.st_atime  = dist(gen);
     ed.statuso.st_blocks = dist(gen);
-    pwork.pinode         = dist(gen);
+    pwork->pinode        = dist(gen);
     ed.crtime            = dist(gen);
     ed.ossint1           = dist(gen);
     ed.ossint2           = dist(gen);
@@ -205,6 +204,8 @@ TEST(summary, sumit_file) {
     EXPECT_EQ(summary.minossint4, ed.ossint4);
     EXPECT_EQ(summary.maxossint4, ed.ossint4);
     EXPECT_EQ(summary.totxattr,   0);
+
+    free(pwork);
 }
 
 TEST(summary, sumit_link) {
@@ -215,9 +216,8 @@ TEST(summary, sumit_link) {
     struct sum summary;
     ASSERT_EQ(zeroit(&summary), 0);
 
-    struct work pwork;
+    struct work *pwork = new_work_with_name("", "");
     struct entry_data ed;
-    memset(&pwork, 0, sizeof(pwork));
     memset(&ed, 0, sizeof(ed));
 
     ed.type              = 'l';
@@ -228,7 +228,7 @@ TEST(summary, sumit_link) {
     ed.statuso.st_mtime  = dist(gen);
     ed.statuso.st_atime  = dist(gen);
     ed.statuso.st_blocks = dist(gen);
-    pwork.pinode         = dist(gen);
+    pwork->pinode        = dist(gen);
     ed.crtime            = dist(gen);
     ed.ossint1           = dist(gen);
     ed.ossint2           = dist(gen);
@@ -264,6 +264,8 @@ TEST(summary, sumit_link) {
     EXPECT_EQ(summary.minossint4, ed.ossint4);
     EXPECT_EQ(summary.maxossint4, ed.ossint4);
     EXPECT_EQ(summary.totxattr,   0);
+
+    free(pwork);
 }
 
 TEST(summary, tsumit) {
@@ -647,10 +649,10 @@ TEST(descend, builddir) {
     const char pipename[] = "@CMAKE_BINARY_DIR@/testpipe";
     ASSERT_EQ(mkfifo(pipename, S_IRUSR | S_IWUSR), 0);
 
-    struct work work = {};
-    work.name_len = SNPRINTF(work.name, sizeof(work.name), "@CMAKE_BINARY_DIR@");
+    // TODO: does this need free() here?
+    struct work *work = new_work_with_name("", "@CMAKE_BINARY_DIR@");
 
-    DIR *dir = opendir(work.name);
+    DIR *dir = opendir(work->name);
     ASSERT_NE(dir, nullptr);
 
     QPTPool_t *pool = QPTPool_init(1, nullptr);
@@ -666,7 +668,7 @@ TEST(descend, builddir) {
 
     // work->level == in->max_level - not descending
     {
-        EXPECT_EQ(descend(nullptr, 0, nullptr, &in, &work, 0, dir,
+        EXPECT_EQ(descend(nullptr, 0, nullptr, &in, work, 0, dir,
                           0, nullptr,
                           nullptr, nullptr,
                           &ctrs), 0);
@@ -681,7 +683,7 @@ TEST(descend, builddir) {
     {
         rewinddir(dir);
         in.max_level = 1;
-        EXPECT_EQ(descend(pool, 0, nullptr, &in, &work, 0, dir, 0,
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 0,
                           [](QPTPool_t *, const size_t, void *data, void *) -> int {
                               free(data);
                               return 0;
@@ -699,7 +701,7 @@ TEST(descend, builddir) {
     // good descend with skip_db
     {
         rewinddir(dir);
-        EXPECT_EQ(descend(pool, 0, nullptr, &in, &work, 0, dir, 1,
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 1,
                           [](QPTPool_t *, const size_t, void *data, void *) -> int {
                               free(data);
                               return 0;
@@ -717,7 +719,7 @@ TEST(descend, builddir) {
     {
         rewinddir(dir);
         in.subdir_limit = 1;
-        EXPECT_EQ(descend(pool, 0, nullptr, &in, &work, 0, dir, 0,
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 0,
                           [](QPTPool_t *, const size_t, void *data, void *) -> int {
                               struct work *work = (struct work *) data;
                               if (work->recursion_level == 0) {

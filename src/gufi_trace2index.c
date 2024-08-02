@@ -164,7 +164,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_set_end(handle_args);
 
     timestamp_create_start(memset_work);
-    struct work dir; /* name and name_len are not used */
+    // TODO: based on following comment, can this be stack allocated?
+    struct work *dir = NULL; /* name and name_len are not used */
     struct entry_data ed;
     timestamp_set_end(memset_work);
 
@@ -242,7 +243,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             timestamp_set_end(getline);
 
             timestamp_create_start(memset_row);
-            struct work row;
+            struct work *row;
             struct entry_data row_ed;
             timestamp_set_end(memset_row);
 
@@ -257,7 +258,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             if (row_ed.type == 'e') {
                 /* insert right here (instead of bulk inserting) since this is likely to be very rare */
                 timestamp_set_start(external_db);
-                external_insert(db, EXTERNAL_TYPE_USER_DB_NAME, ed.statuso.st_ino, row.name);
+                external_insert(db, EXTERNAL_TYPE_USER_DB_NAME, ed.statuso.st_ino, row->name);
                 timestamp_set_end(external_db);
             }
             else {
@@ -267,12 +268,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 timestamp_set_end(sumit);
 
                 /* don't record pinode */
-                row.pinode = 0;
+                row->pinode = 0;
 
                 /* add row to bulk insert */
                 timestamp_set_start(insertdbgo);
-                insertdbgo(&row, &row_ed, entries_res);
-                insertdbgo_xattrs(in, &ed.statuso, &row, &row_ed,
+                insertdbgo(row, &row_ed, entries_res);
+                insertdbgo_xattrs(in, &ed.statuso, row, &row_ed,
                                   &xattr_db_list, &pa->xattr,
                                   topath, topath_len,
                                   xattrs_res, xattr_files_res);
@@ -333,6 +334,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             #endif
 
             #endif
+
+            free(row);
         }
 
         timestamp_create_start(free);
@@ -363,7 +366,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         w->line[w->first_delim] = '\x00';
         const size_t basename_start = trailing_match_index(w->line, w->first_delim, "/", 1);
 
-        insertsumdb(db, w->line + basename_start, &dir, &ed, &summary);
+        insertsumdb(db, w->line + basename_start, dir, &ed, &summary);
         xattrs_cleanup(&ed.xattrs);
         timestamp_set_end(insertsumdb);
 
@@ -449,6 +452,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #endif
     timestamp_print(debug_buffers, id, "print_timestamps", print_timestamps);
     #endif
+
+    free(dir);
 
     return !db;
 }

@@ -69,7 +69,6 @@ OF SUCH DAMAGE.
 #endif
 
 #include <cstdio>
-#include <pthread.h>
 
 #include "config.h"
 #include "trace.h"
@@ -98,8 +97,8 @@ static const char EXPECTED_XATTRS_STR[] = "xattr.key0\x1fxattr.val0\x1f"
                                           "xattr.key1\x1fxattr.val1\x1f";
 static const size_t EXPECTED_XATTRS_STR_LEN = sizeof(EXPECTED_XATTRS_STR) - 1;
 
-static void get_work(struct work *work, struct entry_data *ed) {
-    work->name_len         = snprintf(work->name, sizeof(work->name), "name");
+static struct work *get_work(struct entry_data *ed) {
+    struct work *new_work = new_work_with_name("", "name");
     ed->type               = 't';
     snprintf(ed->linkname, sizeof(ed->linkname), "link");
     ed->statuso.st_ino     = 0xfedc;
@@ -124,7 +123,9 @@ static void get_work(struct work *work, struct entry_data *ed) {
     ed->ossint4            = 4;
     snprintf(ed->osstext1, sizeof(ed->osstext1), "osstext1");
     snprintf(ed->osstext2, sizeof(ed->osstext2), "osstext2");
-    work->pinode           = 0xdef0;
+    new_work->pinode           = 0xdef0;
+
+    return new_work;
 }
 
 static int to_string(char *line, const size_t size, struct work *work, struct entry_data *ed) {
@@ -191,16 +192,15 @@ static int to_string(char *line, const size_t size, struct work *work, struct en
 }
 
 TEST(trace, worktofile) {
-    struct work work;
     struct entry_data ed;
-    get_work(&work, &ed);
+    struct work *work = get_work(&ed);
 
     // write a known struct to a file
     char buf[4096];
     FILE *file = fmemopen(buf, sizeof(buf), "w");
     ASSERT_NE(file, nullptr);
 
-    const int written = worktofile(file, delim, 0, &work, &ed);
+    const int written = worktofile(file, delim, 0, work, &ed);
     fclose(file);
 
     ASSERT_GT(written, 0);
@@ -208,20 +208,22 @@ TEST(trace, worktofile) {
 
     // generate the string to compare with
     char line[4096];
-    const int rc = to_string(line, sizeof(line), &work, &ed);
+    const int rc = to_string(line, sizeof(line), work, &ed);
 
     ASSERT_GT(rc, -1);
     ASSERT_LT(rc, (int) sizeof(line));
 
     EXPECT_STREQ(buf, line);
 
-    EXPECT_EQ(worktofile(nullptr, delim, 0, &work, &ed),  -1);
-    EXPECT_EQ(worktofile(file, delim, 0, nullptr,  &ed),  -1);
-    EXPECT_EQ(worktofile(file, delim, 0, &work, nullptr), -1);
+    EXPECT_EQ(worktofile(NULL, delim, 0, work, &ed),  -1);
+    EXPECT_EQ(worktofile(file, delim, 0, NULL,  &ed),  -1);
+    EXPECT_EQ(worktofile(file, delim, 0, work, NULL), -1);
+
+    free(work);
 }
 
 #define COMPARE(src, src_ed, dst, dst_ed)                               \
-    EXPECT_STREQ(dst.name,               src.name);                     \
+    EXPECT_STREQ(dst->name,               src->name);                     \
     EXPECT_EQ(dst_ed.type,               src_ed.type);                  \
     EXPECT_EQ(dst_ed.statuso.st_ino,     src_ed.statuso.st_ino);        \
     EXPECT_EQ(dst_ed.statuso.st_mode,    src_ed.statuso.st_mode);       \
@@ -242,21 +244,20 @@ TEST(trace, worktofile) {
     EXPECT_EQ(dst_ed.ossint4,            src_ed.ossint4);               \
     EXPECT_STREQ(dst_ed.osstext1,        src_ed.osstext1);              \
     EXPECT_STREQ(dst_ed.osstext2,        src_ed.osstext2);              \
-    EXPECT_EQ(dst.pinode,                src.pinode);                   \
+    EXPECT_EQ(dst->pinode,                src->pinode);                   \
 
 TEST(trace, linetowork) {
-    struct work src;
     struct entry_data src_ed;
-    get_work(&src, &src_ed);
+    struct work *src = get_work(&src_ed);
 
     // write the known struct to a string using an alternative write function
     char line[4096];
-    const int rc = to_string(line, sizeof(line), &src, &src_ed);
+    const int rc = to_string(line, sizeof(line), src, &src_ed);
     ASSERT_GT(rc, -1);
     ASSERT_LT(rc, (int) sizeof(line));
 
     // read the string
-    struct work work;
+    struct work *work;
     struct entry_data ed;
     EXPECT_EQ(linetowork(line, rc, delim, &work, &ed), 0);
 
@@ -268,6 +269,7 @@ TEST(trace, linetowork) {
     EXPECT_STREQ(ed.xattrs.pairs[1].value, EXPECTED_XATTRS.pairs[1].value);
 
     xattrs_cleanup(&ed.xattrs);
+    free(work);
 
     EXPECT_EQ(linetowork(nullptr, rc, delim, &work, &ed),  -1);
     EXPECT_EQ(linetowork(line, rc, delim, nullptr,  &ed),  -1);
@@ -279,14 +281,13 @@ TEST(open_traces, too_many) {
 }
 
 TEST(scout_trace, no_cleanup) {
-    struct work src;
     struct entry_data src_ed;
-    get_work(&src, &src_ed);
+    struct work *src = get_work(&src_ed);
     src_ed.type = 'd';
 
     // write the known struct to a string using an alternative write function
     char line[4096];
-    const int rc = to_string(line, sizeof(line), &src, &src_ed);
+    const int rc = to_string(line, sizeof(line), src, &src_ed);
     ASSERT_GT(rc, -1);
     const size_t len = strlen(line);
     ASSERT_EQ(rc, (int) len);

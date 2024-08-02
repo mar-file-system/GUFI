@@ -105,57 +105,71 @@ static void decompress_zlib(void *dst, size_t *dst_len, void *src, const size_t 
 }
 #endif
 
-/* always return new address */
+/*
+ * compress_struct() should act like realloc() - it either returns a new pointer,
+ *   and frees the original, or returns the original.
+ *
+ *   comp       - if true, do compression
+ *   src        - must be a valid free()able pointer.
+ *   struct_len - size of *src
+ */
 void *compress_struct(const int comp, void *src, const size_t struct_len) {
-    /* not checking src == NULL */
-    compressed_t *dst = malloc(struct_len);
-    dst->yes = 0;
-    dst->len = 0;
-
+    #if HAVE_ZLIB
     if (comp) {
+        compressed_t *dst = malloc(struct_len);
+        dst->yes = 0;
         dst->len = struct_len - COMP_OFFSET;
+        dst->orig_len = struct_len;
 
-        #if HAVE_ZLIB
-        if (compress_zlib(((unsigned char *) dst) + COMP_OFFSET, &dst->len,
-                          ((unsigned char *) src) + COMP_OFFSET,  dst->len) == Z_OK) {
+        if (compress_zlib(dst->data, &dst->len,
+                          ((compressed_t *) src)->data,  dst->len) == Z_OK) {
             dst->yes = 1;
             dst->len += COMP_OFFSET;
         }
-        #endif
 
         /* if compressed enough, reallocate to reduce memory usage */
         if (dst->yes && (dst->len < struct_len)) {
             void *r = realloc(dst, COMP_OFFSET + dst->len);
             if (r) {
-                dst = r;
+                free(src);
+                return r;
             }
 
-            /* if realloc failed, dst can still be used */
-            return dst;
+            /* realloc() failed - free() the new buffer and return src */
+            free(dst);
         }
     }
+    #endif
 
-    /* if no compression or compression failed, copy src */
-    memcpy(dst, src, struct_len);
-
-    return dst;
+    return src;
 }
 
-void decompress_struct(void **dst, void *src, const size_t struct_len) {
-    /* not checking src == NULL */
+/*
+ * decompress_struct() -
+ *
+ *     src - pointer to optionally compressed data item
+ *     dst - will be updated to hold pointer to uncompressed buffer.
+ *
+ *     If src is compressed, then free() src and make dst point to a new buffer.
+ *     If src is not compressed, then make dst point to src.
+ *
+ *     Returns: 0 if success, and *dst will be a valid pointer
+ *         else 1 and *dst will not be a valid pointer
+ */
+void decompress_struct(void **dst, void *src) {
+    #if HAVE_ZLIB
     compressed_t *comp = (compressed_t *) src;
     if (comp->yes) {
-        compressed_t *decomp = (compressed_t *) *dst;
-        decomp->len = struct_len - COMP_OFFSET;
+        compressed_t *new = calloc(1, comp->orig_len);
+        size_t new_len = comp->orig_len - COMP_OFFSET;
 
-        #if HAVE_ZLIB
-        decompress_zlib(((unsigned char *) *dst) + COMP_OFFSET, &decomp->len,
-                        ((unsigned char *)  src) + COMP_OFFSET,    comp->len);
-        #endif
+        decompress_zlib(new->data, &new_len, comp->data, comp->len);
 
         free(src);
+        *dst = new;
         return;
     }
+    #endif
 
     /*
      * compression not enabled or compression enabled but

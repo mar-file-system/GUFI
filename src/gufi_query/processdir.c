@@ -90,7 +90,7 @@ static inline int save_matime(gqw_t *gqw,
                               char *dbpath, const size_t dbpath_size,
                               struct utimbuf *dbtime) {
     const size_t dbpath_len = SNFORMAT_S(dbpath, dbpath_size, 2,
-                                         gqw->work.name, gqw->work.name_len,
+                                         gqw->work->name, gqw->work->name_len,
                                          "/" DBNAME, DBNAME_LEN + 1);
     struct stat st;
     if (lstat(dbpath, &st) != 0) {
@@ -98,7 +98,7 @@ static inline int save_matime(gqw_t *gqw,
 
         char buf[MAXPATH];
         present_user_path(dbpath, dbpath_len,
-                          &gqw->work.root_parent, gqw->work.root_basename_len, &gqw->work.orig_root,
+                          &gqw->work->root_parent, gqw->work->root_basename_len, &gqw->work->orig_root,
                           buf, sizeof(buf));
 
         fprintf(stderr, "Could not stat database file \"%s\": %s (%d)\n",
@@ -161,10 +161,10 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct input *in = pa->in;
     ThreadArgs_t *ta = &(pa->ta[id]);
 
-    gqw_t stack;
+    gqw_t stack = { 0 };
     gqw_t *gqw = &stack;
 
-    decompress_struct((void **) &gqw, data, sizeof(stack));
+    decompress_struct((void **) &gqw, data);
 
     char dbpath[MAXPATH];  /* filesystem path of db.db; only generated if keep_matime is set */
     char dbname[MAXPATH];  /* path of db.db modified so that sqlite3 can open it */
@@ -179,7 +179,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
     thread_timestamp_start(opendir_call, &ts.tts[tts_opendir_call]);
-    dir = opendir(gqw->work.name);
+    dir = opendir(gqw->work->name);
     thread_timestamp_end(opendir_call);
 
     /* if the directory can't be opened, don't bother with anything else */
@@ -198,7 +198,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto close_dir;
     }
 
-    if (gqw->work.level >= in->min_level) {
+    if (gqw->work->level >= in->min_level) {
         #if OPENDB
         thread_timestamp_start(attachdb_call, &ts.tts[tts_attachdb_call]);
         db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
@@ -210,7 +210,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         #ifdef ADDQUERYFUNCS
         thread_timestamp_start(addqueryfuncs_call, &ts.tts[tts_addqueryfuncs_call]);
         if (db) {
-            if (addqueryfuncs_with_context(db, &gqw->work) != 0) {
+            if (addqueryfuncs_with_context(db, gqw->work) != 0) {
                 fprintf(stderr, "Could not add functions to sqlite\n");
             }
         }
@@ -221,7 +221,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* get number of subdirs walked on first call to process_queries */
     size_t subdirs_walked_count = 0;
 
-    if (db && (gqw->work.level >= in->min_level)) {
+    if (db && (gqw->work->level >= in->min_level)) {
         int recs = 1;
 
         /*
@@ -235,7 +235,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             if (in->andor == AND) {
                 /* make sure the treesummary table exists */
                 thread_timestamp_start(sqltsumcheck, &ts.tts[tts_sqltsumcheck]);
-                querydb(&gqw->work, dbname, dbname_len, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
+                querydb(gqw->work, dbname, dbname_len, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
                         "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
                         pa, id, count_rows, &recs);
                 thread_timestamp_end(sqltsumcheck);
@@ -246,7 +246,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 else {
                     /* run in->sql.tsum */
                     thread_timestamp_start(sqltsum, &ts.tts[tts_sqltsum]);
-                    querydb(&gqw->work, dbname, dbname_len, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
+                    querydb(gqw->work, dbname, dbname_len, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
                     thread_timestamp_end(sqltsum);
                     increment_query_count(ta);
                 }
@@ -268,7 +268,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
              */
             if (in->process_xattrs) {
                 setup_xattrs_views(in, db,
-                                   &gqw->work,
+                                   gqw->work,
                                    &extdb_count
                                    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                                    , &ts.tts[tts_xattrprep_call]
@@ -441,7 +441,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     ;
 
     thread_timestamp_start(free_work, &ts.tts[tts_free_work]);
-    free(gqw->work.fullpath);
+    free(gqw->work->fullpath);
+    free(gqw->work);
     free_struct(gqw, data, 0);
     thread_timestamp_end(free_work);
 

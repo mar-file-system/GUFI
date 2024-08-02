@@ -122,7 +122,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
 }
 
 int linetowork(char *line, const size_t len, const char delim,
-               struct work *work, struct entry_data *ed) {
+               struct work **work, struct entry_data *ed) {
     if (!line || !work || !ed) {
         return -1;
     }
@@ -132,7 +132,10 @@ int linetowork(char *line, const size_t len, const char delim,
     char *p;
     char *q;
 
-    p=line; q = split(p, &delim, 1, end); work->name_len = SNPRINTF(work->name, MAXPATH, "%s", p);
+    p=line; q = split(p, &delim, 1, end);
+    struct work *new_work = new_work_with_name("", p);
+    *work = new_work;
+
     p = q;  q = split(p, &delim, 1, end); ed->type = *p;
 
     if (ed->type == 'e') {
@@ -159,9 +162,9 @@ int linetowork(char *line, const size_t len, const char delim,
     p = q; q = split(p, &delim, 1, end); ed->ossint4 = atol(p);
     p = q; q = split(p, &delim, 1, end); SNPRINTF(ed->osstext1, MAXXATTR, "%s", p);
     p = q; q = split(p, &delim, 1, end); SNPRINTF(ed->osstext2, MAXXATTR, "%s", p);
-    p = q;     split(p, &delim, 1, end); work->pinode = atol(p);
+    p = q;     split(p, &delim, 1, end); new_work->pinode = atol(p);
 
-    work->basename_len = work->name_len - trailing_match_index(work->name, work->name_len, "/", 1);
+    new_work->basename_len = new_work->name_len - trailing_match_index(new_work->name, new_work->name_len, "/", 1);
 
     return 0;
 }

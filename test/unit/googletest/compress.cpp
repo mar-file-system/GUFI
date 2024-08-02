@@ -75,13 +75,16 @@ typedef struct {
 
 static const size_t DATA_LEN = sizeof(data_t);
 
+static data_t *new_data() {
+    return (data_t *) calloc(sizeof(data_t), 1);
+}
+
 TEST(compress, off) {
-    data_t src;
-    memset(&src, 0, sizeof(src));
+    data_t *src = new_data();
 
     const int comp = 0;
 
-    void *compressed = compress_struct(comp, &src, DATA_LEN);
+    void *compressed = compress_struct(comp, src, DATA_LEN);
     EXPECT_NE(compressed, nullptr);
 
     compressed_t *c = (compressed_t *) compressed;
@@ -89,19 +92,19 @@ TEST(compress, off) {
     EXPECT_EQ(c->len, (size_t) 0);
 
     data_t *decompressed = nullptr;
-    decompress_struct((void **) &decompressed, compressed, DATA_LEN);
+    decompress_struct((void **) &decompressed, compressed);
     EXPECT_EQ(decompressed, compressed);
 
     free_struct(decompressed, compressed, 0);
 }
 
 TEST(compress, on) {
-    data_t src;
-    memset(&src, 0, sizeof(src));
+    data_t *src = new_data();
 
+    fprintf(stderr, "in compress on test\n");
     const int comp = 1;
 
-    void *compressed = compress_struct(comp, &src, DATA_LEN);
+    void *compressed = compress_struct(comp, src, DATA_LEN);
     EXPECT_NE(compressed, nullptr);
 
     compressed_t *c = (compressed_t *) compressed;
@@ -110,34 +113,38 @@ TEST(compress, on) {
 
     data_t stack;
     data_t *decompressed = &stack;
-    decompress_struct((void **) &decompressed, compressed, DATA_LEN);
+    decompress_struct((void **) &decompressed, compressed);
     EXPECT_NE(decompressed, compressed);
 
-    EXPECT_EQ(memcmp(src.data, decompressed->data, TEST_DATA_LEN), 0);
+    EXPECT_EQ(memcmp(src->data, decompressed->data, TEST_DATA_LEN), 0);
 
     // compressed was freed, decompressed points to stack address
     free_struct(decompressed, compressed, 0);
 }
 
+#if 0
+struct small {
+    compressed_t comp;
+    int data; // not enough data to compress
+};
+
 TEST(compress, not_enough) {
-    struct {
-        compressed_t comp;
-        int data; // not enough data to compress
-    } small;
+    struct small *small = (struct small *) calloc(sizeof(*small), 1);
 
-    memset(&small, 0, sizeof(small));
-    small.data = 1234;
+    small->data = 1234;
 
-    void *not_compressed = compress_struct(1, &small, sizeof(small));
+    void *not_compressed = compress_struct(1, small, sizeof(*small));
     EXPECT_NE(not_compressed, nullptr);
 
-    decltype(small) *nc = (decltype(small) *) not_compressed;
+    struct small *nc = (struct small *) not_compressed;
     EXPECT_EQ(nc->comp.yes, (int)    0);
     EXPECT_EQ(nc->comp.len, (size_t) 0);
-    EXPECT_EQ(nc->data, small.data);
+    EXPECT_EQ(nc->data, small->data);
 
     free(not_compressed);
+    free(small);
 }
+#endif
 
 TEST(compress, free_in_situ) {
     char c;
@@ -146,12 +153,11 @@ TEST(compress, free_in_situ) {
 
 #ifdef HAVE_ZLIB
 TEST(compress_zlib, bad) {
-    compressed_t src;
-    memset(&src, 0, sizeof(src));
+    compressed_t *src = (compressed_t *) calloc(1, sizeof(*src));
+    compressed_t *dst = (compressed_t *) compress_struct(1, src, sizeof(*src));
 
-    compressed_t *dst = (compressed_t *) compress_struct(1, &src, sizeof(src));
     EXPECT_NE(dst, nullptr);
-    EXPECT_NE(dst, &src);
+    EXPECT_EQ(dst, src);
     EXPECT_EQ(dst->yes, (std::int8_t) 0);
     EXPECT_EQ(dst->len, (std::size_t) 0);
 

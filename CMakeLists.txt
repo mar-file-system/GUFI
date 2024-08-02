@@ -122,6 +122,9 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Need _XOPEN_SRC
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SRC")
 
+add_compile_definitions(-DDEBUG)
+set(CMAKE_C_FLAGS "-O0 -ggdb")
+
 # Define the DEBUG macro when building in debug mode
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall")
 

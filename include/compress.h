@@ -78,7 +78,9 @@ extern "C" {
  */
 typedef struct compressed {
     int8_t          yes;  /* is this struct compressed? */
+    uint16_t        orig_len; /* not a size_t to fit in hole in struct */
     size_t          len;  /* includes self; only meaningful if yes == 1 */
+    char            data[0];
 } compressed_t;
 
 #if HAVE_ZLIB /* or any other algorithm */
@@ -89,8 +91,7 @@ typedef struct compressed {
 
 void *compress_struct(const int comp, void *src, const size_t struct_len);
 
-/* initialize dst with pointer to valid buffer */
-void decompress_struct(void **dst, void *src, const size_t struct_len);
+void decompress_struct(void **dst, void *src);
 
 /*
  * used is the struct that was used for operations (decompressed or original data)

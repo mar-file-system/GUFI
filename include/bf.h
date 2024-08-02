@@ -284,23 +284,36 @@ typedef enum {
    CLOSE_DB  = 0x04,
 } CleanUpTasks;
 
-/* minimum data needs to be passed around between threads */
+/*
+ * Minimum data needs to be passed around between threads.
+ *
+ * struct work generally should not be allocated directly - the helper
+ *    new_work_with_name() should be used to ensure correct size is allocated.
+ *
+ * Similarly, the size of struct work should not be calculated with
+ * sizeof, but rather using the helper struct_work_size() to account for the
+ * storage for name.
+ */
 struct work {
    compressed_t  compressed;
    refstr_t      orig_root;              /* argv[i] */
    refstr_t      root_parent;            /* dirname(realpath(argv[i])) */
    size_t        root_basename_len;      /* strlen(basename(argv[i])) */
    size_t        level;
-   char          name[MAXPATH];
-   size_t        name_len;
-   size_t        basename_len;           /* can usually get through readdir */
    long long int pinode;
    size_t        recursion_level;
 
    /* probably shouldn't be here */
    char *        fullpath;
    size_t        fullpath_len;
+
+   size_t        name_len;               /* == strlen(name) - meaning excludes NUL! */
+   size_t        basename_len;           /* can usually get through readdir */
+   char          name[];
 };
+
+size_t struct_work_size(struct work *w);
+struct work *new_work_with_name(const char *prefix, const char *name);
 
 /* extra data used by entries that does not depend on data from other directories */
 struct entry_data {

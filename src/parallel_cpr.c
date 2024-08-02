@@ -108,7 +108,7 @@ static int set_xattrs(const char *name, struct xattrs *xattrs) {
 }
 
 struct work_data {
-    struct work work;
+    struct work *work;    // TODO: can make this inline?
     struct entry_data ed;
 };
 
@@ -127,7 +127,7 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct input *in = (struct input *) args;
     struct work_data *wd = (struct work_data *) data;
-    struct work *work = &wd->work;
+    struct work *work = wd->work;
     struct entry_data *ed = &wd->ed;
 
     int rc = 0;
@@ -169,11 +169,11 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
   cleanup:
     free(wd);
+    free(work);
 
     return rc;
 }
 
-/* work and ed are on the stack */
 static int cpr_link(struct work *work, struct entry_data *ed, struct input *in) {
     int rc = 0;
 
@@ -195,6 +195,7 @@ static int cpr_link(struct work *work, struct entry_data *ed, struct input *in) 
 
   cleanup:
     free(dst.data);
+    free(work);
 
     return rc;
 }
@@ -211,7 +212,7 @@ static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir
 
     if (S_ISREG(ed->statuso.st_mode)) {
         struct work_data *wd = calloc(1, sizeof(*wd));
-        memcpy(&wd->work, work, sizeof(*work));
+        wd->work = work;
         xattrs_setup(&wd->ed.xattrs);
         memcpy(&wd->ed,   ed,   sizeof(*ed));
 
@@ -367,16 +368,15 @@ int main(int argc, char * argv[]) {
             continue;
         }
 
-        struct work work;
-        memset(&work, 0, sizeof(work));
+        struct work *work = new_work_with_name("", path);
 
         /* remove trailing slashes (+ 1 to keep at least 1 character) */
         const size_t len = strlen(path);
-        work.name_len = trailing_non_match_index(path + 1, len - 1, "/", 1) + 1;;
-        memcpy(work.name, path, work.name_len);
-        work.basename_len = work.name_len - trailing_match_index(work.name, work.name_len, "/", 1);
-        work.root_parent.data = path;
-        work.root_parent.len = dirname_len(path, work.name_len);
+        work->name_len = trailing_non_match_index(path + 1, len - 1, "/", 1) + 1;
+        work->name[work->name_len] = '\0';
+        work->basename_len = work->name_len - trailing_match_index(work->name, work->name_len, "/", 1);
+        work->root_parent.data = path;
+        work->root_parent.len = dirname_len(path, work->name_len);
 
         if (S_ISDIR(st.st_mode)) {
             const char *real_path = realpath(path, NULL);
@@ -389,29 +389,28 @@ int main(int argc, char * argv[]) {
                 continue;
             }
 
-            struct work *copy = malloc(sizeof(*copy));
-            memcpy(copy, &work, sizeof(work));
-            QPTPool_enqueue(pool, 0, cpr_dir, copy);
+            QPTPool_enqueue(pool, 0, cpr_dir, work);
         }
         else if (S_ISLNK(st.st_mode)) {
             struct entry_data ed;
             /* readlink in cpr_link */
 
             /* copy right here instead of enqueuing */
-            cpr_link(&work, &ed, &in);
+            cpr_link(work, &ed, &in);
         }
         else if (S_ISREG(st.st_mode)) {
             struct work_data *wd = calloc(1, sizeof(*wd));
-            memcpy(&wd->work, &work, sizeof(work));
+            wd->work = work;
             xattrs_setup(&wd->ed.xattrs);
 
             if (in.process_xattrs) {
-                xattrs_get(work.name, &wd->ed.xattrs);
+                xattrs_get(work->name, &wd->ed.xattrs);
             }
 
             QPTPool_enqueue(pool, 0, cpr_file, wd);
         }
         else {
+            free(work);
             fprintf(stderr, "Not copying \"%s\"\n", path);
             rc = 1;
         }

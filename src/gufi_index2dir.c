@@ -436,14 +436,11 @@ struct work *validate_inputs(struct PoolArgs *pa) {
         return NULL;
     }
 
-    struct work *root = (struct work *) calloc(1, sizeof(struct work));
+    struct work *root = new_work_with_name("", pa->in.name.data);
     if (!root) {
         fprintf(stderr, "Could not allocate root struct\n");
         return NULL;
     }
-
-    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1,
-                                pa->in.name.data, pa->in.name.len);
 
     return root;
 }

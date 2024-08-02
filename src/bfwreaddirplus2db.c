@@ -219,19 +219,17 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
                 continue;
         }
 
-        struct work qwork;
+        struct work *qwork = new_work_with_name(passmywork->name,  entry->d_name);
+        qwork->basename_len = len;
+
         struct entry_data qwork_ed;
-        memset(&qwork, 0, sizeof(qwork));
         memset(&qwork_ed, 0, sizeof(qwork_ed));
-        qwork.pinode = ed.statuso.st_ino;
+        qwork->pinode = ed.statuso.st_ino;
 
-        qwork.name_len = SNPRINTF(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
-        qwork.basename_len = len;
-
-        lstat(qwork.name, &qwork_ed.statuso);
+        lstat(qwork->name, &qwork_ed.statuso);
         xattrs_setup(&qwork_ed.xattrs);
         if (in->process_xattrs) {
-            xattrs_get(qwork.name, &qwork_ed.xattrs);
+            xattrs_get(qwork->name, &qwork_ed.xattrs);
         }
 
         /*
@@ -241,16 +239,17 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
         if (!S_ISDIR(qwork_ed.statuso.st_mode)) {
             if (S_ISLNK(qwork_ed.statuso.st_mode)) {
                 qwork_ed.type = 'l';
-                readlink(qwork.name, qwork_ed.linkname, MAXPATH);
+                readlink(qwork->name, qwork_ed.linkname, MAXPATH);
             } else if (S_ISREG(qwork_ed.statuso.st_mode)) {
                 qwork_ed.type = 'f';
             }
 
             sumit(&summary, &qwork_ed);
-            insertdbgo(&qwork, &qwork_ed, res);
+            insertdbgo(qwork, &qwork_ed, res);
         }
 
         xattrs_cleanup(&qwork_ed.xattrs);
+        free(qwork);
     }
 
     stopdb(db);
@@ -390,19 +389,15 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 continue;
         }
 
-        struct work qwork;
+        struct work *qwork = new_work_with_name(passmywork->name, entry->d_name);
         struct entry_data qwork_ed;
-        memset(&qwork, 0, sizeof(qwork));
         memset(&qwork_ed, 0, sizeof(qwork_ed));
 
-        SNPRINTF(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
-        qwork.pinode = ed.statuso.st_ino;
+        qwork->pinode = ed.statuso.st_ino;
         qwork_ed.statuso.st_ino = entry->d_ino;
 
         if (entry->d_type == DT_DIR) {
-            struct work *work = calloc(1, sizeof(struct work));
-            memcpy(work, &qwork, sizeof(qwork));
-            QPTPool_enqueue(ctx, id, processdir, work);
+            QPTPool_enqueue(ctx, id, processdir, qwork);
             continue;
         }
         else if (entry->d_type == DT_LNK) {
@@ -427,7 +422,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                         startdb(ta->db);
                     }
 
-                    insertdbgor(&qwork, &qwork_ed, ta->res);
+                    insertdbgor(qwork, &qwork_ed, ta->res);
 
                     if (in->stride > 0) {
                         stopdb(ta->db);
@@ -444,7 +439,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 if (in->suspectmethod > 2) {
                     /* stat the file/link and if ctime or mtime is >= provided last run time mark dir suspect */
                     struct stat st;
-                    lstat(qwork.name, &st);
+                    lstat(qwork->name, &st);
                     if (st.st_ctime >= locsuspecttime) ed.suspect = 1;
                     if (st.st_mtime >= locsuspecttime) ed.suspect = 1;
                 }
@@ -463,9 +458,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                  * the file or link without the name as the sortf
                  */
                 fprintf(ta->file, "%s%c%" STAT_ino "%c%lld%c%c%c%s%c\n",
-                        qwork.name,              in->delim,
+                        qwork->name,             in->delim,
                         qwork_ed.statuso.st_ino, in->delim,
-                        qwork.pinode,            in->delim,
+                        qwork->pinode,           in->delim,
                         qwork_ed.type,           in->delim,
                         passmywork->name,        in->delim);
 
@@ -474,6 +469,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 }
             }
         }
+
+        free(qwork);
     }
 
     /*
@@ -613,9 +610,7 @@ static int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
         }
     }
 
-    struct work *mywork = calloc(1, sizeof(struct work));
-
-    mywork->name_len = SNFORMAT_S(mywork->name, sizeof(mywork->name), 1, pa->in.name.data, pa->in.name.len);
+    struct work *mywork = new_work_with_name("", pa->in.name.data);
 
     QPTPool_enqueue(ctx, 0, processdir, mywork);
 

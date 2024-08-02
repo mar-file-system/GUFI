@@ -128,6 +128,7 @@ static int process_external(struct input *in, void *args,
 static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NonDirArgs *nda = (struct NonDirArgs *) args;
     struct input *in = nda->in;
+    int rc = 0;
 
     if (!ed->lstat_called) {
         char *basename = entry->name + entry->name_len - entry->basename_len;
@@ -135,7 +136,8 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         if (fstatat(ed->parent_fd, basename, &ed->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
             const int err = errno;
             fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n", entry->name, strerror(err), err);
-            return 1;
+            rc = 1;
+            goto out;
         }
     }
 
@@ -169,7 +171,9 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         external_read_file(in, entry, process_external, nda->db);
     }
 
-    return 0;
+out:
+    free(entry);
+    return rc;
 }
 
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
@@ -180,23 +184,18 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct input *in = &pa->in;
 
-    struct work work_src;
-
     struct NonDirArgs nda;
     nda.in         = &pa->in;
     nda.temp_db    = &pa->db;
     nda.temp_xattr = &pa->xattr;
-    nda.work       = (struct work *) data;
     memset(&nda.ed, 0, sizeof(nda.ed));
     nda.topath     = NULL;
     nda.ed.type    = 'd';
 
     DIR *dir = NULL;
 
-    if (nda.work->compressed.yes) {
-        nda.work = &work_src;
-        decompress_struct((void **) &nda.work, data, sizeof(work_src));
-    }
+    // TODO: check error
+    decompress_struct((void **) &nda.work, data);
 
     if (lstat(nda.work->name, &nda.ed.statuso) != 0) {
         const int err = errno;
@@ -314,7 +313,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     closedir(dir);
 
     free(nda.topath);
-    free_struct(nda.work, data, nda.work->recursion_level);
+    free(nda.work);
 
     pa->total_files[id] += ctrs.nondirs_processed;
 
@@ -355,9 +354,7 @@ static int setup_dst(const char *nameto) {
     return 0;
 }
 
-static int validate_source(struct input *in, const char *path, struct work *work) {
-    memset(work, 0, sizeof(*work));
-
+static int validate_source(struct input *in, const char *path, struct work **work) {
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) < 0) {
@@ -371,21 +368,24 @@ static int validate_source(struct input *in, const char *path, struct work *work
         return 1;
     }
 
-    work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, path, strlen(path));
-    work->root_parent.data = path;
-    work->root_parent.len = dirname_len(path, work->name_len);
+    struct work *new_work = new_work_with_name("", path);
+
+    new_work->root_parent.data = path;
+    new_work->root_parent.len = dirname_len(path, new_work->name_len);
 
     char expathin[MAXPATH];
     char expathout[MAXPATH];
     char expathtst[MAXPATH];
 
-    SNPRINTF(expathtst, MAXPATH,"%s/%s", in->nameto.data, work->root_parent.data + work->root_parent.len);
+    SNPRINTF(expathtst, MAXPATH,"%s/%s", in->nameto.data, new_work->root_parent.data + new_work->root_parent.len);
     realpath(expathtst, expathout);
-    realpath(work->root_parent.data, expathin);
+    realpath(new_work->root_parent.data, expathin);
 
     if (!strcmp(expathin, expathout)) {
         fprintf(stderr,"You are putting the index dbs in input directory\n");
     }
+
+    *work = new_work;
 
     return 0;
 }
@@ -475,7 +475,7 @@ int main(int argc, char *argv[]) {
         }
 
         /* get first work item by validating source path */
-        struct work root;
+        struct work *root;
         if (validate_source(&pa.in, roots[i], &root) != 0) {
             continue;
         }
@@ -484,9 +484,9 @@ int main(int argc, char *argv[]) {
          * manually get basename of provided path since
          * there is no source for the basenames
          */
-        root.basename_len = root.name_len - root.root_parent.len;
+        root->basename_len = root->name_len - root->root_parent.len;
 
-        struct work *copy = compress_struct(pa.in.compress, &root, sizeof(root));
+        struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
         QPTPool_enqueue(pool, 0, processdir, copy);
         i++;
     }

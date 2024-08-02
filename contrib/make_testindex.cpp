@@ -470,10 +470,9 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
 
         const std::size_t bucket = bucket_rng(gen);
 
-        struct work work;
+        struct work *work = new_work_with_name("", s.str().c_str());
         struct entry_data ed;
 
-        SNPRINTF(work.name, MAXPATH, "%s", s.str().c_str());
         ed.type = 'f';
         ed.linkname[0] = '\0';
 
@@ -501,7 +500,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         ed.statuso.st_atime = std::max(ed.statuso.st_ctime, (time_t) time_rng(gen));
         ed.statuso.st_mtime = std::max(ed.statuso.st_ctime, (time_t) time_rng(gen));
 
-        work.pinode   = rng(gen);
+        work->pinode   = rng(gen);
         ed.crtime     = rng(gen);
         ed.ossint1    = rng(gen);
         ed.ossint2    = rng(gen);
@@ -512,7 +511,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         sumit(&summary, &ed);
 
         // insert the row
-        insertdbgo(&work, &ed, res);
+        insertdbgo(work, &ed, res);
 
         // store stats in local variables first
         // to prevent lock contention and
@@ -520,6 +519,8 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         // the transaction ends
         curr_size += ed.statuso.st_size;
         curr_sizes.push_back(ed.statuso.st_size);
+
+        free(work);
     }
 
     // complete the transaction
@@ -547,10 +548,9 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     }
 
     // summarize this directory
-    struct work work;
+    struct work *work = new_work_with_name("", arg->path.c_str());
     struct entry_data ed;
 
-    SNPRINTF(work.name, MAXPATH, "%s", arg->path.c_str());
     ed.type = 'd';
     ed.linkname[0] = '\0';
 
@@ -584,7 +584,8 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     ed.ossint3 = rng(gen);
     ed.ossint4 = rng(gen);
 
-    insertsumdb(on_disk, work.name, &work, &ed, &summary);
+    insertsumdb(on_disk, work->name, work, &ed, &summary);
+    free(work);
 
     sqlite3_close(on_disk);
 

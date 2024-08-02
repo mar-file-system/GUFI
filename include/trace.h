@@ -84,7 +84,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
 
 /* convert a formatted string to a work struct or attach name */
 int linetowork(char *line, const size_t len, const char delim,
-               struct work *work, struct entry_data *ed);
+               struct work **work, struct entry_data *ed);
 
 int *open_traces(char **trace_names, size_t trace_count);
 void close_traces(int *traces, size_t trace_count);
