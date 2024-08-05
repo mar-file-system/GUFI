@@ -389,12 +389,14 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
-            DIR *dir, trie_t *skip_names, const int skip_db,
+            DIR *dir, const int skip_db,
             QPTPoolFunc_t processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters) {
     if (!work) {
         return 1;
     }
+
+    trie_t *skip_names = in->skip;
 
     struct descend_counters ctrs;
     memset(&ctrs, 0, sizeof(ctrs));

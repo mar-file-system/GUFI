@@ -192,7 +192,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                  */
                 descend(ctx, id, pa,
                         &pa->in, passmywork, ed.statuso.st_ino,
-                        dir, pa->in.skip, 0,
+                        dir, 0,
                         processdir, NULL, NULL,
                         NULL);
 

@@ -269,8 +269,7 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* process children */
     descend(ctx, id, args, in,
-            work, st.st_ino, dir,
-            in->skip, 0,
+            work, st.st_ino, dir, 0,
             cpr_dir,
             enqueue_nondir, &qptp_vals,
             NULL);
