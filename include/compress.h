@@ -90,7 +90,7 @@ typedef struct compressed {
 void *compress_struct(const int comp, void *src, const size_t struct_len);
 
 /* initialize dst with pointer to valid buffer */
-int decompress_struct(void **dst, void *src, const size_t struct_len);
+void decompress_struct(void **dst, void *src, const size_t struct_len);
 
 /*
  * used is the struct that was used for operations (decompressed or original data)
