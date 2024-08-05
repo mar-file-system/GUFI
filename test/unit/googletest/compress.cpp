@@ -67,9 +67,10 @@ OF SUCH DAMAGE.
 #include "compress.h"
 
 // only visible here
+#define TEST_DATA_LEN 1ULL << 10
 typedef struct {
     compressed_t comp;
-    char data[1ULL << 10];
+    char data[TEST_DATA_LEN];
 } data_t;
 
 static const size_t DATA_LEN = sizeof(data_t);
@@ -88,7 +89,7 @@ TEST(compress, off) {
     EXPECT_EQ(c->len, (size_t) 0);
 
     data_t *decompressed = nullptr;
-    EXPECT_EQ(decompress_struct((void **) &decompressed, compressed, DATA_LEN), 0);
+    decompress_struct((void **) &decompressed, compressed, DATA_LEN);
     EXPECT_EQ(decompressed, compressed);
 
     free_struct(decompressed, compressed, 0);
@@ -109,8 +110,10 @@ TEST(compress, on) {
 
     data_t stack;
     data_t *decompressed = &stack;
-    EXPECT_EQ(decompress_struct((void **) &decompressed, compressed, DATA_LEN), 0);
+    decompress_struct((void **) &decompressed, compressed, DATA_LEN);
     EXPECT_NE(decompressed, compressed);
+
+    EXPECT_EQ(memcmp(src.data, decompressed->data, TEST_DATA_LEN), 0);
 
     // compressed was freed, decompressed points to stack address
     free_struct(decompressed, compressed, 0);
@@ -153,16 +156,5 @@ TEST(compress_zlib, bad) {
     EXPECT_EQ(dst->len, (std::size_t) 0);
 
     free(dst);
-}
-
-TEST(decompress_zlib, bad) {
-    compressed_t src; // should not be freed
-    src.yes = 1;
-    src.len = 0;
-
-    compressed_t dst;
-    compressed_t *dstp = &dst;
-
-    ASSERT_NO_THROW(decompress_struct((void **) &dstp, &src, sizeof(src)));
 }
 #endif

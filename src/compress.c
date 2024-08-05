@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -77,8 +78,30 @@ static int compress_zlib(void *dst, size_t *dst_len, void *src, const size_t src
     return compress(dst, dst_len, src, src_len);
 }
 
-static int decompress_zlib(void *dst, size_t *dst_len, void *src, const size_t src_len) {
-    return uncompress(dst, dst_len, src, src_len);
+static void decompress_zlib(void *dst, size_t *dst_len, void *src, const size_t src_len) {
+    int rc = uncompress(dst, dst_len, src, src_len);
+    switch (rc) {
+        case Z_OK:
+            return;
+        /*
+         * Z_BUF_ERROR and Z_DATA_ERROR indicate a bug in this program and
+         * should never happen, so panic if they do.
+         */
+        case Z_BUF_ERROR:
+        case Z_DATA_ERROR:
+            fprintf(stderr, "BUG: uncompress() failed: rc = %d\n", rc);
+            exit(EXIT_FAILURE);
+        /*
+         * Z_MEM_ERROR could occur, but there is no point in continuing
+         * if we can't allocate memory.
+         */
+        case Z_MEM_ERROR:
+            fprintf(stderr, "uncompress() failed: rc = %d\n", rc);
+            exit(EXIT_FAILURE);
+        default:
+            fprintf(stderr, "uncompress() failed: unexpected error: rc = %d\n", rc);
+            exit(EXIT_FAILURE);
+    }
 }
 #endif
 
@@ -118,7 +141,7 @@ void *compress_struct(const int comp, void *src, const size_t struct_len) {
     return dst;
 }
 
-int decompress_struct(void **dst, void *src, const size_t struct_len) {
+void decompress_struct(void **dst, void *src, const size_t struct_len) {
     /* not checking src == NULL */
     compressed_t *comp = (compressed_t *) src;
     if (comp->yes) {
@@ -126,14 +149,12 @@ int decompress_struct(void **dst, void *src, const size_t struct_len) {
         decomp->len = struct_len - COMP_OFFSET;
 
         #if HAVE_ZLIB
-        if (decompress_zlib(((unsigned char *) *dst) + COMP_OFFSET, &decomp->len,
-                            ((unsigned char *)  src) + COMP_OFFSET,    comp->len) != Z_OK) {
-            return 1;
-        }
+        decompress_zlib(((unsigned char *) *dst) + COMP_OFFSET, &decomp->len,
+                        ((unsigned char *)  src) + COMP_OFFSET,    comp->len);
         #endif
 
         free(src);
-        return 0;
+        return;
     }
 
     /*
@@ -141,8 +162,6 @@ int decompress_struct(void **dst, void *src, const size_t struct_len) {
      * data was not compressed - use original pointer
      */
     *dst = src;
-
-    return 0;
 }
 
 void free_struct(void *used, void *data, const size_t recursion_level) {
