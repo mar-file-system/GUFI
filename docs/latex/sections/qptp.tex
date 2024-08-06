@@ -82,32 +82,79 @@ This function can be changed during initialization.
 Because work items are enqueued in parallel while work items are
 processed, popping off work items one at a time results in one lock
 per removal that might experience contention while the queue is being
-modified. In \qptp, when a thread pops off work for processing, {\bf
- all} work items in the queue are removed, resulting in the removal
-of multiple work items with only a single lock that might experience
-contention. All work is processed before the thread returns to the
-work queue to find more work.
+modified. In \qptp, when a thread claims (pops off) work for
+processing, {\bf all} work items in the waiting work queue are moved
+to the claimed work queue, resulting in the removal of multiple work
+items with only a single lock that might experience contention. All
+claimed work is processed before the thread returns to the work queue
+to find more work.
 
-There exists a second work queue, called the deferred work queue, that
+There exists another work queue called the deferred work queue, that
 is pushed to if the thread pool is initialized with a non-zero
 \texttt{queue\_limit}. Work items are placed in the deferred work
-queue when the normal work queue has more than \texttt{queue\_limit}
-items enqueued. The deferred work queue is only processed if the work
-queue is empty when the worker thread goes to look for more work. The
-work queue may still be pushed to if it was recently moved for
-processing (since the work queue now has as size of 0). This changes
-the order that work is processed, allowing for work to drain, reducing
-memory pressure, while still continuously
+queue when the waiting work queue has more than \texttt{queue\_limit}
+items enqueued. The deferred work queue is only processed if the
+waiting work queue is empty when the worker thread goes to look for
+more work. The work queue may still be pushed to if it was recently
+moved for processing (since the waiting work queue now has a size of
+0). This changes the order that work is processed, allowing for work
+to drain, reducing memory pressure, while still continuously
 processing work when there is work present.
 
-If a thread discovers that it does not have work items in either queue
-but the thread pool still has outstanding work, it will search for
-more work in other threads. If work items are found, the thread will
-steal some of them, causing the stolen work items to experience less
-latency between enqueuing and processing. Note that when work items
-are stolen, the work queue is searched first, and if nothing is found,
-the deferred queue is searched next, instead of the next thread's work
-queue.
+If a thread discovers that it does not have work items in either of
+its own queues but the thread pool still has outstanding work, it will
+search for more work in the waiting and deferred work queues of other
+threads. If work items are found, the thread will steal at least one
+item, causing the stolen work items to experience less latency between
+enqueuing and processing. Note that when work items are stolen, the
+work queue is searched first, and if nothing is found, the deferred
+queue is searched next, instead of the next thread's work queue.
+
+If no work can be stolen from the two queues in all threads, the
+thread will attempt to take work from the claimed work queue. This is
+done so that long running jobs do not prevent claimed work from being
+processed. This also makes \qptp behave more like thread pools that
+pull one work item off at a time and thus always process work when
+work is available. This should be considered a last-ditch attempt to
+acquire work, and should not occur too often.
+
+\begin{lstlisting}[language=C++,
+    frame=lines,
+    keepspaces,
+    tabsize=4,
+    caption=Queue Selection Order When Stealing Work,
+    captionpos=b]
+stolen = 0;
+
+for(i = 0; i < thread_count; i++) {
+    if (id == i) {
+        continue;
+    }
+
+    stolen = steal_work_from(i, waiting);
+    if (stolen > 0) {
+        break;
+    }
+
+    stolen = steal_work_from(i, deferred);
+    if (stolen > 0) {
+        break;
+    }
+}
+
+if (stolen == 0) {
+    for(i = 0; i < thread_count; i++) {
+        if (id == i) {
+            continue;
+        }
+
+        stolen = steal_work_from(i, claimed)
+        if (stolen > 0) {
+            break;
+        }
+    }
+}
+\end{lstlisting}
 
 \subsubsection{Usage}
 \begin{enumerate}
@@ -140,9 +187,9 @@ queue.
 
   \texttt{QPTPool\_set\_steal} sets the numerator and denominator of
   the multiplier used when work items are being stolen from other
-  threads. For the first queue where \texttt{queue.size * numerator /
-  denominator} results in at least 1 work item, that many work items
-  will be taken from the front of the queue.
+  threads. If the queue being inspected has at least one work item on
+  it, \texttt{max(queue.size * numerator / denominator, 1)} work items
+  are taken from the front of the queue.
 
 \item Getting Properties:
 
@@ -155,23 +202,47 @@ queue.
 
 \item Add work:
 
-  \texttt{QPTPool\_enqueue(pool, id, function, work);}
+  \begin{itemize}
+    \item \texttt{QPTPool\_enqueue(pool, id, function, work);}
 
-  The function passed into \texttt{QPTPool\_enqueue} must match the
-  signature found in \texttt{QueuePerThreadPool.h}. The \texttt{work} argument
-  will only be accessible to the thread processing this work.
+    The function passed into \texttt{QPTPool\_enqueue} must match the
+    signature found in \texttt{QueuePerThreadPool.h}. The
+    \texttt{work} argument will only be accessible to the thread
+    processing this work.
 
-  The thread that will receive the new work item is not \texttt{id}.
-  Rather, \texttt{id} is treated as the source thread id and
-  \texttt{threads[id]->next\_queue} will be where the new work item is
-  enqueued.
+    The thread that will receive the new work item is not \texttt{id}.
+    Rather, \texttt{id} is treated as the source thread id and
+    \texttt{threads[id]->next\_queue} will be where the new work item
+    is enqueued.
+
+    \item \texttt{QPTPool\_enqueue\_here(pool, id, queue, func, work);}
+
+    This function allows for work to be explicitly placed into the
+    selected queue at thread \texttt{id} instead of using the next
+    thread selection function.
+  \end{itemize}
+
+\item Wait for work to be completed (optional):
+
+  \begin{itemize}
+    \item \texttt{QPTPool\_wait\_lte(pool, count);}
+
+      This function waits until the amount of work to be done is less
+      than or equal to \texttt{count}.
+
+    \item \texttt{QPTPool\_wait(pool);}
+
+      This function waits until all existing work to be done. This
+      function is just \texttt{QPTPool\_wait\_lte(pool, 0);}
+  \end{itemize}
 
 \item Wait for all work to be completed (threads are joined):
 
-  \texttt{QPTPool\_wait(pool);}
+  \texttt{QPTPool\_stop(pool);}
 
   This function exists to allow for the collection of statistics
-  before the context is destroyed.
+  before the context is destroyed. Note that \texttt{QPTPool\_wait}
+  does not have to be called before calling this function.
 
 \item Destroy the pool context:
 

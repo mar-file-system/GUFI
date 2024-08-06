@@ -60,52 +60,32 @@
 
 
 
-\documentclass{article}
+\subsection{\gufisqlite}
+\gufisqlite is a simple program that imitates most of the
+\texttt{sqlite3} cli while providing GUFI specific functions.  The
+main difference from the \texttt{sqlite3} cli is that ''dot commands''
+are not supported.
 
-% Useful packages
-\usepackage{fixltx2e}
-\usepackage{float}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{listings}
-\usepackage{rotating}
-\usepackage{tabularx}
-\usepackage{tikz}
-\usepackage{verbatim}
-\usepackage{GUFIText}
+The difference between \gufisqlite and \querydbs is that \querydbs is
+intended for parsing \gufiquery \texttt{-O} output, and has built-in
+operations for automatically doing so, whereas \gufisqlite simply
+forwards commands to \texttt{sqlite3}.
 
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=blue
-}
+\subsubsection{Flags}
+\begin{table} [H]
+  \centering
+  \begin{tabular}{l|l}
+    Flag & Functionality \\
+    \hline
+    -h & help manual \\
+    \hline
+    -d \textless delim\textgreater & delimiter (one char)  [use 'x' for 0x1E] \\
+    \hline
+  \end{tabular}
+  \caption{\gufisqlite Flags and Arguments}
+\end{table}
 
-\usetikzlibrary{positioning}
+\subsubsection{Usage}
+\gufisqlite \texttt{[options] [db [SQL]...]}
 
-\setcounter{tocdepth}{4}
-\setcounter{secnumdepth}{4}
-
-\title{GUFI Administrator's Guide}
-\author{GUFI Developers}
-
-\begin{document}
-
-\maketitle
-
-\tableofcontents
-\include{sections/license}
-\include{sections/introduction}
-\include{sections/dependencies}
-\include{sections/download}
-\include{sections/build}
-\include{sections/install}
-\include{sections/schema}
-\include{sections/indexing}
-\include{sections/postindexing}
-\include{sections/querying}
-\include{sections/utility}
-\include{sections/deploy}
-
-\end{document}
+If no SQL statements are passed in, SQL statements will be read in from stdin

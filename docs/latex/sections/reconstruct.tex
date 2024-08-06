@@ -60,52 +60,86 @@
 
 
 
-\documentclass{article}
+\subsection{Source Tree Reconstruction}
 
-% Useful packages
-\usepackage{fixltx2e}
-\usepackage{float}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{listings}
-\usepackage{rotating}
-\usepackage{tabularx}
-\usepackage{tikz}
-\usepackage{verbatim}
-\usepackage{GUFIText}
+Occasionally, it may be useful to reconstruct the original source tree
+structure. Two utility tools have been created to do so: \gufitracedir
+and \gufiindexdir. As their names imply, they convert traces and index
+and convert them back into source directories, with files and
+symlinks. Note that currently, files are created and left with the
+size at 0. They are not set to their real sizes because users likely
+do not have the storage space available to them. Files with hole are
+not created with \texttt{fallocate(2)} in order to not use
+non-portable functions. This may change in the future.
 
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=blue
-}
+Note that \texttt{gufi\_index2trace} is currently not available, but
+may be in the future.
 
-\usetikzlibrary{positioning}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    state/.style={draw = black, circle, minimum width = 2cm, very thick},
+    arrow/.style={black, ->, line width = 2pt}
+  ]
+\begin{scope}[on grid]
+\node[state] (dir)   {dir};
+\node[state] (trace) [below right=6cm and 5cm of dir] {trace};
+\node[state] (index) [right=10cm of dir] {index};
+\end{scope}
 
-\setcounter{tocdepth}{4}
-\setcounter{secnumdepth}{4}
+\path (dir)   edge [arrow, bend right = -20] node [midway, above] {\gufidirindex}   (index);
+\path (index) edge [arrow, bend left  =  20] node [midway, above] {\gufiindexdir}   (dir);
 
-\title{GUFI Administrator's Guide}
-\author{GUFI Developers}
+\path (dir)   edge [arrow, bend right = -20] node [midway, below] {\gufidirtrace}   (trace);
+\path (trace) edge [arrow, bend left  =  20] node [midway, below] {\gufitracedir}   (dir);
 
-\begin{document}
+\path (trace) edge [arrow, bend right = -20] node [midway, below] {\gufitraceindex} (index);
+\end{tikzpicture}
+\caption{Tools for Transforming Between Source Trees, Traces, and Indexes}
+\end{figure}
 
-\maketitle
+\subsubsection{\gufitracedir}
+\paragraph{Flags}
+\begin{table} [H]
+  \centering
+  \begin{tabular}{l|l}
+    Flag & Functionality \\
+    \hline
+    -h & help manual \\
+    \hline
+    -H & Show assigned input values \\
+    \hline
+    -n \textless num\_threads\textgreater & define number of threads to use \\
+    \hline
+    -d \textless delim\textgreater & delimiter (one char)  [use 'x' for 0x1E] \\
+    \hline
+    -x & pull xattrs from source file-sys into GUFI \\
+    \hline
+  \end{tabular}
+  \caption{\gufitracedir Flags and Arguments}
+\end{table}
 
-\tableofcontents
-\include{sections/license}
-\include{sections/introduction}
-\include{sections/dependencies}
-\include{sections/download}
-\include{sections/build}
-\include{sections/install}
-\include{sections/schema}
-\include{sections/indexing}
-\include{sections/postindexing}
-\include{sections/querying}
-\include{sections/utility}
-\include{sections/deploy}
+\paragraph{Usage} ~\\\\
+\gufitracedir \texttt{[options] trace\_file... output\_dir}
 
-\end{document}
+\subsubsection{\gufiindexdir}
+\paragraph{Flags}
+\begin{table} [H]
+  \centering
+  \begin{tabular}{l|l}
+    Flag & Functionality \\
+    \hline
+    -h & help manual \\
+    \hline
+    -H & Show assigned input values \\
+    \hline
+    -n \textless num\_threads\textgreater & define number of threads to use \\
+    \hline
+    -x & pull xattrs from source file-sys into GUFI \\
+    \hline
+  \end{tabular}
+  \caption{\gufiindexdir Flags and Arguments}
+\end{table}
+
+\paragraph{Usage} ~\\\\
+\gufiindexdir \texttt{[options] input\_dir output\_dir}

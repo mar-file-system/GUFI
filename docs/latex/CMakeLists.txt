@@ -94,8 +94,11 @@ set(gufi_developer_inputs
     sections/querying.tex
     sections/gufi_query.tex
     sections/querydbs.tex
+    sections/gufi_sqlite3.tex
     sections/addqueryfuncs.tex
     sections/gufi_stat_bin.tex
+    sections/utility.tex
+    sections/reconstruct.tex
     sections/implementation.tex
     sections/qptp.tex
     sections/bottomup.tex
@@ -123,8 +126,11 @@ set(gufi_administrator_inputs
     sections/querying.tex
     sections/gufi_query.tex
     sections/querydbs.tex
+    sections/gufi_sqlite3.tex
     sections/addqueryfuncs.tex
     sections/gufi_stat_bin.tex
+    sections/utility.tex
+    sections/reconstruct.tex
     sections/deploy.tex
     )
 

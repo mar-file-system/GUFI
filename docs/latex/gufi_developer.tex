@@ -67,8 +67,10 @@
 \usepackage{float}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{listings}
 \usepackage{rotating}
 \usepackage{tabularx}
+\usepackage{tikz}
 \usepackage{verbatim}
 \usepackage{GUFIText}
 
@@ -79,6 +81,8 @@
     linkcolor=black,
     urlcolor=blue
 }
+
+\usetikzlibrary{positioning}
 
 \setcounter{tocdepth}{4}
 \setcounter{secnumdepth}{4}
@@ -101,5 +105,7 @@
 \include{sections/indexing}
 \include{sections/postindexing}
 \include{sections/querying}
+\include{sections/utility}
 \include{sections/implementation}
+
 \end{document}
