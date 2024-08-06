@@ -133,6 +133,7 @@ int main(int argc, char *argv[])
     if (in.helped)
         sub_help();
     if (idx < 0) {
+        input_fini(&in);
         return EXIT_FAILURE;
     }
 
@@ -144,6 +145,7 @@ int main(int argc, char *argv[])
 
     if (!(db = opendb(SQLITE_MEMORY, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL))) {
         fprintf(stderr, "Error: Unable to open in-memory database.\n");
+        input_fini(&in);
         return EXIT_FAILURE;
     }
 
@@ -253,6 +255,7 @@ int main(int argc, char *argv[])
   /* done: */
 
    closedb(db);
+   input_fini(&in);
 
    return rc;
 }

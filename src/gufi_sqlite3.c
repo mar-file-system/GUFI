@@ -96,6 +96,7 @@ int main(int argc, char *argv[]) {
                          0, 1, NULL, NULL);
     if (!db) {
         fprintf(stderr, "Error: Could not open database file \"%s\"\n", dbname);
+        input_fini(&in);
         return EXIT_FAILURE;
     }
 
@@ -138,6 +139,7 @@ int main(int argc, char *argv[]) {
     }
 
     closedb(db);
+    input_fini(&in);
 
     return err?EXIT_FAILURE:EXIT_SUCCESS;
 }

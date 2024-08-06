@@ -640,6 +640,7 @@ static int processfin(struct PoolArgs *pa) {
     trie_free(pa->fls);
     trie_free(pa->dirs);
     free(pa->ta);
+    input_fini(&pa->in);
 
     return 0;
 }
@@ -670,8 +671,10 @@ int main(int argc, char *argv[]) {
     if (pa.in.helped)
         sub_help();
 
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&pa.in);
         return -!pa.in.helped;
+    }
     else {
         INSTALL_STR(&pa.in.name, argv[idx++]);
 
@@ -681,6 +684,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (validate_inputs(&pa.in)) {
+        input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
@@ -692,10 +696,12 @@ int main(int argc, char *argv[]) {
         struct stat st;
         if (lstat(pa.in.nameto.data, &st) != 0) {
             fprintf(stdout, "directory to place gufi dbs problem for %s\n", pa.in.nameto.data);
+            input_fini(&pa.in);
             return EXIT_FAILURE;
         }
         if (!S_ISDIR(st.st_mode)) {
             fprintf(stdout, "directory to place gufi dbs is not a directory\n");
+            input_fini(&pa.in);
             return EXIT_FAILURE;
         }
     }
@@ -708,6 +714,7 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
+        input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
