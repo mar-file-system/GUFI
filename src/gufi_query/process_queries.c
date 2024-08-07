@@ -138,11 +138,9 @@ static size_t descend2(QPTPool_t *ctx,
             }
 
             gqw_t child;
-            memset(&child, 0, sizeof(child)); /* zero padding */
+            memset(&child, 0, sizeof(child));
 
             child.work.basename_len = len;
-            child.work.fullpath = NULL;
-            child.work.fullpath_len = 0;
 
             descend_timestamp_start(dts, snprintf_call);
             /* append entry name to directory */

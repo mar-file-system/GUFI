@@ -454,7 +454,10 @@ int parse_cmd_line(int         argc,
 
       case 'k':
           {
-              refstr_t skipfile;
+              refstr_t skipfile = {
+                  .data = NULL,
+                  .len = 0,
+              };
               INSTALL_STR(&skipfile, optarg);
               const ssize_t added = setup_directory_skip(in->skip, skipfile.data);
               if (added < 0) {

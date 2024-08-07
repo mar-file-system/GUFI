@@ -1330,7 +1330,7 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
     /*     return NULL; */
     /* } */
 
-    struct xattr_db *xdb = malloc(sizeof(struct xattr_db));
+    struct xattr_db *xdb = calloc(1, sizeof(struct xattr_db));
     mode_t xattr_db_mode = 0;
 
     /* set the relative path in xdb */

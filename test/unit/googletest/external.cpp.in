@@ -160,7 +160,7 @@ TEST(external, read_file) {
 
     struct work work;
     memset(&work, 0, sizeof(work));
-    EXPECT_EQ(strncpy(work.name, filename, 6), work.name);
+    EXPECT_EQ(strncpy(work.name, filename, 7), work.name);
 
     // skip checking path is valid db
     in.check_extdb_valid = false;
