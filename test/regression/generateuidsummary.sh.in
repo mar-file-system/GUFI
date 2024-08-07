@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="generateuidsummary.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "generateuidsummary" 1
 
 (
     run_no_sort "${GENERATEUIDSUMMARY} \"${INDEXROOT}\" ${THREADS}"
@@ -74,7 +72,8 @@ OUTPUT="generateuidsummary.out"
 
     pull_ug_summary_columns "uid" "summary" " WHERE rectype == 1"
     pull_ug_summary_columns "uid" "vsummaryuser"
-) | tee "${OUTPUT}"
+) | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/generateuidsummary.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/generateuidsummary.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

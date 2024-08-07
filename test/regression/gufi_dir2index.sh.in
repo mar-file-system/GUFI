@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_dir2index.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_dir2index" 1
 
 (
 echo "# ${GUFI_DIR2INDEX} help" | replace
@@ -77,7 +75,7 @@ run_no_sort "${GUFI_DIR2INDEX}"
 
     # generate the index
     # shellcheck disable=SC2016
-    out=$(${GUFI_DIR2INDEX} -x "${SRCDIR}" "${SEARCH}" | @AWK@ '{ print "    " $0 }')
+    out=$(${GUFI_DIR2INDEX} -x "${SRCDIR}" "${SEARCH}" | "${AWK}" '{ print "    " $0 }')
 
     src=$(find "${SRCDIR}" | sort)
 
@@ -86,13 +84,13 @@ run_no_sort "${GUFI_DIR2INDEX}"
     echo "Index Everything:"
     echo "    Source Directory:"
     # shellcheck disable=SC2016
-    echo "${src}" | @AWK@ '{ printf "        " $0 "\n" }'
+    echo "${src}" | "${AWK}" '{ printf "        " $0 "\n" }'
     echo
     echo "${out}"
     echo
     echo "    GUFI Index:"
     # shellcheck disable=SC2016
-    echo "${index}" | @AWK@ '{ printf "        " $0 "\n" }'
+    echo "${index}" | "${AWK}" '{ printf "        " $0 "\n" }'
     echo
 )
 
@@ -104,7 +102,7 @@ do
 
     # generate the index
     # shellcheck disable=SC2016
-    out=$(${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${SEARCH}" | @AWK@ '{ print "    " $0 }')
+    out=$(${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${SEARCH}" | "${AWK}" '{ print "    " $0 }')
 
     src=$(find "${SRCDIR}" -maxdepth ${level} | sort)
 
@@ -113,13 +111,13 @@ do
     echo "Index up to level ${level}:"
     echo "    Source Directory:"
     # shellcheck disable=SC2016
-    echo "${src}" | @AWK@ '{ printf "        " $0 "\n" }'
+    echo "${src}" | "${AWK}" '{ printf "        " $0 "\n" }'
     echo
     echo "${out}"
     echo
     echo "    GUFI Index:"
     # shellcheck disable=SC2016
-    echo "${index}" | @AWK@ '{ printf "        " $0 "\n" }'
+    echo "${index}" | "${AWK}" '{ printf "        " $0 "\n" }'
     echo
 done
 echo
@@ -147,7 +145,8 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"
 
 echo "# bad thread count"
 run_no_sort "${GUFI_DIR2INDEX} -n 18446744073709551615 \"${SRCDIR}\" \"${SEARCH}\""
-) | remove_indexing_time | replace | tee "${OUTPUT}"
+) | remove_indexing_time | replace | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

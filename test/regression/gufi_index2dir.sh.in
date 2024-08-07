@@ -62,21 +62,14 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_index2dir" 1
+source @CMAKE_CURRENT_BINARY_DIR@/os_xattr.sh
 
-OUTPUT="gufi_index2dir.out"
 DST="reconstructed"
 
 cleanup() {
     rm -rf "${DST}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -87,14 +80,22 @@ run_no_sort "${GUFI_INDEX2DIR}"
 run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} -x \"${INDEXROOT}\" \"${DST}\""
 
 echo "# Diff Trees"
-run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+diff <(find "${SRCDIR}" -mindepth 1 | sort | replace) <(find "${DST}" -mindepth 2 | sed "s/${DST//\//\\/}\\///g" | sort) && echo
 
 echo "# Diff xattrs"
-run_no_sort "diff <(find \"${SRCDIR}\" -exec getfattr -m \".*\" -d {} \; | sort) <(find ${DST}/* -exec getfattr -m \".*\" -d {} \; | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+# shellcheck disable=2050
+if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE"  ]] || \
+   [[ "@CMAKE_SYSTEM_NAME@" == "Darwin" ]]
+then
+    diff <(find "${SRCDIR}" -exec "@XATTR@" -l -- {} \; 2>&1 | replace | sort) <(find "${DST}" -mindepth 2 -exec "@XATTR@" -l -- {} \; 2>&1 | replace | sed "s/${DST//\//\\/}\\///g" | sort) && echo
+else
+    GETFATTR_SRCDIR="${SRCDIR/\//}"
+    diff <(find "${SRCDIR}" -exec getfattr -P -m ".*" -d {} \; 2>&1 | replace | sed "s/${GETFATTR_SRCDIR//\//\\/}\\//${BASENAME}\//g" | sort) <(find "${DST}" -mindepth 2 -exec getfattr -P -m ".*" -d {} \; 2>&1 | replace | sed "s/${DST//\//\\/}\\///g" | sort) && echo
+fi
 
 # bad inputs
 
-run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}\" \"${DST}/${SRCDIR}/old_file\""
+run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}\" \"${DST}/${BASENAME}/old_file\""
 
 rm -rf "${SRCDIR}" "${DST}"
 run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}\" \"$(dirname ${DST})\""
@@ -104,7 +105,9 @@ run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}/db.db\" \"${DST}\""
 run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}\" \"\""
 
 run_no_sort "${GUFI_INDEX2DIR} -n 18446744073709551615 \"${INDEXROOT}\" \"${DST}\""
-) | tee "${OUTPUT}"
+) | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_index2dir.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_index2dir.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

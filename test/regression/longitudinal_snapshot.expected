@@ -39,7 +39,7 @@ options:
 # bad flat db path
 $ ln -s "prefix" "flattened_index.db"
 
-$ longitudinal_snapshot.py level "prefix" "flattened_index.db" "longitudinal_snapshot.db" --gufi_query="gufi_query" |& tail -n 2 | head -n 1
+$ longitudinal_snapshot.py level "prefix" "flattened_index.db" "longitudinal_snapshot.db" --gufi_query="gufi_query" 2>&1 | tail -n 2 | head -n 1
 TypeError: "flattened_index.db" is not a regular file
 
 $ rm "flattened_index.db"

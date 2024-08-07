@@ -62,22 +62,13 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_sqlite3.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_sqlite3" 1
 
 DBNAME="test.db"
 
 cleanup() {
     rm -rf "${DBNAME}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -117,7 +108,9 @@ run_no_sort "${GUFI_SQLITE3} \"${SEARCH}\""
 echo "# bad SQL"
 run_no_sort "(echo \"CREATE TABLE;\") |" \
             "${GUFI_SQLITE3}"
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_sqlite3.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_sqlite3.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

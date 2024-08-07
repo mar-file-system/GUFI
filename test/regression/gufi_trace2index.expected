@@ -19,7 +19,7 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          6
 Total Files:         14
 
-$ gufi_trace2index -d "|" trace.0 trace.1 "search"
+$ gufi_trace2index -d "|" trace "search"
 Creating GUFI Index search with 1 threads
 Dirs:                6 (1 empty)
 Files:               14
@@ -140,6 +140,11 @@ Total:               0
 Total Dirs:          0
 Total Files:         0
 
+
+# badtrace:
+$ cat "badtrace"
+prefix|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+prefix/1KB?f?
 
 # file delimiter not found
 $ gufi_trace2index -d "|" -n 2 "badtrace" "search"

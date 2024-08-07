@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="deploy.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "deploy" 1
 
 USER_PATH="user_path"
 # shellcheck disable=SC2153
@@ -73,13 +71,6 @@ SEARCH2="${SEARCH}2"
 cleanup() {
     rm -rf "${USER_PATH}" "${SEARCH2}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -121,7 +112,9 @@ run_no_sort "ln -snfv \"${SEARCH2}\" \"${USER_PATH}\""
 run_sort "${GUFI_FIND}"
 run_sort "${GUFI_LS} -aR"
 run_sort "${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${USER_PATH}\""
-) | replace | tee "${OUTPUT}"
+) | replace | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/deploy.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/deploy.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

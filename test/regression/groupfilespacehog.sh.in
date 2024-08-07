@@ -62,13 +62,12 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="groupfilespacehog.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "groupfilespacehog" 1
 
 (
     run_no_sort "${GROUPFILESPACEHOG} \"${INDEXROOT}\" ${THREADS}"
-) | sed "s/${GROUP_NAME}/${TEST_GROUP_NAME}/g" | tee "${OUTPUT}"
+) | sed "s/${GROUP_NAME}/${TEST_GROUP_NAME}/g" | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/groupfilespacehog.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/groupfilespacehog.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

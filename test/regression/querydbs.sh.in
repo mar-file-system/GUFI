@@ -62,7 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "querydbs" 1
 
 OUTDB="outdb"
 TABLE="out"
@@ -72,16 +72,7 @@ cleanup() {
     rm -f ${OUTDB} ${OUTDB}.*
 }
 
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
 cleanup
-
-OUTPUT="querydbs.out"
 
 (
 echo "# ${QUERYDBS} help" | replace
@@ -110,7 +101,9 @@ run_no_sort "${QUERYDBS} -d '|' -NV \"${TABLE}\" \"SELECT name, size FROM v${TAB
 
 echo "# Attach too many database files"
 run_no_sort "${QUERYDBS} -d '|' -NV \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many} ${OUTDB}.*"
-) | sed "s/${SRCDIR//\//\\/}\\///g;" | tee "${OUTPUT}"
+) | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

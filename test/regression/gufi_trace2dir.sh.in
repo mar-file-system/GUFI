@@ -62,21 +62,13 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_trace2dir" 1
 
-OUTPUT="gufi_trace2dir.out"
 DST="reconstructed"
 
 cleanup() {
     rm -rf "${DST}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -93,10 +85,18 @@ run_no_sort "cat ${TRACES[@]} > \"${TRACE}\""
 run_no_sort "${GUFI_TRACE2DIR} -n ${THREADS} -d \"${DELIM}\" -x \"${TRACE}\" \"${DST}\""
 
 echo "# Diff Trees"
-run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+diff <(find "${SRCDIR}" | replace | sort) <(find "${DST}" -mindepth 1 | sed "s/${DST//\//\\/}\\///g" | sort) && echo
 
 echo "# Diff xattrs"
-run_no_sort "diff <(find \"${SRCDIR}\" -exec getfattr -m \".*\" -d {} \; | sort) <(find ${DST}/* -exec getfattr -m \".*\" -d {} \; | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+# shellcheck disable=2050
+if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE"  ]] || \
+   [[ "@CMAKE_SYSTEM_NAME@" == "Darwin" ]]
+then
+    diff <(find "${SRCDIR}" -exec "@XATTR@" -l -- {} \; | replace | sort) <(find "${DST}" -mindepth 1 -exec "@XATTR@" -l -- {} \; | sed "s/${DST//\//\\/}\\///g" | sort) && echo
+else
+    GETFATTR_SRCDIR="${SRCDIR/\//}"
+    diff <(find "${SRCDIR}" -exec getfattr -P -m ".*" -d {} \; | replace | sed "s/${GETFATTR_SRCDIR//\//\\/}\\//${BASENAME}\//g" | sort) <(find "${DST}" -mindepth 1 -exec getfattr -P -m ".*" -d {} \; | sed "s/${DST//\//\\/}\\///g" | sort) && echo
+fi
 
 (
 cat "${TRACES[@]}"
@@ -108,24 +108,27 @@ run_no_sort "rm -rf \"${DST}\""
 echo "# reconstruct tree with an external database record"
 run_no_sort "${GUFI_TRACE2DIR} -n ${THREADS} -d \"${DELIM}\" -x ${TRACE} \"${DST}\""
 
-run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+echo "# Diff Trees Again"
+diff <(find "${SRCDIR}" | replace | sort) <(find "${DST}" -mindepth 1 | sed "s/${DST//\//\\/}\\///g" | sort) && echo
 
 # bad inputs
 
 run_no_sort "${GUFI_TRACE2DIR} ${BADTRACE} \"${DST}\""
 
 # shellcheck disable=SC2145
-run_no_sort "${GUFI_TRACE2DIR} ${TRACES[@]} \"${SRCDIR}/old_file\""
+run_no_sort "${GUFI_TRACE2DIR} ${TRACES[@]} \"${BASENAME}/old_file\""
 
 # bad dupdir
-run_no_sort "rm -rf \"${DST}/${SRCDIR}/directory/readonly\""
+run_no_sort "rm -rf \"${DST}/${BASENAME}/directory/readonly\""
 # shellcheck disable=SC2094
-head -n 1 "${TRACE}" | sed "s/^.*${DELIM}d${DELIM}/${SRCDIR//\//\\/}\\/old_file\\/dir${DELIM}d${DELIM}/g" >> "${TRACE}"
+head -n 1 "${TRACE}" | sed "s/^.*${DELIM}d${DELIM}/${BASENAME//\//\\/}\\/old_file\\/dir${DELIM}d${DELIM}/g" >> "${TRACE}"
 run_no_sort "${GUFI_TRACE2DIR} -d \"${DELIM}\" ${TRACE} \"${DST}\""
 
 # shellcheck disable=SC2145
 run_no_sort "${GUFI_TRACE2DIR} -n 18446744073709551615 ${TRACES[@]} \"${DST}\""
-) | remove_indexing_time | tee "${OUTPUT}"
+) | remove_indexing_time | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2dir.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2dir.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

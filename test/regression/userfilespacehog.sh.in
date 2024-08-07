@@ -62,13 +62,12 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="userfilespacehog.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "userfilespacehog" 1
 
 (
     run_no_sort "${USERFILESPACEHOG} \"${INDEXROOT}\" ${THREADS}"
-) | sed "s/${USER_NAME}/${TEST_USER_NAME}/g" | tee "${OUTPUT}"
+) | sed "s/${USER_NAME}/${TEST_USER_NAME}/g" | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/userfilespacehog.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/userfilespacehog.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

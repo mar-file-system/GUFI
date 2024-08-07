@@ -684,7 +684,7 @@ $ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t
 % 1024 0 1024 2 0 0 0 - 1KB 0 prefix/1KB 0 664 -rw-rw-r-- 1 prefix/1KB prefix/1KB 1024 1024 0 f
 % 1048576 0 1048576 2 0 0 0 - 1MB 0 prefix/1MB 0 664 -rw-rw-r-- 1 prefix/1MB prefix/1MB 1048576 1048576 0 f
 
-$ gufi_find -empty path_after_expression |& grep "RuntimeError:"
+$ gufi_find -empty path_after_expression 2>&1 | grep "RuntimeError:"
 RuntimeError: gufi_find: unknown predicate `path_after_expression'
 
 $ gufi_find -atime abc
@@ -701,7 +701,7 @@ usage: gufi_find [-help] [-maxdepth levels] [-mindepth levels] [--version]
                  [--aggregate-name name] [--skip-file filename] [--verbose]
 gufi_find: error: argument -atime: abc is not a valid numeric argument
 
-$ gufi_find -unknown-predicate |& grep "RuntimeError:"
+$ gufi_find -unknown-predicate 2>&1 | grep "RuntimeError:"
 RuntimeError: gufi_find: unknown predicate `-unknown-predicate'
 
 $ gufi_find --skip "skip"

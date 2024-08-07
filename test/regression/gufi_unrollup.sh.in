@@ -62,22 +62,9 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
+source @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh "gufi_unrollup"
 
-cleanup() {
-    rollup_tree_cleanup
-}
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
-cleanup
-
-OUTPUT="gufi_unrollup.out"
+rollup_tree_cleanup
 
 (
 echo "# ${GUFI_UNROLLUP} help" | replace
@@ -103,7 +90,9 @@ run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM e
 echo
 run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}/db.db\""
 run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}/badfile\""
-) | sed "s/${SRCDIR//\//\\/}\\///g" | remove_indexing_time | tee "${OUTPUT}"
+) | sed "s/${SRCDIR//\//\\/}\\///g" | remove_indexing_time | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_unrollup.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_unrollup.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+rollup_tree_cleanup
+setup_cleanup

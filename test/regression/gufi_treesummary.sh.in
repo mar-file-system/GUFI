@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_treesummary.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_treesummary" 1
 
 remove_extra() {
     run_no_sort "$@" | sed '/.*int.*/d; /min.*/d; /max.*/d; /^$/d;'
@@ -75,8 +73,8 @@ keep_paths() {
     (
         echo "$" "$@"
         # shellcheck disable=SC2016,SC2294
-        eval "$@" | sed '/^$/d; /tot.*/d; /min.*/d;' | @AWK@ -F "|" '{ print $1 "|" $2 }' | sort
-    ) |& replace
+        eval "$@" | sed '/^$/d; /tot.*/d; /min.*/d;' | "${AWK}" -F "|" '{ print $1 "|" $2 }' | sort
+    ) 2>&1 | replace
 }
 
 query() {
@@ -165,7 +163,8 @@ echo
 echo "# Bad thread count"
 remove_extra "${GUFI_TREESUMMARY} -n 18446744073709551615 \"${INDEXROOT}\""
 echo
-) |& replace | tee "${OUTPUT}"
+) 2>&1 | replace | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

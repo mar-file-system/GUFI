@@ -96,9 +96,9 @@ then
     return 1
 fi
 
-DIR="$(realpath $1)"
+DIR="$1"
 
-source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
+source @CMAKE_CURRENT_BINARY_DIR@/os_xattr.sh
 
 rm -rf "${DIR}"
 mkdir -p "${DIR}"

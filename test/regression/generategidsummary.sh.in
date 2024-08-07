@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="generategidsummary.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "generategidsummary" 1
 
 (
     run_no_sort "${GENERATEGIDSUMMARY} \"${INDEXROOT}\" ${THREADS}"
@@ -74,7 +72,8 @@ OUTPUT="generategidsummary.out"
 
     pull_ug_summary_columns "gid" "summary" " WHERE rectype == 2"
     pull_ug_summary_columns "gid" "vsummarygroup"
-) | tee "${OUTPUT}"
+) | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/generategidsummary.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/generategidsummary.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

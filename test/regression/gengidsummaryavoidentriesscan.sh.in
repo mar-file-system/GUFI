@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gengidsummaryavoidentriesscan.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gengidsummaryavoidentriesscan" 1
 
 (
     run_no_sort "${GENERATEGIDSUMMARY} \"${INDEXROOT}\" ${THREADS}"
@@ -83,8 +81,9 @@ OUTPUT="gengidsummaryavoidentriesscan.out"
     echo "${results}"
     echo
 
-    run_no_sort "@DIFF@ <(echo \"\${expected}\") <(echo \"\${results}\")"
-) | tee "${OUTPUT}"
+    run_no_sort "${DIFF} <(echo \"\${expected}\") <(echo \"\${results}\")"
+) | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gengidsummaryavoidentriesscan.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gengidsummaryavoidentriesscan.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

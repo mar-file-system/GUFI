@@ -12,7 +12,7 @@ dst        directory to place sources under
 
 $ parallel_cpr -n 2 "prefix" "copy"
 
-$ compare <(find "prefix") <(find "copy/prefix") 
+$ compare <(find "prefix") <(find "copy/prefix")
 prefix                                              prefix
 prefix/.hidden                                      prefix/.hidden
 prefix/1KB                                          prefix/1KB
@@ -96,9 +96,9 @@ copy/file_symlink
 copy/leaf_file1
 copy/leaf_file2
 
-$ getfattr -d -m ".*" -- "copy/leaf_file1"
+$ getfattr "copy/leaf_file1"
 
-$ getfattr -d -m ".*" -- "copy/leaf_file2"
+$ getfattr "copy/leaf_file2"
 # file: copy/leaf_file2
 user.name4="value4"
 user.name5="value5"

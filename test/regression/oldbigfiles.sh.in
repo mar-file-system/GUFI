@@ -62,14 +62,13 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="oldbigfiles.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "oldbigfiles" 1
 
 (
     run_no_sort "${OLDBIGFILES} \"${INDEXROOT}\" ${THREADS}"
     run_no_sort "${OLDBIGFILES} \"${INDEXROOT}\" ${THREADS} 1000"
-) | sed "s/${USER_NAME}/${TEST_USER_NAME}/g" | tee "${OUTPUT}"
+) | sed "s/${USER_NAME}/${TEST_USER_NAME}/g" | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/oldbigfiles.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/oldbigfiles.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

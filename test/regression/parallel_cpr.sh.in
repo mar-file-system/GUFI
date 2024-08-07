@@ -62,9 +62,8 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
-
-OUTPUT="parallel_cpr.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "parallel_cpr" 0
+source @CMAKE_CURRENT_BINARY_DIR@/os_xattr.sh
 
 CPR_ROOT="copy"
 
@@ -72,19 +71,12 @@ cleanup() {
     rm -rf "${CPR_ROOT}"
 }
 
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
 cleanup
 
 DIFF_FLAGS="--side-by-side --width 100 --expand-tabs"
 
 # shellcheck disable=SC2050
-if [[ "@DIFF@" =~ .*colordiff ]]
+if [[ "${DIFF}" =~ .*colordiff ]]
 then
     DIFF_FLAGS="${DIFF_FLAGS} --color=no"
 fi
@@ -96,8 +88,8 @@ run_no_sort "${PARALLEL_CPR} -h"
 
 run_no_sort "${PARALLEL_CPR} -n ${THREADS} \"${SRCDIR}\" \"${CPR_ROOT}\""
 
-echo "$ compare <(find \"${SRCDIR}\") <(find \"${CPR_ROOT}/${SRCDIR}\") "
-@DIFF@ ${DIFF_FLAGS} <(find "${SRCDIR}" | sort) <(find "${CPR_ROOT}/${SRCDIR}" | sed 's/copy\///g' | sort)
+echo "$ compare <(find \"${SRCDIR}\") <(find \"${CPR_ROOT}/${SRCDIR}\") " | replace
+"${DIFF}" ${DIFF_FLAGS} <(find "${SRCDIR}" | replace | sort) <(find "${CPR_ROOT}/${BASENAME}" | sed 's/copy\///g' | sort)
 echo
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
@@ -105,15 +97,25 @@ run_no_sort "rm -rf \"${CPR_ROOT}\""
 # re-copy with xattrs
 run_no_sort "${PARALLEL_CPR} -n ${THREADS} -x \"${SRCDIR}\" \"${CPR_ROOT}\""
 
+GETFATTR_SRCDIR="${SRCDIR/\//}"
+
 set +e
-find "${SRCDIR}" | sort | while IFS= read -r name
+find "${BASENAME}" | sort | while IFS= read -r name
 do
-    echo "$ compare xattrs of \"${name}\""
-    @DIFF@ ${DIFF_FLAGS} <(getfattr -P -d -m ".*" -- "${name}") <(getfattr -P -d -m ".*" -- "${CPR_ROOT}/${name}" | sed 's/copy\///g')
+    echo "$ compare xattrs of \"${name}\"" | replace
+
+    # shellcheck disable=2050
+    if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE"  ]] || \
+       [[ "@CMAKE_SYSTEM_NAME@" == "Darwin" ]]
+    then
+        "${DIFF}" ${DIFF_FLAGS} <("@XATTR@" -l -- "${name}") <("@XATTR@" -l -- "${CPR_ROOT}/${name}" | sed 's/copy\///g')
+    else
+        "${DIFF}" ${DIFF_FLAGS} <(getfattr -P -d -m ".*" -- "${name}" | sed "s/${GETFATTR_SRCDIR//\//\\/}\\//${BASENAME}\//g") <(getfattr -P -d -m ".*" -- "${CPR_ROOT}/${name}" | sed 's/copy\///g')
+    fi
 done
 set -e
 
-# copy single files/links
+# copy single files/linkspa
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
 
@@ -121,8 +123,16 @@ run_no_sort "${PARALLEL_CPR}    \"${SRCDIR}/leaf_directory/leaf_file1\" \"${CPR_
 run_no_sort "${PARALLEL_CPR} -x \"${SRCDIR}/leaf_directory/leaf_file2\" \"${CPR_ROOT}\""
 run_no_sort "${PARALLEL_CPR}    \"${SRCDIR}/file_symlink\"              \"${CPR_ROOT}\""
 run_sort    "find \"${CPR_ROOT}\" -not -type d"
-run_no_sort "getfattr -d -m \".*\" -- \"${CPR_ROOT}/leaf_file1\""
-run_no_sort "getfattr -d -m \".*\" -- \"${CPR_ROOT}/leaf_file2\""
+# shellcheck disable=2050
+if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE"  ]] || \
+   [[ "@CMAKE_SYSTEM_NAME@" == "Darwin" ]]
+then
+    run_no_sort "@XATTR@ -l -- \"${CPR_ROOT}/leaf_file1\""
+    run_no_sort "@XATTR@ -l -- \"${CPR_ROOT}/leaf_file2\""
+else
+    run_no_sort "getfattr -d -m \".*\" -- \"${CPR_ROOT}/leaf_file1\""
+    run_no_sort "getfattr -d -m \".*\" -- \"${CPR_ROOT}/leaf_file2\""
+fi
 run_no_sort "readlink \"${CPR_ROOT}/file_symlink\""
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
@@ -151,7 +161,9 @@ run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}/old_file\""
 # bad thread count
 run_no_sort "${PARALLEL_CPR} -n 18446744073709551615 \"${SRCDIR}\" \"${CPR_ROOT}\""
 
-) | tee "${OUTPUT}"
+) | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/parallel_cpr.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/parallel_cpr.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

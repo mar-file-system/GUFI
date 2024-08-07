@@ -62,13 +62,12 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="groupfilespacehogusesummary.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "groupfilespacehogusesummary" 1
 
 (
     run_no_sort "${GROUPFILESPACEHOGUSESUMMARY} \"${INDEXROOT}\" ${THREADS}"
-) | sed "s/${GROUP_NAME}/${TEST_GROUP_NAME}/g" | tee "${OUTPUT}"
+) | sed "s/${GROUP_NAME}/${TEST_GROUP_NAME}/g" | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/groupfilespacehogusesummary.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/groupfilespacehogusesummary.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

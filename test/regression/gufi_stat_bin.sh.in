@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_stat_bin.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_stat_bin" 1
 
 (
 run_no_sort "${GUFI_STAT_BIN} -h"
@@ -107,7 +105,7 @@ echo "# first two columns of terse format"
 for entry in "${fixed_size[@]}"
 do
     # shellcheck disable=SC2016
-    "${GUFI_STAT_BIN}" -j "${INDEXROOT}/${entry}" | @AWK@ '{ print $1 " " $2 }'
+    "${GUFI_STAT_BIN}" -j "${INDEXROOT}/${entry}" | "${AWK}" '{ print $1 " " $2 }'
 done | sort
 echo
 
@@ -142,7 +140,7 @@ for c in "${nonprintable[@]}"
 do
     echo -n "\\${c} -> "
     # shellcheck disable=SC2016
-    "${GUFI_STAT_BIN}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | @AWK@ '{ print $2 }'
+    "${GUFI_STAT_BIN}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | "${AWK}" '{ print $2 }'
 done
 
 # do this separately to not deal with "\\${c}\n" -> "\\\\n"
@@ -181,7 +179,8 @@ run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/db.db"
 
 run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/bad/directory"
 run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/badfile"
-) | replace | tee "${OUTPUT}"
+) | replace | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat_bin.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_stat_bin.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

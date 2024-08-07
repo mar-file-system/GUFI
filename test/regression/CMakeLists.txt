@@ -65,7 +65,7 @@ cmake_minimum_required(VERSION 3.1.0)
 # regression test specific files
 set(CORE
   generatetree.sh
-  os_setfattr.sh
+  os_xattr.sh
   setup.sh
 )
 

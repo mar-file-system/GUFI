@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_treesummary_all.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_treesummary_all" 1
 
 (
 echo "# ${GUFI_TREESUMMARY_ALL} help" | replace
@@ -85,7 +83,8 @@ rm -rf "${SEARCH}/db.db"
 
 echo "# Missing db.db"
 run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\"" | sed '/^Started .*$/d'
-) |& replace | tee "${OUTPUT}"
+) 2>&1 | replace | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary_all.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary_all.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

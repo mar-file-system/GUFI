@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="parallel_rmr.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "parallel_rmr" 1
 
 (
 run_no_sort "${PARALLEL_RMR} -h"
@@ -73,7 +71,8 @@ run_no_sort "${PARALLEL_RMR} -n ${THREADS} \"${INDEXROOT}/directory\" \"${INDEXR
 run_sort    "ls -1 ${INDEXROOT}"
 
 run_no_sort "${PARALLEL_RMR} -n 18446744073709551615 \"${INDEXROOT}\""
-) | tee "${OUTPUT}"
+) | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/parallel_rmr.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/parallel_rmr.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

@@ -63,7 +63,7 @@
 
 set -e
 
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "verifytraceintree" 1
 
 # column indicies for awk (1 based)
 AWK_TYPE=2
@@ -80,16 +80,7 @@ cleanup() {
     rm -rf "${COPY}"
 }
 
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
 cleanup
-
-OUTPUT="verifytraceintree.out"
 
 (
 echo "# ${VERIFYTRACEINTREE} help" | replace
@@ -124,12 +115,12 @@ run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# first line bad delimiter (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "d" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
+"${AWK}" -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "d" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# second line bad delimiter (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "f" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
+"${AWK}" -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "f" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# first line is not a directory (Fail)"
@@ -137,7 +128,7 @@ tail -n +2 "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory add trailing slashes (Pass)"
-sed "s/^${SRCDIR}${DELIM}/${SRCDIR}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
+sed "s/^${BASENAME}${DELIM}/${BASENAME}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory does not exist (Fail)"
@@ -151,24 +142,24 @@ echo "# path exists, but is not directory (Fail)"
     tail -n +3 "${TRACE}"
 ) > "${BADTRACE}"
 # shellcheck disable=SC2016
-filename=$(echo -n "${SEARCH}/"; head -n 1 "${BADTRACE}" | @AWK@ -F "${DELIM}" '{ printf $1 }')
+filename=$(echo -n "${SEARCH}/"; head -n 1 "${BADTRACE}" | "${AWK}" -F "${DELIM}" '{ printf $1 }')
 touch "${filename}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 rm "${filename}"
 
 echo "# directory permission mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "d" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
+"${AWK}" -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "d" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory uid mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "d" { $UID = NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
+"${AWK}" -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "d" { $UID = NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory gid mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "d" { $GID = NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
+"${AWK}" -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "d" { $GID = NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# missing db.db (Fail)"
@@ -182,17 +173,17 @@ run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# non-directory permissions mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "f" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
+"${AWK}" -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "f" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# non-directory uid mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "f" { $UID = NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
+"${AWK}" -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "f" { $UID = NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# non-directory gid mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "f" { $GID = NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
+"${AWK}" -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "f" { $GID = NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# empty line (Pass)"
@@ -202,7 +193,9 @@ echo "# empty line (Pass)"
     echo
 ) > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${SEARCH}\""
-) |& remove_indexing_time | sed '/qptpool.*/d' | tee "${OUTPUT}"
+) 2>&1 | remove_indexing_time | sed '/qptpool.*/d' | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

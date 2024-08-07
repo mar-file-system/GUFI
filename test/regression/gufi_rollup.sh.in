@@ -62,22 +62,9 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
+source @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh "gufi_rollup"
 
-OUTPUT="gufi_rollup.out"
-
-cleanup() {
-    rollup_tree_cleanup
-}
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
-cleanup
+rollup_tree_cleanup
 
 (
 echo "# ${GUFI_ROLLUP} help" | replace
@@ -142,7 +129,7 @@ regen=$("${GUFI_QUERY}" -d "|" -z 1 -T "SELECT totsubdirs, totfiles, totlinks, m
 echo "# Compare treesummary to regenerated treesummary"
 # shellcheck disable=SC2000
 echo "$(echo ${orig} | wc -c) bytes vs $(echo ${regen} | wc -c) bytes"
-@DIFF@ <(echo "${orig}") <(echo "${regen}") && echo "No difference"
+"${DIFF}" <(echo "${orig}") <(echo "${regen}") && echo "No difference"
 
 rm -r "${SEARCH}"
 
@@ -152,7 +139,9 @@ do_tests
 
 echo "# bad thread count"
 run_no_sort "${GUFI_ROLLUP} -n 18446744073709551615 \"${SEARCH}\""
-) | remove_indexing_time | replace | tee "${OUTPUT}"
+) | remove_indexing_time | replace | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_rollup.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_rollup.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+rollup_tree_cleanup
+setup_cleanup

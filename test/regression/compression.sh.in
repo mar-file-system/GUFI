@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="compression.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "compression" 1
 
 D2I="${SEARCH}.d2i"
 T2I="${SEARCH}.t2i"
@@ -72,13 +70,6 @@ T2I="${SEARCH}.t2i"
 cleanup() {
     rm -rf "${D2I}" "${T2I}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -91,7 +82,7 @@ compare_output() {
     INDEX="$1"
     ORIG=$(run_sort "\"${GUFI_QUERY}\" -d \" \"    -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
     COMP=$(run_sort "\"${GUFI_QUERY}\" -d \" \" -e -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
-    run_no_sort "@DIFF@ <(echo '${ORIG}') <(echo '${COMP}' | remove_e)"
+    run_no_sort "${DIFF} <(echo '${ORIG}') <(echo '${COMP}' | remove_e)"
 }
 
 (
@@ -106,7 +97,9 @@ compare_output() {
     compare_output "${INDEXROOT}"
     compare_output "${D2I}/${BASENAME}"
     compare_output "${T2I}/${BASENAME}"
-) | remove_indexing_time | replace | tee "${OUTPUT}"
+) | remove_indexing_time | replace | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/compression.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/compression.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

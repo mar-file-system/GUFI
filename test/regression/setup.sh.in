@@ -65,26 +65,43 @@
 
 set -e
 
-if [[ "$#" -ne "1" ]]
+if [[ "$#" -ne "2" ]]
 then
-    echo "Syntax: $0 <generate index>" 1>&2
+    echo "Syntax: $0 <test name> <generate index>" 1>&2
     exit 1
 fi
 
-GENERATE_INDEX="$1"
+TEST_NAME="$1"
+GENERATE_INDEX="$2"
 
-SRCDIR="prefix"
+TEST_WORKING_DIRECTORY="@TEST_WORKING_DIRECTORY@"
+
+if [[ -z "${TEST_WORKING_DIRECTORY}" ]]
+then
+    TEST_WORKING_DIRECTORY="$(pwd)"
+fi
+
+# create a subdirectory to place individual tests into
+TEST_DIR="${TEST_WORKING_DIRECTORY}/${TEST_NAME}-$(date +%s)"
+TEST_DIR_LATEST="${TEST_WORKING_DIRECTORY}/${TEST_NAME}"
+
+# common test output file name
+# shellcheck disable=SC2034
+TEST_OUTPUT="out"
+
+SRCDIR="${TEST_DIR}/prefix"
 BASENAME="$(basename ${SRCDIR})"
 THREADS=2
 
 TRACE="trace"
-BADTRACE="badtrace"
 TRACES=()
 for (( i = 0; i < THREADS; i++ ));
 do
     TRACES+=("${TRACE}.${i}")
 done
 DELIM="|"
+# shellcheck disable=SC2034
+BADTRACE="badtrace"
 # shellcheck disable=SC2034
 BADDELIM="?"
 
@@ -111,14 +128,38 @@ TEST_GROUP_ID="${TEST_USER_ID}"
 # shellcheck disable=SC2034
 TEST_GROUP_NAME="group"
 
-# always clean up
+# call at end of each test that sources this file
+# clean up if there are no errors
 setup_cleanup() {
-    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${BADTRACE}" "${SEARCH}" "${SKIP}"
+    if [[ -d "${TEST_WORKING_DIRECTORY}" ]]
+    then
+        # remove existing output dir (should never exist) and link to latest output
+        rm -rf "${TEST_DIR}" "${TEST_DIR_LATEST}"
+
+        # find latest output directory
+        PREVIOUS=$(find "${TEST_WORKING_DIRECTORY}" -mindepth 1 -maxdepth 1 -name "${TEST_NAME}-*" -type d | sort -nr | head -n 1)
+
+        # if one exists, create a link to it
+        if [[ -n "${PREVIOUS}" ]]
+        then
+            ln -sf "${PREVIOUS}" "${TEST_DIR_LATEST}"
+        fi
+    fi
 }
 
-trap setup_cleanup EXIT
-
+# always clean up existing data
 setup_cleanup
+
+mkdir -p "${TEST_DIR}"
+
+# link to new test output
+#
+# at end of test, will either point to current output
+# or be changed to previous test output if it exists
+rm -f "${TEST_DIR_LATEST}"               # need this because ln -f is not replacing
+ln -s "${TEST_DIR}" "${TEST_DIR_LATEST}"
+
+cd "${TEST_DIR}"
 
 umask 002
 export TZ=UTC
@@ -186,6 +227,30 @@ GREP="@GREP@"
 
 PWD="$(pwd)"
 
+# shellcheck disable=2050
+if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE"  ]] || \
+   [[ "@CMAKE_SYSTEM_NAME@" == "Darwin" ]]
+then
+    STAT_FORMAT="-f"
+
+    XATTR="@XATTR@"
+
+    replace_xattr() {
+        sed "
+        s/${XATTR//\//\\/} .* \-\- /getfattr /g;
+        "
+    }
+else
+    STAT_FORMAT="--printf"
+
+    replace_xattr() {
+        sed "
+        /getfattr: Removing leading '\/' from absolute path names/d;
+        s/getfattr .* \-\- /getfattr /g;
+        "
+    }
+fi
+
 # common strings that need replacing
 replace() {
     sed "
@@ -232,7 +297,8 @@ replace() {
     /-e                          compress work items/d;
     /Started [0-9]* threads. Successfully completed [0-9]* threads./d;
 
-    s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
+    s/${TEST_DIR//\//\\/}\\///g;
+    s/${INDEXROOT//\//\\/}/${BASENAME//\//\\/}/g;
     s/${CONFIG//\//\\/}/\\/etc\\/GUFI\\/config/g;
     s/${PWD//\//\\/}\\///g;
 
@@ -241,40 +307,40 @@ replace() {
     s/${GREP//\//\\/}/grep/g;
 
     s/[[:space:]]*$//g;
-    "
+    " | replace_xattr
 }
 
 # argparse help output changes slightly between versions
 replace_argparse() {
-    sed 's/optional arguments/options/g; s/\[paths \[paths ...\]\]/\[paths ...\]/g;'
+    sed ${SED_COMPAT} 's/optional arguments/options/g; s/\[paths \[paths ...\]\]/\[paths ...\]/g;'
 }
 
 run_sort() {
-    echo "$" "$@"                             |& replace
+    echo "$" "$@"                                  | replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | sort
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  2>&1 | replace | sort
     echo
 }
 
 run_no_sort() {
-    echo "$" "$@"                             |& replace
+    echo "$" "$@"                                  | replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  2>&1 | replace
     echo
 }
 
 # somewhat force ordering of trace file
 order_tracefile() {
-    @GREP@ -a "^${SRCDIR}${DELIM}"              "$1"
-    @GREP@ -a "^${SRCDIR}/.hidden${DELIM}"      "$1"
-    @GREP@ -a "^${SRCDIR}/1KB${DELIM}"          "$1"
-    @GREP@ -a "^${SRCDIR}/1MB${DELIM}"          "$1"
-    @GREP@ -a "^${SRCDIR}/file_symlink${DELIM}" "$1"
-    @GREP@ -a "^${SRCDIR}/old_file${DELIM}"     "$1"
-    @GREP@ -a "^${SRCDIR}/repeat_name${DELIM}"  "$1"
-    @GREP@ -a "^${SRCDIR}/directory.*${DELIM}"  "$1"
-    @GREP@ -a "^${SRCDIR}/leaf.*${DELIM}"       "$1"
-    @GREP@ -a "^${SRCDIR}/unusual.*${DELIM}"    "$1"
+    @GREP@ -a "^${BASENAME}${DELIM}"              "$1"
+    @GREP@ -a "^${BASENAME}/.hidden${DELIM}"      "$1"
+    @GREP@ -a "^${BASENAME}/1KB${DELIM}"          "$1"
+    @GREP@ -a "^${BASENAME}/1MB${DELIM}"          "$1"
+    @GREP@ -a "^${BASENAME}/file_symlink${DELIM}" "$1"
+    @GREP@ -a "^${BASENAME}/old_file${DELIM}"     "$1"
+    @GREP@ -a "^${BASENAME}/repeat_name${DELIM}"  "$1"
+    @GREP@ -a "^${BASENAME}/directory.*${DELIM}"  "$1"
+    @GREP@ -a "^${BASENAME}/leaf.*${DELIM}"       "$1"
+    @GREP@ -a "^${BASENAME}/unusual.*${DELIM}"    "$1"
 }
 
 remove_indexing_time() {
@@ -296,7 +362,7 @@ pull_ug_summary_columns() {
         DST="${TEST_GROUP_ID}"
     fi
 
-    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | sed "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | sed ${SED_COMPAT} "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
 }
 
 # set some columns to make test easier
@@ -340,8 +406,8 @@ clean_index() {
     if [[ "${ACTUAL}" == "1" ]]
     then
         # directory/subdirectory and directory/subdirectory/repeat_name need their actual inodes
-        DIR="$(stat -c '%i' ${SRCDIR}/directory/subdirectory)"
-        FILE="$(stat -c '%i' ${SRCDIR}/directory/subdirectory/repeat_name)"
+        DIR="$(stat ${STAT_FORMAT} '%i' ${SRCDIR}/directory/subdirectory)"
+        FILE="$(stat ${STAT_FORMAT} '%i' ${SRCDIR}/directory/subdirectory/repeat_name)"
         "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE summary SET inode = '${DIR}' WHERE name == 'subdirectory';"
         "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE entries SET inode = '${FILE}' WHERE name == 'repeat_name';"
         "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE xattrs_pwd SET inode = '${DIR}' WHERE inode == '6';"

@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="longitudinal_snapshot.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "longitudinal_snapshot" 1
 
 FLATDB="flattened_index.db"
 SNAPSHOT="longitudinal_snapshot.db"
@@ -72,13 +70,6 @@ SNAPSHOT="longitudinal_snapshot.db"
 cleanup() {
     rm -f "${FLATDB}" "${SNAPSHOT}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -92,7 +83,7 @@ show_schema() {
     (
         echo "# bad flat db path"
         run_no_sort "ln -s \"${INDEXROOT}\" \"${FLATDB}\""
-        run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" |& tail -n 2 | head -n 1"
+        run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" 2>&1 | tail -n 2 | head -n 1"
         run_no_sort "rm \"${FLATDB}\""
 
         echo "# generate good flat db and snapshot db"
@@ -172,10 +163,12 @@ do_test() {
 (
 "${GUFI_TREESUMMARY_ALL}" "${INDEXROOT}" >/dev/null 2>&1
 
-do_test | tee "${OUTPUT}"
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
+do_test | tee "${TEST_OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${TEST_OUTPUT}"
 
 # longitudinal snapshot does not work with rolled up indexes due to treesummaries not being copied
 )
 
-rm "${OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

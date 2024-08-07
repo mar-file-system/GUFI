@@ -62,18 +62,16 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_stats.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_stats" 1
 
 run() {
     run_sort "$@" | sed "s/${USER_NAME}/${TEST_USER_ID}/g;"
 }
 
 run_uidgid_size() {
-    echo "$" "$@"                             |& replace
+    echo "$" "$@"                             2>&1 | replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | @AWK@ "{ \$1 = ${TEST_USER_ID} ; print }"
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  2>&1 | replace | "${AWK}" "{ \$1 = ${TEST_USER_ID} ; print }"
     echo
 }
 
@@ -187,7 +185,7 @@ then
     run "${GUFI_STATS}    median-leaf-links \"${BASENAME}\""
     run "${GUFI_STATS}    median-leaf-size \"${BASENAME}\""
 fi
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${TEST_OUTPUT}"
 
 EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
 ACTUAL="${EXPECTED}.actual"
@@ -201,5 +199,6 @@ else
     cp "${EXPECTED}" "${ACTUAL}"
 fi
 
-@DIFF@ "${ACTUAL}" "${OUTPUT}"
-rm "${ACTUAL}" "${OUTPUT}"
+"${DIFF}" "${ACTUAL}" "${TEST_OUTPUT}"
+rm "${ACTUAL}" "${TEST_OUTPUT}"
+setup_cleanup

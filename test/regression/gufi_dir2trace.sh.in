@@ -62,22 +62,13 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
-
-OUTPUT="gufi_dir2trace.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_dir2trace" 0
 
 NEWDIR="$(mktemp -d 'XXXXXX')"
 
 cleanup() {
     rm -rf "${NEWDIR}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -95,32 +86,35 @@ echo "/external/db" > "${SRCDIR}/external.gufi"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
 # count output files
-found=$(find "${TRACES[@]}" | wc -l)
+# awk to trime whitespace
+# https://unix.stackexchange.com/a/205854/178853
+# shellcheck disable=SC2016
+found=$(find "${TRACES[@]}" | wc -l | "${AWK}" '{ $1=$1; print } ')
 echo "Expecting ${THREADS} trace files. Found ${found}."
 
 # count lines
 # shellcheck disable=SC2016
-trace_lines=$(cat "${TRACES[@]}" | wc -l | @AWK@ '{print $1 - 1}')
+trace_lines=$(cat "${TRACES[@]}" | wc -l | "${AWK}" '{print $1 - 1}')
 contents=$(find "${SRCDIR}")
 # shellcheck disable=SC2016
-content_lines=$(echo "${contents}" | wc -l | @AWK@ '{print $1}')
+content_lines=$(echo "${contents}" | wc -l | "${AWK}" '{print $1}')
 echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
 # count separators
-columns=$(sed "/^.*${DELIM}e${DELIM}$/d; s/[^${DELIM}]//g;" "${TRACES[@]}" | @AWK@ '{ print length }' | sort | uniq)
+columns=$(sed "/^.*${DELIM}e${DELIM}$/d; s/[^${DELIM}]//g;" "${TRACES[@]}" | "${AWK}" '{ print length }' | sort | uniq)
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
-src=$(find "${SRCDIR}" | sort)
+src=$(find "${SRCDIR}" | sort | replace)
 # shellcheck disable=SC2016
-lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | sed "/\\/external\\/db/d; s/\\/\\//\\//g;" | sort)
+lines=$("${AWK}" -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | sed "/\\/external\\/db/d; s/\\/\\//\\//g;" | sort)
 
 echo "Source Directory:"
 # shellcheck disable=SC2016
-echo "${src}"   | @AWK@ '{ print "    " $1 }'
+echo "${src}"   | "${AWK}" '{ print "    " $1 }'
 echo "Trace File:"
 # shellcheck disable=SC2016
-echo "${lines}" | @AWK@ '{ print "    " $1 }'
+echo "${lines}" | "${AWK}" '{ print "    " $1 }'
 echo
 
 run_no_sort "mkdir \"${SRCDIR}.0\""
@@ -130,8 +124,7 @@ run_no_sort "rm -r \"${SRCDIR}.0\""
 
 echo "# source path is file"
 # shellcheck disable=SC2046,SC2086
-FULLTRACEPATH="$(dirname $(realpath ${TRACE}))"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}/1KB\" \"${TRACE}\"" | sed "s/${FULLTRACEPATH//\//\\/}\\///g;"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}/1KB\" \"${TRACE}\""
 
 echo "# empty source path"
 rm "${TRACES[@]}"
@@ -143,15 +136,17 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${NEWDIR}/ba
 echo "# skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}\" \"${SRCDIR}\" \"${TRACE}\""
 
-# shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}' | sed '/\\/external\\/db/d;'"
+# shellcheck disable=SC2016,SC2145
+run_sort "cat ${TRACES[@]} | ${AWK} -F \"${DELIM}\" '{print \$1}' | sed '/\\/external\\/db/d;'"
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""
 
 echo "# bad thread count"
 run_no_sort "${GUFI_DIR2TRACE} -n 18446744073709551615 \"${SRCDIR}\" \"${TRACE}\""
-) | remove_indexing_time | tee "${OUTPUT}"
+) | remove_indexing_time | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

@@ -62,21 +62,12 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
-source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
-
-OUTPUT="xattrs.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "xattrs" 0
+source @CMAKE_CURRENT_BINARY_DIR@/os_xattr.sh
 
 cleanup() {
     rm -rf "${TRACES[@]}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -168,7 +159,9 @@ run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}\""
 unrolled="$(query)"
 echo -e "${unrolled}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${unrolled}")
-) | remove_indexing_time | tee "${OUTPUT}"
+) | remove_indexing_time | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/xattrs.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/xattrs.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

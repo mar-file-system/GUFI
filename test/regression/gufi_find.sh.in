@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_find.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_find" 1
 
 FPRINT="gufi_query.fprint"
 REFERENCE="not_as_old_file"
@@ -72,13 +70,6 @@ REFERENCE="not_as_old_file"
 cleanup() {
     rm -rf "${FPRINT}" "${REFERENCE}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -112,7 +103,7 @@ run_sort "${GUFI_FIND} -links 1 -type f"          # directory and symlinks chang
 run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
 run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file link name
 # shellcheck disable=SC2016
-run_no_sort "${GUFI_FIND} -ls" | sed "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g;" | @AWK@ '{ if (NF > 10) { $1="0"; $2="0"; $4=1; $7="0"; } print }' | sort -k 11; echo
+run_no_sort "${GUFI_FIND} -ls" | sed "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g;" | "${AWK}" '{ if (NF > 10) { $1="0"; $2="0"; $4=1; $7="0"; } print }' | sort -k 11; echo
 run_sort "${GUFI_FIND} -maxdepth 2"
 run_sort "${GUFI_FIND} -mindepth 3"
 run_sort "${GUFI_FIND} -mmin  +0"
@@ -178,23 +169,25 @@ run_no_sort "${GUFI_QUERY} -a -w -E \"UPDATE entries SET inode = 0, uid = 0, gid
 
 # %H and %l still need fixing
 # shellcheck disable=SC2016
-run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y\" -type f" | @AWK@ '{ if ((NR > 1) && (NF > 8)) { $3=0; $6=0; $7=0; $8=0; } print }' | sort -n -k 2; echo
+run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y\" -type f" | "${AWK}" '{ if ((NR > 1) && (NF > 8)) { $3=0; $6=0; $7=0; $8=0; } print }' | sort -n -k 2; echo
 
 # path must come before expressions
-run_no_sort "${GUFI_FIND} -empty path_after_expression |& @GREP@ \"RuntimeError:\""
+run_no_sort "${GUFI_FIND} -empty path_after_expression 2>&1 | ${GREP} \"RuntimeError:\""
 
 # bad numerical input
 run_no_sort "${GUFI_FIND} -atime abc"
 
 # unknown predicate
-run_no_sort "${GUFI_FIND} -unknown-predicate |& @GREP@ \"RuntimeError:\""
+run_no_sort "${GUFI_FIND} -unknown-predicate 2>&1 | ${GREP} \"RuntimeError:\""
 
 # skip
 run_sort "${GUFI_FIND} --skip \"${SKIP}\""
 
 # bad skip
 run_no_sort "${GUFI_FIND} --skip \"${SKIP}.bad\""
-) | sed 's+@CMAKE_BINARY_DIR@/++g; s/\,\ line\ [0-9]\+\,/, line n,/g;' | tee "${OUTPUT}"
+) | sed 's+@CMAKE_BINARY_DIR@/++g; s/\,\ line\ [0-9]\+\,/, line n,/g;' | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_getfattr.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_getfattr" 1
 
 do_tests() {
     run_no_sort "${GUFI_GETFATTR} --help" | replace_argparse
@@ -215,13 +213,14 @@ do_tests() {
 (
     set -e
 
-    do_tests | replace | tee "${OUTPUT}"
-    @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${OUTPUT}"
+    do_tests | replace | tee "${TEST_OUTPUT}"
+    "${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${TEST_OUTPUT}"
 
     run_no_sort "${GUFI_ROLLUP} \"${SEARCH}\""
 
-    do_tests | replace | tee "${OUTPUT}"
-    @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${OUTPUT}"
+    do_tests | replace | tee "${TEST_OUTPUT}"
+    "${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${TEST_OUTPUT}"
 )
 
-rm "${OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

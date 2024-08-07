@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="deluidgidsummaryrecs.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "deluidgidsummaryrecs" 1
 
 (
     run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name, rectype FROM summary\" \"${INDEXROOT}\""
@@ -75,7 +73,8 @@ OUTPUT="deluidgidsummaryrecs.out"
 
     run_no_sort "${DELUIDGIDSUMMARYRECS} \"${INDEXROOT}\" ${THREADS}"
     run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name, rectype FROM summary\" \"${INDEXROOT}\""
-) | tee "${OUTPUT}"
+) | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/deluidgidsummaryrecs.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/deluidgidsummaryrecs.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

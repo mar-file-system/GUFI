@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
-
-OUTPUT="split_trace.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "split_trace" 0
 
 # shellcheck disable=SC2153
 TRACE0="${TRACE}.0"
@@ -78,17 +76,9 @@ do
     SPLITS+=("${SPLIT_PREFIX}.${i}")
 done
 
-
 cleanup() {
     rm -rf "${TRACE0}" "${SPLIT_PREFIX}" "${SPLITS[@]}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -132,7 +122,7 @@ do
 done > "${SPLIT_PREFIX}"
 
 # make sure there are no differences
-run_no_sort "@DIFF@ \"${TRACE0}\" \"${SPLIT_PREFIX}\""
+run_no_sort "${DIFF} \"${TRACE0}\" \"${SPLIT_PREFIX}\""
 
 echo "# Split non-existant trace"
 run_no_sort "${SPLIT_TRACE} \"${BADTRACE}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\"" | replace
@@ -154,7 +144,9 @@ run_no_sort "${SPLIT_TRACE} \"${BADTRACE}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${
 
 echo "# Bad thread count"
 run_no_sort "${SPLIT_TRACE} \"${BADTRACE}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\" 18446744073709551615" | replace
-) | remove_indexing_time | tee "${OUTPUT}"
+) | remove_indexing_time | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/split_trace.expected "${OUTPUT}"
-rm "${OUTPUT}"
+"${DIFF}" @CMAKE_CURRENT_BINARY_DIR@/split_trace.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

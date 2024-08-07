@@ -62,15 +62,13 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "$1" 0
 
 TMP="tmp"
 
 rollup_tree_cleanup() {
     rm -rf "${TMP}"
 }
-
-trap rollup_tree_cleanup EXIT
 
 rollup_tree_cleanup
 
