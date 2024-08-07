@@ -714,10 +714,6 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
         char *start = *lineptr + read;
         rc = pread(fd, start, *n - read, *offset + read);
         if (rc < 1) {
-            if (rc < 0) {
-                const int err = errno;
-                fprintf(stderr, "Error: Could not pread: %s (%d)\n", strerror(err), err);
-            }
             break;
         }
 
@@ -733,7 +729,9 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
     }
 
     if (rc < 0) {
-        return -errno;
+        const int err = errno;
+        fprintf(stderr, "Error: Could not pread: %s (%d)\n", strerror(err), err);
+        return -err;
     }
 
     *offset += read + found; /* remove newlne if it was read */

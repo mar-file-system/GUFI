@@ -239,7 +239,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* empty trace */
     if ((len = getline_fd(&line, &size, sta->trace, &offset, GETLINE_DEFAULT_SIZE)) < 1) {
         free(line);
-        fprintf(stderr, "Could not get the first line of the trace\n");
+        fprintf(stderr, "Could not get the first line of trace \"%s\"\n", sta->tracename);
         rc = 1;
         goto done;
     }
@@ -248,7 +248,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     char *first_delim = memchr(line, in->delim, len);
     if (!first_delim) {
         free(line);
-        fprintf(stderr, "Could not find the specified delimiter\n");
+        fprintf(stderr, "Could not find the specified delimiter in \"%s\"\n", sta->tracename);
         rc = 1;
         goto done;
     }
@@ -256,7 +256,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* make sure the first line is a directory */
     if (first_delim[1] != 'd') {
         free(line);
-        fprintf(stderr, "First line of trace is not a directory\n");
+        fprintf(stderr, "First line of \"%s\" is not a directory\n", sta->tracename);
         rc = 1;
         goto done;
     }
@@ -280,7 +280,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (!first_delim) {
             free(line);
             row_destroy(&work);
-            fprintf(stderr, "Scout encountered bad line ending at %s offset %jd\n",
+            fprintf(stderr, "Scout encountered bad line ending at \"%s\" offset %jd\n",
                     sta->tracename, (intmax_t) offset);
             rc = 1;
             goto done;
