@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_stats.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_stats" 1
 
 run() {
     run_sort "$@" | sed "s/${USER_NAME}/${TEST_USER_ID}/g;"
@@ -185,7 +183,7 @@ then
     run "${GUFI_STATS}    median-leaf-links \"${BASENAME}\""
     run "${GUFI_STATS}    median-leaf-size \"${BASENAME}\""
 fi
-) |& tee "${OUTPUT}"
+) |& tee "${TEST_OUTPUT}"
 
 EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
 ACTUAL="${EXPECTED}.actual"
@@ -199,5 +197,6 @@ else
     cp "${EXPECTED}" "${ACTUAL}"
 fi
 
-@DIFF@ "${ACTUAL}" "${OUTPUT}"
-rm "${ACTUAL}" "${OUTPUT}"
+@DIFF@ "${ACTUAL}" "${TEST_OUTPUT}"
+rm "${ACTUAL}" "${TEST_OUTPUT}"
+setup_cleanup

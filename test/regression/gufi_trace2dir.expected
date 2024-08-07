@@ -26,10 +26,8 @@ Total:               20
 
 
 # Diff Trees
-$ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s/reconstructed\///g" | sort)
 
 # Diff xattrs
-$ diff <(find "prefix" -exec getfattr -m ".*" -d {} \; | sort) <(find reconstructed/* -exec getfattr -m ".*" -d {} \; | sed "s/reconstructed\///g" | sort)
 
 $ rm -rf "reconstructed"
 
@@ -40,7 +38,7 @@ Files:               14
 Total:               20
 
 
-$ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s/reconstructed\///g" | sort)
+# Diff Trees Again
 
 $ gufi_trace2dir badtrace "reconstructed"
 Could not open "badtrace": No such file or directory (2)

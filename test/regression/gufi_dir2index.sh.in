@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_dir2index.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_dir2index" 1
 
 (
 echo "# ${GUFI_DIR2INDEX} help" | replace
@@ -147,7 +145,8 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"
 
 echo "# bad thread count"
 run_no_sort "${GUFI_DIR2INDEX} -n 18446744073709551615 \"${SRCDIR}\" \"${SEARCH}\""
-) | remove_indexing_time | replace | tee "${OUTPUT}"
+) | remove_indexing_time | replace | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

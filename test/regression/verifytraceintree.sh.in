@@ -63,7 +63,7 @@
 
 set -e
 
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "verifytraceintree" 1
 
 # column indicies for awk (1 based)
 AWK_TYPE=2
@@ -80,16 +80,7 @@ cleanup() {
     rm -rf "${COPY}"
 }
 
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
 cleanup
-
-OUTPUT="verifytraceintree.out"
 
 (
 echo "# ${VERIFYTRACEINTREE} help" | replace
@@ -137,7 +128,7 @@ tail -n +2 "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory add trailing slashes (Pass)"
-sed "s/^${SRCDIR}${DELIM}/${SRCDIR}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
+sed "s/^${BASENAME}${DELIM}/${BASENAME}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory does not exist (Fail)"
@@ -202,7 +193,9 @@ echo "# empty line (Pass)"
     echo
 ) > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${SEARCH}\""
-) |& remove_indexing_time | sed '/qptpool.*/d' | tee "${OUTPUT}"
+) |& remove_indexing_time | sed '/qptpool.*/d' | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

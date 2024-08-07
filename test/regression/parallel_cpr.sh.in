@@ -62,22 +62,13 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
-
-OUTPUT="parallel_cpr.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "parallel_cpr" 0
 
 CPR_ROOT="copy"
 
 cleanup() {
     rm -rf "${CPR_ROOT}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -96,8 +87,8 @@ run_no_sort "${PARALLEL_CPR} -h"
 
 run_no_sort "${PARALLEL_CPR} -n ${THREADS} \"${SRCDIR}\" \"${CPR_ROOT}\""
 
-echo "$ compare <(find \"${SRCDIR}\") <(find \"${CPR_ROOT}/${SRCDIR}\") "
-@DIFF@ ${DIFF_FLAGS} <(find "${SRCDIR}" | sort) <(find "${CPR_ROOT}/${SRCDIR}" | sed 's/copy\///g' | sort)
+echo "$ compare <(find \"${SRCDIR}\") <(find \"${CPR_ROOT}/${SRCDIR}\") " | replace
+@DIFF@ ${DIFF_FLAGS} <(find "${SRCDIR}" | replace | sort) <(find "${CPR_ROOT}/${BASENAME}" | sed 's/copy\///g' | sort)
 echo
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
@@ -105,11 +96,13 @@ run_no_sort "rm -rf \"${CPR_ROOT}\""
 # re-copy with xattrs
 run_no_sort "${PARALLEL_CPR} -n ${THREADS} -x \"${SRCDIR}\" \"${CPR_ROOT}\""
 
+GETFATTR_SRCDIR="${SRCDIR/\//}"
+
 set +e
-find "${SRCDIR}" | sort | while IFS= read -r name
+find "${BASENAME}" | sort | while IFS= read -r name
 do
-    echo "$ compare xattrs of \"${name}\""
-    @DIFF@ ${DIFF_FLAGS} <(getfattr -P -d -m ".*" -- "${name}") <(getfattr -P -d -m ".*" -- "${CPR_ROOT}/${name}" | sed 's/copy\///g')
+    echo "$ compare xattrs of \"${name}\"" | replace
+    @DIFF@ ${DIFF_FLAGS} <(getfattr -P -d -m ".*" -- "${name}" | sed "s/${GETFATTR_SRCDIR//\//\\/}\\//${BASENAME}\//g") <(getfattr -P -d -m ".*" -- "${CPR_ROOT}/${name}" | sed 's/copy\///g')
 done
 set -e
 
@@ -151,7 +144,9 @@ run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}/old_file\""
 # bad thread count
 run_no_sort "${PARALLEL_CPR} -n 18446744073709551615 \"${SRCDIR}\" \"${CPR_ROOT}\""
 
-) | tee "${OUTPUT}"
+) | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/parallel_cpr.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/parallel_cpr.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

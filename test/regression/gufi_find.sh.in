@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_find.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_find" 1
 
 FPRINT="gufi_query.fprint"
 REFERENCE="not_as_old_file"
@@ -72,13 +70,6 @@ REFERENCE="not_as_old_file"
 cleanup() {
     rm -rf "${FPRINT}" "${REFERENCE}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -194,7 +185,9 @@ run_sort "${GUFI_FIND} --skip \"${SKIP}\""
 
 # bad skip
 run_no_sort "${GUFI_FIND} --skip \"${SKIP}.bad\""
-) | sed 's+@CMAKE_BINARY_DIR@/++g; s/\,\ line\ [0-9]\+\,/, line n,/g;' | tee "${OUTPUT}"
+) | sed 's+@CMAKE_BINARY_DIR@/++g; s/\,\ line\ [0-9]\+\,/, line n,/g;' | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

@@ -12,7 +12,7 @@ dst        directory to place sources under
 
 $ parallel_cpr -n 2 "prefix" "copy"
 
-$ compare <(find "prefix") <(find "copy/prefix") 
+$ compare <(find "prefix") <(find "copy/prefix")
 prefix                                              prefix
 prefix/.hidden                                      prefix/.hidden
 prefix/1KB                                          prefix/1KB

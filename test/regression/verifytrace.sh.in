@@ -62,7 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "verifytrace" 1
 
 COPY="${TRACE}.copy"
 
@@ -70,16 +70,7 @@ cleanup() {
     rm -rf "${COPY}"
 }
 
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
 cleanup
-
-OUTPUT="verifytrace.out"
 
 (
 echo "# ${VERIFYTRACE} help" | replace
@@ -236,7 +227,9 @@ echo "# bad parent pinode"
 
 cat "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
-) |& remove_indexing_time | tee "${OUTPUT}"
+) |& remove_indexing_time | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytrace.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytrace.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

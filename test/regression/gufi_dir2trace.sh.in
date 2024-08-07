@@ -62,22 +62,13 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
-
-OUTPUT="gufi_dir2trace.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_dir2trace" 0
 
 NEWDIR="$(mktemp -d 'XXXXXX')"
 
 cleanup() {
     rm -rf "${NEWDIR}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -111,7 +102,7 @@ columns=$(sed "/^.*${DELIM}e${DELIM}$/d; s/[^${DELIM}]//g;" "${TRACES[@]}" | @AW
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
-src=$(find "${SRCDIR}" | sort)
+src=$(find "${SRCDIR}" | sort | replace)
 # shellcheck disable=SC2016
 lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | sed "/\\/external\\/db/d; s/\\/\\//\\//g;" | sort)
 
@@ -151,7 +142,9 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}.bad\" 
 
 echo "# bad thread count"
 run_no_sort "${GUFI_DIR2TRACE} -n 18446744073709551615 \"${SRCDIR}\" \"${TRACE}\""
-) | remove_indexing_time | tee "${OUTPUT}"
+) | remove_indexing_time | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup

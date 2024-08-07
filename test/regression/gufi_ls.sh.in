@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_ls.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_ls" 1
 
 BACKUP="backup~"
 
@@ -155,7 +153,8 @@ run_sort "${GUFI_LS} --skip \"${SKIP}\" ${BASENAME}"
 
 # bad skip
 run_no_sort "${GUFI_LS} --skip \"${SKIP}.bad\" ${BASENAME}"
-) |& tee "${OUTPUT}"
+) |& tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

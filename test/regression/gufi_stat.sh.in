@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_stat.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_stat" 1
 
 (
 run_no_sort "${GUFI_STAT} --help" | replace_argparse
@@ -108,7 +106,8 @@ run_no_sort "${GUFI_STAT} --terse \"${BASENAME}/${fixed_size[0]}\"" | @AWK@ "FNR
 
 run_no_sort "${GUFI_STAT} ${BASENAME}/bad/directory"
 run_no_sort "${GUFI_STAT} ${BASENAME}/badfile"
-) | replace | tee "${OUTPUT}"
+) | replace | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

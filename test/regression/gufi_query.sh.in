@@ -62,9 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-OUTPUT="gufi_query.out"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_query" 1
 
 (
 touch "${INDEXROOT}/file" # ignored when walking index
@@ -216,10 +214,11 @@ rm -f "${INDEXROOT}/directory/symlink"
 echo "# Missing database file"
 rm "${INDEXROOT}/db.db"
 run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
-) |& tee "${OUTPUT}"
+) |& tee "${TEST_OUTPUT}"
 
 echo "# Print terse debug timestamps (not part of expected results)"
 run_sort "${GUFI_QUERY} -d \" \" -j -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+setup_cleanup

@@ -62,9 +62,8 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh "gufi_trace2index" 0
 
-OUTPUT="gufi_trace2index.out"
 EMPTY_LAST_DIR_TRACE="empty_last_dir.trace"
 BIG_DIR_TRACE="big.dir.trace"
 BIG_DIR_INDEX="big.dir.index"
@@ -72,13 +71,6 @@ BIG_DIR_INDEX="big.dir.index"
 cleanup() {
     rm -rf "${EMPTY_LAST_DIR_TRACE}" "${BIG_DIR_TRACE}" "${BIG_DIR_INDEX}"
 }
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
 
 cleanup
 
@@ -99,7 +91,7 @@ echo "external_db${DELIM}e${DELIM}" >> "${TRACES[0]}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\"" "${TRACES[@]}" "\"${SEARCH}\""
 
 # compare contents
-src_contents=$(find "${SRCDIR}" | sort)
+src_contents=$(find "${BASENAME}" | sort)
 index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | replace | sort)
 
 echo "Source Directory:"
@@ -116,19 +108,19 @@ cat "${TRACES[@]}" > "${TRACE}"
 # ###########################################################
 # big directory (see gufi_trace2index.c)
 (
-    row=$(grep "^${SRCDIR}/old_file${DELIM}f${DELIM}" "${TRACE}" | awk -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
+    row=$(grep "^${BASENAME}/old_file${DELIM}f${DELIM}" "${TRACE}" | awk -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
 
-    grep "^${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
+    grep "^${BASENAME}${DELIM}d${DELIM}" "${TRACE}"
     for (( i = 0; i <= 100000; i++ )) # 100K + 1
     do
-        echo -n "${SRCDIR}/${i}"
+        echo -n "${BASENAME}/${i}"
         echo "${row}"
     done
 ) > "${BIG_DIR_TRACE}"
 
 echo "# create index with a directory containing a lot of files "
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\"" "${BIG_DIR_TRACE}" "\"${BIG_DIR_INDEX}\""
-run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT COUNT(*) FROM entries;\" \"${BIG_DIR_INDEX}/${SRCDIR}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT COUNT(*) FROM entries;\" \"${BIG_DIR_INDEX}/${BASENAME}\""
 # ###########################################################
 
 (
@@ -142,7 +134,7 @@ echo "# bad trace path"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"\" \"${SEARCH}\""
 
 echo "# bad index path"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${TRACE}\" \"${SRCDIR}/1KB\" 2> >(sort)"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${TRACE}\" \"${BASENAME}/1KB\" 2> >(sort)"
 echo
 
 echo "# empty trace"
@@ -162,8 +154,8 @@ echo
 # generate trace with good directory line and bad file line
 # only need the first delimiter to trigger error
 (
-    grep "^${SRCDIR}${DELIM}d${DELIM}.*" "${TRACE}" | sed 's/[0-9]\+/0/g'
-    echo "${SRCDIR}/1KB${BADDELIM}f${BADDELIM}"
+    grep "^${BASENAME}${DELIM}d${DELIM}.*" "${TRACE}" | sed 's/[0-9]\+/0/g'
+    echo "${BASENAME}/1KB${BADDELIM}f${BADDELIM}"
 ) > "${BADTRACE}"
 
 echo "# file delimiter not found"
@@ -171,7 +163,9 @@ run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \
 
 echo "# bad thread count"
 run_no_sort "${GUFI_DIR2TRACE} -n 18446744073709551615 \"${SRCDIR}\" \"${TRACE}\""
-) | remove_indexing_time | tee "${OUTPUT}"
+) | remove_indexing_time | tee "${TEST_OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2index.expected "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2index.expected "${TEST_OUTPUT}"
+rm "${TEST_OUTPUT}"
+cleanup
+setup_cleanup
