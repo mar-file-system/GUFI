@@ -86,8 +86,11 @@ run_no_sort "${GUFI_TRACE2DIR}"
 
 run_no_sort "${GUFI_DIR2TRACE} -n ${THREADS} -d \"${DELIM}\" -x \"${SRCDIR}\" \"${TRACE}\""
 
+# sometimes a trace file might not have anything written to it, resulting in an error message being printed
 # shellcheck disable=SC2145
-run_no_sort "${GUFI_TRACE2DIR} -n ${THREADS} -d \"${DELIM}\" -x ${TRACES[@]} \"${DST}\""
+run_no_sort "cat ${TRACES[@]} > \"${TRACE}\""
+
+run_no_sort "${GUFI_TRACE2DIR} -n ${THREADS} -d \"${DELIM}\" -x \"${TRACE}\" \"${DST}\""
 
 echo "# Diff Trees"
 run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"

@@ -17,7 +17,9 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          6
 Total Files:         14
 
-$ gufi_trace2dir -n 2 -d "|" -x trace.0 trace.1 "reconstructed"
+$ cat trace.0 trace.1 > "trace"
+
+$ gufi_trace2dir -n 2 -d "|" -x "trace" "reconstructed"
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
