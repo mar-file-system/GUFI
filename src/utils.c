@@ -375,17 +375,12 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
  *
  * work->statuso should be filled before calling descend.
  *
- * If stat_entries is set to 0, the processing thread should stat
- * the path. Nothing in work->statuso will be filled except the
- * entry type. Links will not be read.
- *
  * If work->recursion_level > 0, the work item that is passed
  * into the processdir function will be allocated on the stack
  * instead of on the heap, so do not free it.
  *
  * if a child file/link is selected for external tracking, add
  * it to EXTERNAL_DBS_PWD in addition to ENTRIES.
- *
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
@@ -694,6 +689,8 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
     if (!*lineptr) {
         void *new_alloc = realloc(*lineptr, *n);
         if (!new_alloc) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not realloc input address: %s (%d)\n", strerror(err), err);
             return -ENOMEM;
         }
 
@@ -706,6 +703,8 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
             *n *= 2;
             void *new_alloc = realloc(*lineptr, *n);
             if (!new_alloc) {
+                const int err = errno;
+                fprintf(stderr, "Error: Could not realloc buffer: %s (%d)\n", strerror(err), err);
                 return -ENOMEM;
             }
 
@@ -715,6 +714,10 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
         char *start = *lineptr + read;
         rc = pread(fd, start, *n - read, *offset + read);
         if (rc < 1) {
+            if (rc < 0) {
+                const int err = errno;
+                fprintf(stderr, "Error: Could not pread: %s (%d)\n", strerror(err), err);
+            }
             break;
         }
 
