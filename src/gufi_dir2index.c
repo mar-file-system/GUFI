@@ -99,7 +99,7 @@ struct NonDirArgs {
     struct entry_data ed;
 
     /* index path */
-    char topath[MAXPATH];
+    char *topath;
     size_t topath_len;
 
     /* summary of the current directory */
@@ -183,6 +183,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.temp_xattr = &pa->xattr;
     nda.work       = (struct work *) data;
     memset(&nda.ed, 0, sizeof(nda.ed));
+    nda.topath     = NULL;
     nda.ed.type    = 'd';
 
     DIR *dir = NULL;
@@ -206,10 +207,21 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* offset by work->root_len to remove prefix */
-    nda.topath_len = SNFORMAT_S(nda.topath, MAXPATH, 3,
-                                in->nameto.data, in->nameto.len,
-                                "/", (size_t) 1,
-                                nda.work->name + nda.work->root_parent.len, nda.work->name_len - nda.work->root_parent.len);
+    nda.topath_len = in->nameto.len + 1 + nda.work->name_len - nda.work->root_parent.len;
+
+    /*
+     * allocate space for "/db.db" in nda.topath
+     *
+     * extra buffer is not needed and save on memcpy-ing
+     */
+    const size_t topath_size = nda.topath_len + 1 + DBNAME_LEN + 1;
+
+    nda.topath = malloc(topath_size);
+    SNFORMAT_S(nda.topath, topath_size, 4,
+               in->nameto.data, in->nameto.len,
+               "/", (size_t) 1,
+               nda.work->name + nda.work->root_parent.len, nda.work->name_len - nda.work->root_parent.len,
+               "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     /* don't need recursion because parent is guaranteed to exist */
     if (mkdir(nda.topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
@@ -221,14 +233,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
     }
 
-    /* create the database name */
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 3,
-               nda.topath, nda.topath_len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
+    /* restore "/db.db" */
+    nda.topath[nda.topath_len] = '/';
 
-    nda.db = template_to_db(nda.temp_db, dbname, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
+    nda.db = template_to_db(nda.temp_db, nda.topath, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
+
+    /* remove "/db.db" */
+    nda.topath[nda.topath_len] = '\0';
+
     if (!nda.db) {
         rc = 1;
         goto cleanup;
@@ -294,6 +306,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   cleanup:
     closedir(dir);
 
+    free(nda.topath);
     free_struct(nda.work, data, nda.work->recursion_level);
 
     pa->total_files[id] += ctrs.nondirs_processed;

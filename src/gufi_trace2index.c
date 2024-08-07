@@ -175,17 +175,27 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* create the directory */
     timestamp_create_start(dupdir);
-    char topath[MAXPATH];
-    const size_t topath_len = SNFORMAT_S(topath, MAXPATH, 3,
-                                         in->nameto.data, in->nameto.len,
-                                         "/", (size_t) 1,
-                                         w->line, w->first_delim);
+    const size_t topath_len = in->nameto.len + 1 + w->first_delim;
+
+    /*
+     * allocate space for "/db.db" in topath
+     *
+     * extra buffer is not needed and save on memcpy-ing
+     */
+    const size_t topath_size = topath_len + 1 + DBNAME_LEN + 1;
+    char *topath = malloc(topath_size);
+    SNFORMAT_S(topath, topath_size, 4,
+               in->nameto.data, in->nameto.len,
+               "/", (size_t) 1,
+               w->line, w->first_delim,
+               "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     /* have to dupdir here because directories can show up in any order */
     if (dupdir(topath, &ed.statuso)) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
+        free(topath);
         row_destroy(&w);
         return 1;
     }
@@ -193,13 +203,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     timestamp_create_start(template_to_db);
 
-    /* create the database name */
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 2,
-               topath, topath_len,
-               "/" DBNAME, (size_t) (DBNAME_LEN + 1));
+    /* restore "/db.db" (no need to remove afterwards) */
+    topath[topath_len] = '/';
 
-    sqlite3 *db = template_to_db(&pa->db, dbname, ed.statuso.st_uid, ed.statuso.st_gid);
+    sqlite3 *db = template_to_db(&pa->db, topath, ed.statuso.st_uid, ed.statuso.st_gid);
     timestamp_set_end(template_to_db);
 
     if (db) {
@@ -395,6 +402,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     timestamp_create_start(row_destroy);
+    free(topath);
     row_destroy(&w);
     timestamp_set_end(row_destroy);
 
