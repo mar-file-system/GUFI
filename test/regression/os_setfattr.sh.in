@@ -69,7 +69,7 @@ case "@CMAKE_SYSTEM_NAME@" in
             @SETFATTR@ -n "$1" -v "$2" "$3"
         }
         ;;
-    "APPLE")
+    "APPLE" | "Darwin")
         os_setfattr() {
             @XATTR@ -w "$1" "$2" "$3"
         }
