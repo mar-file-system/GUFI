@@ -165,6 +165,8 @@ size_t present_user_path(const char *path, size_t path_len,
 /* set metadata on given path */
 void set_metadata(const char *path, struct stat *st, struct xattrs *xattrs);
 
+void dump_memory_usage(void);
+
 #ifdef __cplusplus
 }
 #endif
