@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -892,4 +893,30 @@ void set_metadata(const char *path, struct stat *st,
         fprintf(stderr, "Error setting atime and mtime of %s: %s (%d)\n",
                 path, strerror(err), err);
     }
+}
+
+void dump_memory_usage(void) {
+    #if defined(DEBUG) && defined(__linux__)
+    int fd = open("/proc/self/status", O_RDONLY);
+    if (fd < 0) {
+        perror("Could not open /proc/self/status");
+        return;
+    }
+
+    char buf[4096] = { 0 };
+    int rc = read(fd, buf, sizeof buf - 1);
+    if (rc < 0) {
+        perror("Could not read /proc/self/status");
+        return;
+    }
+
+    const char *field = "VmHWM";
+    char *p = buf;
+    p = strtok(p, "\n");
+    while (p && strncmp(p, field, strlen(field)))
+        p = strtok(NULL, "\n");
+
+    if (p)
+        printf("%s\n", p);
+    #endif
 }
