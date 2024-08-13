@@ -734,6 +734,15 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
         return -err;
     }
 
+    /*
+     * no need to possibly reallocate for NULL terminator
+     *  - if buffer has newline, simply replace newline
+     *  - if buffer does not have newline, must have hit EOF,
+     *    and loop would have cycled back after reading and
+     *    reallocated with more space before breaking
+     */
+    (*lineptr)[read] = '\0';
+
     *offset += read + found; /* remove newlne if it was read */
 
     return read;
