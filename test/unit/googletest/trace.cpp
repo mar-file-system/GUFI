@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #endif
 
 #include <cstdio>
+#include <pthread.h>
 
 #include "config.h"
 #include "trace.h"
@@ -214,9 +215,9 @@ TEST(trace, worktofile) {
 
     EXPECT_STREQ(buf, line);
 
-    EXPECT_EQ(worktofile(NULL, delim, 0, &work, &ed),  -1);
-    EXPECT_EQ(worktofile(file, delim, 0, NULL,  &ed),  -1);
-    EXPECT_EQ(worktofile(file, delim, 0, &work, NULL), -1);
+    EXPECT_EQ(worktofile(nullptr, delim, 0, &work, &ed),  -1);
+    EXPECT_EQ(worktofile(file, delim, 0, nullptr,  &ed),  -1);
+    EXPECT_EQ(worktofile(file, delim, 0, &work, nullptr), -1);
 }
 
 #define COMPARE(src, src_ed, dst, dst_ed)                               \
@@ -268,7 +269,73 @@ TEST(trace, linetowork) {
 
     xattrs_cleanup(&ed.xattrs);
 
-    EXPECT_EQ(linetowork(NULL, rc, delim, &work, &ed),  -1);
-    EXPECT_EQ(linetowork(line, rc, delim, NULL,  &ed),  -1);
-    EXPECT_EQ(linetowork(line, rc, delim, &work, NULL), -1);
+    EXPECT_EQ(linetowork(nullptr, rc, delim, &work, &ed),  -1);
+    EXPECT_EQ(linetowork(line, rc, delim, nullptr,  &ed),  -1);
+    EXPECT_EQ(linetowork(line, rc, delim, &work, nullptr), -1);
+}
+
+TEST(scout_trace, no_cleanup) {
+    struct work src;
+    struct entry_data src_ed;
+    get_work(&src, &src_ed);
+    src_ed.type = 'd';
+
+    // write the known struct to a string using an alternative write function
+    char line[4096];
+    const int rc = to_string(line, sizeof(line), &src, &src_ed);
+    ASSERT_GT(rc, -1);
+    const size_t len = strlen(line);
+    ASSERT_EQ(rc, (int) len);
+
+    // write trace to file
+    char tracename[] = "XXXXXX";
+    const int fd = mkstemp(tracename);
+    ASSERT_GT(fd, -1);
+    ASSERT_EQ(write(fd, line, len), (ssize_t) len);
+
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    size_t remaining = 1;
+    uint64_t time = 0;
+    size_t files = 0;
+    size_t dirs = 0;
+    size_t empty = 0;
+
+    struct ScoutTraceArgs sta;
+    sta.delim      = delim;
+    sta.tracename  = tracename;
+    sta.trace      = fd;
+    sta.processdir = [] (QPTPool_t *, const size_t, void *data, void *) {
+        struct row *row = (struct row *) data;
+        row_destroy(&row);
+        return 0;
+    };
+    sta.free       = nullptr;
+    sta.mutex      = &mutex;
+    sta.remaining  = &remaining;
+    sta.time       = &time;
+    sta.files      = &files;
+    sta.dirs       = &dirs;
+    sta.empty      = &empty;
+
+    QPTPool_t *pool = QPTPool_init(1, nullptr);
+    ASSERT_NE(pool, nullptr);
+    ASSERT_EQ(QPTPool_start(pool), 0);
+
+    // not enqueuing scout_trace
+    // struct (on statck) is not cleaned up, so should not throw
+    EXPECT_EQ(scout_trace(pool, 0, &sta, nullptr), 0);
+
+    QPTPool_stop(pool);
+    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 1);
+    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 1);
+    QPTPool_destroy(pool);
+
+    EXPECT_EQ(remaining, (size_t)   0);
+    EXPECT_GT(time,      (uint64_t) 0);
+    EXPECT_EQ(files,     (size_t)   0);
+    EXPECT_EQ(dirs,      (size_t)   1);
+    EXPECT_EQ(empty,     (size_t)   1);
+
+    EXPECT_EQ(close(fd), 0);
+    EXPECT_EQ(remove(tracename), 0);
 }

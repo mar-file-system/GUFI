@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <pthread.h>
 #include <stdlib.h>
 
 #include "QueuePerThreadPool.h"

@@ -66,7 +66,6 @@ OF SUCH DAMAGE.
 #define QUEUE_PER_THREAD_POOL_H
 
 #include <inttypes.h>
-#include <pthread.h>
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 #include "OutputBuffers.h"

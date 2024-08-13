@@ -554,10 +554,12 @@ int main(int argc, char *argv[]) {
     for(size_t i = 0; i < trace_count; i++) {
         /* freed by scout_function */
         struct ScoutTraceArgs *sta = malloc(sizeof(struct ScoutTraceArgs));
-        sta->in = &pa.in;
+        sta->delim = pa.in.delim;
         sta->tracename = argv[idx + i];
         sta->trace = traces[i];
         sta->processdir = processdir;
+        sta->free = free;
+        sta->mutex = &print_mutex;
         sta->remaining = &remaining;
         sta->time = &scout_time;
         sta->files = &files;

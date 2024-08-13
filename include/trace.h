@@ -65,11 +65,11 @@ OF SUCH DAMAGE.
 #ifndef GUFI_TRACE_H
 #define GUFI_TRACE_H
 
+#include <pthread.h>
 #include <stdio.h>
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "debug.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,23 +103,25 @@ struct row *row_init(const int trace, const size_t first_delim, char *line,
 void row_destroy(struct row **ref);
 
 struct ScoutTraceArgs {
-    struct input *in;  /* reference to PoolArgs */
-    char *tracename;
-    int trace;         /* file descriptor */
+    char delim;
+    const char *tracename;
+    int trace;              /* file descriptor */
 
     /* data argument will be a struct row */
     QPTPoolFunc_t processdir;
 
-    /* everything below is locked with print_mutex from debug.h */
+    /* if provided, call at end of scout_trace */
+    void (*free)(void *);
 
-    size_t *remaining; /* number of scouts still running */
+    pthread_mutex_t *mutex; /* lock for values below */
 
-    /* sum of counts from all trace files */
+    /* references to single shared values */
+    size_t *remaining;      /* number of scouts still running */
     uint64_t *time;
     size_t *files;
     size_t *dirs;
-    size_t *empty;     /* number of directories without files/links
-                        * can still have child directories */
+    size_t *empty;          /* number of directories without files/links
+                             * can still have child directories */
 };
 
 int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);

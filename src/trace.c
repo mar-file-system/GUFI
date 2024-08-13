@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <unistd.h>
 
+#include "debug.h"
 #include "trace.h"
 #include "utils.h"
 #include "xattrs.h"
@@ -216,7 +217,6 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* skip argument checking */
     struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) data;
-    struct input *in = sta->in;
 
     (void) id; (void) args;
 
@@ -245,7 +245,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* find a delimiter */
-    char *first_delim = memchr(line, in->delim, len);
+    char *first_delim = memchr(line, sta->delim, len);
     if (!first_delim) {
         free(line);
         fprintf(stderr, "Could not find the specified delimiter in \"%s\"\n", sta->tracename);
@@ -270,7 +270,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     size = 0;
     len = 0;
     while ((len = getline_fd(&line, &size, sta->trace, &offset, GETLINE_DEFAULT_SIZE)) > 0) {
-        first_delim = memchr(line, in->delim, len);
+        first_delim = memchr(line, sta->delim, len);
 
         /*
          * if got bad line, have to stop here or else processdir will
@@ -334,10 +334,10 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   done:
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 
-    pthread_mutex_lock(&print_mutex);
-    *sta->time += nsec(&scouting);
+    pthread_mutex_lock(sta->mutex);
+    *sta->time  += nsec(&scouting);
     *sta->files += file_count;
-    *sta->dirs += dir_count;
+    *sta->dirs  += dir_count;
     *sta->empty += empty;
 
     (*sta->remaining)--;
@@ -350,9 +350,11 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         fprintf(stdout, "Total:               %zu\n", *sta->files + *sta->dirs);
         fprintf(stdout, "\n");
     }
-    pthread_mutex_unlock(&print_mutex);
+    pthread_mutex_unlock(sta->mutex);
 
-    free(sta);
+    if (sta->free) {
+        sta->free(sta);
+    }
 
     return rc;
 }
