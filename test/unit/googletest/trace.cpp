@@ -274,6 +274,10 @@ TEST(trace, linetowork) {
     EXPECT_EQ(linetowork(line, rc, delim, &work, nullptr), -1);
 }
 
+TEST(open_traces, too_many) {
+    EXPECT_EQ(open_traces(nullptr, (size_t) -1), nullptr);
+}
+
 TEST(scout_trace, no_cleanup) {
     struct work src;
     struct entry_data src_ed;

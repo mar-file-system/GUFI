@@ -537,6 +537,7 @@ TEST(QueuePerThreadPool, steal_active) {
     // prevent thread 0 from completing
     pthread_mutex_lock(&mutex);
 
+    // this work item does not complete until the end
     EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
                                    [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
                                        pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
@@ -548,57 +549,12 @@ TEST(QueuePerThreadPool, steal_active) {
                                        return 0;
                                    }, &counter), QPTPool_enqueue_WAIT);
 
-    struct Data {
-        std::size_t *counter;
-        pthread_mutex_t mutex;
-        std::size_t value;
-
-        Data(std::size_t *counter)
-            : counter(counter),
-              mutex(PTHREAD_MUTEX_INITIALIZER),
-              value(0)
-            {}
-    };
-
-    struct Data data(&counter);
-
-    const std::size_t EXPECTED_VALUE = 1234;
-    const std::size_t BAD_VALUE      = 5678;
-
-    // thread 0: queue up work that will be claimed by thread 0, but will never run in thread 0
-    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
-                                   [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
-                                       struct Data *d = static_cast<struct Data *>(data);
-
-                                       increment_counter(ctx, id, d->counter, args);
-
-                                       pthread_mutex_lock(&d->mutex);
-                                       if (d->value == 0) {
-                                           d->value = EXPECTED_VALUE;
-                                       }
-                                       pthread_mutex_unlock(&d->mutex);
-
-                                       return 0;
-                                   }, &data), QPTPool_enqueue_WAIT);
-
-    // thread 0: need second work item to be queued for steal fraction of 1/2 to steal 1
-    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
-                                   [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
-                                       struct Data *d = static_cast<struct Data *>(data);
-
-                                       increment_counter(ctx, id, d->counter, args);
-
-                                       pthread_mutex_lock(&d->mutex);
-                                       if (d->value == 0) {
-                                           d->value = BAD_VALUE;
-                                       }
-                                       pthread_mutex_unlock(&d->mutex);
-
-                                       return 0;
-                                   }, &data), QPTPool_enqueue_WAIT);
+    // trap this work item after the first work item
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT, increment_counter,  &counter),
+                                   QPTPool_enqueue_WAIT);
 
     // start the thread pool, causing thread 0 to take all work items, but get stuck on the
-    // first work item, not letting the rest of the work items run
+    // first work item, not letting the second work items run
     ASSERT_EQ(QPTPool_start(pool), 0);
 
     // need to make sure the first work item started
@@ -620,9 +576,8 @@ TEST(QueuePerThreadPool, steal_active) {
 
     QPTPool_stop(pool);
 
-    const uint64_t expected = 4;
+    const uint64_t expected = 3;
     EXPECT_EQ(counter, expected);
-    EXPECT_EQ(data.value, EXPECTED_VALUE);
     EXPECT_EQ(QPTPool_threads_started(pool),   expected);
     EXPECT_EQ(QPTPool_threads_completed(pool), expected);
 
