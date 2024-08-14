@@ -240,6 +240,8 @@ replace() {
     s/${DIFF//\//\\/}/diff/g;
     s/${GREP//\//\\/}/grep/g;
 
+    /VmHWM:/d;
+
     s/[[:space:]]*$//g;
     "
 }

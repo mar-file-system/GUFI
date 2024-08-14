@@ -245,7 +245,19 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
+      if: |
+        matrix.PRINT_CUMULATIVE_TIMES   == 'On' ||
+        matrix.PRINT_PER_THREAD_STATS   == 'On' ||
+        matrix.PRINT_QPTPOOL_QUEUE_SIZE == 'On'
       run:  ctest --output-on-failure -L unit
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build
+      if: |
+        matrix.PRINT_CUMULATIVE_TIMES   == 'Off' &&
+        matrix.PRINT_PER_THREAD_STATS   == 'Off' &&
+        matrix.PRINT_QPTPOOL_QUEUE_SIZE == 'Off'
+      run:  ctest --output-on-failure
 
   Memcheck:
     needs: [ShellCheck, Pylint]
