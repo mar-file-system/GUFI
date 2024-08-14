@@ -227,20 +227,24 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     size_t empty = 0;
     size_t external = 0;
 
+    /*
+     * keep current directory while finding next directory
+     * in order to find out whether or not the current
+     * directory has files in it
+     */
+
     char *line = NULL;
     size_t size = 0;
     ssize_t len = 0;
     off_t offset = 0;
 
-    /* keep current directory while finding next directory */
-    /* in order to find out whether or not the current */
-    /* directory has files in it */
-
-    /* empty trace */
+    /* bad read (error) or empty trace (not an error) */
     if ((len = getline_fd(&line, &size, sta->trace, &offset, GETLINE_DEFAULT_SIZE)) < 1) {
+        if (offset != 0) {
+            fprintf(stderr, "Could not get the first line of trace \"%s\"\n", sta->tracename);
+            rc = 1;
+        }
         free(line);
-        fprintf(stderr, "Could not get the first line of trace \"%s\"\n", sta->tracename);
-        rc = 1;
         goto done;
     }
 
@@ -290,7 +294,10 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (first_delim[1] == 'd') {
             dir_count++;
 
-            /* external dbs do not contribue to entry count, but are needed to loop correctly when processing directory */
+            /*
+             * external dbs do not contribue to entry count, but are
+             * needed to loop correctly when processing directory
+             */
             empty += !work->entries;
             work->entries += external;
             external = 0;
@@ -300,6 +307,11 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             /* put the current line into a new work item */
             work = row_init(sta->trace, first_delim - line, line, len, offset);
+
+            /* have getline allocate a new buffer */
+            line = NULL;
+            size = 0;
+            len = 0;
         }
         /* ignore non-directories */
         else {
@@ -311,14 +323,8 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 file_count++;
             }
 
-            /* this line is not needed */
-            free(line);
+            /* don't clean up line (unnecessary free) - reuse in next loop */
         }
-
-        /* have getline allocate a new buffer */
-        line = NULL;
-        size = 0;
-        len = 0;
     }
 
     free(line);

@@ -137,17 +137,11 @@ int find_end(const int fd, const char delim, off_t *end) {
     while (1) {
         const off_t before_read = *end;
 
-        free(line);
-        line = NULL;
-        size = 0;
-
         len = getline_fd(&line, &size, fd, end, GETLINE_DEFAULT_SIZE);
-        if (len == 0) {
+
+        if (len < 1) {
             free(line);
-            return 1;
-        }
-        else if (len < 0) {
-            return -1;
+            return -!!len;
         }
 
         const char *first_delim = memchr(line, delim, len);
@@ -242,7 +236,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* need this because last chunk will error out of loop */
-    if ((rc > -1) && (start < st.st_size)) {
+    if (start < st.st_size) {
         struct Range *range = malloc(sizeof(*range));
         range->fd = fd;
         range->start = start;

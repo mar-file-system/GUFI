@@ -78,7 +78,6 @@ do
     SPLITS+=("${SPLIT_PREFIX}.${i}")
 done
 
-
 cleanup() {
     rm -rf "${TRACE0}" "${SPLIT_PREFIX}" "${SPLITS[@]}"
 }
@@ -101,8 +100,8 @@ run_no_sort "${SPLIT_TRACE}"
 rm -f "${TRACE0}"
 touch "${TRACE0}"
 
-echo "Split empty trace file"
-run_no_sort "\"${SPLIT_TRACE}\" \"${TRACE0}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\""
+echo "# Split empty trace file"
+run_no_sort "${SPLIT_TRACE} \"${TRACE0}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\""
 
 found=$(find "${SPLITS[@]}" 2> /dev/null | wc -l)
 echo "Expecting 0 trace files. Found ${found}."

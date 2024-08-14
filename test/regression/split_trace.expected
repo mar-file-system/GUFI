@@ -2,8 +2,8 @@
 $ split_trace
 Syntax: split_trace src_trace delim max_split_count dst_trace_prefix [threads]
 
-Split empty trace file
-$ "split_trace" "trace.0" "|" "4" "split"
+# Split empty trace file
+$ split_trace "trace.0" "|" "4" "split"
 
 Expecting 0 trace files. Found 0.
 

@@ -734,6 +734,12 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
         fprintf(stderr, "Error: Could not pread: %s (%d)\n", strerror(err), err);
         return -err;
     }
+    else if (rc == 0) {
+        /* EOF */
+        if ((read == 0) && (found == 0)) {
+            return -EIO;
+        }
+    }
 
     /*
      * no need to possibly reallocate for NULL terminator

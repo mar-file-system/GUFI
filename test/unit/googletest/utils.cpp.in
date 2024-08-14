@@ -802,11 +802,11 @@ TEST(modetostr, directories) {
 }
 
 TEST(trailing_match_index, paths) {
-    char root[MAXPATH]    = "/";
-    char dir[MAXPATH]     = "/a/b/c/";
-    char nondir[MAXPATH]  = "/a/b/c";
-    char slashes[MAXPATH] = "////";
-    char nulls[MAXPATH]   = "";
+    const char root[]    = "/";
+    const char dir[]     = "/a/b/c/";
+    const char nondir[]  = "/a/b/c";
+    const char slashes[] = "////";
+    const char nulls[]   = "";
 
     const char match[] = "\b\t/";
     const size_t match_len = strlen(match);
@@ -821,11 +821,11 @@ TEST(trailing_match_index, paths) {
 }
 
 TEST(trailing_non_match_index, paths) {
-    char root[MAXPATH]    = "/";
-    char dir[MAXPATH]     = "/a/b/c/";
-    char nondir[MAXPATH]  = "/a/b/c";
-    char slashes[MAXPATH] = "////";
-    char nulls[MAXPATH]   = "";
+    const char root[]    = "/";
+    const char dir[]     = "/a/b/c/";
+    const char nondir[]  = "/a/b/c";
+    const char slashes[] = "////";
+    const char nulls[]   = "";
 
     const char match[] = "\b\t/";
     const size_t match_len = strlen(match);
@@ -953,15 +953,18 @@ TEST(getline, fd) {
     ASSERT_GT(fd, -1);
     EXPECT_EQ(remove(name), 0);
 
+    // line 1
     EXPECT_EQ(write(fd, LINE, LINE_LEN), (ssize_t) LINE_LEN);
     EXPECT_EQ(write(fd, "\n", 1),        (ssize_t) 1);
+
+    // line 2
     EXPECT_EQ(write(fd, "\n", 1),        (ssize_t) 1);
 
     char *line = nullptr;
     size_t size = 0; // size of buffer, not length of string
     off_t offset = 0;
 
-    /* read line */
+    // read line
     EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) LINE_LEN);
     EXPECT_NE(line,   nullptr);
     EXPECT_NE(size,   (size_t) 0);
@@ -969,7 +972,7 @@ TEST(getline, fd) {
     free(line);
     line = nullptr;
 
-    /* empty line */
+    // empty line
     EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
     EXPECT_NE(size,   (size_t) 0);
@@ -977,8 +980,8 @@ TEST(getline, fd) {
     free(line);
     line = nullptr;
 
-    /* end of file */
-    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) 0);
+    // end of file
+    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) -EIO);
     EXPECT_NE(line,   nullptr);
     EXPECT_NE(size,   (size_t) 0);
     EXPECT_EQ(offset, (off_t) (LINE_LEN + 2));
@@ -988,7 +991,7 @@ TEST(getline, fd) {
     /* past end of file */
     const off_t past = LINE_LEN * 5;
     offset = past;
-    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) -EIO);
     EXPECT_NE(line,   nullptr);
     EXPECT_NE(size,   (size_t) 0);
     EXPECT_EQ(offset, past);
@@ -1023,7 +1026,7 @@ TEST(getline, fd) {
 
     /* initial alloc is too big */
     size = (size_t) -1;
-    EXPECT_EQ(getline_fd(&line,   &size,   fd, &offset, default_size),  -ENOMEM);
+    EXPECT_EQ(getline_fd(&line,   &size,   fd, &offset, default_size), -ENOMEM);
     EXPECT_EQ(line, nullptr);
 }
 

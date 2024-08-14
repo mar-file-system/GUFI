@@ -19,7 +19,7 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          6
 Total Files:         14
 
-$ gufi_trace2index -d "|" trace.0 trace.1 "search"
+$ gufi_trace2index -d "|" "trace" "search"
 Creating GUFI Index search with 1 threads
 Dirs:                6 (1 empty)
 Files:               14
@@ -105,7 +105,18 @@ $ gufi_trace2index -d "|" -n 2 "trace" "prefix/1KB" 2> >(sort)
 Could not create directory prefix/1KB
 
 
-# empty trace
+# empty trace (no error message)
+$ gufi_trace2index -d "|" -n 2 "badtrace" "search"
+Creating GUFI Index search with 2 threads
+Dirs:                0 (0 empty)
+Files:               0
+Total:               0
+
+Total Dirs:          0
+Total Files:         0
+
+
+# trace with empty line at front
 $ gufi_trace2index -d "|" -n 2 "badtrace" "search"
 Could not get the first line of trace "badtrace"
 Creating GUFI Index search with 2 threads

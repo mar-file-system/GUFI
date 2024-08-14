@@ -298,7 +298,7 @@ TEST(scout_trace, no_cleanup) {
     ASSERT_EQ(write(fd, line, len), (ssize_t) len);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    size_t remaining = 1;
+    size_t remaining = 2; // run twice to cover both sides of final print condition
     uint64_t time = 0;
     size_t files = 0;
     size_t dirs = 0;
@@ -328,17 +328,18 @@ TEST(scout_trace, no_cleanup) {
     // not enqueuing scout_trace
     // struct (on statck) is not cleaned up, so should not throw
     EXPECT_EQ(scout_trace(pool, 0, &sta, nullptr), 0);
+    EXPECT_EQ(scout_trace(pool, 0, &sta, nullptr), 0);
 
     QPTPool_stop(pool);
-    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 1);
-    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 1);
+    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 2);
+    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 2);
     QPTPool_destroy(pool);
 
     EXPECT_EQ(remaining, (size_t)   0);
     EXPECT_GT(time,      (uint64_t) 0);
     EXPECT_EQ(files,     (size_t)   0);
-    EXPECT_EQ(dirs,      (size_t)   1);
-    EXPECT_EQ(empty,     (size_t)   1);
+    EXPECT_EQ(dirs,      (size_t)   2);
+    EXPECT_EQ(empty,     (size_t)   2);
 
     EXPECT_EQ(close(fd), 0);
     EXPECT_EQ(remove(tracename), 0);
