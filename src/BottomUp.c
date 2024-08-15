@@ -78,10 +78,7 @@ processed before processing the current one
 #include <sys/types.h>
 
 #include "BottomUp.h"
-#include "QueuePerThreadPool.h"
-#include "SinglyLinkedList.h"
 #include "dbutils.h"
-#include "debug.h"
 #include "utils.h"
 
 /* define so that descend and ascend always have valid functions to call */
@@ -349,6 +346,131 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
     return desc_rc;
 }
 
+QPTPool_t *parallel_bottomup_init(const size_t thread_count,
+                                  const size_t user_struct_size,
+                                  BU_f descend, BU_f ascend,
+                                  const int track_non_dirs,
+                                  const int generate_alt_name
+                                  #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                  , struct OutputBuffers *timestamp_buffers
+                                  #endif
+    ) {
+    if (user_struct_size < sizeof(struct BottomUp)) {
+        fprintf(stderr, "Error: Provided user struct size is smaller than a struct BottomUp\n");
+        return NULL;
+    }
+
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    if (timestamp_buffers) {
+        if (timestamp_buffers->count <= thread_count) {
+            fprintf(stderr, "Error: timestamp_buffers needs at least %zu buffers: Got %zu\n",
+                    thread_count + 1, timestamp_buffers->count);
+            return NULL;
+        }
+    }
+    #endif
+
+    struct UserArgs *ua = calloc(1, sizeof(*ua));
+    ua->user_struct_size = user_struct_size;
+    ua->descend = descend?descend:noop;
+    ua->ascend = ascend?ascend:noop;
+    ua->track_non_dirs = track_non_dirs;
+    ua->generate_alt_name = generate_alt_name;
+
+    /* only skip . and .. */
+    ua->skip = trie_alloc();
+    trie_insert(ua->skip, ".",  1, NULL, NULL);
+    trie_insert(ua->skip, "..", 2, NULL, NULL);
+
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    ua->timestamp_buffers = timestamp_buffers;
+    #endif
+
+    QPTPool_t *pool = QPTPool_init_with_props(thread_count, ua, NULL, NULL, 0, 1, 2
+                                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                              , timestamp_buffers
+                                              #endif
+        );
+    if (QPTPool_start(pool) != 0) {
+        fprintf(stderr, "Error: Failed to start thread pool\n");
+        QPTPool_destroy(pool);
+        trie_free(ua->skip);
+        free(ua);
+        return NULL;
+    }
+
+    return pool;
+}
+
+int parallel_bottomup_enqueue(QPTPool_t *pool,
+                              const char *path, const size_t len,
+                              void *extra_args) {
+    if (!pool) {
+        return -1;
+    }
+
+    size_t thread_count = 0;
+    QPTPool_get_nthreads(pool, &thread_count);
+
+    struct UserArgs *ua = NULL;
+    QPTPool_get_args(pool, (void **) &ua);
+
+    struct BottomUp *root = (struct BottomUp *) malloc(ua->user_struct_size);
+    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, path, len);
+
+    if (ua->generate_alt_name) {
+        size_t name_len = root->name_len;
+        root->alt_name_len = sqlite_uri_path(root->alt_name, sizeof(root->alt_name),
+                                             root->name, &name_len);
+
+        if (name_len != root->name_len) {
+            fprintf(stderr, "%s could not fit into ALT_NAME buffer\n", root->name);
+            free(root);
+            return -1;
+        }
+    }
+
+    root->parent = NULL;
+    root->extra_args = extra_args;
+    root->level = 0;
+
+    timestamp_create_start(enqueue_root);
+    QPTPool_enqueue(pool, 0, descend_to_bottom, root);
+    timestamp_end_print(ua->timestamp_buffers, thread_count, "enqueue_root", enqueue_root);
+    return 0;
+}
+
+int parallel_bottomup_fini(QPTPool_t *pool) {
+    if (!pool) {
+        return -1;
+    }
+
+    size_t thread_count = 0;
+    QPTPool_get_nthreads(pool, &thread_count);
+
+    struct UserArgs *ua = NULL;
+    QPTPool_get_args(pool, (void **) &ua);
+
+    timestamp_create_start(qptpool_stop);
+    QPTPool_stop(pool);
+    timestamp_end_print(ua->timestamp_buffers, thread_count, "wait_for_threads", qptpool_stop);
+
+    const size_t threads_started = QPTPool_threads_started(pool);
+    const size_t threads_completed = QPTPool_threads_completed(pool);
+
+    trie_free(ua->skip);
+    free(ua);
+
+    #ifdef DEBUG
+    fprintf(stderr, "Started %zu threads. Successfully completed %zu threads.\n",
+            threads_started, threads_completed);
+    #endif
+
+    QPTPool_destroy(pool);
+
+    return -(threads_started != threads_completed);
+}
+
 int parallel_bottomup(char **root_names, const size_t root_count,
                       const size_t thread_count,
                       const size_t user_struct_size,
@@ -360,97 +482,27 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       , struct OutputBuffers *timestamp_buffers
                       #endif
     ) {
-    struct UserArgs ua;
-
-    if (user_struct_size < sizeof(struct BottomUp)) {
-        fprintf(stderr, "Error: Provided user struct size is smaller than a struct BottomUp\n");
-        return -1;
-    }
-
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    if (timestamp_buffers) {
-        if (timestamp_buffers->count <= thread_count) {
-            fprintf(stderr, "Error: timestamp_buffers needs at least %zu buffers: Got %zu\n",
-                    thread_count + 1, timestamp_buffers->count);
-            return -1;
-        }
-    }
-    #endif
-
-    ua.user_struct_size = user_struct_size;
-    ua.descend = descend?descend:noop;
-    ua.ascend = ascend?ascend:noop;
-    ua.track_non_dirs = track_non_dirs;
-    ua.generate_alt_name = generate_alt_name;
-
-    /* only skip . and .. */
-    ua.skip = trie_alloc();
-    trie_insert(ua.skip, ".",  1, NULL, NULL);
-    trie_insert(ua.skip, "..", 2, NULL, NULL);
-
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    ua.timestamp_buffers = timestamp_buffers;
-    #endif
-
-    QPTPool_t *pool = QPTPool_init_with_props(thread_count, &ua, NULL, NULL, 0, 1, 2
-                                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                              , timestamp_buffers
-                                              #endif
+    QPTPool_t *pool = parallel_bottomup_init(thread_count, user_struct_size,
+                                             descend, ascend, track_non_dirs,
+                                             generate_alt_name
+                                             #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                             , timestamp_buffers
+                                             #endif
         );
-    if (QPTPool_start(pool) != 0) {
-        fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
-        trie_free(ua.skip);
+    if (!pool) {
         return -1;
     }
+
+    struct UserArgs *ua = NULL;
+    QPTPool_get_args(pool, (void **) &ua);
 
     /* enqueue all root directories */
     size_t good_roots = 0;
     timestamp_create_start(enqueue_roots);
     for(size_t i = 0; i < root_count; i++) {
-        struct BottomUp *root = (struct BottomUp *) malloc(user_struct_size);
-        root->name_len = SNPRINTF(root->name, MAXPATH, "%s", root_names[i]);
-
-        if (generate_alt_name) {
-            size_t name_len = root->name_len;
-            root->alt_name_len = sqlite_uri_path(root->alt_name, sizeof(root->alt_name),
-                                                 root->name, &name_len);
-
-            if (name_len != root->name_len) {
-                fprintf(stderr, "%s could not fit into ALT_NAME buffer\n", root->name);
-                free(root);
-                continue;
-            }
-        }
-
-        root->parent = NULL;
-        root->extra_args = extra_args;
-        root->level = 0;
-
-        good_roots++;
-
-        timestamp_create_start(enqueue_root);
-        QPTPool_enqueue(pool, i % thread_count, descend_to_bottom, root);
-        timestamp_end_print(ua.timestamp_buffers, thread_count, "enqueue_root", enqueue_root);
+        good_roots += !parallel_bottomup_enqueue(pool, root_names[i], strlen(root_names[i]), extra_args);
     }
-    timestamp_end_print(ua.timestamp_buffers, thread_count, "enqueue_roots", enqueue_roots);
+    timestamp_end_print(ua->timestamp_buffers, thread_count, "enqueue_roots", enqueue_roots);
 
-    timestamp_create_start(qptpool_stop);
-    QPTPool_stop(pool);
-    timestamp_end_print(ua.timestamp_buffers, thread_count, "wait_for_threads", qptpool_stop);
-
-    const size_t threads_started = QPTPool_threads_started(pool);
-    const size_t threads_completed = QPTPool_threads_completed(pool);
-
-    #ifdef DEBUG
-    fprintf(stderr, "Started %zu threads. Successfully completed %zu threads.\n",
-            threads_started, threads_completed);
-    #endif
-
-    QPTPool_destroy(pool);
-
-    trie_free(ua.skip);
-
-    return -!((root_count == good_roots) &&
-              (threads_started == threads_completed));
+    return -(parallel_bottomup_fini(pool) || (root_count != good_roots));
 }

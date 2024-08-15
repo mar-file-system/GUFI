@@ -65,15 +65,12 @@ OF SUCH DAMAGE.
 /*
    This header provides an API for parallelized
    bottom-up traversal of a directory tree.
-   Operations are performed on directories
-   during the upward portion of the traversal.
 */
 
 #ifndef GUFI_BOTTOM_UP_H
 #define GUFI_BOTTOM_UP_H
 
-#include <pthread.h>
-
+#include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
 #include "bf.h"
 #include "debug.h"
@@ -82,7 +79,6 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-/* extra AscendFunc_t argments */
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
     #include "OutputBuffers.h"
     #define timestamp_sig  , struct OutputBuffers *timestamp_buffers
@@ -132,11 +128,46 @@ struct BottomUp {
 typedef int (*BU_f)(void *user_struct
                     timestamp_sig);
 
+/* ****************************************************************** */
+/*
+ * Parallel BottomUp Components
+ *
+ * Allows for the QPTPool context to be reused for other purposes if
+ * both non-BottomUp operations and BottomUp operations need to be
+ * done in the same process so that the two sets of operations do not
+ * need to be done in separate pools, using more resources than a user
+ * might expect. Note that non-BottomUp threads will not have the
+ * QPTPool arg argument available to them because it will have been
+ * assigned to an opaque value by BottomUp.
+
+ * timestamp_buffers should have at least thread_count + 1
+ * buffers. The extra buffer contains data printed to it that is
+ * relevant to the thread pool but is from outside the thread pool.
+ */
+QPTPool_t *parallel_bottomup_init(const size_t thread_count,
+                                  const size_t user_struct_size,
+                                  BU_f descend, BU_f ascend,
+                                  const int track_non_dirs,
+                                  const int generate_alt_name
+                                  #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                  , struct OutputBuffers *timestamp_buffers
+                                  #endif
+    );
+
+int parallel_bottomup_enqueue(QPTPool_t *pool,
+                              const char *path, const size_t len,
+                              void *extra_args);
+
+int parallel_bottomup_fini(QPTPool_t *pool);
+/* ****************************************************************** */
+
 /*
  * Function user should call to walk an existing tree in parallel.
  *
- * Similar to descent, returning from the bottom upwards does
- * not happen until all subdirectories have been processed.
+ * Returning from the bottom does not happen until all subdirectories
+ * in the current subtree have been processed.
+ *
+ * This function wraps parallel_bottomup_{init,enqueue,fini}.
  */
 int parallel_bottomup(char **root_names, const size_t root_count,
                       const size_t thread_count,
