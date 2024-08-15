@@ -9,6 +9,7 @@ options:
   -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
+  -s <path>              File name prefix for swap files
   -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
   -e                     compress work items
   -q                     check that external databases are valid before tracking during indexing

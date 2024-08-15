@@ -123,6 +123,7 @@ static const std::string Q = "-Q"; static const std::string Q_arg0 = "extdb";
                                    static const std::string Q_arg1 = "table";
                                    static const std::string Q_arg2 = "template.table";
                                    static const std::string Q_arg3 = "view";
+static const std::string s = "-s"; static const std::string s_arg  = "s_arg";
 
 static bool operator==(const refstr_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -225,6 +226,8 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(eus->table.data,                    Q_arg1);
         EXPECT_EQ(eus->template_table.data,           Q_arg2);
         EXPECT_EQ(eus->view.data,                     Q_arg3);
+
+        EXPECT_EQ(in->swap_prefix.data,               s_arg);
     }
     else {
         const std::string empty = "";
@@ -257,6 +260,7 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->target_memory_footprint,        (std::size_t) 0);
         EXPECT_EQ(in->subdir_limit,                   (std::size_t) 0);
         EXPECT_EQ(sll_get_size(&in->external_attach), (std::size_t) 0);
+        EXPECT_NE(in->swap_prefix.data,               nullptr); /* default exists */
     }
 }
 
@@ -286,7 +290,7 @@ TEST(parse_cmd_line, help) {
 }
 
 TEST(parse_cmd_line, debug) {
-    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:";
+    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:s:";
 
     const char *argv[] = {
         exec.c_str(),
@@ -335,6 +339,7 @@ TEST(parse_cmd_line, debug) {
         #endif
         q.c_str(),
         Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
+        s.c_str(), s_arg.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
@@ -390,7 +395,7 @@ TEST(parse_cmd_line, flags) {
 }
 
 TEST(parse_cmd_line, options) {
-    const char opts[] = "n:d:i:t:I:T:S:E:F:W:A:g:c:y:z:J:K:G:B:f:L:k:M:C:Q:";
+    const char opts[] = "n:d:i:t:I:T:S:E:F:W:A:g:c:y:z:J:K:G:B:f:L:k:M:C:Q:s:";
 
     const char *argv[] = {
         exec.c_str(),
@@ -419,6 +424,7 @@ TEST(parse_cmd_line, options) {
         M.c_str(), M_arg.c_str(),
         C.c_str(), C_arg.c_str(),
         Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
+        s.c_str(), s_arg.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);

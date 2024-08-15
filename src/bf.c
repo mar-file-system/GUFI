@@ -85,6 +85,8 @@ extern int optind, opterr, optopt;
 
 const char fielddelim = '\x1E';     /* ASCII Record Separator */
 
+static const char DEFAULT_SWAP_PREFIX[] = "";
+
 struct input *input_init(struct input *in) {
     if (in) {
         memset(in, 0, sizeof(*in));
@@ -109,6 +111,9 @@ struct input *input_init(struct input *in) {
         trie_insert(in->skip, "..", 2, NULL, NULL);
 
         sll_init(&in->external_attach);
+
+        in->swap_prefix.data = DEFAULT_SWAP_PREFIX;
+        in->swap_prefix.len  = 0;
     }
 
     return in;
@@ -183,6 +188,7 @@ void print_help(const char* prog_name,
                        "     <table>\n"
                        "     <template>.<table>\n"
                        "     <view>              External database file basename, per-attach table name, template + table name, and the resultant view"); break;
+      case 's': printf("  -s <path>              File name prefix for swap files"); break;
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -245,6 +251,7 @@ void show_input(struct input* in, int retval) {
               i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
    }
    printf("\n");
+   printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
    printf("retval                      = %d\n",            retval);
    printf("\n");
 }
@@ -506,6 +513,10 @@ int parse_cmd_line(int         argc,
 
               sll_push(&in->external_attach, user);
           }
+          break;
+
+      case 's':
+          INSTALL_STR(&in->swap_prefix, optarg);
           break;
 
       case '?':

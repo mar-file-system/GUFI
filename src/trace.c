@@ -192,7 +192,7 @@ void close_traces(int *traces, size_t trace_count) {
 
 struct row *row_init(const int trace, const size_t first_delim, char *line,
                      const size_t len, const long offset) {
-    struct row *row = malloc(sizeof(struct row));
+    struct row *row = calloc(1, sizeof(struct row));
     row->trace = trace;
     row->first_delim = first_delim;
     row->line = line; /* takes ownership of line */
@@ -200,6 +200,44 @@ struct row *row_init(const int trace, const size_t first_delim, char *line,
     row->offset = offset;
     row->entries = 0;
     return row;
+}
+
+static int row_serialize_and_free(const int fd, QPTPoolFunc_t func, void *work, size_t *size) {
+    struct row *row = (struct row *) work;
+    if ((write_size(fd, (void *) (uintptr_t) &func, sizeof(func)) != sizeof(func)) ||
+        (write_size(fd, row, sizeof(*row)) != sizeof(*row)) ||
+        (write_size(fd, row->line, row->len) != (ssize_t) row->len)) {
+        return 1;
+    }
+
+    *size += sizeof(func) + sizeof(*row) + row->len;
+
+    row_destroy(&row);
+
+    return 0;
+}
+
+static int row_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **work) {
+    if (read_size(fd, (void *) (uintptr_t) func, sizeof(*func)) != sizeof(*func)) {
+        return 1;
+    }
+
+    struct row *row = malloc(sizeof(*row));
+    if (read_size(fd, row, sizeof(*row)) != sizeof(*row)) {
+        free(row);
+        return 1;
+    }
+
+    row->line = malloc(row->len);
+
+    if (read_size(fd, row->line, row->len) != (ssize_t) row->len) {
+        row_destroy(&row);
+        return 1;
+    }
+
+    *work = row;
+
+    return 0;
 }
 
 void row_destroy(struct row **ref) {
@@ -319,7 +357,8 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             external = 0;
 
             /* put the previous work on the queue */
-            QPTPool_enqueue(ctx, id, sta->processdir, work);
+            QPTPool_enqueue_swappable(ctx, id, sta->processdir, work,
+                                      row_serialize_and_free, row_alloc_and_deserialize);
 
             /* put the current line into a new work item */
             work = row_init(sta->tr.fd, first_delim - line, line, len, offset);
@@ -449,10 +488,13 @@ static ssize_t split_file(const char *name, const int fd, const size_t max_parts
         return -1;
     }
 
+    const off_t starting_offset = lseek(fd, 0, SEEK_CUR);
+    st.st_size -= starting_offset;
+
     /* approximate number of bytes per chunk */
     const size_t jump = (st.st_size / max_parts) + !!(st.st_size % max_parts);
 
-    off_t start = lseek(fd, 0, SEEK_SET);
+    off_t start = starting_offset;
     off_t end = start + jump;
 
     int rc = 0;
@@ -500,10 +542,10 @@ static void *fill_scout_args(struct TraceRange *tr, void *args) {
     return ret;
 }
 
-void enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
-                    const char delim, const size_t max_parts,
-                    QPTPool_t *ctx, QPTPoolFunc_t func,
-                    struct ScoutTraceStats *stats) {
+size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
+                        const char delim, const size_t max_parts,
+                        QPTPool_t *ctx, QPTPoolFunc_t func,
+                        struct ScoutTraceStats *stats) {
     memset(stats, 0, sizeof(*stats));
     clock_gettime(CLOCK_MONOTONIC, &stats->time.start);
     stats->mutex = &print_mutex;
@@ -531,13 +573,19 @@ void enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
         };
 
         /* chunks are not enqueued just yet */
-        stats->remaining += split_file(tracenames[i], tracefds[i], max_parts,
-                                       find_stanza_end, (void *) &delim,
-                                       fill_scout_args, &sta,
-                                       &chunks);
+        const ssize_t rc = split_file(tracenames[i], tracefds[i], max_parts,
+                                      find_stanza_end, (void *) &delim,
+                                      fill_scout_args, &sta,
+                                      &chunks);
+
+        if (rc > 0) {
+            stats->remaining += rc;
+        }
     }
 
-    if (stats->remaining == 0) {
+    const size_t chunk_count = stats->remaining;
+
+    if (chunk_count == 0) {
         clock_gettime(CLOCK_MONOTONIC, &stats->time.end);
         scout_end_print(stats);
     }
@@ -549,4 +597,6 @@ void enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
     }
 
     sll_destroy(&chunks, NULL);
+
+    return chunk_count;
 }

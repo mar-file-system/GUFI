@@ -271,7 +271,7 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:C:" COMPRESS_OPT "q", 2, "input_dir... output_prefix", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:s:C:" COMPRESS_OPT "q", 2, "input_dir... output_prefix", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0) {
@@ -290,7 +290,7 @@ int main(int argc, char *argv[]) {
     }
 
     const uint64_t queue_limit = get_queue_limit(pa.in.target_memory_footprint, pa.in.maxthreads);
-    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, 1, 2
+    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2
                                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                               , NULL
                                               #endif

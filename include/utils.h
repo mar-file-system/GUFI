@@ -173,6 +173,12 @@ void set_metadata(const char *path, struct stat *st, struct xattrs *xattrs);
 
 void dump_memory_usage(void);
 
+/* write as much as possible up to size bytes */
+ssize_t write_size(const int fd, const void *data, const size_t size);
+
+/* read as much as possible up to size bytes */
+ssize_t read_size(const int fd, void *buf, const size_t size);
+
 #ifdef __cplusplus
 }
 #endif

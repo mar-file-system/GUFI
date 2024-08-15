@@ -63,11 +63,13 @@ OF SUCH DAMAGE.
 
 
 #include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
 #include "debug.h"
+#include "swap.h"
 #include "utils.h"
 
 typedef enum {
@@ -82,7 +84,7 @@ typedef struct QPTPoolThreadData {
     pthread_mutex_t claimed_mutex;
 
     sll_t waiting;         /* generally push into this queue */
-    sll_t deferred;        /* push into here if waiting queue is too big; pop when waiting queue is empty */
+    struct Swap swap;      /* swap for this thread */
     pthread_mutex_t mutex;
     pthread_cond_t cv;
     size_t next_queue;     /* push to this thread when enqueuing */
@@ -95,7 +97,8 @@ typedef struct QPTPoolThreadData {
 /* The Queue Per Thread Pool context */
 struct QPTPool {
     size_t nthreads;
-    uint64_t queue_limit;    /* if the waiting queue reaches this size, push to the deferred queue instead */
+    uint64_t queue_limit;    /* if the waiting queue reaches this size, write to swap instead */
+    const char *swap_prefix; /* only used if queue_limit > 0 */
     struct {
         uint64_t num;        /* if there is work to steal from a queue, take */
         uint64_t denom;      /* (queue.size * num / denom) items from the front */
@@ -111,7 +114,10 @@ struct QPTPool {
     pthread_mutex_t mutex;
     pthread_cond_t cv;
     QPTPoolState_t state;
+
+    /* counters */
     uint64_t incomplete;
+    uint64_t swapped;
 
     QPTPoolThreadData_t *data;
 
@@ -169,24 +175,19 @@ static inline uint64_t steal_waiting(QPTPool_t *ctx, const size_t id, const size
     return rc;
 }
 
-static inline uint64_t steal_deferred(QPTPool_t *ctx, const size_t id, const size_t start) {
-    uint64_t rc = 0;
-    steal(ctx, id, start, mutex, deferred, rc);
-    return rc;
-}
-
 /*
- * QueuePerThreadPool threads normally claim their entire waiting or
- * deferred queue at once instead of popping work items off a queue
- * one at a time to reduce contention on the selected queue. However,
- * this scheme makes it possible to cause starvation when a work item
- * takes a long time to complete and has more work items queued up
- * after it.
+ * QueuePerThreadPool normally claims an entire work queue at once
+ * instead of popping work items off one at a time. This reduces the
+ * contention on the work queues. However, this scheme makes it
+ * possible to cause starvation when a work item takes a long time to
+ * complete and has more work items queued up after it, all of which
+ * have already been claimed and are not in the waiting queue.
  *
- * Stealing claimed work attempts to prevent starvation, reproducing
- * the effect of threads popping off individual work items. This only
- * happens after all waiting and deferred queues have been checked and
- * found to be empty, and so should not be called frequently.
+ * This function attempts to prevent starvation by stealing work that
+ * has already been claimed, reproducing the effect of threads popping
+ * off individual work items. This function is only called after the
+ * all waiting queues have been checked and found to be empty, and so
+ * should not be called frequently.
  */
 static inline uint64_t steal_claimed(QPTPool_t *ctx, const size_t id, const size_t start) {
     uint64_t rc = 0;
@@ -203,7 +204,7 @@ static inline uint64_t steal_claimed(QPTPool_t *ctx, const size_t id, const size
  */
 static inline void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id) {
     if (!ctx->steal.num || (ctx->nthreads < 2) ||
-        tw->waiting.size || tw->deferred.size ||
+        tw->waiting.size ||
         !ctx->incomplete) {
         return;
     }
@@ -215,7 +216,8 @@ static inline void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, siz
      */
     (void) (
         (steal_waiting( ctx, id, tw->steal_from) == 0) &&
-        (steal_deferred(ctx, id, tw->steal_from) == 0) &&
+        /* not stealing swapped work */
+
         /*
          * if still can't find anything, try the claimed queue
          *
@@ -237,14 +239,14 @@ static inline void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, siz
 static void wait_for_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw) {
     while (
         /* running, but no work in pool or current thread */
-        ((ctx->state == RUNNING) && (!ctx->incomplete ||
-                                     (!tw->waiting.size && !tw->deferred.size))) ||
+        ((ctx->state == RUNNING) && ((!ctx->incomplete && !ctx->swapped) ||
+                                     !tw->waiting.size)) ||
         /*
          * not running and still have work in
          * other threads, just not this one
          */
-        ((ctx->state == STOPPING) && ctx->incomplete &&
-         !tw->waiting.size && !tw->deferred.size)
+        ((ctx->state == STOPPING) && (ctx->incomplete || ctx->swapped) &&
+         !tw->waiting.size)
         ) {
         pthread_mutex_unlock(&ctx->mutex);
         pthread_cond_wait(&tw->cv, &tw->mutex);
@@ -261,9 +263,6 @@ static void claim_work(QPTPoolThreadData_t *tw) {
     pthread_mutex_lock(&tw->claimed_mutex);
     if (tw->waiting.size) {
         sll_move_append(&tw->claimed, &tw->waiting);
-    }
-    else {
-        sll_move_append(&tw->claimed, &tw->deferred);
     }
     pthread_mutex_unlock(&tw->claimed_mutex);
 }
@@ -282,8 +281,6 @@ static void dump_queue_size_stats(QPTPool_t *ctx, QPTPoolThreadData_t *tw) {
     for(size_t i = 0; i < ctx->nthreads; i++) {
         fprintf(stderr, "%zu ", ctx->data[i].waiting.size);
         sum += ctx->data[i].waiting.size;
-        fprintf(stderr, "%zu ", ctx->data[i].deferred.size);
-        sum += ctx->data[i].deferred.size;
     }
     fprintf(stderr, "%zu\n", sum);
     tw->waiting.size = 0;
@@ -365,7 +362,7 @@ static void *worker_function(void *args) {
         timestamp_set_end(wf_wait);
 
         /* if stopping and entire thread pool is empty, this thread can exit */
-        if ((ctx->state == STOPPING) && !ctx->incomplete) {
+        if ((ctx->state == STOPPING) && !ctx->incomplete && !ctx->swapped) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_mutex_unlock(&tw->mutex);
             break;
@@ -441,7 +438,7 @@ static size_t QPTPool_round_robin(const size_t id, const size_t prev, const size
 }
 
 QPTPool_t *QPTPool_init(const size_t nthreads, void *args) {
-    return QPTPool_init_with_props(nthreads, args, NULL, NULL, 0, 0, 0
+    return QPTPool_init_with_props(nthreads, args, NULL, NULL, 0, "", 0, 0
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , NULL
                                    #endif
@@ -476,9 +473,56 @@ int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit) {
         return 1;
     }
 
+    /* drop old swap data no matter what the new queue limit is */
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        QPTPoolThreadData_t *data = &ctx->data[i];
+        swap_stop(&data->swap);
+    }
+
+    ctx->swapped = 0;
     ctx->queue_limit = queue_limit;
+
+    /* create new swap space */
+    int bad = 0;
+    if (ctx->queue_limit) {
+        for(size_t i = 0; i < ctx->nthreads; i++) {
+            QPTPoolThreadData_t *data = &ctx->data[i];
+            if (swap_restart(&data->swap, ctx->swap_prefix, i) != 0) {
+                bad = 1;
+            }
+        }
+    }
+
     pthread_mutex_unlock(&ctx->mutex);
-    return 0;
+    return bad;
+}
+
+int QPTPool_set_swap_prefix(QPTPool_t *ctx, const char *swap_prefix) {
+    if (!ctx) {
+        return 1;
+    }
+
+    pthread_mutex_lock(&ctx->mutex);
+    if (ctx->state != INITIALIZED) {
+        pthread_mutex_unlock(&ctx->mutex);
+        return 1;
+    }
+
+    ctx->swapped = 0;
+    ctx->swap_prefix = swap_prefix;
+
+    int bad = 0;
+    if (ctx->queue_limit) {
+        for(size_t i = 0; i < ctx->nthreads; i++) {
+            QPTPoolThreadData_t *data = &ctx->data[i];
+            if (swap_restart(&data->swap, ctx->swap_prefix, i) != 0) {
+                bad = 1;
+            }
+        }
+    }
+
+    pthread_mutex_unlock(&ctx->mutex);
+    return bad;
 }
 
 int QPTPool_set_steal(QPTPool_t *ctx, const uint64_t num, const uint64_t denom) {
@@ -568,6 +612,18 @@ int QPTPool_get_queue_limit(QPTPool_t *ctx, uint64_t *queue_limit) {
     return 0;
 }
 
+int QPTPool_get_swap_prefix(QPTPool_t *ctx, const char **swap_prefix) {
+    if (!ctx) {
+        return 1;
+    }
+
+    if (swap_prefix) {
+        *swap_prefix = ctx->swap_prefix;
+    }
+
+    return 0;
+}
+
 int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom) {
     if (!ctx) {
         return 1;
@@ -598,13 +654,10 @@ int QPTPool_get_debug_buffers(QPTPool_t *ctx, struct OutputBuffers **debug_buffe
 }
 #endif
 
-QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
-                                   void *args,
-                                   QPTPoolNextFunc_t next_func,
-                                   void *next_args,
-                                   const uint64_t queue_limit,
-                                   const uint64_t steal_num,
-                                   const uint64_t steal_denom
+QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
+                                   QPTPoolNextFunc_t next_func, void *next_args,
+                                   const uint64_t queue_limit, const char *swap_prefix,
+                                   const uint64_t steal_num, const uint64_t steal_denom
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , struct OutputBuffers *debug_buffers
                                    #endif
@@ -620,6 +673,7 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
 
     ctx->nthreads = nthreads;
     ctx->queue_limit = queue_limit;
+    ctx->swap_prefix = swap_prefix;
     ctx->steal.num = steal_num;
     ctx->steal.denom = steal_denom;
     ctx->args = args;
@@ -629,10 +683,10 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
     pthread_cond_init(&ctx->cv, NULL);
     ctx->state = INITIALIZED;
     ctx->incomplete = 0;
-
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    ctx->swapped = 0;
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
     ctx->debug_buffers = debug_buffers;
-    #endif
+#endif
 
     ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
     if (!ctx->data) {
@@ -641,18 +695,29 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
     }
 
     /* set up thread data, but not threads */
+    int bad = 0;
     for(size_t i = 0; i < nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];
         sll_init(&data->claimed);
         pthread_mutex_init(&data->claimed_mutex, NULL);
         sll_init(&data->waiting);
-        sll_init(&data->deferred);
+        swap_init(&data->swap);
+        if (ctx->queue_limit) {
+            if (swap_start(&data->swap, ctx->swap_prefix, i) != 0) {
+                bad = 1; /* allow all threads to complete even if there are errors */
+            }
+        }
         pthread_mutex_init(&data->mutex, NULL);
         pthread_cond_init(&data->cv, NULL);
         data->next_queue = i;
         data->steal_from = i;
         data->threads_started = 0;
         data->threads_successful = 0;
+    }
+
+    if (bad) {
+        QPTPool_destroy(ctx);
+        return NULL;
     }
 
     return ctx;
@@ -699,6 +764,82 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFu
     qi->work = new_work;
 
     QPTPoolThreadData_t *data = &ctx->data[id];
+    pthread_mutex_lock(&data->mutex);
+    QPTPoolThreadData_t *next = &ctx->data[data->next_queue];
+
+    /* have to calculate next_queue before new_work is modified */
+    data->next_queue = ctx->next.func(id, data->next_queue, ctx->nthreads,
+                                      new_work, ctx->next.args);
+    pthread_mutex_unlock(&data->mutex);
+
+    QPTPool_enqueue_dst_t ret = QPTPool_enqueue_ERROR;
+
+    /* always push into wait queue no matter what the queue_limit is */
+    pthread_mutex_lock(&next->mutex);
+    sll_push(&next->waiting, qi);
+    ret = QPTPool_enqueue_WAIT;
+    pthread_mutex_lock(&ctx->mutex);
+    ctx->incomplete++;
+    pthread_mutex_unlock(&ctx->mutex);
+
+    pthread_cond_broadcast(&next->cv);
+    pthread_mutex_unlock(&next->mutex);
+
+    return ret;
+}
+
+static int write_swap(struct Swap *swap,
+                      serialize_and_free serialize,
+                      alloc_and_deserialize deserialize,
+                      QPTPoolFunc_t func, void *work) {
+    /* Not checking arguments */
+
+    const int fd = swap->write.fd;
+    const off_t start = lseek(fd, 0, SEEK_CUR);
+
+    size_t user_size = 0;
+    if ((write_size(fd, &serialize,   sizeof(serialize))   != sizeof(serialize))   ||
+        (write_size(fd, &deserialize, sizeof(deserialize)) != sizeof(deserialize)) ||
+        (serialize(fd, func, work, &user_size)             != 0)) {
+        lseek(fd, start, SEEK_SET); /* check for errors? */
+        return 1;
+    }
+
+    const size_t written = sizeof(serialize) + sizeof(deserialize) + user_size;
+
+    swap->write.count++;
+    swap->write.size += written;
+    swap->total_count++;
+    swap->total_size += written;
+
+    return 0;
+}
+
+static int read_swap(struct Swap *swap,
+                     serialize_and_free *serialize,
+                     alloc_and_deserialize *deserialize,
+                     QPTPoolFunc_t *func, void **work) {
+    /* Not checking arguments */
+
+    const int fd = swap->read.fd;
+    const off_t start = lseek(fd, 0, SEEK_CUR);
+
+    if ((read_size(fd, serialize,   sizeof(*serialize))   != sizeof(*serialize))   ||
+        (read_size(fd, deserialize, sizeof(*deserialize)) != sizeof(*deserialize)) ||
+        ((*deserialize)(fd, func, work)                   != 0)) {
+        lseek(fd, start, SEEK_SET); /* check for errors? */
+        return 1;
+    }
+
+    return 0;
+}
+
+QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work,
+                                                serialize_and_free serialize,
+                                                alloc_and_deserialize deserialize) {
+    /* Not checking arguments */
+
+    QPTPoolThreadData_t *data = &ctx->data[id];
 
     pthread_mutex_lock(&data->mutex);
     QPTPoolThreadData_t *next = &ctx->data[data->next_queue];
@@ -711,17 +852,26 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFu
 
     pthread_mutex_lock(&next->mutex);
     if (!ctx->queue_limit || (next->waiting.size < ctx->queue_limit)) {
+        struct queue_item *qi = malloc(sizeof(struct queue_item));
+        qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
+        qi->work = new_work;
+
         sll_push(&next->waiting, qi);
         ret = QPTPool_enqueue_WAIT;
+
+        pthread_mutex_lock(&ctx->mutex);
+        ctx->incomplete++;
+        pthread_mutex_unlock(&ctx->mutex);
     }
     else {
-        sll_push(&next->deferred, qi);
-        ret = QPTPool_enqueue_DEFERRED;
-    }
+        if (write_swap(&next->swap, serialize, deserialize, func, new_work) == 0) {
+            ret = QPTPool_enqueue_SWAP;
 
-    pthread_mutex_lock(&ctx->mutex);
-    ctx->incomplete++;
-    pthread_mutex_unlock(&ctx->mutex);
+            pthread_mutex_lock(&ctx->mutex);
+            ctx->swapped++;
+            pthread_mutex_unlock(&ctx->mutex);
+        }
+    }
 
     pthread_cond_broadcast(&next->cv);
     pthread_mutex_unlock(&next->mutex);
@@ -730,43 +880,53 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFu
 }
 
 QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTPool_enqueue_dst_t queue,
-                                           QPTPoolFunc_t func, void *new_work) {
+                                           QPTPoolFunc_t func, void *new_work,
+                                           serialize_and_free serialize,
+                                           alloc_and_deserialize deserialize) {
     /* Not checking other arguments */
 
     if ((queue != QPTPool_enqueue_WAIT) &&
-        (queue != QPTPool_enqueue_DEFERRED)) {
+        (queue != QPTPool_enqueue_SWAP)) {
         return QPTPool_enqueue_ERROR;
     }
 
-    struct queue_item *qi = malloc(sizeof(struct queue_item));
-    qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
-    qi->work = new_work;
+    QPTPool_enqueue_dst_t ret = queue;
 
     QPTPoolThreadData_t *data = &ctx->data[id];
-
     pthread_mutex_lock(&data->mutex);
     if (queue == QPTPool_enqueue_WAIT) {
-        sll_push(&data->waiting, qi);
-    }
-    else if (queue == QPTPool_enqueue_DEFERRED) {
-        sll_push(&data->deferred, qi);
-    }
+        struct queue_item *qi = malloc(sizeof(struct queue_item));
+        qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
+        qi->work = new_work;
 
-    pthread_mutex_lock(&ctx->mutex);
-    ctx->incomplete++;
-    pthread_mutex_unlock(&ctx->mutex);
+        sll_push(&data->waiting, qi);
+
+        pthread_mutex_lock(&ctx->mutex);
+        ctx->incomplete++;
+        pthread_mutex_unlock(&ctx->mutex);
+    }
+    else if (queue == QPTPool_enqueue_SWAP) {
+        if (write_swap(&data->swap, serialize, deserialize, func, new_work) == 0) {
+            pthread_mutex_lock(&ctx->mutex);
+            ctx->swapped++;
+            pthread_mutex_unlock(&ctx->mutex);
+        }
+        else {
+            ret = QPTPool_enqueue_ERROR;
+        }
+    }
 
     pthread_cond_broadcast(&data->cv);
     pthread_mutex_unlock(&data->mutex);
 
-    return queue;
+    return ret;
 }
 
-uint64_t QPTPool_wait(QPTPool_t *ctx) {
-    return QPTPool_wait_lte(ctx, 0);
+uint64_t QPTPool_wait_mem(QPTPool_t *ctx) {
+    return QPTPool_wait_mem_lte(ctx, 0);
 }
 
-uint64_t QPTPool_wait_lte(QPTPool_t *ctx, const uint64_t count) {
+uint64_t QPTPool_wait_mem_lte(QPTPool_t *ctx, const uint64_t count) {
     if (!ctx) {
         return 0;
     }
@@ -789,29 +949,143 @@ uint64_t QPTPool_wait_lte(QPTPool_t *ctx, const uint64_t count) {
     return incomplete;
 }
 
+/*
+ * Read everything from a swap file back into memory. Simply running
+ * this once for ecach thread is not enough because the previously
+ * swapped work items might be swapped again or might create new work
+ * that is swapped.
+ *
+ * Additionally, the swap files are changed to new files in order to
+ * prevent racing of swap items being generated while they are being
+ * read.
+ */
+static int QPTPool_wait_swapped_once(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+    (void) data; (void) args;
+
+    /* read swap files */
+    QPTPoolThreadData_t *tw = &ctx->data[id];
+    struct Swap *swap = &tw->swap;
+
+    /*
+     * Reset the swap file's offset to 0, stash the file
+     * descriptor, and open a new swap file for writing
+     * to while reading the old one.
+     *
+     * If this is not done, the new work will write to the
+     * original swap file while it is being read, throwing
+     * off the internal offset.
+     *
+     * This has the additional benefit of reducing storage
+     * space utilization once the old swap file is closed.
+     */
+    pthread_mutex_lock(&tw->mutex);
+    /* if there's nothing, just return */
+    if (swap_read_prep(swap) != 0) {
+        pthread_mutex_unlock(&tw->mutex);
+        return 0;
+    }
+    pthread_mutex_unlock(&tw->mutex);
+
+    /* thread mutex does not need locking any more */
+
+    size_t count = 0;
+
+    serialize_and_free serialize = NULL;
+    alloc_and_deserialize deserialize = NULL;
+    QPTPoolFunc_t func = NULL;
+    void *work = NULL;
+
+    /* read everything out of swap and enqueue */
+    while (read_swap(swap, &serialize, &deserialize, &func, &work) == 0) {
+        /* can be swapped again immediately */
+        QPTPool_enqueue_swappable(ctx, id, func, work, serialize, deserialize);
+        count++;
+    }
+
+    pthread_mutex_lock(&ctx->mutex);
+    ctx->swapped -= count;
+    pthread_mutex_unlock(&ctx->mutex);
+
+    swap_read_done(swap);
+
+    return 0;
+}
+
+void QPTPool_wait(QPTPool_t *ctx) {
+    if (!ctx) {
+        return;
+    }
+
+    pthread_mutex_lock(&ctx->mutex);
+    const QPTPoolState_t state = ctx->state;
+    pthread_mutex_unlock(&ctx->mutex);
+
+    if (state != RUNNING) {
+        return;
+    }
+
+    /*
+     * wait for all in-memory work to clear
+     * out so that ctx->swapped is stable
+     */
+    QPTPool_wait_mem(ctx);
+
+    pthread_mutex_lock(&ctx->mutex);
+    while (ctx->swapped) {
+        pthread_mutex_unlock(&ctx->mutex);
+
+        /* read swap in parallel */
+        for(size_t i = 0; i < ctx->nthreads; i++) {
+            /* not swappable */
+            QPTPool_enqueue_here(ctx, i, QPTPool_enqueue_WAIT,
+                                 QPTPool_wait_swapped_once, NULL,
+                                 NULL, NULL);
+        }
+
+        /* wait for all QPTPool_wait_swapped_once to clear out */
+        QPTPool_wait_mem(ctx);
+
+        /* ctx->swapped is now stable */
+
+        pthread_mutex_lock(&ctx->mutex);
+    }
+    pthread_mutex_unlock(&ctx->mutex);
+}
+
 void QPTPool_stop(QPTPool_t *ctx) {
     if (!ctx) {
         return;
     }
 
-    /* no need to call QPTPool_wait - just wait for threads to stop */
+    pthread_mutex_lock(&ctx->mutex);
+    const QPTPoolState_t state = ctx->state;
+    pthread_mutex_unlock(&ctx->mutex);
+
+    if (state != RUNNING) {
+        return;
+    }
+
+    /* have to wait to clear out swapped work */
+    QPTPool_wait(ctx);
 
     pthread_mutex_lock(&ctx->mutex);
-    const QPTPoolState_t prev = ctx->state;
     ctx->state = STOPPING;
     pthread_mutex_unlock(&ctx->mutex);
 
-    if (prev == RUNNING) {
-        for(size_t i = 0; i < ctx->nthreads; i++) {
-            QPTPoolThreadData_t *data = &ctx->data[i];
-            pthread_mutex_lock(&data->mutex);
-            pthread_cond_broadcast(&data->cv);
-            pthread_mutex_unlock(&data->mutex);
-        }
+    /* force all threads out of waiting loop if they are in it */
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        QPTPoolThreadData_t *data = &ctx->data[i];
+        pthread_mutex_lock(&data->mutex);
+        pthread_cond_broadcast(&data->cv);
+        pthread_mutex_unlock(&data->mutex);
+    }
 
-        for(size_t i = 0; i < ctx->nthreads; i++) {
-            pthread_join(ctx->data[i].thread, NULL);
-        }
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        pthread_join(ctx->data[i].thread, NULL);
+        #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
+        printf("Thread %zu Swap: %zu items/%zu bytes\n",
+               i, ctx->data[i].swap.total_count, ctx->data[i].swap.total_size);
+        #endif
     }
 }
 
@@ -839,6 +1113,30 @@ uint64_t QPTPool_threads_completed(QPTPool_t *ctx) {
     return sum;
 }
 
+uint64_t QPTPool_work_swapped_count(QPTPool_t *ctx) {
+    if (!ctx) {
+        return 0;
+    }
+
+    uint64_t sum = 0;
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        sum += ctx->data[i].swap.total_count;
+    }
+    return sum;
+}
+
+size_t QPTPool_work_swapped_size(QPTPool_t *ctx) {
+    if (!ctx) {
+        return 0;
+    }
+
+    size_t sum = 0;
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        sum += ctx->data[i].swap.total_size;
+    }
+    return sum;
+}
+
 void QPTPool_destroy(QPTPool_t *ctx) {
     if (!ctx) {
         return;
@@ -851,14 +1149,15 @@ void QPTPool_destroy(QPTPool_t *ctx) {
         data->thread = 0;
         pthread_cond_destroy(&data->cv);
         pthread_mutex_destroy(&data->mutex);
+        swap_stop(&data->swap);
+        swap_destroy(&data->swap);
         /*
-         * If QPTPool_start is called, queues will be empty at this point
+         * If QPTPool_start was called, queues will be empty at this point
          *
-         * If QPTPool_start is not called, queues might not be empty since
+         * If QPTPool_start was not called, queues might not be empty since
          * enqueuing work without starting the worker threads is allowed,
          * so free() is called to clear out any unprocessed work items
          */
-        sll_destroy(&data->deferred, free);
         sll_destroy(&data->waiting, free);
         pthread_mutex_destroy(&data->claimed_mutex);
         sll_destroy(&data->claimed, free);
