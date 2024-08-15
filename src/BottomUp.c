@@ -392,7 +392,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
     ua.timestamp_buffers = timestamp_buffers;
     #endif
 
-    QPTPool_t *pool = QPTPool_init_with_props(thread_count, &ua, NULL, NULL, 0, 1, 2
+    QPTPool_t *pool = QPTPool_init_with_props(thread_count, &ua, NULL, NULL, 0, "", 1, 2
                                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                               , timestamp_buffers
                                               #endif

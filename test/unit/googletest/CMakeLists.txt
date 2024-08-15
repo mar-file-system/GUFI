@@ -79,6 +79,7 @@ if (CMAKE_CXX_COMPILER)
     debug.cpp
     histogram.cpp
     print.cpp
+    swap.cpp
     template_db.cpp
     trace.cpp
     trie.cpp

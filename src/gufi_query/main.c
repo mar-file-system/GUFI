@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:" COMPRESS_OPT "Q:", 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:s:" COMPRESS_OPT "Q:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0) {
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
     #endif
 
     const uint64_t queue_limit = get_queue_limit(in.target_memory_footprint, in.maxthreads);
-    QPTPool_t *pool = QPTPool_init_with_props(in.maxthreads, &pa, NULL, NULL, queue_limit, 1, 2
+    QPTPool_t *pool = QPTPool_init_with_props(in.maxthreads, &pa, NULL, NULL, queue_limit, in.swap_prefix.data, 1, 2
                                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                               , timestamp_buffers
                                               #endif

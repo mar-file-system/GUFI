@@ -101,7 +101,8 @@ typedef size_t (*QPTPoolNextFunc_t)(const size_t id, const size_t prev, const si
  * @return 0 if successful, non-zero if not
  */
 int QPTPool_set_next(QPTPool_t *ctx, QPTPoolNextFunc_t func, void *args);
-int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit);
+int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit); /* count; same for all threads */
+int QPTPool_set_swap_prefix(QPTPool_t *ctx, const char *swap_prefix);
 int QPTPool_set_steal(QPTPool_t *ctx, const uint64_t num, const uint64_t denom);
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 int QPTPool_set_debug_buffers(QPTPool_t *ctx, struct OutputBuffers *debug_buffers);
@@ -112,19 +113,17 @@ int QPTPool_get_nthreads(QPTPool_t *ctx, size_t *nthreads);
 int QPTPool_get_args(QPTPool_t *ctx, void **args);
 int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args);
 int QPTPool_get_queue_limit(QPTPool_t *ctx, uint64_t *queue_limit);
+int QPTPool_get_swap_prefix(QPTPool_t *ctx, const char **swap_prefix);
 int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom);
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 int QPTPool_get_debug_buffers(QPTPool_t *ctx, struct OutputBuffers **debug_buffers);
 #endif
 
 /* calls QPTPool_init and QPTPool_set_* functions */
-QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
-                                   void *args,
-                                   QPTPoolNextFunc_t next_func,
-                                   void *next_args,
-                                   const uint64_t queue_limit,
-                                   const uint64_t steal_num,
-                                   const uint64_t steal_denom
+QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
+                                   QPTPoolNextFunc_t next_func, void *next_args,
+                                   const uint64_t queue_limit, const char *swap_prefix,
+                                   const uint64_t steal_num, const uint64_t steal_denom
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , struct OutputBuffers *debug_buffers
                                    #endif
@@ -152,12 +151,17 @@ typedef int (*QPTPoolFunc_t)(QPTPool_t *ctx, const size_t id, void *data, void *
 typedef enum QPTPool_enqueue_dst {
     QPTPool_enqueue_ERROR,
     QPTPool_enqueue_WAIT,
-    QPTPool_enqueue_DEFERRED,
+    QPTPool_enqueue_SWAP,
 } QPTPool_enqueue_dst_t;
 
+/* function signatures for serializing and deserializing data to swap */
+typedef int (*serialize_and_free)(const int fd, QPTPoolFunc_t func, void *work, size_t *size);
+typedef int (*alloc_and_deserialize)(const int fd, QPTPoolFunc_t *func, void **work);
+
 /*
- * Enqueue data and a function to process the data
- * Pushes to thread[id]->next_queue, rather than directly to thread[id]
+ * Enqueue data and a function to process the data. Pushes to
+ * thread[id]->next_queue, rather than directly to thread[id]. The
+ * queue_limit is ignored and work items are not swapped.
  *
  * This function can be called before starting the thread pool.
  *
@@ -170,26 +174,56 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id,
                                       QPTPoolFunc_t func, void *new_work);
 
 /*
- * Enqueue data and a function to process the data
- * Pushes directly to thread[id]->queue. Because the id is used
- * directly, the internal "next queue" value is not updated.
+ * Enqueue data and a function to process the data. Pushes to
+ * thread[id]->next_queue, rather than directly to thread[id]. If
+ * target thread's queue size is greater than or equal to the
+ * queue_limit, the work item is swapped and freed from memory.
  *
  * This function can be called before starting the thread pool.
+ * However, note that if the queue limit or swap prefix is set after
+ * pushing to the swap queue, all data in the swap files will be lost.
  *
- * @param ctx      the pool context the function is running in
- * @param id       the id of the thread that will process this work
- * @param queue    queue to push to: wait or deferred
- * @param func     the function to run
- * @param new_work the work to be processed by func
+ * @param ctx         the pool context the function is running in
+ * @param id          the id of the thread used to select where the work item should be enqueued
+ * @param func        the function to run
+ * @param new_work    the work to be processed by func
+ * @param serialize   function to serialize and if necessary, free new_work
+ * @param deserialize function to allocate space and fill in new_work
+ */
+QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id,
+                                                QPTPoolFunc_t func, void *new_work,
+                                                serialize_and_free serialize,
+                                                alloc_and_deserialize deserialze);
+/*
+ * Enqueue data and a function to process the data. Pushes directly to
+ * thread[id] instead of thread[id]->next_queue. The queue_limit is
+ * ignored. If the work item is swapped, it is also freed from memory.
+ *
+ * This function can be called before starting the thread pool.
+ * However, note that if the queue limit or swap prefix is set after
+ * pushing to the swap queue, all data in the swap files will be lost.
+ *
+ * @param ctx         the pool context the function is running in
+ * @param id          the id of the thread that will process this work
+ * @param queue       queue to push to: wait or swap
+ * @param func        the function to run
+ * @param new_work    the work to be processed by func
+ * @param serialize   function to serialize and if necessary, free new_work
+ * @param deserialize function to allocate space and fill in new_work
  */
 QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTPool_enqueue_dst_t queue,
-                                           QPTPoolFunc_t func, void *new_work);
+                                           QPTPoolFunc_t func, void *new_work,
+                                           serialize_and_free serialize,
+                                           alloc_and_deserialize deserialize);
 
-/* Wait for all work to be processed but do not clean up threads */
-uint64_t QPTPool_wait(QPTPool_t *ctx);
+/* Wait for all in-memory work to be processed but do not clean up threads */
+uint64_t QPTPool_wait_mem(QPTPool_t *ctx);
 
-/* Wait for all but count work items to be processed and do not clean up threads */
-uint64_t QPTPool_wait_lte(QPTPool_t *ctx, const uint64_t count);
+/* Wait for all but count in-memory work items to be processed and do not clean up threads */
+uint64_t QPTPool_wait_mem_lte(QPTPool_t *ctx, const uint64_t count);
+
+/* Wait for all in-memory and swapped work to be processed and do not clean up threads */
+void QPTPool_wait(QPTPool_t *ctx);
 
 /*
  * Join threads after all threads have stopped
@@ -211,6 +245,12 @@ uint64_t QPTPool_threads_started(QPTPool_t *ctx);
 
 /* get the number of started threads that completed successfully */
 uint64_t QPTPool_threads_completed(QPTPool_t *ctx);
+
+/* number of work items that were swapped out */
+uint64_t QPTPool_work_swapped_count(QPTPool_t *ctx);
+
+/* total size of work items that were swapped out (function pointer + arg size + arg contents) */
+size_t QPTPool_work_swapped_size(QPTPool_t *ctx);
 
 /* clean up QPTPool context data */
 void QPTPool_destroy(QPTPool_t *ctx);

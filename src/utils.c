@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <utime.h>
 
+#include "compress.h"
 #include "external.h"
 #include "utils.h"
 
@@ -380,6 +381,48 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
     return dst_len - max_len - 1;
 }
 
+static int work_serialize_and_free(const int fd, QPTPoolFunc_t func, void *work, size_t *size) {
+    if (write_size(fd, &func, sizeof(func)) != sizeof(func)) {
+        return 1;
+    }
+
+    struct work *w = (struct work *) work;
+    const size_t len = w->compressed.yes?w->compressed.len:sizeof(*w);
+
+    if ((write_size(fd, &len, sizeof(len)) != sizeof(len)) ||
+        (write_size(fd, w, len) != (ssize_t) len)) {
+        return 1;
+    }
+
+    free(work);
+
+    *size += sizeof(func) + len;
+
+    return 0;
+}
+
+static int work_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **work) {
+    if (read_size(fd, func, sizeof(*func)) != sizeof(*func)) {
+        return 1;
+    }
+
+    size_t len = 0;
+
+    if (read_size(fd, &len, sizeof(len)) != sizeof(len)) {
+        return 1;
+    }
+
+    struct work *w = malloc(len);
+
+    if (read_size(fd, w, len) != (ssize_t) len) {
+        return 1;
+    }
+
+    *work = w;
+
+    return 0;
+}
+
 /*
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function.
@@ -483,7 +526,8 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
 
                 if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
                     struct work *copy = compress_struct(in->compress, &child, sizeof(child));
-                    QPTPool_enqueue(ctx, id, processdir, copy);
+                    QPTPool_enqueue_swappable(ctx, id, processdir, copy,
+                                              work_serialize_and_free, work_alloc_and_deserialize);
                 }
                 else {
                     /*
@@ -957,4 +1001,53 @@ void dump_memory_usage(void) {
     if (p)
         printf("%s\n", p);
     #endif
+}
+
+ssize_t write_size(const int fd, const void *data, const size_t size) {
+    /* Not checking arguments */
+    char *curr = (char *) data;
+    size_t written = 0;
+    while (written < size) {
+        const ssize_t w = write(fd, curr, size - written);
+
+        if (w < 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Failed to write to file descriptor %d: %s (%d)\n",
+                    fd, strerror(err), err);
+            return -1;
+        }
+        else if (w == 0) {
+            break;
+        }
+
+        curr += w;
+        written += w;
+    }
+
+    return written;
+}
+
+ssize_t read_size(const int fd, void *buf, const size_t size) {
+    /* Not checking arguments */
+    char *curr = (char *) buf;
+    size_t got = 0;
+    while (got < size) {
+        const ssize_t r = read(fd, curr, size - got);
+
+        if (r < 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Failed to read from file descriptor %d: %s (%d)\n",
+                    fd, strerror(err), err);
+            return -1;
+        }
+        else if (r == 0) {
+            /* EOF */
+            break;
+        }
+
+        curr += r;
+        got += r;
+    }
+
+    return got;
 }

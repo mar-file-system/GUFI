@@ -244,6 +244,9 @@ struct input {
 
    /* used when querying (-Q) */
    sll_t external_attach;     /* list of eus_t */
+
+   /* prefix of swap files */
+   refstr_t swap_prefix;
 };
 
 struct input *input_init(struct input *in);

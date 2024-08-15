@@ -459,7 +459,6 @@ static void sub_help(void) {
    printf("\n");
 }
 
-
 int main(int argc, char *argv[]) {
     /* have to call clock_gettime explicitly to get start time and epoch */
     struct start_end main_func;
@@ -467,7 +466,7 @@ int main(int argc, char *argv[]) {
     epoch = since_epoch(&main_func.start);
 
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:d:M:", 2, "trace_file... output_dir", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:d:M:s:", 2, "trace_file... output_dir", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0) {
@@ -531,7 +530,7 @@ int main(int argc, char *argv[]) {
     #endif
 
     const uint64_t queue_limit = get_queue_limit(pa.in.target_memory_footprint, pa.in.maxthreads);
-    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, 1, 2
+    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2
                                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                               , &debug_output_buffers
                                               #endif

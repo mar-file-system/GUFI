@@ -113,6 +113,7 @@ set(GUFI_SOURCES
   external.c
   histogram.c
   print.c
+  swap.c
   template_db.c
   trace.c
   trie.c

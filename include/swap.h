@@ -62,86 +62,67 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_TRACE_H
-#define GUFI_TRACE_H
+#ifndef GUFI_SWAP_H
+#define GUFI_SWAP_H
 
-#include <pthread.h>
-#include <stdio.h>
+#include <unistd.h>
 
-#include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "debug.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* write a mapping from an external db path to an attach name */
-int externaltofile(FILE *file, const char delim, const char *path);
+/*
+ * Swap work items to filesystem
+ */
 
-/* write a work struct to a file */
-int worktofile(FILE *file, const char delim, const size_t prefix_len, struct work *work, struct entry_data *ed);
-
-/* convert a formatted string to a work struct or attach name */
-int linetowork(char *line, const size_t len, const char delim,
-               struct work *work, struct entry_data *ed);
-
-int *open_traces(char **trace_names, size_t trace_count);
-void close_traces(int *traces, size_t trace_count);
-
-/* Data stored during first pass of input file */
-struct row {
-    int trace;
-    size_t first_delim;
-    char *line;
-    size_t len;
-    off_t offset;
-    size_t entries;
-};
-
-struct row *row_init(const int trace, const size_t first_delim, char *line,
-                     const size_t len, const long offset);
-void row_destroy(struct row **ref);
-
-struct TraceRange {
+struct SwapFile {
     int fd;
-    off_t start, end; /* [start, end) */
+    uint64_t count;
+    size_t size;
 };
 
-struct ScoutTraceStats {
-    pthread_mutex_t *mutex; /* lock for values below */
+/* Swap for a single thread */
+struct Swap {
+    /* filename */
+    const char *prefix;
+    uint64_t id;
 
-    size_t remaining;
+    /*
+     * Start with a file to write to.
+     * Once writing is complete, write
+     * is moved to read, and a new
+     * write file is opened.
+     */
+    struct SwapFile write;
+    struct SwapFile read;
 
-    struct start_end time;  /* time from beginning of enqueue_traces call until right before scout_end_print */
-    uint64_t thread_time;   /* sum across all threads */
-    size_t files;
-    size_t dirs;
-    size_t empty;           /* number of directories without files/links
-                             * can still have child directories */
+    /* total across lifetime of this swap struct */
+    uint64_t total_count;
+    size_t total_size;
 };
 
-struct ScoutTraceArgs {
-    char delim;
-    const char *tracename;
-    struct TraceRange tr;
+/* zero struct */
+void swap_init     (struct Swap *swap);
 
-    /* data argument will be a struct row */
-    QPTPoolFunc_t processdir;
+/* open write file */
+int  swap_start    (struct Swap *swap, const char *prefix, const uint64_t id);
 
-    /* if provided, call at end of scout_trace */
-    void (*free)(void *);
+/* close write and call swap_start with new prefix and id (data is not copied to new file) */
+int  swap_restart  (struct Swap *swap, const char *prefix, const uint64_t id);
 
-    /* reference to single set of shared values */
-    struct ScoutTraceStats *stats;
-};
+/* move write to read and open new write */
+int  swap_read_prep(struct Swap *swap);
 
-int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
+/* close read */
+void swap_read_done(struct Swap *swap);
 
-size_t enqueue_traces(char **traceames, int *tracefds, const size_t trace_count,
-                      const char delim, const size_t max_parts,
-                      QPTPool_t *ctx, QPTPoolFunc_t func,
-                      struct ScoutTraceStats *stats);
+/* close both write and read files */
+void swap_stop     (struct Swap *swap);
+
+/* zero struct */
+void swap_destroy  (struct Swap *swap);
 
 #ifdef __cplusplus
 }

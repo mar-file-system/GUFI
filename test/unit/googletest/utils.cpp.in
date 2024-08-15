@@ -1141,3 +1141,33 @@ TEST(set_metadata, bad) {
 
     EXPECT_EQ(rmdir(dir), 0);
 }
+
+TEST(write_read, size) {
+    char filename[] = "XXXXXX";
+    int fd = mkstemp(filename);
+    ASSERT_GT(fd, -1);
+    EXPECT_EQ(remove(filename), 0);
+
+    const off_t start = lseek(fd, 0, SEEK_CUR);
+    EXPECT_EQ(start, 0);
+
+    char src[1024];
+    EXPECT_EQ(memset(src, 0xa5, sizeof(src)), src);
+    EXPECT_EQ(write_size(fd, src, sizeof(src)), (ssize_t) sizeof(src));
+
+    const off_t end = lseek(fd, 0, SEEK_CUR);
+    EXPECT_EQ(end, (off_t) sizeof(src));
+
+    EXPECT_EQ(lseek(fd, 0, SEEK_SET), 0);
+
+    char dst[1024];
+    EXPECT_EQ(memset(dst, 0, sizeof(dst)), dst);
+    EXPECT_EQ(read_size(fd, dst, sizeof(dst)), (ssize_t) sizeof(dst));
+
+    EXPECT_EQ(memcmp(dst, src, sizeof(src)), 0);
+
+    EXPECT_EQ(close(fd), 0);
+
+    // write to closed file descriptor
+    EXPECT_EQ(read_size(fd, dst, sizeof(dst)), -1);
+}

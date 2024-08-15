@@ -339,3 +339,12 @@ TEST(scout_trace, no_cleanup) {
     EXPECT_EQ(close(fd), 0);
     EXPECT_EQ(remove(tracename), 0);
 }
+
+TEST(enqueue_traces, bad) {
+    char tracename[] = "trace";
+    char *tracenameptr = tracename;
+    int tracefd = -1;
+    struct ScoutTraceStats stats = {};
+
+    EXPECT_EQ(enqueue_traces(&tracenameptr, &tracefd, 1, '|', 10, nullptr, nullptr, &stats), (std::size_t) 0);
+}

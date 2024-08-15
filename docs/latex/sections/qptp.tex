@@ -69,7 +69,9 @@ required a more performant thread pool. The solution to this was
 
 \qptp is named so because originally, there was one work queue (and
 lock) maintained for each thread in the thread pool. Now, there are
-multiple work queues maintained for each thread.
+multiple work queues maintained for each thread: work is pushed to the
+waiting work queue and the claimed work queue contains the work that
+the thread is actively processing.
 
 \subsubsection{Adding Work}
 By default, work is added to threads in a round robin fashion in order
@@ -89,32 +91,25 @@ items with only a single lock that might experience contention. All
 claimed work is processed before the thread returns to the work queue
 to find more work.
 
-There exists another work queue called the deferred work queue, that
-is pushed to if the thread pool is initialized with a non-zero
-\texttt{queue\_limit}. Work items are placed in the deferred work
-queue when the waiting work queue has more than \texttt{queue\_limit}
-items enqueued. The deferred work queue is only processed if the
-waiting work queue is empty when the worker thread goes to look for
-more work. The work queue may still be pushed to if it was recently
-moved for processing (since the waiting work queue now has a size of
-0). This changes the order that work is processed, allowing for work
-to drain, reducing memory pressure, while still continuously
-processing work when there is work present.
+If a thread discovers that it does not have work items in its waiting
+work queue but the thread pool still has outstanding in-memory work,
+it will search for more work in the waiting queue of other threads. If
+work items are found, the thread will steal at least one item, causing
+the stolen work items to experience less latency between enqueuing and
+processing. If no work can be stolen from the waiting work queues of
+all threads, the thread will attempt to take work from the claimed
+work queue. This is done so that long running jobs do not prevent
+claimed work from being processed. This also makes \qptp behave more
+like thread pools that pull one work item off at a time and thus
+always process work when work is available. This should be considered
+a last-ditch attempt to acquire work, and should not occur too often.
 
-If a thread discovers that it does not have work items in either of
-its own queues but the thread pool still has outstanding work, it will
-search for more work in other waiting work queues, and if none are
-found, other deferred work queues. If work items are found in a queue,
-the thread will steal at least one item, causing the stolen work items
-to experience less latency between enqueuing and processing.
-
-If no work can be stolen from the two queues in all threads, the
-thread will attempt to take work from the claimed work queue. This is
-done so that long running jobs do not prevent claimed work from being
-processed. This also makes \qptp behave more like thread pools that
-pull one work item off at a time and thus always process work when
-work is available. This should be considered a last-ditch attempt to
-acquire work, and should not occur too often.
+If the queue size limit was set before the thread pool was started and
+a thread's work item count is greater than or equal to the queue size
+limit, new work items are swapped to a filesystem instead of cached in
+memory. These work items are not counted as in-memory outstanding
+work, and are instead processed after all in-memory work items have
+been processed, in \texttt{QPTPool\_stop}.
 
 \subsubsection{Usage}
 \begin{enumerate}
@@ -142,8 +137,14 @@ acquire work, and should not occur too often.
   require a branch to figure out whether or not the provided function
   pointer is valid.
 
-  \texttt{QPTPool\_set\_queue\_limit} causes work items to be pushed
-  into the deferred work queue as described above.
+  \texttt{QPTPool\_set\_queue\_limit} causes work items to be swapped
+  to a filesystem.
+
+  \texttt{QPTPool\_set\_swap\_prefix} sets the path where swap data is
+  written. Note that this prefix is prefixed to the path string
+  directly, without a path separator. Additionally, the parent
+  directory of the prefix must already exist - the path is not created
+  if it does not exist.
 
   \texttt{QPTPool\_set\_steal} sets the numerator and denominator of
   the multiplier used when work items are being stolen from other
@@ -175,7 +176,25 @@ acquire work, and should not occur too often.
     \texttt{threads[id]->next\_queue} will be where the new work item
     is enqueued.
 
-    \item \texttt{QPTPool\_enqueue\_here(pool, id, queue, func, work);}
+    Work enqueued with \texttt{QPTPool\_enqueue} will not be swapped.
+
+    \item \texttt{QPTPool\_enqueue\_swappable(pool, id, queue, func, work, size, free\_work);}
+
+    Work passed into \texttt{QPTPool\_enqueue\_swappable} may end up
+    in the wait queue or be swapped to a filesystem.
+
+    The thread that will receive the new work item is not \texttt{id}.
+    Rather, \texttt{id} is treated as the source thread id and
+    \texttt{threads[id]->next\_queue} will be where the new work item
+    is enqueued.
+
+    The additional arguments \texttt{size} and \texttt{free\_work} are
+    required in order for swapping to work: \texttt{size} allows for
+    arbitrary work items to be written out. \texttt{free\_work}
+    removes the work item to be removed from memory, reducing memory
+    pressure.
+
+    \item \texttt{QPTPool\_enqueue\_here(pool, id, queue, func, work, size, free\_work);}
 
     This function allows for work to be explicitly placed into the
     selected queue at thread \texttt{id} instead of using the next
@@ -185,15 +204,19 @@ acquire work, and should not occur too often.
 \item Wait for work to be completed (optional):
 
   \begin{itemize}
-    \item \texttt{QPTPool\_wait\_lte(pool, count);}
+    \item \texttt{QPTPool\_wait\_mem\_lte(pool, count);}
 
-      This function waits until the amount of work to be done is less
-      than or equal to \texttt{count}.
+      This function waits until the amount of in-memory work to be
+      done is less than or equal to \texttt{count}.
+
+    \item \texttt{QPTPool\_wait\_mem(pool);}
+
+      This function waits until all in-memory work to be done. This
+      function is just \texttt{QPTPool\_wait\_mem\_lte(pool, 0);}
 
     \item \texttt{QPTPool\_wait(pool);}
 
-      This function waits until all existing work to be done. This
-      function is just \texttt{QPTPool\_wait\_lte(pool, 0);}
+      This function waits until all in-memory and swapped work is done.
   \end{itemize}
 
 \item Wait for all work to be completed (threads are joined):
@@ -201,8 +224,9 @@ acquire work, and should not occur too often.
   \texttt{QPTPool\_stop(pool);}
 
   This function exists to allow for the collection of statistics
-  before the context is destroyed. Note that \texttt{QPTPool\_wait}
-  does not have to be called before calling this function.
+  before the context is destroyed. Note that \texttt{QPTPool\_wait} is
+  called by this function, and thus does not have to be explicitly
+  called before calling this function.
 
 \item Destroy the pool context:
 
