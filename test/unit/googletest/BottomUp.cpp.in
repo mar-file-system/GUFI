@@ -71,6 +71,10 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+#include "OutputBuffers.h"
+#endif
+
 static BU_f zero = [](void *args timestamp_sig) -> int {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     (void) timestamp_buffers;
@@ -113,6 +117,7 @@ static int parallel_bottomup_wrapper(char **root_names, const size_t root_count,
 }
 
 static const std::string ROOT = "@CMAKE_BINARY_DIR@";
+static const std::size_t THREAD_COUNT = 1;
 
 TEST(BottomUp, builddir) {
     const char *roots[] = {
@@ -121,14 +126,14 @@ TEST(BottomUp, builddir) {
 
     const std::size_t root_count = sizeof(roots) / sizeof(roots[0]);
 
-    EXPECT_EQ(parallel_bottomup_wrapper((char **) roots, root_count, 1,
+    EXPECT_EQ(parallel_bottomup_wrapper((char **) roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        zero, zero, 1, 0, nullptr), 0);
+                                        zero, zero, THREAD_COUNT, 0, nullptr), 0);
 }
 
 TEST(BottomUp, bad) {
     // bad user struct size
-    EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, 1,
+    EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, THREAD_COUNT,
                                         sizeof(struct BottomUp) - 1,
                                         zero, zero, 0, 0, nullptr), -1);
 
@@ -138,7 +143,7 @@ TEST(BottomUp, bad) {
                                         zero, zero, 0, 0, nullptr), -1);
 
     // no root dirs
-    EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, 1,
+    EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, THREAD_COUNT,
                                         sizeof(struct BottomUp),
                                         zero, zero, 0, 0, nullptr), 0);
 
@@ -154,14 +159,14 @@ TEST(BottomUp, bad) {
     const std::size_t root_count = sizeof(roots) / sizeof(roots[0]);
 
     // root path is not directory
-    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
+    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
                                         zero, zero, 0, 0, nullptr), -1);
 
     EXPECT_EQ(remove(badfilename), 0);
 
     // root path doesn't exist
-    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
+    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
                                         zero, zero, 0, 0, nullptr), -1);
 
@@ -170,18 +175,33 @@ TEST(BottomUp, bad) {
     const std::string name(maxpath, '%');
     roots[0] = (char *) name.c_str();
 
-    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
+    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        zero, zero, 0, 1, nullptr), -1);
+                                        zero, zero, 0, THREAD_COUNT, nullptr), -1);
 
     // path is good but user function returned error
     roots[0] = (char *) ROOT.c_str();
 
-    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
+    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        one, zero, 0, 1, nullptr), -1);
+                                        one, zero, 0, THREAD_COUNT, nullptr), -1);
 
-    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
+    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        zero, one, 0, 1, nullptr), -1);
+                                        zero, one, 0, THREAD_COUNT, nullptr), -1);
+
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    struct OutputBuffers obs;
+    ASSERT_EQ(OutputBuffers_init(&obs, THREAD_COUNT + 1, 1024, nullptr), &obs);
+
+    obs.count = THREAD_COUNT;
+    EXPECT_EQ(parallel_bottomup(nullptr, 0, THREAD_COUNT, sizeof(struct BottomUp),
+                                zero, zero, 0, 0, nullptr, &obs), -1);
+
+    obs.count = THREAD_COUNT + 1;
+    EXPECT_EQ(parallel_bottomup(nullptr, 0, THREAD_COUNT, sizeof(struct BottomUp),
+                                zero, zero, 0, 0, nullptr, &obs), 0);
+
+    OutputBuffers_destroy(&obs);
+    #endif
 }

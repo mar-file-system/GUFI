@@ -367,6 +367,16 @@ int parallel_bottomup(char **root_names, const size_t root_count,
         return -1;
     }
 
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    if (timestamp_buffers) {
+        if (timestamp_buffers->count <= thread_count) {
+            fprintf(stderr, "Error: timestamp_buffers needs at least %zu buffers: Got %zu\n",
+                    thread_count + 1, timestamp_buffers->count);
+            return -1;
+        }
+    }
+    #endif
+
     ua.user_struct_size = user_struct_size;
     ua.descend = descend?descend:noop;
     ua.ascend = ascend?ascend:noop;
