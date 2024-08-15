@@ -584,6 +584,39 @@ TEST(QueuePerThreadPool, steal_active) {
     QPTPool_destroy(pool);
 }
 
+TEST(QueuePerThreadPool, prop_nthreads) {
+    QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
+    ASSERT_NE(pool, nullptr);
+
+    std::size_t nthreads = 0;
+    EXPECT_EQ(QPTPool_get_nthreads(pool, &nthreads), 0);
+    EXPECT_EQ(nthreads, THREADS);
+
+    EXPECT_EQ(QPTPool_get_nthreads(nullptr, &nthreads), 1);
+    EXPECT_EQ(QPTPool_get_nthreads(pool, nullptr), 0);
+
+    QPTPool_destroy(pool);
+}
+
+static void check_get_args(void *ptr) {
+    QPTPool_t *pool = QPTPool_init(THREADS, ptr);
+    ASSERT_NE(pool, nullptr);
+
+    void *args = nullptr;
+    EXPECT_EQ(QPTPool_get_args(pool, &args), 0);
+    EXPECT_EQ(args, ptr);
+
+    QPTPool_destroy(pool);
+}
+
+TEST(QueuePerThreadPool, prop_args) {
+    check_get_args(nullptr);
+    check_get_args((void *) check_get_args);
+
+    EXPECT_EQ(QPTPool_get_args(nullptr, nullptr), 1);
+    EXPECT_EQ(QPTPool_get_args((QPTPool_t *) check_get_args, nullptr), 0);
+}
+
 static std::size_t test_next_func(const std::size_t, const std::size_t,
                                   const std::size_t, void *, void *) {
     return 0;

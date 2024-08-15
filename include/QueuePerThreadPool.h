@@ -108,6 +108,8 @@ int QPTPool_set_debug_buffers(QPTPool_t *ctx, struct OutputBuffers *debug_buffer
 #endif
 
 /* Get QPTPool context properties */
+int QPTPool_get_nthreads(QPTPool_t *ctx, size_t *nthreads);
+int QPTPool_get_args(QPTPool_t *ctx, void **args);
 int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args);
 int QPTPool_get_queue_limit(QPTPool_t *ctx, uint64_t *queue_limit);
 int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom);

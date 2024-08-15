@@ -482,6 +482,30 @@ int QPTPool_set_debug_buffers(QPTPool_t *ctx, struct OutputBuffers *debug_buffer
 }
 #endif
 
+int QPTPool_get_nthreads(QPTPool_t *ctx, size_t *nthreads) {
+    if (!ctx) {
+        return 1;
+    }
+
+    if (nthreads) {
+        *nthreads = ctx->nthreads;
+    }
+
+    return 0;
+}
+
+int QPTPool_get_args(QPTPool_t *ctx, void **args) {
+    if (!ctx) {
+        return 1;
+    }
+
+    if (args) {
+        *args = ctx->args;
+    }
+
+    return 0;
+}
+
 int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args) {
     if (!ctx) {
         return 1;
