@@ -177,7 +177,7 @@ echo "# file delimiter not found"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
 
 echo "# bad thread count"
-run_no_sort "${GUFI_DIR2TRACE} -n 18446744073709551615 \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_TRACE2INDEX} -n 18446744073709551615 \"${SRCDIR}\" \"${SEARCH}\""
 ) | remove_indexing_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2index.expected "${OUTPUT}"

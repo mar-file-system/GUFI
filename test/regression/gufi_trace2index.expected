@@ -129,7 +129,7 @@ Total Files:         0
 
 
 # cannot find delimiter of first line
-$ gufi_trace2index -d "?" -n 2 "trace" "search"
+$ gufi_trace2index -d "&" -n 2 "trace" "search"
 Could not find the specified delimiter in "trace"
 Creating GUFI Index search with 2 threads
 Dirs:                0 (0 empty)
@@ -164,6 +164,6 @@ Total Dirs:          0
 Total Files:         0
 
 # bad thread count
-$ gufi_dir2trace -n 18446744073709551615 "prefix" "trace"
-Could not allocate space for 18446744073709551615 files
+$ gufi_trace2index -n 18446744073709551615 "prefix" "search"
+Error: Failed to start thread pool
 

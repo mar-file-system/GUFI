@@ -86,7 +86,7 @@ do
 done
 DELIM="|"
 # shellcheck disable=SC2034
-BADDELIM="?"
+BADDELIM="&" # should not show up in path names and should be printable character
 
 SEARCH="search"
 INDEXROOT="${SEARCH}/${BASENAME}"

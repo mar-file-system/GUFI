@@ -34,7 +34,7 @@ $ verifytrace "|" trace.copy
 trace.copy: Pass
 
 # directory can't find delimiter
-$ verifytrace "?" trace
+$ verifytrace "&" trace
 trace: Error: Stanza missing first delimiter: prefix|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
 Fail
 
@@ -73,7 +73,7 @@ trace.copy: Pass
 
 # non-directory can't find delimiter
 $ verifytrace "|" badtrace
-badtrace: Error: Entry missing delimiter: prefix/.hidden?f?0?0?0?0?0?0?0?0?0?0?0???0?0?0?0?0???0?
+badtrace: Error: Entry missing delimiter: prefix/.hidden&f&0&0&0&0&0&0&0&0&0&0&0&&&0&0&0&0&0&&&0&
 Fail
 
 # non-directory too few columns
