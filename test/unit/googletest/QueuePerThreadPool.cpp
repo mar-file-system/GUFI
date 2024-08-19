@@ -567,7 +567,7 @@ TEST(QueuePerThreadPool, steal_active) {
               QPTPool_enqueue_WAIT);
 
     // wait for thread 1's original work item and the stolen work item to finish
-    while (counter < 3) {
+    while (counter < 2) {
         sched_yield();
     }
 
