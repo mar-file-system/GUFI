@@ -287,7 +287,7 @@ jobs:
     - name: Memcheck
       run:  |
             cd ${{ github.workspace }}/build
-            valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --show-error-list=yes --gen-suppressions=all --suppressions=test/unit/googletest/valgrind.suppressions --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
+            valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --show-error-list=yes --track-fds=yes --gen-suppressions=all --suppressions=test/unit/googletest/valgrind.suppressions --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
 
   WithoutJemalloc:
     needs: [ShellCheck, Pylint]
