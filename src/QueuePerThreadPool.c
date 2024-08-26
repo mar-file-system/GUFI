@@ -212,6 +212,27 @@ static uint64_t steal_claimed(QPTPool_t *ctx, const size_t id,
     return 0;
 }
 
+/*
+ * wait_for_work() -
+ *    Assumes ctx->mutex is locked.
+ */
+static void wait_for_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw) {
+    while (
+        /* running, but no work in pool */
+        ((ctx->state == RUNNING) && !ctx->incomplete) ||
+        /*
+         * not running and still have work in
+         * other threads, just not this one
+         */
+        ((ctx->state == STOPPING) && ctx->incomplete &&
+         !tw->waiting.size && !tw->deferred.size)
+        ) {
+        pthread_mutex_unlock(&ctx->mutex);
+        pthread_cond_wait(&tw->cv, &tw->mutex);
+        pthread_mutex_lock(&ctx->mutex);
+    }
+}
+
 #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
 static void dump_queue_size_stats(QPTPool_t *ctx, QPTPoolThreadData_t *tw) {
     pthread_mutex_lock(&ctx->mutex);
@@ -284,22 +305,8 @@ static void *worker_function(void *args) {
             tw->steal_from = (tw->steal_from + 1) % ctx->nthreads;
         }
 
-        /* wait for work */
         timestamp_create_start(wf_wait);
-        while (
-            /* running, but no work in pool */
-            ((ctx->state == RUNNING) && !ctx->incomplete) ||
-            /*
-             * not running and still have work in
-             * other threads, just not this one
-             */
-            ((ctx->state == STOPPING) && ctx->incomplete &&
-             !tw->waiting.size && !tw->deferred.size)
-            ) {
-            pthread_mutex_unlock(&ctx->mutex);
-            pthread_cond_wait(&tw->cv, &tw->mutex);
-            pthread_mutex_lock(&ctx->mutex);
-        }
+        wait_for_work(ctx, tw);
         timestamp_set_end(wf_wait);
 
         if ((ctx->state == STOPPING) && !ctx->incomplete &&
