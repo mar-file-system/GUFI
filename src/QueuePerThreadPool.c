@@ -264,6 +264,22 @@ static void wait_for_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw) {
     }
 }
 
+/*
+ * claim_work() -
+ *    Assumes tw->mutex is locked.
+ */
+static void claim_work(QPTPoolThreadData_t *tw) {
+    /* move entire queue into work and clear out queue */
+    pthread_mutex_lock(&tw->claimed_mutex);
+    if (tw->waiting.size) {
+        sll_move(&tw->claimed, &tw->waiting);
+    }
+    else {
+        sll_move(&tw->claimed, &tw->deferred);
+    }
+    pthread_mutex_unlock(&tw->claimed_mutex);
+}
+
 #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
 static void dump_queue_size_stats(QPTPool_t *ctx, QPTPoolThreadData_t *tw) {
     pthread_mutex_lock(&ctx->mutex);
@@ -369,16 +385,8 @@ static void *worker_function(void *args) {
 
         pthread_mutex_unlock(&ctx->mutex);
 
-        /* move entire queue into work and clear out queue */
         timestamp_create_start(wf_move_queue);
-        pthread_mutex_lock(&tw->claimed_mutex);
-        if (tw->waiting.size) {
-            sll_move(&tw->claimed, &tw->waiting);
-        }
-        else {
-            sll_move(&tw->claimed, &tw->deferred);
-        }
-        pthread_mutex_unlock(&tw->claimed_mutex);
+        claim_work(tw);
         timestamp_set_end(wf_move_queue);
 
         #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
