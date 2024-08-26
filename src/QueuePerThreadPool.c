@@ -212,6 +212,30 @@ static uint64_t steal_claimed(QPTPool_t *ctx, const size_t id,
     return 0;
 }
 
+#if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
+static void dump_queue_size_stats(QPTPool_t *ctx, QPTPoolThreadData_t *tw) {
+    pthread_mutex_lock(&ctx->mutex);
+    pthread_mutex_lock(&print_mutex);
+    tw->waiting.size = tw->claimed.size;
+
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    fprintf(stderr, "qptpool_size %" PRIu64 " ", since_epoch(&now) - epoch);
+
+    size_t sum = 0;
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        fprintf(stderr, "%zu ", ctx->data[i].waiting.size);
+        sum += ctx->data[i].waiting.size;
+        fprintf(stderr, "%zu ", ctx->data[i].deferred.size);
+        sum += ctx->data[i].deferred.size;
+    }
+    fprintf(stderr, "%zu\n", sum);
+    tw->waiting.size = 0;
+    pthread_mutex_unlock(&print_mutex);
+    pthread_mutex_unlock(&ctx->mutex);
+}
+#endif
+
 static void *worker_function(void *args) {
     timestamp_create_start(wf);
 
@@ -300,25 +324,7 @@ static void *worker_function(void *args) {
         timestamp_set_end(wf_move_queue);
 
         #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
-        pthread_mutex_lock(&ctx->mutex);
-        pthread_mutex_lock(&print_mutex);
-        tw->waiting.size = tw->claimed.size;
-
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        fprintf(stderr, "qptpool_size %" PRIu64 " ", since_epoch(&now) - epoch);
-
-        size_t sum = 0;
-        for(size_t i = 0; i < ctx->nthreads; i++) {
-            fprintf(stderr, "%zu ", ctx->data[i].waiting.size);
-            sum += ctx->data[i].waiting.size;
-            fprintf(stderr, "%zu ", ctx->data[i].deferred.size);
-            sum += ctx->data[i].deferred.size;
-        }
-        fprintf(stderr, "%zu\n", sum);
-        tw->waiting.size = 0;
-        pthread_mutex_unlock(&print_mutex);
-        pthread_mutex_unlock(&ctx->mutex);
+        dump_queue_size_stats(ctx, tw);
         #endif
 
         pthread_mutex_unlock(&tw->mutex);
