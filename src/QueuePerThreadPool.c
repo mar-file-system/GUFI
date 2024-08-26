@@ -213,6 +213,37 @@ static uint64_t steal_claimed(QPTPool_t *ctx, const size_t id,
 }
 
 /*
+ * If there's nothing waiting in this thread's work queues but
+ * there is still work to complete, try to steal some work
+ * from other threads.
+ *
+ * Assumes ctx->mutex and tw->mutex are locked.
+ */
+static void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id) {
+    if (ctx->steal.num && (ctx->nthreads > 1) &&
+        !tw->waiting.size && !tw->deferred.size &&
+        ctx->incomplete) {
+        if (steal_work(ctx, id, tw->steal_from, ctx->nthreads) == 0) {
+            if (steal_work(ctx, id, 0, tw->steal_from) == 0) {
+                /*
+                 * if still can't find anything, try the claimed queue
+                 *
+                 * this should only be called if there is some
+                 * work that is taking so long that the rest of
+                 * the threads have run out of work, so this
+                 * should not happen too often
+                 */
+                if (steal_claimed(ctx, id, tw->steal_from, ctx->nthreads) == 0) {
+                    steal_claimed(ctx, id, 0, tw->steal_from);
+                }
+            }
+        }
+
+        tw->steal_from = (tw->steal_from + 1) % ctx->nthreads;
+    }
+}
+
+/*
  * wait_for_work() -
  *    Assumes ctx->mutex is locked.
  */
@@ -278,32 +309,7 @@ static void *worker_function(void *args) {
         pthread_mutex_lock(&ctx->mutex);
         timestamp_set_end(wf_ctx_mutex_lock);
 
-        /*
-         * if there's nothing waiting in this thread's work queues but
-         * there is still work to complete, try to steal some work
-         * from other threads
-         */
-        if (ctx->steal.num && (ctx->nthreads > 1) &&
-            !tw->waiting.size && !tw->deferred.size &&
-            ctx->incomplete) {
-            if (steal_work(ctx, id, tw->steal_from, ctx->nthreads) == 0) {
-                if (steal_work(ctx, id, 0, tw->steal_from) == 0) {
-                    /*
-                     * if still can't find anything, try the claimed queue
-                     *
-                     * this should only be called if there is some
-                     * work that is taking so long that the rest of
-                     * the threads have run out of work, so this
-                     * should not happen too often
-                     */
-                    if (steal_claimed(ctx, id, tw->steal_from, ctx->nthreads) == 0) {
-                        steal_claimed(ctx, id, 0, tw->steal_from);
-                    }
-                }
-            }
-
-            tw->steal_from = (tw->steal_from + 1) % ctx->nthreads;
-        }
+        maybe_steal_work(ctx, tw, id);
 
         timestamp_create_start(wf_wait);
         wait_for_work(ctx, tw);
