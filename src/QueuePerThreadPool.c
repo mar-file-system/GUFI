@@ -288,6 +288,51 @@ static void dump_queue_size_stats(QPTPool_t *ctx, QPTPoolThreadData_t *tw) {
 }
 #endif
 
+/*
+ * process_work() -
+ *    Returns number of work items handled.
+ */
+static size_t process_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id) {
+    /* process all work */
+    size_t work_count = 0;
+
+    /*
+     * pop work item off before it is processed so that if another
+     * thread steals from the claimed queue, the current claimed
+     * work will not be re-run
+     *
+     * this has the side effect of moving 2 frees into the loop
+     * instead of batching all of them after processing the work
+     *
+     * tradeoffs:
+     *     more locking
+     *     delayed work
+     *     lower memory utilization
+     */
+    timestamp_create_start(wf_get_queue_head);
+    pthread_mutex_lock(&tw->claimed_mutex);
+    struct queue_item *qi = (struct queue_item *) sll_pop(&tw->claimed);
+    pthread_mutex_unlock(&tw->claimed_mutex);
+    timestamp_end_print(ctx->debug_buffers, id, "wf_get_queue_head", wf_get_queue_head);
+
+    while (qi) {
+        timestamp_create_start(wf_process_work);
+        tw->threads_successful += !qi->func(ctx, id, qi->work, ctx->args);
+        free(qi);
+        timestamp_end_print(ctx->debug_buffers, id, "wf_process_work", wf_process_work);
+
+        timestamp_create_start(wf_next_work);
+        pthread_mutex_lock(&tw->claimed_mutex);
+        qi = (struct queue_item *) sll_pop(&tw->claimed);
+        pthread_mutex_unlock(&tw->claimed_mutex);
+        timestamp_end_print(ctx->debug_buffers, id, "wf_next_work", wf_next_work);
+
+        work_count++;
+    }
+
+    return work_count;
+}
+
 static void *worker_function(void *args) {
     timestamp_create_start(wf);
 
@@ -343,44 +388,7 @@ static void *worker_function(void *args) {
         pthread_mutex_unlock(&tw->mutex);
 
         timestamp_create_start(wf_process_queue);
-
-        /* process all work */
-        size_t work_count = 0;
-
-        /*
-         * pop work item off before it is processed so that if another
-         * thread steals from the claimed queue, the current claimed
-         * work will not be re-run
-         *
-         * this has the side effect of moving 2 frees into the loop
-         * instead of batching all of them after processing the work
-         *
-         * tradeoffs:
-         *     more locking
-         *     delayed work
-         *     lower memory utilization
-         */
-        timestamp_create_start(wf_get_queue_head);
-        pthread_mutex_lock(&tw->claimed_mutex);
-        struct queue_item *qi = (struct queue_item *) sll_pop(&tw->claimed);
-        pthread_mutex_unlock(&tw->claimed_mutex);
-        timestamp_end_print(ctx->debug_buffers, id, "wf_get_queue_head", wf_get_queue_head);
-
-        while (qi) {
-            timestamp_create_start(wf_process_work);
-            tw->threads_successful += !qi->func(ctx, id, qi->work, ctx->args);
-            free(qi);
-            timestamp_end_print(ctx->debug_buffers, id, "wf_process_work", wf_process_work);
-
-            timestamp_create_start(wf_next_work);
-            pthread_mutex_lock(&tw->claimed_mutex);
-            qi = (struct queue_item *) sll_pop(&tw->claimed);
-            pthread_mutex_unlock(&tw->claimed_mutex);
-            timestamp_end_print(ctx->debug_buffers, id, "wf_next_work", wf_next_work);
-
-            work_count++;
-        }
-
+        const size_t work_count = process_work(ctx, tw, id);
         timestamp_set_end(wf_process_queue);
 
         timestamp_create_start(wf_cleanup);
