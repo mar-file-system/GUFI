@@ -115,7 +115,6 @@ set(OTHERS
   longitudinal_snapshot
   parallel_cpr
   parallel_rmr
-  split_trace
   treediff
 )
 

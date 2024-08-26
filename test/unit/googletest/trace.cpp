@@ -298,7 +298,6 @@ TEST(scout_trace, no_cleanup) {
     ASSERT_EQ(write(fd, line, len), (ssize_t) len);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    size_t remaining = 2; // run twice to cover both sides of final print condition
     uint64_t time = 0;
     size_t files = 0;
     size_t dirs = 0;
@@ -307,7 +306,9 @@ TEST(scout_trace, no_cleanup) {
     struct ScoutTraceArgs sta;
     sta.delim      = delim;
     sta.tracename  = tracename;
-    sta.trace      = fd;
+    sta.tr.fd      = fd;
+    sta.tr.start   = 0;
+    sta.tr.end     = len;
     sta.processdir = [] (QPTPool_t *, const size_t, void *data, void *) {
         struct row *row = (struct row *) data;
         row_destroy(&row);
@@ -315,7 +316,6 @@ TEST(scout_trace, no_cleanup) {
     };
     sta.free       = nullptr;
     sta.mutex      = &mutex;
-    sta.remaining  = &remaining;
     sta.time       = &time;
     sta.files      = &files;
     sta.dirs       = &dirs;
@@ -335,7 +335,6 @@ TEST(scout_trace, no_cleanup) {
     EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 2);
     QPTPool_destroy(pool);
 
-    EXPECT_EQ(remaining, (size_t)   0);
     EXPECT_GT(time,      (uint64_t) 0);
     EXPECT_EQ(files,     (size_t)   0);
     EXPECT_EQ(dirs,      (size_t)   2);

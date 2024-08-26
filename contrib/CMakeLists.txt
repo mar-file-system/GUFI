@@ -64,7 +64,6 @@ cmake_minimum_required(VERSION 3.1.0)
 
 set(CONTRIB_SOURCES
   gendir.c                # simple source tree generator
-  split_trace.c           # utility for spliting large traces into smaller files for parallel processing
   treediff.c              # walk two trees and print the names that don't match
 )
 

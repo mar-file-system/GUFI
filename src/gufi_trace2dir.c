@@ -242,31 +242,39 @@ int main(int argc, char * argv[]) {
     }
 
     /* parse the trace files */
-    size_t remaining = trace_count;
     uint64_t scout_time = 0;
     size_t files = 0;
     size_t dirs = 0;
     size_t empty = 0;
     for(size_t i = 0; i < trace_count; i++) {
-        /* freed by scout_function */
-        struct ScoutTraceArgs *sta = malloc(sizeof(struct ScoutTraceArgs));
-        sta->delim = pa.in.delim;
-        sta->tracename = argv[idx + i];
-        sta->trace = traces[i];
-        sta->processdir = processdir;
-        sta->free = free;
-        sta->mutex = &print_mutex;
-        sta->remaining = &remaining;
-        sta->time = &scout_time;
-        sta->files = &files;
-        sta->dirs = &dirs;
-        sta->empty = &empty;
+        /* copied by fill_scout_args, freed by scout_trace */
+        struct ScoutTraceArgs sta = {
+            .delim = pa.in.delim,
+            .tracename = argv[idx + i],
+            .tr.fd = traces[i],
+            .processdir = processdir,
+            .free = free,
+            .mutex = &print_mutex,
+            .time = &scout_time,
+            .files = &files,
+            .dirs = &dirs,
+            .empty = &empty,
+        };
 
-        /* scout_function pushes more work into the queue */
-        QPTPool_enqueue(pool, 0, scout_trace, sta);
-    }
+        split_traces(argv[idx + i], traces[i], pa.in.delim,
+                     pa.in.maxthreads,
+                     fill_scout_args, &sta,
+                     pool, i, scout_trace);
+   }
 
     QPTPool_stop(pool);
+
+    fprintf(stdout, "Scouts took total of %.2Lf seconds (aggregated across %zu threads)\n", sec(scout_time), pa.in.maxthreads);
+    fprintf(stdout, "Dirs:                %zu (%zu empty)\n", dirs, empty);
+    fprintf(stdout, "Files:               %zu\n", files);
+    fprintf(stdout, "Total:               %zu\n", files + dirs);
+    fprintf(stdout, "\n");
+
     QPTPool_destroy(pool);
 
   free_traces:

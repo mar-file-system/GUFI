@@ -102,10 +102,15 @@ struct row *row_init(const int trace, const size_t first_delim, char *line,
                      const size_t len, const long offset);
 void row_destroy(struct row **ref);
 
+struct TraceRange {
+    int fd;
+    off_t start, end; /* [start, end) */
+};
+
 struct ScoutTraceArgs {
     char delim;
     const char *tracename;
-    int trace;              /* file descriptor */
+    struct TraceRange tr;
 
     /* data argument will be a struct row */
     QPTPoolFunc_t processdir;
@@ -116,7 +121,6 @@ struct ScoutTraceArgs {
     pthread_mutex_t *mutex; /* lock for values below */
 
     /* references to single shared values */
-    size_t *remaining;      /* number of scouts still running */
     uint64_t *time;
     size_t *files;
     size_t *dirs;
@@ -125,6 +129,14 @@ struct ScoutTraceArgs {
 };
 
 int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
+
+/* split the entire trace file */
+ssize_t split_traces(const char *name, const int fd, const char delim,
+                     const size_t max_parts,
+                     void *(*fill)(struct TraceRange *tr, void *args), void *fill_args,
+                     QPTPool_t *pool, const size_t id, QPTPoolFunc_t func);
+
+void *fill_scout_args(struct TraceRange *tr, void *args);
 
 #ifdef __cplusplus
 }

@@ -68,6 +68,8 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "debug.h"
@@ -236,10 +238,11 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     char *line = NULL;
     size_t size = 0;
     ssize_t len = 0;
-    off_t offset = 0;
+    off_t offset = sta->tr.start;
 
     /* bad read (error) or empty trace (not an error) */
-    if ((len = getline_fd(&line, &size, sta->trace, &offset, GETLINE_DEFAULT_SIZE)) < 1) {
+    if ((offset < sta->tr.end) &&
+        (len = getline_fd(&line, &size, sta->tr.fd, &offset, GETLINE_DEFAULT_SIZE)) < 1) {
         if (offset != 0) {
             fprintf(stderr, "Could not get the first line of trace \"%s\"\n", sta->tracename);
             rc = 1;
@@ -265,7 +268,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto done;
     }
 
-    struct row *work = row_init(sta->trace, first_delim - line, line, len, offset);
+    struct row *work = row_init(sta->tr.fd, first_delim - line, line, len, offset);
 
     /* don't free line - the pointer is now owned by work */
 
@@ -273,7 +276,8 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     line = NULL;
     size = 0;
     len = 0;
-    while ((len = getline_fd(&line, &size, sta->trace, &offset, GETLINE_DEFAULT_SIZE)) > 0) {
+    while ((offset < sta->tr.end) &&
+           (len = getline_fd(&line, &size, sta->tr.fd, &offset, GETLINE_DEFAULT_SIZE)) > 0) {
         first_delim = memchr(line, sta->delim, len);
 
         /*
@@ -306,7 +310,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             QPTPool_enqueue(ctx, id, sta->processdir, work);
 
             /* put the current line into a new work item */
-            work = row_init(sta->trace, first_delim - line, line, len, offset);
+            work = row_init(sta->tr.fd, first_delim - line, line, len, offset);
 
             /* have getline allocate a new buffer */
             line = NULL;
@@ -345,17 +349,6 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     *sta->files += file_count;
     *sta->dirs  += dir_count;
     *sta->empty += empty;
-
-    (*sta->remaining)--;
-
-    /* print here to print as early as possible instead of after thread pool completes */
-    if ((*sta->remaining) == 0) {
-        fprintf(stdout, "Scouts took total of %.2Lf seconds\n", sec(*sta->time));
-        fprintf(stdout, "Dirs:                %zu (%zu empty)\n", *sta->dirs, *sta->empty);
-        fprintf(stdout, "Files:               %zu\n", *sta->files);
-        fprintf(stdout, "Total:               %zu\n", *sta->files + *sta->dirs);
-        fprintf(stdout, "\n");
-    }
     pthread_mutex_unlock(sta->mutex);
 
     if (sta->free) {
@@ -363,4 +356,123 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     return rc;
+}
+
+/*
+ * Find end of current chunk/stanza
+ * Return:
+ *     -1 - error
+ *      0 - found end
+ *      1 - end of file
+ */
+static int find_end(const int fd, const char delim, off_t *end) {
+    /* Not checking arguments */
+
+    char *line = NULL;
+    size_t size = 0;
+    ssize_t len = 0;
+
+    /*
+     * drop first line - assume started in middle of line, and
+     * can't be sure if first delimiter found is actually
+     * separator for first and second columns
+     *
+     * errors are ignored
+     */
+    getline_fd(&line, &size, fd, end, GETLINE_DEFAULT_SIZE);
+
+    while (1) {
+        const off_t before_read = *end;
+
+        len = getline_fd(&line, &size, fd, end, GETLINE_DEFAULT_SIZE);
+
+        if (len < 1) {
+            free(line);
+            return -!!len;
+        }
+
+        const char *first_delim = memchr(line, delim, len);
+
+        /* no delimiter */
+        if (!first_delim) {
+            fprintf(stderr, "Error: Line at offset %jd does not have a delimiter\n", (intmax_t) before_read);
+            free(line);
+            return -1;
+        }
+
+        if (first_delim[1] == 'd') {
+            *end = before_read;
+            free(line);
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+/* assume starting from offset 0 */
+ssize_t split_traces(const char *name, const int fd, const char delim,
+                     const size_t max_parts,
+                     void *(*fill)(struct TraceRange *tr, void *args), void *fill_args,
+                     QPTPool_t *pool, const size_t id, QPTPoolFunc_t func) {
+    struct stat st;
+    if (fstat(fd, &st) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not fstat %s: %s (%d)\n",
+                name, strerror(err), err);
+        return -1;
+    }
+
+    /* approximate number of bytes per chunk */
+    const size_t jump = (st.st_size / max_parts) + !!(st.st_size % max_parts);
+
+    size_t count = 0;
+    off_t start = 0;
+    off_t end = start + jump;
+
+    int rc = 0;
+    while ((start < st.st_size) &&
+           ((rc = find_end(fd, delim, &end)) == 0)) {
+        struct TraceRange tr = {
+            .fd = fd,
+            .start = start,
+            .end = end,
+        };
+
+        void *filled = fill(&tr, fill_args);
+
+        count++;
+
+        QPTPool_enqueue(pool, id, func, filled);
+
+        /* jump to next chunk */
+        start = end;
+        end += jump;
+    }
+
+    /* need this because last chunk will error out of loop */
+    if (start < st.st_size) {
+        struct TraceRange tr = {
+            .fd = fd,
+            .start = start,
+            .end = st.st_size,
+        };
+
+        void *filled = fill(&tr, fill_args);
+
+        count++;
+
+        QPTPool_enqueue(pool, id, func, filled);
+    }
+
+    return count;
+}
+
+void *fill_scout_args(struct TraceRange *tr, void *args) {
+    struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) args;
+
+    struct ScoutTraceArgs *ret = malloc(sizeof(*ret));
+    *ret = *sta;
+    ret->tr = *tr;
+    return ret;
 }
