@@ -333,10 +333,8 @@ TEST(QueuePerThreadPool, wait) {
         QPTPool_enqueue(pool, 0,
                         [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
                             pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
-
-                            increment_counter(ctx, id, data, args);
-
                             pthread_mutex_lock(mutex);
+                            increment_counter(ctx, id, data, args);
                             pthread_mutex_unlock(mutex);
                             return 0;
                     }, &counter);
@@ -466,12 +464,15 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find,
                               }, &counter), QPTPool_enqueue_WAIT);
 
     // need to make sure only work item got popped off
+    // no racing here because only 1 thread runs
     while (counter < 1) {
         sched_yield();
     }
 
     uint64_t expected = 1;
 
+    // no racing here because even though work is placed into different
+    // threads, they end up getting stolen and run serially in dst
     if (find) {
         // thread src; put a work item in the designated queue for stealing
         EXPECT_EQ(QPTPool_enqueue_here(pool, src, queue, increment_counter, &counter),
@@ -567,7 +568,7 @@ TEST(QueuePerThreadPool, steal_active) {
               QPTPool_enqueue_WAIT);
 
     // wait for thread 1's original work item and the stolen work item to finish
-    while (counter < 2) {
+    while (counter < 3) {
         sched_yield();
     }
 

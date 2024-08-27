@@ -103,12 +103,10 @@ processing work when there is work present.
 
 If a thread discovers that it does not have work items in either of
 its own queues but the thread pool still has outstanding work, it will
-search for more work in the waiting and deferred work queues of other
-threads. If work items are found, the thread will steal at least one
-item, causing the stolen work items to experience less latency between
-enqueuing and processing. Note that when work items are stolen, the
-work queue is searched first, and if nothing is found, the deferred
-queue is searched next, instead of the next thread's work queue.
+search for more work in other waiting work queues, and if none are
+found, other deferred work queues. If work items are found in a queue,
+the thread will steal at least one item, causing the stolen work items
+to experience less latency between enqueuing and processing.
 
 If no work can be stolen from the two queues in all threads, the
 thread will attempt to take work from the claimed work queue. This is
@@ -117,44 +115,6 @@ processed. This also makes \qptp behave more like thread pools that
 pull one work item off at a time and thus always process work when
 work is available. This should be considered a last-ditch attempt to
 acquire work, and should not occur too often.
-
-\begin{lstlisting}[language=C++,
-    frame=lines,
-    keepspaces,
-    tabsize=4,
-    caption=Queue Selection Order When Stealing Work,
-    captionpos=b]
-stolen = 0;
-
-for(i = 0; i < thread_count; i++) {
-    if (id == i) {
-        continue;
-    }
-
-    stolen = steal_work_from(i, waiting);
-    if (stolen > 0) {
-        break;
-    }
-
-    stolen = steal_work_from(i, deferred);
-    if (stolen > 0) {
-        break;
-    }
-}
-
-if (stolen == 0) {
-    for(i = 0; i < thread_count; i++) {
-        if (id == i) {
-            continue;
-        }
-
-        stolen = steal_work_from(i, claimed)
-        if (stolen > 0) {
-            break;
-        }
-    }
-}
-\end{lstlisting}
 
 \subsubsection{Usage}
 \begin{enumerate}

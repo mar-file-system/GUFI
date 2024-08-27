@@ -135,81 +135,68 @@ static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
     return (lhs > rhs)?lhs:rhs;
 }
 
-/* loop through neighbors, look for work, take some portion of a queue */
-static uint64_t steal_work(QPTPool_t *ctx, const size_t id,
-                           const size_t start, const size_t end) {
-    QPTPoolThreadData_t *tw = &ctx->data[id];
-
-    for(size_t i = start; i < end; i++) {
-        if (i == id) {
-            continue;
-        }
-
-        QPTPoolThreadData_t *target = &ctx->data[i];
-
-        if (pthread_mutex_trylock(&target->mutex) == 0) {
-            if (target->waiting.size) {
-                /* always take at least 1 */
-                const uint64_t waiting = max(target->waiting.size * ctx->steal.num / ctx->steal.denom, 1);
-                sll_move_first(&tw->waiting, &target->waiting, waiting);
-                pthread_mutex_unlock(&target->mutex);
-                return waiting;
-            }
-
-            if (target->deferred.size) {
-                /* always take at least 1 */
-                const uint64_t deferred = max(target->deferred.size * ctx->steal.num / ctx->steal.denom, 1);
-                sll_move_first(&tw->waiting, &target->deferred, deferred);
-                pthread_mutex_unlock(&target->mutex);
-                return deferred;
-            }
-            pthread_mutex_unlock(&target->mutex);
-        }
+/*
+ * Loop through neighbors, looking for work items.
+ * If there are work items, take at least one.
+ */
+#define steal(ctx, id, start, end, mutex_name, queue_name, rc)                     \
+    QPTPoolThreadData_t *tw = &ctx->data[id];                                      \
+                                                                                   \
+    for(size_t i = start; i < end; i++) {                                          \
+        if (id == i) {                                                             \
+            continue;                                                              \
+        }                                                                          \
+                                                                                   \
+        QPTPoolThreadData_t *target = &ctx->data[i];                               \
+                                                                                   \
+        if (pthread_mutex_trylock(&target->mutex_name) == 0) {                     \
+            if (target->queue_name.size) {                                         \
+                /* always take at least 1 */                                       \
+                const uint64_t take = max(                                         \
+                    target->queue_name.size * ctx->steal.num / ctx->steal.denom,   \
+                    1);                                                            \
+                sll_move_first(&tw->waiting, &target->queue_name, take);           \
+                pthread_mutex_unlock(&target->mutex_name);                         \
+                rc = tw->waiting.size;                                             \
+                break;                                                             \
+            }                                                                      \
+                                                                                   \
+            pthread_mutex_unlock(&target->mutex_name);                             \
+        }                                                                          \
     }
 
-    return 0;
+static uint64_t steal_waiting(QPTPool_t *ctx, const size_t id,
+                              const size_t start, const size_t end) {
+    uint64_t rc = 0;
+    steal(ctx, id, start, end, mutex, waiting, rc);
+    return rc;
+}
+
+static uint64_t steal_deferred(QPTPool_t *ctx, const size_t id,
+                               const size_t start, const size_t end) {
+    uint64_t rc = 0;
+    steal(ctx, id, start, end, mutex, deferred, rc);
+    return rc;
 }
 
 /*
- * QueuePerThreadPool normally claims an entire work queue at once
- * instead of popping them off one at a time. This reduces the
- * contention on the work queues. However, this scheme makes it
- * possible to cause starvation when a work item takes a long time to
- * complete and has more work items queued up after it, all of which
- * have already been claimed and are not in the waiting or deferred
- * queues.
+ * QueuePerThreadPool threads normally claim their entire waiting or
+ * deferred queue at once instead of popping work items off a queue
+ * one at a time to reduce contention on the selected queue. However,
+ * this scheme makes it possible to cause starvation when a work item
+ * takes a long time to complete and has more work items queued up
+ * after it.
  *
- * This function attempts to prevent starvation by stealing work that
- * has already been claimed, reproducing the effect of threads popping
- * off individual work items. This function is only called after the
- * waiting and deferred queues have been checked and found to be
- * empty, and so should not be called frequently.
+ * Stealing claimed work attempts to prevent starvation, reproducing
+ * the effect of threads popping off individual work items. This only
+ * happens after all waiting and deferred queues have been checked and
+ * found to be empty, and so should not be called frequently.
  */
 static uint64_t steal_claimed(QPTPool_t *ctx, const size_t id,
-                             const size_t start, const size_t end) {
-    QPTPoolThreadData_t *tw = &ctx->data[id];
-
-    for(size_t i = start; i < end; i++) {
-        if (i == id) {
-            continue;
-        }
-
-        QPTPoolThreadData_t *target = &ctx->data[i];
-
-        if (pthread_mutex_trylock(&target->claimed_mutex) == 0) {
-            if (target->claimed.size) {
-                /* always take at least 1 */
-                const uint64_t claimed = max(target->claimed.size * ctx->steal.num / ctx->steal.denom, 1);
-                sll_move_first(&tw->waiting, &target->claimed, claimed);
-                pthread_mutex_unlock(&target->claimed_mutex);
-                return claimed;
-            }
-
-            pthread_mutex_unlock(&target->claimed_mutex);
-        }
-    }
-
-    return 0;
+                              const size_t start, const size_t end) {
+    uint64_t rc = 0;
+    steal(ctx, id, start, end, claimed_mutex, claimed, rc);
+    return rc;
 }
 
 /*
@@ -220,27 +207,37 @@ static uint64_t steal_claimed(QPTPool_t *ctx, const size_t id,
  * Assumes ctx->mutex and tw->mutex are locked.
  */
 static void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id) {
-    if (ctx->steal.num && (ctx->nthreads > 1) &&
-        !tw->waiting.size && !tw->deferred.size &&
-        ctx->incomplete) {
-        if (steal_work(ctx, id, tw->steal_from, ctx->nthreads) == 0) {
-            if (steal_work(ctx, id, 0, tw->steal_from) == 0) {
-                /*
-                 * if still can't find anything, try the claimed queue
-                 *
-                 * this should only be called if there is some
-                 * work that is taking so long that the rest of
-                 * the threads have run out of work, so this
-                 * should not happen too often
-                 */
-                if (steal_claimed(ctx, id, tw->steal_from, ctx->nthreads) == 0) {
-                    steal_claimed(ctx, id, 0, tw->steal_from);
-                }
-            }
-        }
-
-        tw->steal_from = (tw->steal_from + 1) % ctx->nthreads;
+    if (!ctx->steal.num || (ctx->nthreads < 2) ||
+        tw->waiting.size || tw->deferred.size ||
+        !ctx->incomplete) {
+        return;
     }
+
+    /*
+     * search [steal_from, nthreads) and then [0, steal_from)
+     * increment steal_from at the end
+     *
+     * use short circuiting to stop searching
+     *
+     * do this to always start searching from different locations
+     */
+    (void) (
+        (steal_waiting( ctx, id, tw->steal_from, ctx->nthreads)  == 0) &&
+        (steal_waiting( ctx, id, 0,              tw->steal_from) == 0) &&
+        (steal_deferred(ctx, id, tw->steal_from, ctx->nthreads)  == 0) &&
+        (steal_deferred(ctx, id, 0,              tw->steal_from) == 0) &&
+        /*
+         * if still can't find anything, try the claimed queue
+         *
+         * this should only be called if there is some work that
+         * is taking so long that the rest of the threads have run
+         * out of work, so this should not happen too often
+         */
+        (steal_claimed( ctx, id, tw->steal_from, ctx->nthreads)  == 0) &&
+        (steal_claimed( ctx, id, 0,              tw->steal_from) == 0)
+    );
+
+    tw->steal_from = (tw->steal_from + 1) % ctx->nthreads;
 }
 
 /*
