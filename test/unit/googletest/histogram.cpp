@@ -101,19 +101,31 @@ int serialize_bucket(sqlite3_context *context,
 }
 #endif
 
+struct test_hist_ctx {
+    bool reset;
+    int good;
+};
+
 static void test_hist_step(sqlite3_context *context, int, sqlite3_value **argv) {
-    int *good = (int *) sqlite3_aggregate_context(context, sizeof(*good));
-    *good = sqlite3_value_int(argv[0]);
+    struct test_hist_ctx *ctx = (struct test_hist_ctx *) sqlite3_aggregate_context(context, sizeof(*ctx));
+    ctx->reset = true;
+    ctx->good = sqlite3_value_int(argv[0]);
 }
 
 static ssize_t serialize_test_bucket(char *, const size_t, void *key, void *) {
-    int *good = (int *) sqlite3_aggregate_context((sqlite3_context *) key, sizeof(*good));
-    if (*good) {
+    struct test_hist_ctx *ctx = (struct test_hist_ctx *) sqlite3_aggregate_context((sqlite3_context *) key, sizeof(*ctx));
+    if (ctx->good) {
         return 2;       // write the same size both times
     }
 
-    static size_t iter = 0;
-    static ssize_t ret = 2;
+    static size_t iter;
+    static ssize_t ret;
+
+    if (ctx->reset) {
+        iter = 0;
+        ret = 2;
+        ctx->reset = false;
+    }
 
     ret += iter++ * 10; // second call will "write" more than reallocated space provides
     return ret;
