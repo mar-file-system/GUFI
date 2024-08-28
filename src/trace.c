@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "SinglyLinkedList.h"
 #include "debug.h"
 #include "trace.h"
 #include "utils.h"
@@ -212,6 +213,14 @@ void row_destroy(struct row **ref) {
     *ref = NULL;
 }
 
+static void scout_end_print(const uint64_t time, const size_t files, const size_t dirs, const size_t empty) {
+    fprintf(stdout, "Scouts took total of %.2Lf seconds\n", sec(time));
+    fprintf(stdout, "Dirs:                %zu (%zu empty)\n", dirs, empty);
+    fprintf(stdout, "Files:               %zu\n", files);
+    fprintf(stdout, "Total:               %zu\n", files + dirs);
+    fprintf(stdout, "\n");
+}
+
 /* Read ahead to figure out where files under directories start */
 int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct start_end scouting;
@@ -349,6 +358,13 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     *sta->files += file_count;
     *sta->dirs  += dir_count;
     *sta->empty += empty;
+
+    (*sta->remaining)--;
+
+    /* print here to print as early as possible instead of after thread pool completes */
+    if ((*sta->remaining) == 0) {
+        scout_end_print(*sta->time, *sta->files, *sta->dirs, *sta->empty);
+    }
     pthread_mutex_unlock(sta->mutex);
 
     if (sta->free) {
@@ -365,8 +381,10 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
  *      0 - found end
  *      1 - end of file
  */
-static int find_end(const int fd, const char delim, off_t *end) {
+int find_stanza_end(const int fd, off_t *end, void *args) {
     /* Not checking arguments */
+
+    const char delim = *(char *) args;
 
     char *line = NULL;
     size_t size = 0;
@@ -410,11 +428,15 @@ static int find_end(const int fd, const char delim, off_t *end) {
     return -1;
 }
 
-/* assume starting from offset 0 */
-ssize_t split_traces(const char *name, const int fd, const char delim,
-                     const size_t max_parts,
-                     void *(*fill)(struct TraceRange *tr, void *args), void *fill_args,
-                     QPTPool_t *pool, const size_t id, QPTPoolFunc_t func) {
+/*
+ * generic file splitting function
+ *
+ * chunk ranges are placed into the final input argument
+ */
+static ssize_t split_file(const char *name, const int fd, const size_t max_parts,
+                          int (*find_end)(const int fd, off_t *end, void *args), void *end_args,
+                          void *(*fill)(struct TraceRange *tr, void *args), void *fill_args,
+                          sll_t *chunks) {
     struct stat st;
     if (fstat(fd, &st) != 0) {
         const int err = errno;
@@ -426,24 +448,26 @@ ssize_t split_traces(const char *name, const int fd, const char delim,
     /* approximate number of bytes per chunk */
     const size_t jump = (st.st_size / max_parts) + !!(st.st_size % max_parts);
 
-    size_t count = 0;
-    off_t start = 0;
+    off_t start = lseek(fd, 0, SEEK_SET);
     off_t end = start + jump;
 
     int rc = 0;
     while ((start < st.st_size) &&
-           ((rc = find_end(fd, delim, &end)) == 0)) {
+           ((rc = find_end(fd, &end, end_args)) == 0)) {
         struct TraceRange tr = {
             .fd = fd,
             .start = start,
             .end = end,
         };
 
+        /*
+         * allocate a user struct with the range filled in
+         *
+         * have to do this here to avoid allocating tr and to
+         * be able to keep track of the correct user struct
+         */
         void *filled = fill(&tr, fill_args);
-
-        count++;
-
-        QPTPool_enqueue(pool, id, func, filled);
+        sll_push(chunks, filled);
 
         /* jump to next chunk */
         start = end;
@@ -459,20 +483,66 @@ ssize_t split_traces(const char *name, const int fd, const char delim,
         };
 
         void *filled = fill(&tr, fill_args);
-
-        count++;
-
-        QPTPool_enqueue(pool, id, func, filled);
+        sll_push(chunks, filled);
     }
 
-    return count;
+    return sll_get_size(chunks);
 }
 
-void *fill_scout_args(struct TraceRange *tr, void *args) {
-    struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) args;
-
+static void *fill_scout_args(struct TraceRange *tr, void *args) {
     struct ScoutTraceArgs *ret = malloc(sizeof(*ret));
-    *ret = *sta;
+    memcpy(ret, args, sizeof(*ret));
     ret->tr = *tr;
     return ret;
+}
+
+void enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
+                    const char delim, const size_t max_parts,
+                    QPTPool_t *ctx, QPTPoolFunc_t func,
+                    size_t *remaining, uint64_t *time, size_t *files, size_t *dirs, size_t *empty) {
+    /*
+     * only doing this to be able to keep track of how many chunks
+     * there are in total because it is not possible to predict how
+     * many chunks there actually are, and we don't want the
+     * scout_end_print to print multiple times due to the the counter
+     * bouncing up and down
+     */
+    sll_t chunks;
+    sll_init(&chunks);
+
+    /* split the trace files into chunks for parallel processing */
+    for(size_t i = 0; i < trace_count; i++) {
+        /* copied by fill_scout_args, freed by scout_trace */
+        struct ScoutTraceArgs sta = {
+            .delim = delim,
+            .tracename = tracenames[i],
+            .tr.fd = tracefds[i],
+            .processdir = func,
+            .free = free,
+            .mutex = &print_mutex,
+            .remaining = remaining,
+            .time = time,
+            .files = files,
+            .dirs = dirs,
+            .empty = empty,
+        };
+
+        /* chunks are not enqueued just yet */
+        *remaining += split_file(tracenames[i], tracefds[i], max_parts,
+                                 find_stanza_end, (void *) &delim,
+                                 fill_scout_args, &sta,
+                                 &chunks);
+    }
+
+    if (*remaining == 0) {
+        scout_end_print(0, 0, 0, 0);
+    }
+
+    /* now that remaining is stable, enqueue chunks */
+    sll_loop(&chunks, node) {
+        void *chunk = sll_node_data(node);
+        QPTPool_enqueue(ctx, 0, scout_trace, chunk);
+    }
+
+    sll_destroy(&chunks, NULL);
 }

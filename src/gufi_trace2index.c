@@ -536,6 +536,7 @@ int main(int argc, char *argv[]) {
                                               , &debug_output_buffers
                                               #endif
         );
+
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
@@ -545,42 +546,20 @@ int main(int argc, char *argv[]) {
 
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
 
-    /* parse the trace files */
+    /* parse the trace files and enqueue work */
+    size_t remaining = 0;
     uint64_t scout_time = 0;
     size_t files = 0;
     size_t dirs = 0;
     size_t empty = 0;
-    for(size_t i = 0; i < trace_count; i++) {
-        /* copied by fill_scout_args, freed by scout_trace */
-        struct ScoutTraceArgs sta = {
-            .delim = pa.in.delim,
-            .tracename = argv[idx + i],
-            .tr.fd = traces[i],
-            .processdir = processdir,
-            .free = free,
-            .mutex = &print_mutex,
-            .time = &scout_time,
-            .files = &files,
-            .dirs = &dirs,
-            .empty = &empty,
-        };
-
-        split_traces(argv[idx + i], traces[i], pa.in.delim,
-                     pa.in.maxthreads,
-                     fill_scout_args, &sta,
-                     pool, i, scout_trace);
-    }
+    enqueue_traces(&argv[idx], traces, trace_count, pa.in.delim,
+                   pa.in.maxthreads, pool, processdir,
+                   &remaining, &scout_time, &files, &dirs, &empty);
 
     QPTPool_stop(pool);
 
     clock_gettime(CLOCK_MONOTONIC, &main_func.end);
     const long double processtime = sec(nsec(&main_func));
-
-    fprintf(stdout, "Scouts took total of %.2Lf seconds (aggregated across %zu threads)\n", sec(scout_time), pa.in.maxthreads);
-    fprintf(stdout, "Dirs:                %zu (%zu empty)\n", dirs, empty);
-    fprintf(stdout, "Files:               %zu\n", files);
-    fprintf(stdout, "Total:               %zu\n", files + dirs);
-    fprintf(stdout, "\n");
 
     /* don't count as part of processtime */
     QPTPool_destroy(pool);

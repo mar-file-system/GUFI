@@ -121,6 +121,7 @@ struct ScoutTraceArgs {
     pthread_mutex_t *mutex; /* lock for values below */
 
     /* references to single shared values */
+    size_t *remaining;
     uint64_t *time;
     size_t *files;
     size_t *dirs;
@@ -130,13 +131,10 @@ struct ScoutTraceArgs {
 
 int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
 
-/* split the entire trace file */
-ssize_t split_traces(const char *name, const int fd, const char delim,
-                     const size_t max_parts,
-                     void *(*fill)(struct TraceRange *tr, void *args), void *fill_args,
-                     QPTPool_t *pool, const size_t id, QPTPoolFunc_t func);
-
-void *fill_scout_args(struct TraceRange *tr, void *args);
+void enqueue_traces(char **traceames, int *tracefds, const size_t trace_count,
+                    const char delim, const size_t max_parts,
+                    QPTPool_t *ctx, QPTPoolFunc_t func,
+                    size_t *remaining, uint64_t *time, size_t *files, size_t *dirs, size_t *empty);
 
 #ifdef __cplusplus
 }
