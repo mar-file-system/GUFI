@@ -694,11 +694,13 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFu
     qi->work = new_work;
 
     QPTPoolThreadData_t *data = &ctx->data[id];
-    QPTPoolThreadData_t *next = &ctx->data[data->next_queue];
 
+    pthread_mutex_lock(&data->mutex);
+    QPTPoolThreadData_t *next = &ctx->data[data->next_queue];
     /* have to calculate next_queue before new_work is modified */
     data->next_queue = ctx->next.func(id, data->next_queue, ctx->nthreads,
                                       new_work, ctx->next.args);
+    pthread_mutex_unlock(&data->mutex);
 
     QPTPool_enqueue_dst_t ret = QPTPool_enqueue_ERROR;
 
