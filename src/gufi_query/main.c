@@ -166,9 +166,8 @@ int main(int argc, char *argv[])
     timestamp_create_start(work);
     #endif
 
-    /* provide a function to print if PRINT is set */
-    const uint64_t queue_depth = in.target_memory_footprint / sizeof(struct work) / in.maxthreads;
-    QPTPool_t *pool = QPTPool_init_with_props(in.maxthreads, &pa, NULL, NULL, queue_depth, 1, 2
+    const uint64_t queue_limit = get_queue_limit(in.target_memory_footprint, in.maxthreads);
+    QPTPool_t *pool = QPTPool_init_with_props(in.maxthreads, &pa, NULL, NULL, queue_limit, 1, 2
                                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                               , timestamp_buffers
                                               #endif

@@ -75,6 +75,16 @@ OF SUCH DAMAGE.
 #include "external.h"
 #include "utils.h"
 
+uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads) {
+    /* not set */
+    if (target_memory_footprint == 0) {
+        return 0;
+    }
+
+    /* set, so queue_limit should be at minimum 1 */
+    return max(target_memory_footprint / sizeof(struct work) / nthreads, 1);
+}
+
 int zeroit(struct sum *summary)
 {
   summary->totfiles=0;

@@ -68,6 +68,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
 #include "debug.h"
+#include "utils.h"
 
 typedef enum {
     INITIALIZED,
@@ -130,10 +131,6 @@ struct queue_item {
     QPTPoolFunc_t func;
     void *work;
 };
-
-static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
-    return (lhs > rhs)?lhs:rhs;
-}
 
 /*
  * Loop through neighbors, looking for work items.

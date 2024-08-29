@@ -88,6 +88,12 @@ int SNPRINTF(char *str, size_t size, const char *format, ...);
    to size_t or weird bugs may occur */
 size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...);
 
+static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
+    return (lhs > rhs)?lhs:rhs;
+}
+
+uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads);
+
 int zeroit(struct sum *summary);
 
 int sumit(struct sum *summary, struct entry_data *data);
