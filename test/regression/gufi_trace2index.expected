@@ -130,7 +130,6 @@ Total Files:         0
 
 # cannot find delimiter of first line
 $ gufi_trace2index -d "&" -n 2 "trace" "search"
-Error: Line at offset <n> does not have a delimiter
 Could not find the specified delimiter in "trace"
 Creating GUFI Index search with 2 threads
 Dirs:                0 (0 empty)
@@ -155,7 +154,6 @@ Total Files:         0
 
 # file delimiter not found
 $ gufi_trace2index -d "|" -n 2 "badtrace" "search"
-Error: Line at offset <n> does not have a delimiter
 Scout encountered bad line ending at "badtrace" offset 62
 Creating GUFI Index search with 2 threads
 Dirs:                0 (0 empty)

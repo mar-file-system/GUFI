@@ -158,7 +158,7 @@ run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \
 echo
 
 echo "# cannot find delimiter of first line"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\"" | sed 's/Error: Line at offset [0-9]\+/Error: Line at offset <n>/g'
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\""
 echo
 
 echo "# first line does not start with a directory"
@@ -174,7 +174,7 @@ echo
 ) > "${BADTRACE}"
 
 echo "# file delimiter not found"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\"" | sed 's/Error: Line at offset [0-9]\+/Error: Line at offset <n>/g'
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
 
 echo "# bad thread count"
 run_no_sort "${GUFI_TRACE2INDEX} -n 18446744073709551615 \"${SRCDIR}\" \"${SEARCH}\""
