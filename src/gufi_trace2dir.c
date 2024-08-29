@@ -242,17 +242,13 @@ int main(int argc, char * argv[]) {
     }
 
     /* parse the trace files and enqueue work */
-    size_t remaining = 0;
-    uint64_t scout_time = 0;
-    size_t files = 0;
-    size_t dirs = 0;
-    size_t empty = 0;
+    struct ScoutTraceStats stats;
     enqueue_traces(&argv[idx], traces, trace_count,
                    pa.in.delim,
                    /* allow for some threads to start processing while reading */
                    (pa.in.maxthreads / 2) + !!(pa.in.maxthreads & 1),
                    pool, processdir,
-                   &remaining, &scout_time, &files, &dirs, &empty);
+                   &stats);
 
     QPTPool_stop(pool);
     QPTPool_destroy(pool);

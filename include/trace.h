@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "debug.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,6 +108,19 @@ struct TraceRange {
     off_t start, end; /* [start, end) */
 };
 
+struct ScoutTraceStats {
+    pthread_mutex_t *mutex; /* lock for values below */
+
+    size_t remaining;
+
+    struct start_end time;  /* time from beginning of enqueue_traces call until right before scout_end_print */
+    uint64_t thread_time;   /* sum across all threads */
+    size_t files;
+    size_t dirs;
+    size_t empty;           /* number of directories without files/links
+                             * can still have child directories */
+};
+
 struct ScoutTraceArgs {
     char delim;
     const char *tracename;
@@ -118,15 +132,8 @@ struct ScoutTraceArgs {
     /* if provided, call at end of scout_trace */
     void (*free)(void *);
 
-    pthread_mutex_t *mutex; /* lock for values below */
-
-    /* references to single shared values */
-    size_t *remaining;
-    uint64_t *time;
-    size_t *files;
-    size_t *dirs;
-    size_t *empty;          /* number of directories without files/links
-                             * can still have child directories */
+    /* reference to single set of shared values */
+    struct ScoutTraceStats *stats;
 };
 
 int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
@@ -134,7 +141,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
 void enqueue_traces(char **traceames, int *tracefds, const size_t trace_count,
                     const char delim, const size_t max_parts,
                     QPTPool_t *ctx, QPTPoolFunc_t func,
-                    size_t *remaining, uint64_t *time, size_t *files, size_t *dirs, size_t *empty);
+                    struct ScoutTraceStats *stats);
 
 #ifdef __cplusplus
 }

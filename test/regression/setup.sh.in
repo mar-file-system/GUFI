@@ -280,7 +280,7 @@ order_tracefile() {
 }
 
 remove_indexing_time() {
-    @GREP@ -v "Scouts took total of\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec"
+    @GREP@ -v "Scouts took \|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec"
 }
 
 pull_ug_summary_columns() {

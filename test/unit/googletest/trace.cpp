@@ -298,11 +298,9 @@ TEST(scout_trace, no_cleanup) {
     ASSERT_EQ(write(fd, line, len), (ssize_t) len);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    size_t remaining = 2; // run twice to cover both sides of final print condition
-    uint64_t time = 0;
-    size_t files = 0;
-    size_t dirs = 0;
-    size_t empty = 0;
+    struct ScoutTraceStats stats = {};
+    stats.mutex = &mutex;
+    stats.remaining = 2; // run twice to cover both sides of final print condition
 
     struct ScoutTraceArgs sta;
     sta.delim      = delim;
@@ -316,12 +314,7 @@ TEST(scout_trace, no_cleanup) {
         return 0;
     };
     sta.free       = nullptr;
-    sta.mutex      = &mutex;
-    sta.remaining  = &remaining;
-    sta.time       = &time;
-    sta.files      = &files;
-    sta.dirs       = &dirs;
-    sta.empty      = &empty;
+    sta.stats      = &stats;
 
     QPTPool_t *pool = QPTPool_init(1, nullptr);
     ASSERT_NE(pool, nullptr);
@@ -337,11 +330,11 @@ TEST(scout_trace, no_cleanup) {
     EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 2);
     QPTPool_destroy(pool);
 
-    EXPECT_EQ(remaining, (size_t)   0);
-    EXPECT_GT(time,      (uint64_t) 0);
-    EXPECT_EQ(files,     (size_t)   0);
-    EXPECT_EQ(dirs,      (size_t)   2);
-    EXPECT_EQ(empty,     (size_t)   2);
+    EXPECT_EQ(stats.remaining,  (size_t)   0);
+    EXPECT_GT(stats.thread_time,(uint64_t) 0);
+    EXPECT_EQ(stats.files,      (size_t)   0);
+    EXPECT_EQ(stats.dirs,       (size_t)   2);
+    EXPECT_EQ(stats.empty,      (size_t)   2);
 
     EXPECT_EQ(close(fd), 0);
     EXPECT_EQ(remove(tracename), 0);

@@ -73,7 +73,6 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "SinglyLinkedList.h"
-#include "debug.h"
 #include "trace.h"
 #include "utils.h"
 #include "xattrs.h"
@@ -213,11 +212,15 @@ void row_destroy(struct row **ref) {
     *ref = NULL;
 }
 
-static void scout_end_print(const uint64_t time, const size_t files, const size_t dirs, const size_t empty) {
-    fprintf(stdout, "Scouts took total of %.2Lf seconds\n", sec(time));
-    fprintf(stdout, "Dirs:                %zu (%zu empty)\n", dirs, empty);
-    fprintf(stdout, "Files:               %zu\n", files);
-    fprintf(stdout, "Total:               %zu\n", files + dirs);
+static void scout_end_print(struct ScoutTraceStats *stats) {
+    fprintf(stdout, "Scouts took %.2Lf seconds (%.2Lf seconds aggregated)\n",
+            sec(nsec(&stats->time)), sec(stats->thread_time));
+    fprintf(stdout, "Dirs:                %zu (%zu empty)\n",
+            stats->dirs, stats->empty);
+    fprintf(stdout, "Files:               %zu\n",
+            stats->files);
+    fprintf(stdout, "Total:               %zu\n",
+            stats->files + stats->dirs);
     fprintf(stdout, "\n");
 }
 
@@ -353,19 +356,20 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   done:
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 
-    pthread_mutex_lock(sta->mutex);
-    *sta->time  += nsec(&scouting);
-    *sta->files += file_count;
-    *sta->dirs  += dir_count;
-    *sta->empty += empty;
+    pthread_mutex_lock(sta->stats->mutex);
+    sta->stats->thread_time += nsec(&scouting);
+    sta->stats->files      += file_count;
+    sta->stats->dirs       += dir_count;
+    sta->stats->empty      += empty;
 
-    (*sta->remaining)--;
+    sta->stats->remaining--;
 
     /* print here to print as early as possible instead of after thread pool completes */
-    if ((*sta->remaining) == 0) {
-        scout_end_print(*sta->time, *sta->files, *sta->dirs, *sta->empty);
+    if (sta->stats->remaining == 0) {
+        clock_gettime(CLOCK_MONOTONIC, &sta->stats->time.end);
+        scout_end_print(sta->stats);
     }
-    pthread_mutex_unlock(sta->mutex);
+    pthread_mutex_unlock(sta->stats->mutex);
 
     if (sta->free) {
         sta->free(sta);
@@ -499,7 +503,11 @@ static void *fill_scout_args(struct TraceRange *tr, void *args) {
 void enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
                     const char delim, const size_t max_parts,
                     QPTPool_t *ctx, QPTPoolFunc_t func,
-                    size_t *remaining, uint64_t *time, size_t *files, size_t *dirs, size_t *empty) {
+                    struct ScoutTraceStats *stats) {
+    memset(stats, 0, sizeof(*stats));
+    clock_gettime(CLOCK_MONOTONIC, &stats->time.start);
+    stats->mutex = &print_mutex;
+
     /*
      * only doing this to be able to keep track of how many chunks
      * there are in total because it is not possible to predict how
@@ -519,23 +527,19 @@ void enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
             .tr.fd = tracefds[i],
             .processdir = func,
             .free = free,
-            .mutex = &print_mutex,
-            .remaining = remaining,
-            .time = time,
-            .files = files,
-            .dirs = dirs,
-            .empty = empty,
+            .stats = stats,
         };
 
         /* chunks are not enqueued just yet */
-        *remaining += split_file(tracenames[i], tracefds[i], max_parts,
-                                 find_stanza_end, (void *) &delim,
-                                 fill_scout_args, &sta,
-                                 &chunks);
+        stats->remaining += split_file(tracenames[i], tracefds[i], max_parts,
+                                       find_stanza_end, (void *) &delim,
+                                       fill_scout_args, &sta,
+                                       &chunks);
     }
 
-    if (*remaining == 0) {
-        scout_end_print(0, 0, 0, 0);
+    if (stats->remaining == 0) {
+        clock_gettime(CLOCK_MONOTONIC, &stats->time.end);
+        scout_end_print(stats);
     }
 
     /* now that remaining is stable, enqueue chunks */

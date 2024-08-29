@@ -547,17 +547,13 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
 
     /* parse the trace files and enqueue work */
-    size_t remaining = 0;
-    uint64_t scout_time = 0;
-    size_t files = 0;
-    size_t dirs = 0;
-    size_t empty = 0;
+    struct ScoutTraceStats stats;
     enqueue_traces(&argv[idx], traces, trace_count,
                    pa.in.delim,
                    /* allow for some threads to start processing while reading */
                    (pa.in.maxthreads / 2) + !!(pa.in.maxthreads & 1),
                    pool, processdir,
-                   &remaining, &scout_time, &files, &dirs, &empty);
+                   &stats);
 
     QPTPool_stop(pool);
 
@@ -599,11 +595,11 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\n");
     #endif
 
-    fprintf(stdout, "Total Dirs:          %zu\n",    dirs);
-    fprintf(stdout, "Total Files:         %zu\n",    files);
+    fprintf(stdout, "Total Dirs:          %zu\n",    stats.dirs);
+    fprintf(stdout, "Total Files:         %zu\n",    stats.files);
     fprintf(stdout, "Time Spent Indexing: %.2Lfs\n", processtime);
-    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",  dirs / processtime);
-    fprintf(stdout, "Files/Sec:           %.2Lf\n",  files / processtime);
+    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",  stats.dirs / processtime);
+    fprintf(stdout, "Files/Sec:           %.2Lf\n",  stats.files / processtime);
 
   free_xattr:
     close_template_db(&pa.xattr);
