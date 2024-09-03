@@ -301,6 +301,7 @@ struct work {
 
 /* extra data used by entries that does not depend on data from other directories */
 struct entry_data {
+   int           parent_fd;    /* holds an FD that can be used for fstatat(2), etc. */
    char          type;
    char          linkname[MAXPATH];
    uint8_t       lstat_called;

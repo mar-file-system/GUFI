@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <errno.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
@@ -129,7 +130,9 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     struct input *in = nda->in;
 
     if (!ed->lstat_called) {
-        if (lstat(entry->name, &ed->statuso) != 0) {
+        char *basename = entry->name + entry->name_len - entry->basename_len;
+
+        if (fstatat(ed->parent_fd, basename, &ed->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
             return 1;
         }
     }

@@ -106,8 +106,10 @@ static int process_external(struct input *in, void *args,
 static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NondirArgs *nda = (struct NondirArgs *) args;
     if (!ed->lstat_called) {
-        if (lstat(entry->name, &ed->statuso) != 0) {
-            return 0;
+        char *basename = entry->name + entry->name_len - entry->basename_len;
+
+        if (fstatat(ed->parent_fd, basename, &ed->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
+            return 1;
         }
 
         if (ed->type == 'l') {
