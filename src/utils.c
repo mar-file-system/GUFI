@@ -412,6 +412,17 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
         const size_t next_level = work->level + 1;
         const size_t recursion_level = work->recursion_level + 1;
 
+        int d_fd = dirfd(dir);
+        if (d_fd < 0) {
+            /*
+             * We should never get here. glibc's dirfd(3) never return errors, and
+             * Apple's libc only returns an error if the DIR * is invalid, which would
+             * indicate a bug in GUFI.
+             */
+            fprintf(stderr, "BUG: dirfd(3) failed: errno = %d\n", errno);
+            return 1;
+        }
+
         struct dirent *dir_child = NULL;
         while ((dir_child = readdir(dir))) {
             const size_t len = strlen(dir_child->d_name);
@@ -428,6 +439,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
 
             struct entry_data child_ed;
             memset(&child_ed, 0, sizeof(child_ed));
+            child_ed.parent_fd = -1;
 
             /* get child path */
             child.name_len = SNFORMAT_S(child.name, MAXPATH, 3,
@@ -520,6 +532,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                     xattrs_get(child.name, &child_ed.xattrs);
                 }
 
+                child_ed.parent_fd = d_fd;
                 processnondir(&child, &child_ed, nondir_args);
                 ctrs.nondirs_processed++;
 
