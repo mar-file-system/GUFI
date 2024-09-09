@@ -1,5 +1,6 @@
 *.a
 *.o
+*.swp
 *.pyc
 db.db
 build
