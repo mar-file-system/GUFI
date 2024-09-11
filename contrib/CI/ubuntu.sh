@@ -62,6 +62,7 @@
 
 
 set -e
+SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
 
 # Set Timezone to skip an interactive prompt when running apt-get update
 TZ=America/Denver
@@ -81,9 +82,14 @@ apt -y install \
     attr \
     autoconf \
     clang \
-    cmake \
     git \
+    make \
     patch \
     pkg-config \
     python3 \
     sudo
+
+# cmake-download needs wget
+apt -y install wget
+
+"${SCRIPT_PATH}/cmake-download.sh" 3.30.3 linux-x86_64
