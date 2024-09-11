@@ -61,8 +61,31 @@
 
 
 
-yum autoremove -y cmake*
-yum install -y wget
-wget https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz
-tar xf cmake-3.1.0-Linux-x86_64.tar.gz
-echo "$(pwd)/cmake-3.1.0-Linux-x86_64/bin" >> "${GITHUB_PATH}"
+set -e
+
+if [[ "$#" -lt 2 ]]
+then
+    (
+        echo "Syntax: $0 version platform"
+        echo
+        echo "ex: $0 3.1.0 linux-x86_64"
+    ) >&2
+    exit 1
+fi
+
+version="$1"
+platform="$2"
+name="cmake-${version}-${platform}"
+tarball="${name}.tar.gz"
+
+if [[ ! -d "${name}" ]]
+then
+    if [[ ! -f "${tarball}" ]]
+    then
+        wget "https://github.com/Kitware/CMake/releases/download/v${version}/${tarball}"
+    fi
+    tar -xf "${tarball}"
+fi
+
+echo "Tail the last line of this script's output and export to your PATH:"
+echo "$(pwd)/${name}/bin"

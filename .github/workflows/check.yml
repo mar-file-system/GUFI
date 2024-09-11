@@ -123,8 +123,14 @@ jobs:
     - name: CentOS 8 Prerequisites
       run:  contrib/CI/centos8.sh
 
+    - name: Install wget
+      run:  yum -y install wget
+
+    - name: Uninstall CMake from package manager
+      run:  yum -y autoremove cmake3
+
     - name: Install CMake 3.1.0
-      run:  contrib/CI/cmake3.1.0.sh
+      run:  contrib/CI/cmake-download.sh 3.1.0 linux-x86_64 | tail -n 1 | sed 's/linux/Linux/g' >> "${GITHUB_PATH}"
 
     - name: Check CMake Version
       run:  cmake --version
