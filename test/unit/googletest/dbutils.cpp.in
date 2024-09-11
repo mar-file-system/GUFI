@@ -239,6 +239,7 @@ TEST(addqueryfuncs, fpath) {
 
     sqlite3_close(db);
     free(work.fullpath);
+    work.fullpath = nullptr;
 }
 
 TEST(addqueryfuncs, rpath) {
