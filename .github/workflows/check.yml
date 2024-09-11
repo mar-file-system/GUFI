@@ -93,7 +93,7 @@ jobs:
         key:  ${{ runner.os }}-pylint
 
     - name: Ubuntu Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
+      run:  sudo contrib/CI/ubuntu.sh | tail -n 1 >> "${GITHUB_PATH}"
 
     - name: Install Extra Python Packages
       run:  |
@@ -106,48 +106,6 @@ jobs:
     - name: Run Python3 Pylint
       working-directory: ${{ github.workspace }}/build
       run:  make pylint
-
-  Older_CMake:
-    needs: [ShellCheck, Pylint]
-    runs-on: ubuntu-latest
-    container:
-      image: centos:8
-    steps:
-    - uses: actions/checkout@v4
-
-    - uses: actions/cache@v4
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-old-cmake
-
-    - name: CentOS 8 Prerequisites
-      run:  contrib/CI/centos8.sh
-
-    - name: Install wget
-      run:  yum -y install wget
-
-    - name: Uninstall CMake from package manager
-      run:  yum -y autoremove cmake3
-
-    - name: Install CMake 3.1.0
-      run:  contrib/CI/cmake-download.sh 3.5.0 linux-x86_64 | tail -n 1 | sed 's/linux/Linux/g' >> "${GITHUB_PATH}"
-
-    - name: Check CMake Version
-      run:  cmake --version
-
-    - name: Configure CMake
-      run:  |
-            mkdir -p build
-            cd build
-            cmake .. ${{ env.COMMON_CONFIG }}
-
-    - name: Build
-      working-directory: ${{ github.workspace }}/build
-      run:  make -j
-
-    - name: Test
-      working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure
 
   Python2:
     needs: [ShellCheck, Pylint]
@@ -212,7 +170,7 @@ jobs:
         key:  ${{ runner.os }}-test-directory
 
     - name: Ubuntu Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
+      run:  sudo contrib/CI/ubuntu.sh | tail -n 1 >> "${GITHUB_PATH}"
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY=/tmp
@@ -238,13 +196,13 @@ jobs:
         key:  ${{ runner.os }}-memcheck
 
     - name: Ubuntu Prerequisites
-      run:  contrib/CI/ubuntu.sh
+      run:  contrib/CI/ubuntu.sh | tail -n 1 >> "${GITHUB_PATH}"
 
     - name: Install Valgrind
       run:  apt -y install valgrind
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DDEP_USE_MIMALLOC=Off
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -253,27 +211,3 @@ jobs:
       run:  |
             cd ${{ github.workspace }}/build
             valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --show-error-list=yes --track-fds=yes --gen-suppressions=all --suppressions=test/unit/googletest/valgrind.suppressions --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
-
-  WithoutJemalloc:
-    needs: [ShellCheck, Pylint]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - uses: actions/cache@v4
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-without-jemalloc
-
-    - name: Ubuntu Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
-
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DDEP_USE_JEMALLOC=Off -DTEST_WORKING_DIRECTORY="$(pwd)"
-
-    - name: Build
-      run:  cmake --build ${{ github.workspace }}/build -j
-
-    - name: Test
-      working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure

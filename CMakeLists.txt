@@ -293,7 +293,7 @@ set(DEP_BUILD_THREADS      "1"                                CACHE STRING "Numb
 set(DEP_INSTALL_PREFIX     "${CMAKE_BINARY_DIR}/deps"         CACHE PATH   "Location of dependency binaries")
 set(CLIENT                 OFF                                CACHE BOOL   "Whether or not to build and install client")
 set(DEP_PATCH_SQLITE3_OPEN OFF                                CACHE BOOL   "Whether or not to patch SQLite3 open")
-set(DEP_USE_JEMALLOC       ON                                 CACHE BOOL   "Whether or not to build and link with jemalloc")
+set(DEP_USE_MIMALLOC       ON                                 CACHE BOOL   "Whether or not to build and link with mimalloc")
 set(DEP_OPTIONS --threads "${DEP_BUILD_THREADS}")
 if (CMAKE_CXX_COMPILER)
   set(DEP_OPTIONS ${DEP_OPTIONS} --cxx)
@@ -301,8 +301,8 @@ endif()
 if (DEP_PATCH_SQLITE3_OPEN)
   set(DEP_OPTIONS ${DEP_OPTIONS} --patch-sqlite3-open)
 endif()
-if (DEP_USE_JEMALLOC)
-  set(DEP_OPTIONS ${DEP_OPTIONS} --jemalloc)
+if (DEP_USE_MIMALLOC)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --mimalloc)
 endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}" "${CMAKE_VERSION}" "${CMAKE_SYSTEM_NAME}")
 
@@ -407,9 +407,9 @@ if (ZLIB_FOUND)
   )
 endif()
 
-if (DEP_USE_JEMALLOC)
+if (DEP_USE_MIMALLOC)
   list(APPEND COMMON_LIBRARIES
-    ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
+    "${DEP_INSTALL_PREFIX}/mimalloc/lib/mimalloc-2.1/libmimalloc.a"
   )
 endif()
 
