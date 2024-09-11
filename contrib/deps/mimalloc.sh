@@ -61,32 +61,29 @@
 
 
 
-# build and install jemalloc
+# build and install mimalloc
 
 set -e
 
 # Assume all paths exist
 
-jemalloc_name="jemalloc"
-jemalloc_prefix="${INSTALL_DIR}/${jemalloc_name}"
-if [[ ! -d "${jemalloc_prefix}" ]]; then
-    jemalloc_build="${BUILD_DIR}/jemalloc-master"
-    if [[ ! -d "${jemalloc_build}" ]]; then
-        jemalloc_tarball="${DOWNLOAD_DIR}/jemalloc.tar.gz"
-        if [[ ! -f "${jemalloc_tarball}" ]]; then
-            wget https://github.com/jemalloc/jemalloc/archive/master.tar.gz -O "${jemalloc_tarball}"
+mimalloc_name="mimalloc"
+mimalloc_prefix="${INSTALL_DIR}/${mimalloc_name}"
+if [[ ! -d "${mimalloc_prefix}" ]]; then
+    mimalloc_build="${BUILD_DIR}/mimalloc-master"
+    if [[ ! -d "${mimalloc_build}" ]]; then
+        mimalloc_tarball="${DOWNLOAD_DIR}/mimalloc.tar.gz"
+        if [[ ! -f "${mimalloc_tarball}" ]]; then
+            wget https://github.com/microsoft/mimalloc/archive/master.tar.gz -O "${mimalloc_tarball}"
         fi
 
-        tar -xf "${jemalloc_tarball}" -C "${BUILD_DIR}"
+        tar -xf "${mimalloc_tarball}" -C "${BUILD_DIR}"
     fi
 
-    cd "${jemalloc_build}"
-    ./autogen.sh
+    cd "${mimalloc_build}"
     mkdir -p build
     cd build
-    if [[ ! -f Makefile ]]; then
-        ../configure --prefix="${jemalloc_prefix}"
-    fi
+    "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${mimalloc_prefix}" -DCMAKE_INSTALL_LIBDIR=lib -DMI_BUILD_STATIC=On
     make -j "${THREADS}"
-    make -i install
+    make install
 fi
