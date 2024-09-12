@@ -152,7 +152,7 @@ struct queue_item {
                 const uint64_t take = max(                                         \
                     target->queue_name.size * ctx->steal.num / ctx->steal.denom,   \
                     1);                                                            \
-                sll_move_first(&tw->waiting, &target->queue_name, take);           \
+                sll_move_append_first(&tw->waiting, &target->queue_name, take);    \
                 pthread_mutex_unlock(&target->mutex_name);                         \
                 rc = tw->waiting.size;                                             \
                 break;                                                             \
@@ -267,10 +267,10 @@ static void claim_work(QPTPoolThreadData_t *tw) {
     /* move entire queue into work and clear out queue */
     pthread_mutex_lock(&tw->claimed_mutex);
     if (tw->waiting.size) {
-        sll_move(&tw->claimed, &tw->waiting);
+        sll_move_append(&tw->claimed, &tw->waiting);
     }
     else {
-        sll_move(&tw->claimed, &tw->deferred);
+        sll_move_append(&tw->claimed, &tw->deferred);
     }
     pthread_mutex_unlock(&tw->claimed_mutex);
 }
