@@ -177,6 +177,15 @@ sll_t *sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n) {
         dst->head = src->head;
     }
 
+    if (n >= src->size) {
+        /* Clear all of src */
+        dst->size += src->size;
+        dst->tail = src->tail;
+        sll_clear(src);
+
+        return dst;
+    }
+
     /* find up to n nodes from src */
     sll_node_t *last = src->head;
     uint64_t i = 0;
@@ -190,10 +199,6 @@ sll_t *sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n) {
     }
 
     src->head = last->next;
-    if (last == src->tail) {
-        src->tail = NULL;
-    }
-
     dst->tail = last;
     dst->tail->next = NULL;
 
