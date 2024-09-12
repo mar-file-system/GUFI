@@ -371,8 +371,8 @@ static void *worker_function(void *args) {
         wait_for_work(ctx, tw);
         timestamp_set_end(wf_wait);
 
-        if ((ctx->state == STOPPING) && !ctx->incomplete &&
-            !tw->waiting.head && !tw->deferred.size) {
+        /* if stopping and entire thread pool is empty, this thread can exit */
+        if ((ctx->state == STOPPING) && !ctx->incomplete) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_mutex_unlock(&tw->mutex);
             break;
