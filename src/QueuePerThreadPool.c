@@ -239,12 +239,13 @@ static void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id)
 
 /*
  * wait_for_work() -
- *    Assumes ctx->mutex is locked.
+ *     Assumes ctx->mutex and tw->mutex are locked.
  */
 static void wait_for_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw) {
     while (
-        /* running, but no work in pool */
-        ((ctx->state == RUNNING) && !ctx->incomplete) ||
+        /* running, but no work in pool or current thread */
+        ((ctx->state == RUNNING) && (!ctx->incomplete ||
+                                     (!tw->waiting.size && !tw->deferred.size))) ||
         /*
          * not running and still have work in
          * other threads, just not this one
@@ -337,7 +338,7 @@ static size_t process_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id) {
         pthread_mutex_unlock(&tw->claimed_mutex);
         timestamp_end_print(ctx->debug_buffers, id, "wf_next_work", wf_next_work);
 
-        work_count++;
+        work_count++; /* increment for previous work item */
     }
 
     return work_count;
@@ -378,6 +379,7 @@ static void *worker_function(void *args) {
         }
 
         pthread_mutex_unlock(&ctx->mutex);
+        /* tw->mutex still locked */
 
         timestamp_create_start(wf_move_queue);
         claim_work(tw);
@@ -388,12 +390,22 @@ static void *worker_function(void *args) {
         #endif
 
         pthread_mutex_unlock(&tw->mutex);
+        /* tw->waiting is now empty and can be pushed to */
 
         timestamp_create_start(wf_process_queue);
         const size_t work_count = process_work(ctx, tw, id);
         timestamp_set_end(wf_process_queue);
 
         timestamp_create_start(wf_cleanup);
+
+        /*
+         * no need to lock - thread is modifying its own counter and
+         * no other threads will modify it
+         *
+         * read by QPTPool_threads_started, but while there are still
+         * work items waiting to be processed, the instantaneous value
+         * doesn't matter
+         */
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
