@@ -82,7 +82,7 @@ sll_t *sll_init(sll_t *sll) {
     return sll_clear(sll);
 }
 
-sll_t *sll_push(sll_t *sll, void *data) {
+void sll_push(sll_t *sll, void *data) {
     /* Not checking arguments */
 
     sll_node_t *node = calloc(1, sizeof(sll_node_t));
@@ -100,7 +100,7 @@ sll_t *sll_push(sll_t *sll, void *data) {
 
     sll->size++;
 
-    return sll;
+    return;
 }
 
 void *sll_pop(sll_t *sll) {
@@ -125,11 +125,11 @@ void *sll_pop(sll_t *sll) {
     return data;
 }
 
-sll_t *sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n) {
+void sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n) {
     /* Not checking arguments */
 
     if (!src->size) {
-        return dst;
+        return;
     }
 
     /* Connect src->head to dst->tail first */
@@ -146,7 +146,7 @@ sll_t *sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n) {
         dst->tail = src->tail;
         sll_clear(src);
 
-        return dst;
+        return;
     }
 
     /* find up to n nodes from src */
@@ -168,12 +168,12 @@ sll_t *sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n) {
     dst->size += i;
     src->size -= i;
 
-    return dst;
+    return;
 }
 
-sll_t *sll_move_append(sll_t *dst, sll_t *src) {
+void sll_move_append(sll_t *dst, sll_t *src) {
     /* Not checking arguments */
-    return sll_move_append_first(dst, src, src->size);
+    sll_move_append_first(dst, src, src->size);
 }
 
 uint64_t sll_get_size(sll_t *sll) {
