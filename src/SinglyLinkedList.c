@@ -125,43 +125,6 @@ void *sll_pop(sll_t *sll) {
     return data;
 }
 
-sll_t *sll_move_first(sll_t *dst, sll_t *src, const uint64_t n) {
-    /* Not checking arguments */
-
-    if (!n) {
-        /* dst is cleared, not destroyed */
-        sll_clear(dst);
-        return dst;
-    }
-
-    /* dst is overwritten, not destroyed */
-    *dst = *src;
-
-    if (src->size <= n) {
-        sll_clear(src);
-        return dst;
-    }
-
-    sll_node_t *node = sll_head_node(dst);
-    src->size--;
-
-    for(uint64_t i = 1; i < n; i++) {
-        node = sll_next_node(node); /* no need to check for NULL */
-        src->size--;
-    }
-
-    src->head = node->next; /* node is always non-NULL because src->size > n */
-    dst->tail = node;
-    dst->tail->next = NULL;
-    dst->size -= src->size;
-
-    return dst;
-}
-
-sll_t *sll_move(sll_t *dst, sll_t *src) {
-    return sll_move_first(dst, src, src->size);
-}
-
 sll_t *sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n) {
     /* Not checking arguments */
 
