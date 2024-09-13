@@ -437,8 +437,18 @@ TEST(QueuePerThreadPool, custom_next) {
 }
 
 static void test_steal(const QPTPool_enqueue_dst queue, const bool find,
-                       const int src, const int dst) {
-    std::size_t counter = 0;
+                       const int src) {
+    struct work_item {
+        work_item()
+            : tid(0),
+              counter(0)
+            {}
+
+        std::size_t tid; // which thread is processing this work item
+        std::size_t counter;
+    };
+
+    work_item w{};
 
     // macOS doesn't seem to like std::mutex
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -451,45 +461,49 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find,
     ASSERT_EQ(QPTPool_set_steal(pool, 1, 1), 0);
     ASSERT_EQ(QPTPool_start(pool), 0);
 
-    // prevent thread src from completing
+    // the first work item will be placed in src, but can be processed by any thread
     pthread_mutex_lock(&mutex);
     EXPECT_EQ(QPTPool_enqueue(pool, src,
                               [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
-                                  increment_counter(ctx, id, data, args);
+                                  work_item *w = static_cast<work_item *>(data);
+                                  w->tid = id;
+                                  increment_counter(ctx, id, &w->counter, args);
 
+                                  // first work item is prevented from completing, blocking the thread
                                   pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
                                   pthread_mutex_lock(mutex);
                                   pthread_mutex_unlock(mutex);
                                   return 0;
-                              }, &counter), QPTPool_enqueue_WAIT);
+                              }, &w), QPTPool_enqueue_WAIT);
 
     // need to make sure only work item got popped off
     // no racing here because only 1 thread runs
-    while (counter < 1) {
+    while (w.counter < 1) {
         sched_yield();
     }
 
     uint64_t expected = 1;
 
-    // no racing here because even though work is placed into different
-    // threads, they end up getting stolen and run serially in dst
+    // no racing here because even though work is placed into
+    // different threads, they end up getting stolen and run
+    // serially by the thread that is not blocked
     if (find) {
-        // thread src; put a work item in the designated queue for stealing
-        EXPECT_EQ(QPTPool_enqueue_here(pool, src, queue, increment_counter, &counter),
+        // place a work item behind the first work item for stealing
+        EXPECT_EQ(QPTPool_enqueue_here(pool, w.tid, queue, increment_counter, &w.counter),
                   queue);
 
-        // thread dst; gets 1 work item and triggers stealing 1 work item from src
-        EXPECT_EQ(QPTPool_enqueue_here(pool, dst, QPTPool_enqueue_WAIT, increment_counter, &counter),
+        // place a work item on the other thread, which triggers stealing the previous work item
+        EXPECT_EQ(QPTPool_enqueue_here(pool, !w.tid, QPTPool_enqueue_WAIT, increment_counter, &w.counter),
                   QPTPool_enqueue_WAIT);
 
         expected += 2;
     }
     else {
-        // thread dst will look in both queues and not find anything to steal
+        // thread that is not blocked will look in both queues and not find anything to steal
     }
 
-    // wait for thread dst to run its work (and stolen work item)
-    while (counter < expected) {
+    // wait for thread that is not blocked to run its work (and stolen work item)
+    while (w.counter < expected) {
         sched_yield();
     }
 
@@ -498,7 +512,7 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find,
 
     QPTPool_stop(pool);
 
-    EXPECT_EQ(counter, expected);
+    EXPECT_EQ(w.counter, expected);
     EXPECT_EQ(QPTPool_threads_started(pool),   expected);
     EXPECT_EQ(QPTPool_threads_completed(pool), expected);
 
@@ -507,22 +521,22 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find,
 
 TEST(QueuePerThreadPool, steal_nothing) {
     // same test
-    test_steal(QPTPool_enqueue_WAIT,     false, 0, 1);
-    test_steal(QPTPool_enqueue_DEFERRED, false, 0, 1);
+    test_steal(QPTPool_enqueue_WAIT,     false, 0);
+    test_steal(QPTPool_enqueue_DEFERRED, false, 0);
 
     // same test
-    test_steal(QPTPool_enqueue_WAIT,     false, 1, 0);
-    test_steal(QPTPool_enqueue_DEFERRED, false, 1, 0);
+    test_steal(QPTPool_enqueue_WAIT,     false, 1);
+    test_steal(QPTPool_enqueue_DEFERRED, false, 1);
 }
 
 TEST(QueuePerThreadPool, steal_waiting) {
-    test_steal(QPTPool_enqueue_WAIT,     true, 0, 1);
-    test_steal(QPTPool_enqueue_WAIT,     true, 1, 0);
+    test_steal(QPTPool_enqueue_WAIT,     true, 0);
+    test_steal(QPTPool_enqueue_WAIT,     true, 1);
 }
 
 TEST(QueuePerThreadPool, steal_deferred) {
-    test_steal(QPTPool_enqueue_DEFERRED, true, 0, 1);
-    test_steal(QPTPool_enqueue_DEFERRED, true, 1, 0);
+    test_steal(QPTPool_enqueue_DEFERRED, true, 0);
+    test_steal(QPTPool_enqueue_DEFERRED, true, 1);
 }
 
 TEST(QueuePerThreadPool, steal_active) {
