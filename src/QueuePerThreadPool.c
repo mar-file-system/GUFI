@@ -136,15 +136,15 @@ struct queue_item {
  * Loop through neighbors, looking for work items.
  * If there are work items, take at least one.
  */
-#define steal(ctx, id, start, end, mutex_name, queue_name, rc)                     \
+#define steal(ctx, id, start, mutex_name, queue_name, rc)                          \
     QPTPoolThreadData_t *tw = &ctx->data[id];                                      \
                                                                                    \
-    for(size_t i = start; i < end; i++) {                                          \
-        if (id == i) {                                                             \
+    for(size_t i = 0; i < ctx->nthreads; i++) {                                    \
+        size_t cur = (start + i) % ctx->nthreads;                                  \
+        if (cur == id) {                                                           \
             continue;                                                              \
         }                                                                          \
-                                                                                   \
-        QPTPoolThreadData_t *target = &ctx->data[i];                               \
+        QPTPoolThreadData_t *target = &ctx->data[cur];                             \
                                                                                    \
         if (pthread_mutex_trylock(&target->mutex_name) == 0) {                     \
             if (target->queue_name.size) {                                         \
@@ -162,17 +162,15 @@ struct queue_item {
         }                                                                          \
     }
 
-static uint64_t steal_waiting(QPTPool_t *ctx, const size_t id,
-                              const size_t start, const size_t end) {
+static uint64_t steal_waiting(QPTPool_t *ctx, const size_t id, const size_t start) {
     uint64_t rc = 0;
-    steal(ctx, id, start, end, mutex, waiting, rc);
+    steal(ctx, id, start, mutex, waiting, rc);
     return rc;
 }
 
-static uint64_t steal_deferred(QPTPool_t *ctx, const size_t id,
-                               const size_t start, const size_t end) {
+static uint64_t steal_deferred(QPTPool_t *ctx, const size_t id, const size_t start) {
     uint64_t rc = 0;
-    steal(ctx, id, start, end, mutex, deferred, rc);
+    steal(ctx, id, start, mutex, deferred, rc);
     return rc;
 }
 
@@ -189,10 +187,9 @@ static uint64_t steal_deferred(QPTPool_t *ctx, const size_t id,
  * happens after all waiting and deferred queues have been checked and
  * found to be empty, and so should not be called frequently.
  */
-static uint64_t steal_claimed(QPTPool_t *ctx, const size_t id,
-                              const size_t start, const size_t end) {
+static uint64_t steal_claimed(QPTPool_t *ctx, const size_t id, const size_t start) {
     uint64_t rc = 0;
-    steal(ctx, id, start, end, claimed_mutex, claimed, rc);
+    steal(ctx, id, start, claimed_mutex, claimed, rc);
     return rc;
 }
 
@@ -211,18 +208,15 @@ static void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id)
     }
 
     /*
-     * search [steal_from, nthreads) and then [0, steal_from)
-     * increment steal_from at the end
+     * search other threads' queues and increment steal_from at the end
      *
      * use short circuiting to stop searching
      *
      * do this to always start searching from different locations
      */
     (void) (
-        (steal_waiting( ctx, id, tw->steal_from, ctx->nthreads)  == 0) &&
-        (steal_waiting( ctx, id, 0,              tw->steal_from) == 0) &&
-        (steal_deferred(ctx, id, tw->steal_from, ctx->nthreads)  == 0) &&
-        (steal_deferred(ctx, id, 0,              tw->steal_from) == 0) &&
+        (steal_waiting( ctx, id, tw->steal_from)  == 0) &&
+        (steal_deferred(ctx, id, tw->steal_from)  == 0) &&
         /*
          * if still can't find anything, try the claimed queue
          *
@@ -230,8 +224,7 @@ static void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id)
          * is taking so long that the rest of the threads have run
          * out of work, so this should not happen too often
          */
-        (steal_claimed( ctx, id, tw->steal_from, ctx->nthreads)  == 0) &&
-        (steal_claimed( ctx, id, 0,              tw->steal_from) == 0)
+        (steal_claimed( ctx, id, tw->steal_from)  == 0)
     );
 
     tw->steal_from = (tw->steal_from + 1) % ctx->nthreads;
