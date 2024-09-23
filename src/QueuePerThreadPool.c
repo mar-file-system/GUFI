@@ -140,11 +140,12 @@ struct queue_item {
     QPTPoolThreadData_t *tw = &ctx->data[id];                                      \
                                                                                    \
     for(size_t i = 0; i < ctx->nthreads; i++) {                                    \
-        size_t cur = (start + i) % ctx->nthreads;                                  \
-        if (cur == id) {                                                           \
+        const size_t curr = (start + i) % ctx->nthreads;                           \
+        if (curr == id) {                                                          \
             continue;                                                              \
         }                                                                          \
-        QPTPoolThreadData_t *target = &ctx->data[cur];                             \
+                                                                                   \
+        QPTPoolThreadData_t *target = &ctx->data[curr];                            \
                                                                                    \
         if (pthread_mutex_trylock(&target->mutex_name) == 0) {                     \
             if (target->queue_name.size) {                                         \
@@ -162,13 +163,13 @@ struct queue_item {
         }                                                                          \
     }
 
-static uint64_t steal_waiting(QPTPool_t *ctx, const size_t id, const size_t start) {
+static inline uint64_t steal_waiting(QPTPool_t *ctx, const size_t id, const size_t start) {
     uint64_t rc = 0;
     steal(ctx, id, start, mutex, waiting, rc);
     return rc;
 }
 
-static uint64_t steal_deferred(QPTPool_t *ctx, const size_t id, const size_t start) {
+static inline uint64_t steal_deferred(QPTPool_t *ctx, const size_t id, const size_t start) {
     uint64_t rc = 0;
     steal(ctx, id, start, mutex, deferred, rc);
     return rc;
@@ -187,7 +188,7 @@ static uint64_t steal_deferred(QPTPool_t *ctx, const size_t id, const size_t sta
  * happens after all waiting and deferred queues have been checked and
  * found to be empty, and so should not be called frequently.
  */
-static uint64_t steal_claimed(QPTPool_t *ctx, const size_t id, const size_t start) {
+static inline uint64_t steal_claimed(QPTPool_t *ctx, const size_t id, const size_t start) {
     uint64_t rc = 0;
     steal(ctx, id, start, claimed_mutex, claimed, rc);
     return rc;
@@ -200,7 +201,7 @@ static uint64_t steal_claimed(QPTPool_t *ctx, const size_t id, const size_t star
  *
  * Assumes ctx->mutex and tw->mutex are locked.
  */
-static void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id) {
+static inline void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id) {
     if (!ctx->steal.num || (ctx->nthreads < 2) ||
         tw->waiting.size || tw->deferred.size ||
         !ctx->incomplete) {
@@ -208,15 +209,13 @@ static void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id)
     }
 
     /*
-     * search other threads' queues and increment steal_from at the end
+     * search other threads' queues
      *
      * use short circuiting to stop searching
-     *
-     * do this to always start searching from different locations
      */
     (void) (
-        (steal_waiting( ctx, id, tw->steal_from)  == 0) &&
-        (steal_deferred(ctx, id, tw->steal_from)  == 0) &&
+        (steal_waiting( ctx, id, tw->steal_from) == 0) &&
+        (steal_deferred(ctx, id, tw->steal_from) == 0) &&
         /*
          * if still can't find anything, try the claimed queue
          *
@@ -224,9 +223,10 @@ static void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, size_t id)
          * is taking so long that the rest of the threads have run
          * out of work, so this should not happen too often
          */
-        (steal_claimed( ctx, id, tw->steal_from)  == 0)
+        (steal_claimed( ctx, id, tw->steal_from) == 0)
     );
 
+    /* always start searching from different locations */
     tw->steal_from = (tw->steal_from + 1) % ctx->nthreads;
 }
 
