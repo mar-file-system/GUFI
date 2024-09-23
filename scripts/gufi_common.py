@@ -68,7 +68,7 @@ import re
 import sys
 
 if (sys.version_info.major < 3) or ((sys.version_info.major == 3) and sys.version_info.minor < 3):
-    from pipes import quote as sanitize
+    from pipes import quote as sanitize # pylint: disable=deprecated-module
 else:
     from shlex import quote as sanitize # new in Python 3.3
 
@@ -267,7 +267,7 @@ def build_query(select, tables, where=None, group_by=None,
             LIMIT num_results   (optional)
     '''
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
 
     if not select or len(select) == 0 or not tables or len(tables) == 0:
         return ''

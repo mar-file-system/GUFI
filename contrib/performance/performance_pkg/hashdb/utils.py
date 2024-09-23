@@ -124,7 +124,7 @@ def insert(con, args, hash, table_name, cols_hashed, cols_not_hashed):
     args should contains members with the same names as the columns
     '''
 
-    # pylint: disable=redefined-builtin,too-many-arguments
+    # pylint: disable=redefined-builtin,too-many-arguments,too-many-positional-arguments
 
     cols = ['hash']
     vals = ['"{0}"'.format(hash)]

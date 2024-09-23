@@ -182,7 +182,8 @@ DEFAULTS = {
     },
 }
 
-def read_value(conf, parser, defaults, section, key, modify_val=None): # pylint: disable=too-many-arguments
+def read_value(conf, parser, defaults, section, key, modify_val=None):
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     convert, default = defaults[section][key]
     try:
         value = convert(parser.get(section, key))

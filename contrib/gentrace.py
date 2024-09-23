@@ -63,8 +63,9 @@
 
 import argparse
 
-# pylint: disable=too-many-arguments
 def generate_level_r(out, parent, dir_count, file_count, current_level, max_level, rs = chr(0x1e)):
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+
     # generate all files first
     for f_name in range(file_count):
         out.write(parent + 'f.' + str(f_name) + # name
@@ -123,6 +124,8 @@ def generate_level_r(out, parent, dir_count, file_count, current_level, max_leve
             generate_level_r(out, parent + 'd.' + str(d_name) + '/', dir_count, file_count, current_level + 1, max_level, rs)
 
 def generate_level(out, root, dir_count, file_count, max_level, rs = chr(0x1e)):
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+
     # start at root
     out.write(root +            # name
               rs + 'd' +        # type

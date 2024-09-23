@@ -96,7 +96,7 @@ def add_annotations(x_vals, y_vals,
                     precision,
                     color,
                     x_offset, y_offset):
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     for x_val, y_val in zip(x_vals, y_vals):
         plt.annotate('{0:.{1}f}'.format(y_val, precision),
                      (x_val, y_val),
