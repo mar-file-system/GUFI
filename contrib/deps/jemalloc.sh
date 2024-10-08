@@ -61,118 +61,32 @@
 
 
 
-# get where this script is
-# shellcheck disable=SC2046,SC2086
-SCRIPT_PATH="$(realpath $(dirname ${BASH_SOURCE[0]}))"
+# build and install jemalloc
 
 set -e
 
-#Call the right cmake binary
-if [ -x "$(command -v cmake)" ]
- then
-  CMAKE=$(command -v cmake)
-elif [ -x "$(command -v cmake3)" ]
- then
-  CMAKE=$(command -v cmake3)
-else
-  echo "No cmake available!"
-  exit 1
-fi
+# Assume all paths exist
 
-THREADS="1"
-BUILD_CXX="false"
-PATCH_SQLITE3_OPEN="false"
-JEMALLOC="false"
-MIMALLOC="false"
-
-# https://stackoverflow.com/a/14203146
-# Bruno Bronosky
-POSITIONAL=()
-while [[ $# -gt 0 ]]
-do
-key="$1"
-
-case $key in
-    --threads)
-        THREADS="$2"
-        shift # past count
-        ;;
-    --cxx)
-        BUILD_CXX="true"
-        ;;
-    --patch-sqlite3-open)
-        PATCH_SQLITE3_OPEN="true"
-        ;;
-    --jemalloc)
-        JEMALLOC="true"
-        ;;
-    --mimalloc)
-        MIMALLOC="true"
-        ;;
-    *)    # unknown option
-        POSITIONAL+=("$1") # save it in an array for later
-        ;;
-esac
-    shift # past flag
-done
-set -- "${POSITIONAL[@]}" # restore positional parameters
-
-if [[ "$#" -lt 3 ]]; then
-    echo "Syntax: $0 download_dir build_dir install_dir"
-    exit 1
-fi
-
-if [[ "$#" -lt 5 ]]
-then
-    echo "Syntax: $0 download_dir build_dir install_dir CMAKE_VERSION CMAKE_SYSTEM_NAME" >&2
-    exit 1
-fi
-
-# dependency download path
-mkdir -p "$1"
-DOWNLOAD_DIR=$(realpath "$1")
-
-mkdir -p "$2"
-BUILD_DIR=$(realpath "$2")
-
-# dependency install path
-mkdir -p "$3"
-INSTALL_DIR=$(realpath "$3")
-
-CMAKE_VERSION="$4"
-CMAKE_SYSTEM_NAME="$5"
-
-export SCRIPT_PATH
-export DOWNLOAD_DIR
-export BUILD_DIR
-export INSTALL_DIR
-export CMAKE
-export THREADS
-
-echo "Installing SQLite3"
-source "${SCRIPT_PATH}/sqlite3.sh" "${PATCH_SQLITE3_OPEN}"
-
-echo "Installing SQLite3 PCRE"
-source "${SCRIPT_PATH}/sqlite3-pcre.sh"
-
-if [[ "${JEMALLOC}" == "true" ]]; then
-    echo "Installing jemalloc"
-    source "${SCRIPT_PATH}/jemalloc.sh"
-fi
-
-if [[ "${MIMALLOC}" == "true" ]]; then
-    echo "Installing mimalloc"
-    source "${SCRIPT_PATH}/mimalloc.sh"
-fi
-
-ACCEPTABLE_VERSION=3.5
-HIGHEST_VERSION=$( (echo "${CMAKE_VERSION}"; echo "${ACCEPTABLE_VERSION}") | sort -rV | head -1)
-
-if [[ "${CMAKE_SYSTEM_NAME}" != "CYGWIN" ]]; then
-    if [[ "${CMAKE_VERSION}" == "${HIGHEST_VERSION}" ]]; then
-        if [[ "${BUILD_CXX}" == "true" ]]; then
-            echo "Installing GoogleTest"
-            source "${SCRIPT_PATH}/googletest.sh"
+jemalloc_name="jemalloc"
+jemalloc_prefix="${INSTALL_DIR}/${jemalloc_name}"
+if [[ ! -d "${jemalloc_prefix}" ]]; then
+    jemalloc_build="${BUILD_DIR}/jemalloc-master"
+    if [[ ! -d "${jemalloc_build}" ]]; then
+        jemalloc_tarball="${DOWNLOAD_DIR}/jemalloc.tar.gz"
+        if [[ ! -f "${jemalloc_tarball}" ]]; then
+            wget https://github.com/jemalloc/jemalloc/archive/master.tar.gz -O "${jemalloc_tarball}"
         fi
+
+        tar -xf "${jemalloc_tarball}" -C "${BUILD_DIR}"
     fi
+
+    cd "${jemalloc_build}"
+    ./autogen.sh
+    mkdir -p build
+    cd build
+    if [[ ! -f Makefile ]]; then
+        ../configure --prefix="${jemalloc_prefix}"
+    fi
+    make -j "${THREADS}"
+    make -i install
 fi
