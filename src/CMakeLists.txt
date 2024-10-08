@@ -133,6 +133,42 @@ if (GPFS_LIB AND GPFS_BUILD)
   target_link_libraries(gpfs-scan-tool ${GPFS_LIB} ${COMMON_LIBRARIES})
 endif()
 
+function(build_and_install_one LINK_GUFI TARGET DEFAULT_ALLOCATOR)
+  # create the target for building the executable
+  add_executable(${TARGET} ${ARGN})
+
+  # link GUFI libraries if needed
+  if (LINK_GUFI)
+    target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
+    add_dependencies(${TARGET} GUFI)
+  else()
+    add_dependencies(${TARGET} install_dependencies)
+  endif()
+
+  # each executable links to its own allocator
+
+  # if the provided allocator is available, set it as the target's default allocator
+  if (DEFAULT_ALLOCATOR)
+    if (DEFAULT_ALLOCATOR IN_LIST ALLOCATORS)
+      set("DEFAULT_${TARGET}_ALLOCATOR" "${DEFAULT_ALLOCATOR}")
+    endif()
+  endif()
+
+  # if no default allocator was set for this target, set it to the first available allocator
+  if (NOT DEFAULT_${TARGET}_ALLOCATOR)
+    list(GET ALLOCATORS 0 "DEFAULT_${TARGET}_ALLOCATOR")
+  endif()
+
+  set("${TARGET}_ALLOCATOR" "${DEFAULT_${TARGET}_ALLOCATOR}" CACHE STRING "Allocator used by ${TARGET}")
+  set_property(CACHE "${TARGET}_ALLOCATOR" PROPERTY STRINGS ${ALLOCATORS})
+
+  # link the allocator
+  target_link_libraries(${TARGET} ${${${TARGET}_ALLOCATOR}})
+
+  # install the executable
+  install(TARGETS ${TARGET} DESTINATION "${BIN}" COMPONENT Server)
+endfunction()
+
 # This function builds C executables using the provided file names
 # (SOURCE is an optional argument, so it does not show up in the
 # arguments list).
@@ -142,57 +178,39 @@ endif()
 # There will be duplicate targets if two files share the same name.
 #
 # ex:
-#     build_and_install(bin TRUE file1.c file2.cpp)
+#     build_and_install(TRUE file1.c file2.cpp)
 #        -> compiles file1.c   into file1
 #        -> compiles file2.cpp into file2
 #        -> installs file1 and file2 into bin
 #
-function(build_and_install_one PATH LINK_GUFI TARGET)
-  # create the target for building the executable
-  add_executable(${TARGET} ${ARGN})
-
-  # link GUFI libraries if needed
-  if (LINK_GUFI)
-    target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
-    add_dependencies(${TARGET} GUFI)
-  endif()
-
-  # install the executable
-  install(TARGETS ${TARGET} DESTINATION ${PATH} COMPONENT Server)
-endfunction()
-
-function(build_and_install PATH LINK_GUFI)
+function(build_and_install LINK_GUFI)
+  list(GET ALLOCATORS 0 DEFAULT_ALLOCATOR)
   foreach(SOURCE ${ARGN})
     # get the filename only (no path or extension)
     string(REGEX REPLACE "\\.[^.]*$" "" TARGET ${SOURCE})
-    build_and_install_one("${PATH}" "${LINK_GUFI}" "${TARGET}" "${SOURCE}")
+    build_and_install_one("${LINK_GUFI}" "${TARGET}" "${DEFAULT_ALLOCATOR}" "${SOURCE}")
   endforeach()
 endfunction()
 
 # build and install the binaries that need to link with GUFI
-set(C_SOURCES
-  bfwreaddirplus2db.c
-  dfw.c
-  gufi_dir2index.c
-  gufi_dir2trace.c
-  gufi_index2dir.c
-  gufi_rollup.c
-  gufi_sqlite3.c          # simple wrapper around sqlite3 to enable GUFI modifications
-  gufi_trace2dir.c
-  gufi_trace2index.c
-  gufi_treesummary.c
-  gufi_treesummary_all.c
-  gufi_unrollup.c
-  parallel_cpr.c
-  parallel_rmr.c
-  querydbs.c
-)
-
-# build the C executables
-build_and_install("${BIN}" TRUE ${C_SOURCES})
+build_and_install_one(TRUE bfwreaddirplus2db    mimalloc bfwreaddirplus2db.c)
+build_and_install_one(TRUE dfw                  mimalloc dfw.c)
+build_and_install_one(TRUE gufi_dir2index       mimalloc gufi_dir2index.c)
+build_and_install_one(TRUE gufi_dir2trace       mimalloc gufi_dir2trace.c)
+build_and_install_one(TRUE gufi_index2dir       mimalloc gufi_index2dir.c)
+build_and_install_one(TRUE gufi_rollup          mimalloc gufi_rollup.c)
+build_and_install_one(TRUE gufi_sqlite3         mimalloc gufi_sqlite3.c) # simple wrapper around sqlite3 to enable GUFI modifications
+build_and_install_one(TRUE gufi_trace2dir       mimalloc gufi_trace2dir.c)
+build_and_install_one(TRUE gufi_trace2index     jemalloc gufi_trace2index.c)
+build_and_install_one(TRUE gufi_treesummary     mimalloc gufi_treesummary.c)
+build_and_install_one(TRUE gufi_treesummary_all mimalloc gufi_treesummary_all.c)
+build_and_install_one(TRUE gufi_unrollup        mimalloc gufi_unrollup.c)
+build_and_install_one(TRUE parallel_cpr         mimalloc parallel_cpr.c)
+build_and_install_one(TRUE parallel_rmr         mimalloc parallel_rmr.c)
+build_and_install_one(TRUE querydbs             mimalloc querydbs.c)
 
 # this is the gufi_stat binary that operates on indexes directly
-build_and_install_one("${BIN}" TRUE gufi_stat_bin gufi_stat.c)
+build_and_install_one(TRUE gufi_stat_bin        mimalloc gufi_stat.c)
 
 # gufi_query is split up into multiple files
 add_library(gufi_query_lib OBJECT
@@ -208,7 +226,7 @@ add_library(gufi_query_lib OBJECT
 
 add_dependencies(gufi_query_lib GUFI)
 
-build_and_install_one(${BIN} TRUE gufi_query
+build_and_install_one(TRUE gufi_query mimalloc
   gufi_query/main.c
   $<TARGET_OBJECTS:gufi_query_lib>
 )
@@ -238,7 +256,7 @@ install(TARGETS gufi_vt DESTINATION ${LIB} COMPONENT Server)
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
-build_and_install(${BIN} FALSE ${MISC_SOURCES})
+build_and_install(FALSE ${MISC_SOURCES})
 
 # only build bffuse and bfresultfuse if FUSE is found
 if (MY_FUSE_FOUND AND FUSE_BUILD)
