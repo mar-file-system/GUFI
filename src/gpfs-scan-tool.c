@@ -72,14 +72,16 @@ OF SUCH DAMAGE.
 #include <pthread.h>
 #include <ctype.h>
 #include <gpfs.h>
+
 #include "bf.h"
+#include "utils.h"
 
 pthread_mutex_t lock;
 int gotit;
-#define MPATH 1024
 
 struct passvars {
-   char passoutfile[MPATH];
+   struct input *in;
+   char passoutfile[MAXPATH];
    int numthreads;
    int threadnum;
    long long intime;
@@ -92,7 +94,7 @@ char *format_xattrs(char returnStr[], gpfs_iscan_t *iscanP,
                          const char *xattrP, unsigned int xattrLen)
  {
    int rc;
-   int i;
+   size_t i;
    const char *nameP;
    const char *valueP;
    char *xattrStr = (char *)malloc(xattrLen);
@@ -162,12 +164,12 @@ void *proc_inodes (void *args) {
   unsigned long long int maxinode;
   unsigned long long int seekp;
   FILE* outfile;
-  char outfilename[MPATH];
+  char outfilename[MAXPATH];
   int mythread;
   int totthreads;
   long long stride;
   int bigmoves;
-  char *delim;
+  char delim;
   int nxattrs;
   const char **xattrNames = NULL;
   const char *xattrBuf = NULL;
@@ -179,12 +181,12 @@ void *proc_inodes (void *args) {
   totthreads=pargs->numthreads;
   intimell=pargs->intime;
   stride=pargs->stride;
-  delim=in.delim;
+  delim=pargs->in->delim;
   // We always want to return all xattrs, so we set nxattrs to -1
   // which will make gpfs_open_inodescan_with_xatttrs64() return all xattrs
   nxattrs=-1;
 
-  sprintf(outfilename,"%s.%d",pargs->passoutfile,mythread);
+  SNPRINTF(outfilename,sizeof(outfilename),"%s.%d",pargs->passoutfile,mythread);
   fsp=pargs->fsp;
   /* copied all the variables, release the lock */
   gotit=1;
@@ -258,18 +260,18 @@ void *proc_inodes (void *args) {
 
   // This conditional is for loading a full
   if (intimell == 0) {
-      fprintf(outfile,"%llu%s",iattrp->ia_inode,delim);
-      fprintf(outfile,"%s%s",type,delim);
-      fprintf(outfile,"%u%s",iattrp->ia_mode,delim);
-      fprintf(outfile,"%lld%s",iattrp->ia_nlink,delim);
-      fprintf(outfile,"%llu%s",iattrp->ia_uid,delim);
-      fprintf(outfile,"%llu%s",iattrp->ia_gid,delim);
-      fprintf(outfile,"%lld%s",iattrp->ia_size,delim);
-      fprintf(outfile,"%d%s",iattrp->ia_blocksize,delim);
-      fprintf(outfile,"%lld%s",iattrp->ia_blocks,delim);
-      fprintf(outfile,"%lld%s",iattrp->ia_atime.tv_sec,delim);
-      fprintf(outfile,"%lld%s",iattrp->ia_mtime.tv_sec,delim);
-      fprintf(outfile,"%lld%s",iattrp->ia_ctime.tv_sec,delim);
+      fprintf(outfile,"%llu%c",iattrp->ia_inode,delim);
+      fprintf(outfile,"%s%c",type,delim);
+      fprintf(outfile,"%u%c",iattrp->ia_mode,delim);
+      fprintf(outfile,"%lld%c",iattrp->ia_nlink,delim);
+      fprintf(outfile,"%llu%c",iattrp->ia_uid,delim);
+      fprintf(outfile,"%llu%c",iattrp->ia_gid,delim);
+      fprintf(outfile,"%lld%c",iattrp->ia_size,delim);
+      fprintf(outfile,"%d%c",iattrp->ia_blocksize,delim);
+      fprintf(outfile,"%lld%c",iattrp->ia_blocks,delim);
+      fprintf(outfile,"%lld%c",iattrp->ia_atime.tv_sec,delim);
+      fprintf(outfile,"%lld%c",iattrp->ia_mtime.tv_sec,delim);
+      fprintf(outfile,"%lld%c",iattrp->ia_ctime.tv_sec,delim);
 
       // This returns the relative link path
       if (S_ISLNK(iattrp->ia_mode)) {
@@ -280,22 +282,22 @@ void *proc_inodes (void *args) {
           rc = saveerrno;
           goto scanexit;
         }
-        fprintf(outfile,"%s%s", linkBuf, delim);
-        fprintf(outfile,"%s\n", delim);
+        fprintf(outfile,"%s%c", linkBuf, delim);
+        fprintf(outfile,"%c\n", delim);
         continue;
       } else {
-        fprintf(outfile,"%s", delim);
+        fprintf(outfile,"%c", delim);
       }
 
       if (xattrBufLen > 0) {
         returnStr = format_xattrs(returnStr,iscanp, xattrBuf, xattrBufLen);
-        fprintf(outfile,"%s%s",returnStr,delim);
+        fprintf(outfile,"%s%c",returnStr,delim);
         free(returnStr);
         returnStr = NULL;
       } else {
-        fprintf(outfile,"%s", delim);
+        fprintf(outfile,"%c", delim);
       }
-      fprintf(outfile,"%lld%s\n",iattrp->ia_createtime.tv_sec,delim);
+      fprintf(outfile,"%lld%c\n",iattrp->ia_createtime.tv_sec,delim);
     }
 
   if (printit == 1 && intimell > 0) {
@@ -312,10 +314,10 @@ scanexit:
   return 0;
 }
 
-int validate_inputs(unsigned long long int intime) {
+int validate_inputs(struct input *in, unsigned long long int intime) {
 
-  printf("threadnum: %d; stride: %d; delimiter: %s;\n", in.maxthreads, in.stride, in.delim);
-  printf("scanning under %s\n", in.name);
+  printf("threadnum: %zu; stride: %d; delimiter: %c;\n", in->maxthreads, in->stride, in->delim);
+  printf("scanning under %s\n", in->name.data);
   if (intime == 0) {
     printf(".lastrun doesn't exist, running a full\n");
   } else {
@@ -342,8 +344,8 @@ void sub_help() {
 int main(int argc, char *argv[]) {
   FILE *lastrun;
 
-  int i;
-  int rc = NULL;
+  size_t i;
+  int rc = 0;
   char pastsec[11];
   char outfilename[1024];
   time_t starttime;
@@ -357,6 +359,7 @@ int main(int argc, char *argv[]) {
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
+  struct input in;
   int idx = parse_cmd_line(argc, argv, "hHn:d:g:", 1, "input_dir", &in);
   lastrun = fopen(".lastrun", "r");
   if (lastrun == NULL) {
@@ -370,33 +373,41 @@ int main(int argc, char *argv[]) {
 
   if (in.helped)
     sub_help();
-  if (idx < 0)
-    return -1;
+  if (idx < 0) {
+      input_fini(&in);
+      return -1;
+  }
   else {
     // parse positional args, following the options
     int retval = 0;
-    INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
+    INSTALL_STR(&in.name, argv[idx++]);
 
-    if (retval)
-      return retval;
+    if (retval) {
+        input_fini(&in);
+        return retval;
+    }
   }
-    if (validate_inputs(intime))
+  if (validate_inputs(&in, intime)) {
+      input_fini(&in);
       return -1;
+  }
 
   starttime  = time(NULL);
   timenow = localtime(&starttime);
   strftime(outfilename,sizeof(outfilename),"scan-results-%Y-%m-%d_%H:%M",timenow);
 
   /* Open the file system mount */
-  fsp = gpfs_get_fssnaphandle_by_path(in.name);
+  fsp = gpfs_get_fssnaphandle_by_path(in.name.data);
   if (fsp == NULL) {
     rc = errno;
-    fprintf(stderr, "gpfs_get_fssnaphandle_by_path for %s error %s\n", in.name, strerror(rc));
+    fprintf(stderr, "gpfs_get_fssnaphandle_by_path for %s error %s\n", in.name.data, strerror(rc));
+    input_fini(&in);
     exit(-1);
   }
 
   /* load the non changing parts of the struct to pass to the threads */
   args=malloc(sizeof(struct passvars));
+  args->in = &in;
   sprintf(args->passoutfile,"%s",outfilename);;
   args->numthreads=in.maxthreads;
   args->fsp=fsp;
@@ -406,6 +417,7 @@ int main(int argc, char *argv[]) {
   if (pthread_mutex_init(&lock, NULL) != 0)
     {
         printf("\n mutex init has failed\n");
+        input_fini(&in);
         return 1;
     }
 
@@ -418,6 +430,7 @@ int main(int argc, char *argv[]) {
     if(pthread_create(&workers[i], NULL, proc_inodes, args)) {
       free(args);
       gpfs_free_fssnaphandle(fsp);
+      input_fini(&in);
       fprintf(stderr, "error starting threads\n");
       exit(-1);
     }
@@ -439,5 +452,6 @@ int main(int argc, char *argv[]) {
   fprintf(lastrun,"%lu",starttime);
   gpfs_free_fssnaphandle(fsp);
   fclose(lastrun);
+  input_fini(&in);
   return rc;
 }
