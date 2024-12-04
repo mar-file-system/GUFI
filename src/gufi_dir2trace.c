@@ -364,5 +364,7 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
     fprintf(stdout, "Files/Sec:           %.2Lf\n",       total_files / processtime);
 
+    dump_memory_usage();
+
     return EXIT_SUCCESS;
 }
