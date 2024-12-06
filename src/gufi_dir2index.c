@@ -133,6 +133,8 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         char *basename = entry->name + entry->name_len - entry->basename_len;
 
         if (fstatat(ed->parent_fd, basename, &ed->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n", entry->name, strerror(err), err);
             return 1;
         }
     }
@@ -197,14 +199,16 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     if (lstat(nda.work->name, &nda.ed.statuso) != 0) {
-        fprintf(stderr, "Could not stat directory \"%s\"\n", nda.work->name);
+        const int err = errno;
+        fprintf(stderr, "Error: Could not stat directory \"%s\": %s (%d)\n", nda.work->name, strerror(err), err);
         rc = 1;
         goto cleanup;
     }
 
     dir = opendir(nda.work->name);
     if (!dir) {
-        fprintf(stderr, "Could not open directory \"%s\"\n", nda.work->name);
+        const int err = errno;
+        fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n", nda.work->name, strerror(err), err);
         rc = 1;
         goto cleanup;
     }
