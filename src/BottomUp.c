@@ -93,6 +93,19 @@ static int noop(void *user_struct
     return 0;
 }
 
+/* free a struct BottomUp */
+void bottomup_destroy(void *p) {
+    struct BottomUp *b = (struct BottomUp *) p;
+
+    if (b->name)
+        free(b->name);
+
+    if (b->alt_name)
+        free(b->alt_name);
+
+    free(b);
+}
+
 struct UserArgs {
     size_t user_struct_size;
     BU_f descend;
@@ -107,6 +120,88 @@ struct UserArgs {
     void *timestamp_buffers;
     #endif
 };
+
+/*
+ * new_pathname() -
+ *   Allocates and initializes a new pathname from the given dirname and basename.
+ *
+ *     - dirname_len and basename_len should be WITHOUT the null terminator.
+ *
+ *     - If basename is NULL, then this only uses the dirname and doesn't append a path component
+ *       for the basename.
+ *
+ *   Fills in the path and path length in the given struct BottomUp.
+ */
+static void new_pathname(struct BottomUp *work, const char *dirname, size_t dirname_len,
+                         const char *basename, size_t basename_len) {
+    size_t new_len = 0; // does NOT count null terminator
+
+    if (basename)
+        new_len = dirname_len + basename_len + 1; // +1 for path separator
+    else
+        new_len = dirname_len;
+
+    char *path = calloc(new_len + 1, sizeof(char));  // Additional +1 for null terminator
+    if (!path) {
+        fprintf(stderr, "%s(): out of memory", __func__);
+        /* No point in continuing if we run out of memory: */
+        exit(1);
+    }
+
+    if (basename)
+        SNFORMAT_S(path, new_len + 1, 3, dirname, dirname_len, "/", (size_t) 1, basename, basename_len);
+    else
+        strncpy(path, dirname, new_len + 1);
+
+    work->name = path;
+    work->name_len = new_len;
+}
+
+/*
+ * new_alt_pathname() -
+ *   Allocates and initializes a new alternate pathname, that is, a name that escapes
+ *   characters that cannot appear in a sqlite uri.
+ *
+ *   Parameters [dir|base]name[_len] are the same as in new_pathname().
+ *
+ *   Fills in alt_name and alt_name_len in the given struct BottomUp.
+ */
+static void new_alt_pathname(struct BottomUp *work, const char *dirname, size_t dirname_len,
+                             const char *basename, size_t basename_len) {
+    // Alternate name may be longer than the provided dirname and basename together
+    size_t len = MAXPATH;
+    size_t new_len = 0;
+
+    char *path = calloc(len, sizeof(char));
+    if (!path)
+        goto oom;
+
+    if (basename) {
+        // Assume dirname is already sanitized, only need to sanitize basename:
+        new_len = SNFORMAT_S(path, len, 2, dirname, dirname_len, "/", (size_t) 1);
+        new_len += sqlite_uri_path(path + new_len, len - new_len, basename, &basename_len);
+    } else {
+        // Need to sanitize dirname:
+        new_len = sqlite_uri_path(path, len, dirname, &dirname_len);
+    }
+
+    char *new = calloc(new_len + 1, sizeof(char));
+    if (!new)
+        goto oom;
+
+    strncpy(new, path, new_len);
+    free(path);
+
+    work->alt_name = new;
+    work->alt_name_len = new_len;
+
+    return;
+
+oom:
+    fprintf(stderr, "%s(): out of memory", __func__);
+    /* No point in continuing if we run out of memory: */
+    exit(1);
+}
 
 static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_start(ascend);
@@ -151,8 +246,8 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
     /* clean up 'struct BottomUp's here, when they are */
     /* children instead of when they are the parent */
     timestamp_create_start(cleanup);
-    sll_destroy(&bu->subdirs, free);
-    sll_destroy(&bu->subnondirs, free);
+    sll_destroy(&bu->subdirs, bottomup_destroy);
+    sll_destroy(&bu->subnondirs, bottomup_destroy);
 
     /* mutex is not needed any more */
     pthread_mutex_destroy(&bu->refs.mutex);
@@ -167,7 +262,7 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
     else {
         /* reached root */
         timestamp_create_start(free_root);
-        free(bu);
+        bottomup_destroy(bu);
         timestamp_end_print(ua->timestamp_buffers, id, "free_root", free_root);
     }
 
@@ -175,16 +270,21 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
     return asc_rc;
 }
 
+/*
+ * track() - add the given struct BottomUp src to the given sll_t for later processing.
+ *
+ * Takes ownership of the name and alt_name from src.
+ */
 static struct BottomUp *track(struct BottomUp *src,
                               const size_t user_struct_size, sll_t *sll,
                               const size_t level, const int generate_alt_name) {
-    struct BottomUp *copy = malloc(user_struct_size);
+    struct BottomUp *copy = calloc(user_struct_size, 1);
 
-    memcpy(copy->name, src->name, src->name_len + 1); /* NULL terminate */
+    copy->name = src->name;
     copy->name_len = src->name_len;
 
     if (generate_alt_name) {
-        memcpy(copy->alt_name, src->alt_name, src->alt_name_len + 1); /* NULL terminate */
+        copy->alt_name = src->alt_name;
         copy->alt_name_len = src->alt_name_len;
     }
 
@@ -211,7 +311,7 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
 
     if (!dir) {
         fprintf(stderr, "Error: Could not open directory \"%s\": %s\n", bu->name, strerror(errno));
-        free(data);
+        bottomup_destroy(bu);
         timestamp_end_print(ua->timestamp_buffers, id, "descend_to_bottom", descend);
         return 1;
     }
@@ -240,21 +340,13 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
             continue;
         }
 
-        struct BottomUp new_work;
-        new_work.name_len = SNFORMAT_S(new_work.name, sizeof(new_work.name), 3,
-                                       bu->name, bu->name_len,
-                                       "/", (size_t) 1,
-                                       entry->d_name, name_len);
+        struct BottomUp new_work = { 0 };
+
+        new_pathname(&new_work, bu->name, bu->name_len, entry->d_name, name_len);
 
         if (ua->generate_alt_name) {
             /* append converted entry name to converted directory */
-            new_work.alt_name_len = SNFORMAT_S(new_work.alt_name, sizeof(new_work.alt_name), 2,
-                                               bu->alt_name, bu->alt_name_len,
-                                               "/", (size_t) 1);
-
-            new_work.alt_name_len += sqlite_uri_path(new_work.alt_name + new_work.alt_name_len,
-                                                     sizeof(new_work.alt_name) - new_work.alt_name_len,
-                                                     entry->d_name, &name_len);
+            new_alt_pathname(&new_work, bu->alt_name, bu->alt_name_len, entry->d_name, name_len);
         }
 
         timestamp_create_start(lstat_entry);
@@ -277,9 +369,13 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         }
         else {
             if (ua->track_non_dirs) {
+                /* bu takes ownership of new_work's pathname buffers: */
                 track(&new_work,
                       ua->user_struct_size, &bu->subnondirs,
                       next_level, ua->generate_alt_name);
+            } else {
+                /* bu does not take ownership of new_work's pathname buffers, so free them: */
+                bottomup_destroy_inner(&new_work);
             }
             bu->subnondir_count++;
         }
@@ -334,11 +430,11 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
     }
     else {
         timestamp_create_start(cleanup_after_error);
-        sll_destroy(&bu->subdirs, free);
-        sll_destroy(&bu->subnondirs, free);
+        sll_destroy(&bu->subdirs, bottomup_destroy);
+        sll_destroy(&bu->subnondirs, bottomup_destroy);
         bu->subdir_count = 0;
         bu->subnondir_count = 0;
-        free(bu);
+        bottomup_destroy(bu);
         timestamp_end_print(ua->timestamp_buffers, id, "cleanup_after_error", cleanup_after_error);
     }
 
@@ -415,17 +511,16 @@ int parallel_bottomup_enqueue(QPTPool_t *pool,
     struct UserArgs *ua = NULL;
     QPTPool_get_args(pool, (void **) &ua);
 
-    struct BottomUp *root = (struct BottomUp *) malloc(ua->user_struct_size);
-    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, path, len);
+    struct BottomUp *root = (struct BottomUp *) calloc(ua->user_struct_size, 1);
+    new_pathname(root, path, len, NULL, 0);
 
     if (ua->generate_alt_name) {
         size_t name_len = root->name_len;
-        root->alt_name_len = sqlite_uri_path(root->alt_name, sizeof(root->alt_name),
-                                             root->name, &name_len);
+        new_alt_pathname(root, root->name, name_len, NULL, 0);
 
         if (name_len != root->name_len) {
             fprintf(stderr, "%s could not fit into ALT_NAME buffer\n", root->name);
-            free(root);
+            bottomup_destroy(root);
             return -1;
         }
     }
