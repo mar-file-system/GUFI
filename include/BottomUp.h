@@ -102,7 +102,6 @@ struct BottomUp {
     size_t name_len;
     char *alt_name;
     size_t alt_name_len;
-    struct stat st;
     struct {
         pthread_mutex_t mutex;
         size_t remaining;
