@@ -356,7 +356,8 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         }
 
         timestamp_create_start(lstat_entry);
-        const int rc = lstat(new_work.name, &new_work.st);
+        struct stat st;
+        const int rc = lstat(new_work.name, &st);
         timestamp_end_print(ua->timestamp_buffers, id, "lstat", lstat_entry);
 
         if (rc != 0) {
@@ -365,7 +366,7 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         }
 
         timestamp_create_start(track_entry);
-        if (S_ISDIR(new_work.st.st_mode)) {
+        if (S_ISDIR(st.st_mode)) {
             track(&new_work,
                   ua->user_struct_size, &bu->subdirs,
                   next_level, ua->generate_alt_name);
