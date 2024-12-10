@@ -98,11 +98,10 @@ extern "C" {
   the user, so the imeplementation is not opaque.
 */
 struct BottomUp {
-    char name[MAXPATH];
+    char *name;
     size_t name_len;
-    char alt_name[MAXPATH];
+    char *alt_name;
     size_t alt_name_len;
-    struct stat st;
     struct {
         pthread_mutex_t mutex;
         size_t remaining;
@@ -180,6 +179,9 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       , struct OutputBuffers *debug_buffers
                       #endif
 );
+
+/* free a struct BottomUp */
+void bottomup_destroy(void *p);
 
 #ifdef __cplusplus
 }
