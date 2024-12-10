@@ -455,16 +455,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
         const size_t next_level = work->level + 1;
         const size_t recursion_level = work->recursion_level + 1;
 
-        int d_fd = dirfd(dir);
-        if (d_fd < 0) {
-            /*
-             * We should never get here. glibc's dirfd(3) never return errors, and
-             * Apple's libc only returns an error if the DIR * is invalid, which would
-             * indicate a bug in GUFI.
-             */
-            fprintf(stderr, "BUG: dirfd(3) failed: errno = %d\n", errno);
-            return 1;
-        }
+        int d_fd = gufi_dirfd(dir);
 
         struct dirent *dir_child = NULL;
         while ((dir_child = readdir(dir))) {
@@ -1050,4 +1041,25 @@ ssize_t read_size(const int fd, void *buf, const size_t size) {
     }
 
     return got;
+}
+
+/*
+ * Get a directory file descriptor from a given DIR *, infallibly.
+ *
+ * This is just a wrapper around libc's dirfd() that panics if an error is reported, since
+ * an error in dirfd() always indicates a bug in GUFI.
+ */
+int gufi_dirfd(DIR *d) {
+    int d_fd = dirfd(d);
+    if (d_fd < 0) {
+        /*
+         * We should never get here. glibc's dirfd(3) never return errors, and
+         * Apple's libc only returns an error if the DIR * is invalid, which would
+         * indicate a bug in GUFI.
+         */
+        fprintf(stderr, "BUG: dirfd(3) failed: errno = %d\n", errno);
+        exit(1);
+    }
+
+    return d_fd;
 }

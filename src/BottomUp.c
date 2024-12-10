@@ -70,6 +70,7 @@ processed before processing the current one
 
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -322,6 +323,8 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         return 1;
     }
 
+    int dir_fd = gufi_dirfd(dir);
+
     timestamp_create_start(init);
     pthread_mutex_init(&bu->refs.mutex, NULL);
     bu->subdir_count = 0;
@@ -346,6 +349,32 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
             continue;
         }
 
+        int is_dir = 0;
+        if (entry->d_type == DT_UNKNOWN) {
+            struct stat st;
+            const int rc = fstatat(dir_fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW);
+
+            if (rc != 0) {
+                fprintf(stderr, "Error: Could not stat \"%s/%s\": %s\n",
+                        bu->name, entry->d_name, strerror(errno));
+                continue;
+            }
+
+            if (S_ISDIR(st.st_mode))
+                is_dir = 1;
+        } else if (entry->d_type == DT_DIR) {
+            is_dir = 1;
+        }
+
+        if (is_dir) {
+            bu->subdir_count++;
+        } else {
+            bu->subnondir_count++;
+            // For files, only keep going if asked to track them:
+            if (!ua->track_non_dirs)
+                continue;
+        }
+
         struct BottomUp new_work = { 0 };
 
         new_pathname(&new_work, bu->name, bu->name_len, entry->d_name, name_len);
@@ -355,36 +384,16 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
             new_alt_pathname(&new_work, bu->alt_name, bu->alt_name_len, entry->d_name, name_len);
         }
 
-        timestamp_create_start(lstat_entry);
-        struct stat st;
-        const int rc = lstat(new_work.name, &st);
-        timestamp_end_print(ua->timestamp_buffers, id, "lstat", lstat_entry);
-
-        if (rc != 0) {
-            fprintf(stderr, "Error: Could not stat \"%s\": %s\n", new_work.name, strerror(errno));
-            continue;
-        }
-
         timestamp_create_start(track_entry);
-        if (S_ISDIR(st.st_mode)) {
+        if (is_dir) {
             track(&new_work,
                   ua->user_struct_size, &bu->subdirs,
                   next_level, ua->generate_alt_name);
-
-            /* count how many subdirectories this directory has */
-            bu->subdir_count++;
         }
         else {
-            if (ua->track_non_dirs) {
-                /* bu takes ownership of new_work's pathname buffers: */
-                track(&new_work,
-                      ua->user_struct_size, &bu->subnondirs,
-                      next_level, ua->generate_alt_name);
-            } else {
-                /* bu does not take ownership of new_work's pathname buffers, so free them: */
-                bottomup_destroy_inner(&new_work);
-            }
-            bu->subnondir_count++;
+            track(&new_work,
+                  ua->user_struct_size, &bu->subnondirs,
+                  next_level, ua->generate_alt_name);
         }
         timestamp_end_print(ua->timestamp_buffers, id, "track", track_entry);
     }
