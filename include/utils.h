@@ -179,6 +179,8 @@ ssize_t write_size(const int fd, const void *data, const size_t size);
 /* read as much as possible up to size bytes */
 ssize_t read_size(const int fd, void *buf, const size_t size);
 
+/* Get a directory file descriptor from a given DIR *, infallibly */
+int gufi_dirfd(DIR *d);
 #ifdef __cplusplus
 }
 #endif
