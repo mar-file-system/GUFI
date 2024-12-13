@@ -167,7 +167,7 @@ TEST(inserttreesumdb, nullptr) {
 TEST(addqueryfuncs, path) {
     const char dirname[MAXPATH] = "dirname";
 
-    struct work *work = new_work_with_name("index_root", dirname);
+    struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
     work->orig_root.data = "index_root";
     work->orig_root.len = strlen(work->orig_root.data);
     work->root_parent.data = "";
@@ -193,7 +193,7 @@ TEST(addqueryfuncs, path) {
 TEST(addqueryfuncs, epath) {
     const char dirname[MAXPATH] = "dirname";
 
-    struct work *work = new_work_with_name("index_root", dirname);
+    struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
     work->basename_len = strlen(dirname);
     work->root_parent.data = "index_root";     // currently at index_root/dirname
     work->root_parent.len = strlen(work->root_parent.data);
@@ -210,10 +210,11 @@ TEST(addqueryfuncs, epath) {
     EXPECT_STREQ(output, dirname);
 
     sqlite3_close(db);
+    free(work);
 }
 
 TEST(addqueryfuncs, fpath) {
-    struct work *work = new_work_with_name("", "");
+    struct work *work = new_work_with_name(NULL, 0, NULL, 0);
     work->name_len = SNPRINTF(work->name, MAXPATH, "/");
     work->fullpath = nullptr;
 
@@ -242,7 +243,7 @@ TEST(addqueryfuncs, fpath) {
 TEST(addqueryfuncs, rpath) {
     const char dirname[MAXPATH] = "dirname";
 
-    struct work *work = new_work_with_name("index_root", dirname);
+    struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
     work->orig_root.data = "index_root";
     work->orig_root.len = strlen(work->orig_root.data);
     work->root_parent.data = "";
@@ -495,7 +496,7 @@ TEST(addqueryfuncs, human_readable_size) {
 }
 
 TEST(addqueryfuncs, level) {
-    struct work *work = new_work_with_name("", "");
+    struct work *work = new_work_with_name(NULL, 0, NULL, 0);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
@@ -519,7 +520,7 @@ TEST(addqueryfuncs, level) {
 }
 
 TEST(addqueryfuncs, starting_point) {
-    struct work *work = new_work_with_name("", "");
+    struct work *work = new_work_with_name(NULL, 0, NULL, 0);
     work->orig_root.data = "/index_root";
     work->orig_root.len = strlen(work->orig_root.data);
 

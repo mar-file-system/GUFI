@@ -134,16 +134,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct input *in = &pa->in;
-    struct work *work = (struct work *) data;
+    struct work *work = NULL;
     struct entry_data ed;
     int rc = 0;
 
-    if (work->compressed.yes) {
-        struct work *work_src;
-        // TODO; check error
-        decompress_struct((void **) &work_src, work);
-        work = work_src;
-    }
+    decompress_work(&work, data);
 
     DIR *dir = opendir(work->name);
     if (!dir) {
@@ -187,7 +182,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   cleanup:
     closedir(dir);
 
-    free_struct(work, data, work->recursion_level);
+    free(work);
 
     pa->total_files[id] += ctrs.nondirs_processed;
 
@@ -255,7 +250,7 @@ static int validate_source(const char *path, struct work **work) {
         return 1;
     }
 
-    struct work *new_work = new_work_with_name("", path);
+    struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
     new_work->root_parent.data = path;
     new_work->root_parent.len = dirname_len(path, new_work->name_len);

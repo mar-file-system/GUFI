@@ -129,7 +129,7 @@ static size_t descend2(QPTPool_t *ctx,
 
     descend_timestamp_start(dts, level_cmp);
     size_t pushed = 0;
-    const size_t next_level = gqw->work->level + 1;
+    const size_t next_level = gqw->work.level + 1;
     const int level_check = (next_level < max_level);
     descend_timestamp_end(level_cmp);
 
@@ -171,28 +171,11 @@ static size_t descend2(QPTPool_t *ctx,
                 descend_timestamp_end(strncmp_branch);
             }
 
-            gqw_t child;
-            memset(&child, 0, sizeof(child));
-
-            child.work = new_work_with_name(gqw->work->name, entry->d_name);
-
-            child.work->basename_len = len;
-            child.work->fullpath = NULL;
-            child.work->fullpath_len = 0;
-
-            descend_timestamp_start(dts, isdir_cmp);
             int isdir = (entry->d_type == DT_DIR);
-            if (!isdir) {
-                /* allow for paths immediately under the input paths to be symlinks */
-                if (next_level < 2) {
-                    struct stat st;
-                    if (stat(child.work->name, &st) == 0) {
-                        isdir = S_ISDIR(st.st_mode);
-                    }
-                    /* errors are ignored */
-                }
-            }
-            descend_timestamp_end(isdir_cmp);
+            gqw_t *child = new_gqw_with_name(gqw->work.name, gqw->work.name_len,
+                                             entry->d_name, len,
+                                             &isdir, next_level,
+                                             gqw->sqlite3_name, gqw->sqlite3_name_len);
 
             descend_timestamp_start(dts, isdir_branch);
             if (isdir) {
@@ -200,28 +183,19 @@ static size_t descend2(QPTPool_t *ctx,
 
                 descend_timestamp_start(dts, set);
 
-                child.work->level = next_level;
-                child.work->orig_root = gqw->work->orig_root;
-                child.work->root_parent = gqw->work->root_parent;
-                child.work->root_basename_len = gqw->work->root_basename_len;
+                child->work.basename_len = len;
+                child->work.fullpath = NULL;
+                child->work.fullpath_len = 0;
 
-                /* append converted entry name to converted directory */
-                child.sqlite3_name_len = SNFORMAT_S(child.sqlite3_name, MAXPATH, 2,
-                                                    gqw->sqlite3_name, gqw->sqlite3_name_len,
-                                                    "/", (size_t) 1);
-                const size_t converted_len = sqlite_uri_path(child.sqlite3_name + child.sqlite3_name_len,
-                                                            MAXPATH - child.sqlite3_name_len,
-                                                            entry->d_name, &len);
-                child.sqlite3_name_len += converted_len;
+                child->work.level = next_level;
+                child->work.orig_root = gqw->work.orig_root;
+                child->work.root_parent = gqw->work.root_parent;
+                child->work.root_basename_len = gqw->work.root_basename_len;
 
-                /* this is how the parent gets passed on */
                 descend_timestamp_end(set);
 
-                /* make a clone here so that the data can be pushed into the queue */
-                /* this is more efficient than malloc+free for every single entry */
                 descend_timestamp_start(dts, make_clone);
-                gqw_t *clone = calloc(sizeof(*clone), 1);
-                memcpy(clone, &child, sizeof(*clone));
+                gqw_t *clone = compress_struct(comp, child, gqw_size(child));
                 descend_timestamp_end(make_clone);
 
                 /* push the subdirectory into the queue for processing */
@@ -234,8 +208,7 @@ static size_t descend2(QPTPool_t *ctx,
                 pushed++;
             }
             else {
-                free(child.work)
-
+                free(child);
                 descend_timestamp_end(isdir_branch);
             }
         }
@@ -326,7 +299,7 @@ int process_queries(PoolArgs_t *pa,
                   /* if it fails then this will be set to 1 and will go on */
 
     /* only query this level if the min_level has been reached */
-    if (gqw->work->level >= in->min_level) {
+    if (gqw->work.level >= in->min_level) {
         if (sqlite3_create_function(db, "subdirs", 2, SQLITE_UTF8,
                                     subdirs_walked_count, &subdirs,
                                     NULL, NULL) != SQLITE_OK) {
@@ -340,13 +313,13 @@ int process_queries(PoolArgs_t *pa,
 
         /* run query on summary, print it if printing is needed, if returns none */
         /* and we are doing AND, skip querying the entries db */
-        shortpath(gqw->work->name, shortname, endname);
+        shortpath(gqw->work.name, shortname, endname);
 
         if (in->sql.sum.len) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
             /* put in the path relative to the user's input */
             thread_timestamp_start(sqlsum, &ts->tts[tts_sqlsum]);
-            querydb(gqw->work, dbname, dbname_len, db, in->sql.sum.data, pa, id, print_parallel, &recs);
+            querydb(&gqw->work, dbname, dbname_len, db, in->sql.sum.data, pa, id, print_parallel, &recs);
             thread_timestamp_end(sqlsum);
             increment_query_count(ta);
         } else {
@@ -359,7 +332,7 @@ int process_queries(PoolArgs_t *pa,
         if (recs > 0) {
             if (in->sql.ent.len) {
                 thread_timestamp_start(sqlent, &ts->tts[tts_sqlent]);
-                querydb(gqw->work, dbname, dbname_len, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
+                querydb(&gqw->work, dbname, dbname_len, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
                 thread_timestamp_end(sqlent);
                 increment_query_count(ta);
             }

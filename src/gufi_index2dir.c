@@ -436,7 +436,7 @@ struct work *validate_inputs(struct PoolArgs *pa) {
         return NULL;
     }
 
-    struct work *root = new_work_with_name("", pa->in.name.data);
+    struct work *root = new_work_with_name(NULL, 0, pa->in.name.data, pa->in.name.len);
     if (!root) {
         fprintf(stderr, "Could not allocate root struct\n");
         return NULL;

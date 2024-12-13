@@ -219,7 +219,7 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
                 continue;
         }
 
-        struct work *qwork = new_work_with_name(passmywork->name,  entry->d_name);
+        struct work *qwork = new_work_with_name(passmywork->name, passmywork->name_len, entry->d_name, len);
         qwork->basename_len = len;
 
         struct entry_data qwork_ed;
@@ -389,7 +389,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 continue;
         }
 
-        struct work *qwork = new_work_with_name(passmywork->name, entry->d_name);
+        struct work *qwork = new_work_with_name(passmywork->name, passmywork->name_len, entry->d_name, len);
         struct entry_data qwork_ed;
         memset(&qwork_ed, 0, sizeof(qwork_ed));
 
@@ -610,7 +610,7 @@ static int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
         }
     }
 
-    struct work *mywork = new_work_with_name("", pa->in.name.data);
+    struct work *mywork = new_work_with_name(NULL, 0, pa->in.name.data, pa->in.name.len);
 
     QPTPool_enqueue(ctx, 0, processdir, mywork);
 

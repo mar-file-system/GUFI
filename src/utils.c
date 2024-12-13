@@ -429,7 +429,7 @@ static int work_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **
  * Size of base struct plus size of stored name plus NUL terminator.
  */
 size_t struct_work_size(struct work *w) {
-    return sizeof(struct work) + w->name_len + 1;
+    return sizeof(*w) + w->name_len + 1;
 }
 
 /*
@@ -440,40 +440,21 @@ size_t struct_work_size(struct work *w) {
  *   - name
  *   - name_len
  */
-struct work *new_work_with_name(const char *prefix, const char *basename) {
-    struct work *w;
+struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
+                                const char *basename, const size_t basename_len) {
+    /* +1 for path separator */
+    const size_t name_total = prefix_len + 1 + basename_len;
 
-    size_t prefix_len;
-    if (*prefix == '\0') {
-        prefix_len = 0;
+    struct work *w = calloc(1, sizeof(*w) + name_total + 1);
+    w->name = (char *) &w[1];
+    if (prefix_len == 0) {
+        w->name_len = SNFORMAT_S(w->name, name_total + 1, 1,
+                                 basename, basename_len);
     } else {
-        /* Account for added '/' divider when there is a prefix. */
-        prefix_len = strnlen(prefix, MAXPATH) + 1;
-    }
-
-    size_t base_len = strnlen(basename, MAXPATH - prefix_len);
-
-    /* Extra plus 1 for terminating NUL. */
-    size_t name_total = prefix_len + base_len + 1;
-
-    w = calloc(1, sizeof *w + name_total);
-    if (w == NULL) {
-        /*
-         * If we can't allocate memory, we can't make any useful progress,
-         * so just bail.
-         */
-        fprintf(stderr, "Failed to allocate memory for struct work.\n");
-        exit(1);
-    }
-
-    if (*prefix == '\0') {
-        w->name_len = SNFORMAT_S(w->name, name_total, 1,
-                                 basename, base_len);
-    } else {
-        w->name_len = SNFORMAT_S(w->name, name_total, 3,
-                                 prefix, prefix_len - 1,
+        w->name_len = SNFORMAT_S(w->name, name_total + 1, 3,
+                                 prefix, prefix_len,
                                  "/", (size_t) 1,
-                                 basename, base_len);
+                                 basename, basename_len);
     }
 
     // TODO: should this initialize basename length?
@@ -534,7 +515,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 continue;
             }
 
-            struct work *child = new_work_with_name(work->name, dir_child->d_name);
+            struct work *child = new_work_with_name(work->name, work->name_len, dir_child->d_name, len);
 
             struct entry_data child_ed;
             memset(&child_ed, 0, sizeof(child_ed));
@@ -616,6 +597,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             }
             else {
                 /* other types are not stored */
+                free(child);
                 continue;
             }
 
@@ -634,9 +616,9 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 if (in->process_xattrs) {
                     xattrs_cleanup(&child_ed.xattrs);
                 }
-            } else {
-                free(child);
             }
+
+            free(child);
         }
     }
 
@@ -1124,4 +1106,9 @@ int gufi_dirfd(DIR *d) {
     }
 
     return d_fd;
+}
+
+void decompress_work(struct work **dst, void *src) {
+    decompress_struct((void **) dst, src);
+    (*dst)->name = (char *) &(*dst)[1];
 }

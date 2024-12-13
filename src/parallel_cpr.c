@@ -108,7 +108,7 @@ static int set_xattrs(const char *name, struct xattrs *xattrs) {
 }
 
 struct work_data {
-    struct work *work;    // TODO: can make this inline?
+    struct work work;
     struct entry_data ed;
 };
 
@@ -127,7 +127,7 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct input *in = (struct input *) args;
     struct work_data *wd = (struct work_data *) data;
-    struct work *work = wd->work;
+    struct work *work = &wd->work;
     struct entry_data *ed = &wd->ed;
 
     int rc = 0;
@@ -169,7 +169,6 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
   cleanup:
     free(wd);
-    free(work);
 
     return rc;
 }
@@ -195,7 +194,6 @@ static int cpr_link(struct work *work, struct entry_data *ed, struct input *in) 
 
   cleanup:
     free(dst.data);
-    free(work);
 
     return rc;
 }
@@ -211,10 +209,12 @@ static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir
     struct QPTPool_vals *args = (struct QPTPool_vals *) nondir_args;
 
     if (S_ISREG(ed->statuso.st_mode)) {
-        struct work_data *wd = calloc(1, sizeof(*wd));
-        wd->work = work;
+        struct work_data *wd = calloc(1, sizeof(*wd) + work->name_len + 1);
+        memcpy(&wd->work, work, sizeof(wd->work));
+        wd->work.name = (char *) &wd[1];
+        memcpy(wd->work.name, work->name, work->name_len);
         xattrs_setup(&wd->ed.xattrs);
-        memcpy(&wd->ed,   ed,   sizeof(*ed));
+        memcpy(&wd->ed, ed, sizeof(*ed));
 
         if (args->in->process_xattrs) {
             wd->ed.xattrs.pairs = NULL;
@@ -368,7 +368,7 @@ int main(int argc, char * argv[]) {
             continue;
         }
 
-        struct work *work = new_work_with_name("", path);
+        struct work *work = new_work_with_name(NULL, 0, path, strlen(path));
 
         /* remove trailing slashes (+ 1 to keep at least 1 character) */
         const size_t len = strlen(path);
@@ -397,10 +397,15 @@ int main(int argc, char * argv[]) {
 
             /* copy right here instead of enqueuing */
             cpr_link(work, &ed, &in);
+
+            free(work);
         }
         else if (S_ISREG(st.st_mode)) {
-            struct work_data *wd = calloc(1, sizeof(*wd));
-            wd->work = work;
+            struct work_data *wd = calloc(1, sizeof(*wd) + work->name_len + 1);
+            memcpy(&wd->work, work, sizeof(wd->work));
+            wd->work.name = (char *) &wd[1];
+            memcpy(wd->work.name, work->name, work->name_len);
+
             xattrs_setup(&wd->ed.xattrs);
 
             if (in.process_xattrs) {
@@ -408,6 +413,8 @@ int main(int argc, char * argv[]) {
             }
 
             QPTPool_enqueue(pool, 0, cpr_file, wd);
+
+            free(work);
         }
         else {
             free(work);

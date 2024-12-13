@@ -470,7 +470,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
 
         const std::size_t bucket = bucket_rng(gen);
 
-        struct work *work = new_work_with_name("", s.str().c_str());
+        struct work *work = new_work_with_name(NULL, 0, s.str().c_str(), s.str().size());
         struct entry_data ed;
 
         ed.type = 'f';
@@ -548,7 +548,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     }
 
     // summarize this directory
-    struct work *work = new_work_with_name("", arg->path.c_str());
+    struct work *work = new_work_with_name(NULL, 0, arg->path.c_str(), arg->path.size());
     struct entry_data ed;
 
     ed.type = 'd';

@@ -133,7 +133,7 @@ int linetowork(char *line, const size_t len, const char delim,
     char *q;
 
     p=line; q = split(p, &delim, 1, end);
-    struct work *new_work = new_work_with_name("", p);
+    struct work *new_work = new_work_with_name(NULL, 0, p, q - p);
     *work = new_work;
 
     p = q;  q = split(p, &delim, 1, end); ed->type = *p;

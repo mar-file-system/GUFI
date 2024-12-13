@@ -98,7 +98,7 @@ static const char EXPECTED_XATTRS_STR[] = "xattr.key0\x1fxattr.val0\x1f"
 static const size_t EXPECTED_XATTRS_STR_LEN = sizeof(EXPECTED_XATTRS_STR) - 1;
 
 static struct work *get_work(struct entry_data *ed) {
-    struct work *new_work = new_work_with_name("", "name");
+    struct work *new_work  = new_work_with_name(NULL, 0, "name", 4);
     ed->type               = 't';
     snprintf(ed->linkname, sizeof(ed->linkname), "link");
     ed->statuso.st_ino     = 0xfedc;
@@ -223,7 +223,7 @@ TEST(trace, worktofile) {
 }
 
 #define COMPARE(src, src_ed, dst, dst_ed)                               \
-    EXPECT_STREQ(dst->name,               src->name);                     \
+    EXPECT_STREQ(dst->name,              src->name);                    \
     EXPECT_EQ(dst_ed.type,               src_ed.type);                  \
     EXPECT_EQ(dst_ed.statuso.st_ino,     src_ed.statuso.st_ino);        \
     EXPECT_EQ(dst_ed.statuso.st_mode,    src_ed.statuso.st_mode);       \
@@ -244,7 +244,7 @@ TEST(trace, worktofile) {
     EXPECT_EQ(dst_ed.ossint4,            src_ed.ossint4);               \
     EXPECT_STREQ(dst_ed.osstext1,        src_ed.osstext1);              \
     EXPECT_STREQ(dst_ed.osstext2,        src_ed.osstext2);              \
-    EXPECT_EQ(dst->pinode,                src->pinode);                   \
+    EXPECT_EQ(dst->pinode,               src->pinode);                  \
 
 TEST(trace, linetowork) {
     struct entry_data src_ed;
@@ -270,6 +270,7 @@ TEST(trace, linetowork) {
 
     xattrs_cleanup(&ed.xattrs);
     free(work);
+    free(src);
 
     EXPECT_EQ(linetowork(nullptr, rc, delim, &work, &ed),  -1);
     EXPECT_EQ(linetowork(line, rc, delim, nullptr,  &ed),  -1);
@@ -288,6 +289,7 @@ TEST(scout_trace, no_cleanup) {
     // write the known struct to a string using an alternative write function
     char line[4096];
     const int rc = to_string(line, sizeof(line), src, &src_ed);
+    free(src);
     ASSERT_GT(rc, -1);
     const size_t len = strlen(line);
     ASSERT_EQ(rc, (int) len);

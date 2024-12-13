@@ -158,7 +158,7 @@ TEST(external, read_file) {
 
     struct input in;
 
-    struct work *work = new_work_with_name("", filename);
+    struct work *work = new_work_with_name(NULL, 0, filename, strlen(filename));
     work->basename_len = work->name_len;
 
     // skip checking path is valid db

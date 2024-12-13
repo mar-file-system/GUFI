@@ -121,8 +121,8 @@ void *compress_struct(const int comp, void *src, const size_t struct_len) {
         dst->len = struct_len - COMP_OFFSET;
         dst->orig_len = struct_len;
 
-        if (compress_zlib(dst->data, &dst->len,
-                          ((compressed_t *) src)->data,  dst->len) == Z_OK) {
+        if (compress_zlib(((unsigned char *) dst) + COMP_OFFSET, &dst->len,
+                          ((unsigned char *) src) + COMP_OFFSET, dst->len) == Z_OK) {
             dst->yes = 1;
             dst->len += COMP_OFFSET;
         }
@@ -131,13 +131,16 @@ void *compress_struct(const int comp, void *src, const size_t struct_len) {
         if (dst->yes && (dst->len < struct_len)) {
             void *r = realloc(dst, COMP_OFFSET + dst->len);
             if (r) {
-                free(src);
-                return r;
+                dst = r;
             }
 
-            /* realloc() failed - free() the new buffer and return src */
-            free(dst);
+            free(src);
+
+            /* if realloc failed, dst can still be used */
+            return dst;
         }
+
+        free(dst);
     }
     #endif
 
@@ -160,13 +163,14 @@ void decompress_struct(void **dst, void *src) {
     #if HAVE_ZLIB
     compressed_t *comp = (compressed_t *) src;
     if (comp->yes) {
-        compressed_t *new = calloc(1, comp->orig_len);
-        size_t new_len = comp->orig_len - COMP_OFFSET;
+        compressed_t *decomp = malloc(comp->orig_len);
+        decomp->len = comp->orig_len - COMP_OFFSET;
 
-        decompress_zlib(new->data, &new_len, comp->data, comp->len);
+        decompress_zlib(((unsigned char *) decomp) + COMP_OFFSET, &decomp->len,
+                        ((unsigned char *) comp)   + COMP_OFFSET,    comp->len);
 
         free(src);
-        *dst = new;
+        *dst = decomp;
         return;
     }
     #endif
@@ -176,12 +180,4 @@ void decompress_struct(void **dst, void *src) {
      * data was not compressed - use original pointer
      */
     *dst = src;
-}
-
-void free_struct(void *used, void *data, const size_t recursion_level) {
-    if (used == data) {              /* used received data directly */
-        if (recursion_level == 0) {  /* work was not from in-situ call, so data is dynamically allocated */
-            free(data);
-        }
-    }
 }

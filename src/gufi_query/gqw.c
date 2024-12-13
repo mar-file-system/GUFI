@@ -62,37 +62,99 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_WORK_H
-#define GUFI_QUERY_WORK_H
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include "bf.h"
+#include "dbutils.h"
+#include "gufi_query/gqw.h"
+#include "utils.h"
 
-/* additional data gufi_query needs */
-typedef struct gufi_query_work {
-    compressed_t comp;
-    struct work work;
+size_t gqw_size(gqw_t *gqw) {
+    return sizeof(*gqw) + gqw->work.name_len + 1 + gqw->sqlite3_name_len + 1;
+}
 
-    /*
-     * some characters need to be converted for sqlite3,
-     * but opendir must use the unconverted version
-     */
-    char  *sqlite3_name;
-    size_t sqlite3_name_len;
-
-    /* work.name points here */
-    /* sqlite3_name points here */
-} gqw_t;
-
-/* get size of gqw including name and sqlite3_name */
-size_t gqw_size(gqw_t *gqw);
-
-/* allocate a gqw and fill in some fields */
+/*
+ * Allocates a new gqw_t on the heap with enough room to
+ * fit the given `basename` with an optional `prefix`.
+ *
+ * Initializes the following fields:
+ *   - name
+ *   - name_len
+ *   - sqlite3_name
+ *   - sqlite3_name_len
+ */
 gqw_t *new_gqw_with_name(const char *prefix, const size_t prefix_len,
                          const char *basename, const size_t basename_len,
                          int *isdir, const int next_level,
-                         const char *sqlite3_prefix, const size_t sqlite3_prefix_len);
+                         const char *sqlite3_prefix, const size_t sqlite3_prefix_len) {
+    /* +1 for path separator */
+    const size_t name_len = prefix_len + 1 + basename_len;
 
-/* call compress_struct to compress a gqw, but call this to decompress */
-void decompress_gqw(gqw_t **dst, void *src);
+    /* assume every character is replaced */
+    const size_t sqlite3_name_len = sqlite3_prefix_len + 1 + 3 * basename_len;
 
-#endif
+    /* allocate space for sqlite3_name for now */
+    gqw_t *gqw = calloc(1, sizeof(*gqw) + name_len + 1 + sqlite3_name_len + 1);
+    gqw->work.name = (char *) &gqw[1];
+    gqw->work.name_len = SNFORMAT_S(gqw->work.name, name_len + 1, 3,
+                                    prefix, prefix_len,
+                                    "/", (size_t) 1,
+                                    basename, basename_len);
+
+    if (!*isdir) {
+        /* allow for paths immediately under the input paths to be symlinks */
+        if (next_level < 2) {
+            struct stat st;
+            if (stat(gqw->work.name, &st) == 0) {
+                *isdir = S_ISDIR(st.st_mode);
+            }
+            /* errors are ignored */
+        }
+    }
+
+    if (*isdir) {
+        gqw->sqlite3_name = gqw->work.name + name_len + 1;
+
+        /* append converted entry name to converted directory */
+        gqw->sqlite3_name_len = SNFORMAT_S(gqw->sqlite3_name, sqlite3_name_len + 1, 1,
+                                           sqlite3_prefix, sqlite3_prefix_len);
+
+        if (basename_len) {
+            size_t len = basename_len;
+
+            gqw->sqlite3_name_len += SNFORMAT_S(gqw->sqlite3_name + gqw->sqlite3_name_len,
+                                                sqlite3_name_len + 1 - gqw->sqlite3_name_len, 1,
+                                                "/", (size_t) 1);
+
+            gqw->sqlite3_name_len += sqlite_uri_path(gqw->sqlite3_name + gqw->sqlite3_name_len,
+                                                     sqlite3_name_len + 1 - gqw->sqlite3_name_len,
+                                                     basename, &len);
+        }
+    }
+
+    /* try to shrink allocation */
+    gqw_t *r = realloc(gqw, sizeof(*gqw) + gqw->work.name_len + 1 + gqw->sqlite3_name_len + 1);
+
+    if (!r) {
+        r = gqw;
+    }
+
+    /* struct was moved - update pointers */
+    if (r != gqw) {
+        r->work.name = (char *) &r[1];
+        if (r->sqlite3_name) {
+            r->sqlite3_name = r->work.name + name_len + 1 + 1;
+        }
+    }
+
+    return r;
+}
+
+void decompress_gqw(gqw_t **dst, void *src) {
+    decompress_struct((void **) dst, src);
+    (*dst)->work.name = (char *) &(*dst)[1];
+    if ((*dst)->sqlite3_name) {
+        (*dst)->sqlite3_name = (*dst)->work.name + (*dst)->work.name_len + 1;
+    }
+}

@@ -156,7 +156,7 @@ TEST(summary, sumit_file) {
     struct sum summary;
     ASSERT_EQ(zeroit(&summary), 0);
 
-    struct work *pwork = new_work_with_name("", "");
+    struct work *pwork = new_work_with_name(NULL, 0, NULL, 0);
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
 
@@ -216,7 +216,7 @@ TEST(summary, sumit_link) {
     struct sum summary;
     ASSERT_EQ(zeroit(&summary), 0);
 
-    struct work *pwork = new_work_with_name("", "");
+    struct work *pwork = new_work_with_name(NULL, 0, NULL, 0);
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
 
@@ -649,8 +649,8 @@ TEST(descend, builddir) {
     const char pipename[] = "@CMAKE_BINARY_DIR@/testpipe";
     ASSERT_EQ(mkfifo(pipename, S_IRUSR | S_IWUSR), 0);
 
-    // TODO: does this need free() here?
-    struct work *work = new_work_with_name("", "@CMAKE_BINARY_DIR@");
+    const char root[] = "@CMAKE_BINARY_DIR@";
+    struct work *work = new_work_with_name(NULL, 0, root, strlen(root));
 
     DIR *dir = opendir(work->name);
     ASSERT_NE(dir, nullptr);
@@ -721,10 +721,7 @@ TEST(descend, builddir) {
         in.subdir_limit = 1;
         EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 0,
                           [](QPTPool_t *, const size_t, void *data, void *) -> int {
-                              struct work *work = (struct work *) data;
-                              if (work->recursion_level == 0) {
-                                  free(data);
-                              }
+                              free(data);
                               return 0;
                           },
                           nullptr, nullptr,
@@ -740,6 +737,7 @@ TEST(descend, builddir) {
     QPTPool_destroy(pool);
 
     EXPECT_EQ(closedir(dir),    0);
+    free(work);
     EXPECT_EQ(unlink(pipename), 0);
     EXPECT_EQ(unlink(linkname), 0);
 }

@@ -300,6 +300,9 @@ struct work {
    refstr_t      root_parent;            /* dirname(realpath(argv[i])) */
    size_t        root_basename_len;      /* strlen(basename(argv[i])) */
    size_t        level;
+   char          *name;                  /* points to memory located after struct work */
+   size_t        name_len;               /* == strlen(name) - meaning excludes NUL! */
+   size_t        basename_len;           /* can usually get through readdir */
    long long int pinode;
    size_t        recursion_level;
 
@@ -307,13 +310,12 @@ struct work {
    char *        fullpath;
    size_t        fullpath_len;
 
-   size_t        name_len;               /* == strlen(name) - meaning excludes NUL! */
-   size_t        basename_len;           /* can usually get through readdir */
-   char          name[];
+   /* name is actually here, but not using flexible arrays */
 };
 
 size_t struct_work_size(struct work *w);
-struct work *new_work_with_name(const char *prefix, const char *name);
+struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
+                                const char *basename, const size_t basename_len);
 
 /* extra data used by entries that does not depend on data from other directories */
 struct entry_data {

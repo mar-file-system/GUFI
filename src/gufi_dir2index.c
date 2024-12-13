@@ -172,7 +172,6 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     }
 
 out:
-    free(entry);
     return rc;
 }
 
@@ -182,20 +181,19 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     int rc = 0;
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
-    struct input *in = &pa->in;
 
     struct NonDirArgs nda;
     nda.in         = &pa->in;
     nda.temp_db    = &pa->db;
     nda.temp_xattr = &pa->xattr;
+    nda.work       = NULL;
     memset(&nda.ed, 0, sizeof(nda.ed));
     nda.topath     = NULL;
     nda.ed.type    = 'd';
 
     DIR *dir = NULL;
 
-    // TODO: check error
-    decompress_struct((void **) &nda.work, data);
+    decompress_work(&nda.work, data);
 
     if (lstat(nda.work->name, &nda.ed.statuso) != 0) {
         const int err = errno;
@@ -213,7 +211,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* offset by work->root_len to remove prefix */
-    nda.topath_len = in->nameto.len + 1 + nda.work->name_len - nda.work->root_parent.len;
+    nda.topath_len = nda.in->nameto.len + 1 + nda.work->name_len - nda.work->root_parent.len;
 
     /*
      * allocate space for "/db.db" in nda.topath
@@ -224,7 +222,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     nda.topath = malloc(topath_size);
     SNFORMAT_S(nda.topath, topath_size, 4,
-               in->nameto.data, in->nameto.len,
+               nda.in->nameto.data, nda.in->nameto.len,
                "/", (size_t) 1,
                nda.work->name + nda.work->root_parent.len, nda.work->name_len - nda.work->root_parent.len,
                "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
@@ -260,7 +258,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.xattrs_res = NULL;
     nda.xattr_files_res = NULL;
 
-    if (in->process_xattrs) {
+    if (nda.in->process_xattrs) {
         nda.xattrs_res = insertdbprep(nda.db, XATTRS_PWD_INSERT);
         nda.xattr_files_res = insertdbprep(nda.db, EXTERNAL_DBS_PWD_INSERT);
 
@@ -270,14 +268,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct descend_counters ctrs;
     startdb(nda.db);
-    descend(ctx, id, pa, in, nda.work, nda.ed.statuso.st_ino, dir, 0,
+    descend(ctx, id, pa, nda.in, nda.work, nda.ed.statuso.st_ino, dir, 0,
             processdir, process_nondir, &nda,
             &ctrs);
     stopdb(nda.db);
 
     /* entries and xattrs have been inserted */
 
-    if (in->process_xattrs) {
+    if (nda.in->process_xattrs) {
         /* write out per-user and per-group xattrs */
         sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
 
@@ -298,7 +296,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* the xattrs go into the xattrs_avail table in db.db */
     insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len,
                 nda.work, &nda.ed, &nda.summary);
-    if (in->process_xattrs) {
+    if (nda.in->process_xattrs) {
         xattrs_cleanup(&nda.ed.xattrs);
     }
 
@@ -368,7 +366,7 @@ static int validate_source(struct input *in, const char *path, struct work **wor
         return 1;
     }
 
-    struct work *new_work = new_work_with_name("", path);
+    struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
     new_work->root_parent.data = path;
     new_work->root_parent.len = dirname_len(path, new_work->name_len);
