@@ -4,6 +4,7 @@ usage: gufi_unrollup [options] GUFI_index ...
 options:
   -h                     help
   -H                     show assigned input values (debugging)
+  -v                     version
   -n <threads>           number of threads
 
 GUFI_index        GUFI index to unroll up

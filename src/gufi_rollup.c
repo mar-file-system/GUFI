@@ -919,13 +919,7 @@ int main(int argc, char *argv[]) {
     timestamp_create_start_raw(runtime);
 
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:L:X", 1, "GUFI_index ...", &pa.in);
-    if (pa.in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&pa.in);
-        return EXIT_FAILURE;
-    }
+    process_args_and_maybe_exit("hHvn:L:X", 1, "GUFI_index ...", &pa.in);
 
     init_template_db(&pa.xattr_template);
     if (create_xattrs_template(&pa.xattr_template) != 0) {

@@ -72,6 +72,8 @@ if (sys.version_info.major < 3) or ((sys.version_info.major == 3) and sys.versio
 else:
     from shlex import quote as sanitize # new in Python 3.3
 
+VERSION = '@VERSION_STRING@'
+
 # sqlite3 types (not defined in standard sqlite3.py)
 # https://www.sqlite.org/datatype3.html
 # 2. Storage Classes and Datatypes

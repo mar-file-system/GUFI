@@ -537,7 +537,7 @@ def build_expression_parser():
                         help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
     parser.add_argument('--version', '-v',
                         action='version',
-                        version='{0} @GUFI_VERSION@'.format(os.path.basename(PATH)))
+                        version=gufi_common.VERSION)
 
     # GNU find test expressions
     parser.add_argument('-amin',

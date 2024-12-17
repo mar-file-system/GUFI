@@ -662,7 +662,7 @@ int main(int argc, char *argv[]) {
     /* control which options are parsed for each program. */
     struct PoolArgs pa;
     memset(&pa, 0, sizeof(pa));
-    int idx = parse_cmd_line(argc, argv, "hHn:O:o:d:rRYZW:g:A:c:xb", 1, "input_dir [index]", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHvn:O:o:d:rRYZW:g:A:c:xb", 1, "input_dir [index]", &pa.in);
     if (pa.in.helped)
         sub_help();
 

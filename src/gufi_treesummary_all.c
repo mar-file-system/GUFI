@@ -107,13 +107,7 @@ int main(int argc, char *argv[]) {
      * control which options are parsed for each program.
      */
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHn:", 1, "GUFI_index", &in);
-    if (in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&in);
-        return EXIT_FAILURE;
-    }
+    process_args_and_maybe_exit("hHvn:", 1, "GUFI_index", &in);
 
     const int rc = parallel_bottomup(argv + idx, argc - idx,
                              in.maxthreads,

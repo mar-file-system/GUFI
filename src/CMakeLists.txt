@@ -122,6 +122,7 @@ set(GUFI_SOURCES
 )
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
+set_source_files_properties(bf.c PROPERTIES COMPILE_FLAGS -DGUFI_VERSION="${VERSION_STRING}")
 
 #If the GPFS library exists, build the gpfs scan tool
 if (GPFS_LIB AND GPFS_BUILD)

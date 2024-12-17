@@ -396,18 +396,11 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:M:s:C:" COMPRESS_OPT "q", 2, "input_dir... output_dir", &pa.in);
-    if (pa.in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&pa.in);
-        return EXIT_FAILURE;
-    }
-    else {
-        /* parse positional args, following the options */
-        /* does not have to be canonicalized */
-        INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
-    }
+    process_args_and_maybe_exit("hHvn:xz:k:M:s:C:" COMPRESS_OPT "q", 2, "input_dir... output_dir", &pa.in);
+
+    /* parse positional args, following the options */
+    /* does not have to be canonicalized */
+    INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
 
     int rc = EXIT_SUCCESS;
 

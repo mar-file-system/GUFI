@@ -182,7 +182,7 @@ def run(argv, config_path):
                         help='show this help message and exit')
     parser.add_argument('--version', '-v',
                         action='version',
-                        version='{0} @GUFI_VERSION@'.format(os.path.basename(PATH)))
+                        version=gufi_common.VERSION)
 
     parser.add_argument('--name', '-n',
                         type=str,

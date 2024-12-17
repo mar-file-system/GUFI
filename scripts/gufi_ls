@@ -226,7 +226,7 @@ def run(argv, config_path):
                         help='show this help message and exit')
     parser.add_argument('--version', '-v',
                         action='version',
-                        version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+                        version=gufi_common.VERSION)
     parser.add_argument('-a', '--all',
                         action='store_true',
                         help='do not ignore entries starting with .')

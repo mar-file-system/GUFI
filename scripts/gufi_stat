@@ -105,8 +105,7 @@ def parse_args():
 
     parser.add_argument('--version',
                         action='version',
-                        version='{0} @GUFI_VERSION@'.format(os.path.basename(PATH)),
-                        help='output version information and exit')
+                        version=gufi_common.VERSION)
 
     parser.add_argument('paths',
                         metavar='FILE',
