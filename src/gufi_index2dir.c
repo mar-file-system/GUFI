@@ -453,23 +453,16 @@ void sub_help(void) {
 
 int main(int argc, char * argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:x", 2, "input_dir output_dir", &pa.in);
-    if (pa.in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&pa.in);
-        return EXIT_FAILURE;
-    }
-    else {
-        INSTALL_STR(&pa.in.name,   argv[idx++]);
-        INSTALL_STR(&pa.in.nameto, argv[idx++]);
+    process_args_and_maybe_exit("hHn:x", 2, "input_dir output_dir", &pa.in);
 
-        pa.in.name.len   = trailing_non_match_index(pa.in.name.data,   pa.in.name.len   - 1, "/", 1) + 1;
-        pa.in.nameto.len = trailing_non_match_index(pa.in.nameto.data, pa.in.nameto.len - 1, "/", 1) + 1;
+    INSTALL_STR(&pa.in.name,   argv[idx++]);
+    INSTALL_STR(&pa.in.nameto, argv[idx++]);
 
-        pa.src_dirname_len = dirname_len(pa.in.name.data,
-                                         pa.in.name.len - (pa.in.name.data[pa.in.name.len - 1] == '/'));
-    }
+    pa.in.name.len   = trailing_non_match_index(pa.in.name.data,   pa.in.name.len   - 1, "/", 1) + 1;
+    pa.in.nameto.len = trailing_non_match_index(pa.in.nameto.data, pa.in.nameto.len - 1, "/", 1) + 1;
+
+    pa.src_dirname_len = dirname_len(pa.in.name.data,
+                                     pa.in.name.len - (pa.in.name.data[pa.in.name.len - 1] == '/'));
 
     // get first work item by validating inputs
     struct work *root = validate_inputs(&pa);

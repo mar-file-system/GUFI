@@ -4,6 +4,7 @@ usage: gufi_dir2index [options] input_dir... output_dir
 options:
   -h                     help
   -H                     show assigned input values (debugging)
+  -v                     version
   -n <threads>           number of threads
   -x                     index/query xattrs
   -z <max level>         maximum level to go down

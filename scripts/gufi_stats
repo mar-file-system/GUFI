@@ -1133,7 +1133,7 @@ def run(argv, config_path):
                         help='show this help message and exit')
     parser.add_argument('--version', '-v',
                         action='version',
-                        version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+                        version=gufi_common.VERSION)
     exclusive = parser.add_mutually_exclusive_group()
     exclusive.add_argument('--recursive', '-r',
                            action='store_true',

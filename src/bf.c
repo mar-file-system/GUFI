@@ -74,6 +74,9 @@ OF SUCH DAMAGE.
 #include "external.h"
 #include "utils.h"
 
+#define XSTR(x) #x
+#define STR(x) XSTR(x)
+
 #ifdef __CYGWIN__
 __declspec(dllimport)
 #endif
@@ -141,6 +144,7 @@ void print_help(const char* prog_name,
       case ':': continue;
       case 'h': printf("  -h                     help"); break;
       case 'H': printf("  -H                     show assigned input values (debugging)"); break;
+      case 'v': printf("  -v                     version"); break;
       case 'x': printf("  -x                     index/query xattrs"); break;
       case 'p': printf("  -p                     print file-names"); break;
       case 'P': printf("  -P                     print directories as they are encountered"); break;
@@ -297,6 +301,11 @@ int parse_cmd_line(int         argc,
          show = 1;
          retval = -1;
          break;
+
+      case 'v':
+          printf(STR(GUFI_VERSION) "\n");
+          in->printed_version = 1;
+          return 0;
 
       case 'x':               // enable xattr processing
          in->process_xattrs = 1;

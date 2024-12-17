@@ -4,6 +4,7 @@ usage: gufi_rollup [options] GUFI_index ...
 options:
   -h                     help
   -H                     show assigned input values (debugging)
+  -v                     version
   -n <threads>           number of threads
   -L <count>             Highest number of files/links in a directory allowed to be rolled up
   -X                     Dry run

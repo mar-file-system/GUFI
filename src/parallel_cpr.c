@@ -314,18 +314,11 @@ static void sub_help(void) {
 
 int main(int argc, char * argv[]) {
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHn:x", 2, "src... dst", &in);
-    if (in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&in);
-        return EXIT_FAILURE;
-    }
-    else {
-        /* parse positional args, following the options */
-        /* does not have to be canonicalized */
-        INSTALL_STR(&in.nameto, argv[argc - 1]);
-    }
+    process_args_and_maybe_exit("hHvn:x", 2, "src... dst", &in);
+
+    /* parse positional args, following the options */
+    /* does not have to be canonicalized */
+    INSTALL_STR(&in.nameto, argv[argc - 1]);
 
     int rc = setup(&in.nameto);
     if (rc != 0) {

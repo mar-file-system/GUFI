@@ -495,13 +495,7 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHf:j", 1, "path ...", &in);
-    if (in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&in);
-        return EXIT_FAILURE;
-    }
+    process_args_and_maybe_exit("hHvf:j", 1, "path ...", &in);
 
     const char *format = DEFAULT_FORMAT;
 

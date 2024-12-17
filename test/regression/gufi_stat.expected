@@ -13,7 +13,7 @@ options:
                         output a newline after each use of FORMAT
   -t, --terse           print the information in terse form
   --help                display this help and exit
-  --version             output version information and exit
+  --version             show program's version number and exit
   --verbose, -V         Show the gufi_query being executed
 
 # first line of default print

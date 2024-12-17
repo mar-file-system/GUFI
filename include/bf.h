@@ -183,6 +183,7 @@ struct input {
    int  printheader;
    int  printrows;
    int  helped;               /* support parsing of per-app sub-options */
+   int  printed_version;
    char delim;
    int  buildindex;
    size_t maxthreads;
@@ -265,6 +266,30 @@ int parse_cmd_line(int         argc,
                    int         n_positional,
                    const char *positional_args_help_str,
                    struct input *in);
+
+/*
+ * Call parse_cmd_line, call sub_help(), and possibly exit.
+ * Requires argc, argv, and sub_help() to be defined.
+ * Defines idx variable that points to first unprocessed argv.
+ * This should only be used at the start of main.
+ * Caller still needs to process positional args after this.
+ */
+#define process_args_and_maybe_exit(flags, n_positional, positional, in)          \
+    int idx = parse_cmd_line(argc, argv, flags, n_positional, positional, (in));  \
+                                                                                  \
+    if ((in)->printed_version) {                                                  \
+        input_fini((in));                                                         \
+        return EXIT_SUCCESS;                                                      \
+    }                                                                             \
+                                                                                  \
+    if ((in)->helped) {                                                           \
+        sub_help();                                                               \
+    }                                                                             \
+                                                                                  \
+    if (idx < 0) {                                                                \
+        input_fini((in));                                                         \
+        return EXIT_FAILURE;                                                      \
+    }
 
 int INSTALL_STR(refstr_t *VAR, const char *SOURCE);
 

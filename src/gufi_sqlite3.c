@@ -81,13 +81,7 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hd:", 0, "[db [SQL]...]", &in);
-    if (in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&in);
-        return EXIT_FAILURE;
-    }
+    process_args_and_maybe_exit("hvd:", 0, "[db [SQL]...]", &in);
 
     const int args_left = argc - idx;
     const char *dbname = (args_left == 0)?SQLITE_MEMORY:argv[idx++];

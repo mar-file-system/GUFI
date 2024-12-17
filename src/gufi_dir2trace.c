@@ -268,17 +268,10 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:s:C:" COMPRESS_OPT "q", 2, "input_dir... output_prefix", &pa.in);
-    if (pa.in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&pa.in);
-        return EXIT_FAILURE;
-    }
-    else {
-        /* parse positional args, following the options */
-        INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
-    }
+    process_args_and_maybe_exit("hHvn:xd:k:M:s:C:" COMPRESS_OPT "q", 2, "input_dir... output_prefix", &pa.in);
+
+    /* parse positional args, following the options */
+    INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
 
     pa.outfiles = outfiles_init(pa.in.nameto.data, pa.in.maxthreads);
     if (!pa.outfiles) {

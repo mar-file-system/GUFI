@@ -202,17 +202,10 @@ void sub_help(void) {
 
 int main(int argc, char * argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:d:x", 2, "trace_file... output_dir", &pa.in);
-    if (pa.in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&pa.in);
-        return EXIT_FAILURE;
-    }
-    else {
-        // parse positional args, following the options
-        INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
-    }
+    process_args_and_maybe_exit("hHvn:d:x", 2, "trace_file... output_dir", &pa.in);
+
+    // parse positional args, following the options
+    INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
 
     /* open trace files for threads to jump around in */
     /* open the trace files here to not repeatedly open in threads */

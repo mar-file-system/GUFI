@@ -107,13 +107,7 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:s:" COMPRESS_OPT "Q:", 1, "GUFI_index ...", &in);
-    if (in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&in);
-        return EXIT_FAILURE;
-    }
+    process_args_and_maybe_exit("hHvT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:s:" COMPRESS_OPT "Q:", 1, "GUFI_index ...", &in);
 
     if (validate_inputs(&in) != 0) {
         input_fini(&in);

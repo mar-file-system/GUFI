@@ -310,16 +310,9 @@ int main(int argc, char *argv[]) {
      * control which options are parsed for each program.
      */
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHPn:d:X", 1, "GUFI_index", &pa.in);
-    if (pa.in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&pa.in);
-        return EXIT_FAILURE;
-    }
-    else {
-        INSTALL_STR(&pa.in.name, argv[idx++]);
-    }
+    process_args_and_maybe_exit("hHvPn:d:X", 1, "GUFI_index", &pa.in);
+
+    INSTALL_STR(&pa.in.name, argv[idx++]);
 
     /* not an error, but you might want to know ... */
     if (pa.in.dry_run) {

@@ -128,14 +128,7 @@ int main(int argc, char *argv[])
     char *rsqlstmt = NULL;
     sqlite3 *db = NULL;
 
-    const char* pos_args = "table_name SQL DB_name [DB_name ...]";
-    int idx = parse_cmd_line(argc, argv, "hHNVd:", 3, pos_args, &in);
-    if (in.helped)
-        sub_help();
-    if (idx < 0) {
-        input_fini(&in);
-        return EXIT_FAILURE;
-    }
+    process_args_and_maybe_exit("hHvNVd:", 3, "table_name SQL DB_name [DB_name ...]", &in);
 
     // parse positional args following the options
     tablename = argv[idx++];
