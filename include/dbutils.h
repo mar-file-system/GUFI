@@ -83,51 +83,69 @@ extern "C" {
 extern const char *SQLITE_MEMORY;
 
 #if defined(__APPLE__) || defined(__linux__)
-#define GUFI_SQLITE_VFS       "unix-none"
+#define GUFI_SQLITE_VFS             "unix-none"
 #elif defined(__CYGWIN__)
-#define GUFI_SQLITE_VFS       "win32-none"
+#define GUFI_SQLITE_VFS             "win32-none"
 #endif
-#define GUFI_SQLITE_VFS_URI   "&vfs=" GUFI_SQLITE_VFS
+#define GUFI_SQLITE_VFS_URI         "&vfs=" GUFI_SQLITE_VFS
 
-#define DROP_TABLE(name) "DROP TABLE IF EXISTS " #name ";"
-#define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " #name ";"
+#define DROP_TABLE(name)            "DROP TABLE IF EXISTS " #name ";"
+#define DROP_VIEW(name)             "DROP VIEW  IF EXISTS " #name ";"
 
-#define READDIRPLUS       "readdirplus"
+#define READDIRPLUS                  "readdirplus"
+#define READDIRPLUS_SCHEMA(name)     \
+    "CREATE TABLE " name "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, suspect INT64);"
 extern const char READDIRPLUS_CREATE[];
 extern const char READDIRPLUS_INSERT[];
 
 /* contains all file and link metadata for the current directory */
 /* prefer pentries over entries */
-#define ENTRIES           "entries"
+#define ENTRIES                      "entries"
+#define ENTRIES_SCHEMA(name)         \
+    "CREATE TABLE " name "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);"
 extern const char ENTRIES_CREATE[];
 extern const char ENTRIES_INSERT[];
 
 /* directory metadata + aggregate data */
-#define SUMMARY           "summary"
+#define SUMMARY                      "summary"
+#define SUMMARY_SCHEMA(name)         \
+    "CREATE TABLE " name "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode TEXT, isroot INT64, rollupscore INT64);"
 extern const char SUMMARY_CREATE[];
 
 /* view of summary table with rollups */
-#define VRSUMMARY         "vrsummary"
+#define VRSUMMARY                    "vrsummary"
+#define VRSUMMARY_SCHEMA(name)       \
+    "CREATE VIEW " name " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, '/', '')), '') AS dname, " SUMMARY ".name AS sname, " SUMMARY ".rollupscore AS sroll, (SELECT COUNT(*) FROM " SUMMARY " AS c WHERE c.pinode == " SUMMARY ".inode) AS srollsubdirs, " SUMMARY ".* FROM " SUMMARY ";"
 extern const char VRSUMMARY_CREATE[];
 
 /* pentries pulled from children */
-#define PENTRIES_ROLLUP   "pentries_rollup"
+#define PENTRIES_ROLLUP              "pentries_rollup"
+#define PENTRIES_ROLLUP_SCHEMA(name) \
+    "CREATE TABLE " name "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT, pinode TEXT, ppinode TEXT);"
 extern const char PENTRIES_ROLLUP_CREATE[];
 extern const char PENTRIES_ROLLUP_INSERT[];
 
 /* (entries + summary.inode) UNION pentries_rollup */
-#define PENTRIES          "pentries"
+#define PENTRIES                     "pentries"
+#define PENTRIES_SCHEMA(name)        \
+    "CREATE VIEW " name " AS SELECT " ENTRIES ".*, " SUMMARY ".inode AS pinode, " SUMMARY ".pinode AS ppinode FROM " ENTRIES ", " SUMMARY " WHERE isroot == 1 UNION SELECT * FROM " PENTRIES_ROLLUP ";"
 extern const char PENTRIES_CREATE[];
 
+/* vrentries is not created because rolled up entries tables are not correct */
+
 /* view of pentries view with rollups */
-#define VRPENTRIES        "vrpentries"
+#define VRPENTRIES                   "vrpentries"
+#define VRPENTRIES_SCHEMA(name)      \
+    "CREATE VIEW " name " AS SELECT REPLACE(" VRSUMMARY ".name, RTRIM(" VRSUMMARY ".name, REPLACE(" VRSUMMARY ".name, '/', '')), '') AS dname, " VRSUMMARY ".name AS sname, " VRSUMMARY ".mode AS dmode, " VRSUMMARY ".nlink AS dnlink, " VRSUMMARY ".uid AS duid, " VRSUMMARY ".gid AS dgid, " VRSUMMARY ".size AS dsize, " VRSUMMARY ".blksize AS dblksize, " VRSUMMARY ".blocks AS dblocks, " VRSUMMARY ".atime AS datime, " VRSUMMARY ".mtime AS dmtime, " VRSUMMARY ".ctime AS dctime, " VRSUMMARY ".linkname AS dlinkname, " VRSUMMARY ".totfiles AS dtotfile, " VRSUMMARY ".totlinks AS dtotlinks, " VRSUMMARY ".minuid AS dminuid, " VRSUMMARY ".maxuid AS dmaxuid, " VRSUMMARY ".mingid AS dmingid, " VRSUMMARY ".maxgid AS dmaxgid, " VRSUMMARY ".minsize AS dminsize, " VRSUMMARY ".maxsize AS dmaxsize, " VRSUMMARY ".totzero AS dtotzero, " VRSUMMARY ".totltk AS dtotltk, " VRSUMMARY ".totmtk AS dtotmtk, " VRSUMMARY ".totltm AS totltm, " VRSUMMARY ".totmtm AS dtotmtm, " VRSUMMARY ".totmtg AS dtotmtg, " VRSUMMARY ".totmtt AS dtotmtt, " VRSUMMARY ".totsize AS dtotsize, " VRSUMMARY ".minctime AS dminctime, " VRSUMMARY ".maxctime AS dmaxctime, " VRSUMMARY ".minmtime AS dminmtime, " VRSUMMARY ".maxmtime AS dmaxmtime, " VRSUMMARY ".minatime AS dminatime, " VRSUMMARY ".maxatime AS dmaxatime, " VRSUMMARY ".minblocks AS dminblocks, " VRSUMMARY ".maxblocks AS dmaxblocks, " VRSUMMARY ".totxattr AS dtotxattr, " VRSUMMARY ".depth AS ddepth, " VRSUMMARY ".mincrtime AS dmincrtime, " VRSUMMARY ".maxcrtime AS dmaxcrtime, " VRSUMMARY ".rollupscore AS sroll, " VRSUMMARY ".isroot AS atroot, " VRSUMMARY ".srollsubdirs AS srollsubdirs, " PENTRIES ".* FROM " VRSUMMARY ", " PENTRIES " WHERE " VRSUMMARY ".inode == " PENTRIES ".pinode;"
 extern const char VRPENTRIES_CREATE[];
 
 /* aggregate data of tree starting at current directory */
-#define TREESUMMARY       "treesummary"
-#define TREESUMMARY_CREATE                                              \
-    DROP_TABLE(TREESUMMARY)                                             \
-    "CREATE TABLE " TREESUMMARY "(inode TEXT, pinode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, totextdbs INT64, rectype INT64, uid INT64, gid INT64);"
+#define TREESUMMARY                  "treesummary"
+#define TREESUMMARY_SCHEMA(name)     \
+    "CREATE TABLE " name "(inode TEXT, pinode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, totextdbs INT64, rectype INT64, uid INT64, gid INT64);"
+#define TREESUMMARY_CREATE           \
+    DROP_TABLE(TREESUMMARY)          \
+    TREESUMMARY_SCHEMA(TREESUMMARY)
 
 extern const char TREESUMMARY_EXISTS[];
 

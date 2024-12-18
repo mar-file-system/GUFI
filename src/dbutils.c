@@ -82,45 +82,45 @@ const char *SQLITE_MEMORY = SQLITE_MEMORY_ARRAY;
 
 const char READDIRPLUS_CREATE[] =
     DROP_TABLE(READDIRPLUS)
-    "CREATE TABLE " READDIRPLUS "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, suspect INT64);";
+    READDIRPLUS_SCHEMA(READDIRPLUS);
 
 const char READDIRPLUS_INSERT[] =
     "INSERT INTO " READDIRPLUS " VALUES (@path, @type, @inode, @pinode, @suspect);";
 
 const char ENTRIES_CREATE[] =
     DROP_TABLE(ENTRIES)
-    "CREATE TABLE " ENTRIES "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+    ENTRIES_SCHEMA(ENTRIES);
 
 const char ENTRIES_INSERT[] =
     "INSERT INTO " ENTRIES " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @crtime, @ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2);";
 
 const char SUMMARY_CREATE[] =
     DROP_TABLE(SUMMARY)
-    "CREATE TABLE " SUMMARY "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode TEXT, isroot INT64, rollupscore INT64);";
+    SUMMARY_SCHEMA(SUMMARY);
 
 static const char SUMMARY_INSERT[] =
     "INSERT INTO " SUMMARY " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @totfiles, @totlinks, @minuid, @maxuid, @mingid, @maxgid, @minsize, @maxsize, @totzero, @totltk, @totmtk, @totltm, @totmtm, @totmtg, @totmtt, @totsize, @minctime, @maxctime, @minmtime, @maxmtime, @minatime, @maxatime, @minblocks, @maxblocks, @totxattr, @depth, @mincrtime, @maxcrtime, @minossint1, @maxossint1, @totossint1, @minossint2, @maxossint2, @totossint2, @minossint3, @maxossint3, @totossint3, @minossint4, @maxossint4, @totossint4, @rectype, @pinode, @isroot, @rollupscore);";
 
 const char VRSUMMARY_CREATE[] =
     DROP_VIEW(VRSUMMARY)
-    "CREATE VIEW " VRSUMMARY " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, '/', '')), '') AS dname, " SUMMARY ".name AS sname, " SUMMARY ".rollupscore AS sroll, (SELECT COUNT(*) FROM " SUMMARY " AS c WHERE c.pinode == " SUMMARY ".inode) AS srollsubdirs, " SUMMARY ".* FROM " SUMMARY ";";
+    VRSUMMARY_SCHEMA(VRSUMMARY);
 
 const char PENTRIES_ROLLUP_CREATE[] =
     DROP_TABLE(PENTRIES_ROLLUP)
-    "CREATE TABLE " PENTRIES_ROLLUP "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT, pinode TEXT, ppinode TEXT);";
+    PENTRIES_ROLLUP_SCHEMA(PENTRIES_ROLLUP);
 
 const char PENTRIES_ROLLUP_INSERT[] =
     "INSERT INTO " PENTRIES_ROLLUP " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @crtime, @ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2, @pinode, @ppinode);";
 
 const char PENTRIES_CREATE[] =
     DROP_VIEW(PENTRIES)
-    "CREATE VIEW " PENTRIES " AS SELECT " ENTRIES ".*, " SUMMARY ".inode AS pinode, " SUMMARY ".pinode AS ppinode FROM " ENTRIES ", " SUMMARY " WHERE isroot == 1 UNION SELECT * FROM " PENTRIES_ROLLUP ";";
+    PENTRIES_SCHEMA(PENTRIES);
 
 /* vrentries is not created because rolled up entries tables are not correct */
 
 const char VRPENTRIES_CREATE[] =
     DROP_VIEW(VRPENTRIES)
-    "CREATE VIEW " VRPENTRIES " AS SELECT REPLACE(" VRSUMMARY ".name, RTRIM(" VRSUMMARY ".name, REPLACE(" VRSUMMARY ".name, '/', '')), '') AS dname, " VRSUMMARY ".name AS sname, " VRSUMMARY ".mode AS dmode, " VRSUMMARY ".nlink AS dnlink, " VRSUMMARY ".uid AS duid, " VRSUMMARY ".gid AS dgid, " VRSUMMARY ".size AS dsize, " VRSUMMARY ".blksize AS dblksize, " VRSUMMARY ".blocks AS dblocks, " VRSUMMARY ".atime AS datime, " VRSUMMARY ".mtime AS dmtime, " VRSUMMARY ".ctime AS dctime, " VRSUMMARY ".linkname AS dlinkname, " VRSUMMARY ".totfiles AS dtotfile, " VRSUMMARY ".totlinks AS dtotlinks, " VRSUMMARY ".minuid AS dminuid, " VRSUMMARY ".maxuid AS dmaxuid, " VRSUMMARY ".mingid AS dmingid, " VRSUMMARY ".maxgid AS dmaxgid, " VRSUMMARY ".minsize AS dminsize, " VRSUMMARY ".maxsize AS dmaxsize, " VRSUMMARY ".totzero AS dtotzero, " VRSUMMARY ".totltk AS dtotltk, " VRSUMMARY ".totmtk AS dtotmtk, " VRSUMMARY ".totltm AS totltm, " VRSUMMARY ".totmtm AS dtotmtm, " VRSUMMARY ".totmtg AS dtotmtg, " VRSUMMARY ".totmtt AS dtotmtt, " VRSUMMARY ".totsize AS dtotsize, " VRSUMMARY ".minctime AS dminctime, " VRSUMMARY ".maxctime AS dmaxctime, " VRSUMMARY ".minmtime AS dminmtime, " VRSUMMARY ".maxmtime AS dmaxmtime, " VRSUMMARY ".minatime AS dminatime, " VRSUMMARY ".maxatime AS dmaxatime, " VRSUMMARY ".minblocks AS dminblocks, " VRSUMMARY ".maxblocks AS dmaxblocks, " VRSUMMARY ".totxattr AS dtotxattr, " VRSUMMARY ".depth AS ddepth, " VRSUMMARY ".mincrtime AS dmincrtime, " VRSUMMARY ".maxcrtime AS dmaxcrtime, " VRSUMMARY ".rollupscore AS sroll, " VRSUMMARY ".isroot AS atroot, " VRSUMMARY ".srollsubdirs AS srollsubdirs, " PENTRIES ".* FROM " VRSUMMARY ", " PENTRIES " WHERE " VRSUMMARY ".inode == " PENTRIES ".pinode;";
+    VRPENTRIES_SCHEMA(VRPENTRIES);
 
 const char TREESUMMARY_EXISTS[] =
     "SELECT name FROM sqlite_master WHERE (type == 'table') AND (name == '" TREESUMMARY "');";

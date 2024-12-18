@@ -84,6 +84,7 @@ set(BINARIES
   gufi_treesummary_all
   gufi_query
   gufi_stat_bin
+  gufi_vt
   querydbs
 )
 

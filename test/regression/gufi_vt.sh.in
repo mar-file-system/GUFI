@@ -61,32 +61,32 @@
 
 
 
-# build and install jemalloc
-
 set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-# Assume all paths exist
+OUTPUT="gufi_vt.out"
 
-jemalloc_name="jemalloc"
-jemalloc_prefix="${INSTALL_DIR}/${jemalloc_name}"
-if [[ ! -d "${jemalloc_prefix}" ]]; then
-    jemalloc_build="${BUILD_DIR}/jemalloc-master"
-    if [[ ! -d "${jemalloc_build}" ]]; then
-        jemalloc_tarball="${DOWNLOAD_DIR}/jemalloc.tar.gz"
-        if [[ ! -f "${jemalloc_tarball}" ]]; then
-            wget https://github.com/jemalloc/jemalloc/archive/master.tar.gz -O "${jemalloc_tarball}"
-        fi
+BUILD="@CMAKE_BINARY_DIR@/"
 
-        tar -xf "${jemalloc_tarball}" -C "${BUILD_DIR}"
-    fi
+(
+    for name in summary entries
+    do
+        sql=$(
+            echo ".load @CMAKE_BINARY_DIR@/src/gufi_vt"
 
-    cd "${jemalloc_build}"
-    ./autogen.sh
-    mkdir -p build
-    cd build
-    if [[ ! -f Makefile ]]; then
-        ../configure --prefix="${jemalloc_prefix}" --disable-initial-exec-tls
-    fi
-    make -j "${THREADS}"
-    make -i install
-fi
+            echo "CREATE VIRTUAL TABLE ${name} USING gufi_vt_${name}(${INDEXROOT}, ${THREADS});"
+            echo "SELECT name, size, mtime FROM ${name} ORDER BY name ASC;"
+           )
+
+        echo "# Query ${name}"
+        echo "("
+        echo "${sql}"
+        echo ") | ${SQLITE3}"
+        echo
+        echo "${sql}" | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}"
+        echo
+    done
+) | sed "s/${BUILD//\//\\/}//g;" | replace | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_vt.expected "${OUTPUT}"
+rm "${OUTPUT}"
