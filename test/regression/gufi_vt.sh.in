@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,154 +61,73 @@
 
 
 
-cmake_minimum_required(VERSION 3.5.0)
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-# regression test specific files
-set(CORE
-  generatetree.sh
-  os_setfattr.sh
-  setup.sh
-)
+OUTPUT="gufi_vt.out"
 
-foreach(NAME ${CORE})
-  configure_file("${NAME}.in" "${NAME}" @ONLY)
-endforeach()
+query_vt() {
+    sql="$1"
+    LOAD=".load @CMAKE_BINARY_DIR@/src/gufi_vt"
+    echo "$ ("
+    echo "    echo \"${LOAD}\""
+    echo "    echo \"${sql}\""
+    echo ") | ${SQLITE3}"
+    (
+        echo "${LOAD}"
+        echo "${sql}"
+    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}" 2>&1
+    echo
+}
 
-set(BINARIES
-  gufi_sqlite3
-  gufi_dir2index
-  gufi_dir2trace
-  gufi_index2dir
-  gufi_trace2dir
-  gufi_trace2index
-  gufi_treesummary
-  gufi_treesummary_all
-  gufi_query
-  gufi_stat_bin
-  gufi_vt
-  querydbs
-)
+(
+echo "# Generate treesummary tables in all directories"
+run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | sed '/^Started .*$/d'
 
-set(PYTHON
-  gufi_find
-  gufi_getfattr
-  gufi_ls
-  gufi_stat
-  gufi_stats
-)
+echo "# Query treesummary"
+query_vt "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('${INDEXROOT}', ${THREADS}) ORDER BY minsize ASC, maxsize ASC;"
 
-set(EXAMPLES
-  deluidgidsummaryrecs
-  generategidsummary
-  generateuidsummary
-  gengidsummaryavoidentriesscan
-  genuidsummaryavoidentriesscan
-  groupfilespacehog
-  groupfilespacehogusesummary
-  oldbigfiles
-  userfilespacehog
-  userfilespacehogusesummary
-)
+for name in summary entries pentries vrsummary vrpentries
+do
+    echo "# Query ${name}"
+    query_vt "SELECT name, size, mtime FROM gufi_vt_${name}('${INDEXROOT}', ${THREADS}) ORDER BY name ASC, size ASC;"
+done
 
-set(OTHERS
-  bash_completion
-  deploy
-  external_databases
-  longitudinal_snapshot
-  parallel_cpr
-  parallel_rmr
-  treediff
-)
+echo "# Query with WHERE size < 10"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size < 10 ORDER BY name ASC, size ASC;"
 
-if (ZLIB_FOUND)
-  list(APPEND OTHERS
-    compression
-  )
-endif()
+echo "# Query with WHERE size > 10"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size > 10 ORDER BY name ASC, size ASC;"
 
-if (CMAKE_CXX_COMPILER)
-  list(APPEND OTHERS
-    verifytrace
-    verifytraceintree
-  )
-endif()
+echo "# Query entries in directory where name == 'directory'"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, NULL, NULL, 'SELECT NULL FROM summary WHERE name == ''directory'';') ORDER BY name ASC, size ASC;"
 
-# .sh and .expected
-set(SH_AND_EXPECTED
-  ${BINARIES}
-  ${PYTHON}
-  ${EXAMPLES}
-  ${OTHERS}
-)
+echo "# Query directories that contain entries larger than 1024 (only 1: ${INDEXROOT})"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, NULL, NULL, 'SELECT NULL FROM summary WHERE maxsize > 1024;') ORDER BY name ASC, size ASC;"
 
-configure_file(gufi_tool.py.in gufi_tool.py)
+echo "# Missing thread count (not an error)"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}') ORDER BY name ASC, size ASC;"
 
-foreach(NAME ${SH_AND_EXPECTED})
-  configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
+echo "# NULL thread count (not an error)"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
 
-  add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
-    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-endforeach()
+echo "# Place results in a specific directory"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, '@TEST_WORKING_DIRECTORY@') ORDER BY name ASC, size ASC;"
 
-foreach(NAME ${BINARIES})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;binary")
-endforeach()
+echo "# Make sure all types work"
+query_vt "SELECT rowid, 1, 1.0, 'text', CAST('blob' AS BLOB), NULL FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) LIMIT 5;"
 
-foreach(NAME ${EXAMPLES})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;examples")
-endforeach()
+set +e
+echo "# Missing indexroot (error)"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries();"
 
-foreach(NAME ${OTHERS})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression")
-endforeach()
+echo "# Empty string thread count (error)"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;"
 
-foreach(NAME ${PYTHON})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;python")
-endforeach()
+echo "# Zero thread count (error)"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
+set -e
+) | replace | tee "${OUTPUT}"
 
-find_program(SUDO sudo)
-if (SUDO)
-  if (APPLE)
-    set(SUDO sudo)
-  endif()
-
-  set(ENABLE_SUDO_TESTS Off CACHE BOOL "Whether or not to enable tests that need sudo")
-  if (ENABLE_SUDO_TESTS)
-    configure_file("rollup_tree.sh.in" "rollup_tree.sh" @ONLY)
-
-    set(SUDO_BINARIES
-      gufi_rollup
-      gufi_unrollup
-    )
-
-    set(SUDO_OTHERS
-      xattrs
-    )
-
-    # .sh and .expected
-    set(NEED_SUDO
-      ${SUDO_BINARIES}
-      ${SUDO_OTHERS}
-    )
-
-    foreach(NAME ${NEED_SUDO})
-      configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-      configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
-
-      add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
-        WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-    endforeach()
-
-    foreach(NAME ${SUDO_BINARIES})
-      set_tests_properties("${NAME}" PROPERTIES LABELS "regression;sudo;binary")
-    endforeach()
-
-    foreach(NAME ${SUDO_OTHERS})
-      set_tests_properties("${NAME}" PROPERTIES LABELS "regression;sudo")
-    endforeach()
-
-  endif()
-else()
-  message(STATUS "sudo executable not found. Not running tests requiring sudo.")
-endif()
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_vt.expected "${OUTPUT}"
+rm "${OUTPUT}"

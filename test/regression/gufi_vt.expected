@@ -1,0 +1,241 @@
+# Generate treesummary tables in all directories
+$ gufi_treesummary_all "prefix"
+
+# Query treesummary
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('prefix', 2) ORDER BY minsize ASC, maxsize ASC;"
+) | sqlite3
+
+
+
+
+
+
+-1|0|-1|0
+0|1048576|0|1048576
+1|5|1|5
+5|5|4|5
+11|12|11|12
+15|15|15|15
+
+# Query summary
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_summary('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+directory|7|7
+empty_directory|8|8
+leaf_directory|13|13
+prefix|17|17
+subdirectory|6|6
+unusual#? directory ,|16|16
+
+# Query entries
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_entries('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+leaf_file1|11|11
+leaf_file2|12|12
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+repeat_name|14|14
+unusual, name?#|15|15
+writable|3|3
+
+# Query pentries
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+leaf_file1|11|11
+leaf_file2|12|12
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+repeat_name|14|14
+unusual, name?#|15|15
+writable|3|3
+
+# Query vrsummary
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_vrsummary('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+directory|7|7
+empty_directory|8|8
+leaf_directory|13|13
+prefix|17|17
+subdirectory|6|6
+unusual#? directory ,|16|16
+
+# Query vrpentries
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_vrpentries('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+leaf_file1|11|11
+leaf_file2|12|12
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+repeat_name|14|14
+unusual, name?#|15|15
+writable|3|3
+
+# Query with WHERE size < 10
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix', 2) WHERE size < 10 ORDER BY name ASC, size ASC;"
+) | sqlite3
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+writable|3|3
+
+# Query with WHERE size > 10
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix', 2) WHERE size > 10 ORDER BY name ASC, size ASC;"
+) | sqlite3
+1KB|1024|1024
+1MB|1048576|1048576
+leaf_file1|11|11
+leaf_file2|12|12
+repeat_name|14|14
+unusual, name?#|15|15
+
+# Query entries in directory where name == 'directory'
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix', 2, NULL, NULL, NULL, 'SELECT NULL FROM summary WHERE name == ''directory'';') ORDER BY name ASC, size ASC;"
+) | sqlite3
+
+executable|1|1
+readonly|2|2
+writable|3|3
+
+# Query directories that contain entries larger than 1024 (only 1: prefix)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix', 2, NULL, NULL, NULL, 'SELECT NULL FROM summary WHERE maxsize > 1024;') ORDER BY name ASC, size ASC;"
+) | sqlite3
+
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+file_symlink|9|9
+old_file|0|0
+repeat_name|14|14
+
+# Missing thread count (not an error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix') ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+leaf_file1|11|11
+leaf_file2|12|12
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+repeat_name|14|14
+unusual, name?#|15|15
+writable|3|3
+
+# NULL thread count (not an error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix', NULL) ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+leaf_file1|11|11
+leaf_file2|12|12
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+repeat_name|14|14
+unusual, name?#|15|15
+writable|3|3
+
+# Place results in a specific directory
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix', 2, 'test') ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+leaf_file1|11|11
+leaf_file2|12|12
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+repeat_name|14|14
+unusual, name?#|15|15
+writable|3|3
+
+# Make sure all types work
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT 1, 1.0, 'text', CAST('blob' AS BLOB), NULL FROM gufi_vt_pentries('prefix', 2) LIMIT 1;"
+) | sqlite3
+1|1.0|text|blob|
+
+# Missing indexroot (error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries();"
+) | sqlite3
+Parse error near line 2: no query solution
+
+# Empty string thread count (error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix', '') ORDER BY name ASC, size ASC;"
+) | sqlite3
+Runtime error near line 2: Bad thread count: '' (19)
+
+# Zero thread count (error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, mtime FROM gufi_vt_pentries('prefix', 0) ORDER BY name ASC, size ASC;"
+) | sqlite3
+Runtime error near line 2: Bad thread count: '0' (19)
+
