@@ -211,6 +211,12 @@ build_and_install_one(${BIN} TRUE gufi_query
   $<TARGET_OBJECTS:gufi_query_lib>
 )
 
+# build custom SQLite virtual tables
+add_library(gufi_vt SHARED gufi_vt.c)
+set_target_properties(gufi_vt PROPERTIES PREFIX "")
+add_dependencies(gufi_vt install_dependencies)
+install(TARGETS gufi_vt DESTINATION ${LIB} COMPONENT Server)
+
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
 build_and_install(${BIN} FALSE ${MISC_SOURCES})

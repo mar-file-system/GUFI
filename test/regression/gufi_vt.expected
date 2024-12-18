@@ -1,0 +1,94 @@
+# Query summary
+(
+.load src/gufi_vt
+CREATE VIRTUAL TABLE summary USING gufi_vt_summary(prefix, 2);
+SELECT name, size, mtime FROM summary ORDER BY name ASC, size ASC;
+) | sqlite3
+
+directory|7|7
+empty_directory|8|8
+leaf_directory|13|13
+prefix|17|17
+subdirectory|6|6
+unusual#? directory ,|16|16
+
+# Query entries
+(
+.load src/gufi_vt
+CREATE VIRTUAL TABLE entries USING gufi_vt_entries(prefix, 2);
+SELECT name, size, mtime FROM entries ORDER BY name ASC, size ASC;
+) | sqlite3
+
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+leaf_file1|11|11
+leaf_file2|12|12
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+repeat_name|14|14
+unusual, name?#|15|15
+writable|3|3
+
+# Query pentries
+(
+.load src/gufi_vt
+CREATE VIRTUAL TABLE pentries USING gufi_vt_pentries(prefix, 2);
+SELECT name, size, mtime FROM pentries ORDER BY name ASC, size ASC;
+) | sqlite3
+
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+leaf_file1|11|11
+leaf_file2|12|12
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+repeat_name|14|14
+unusual, name?#|15|15
+writable|3|3
+
+# Query vrsummary
+(
+.load src/gufi_vt
+CREATE VIRTUAL TABLE vrsummary USING gufi_vt_vrsummary(prefix, 2);
+SELECT name, size, mtime FROM vrsummary ORDER BY name ASC, size ASC;
+) | sqlite3
+
+directory|7|7
+empty_directory|8|8
+leaf_directory|13|13
+prefix|17|17
+subdirectory|6|6
+unusual#? directory ,|16|16
+
+# Query vrpentries
+(
+.load src/gufi_vt
+CREATE VIRTUAL TABLE vrpentries USING gufi_vt_vrpentries(prefix, 2);
+SELECT name, size, mtime FROM vrpentries ORDER BY name ASC, size ASC;
+) | sqlite3
+
+.hidden|10|10
+1KB|1024|1024
+1MB|1048576|1048576
+directory_symlink|4|4
+executable|1|1
+file_symlink|9|9
+leaf_file1|11|11
+leaf_file2|12|12
+old_file|0|0
+readonly|2|2
+repeat_name|5|5
+repeat_name|14|14
+unusual, name?#|15|15
+writable|3|3
+
