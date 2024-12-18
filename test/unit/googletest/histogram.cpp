@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include <gtest/gtest.h>
 
 #include "bf.h"
+#include "dbutils.h"
 #include "histogram.h"
 
 static void setup_db(sqlite3 **db) {

@@ -815,3 +815,81 @@ TEST(bottomup_collect_treesummary, nullptr) {
     sll_destroy(&sll, nullptr);
     EXPECT_EQ(rmdir(dirname), 0);
 }
+
+static const char CREATE_TABLE_TEST[] = "CREATE TABLE test(i INT, f FLOAT, t TEXT, b BLOB, n NULL, d DATE);";
+
+TEST(get_col_types, have_cols) {
+    sqlite3 *db = nullptr;
+    refstr_t str = {};
+    int cols = 0;
+
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db,
+                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                              nullptr), SQLITE_OK);
+
+    ASSERT_EQ(sqlite3_exec(db, CREATE_TABLE_TEST,
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+
+    str.data = "SELECT * FROM test;";
+    str.len = strlen(str.data);
+
+    int *types = get_col_types(db, &str, &cols);
+    ASSERT_NE(types, nullptr);
+
+    const int expected[] = { SQLITE_INTEGER, SQLITE_FLOAT, SQLITE_TEXT, SQLITE_BLOB, SQLITE_NULL, 0};
+    EXPECT_EQ((std::size_t) cols, sizeof(expected) / sizeof(expected[0]));
+
+    for(std::size_t i = 0; i < (sizeof(expected) / sizeof(expected[0])); i++) {
+        EXPECT_EQ(types[i], expected[i]);
+    }
+
+    free(types);
+
+    sqlite3_close(db);
+}
+
+TEST(get_col_types, no_cols) {
+    sqlite3 *db = nullptr;
+    refstr_t str = {};
+    int cols = 0;
+
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db,
+                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                              nullptr), SQLITE_OK);
+
+    ASSERT_EQ(sqlite3_exec(db, CREATE_TABLE_TEST,
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+
+    str.data = "INSERT INTO test (i) VALUES (0);";
+    str.len = strlen(str.data);
+
+    int *types = get_col_types(db, &str, &cols);
+    EXPECT_EQ(types, nullptr);
+
+    sqlite3_close(db);
+}
+
+TEST(get_col_types, bad) {
+    sqlite3 *db = nullptr;
+    refstr_t str = {};
+    int cols = 0;
+
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db,
+                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                              nullptr),
+              SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, CREATE_TABLE_TEST,
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+
+    EXPECT_EQ(get_col_types(nullptr, &str, &cols), nullptr);
+    EXPECT_EQ(get_col_types(db,      &str, &cols), nullptr);
+    // &cols == nullptr will break
+
+    str.data = "bad SQL";
+    str.len = strlen(str.data);
+
+    int *types = get_col_types(db, &str, &cols);
+    EXPECT_EQ(types, nullptr);
+
+    sqlite3_close(db);
+}

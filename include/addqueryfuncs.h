@@ -62,83 +62,63 @@ OF SUCH DAMAGE.
 
 
 
-#include <stdio.h>
+#ifndef ADDQUERYFUNCS_H
+#define ADDQUERYFUNCS_H
 
-#include "gufi_query/validate_inputs.h"
+#include <sqlite3.h>
 
-int validate_inputs(struct input *in) {
-    /*
-     * - Leaves are final outputs
-     * - OUTFILE/OUTDB + aggregation will create per thread and final aggregation files
-     *
-     *                         init                       | if writing to outdb or aggregating
-     *                          |                         | -I CREATE [TEMP] TABLE <name>
-     *                          |
-     *                          |                         | if aggregating, create an aggregate table
-     *                          |                         | -K CREATE [TEMP] TABLE <aggregate name>
-     *                          |
-     *   -----------------------------------------------  | start walk
-     *                          |
-     *                       thread
-     *                          |
-     *          -------------------------------
-     *          |               |             |
-     *          |               |       stdout/outfile.*  | -T/-S/-E SELECT FROM <index table>
-     *          |               |
-     *   intermediate db      outdb.*                     | -T/-S/-E INSERT into <name> SELECT FROM <index table>
-     *          |
-     *          |
-     *   -----------------------------------------------  | after walking index
-     *          |
-     *          |                                         | move intermediate results into aggregate table
-     *    aggregate db - outdb                            | -J INSERT INTO <aggregate name>
-     *    |          |
-     * outfile     stdout                                 | Get final results
-     *                                                    | -G SELECT * FROM <aggregate name>
-     */
-     if ((in->output == OUTDB) || in->sql.init_agg.len) {
-        /* -I (required) */
-        if (!in->sql.init.len) {
-            fprintf(stderr, "Error: Missing -I\n");
-            return -1;
-        }
-    }
+#include "bf.h"
+#include "histogram.h"
 
-    /* not aggregating */
-    if (!in->sql.init_agg.len) {
-        if (in->sql.intermediate.len) {
-            fprintf(stderr, "Warning: Got -J even though not aggregating. Ignoring\n");
-        }
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-        if (in->sql.agg.len) {
-            fprintf(stderr, "Warning: Got -G even though not aggregating. Ignoring\n");
-        }
-    }
-    /* aggregating */
-    else {
-        /* need -J to write to aggregate db */
-        if (!in->sql.intermediate.len) {
-            fprintf(stderr, "Error: Missing -J\n");
-            return -1;
-        }
+/* list of functions to add to a SQLite3 db handle that do not have user data/context */
 
-        if ((in->output == STDOUT) || (in->output == OUTFILE)) {
-            /* need -G to write out results */
-            if (!in->sql.agg.len) {
-                fprintf(stderr, "Error: Missing -G\n");
-                return -1;
-            }
-        }
-        /* -G can be called when aggregating, but is not necessary */
-    }
+void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv);
+void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv);
+void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv);
+void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv);
+void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv);
+void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv);
+void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv);
+void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv);
+void stdevs_final(sqlite3_context *context);
+void stdevp_final(sqlite3_context *context);
+void median_step(sqlite3_context *context, int argc, sqlite3_value **argv);
+void median_final(sqlite3_context *context);
 
-    /* -Q requires -I */
-    if (sll_get_size(&in->external_attach)) {
-        if (!in->sql.init.len) {
-            fprintf(stderr, "External databases require template files attached with -I\n");
-            return -1;
-        }
-    }
-
-    return 0;
+static inline int addqueryfuncs(sqlite3 *db) {
+    return !(
+        (sqlite3_create_function(db,   "uidtouser",           1,   SQLITE_UTF8,
+                                 NULL, &uidtouser,                 NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "gidtogroup",          1,   SQLITE_UTF8,
+                                 NULL, &gidtogroup,                NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "modetotxt",           1,   SQLITE_UTF8,
+                                 NULL, &modetotxt,                 NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "strftime",            2,   SQLITE_UTF8,
+                                 NULL, &sqlite3_strftime,          NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "blocksize",           2,   SQLITE_UTF8,
+                                 NULL, &blocksize,                 NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "human_readable_size", 1,   SQLITE_UTF8,
+                                 NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
+                                 NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
+                                 NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "stdevp",              1,   SQLITE_UTF8,
+                                 NULL, NULL,  stdev_step,          stdevp_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "median",              1,   SQLITE_UTF8,
+                                 NULL, NULL,  median_step,         median_final) == SQLITE_OK) &&
+        addhistfuncs(db)
+        );
 }
+
+int addqueryfuncs_with_context(sqlite3 *db, struct work *work);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

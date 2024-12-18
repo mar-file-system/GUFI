@@ -124,6 +124,10 @@ struct input *input_init(struct input *in) {
 
 void input_fini(struct input *in) {
     if (in) {
+        free(in->types.agg);
+        free(in->types.ent);
+        free(in->types.sum);
+        free(in->types.tsum);
         sll_destroy(&in->external_attach, free);
         trie_free(in->skip);
     }
@@ -156,6 +160,7 @@ void print_help(const char* prog_name,
       case 'd': printf("  -d <delim>             delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
       case 'o': printf("  -o <out_fname>         output file (one-per-thread, with thread-id suffix)"); break;
       case 'O': printf("  -O <out_DB>            output DB"); break;
+      case 'u': printf("  -u                     prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
       case 'I': printf("  -I <SQL_init>          SQL init"); break;
       case 'T': printf("  -T <SQL_tsum>          SQL for tree-summary table"); break;
       case 'S': printf("  -S <SQL_sum>           SQL for summary table"); break;
@@ -208,6 +213,7 @@ void show_input(struct input* in, int retval) {
    printf("in.maxthreads               = %zu\n",           in->maxthreads);
    printf("in.delim                    = '%c'\n",          in->delim);
    printf("in.andor                    = %d\n",            (int) in->andor);
+   printf("in.types.prefix             = %d\n",            in->types.prefix);
    printf("in.process_xattrs           = %d\n",            in->process_xattrs);
    printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
    printf("in.nobody.gid               = %" STAT_gid "\n", in->nobody.gid);
@@ -351,6 +357,10 @@ int parse_cmd_line(int         argc,
       case 'O':
          in->output = OUTDB;
          INSTALL_STR(&in->outname, optarg);
+         break;
+
+      case 'u':
+         in->types.prefix = 1;
          break;
 
       case 'I':               // SQL initializations

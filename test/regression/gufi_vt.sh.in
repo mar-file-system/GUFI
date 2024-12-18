@@ -64,12 +64,13 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-OUTPUT="gufi_sqlite3.out"
+OUTPUT="gufi_vt.out"
 
-DBNAME="test.db"
+LOAD=".load @CMAKE_BINARY_DIR@/src/gufi_vt"
+BADDIR=$(mktemp -d "${INDEXROOT}.XXXXXX")
 
 cleanup() {
-    rm -rf "${DBNAME}"
+    rm -rf "${BADDIR}"
 }
 
 cleanup_exit() {
@@ -81,46 +82,74 @@ trap cleanup_exit EXIT
 
 cleanup
 
+query_vt() {
+    sql="$1"
+    echo "$ ("
+    echo "    echo \"${LOAD}\""
+    echo "    echo \"${sql}\""
+    echo ") | ${SQLITE3}"
+    (
+        echo "${LOAD}"
+        echo "${sql}"
+    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}" 2>&1
+    echo
+}
+
 (
-echo "# ${GUFI_SQLITE3} help" | replace
-run_no_sort "${GUFI_SQLITE3} -h"
+echo "# Generate treesummary tables in all directories"
+run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | sed '/^Started .*$/d'
 
-echo "# new db file + argv"
-run_no_sort "${GUFI_SQLITE3} \"${DBNAME}\"" \
-            "\"CREATE TABLE new_table(i INT);\"" \
-            "\"INSERT INTO new_table VALUES (0), (1), (2);\""
+echo "# Query treesummary"
+query_vt "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('${INDEXROOT}', ${THREADS}) ORDER BY minsize ASC, maxsize ASC;"
 
-echo "# existing db file + argv"
-run_no_sort "${GUFI_SQLITE3} \"${DBNAME}\"" \
-            "\"SELECT * FROM new_table ORDER BY i DESC;\""
+for name in summary entries pentries vrsummary vrpentries
+do
+    echo "# Query ${name}"
+    query_vt "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_${name}('${INDEXROOT}', ${THREADS}) ORDER BY name ASC, size ASC;"
+done
 
-run_no_sort "rm -f \"${DBNAME}\""
+echo "# Query with WHERE size < 10"
+query_vt "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size < 10 ORDER BY name ASC, size ASC;"
 
-echo "# new db file + stdin"
-run_no_sort "(echo \"CREATE TABLE new_table(i INT);\";" \
-            "echo \"INSERT INTO new_table VALUES (3), (4), (5);\") |" \
-            "${GUFI_SQLITE3} \"${DBNAME}\""
+echo "# Query with WHERE size > 10"
+query_vt "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size > 10 ORDER BY name ASC, size ASC;"
 
-echo "# existing db file + stdin"
-run_no_sort "echo \"SELECT * FROM new_table ORDER BY i DESC;\" |" \
-            "${GUFI_SQLITE3} \"${DBNAME}\""
+echo "# Query entries in directory where name == 'directory'"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') ORDER BY name ASC, size ASC;"
 
-echo "# in-memory db"
-run_no_sort "(echo \"CREATE TABLE new_table(i INT);\";" \
-            "echo \"INSERT INTO new_table VALUES (6), (7), (8);\";" \
-            "echo \"SELECT * FROM new_table ORDER BY i DESC;\") |" \
-            "${GUFI_SQLITE3}"
+echo "# Query directories that contain entries larger than 1024 (only 1: ${INDEXROOT})"
+query_vt "SELECT rowid, name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;"
 
-echo "# directory as db"
-run_no_sort "${GUFI_SQLITE3} \"${SEARCH}\""
+echo "# Paths"
+query_vt "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
 
-echo "# virtual table"
-PATH="@CMAKE_BINARY_DIR@/src:${PATH}" run_no_sort "echo \"SELECT size, path || '/' || name FROM gufi_vt_pentries('${INDEXROOT}') ORDER BY size ASC;\" | ${GUFI_SQLITE3} -d \"|\""
+echo "# Make sure all types work"
+query_vt "SELECT name, size, size * 1.0, CAST(name AS BLOB), NULL FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
 
-echo "# bad SQL"
-run_no_sort "(echo \"CREATE TABLE;\") |" \
-            "${GUFI_SQLITE3}"
-) |& tee "${OUTPUT}"
+echo "# Missing thread count (not an error)"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}') ORDER BY name ASC, size ASC;"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_sqlite3.expected "${OUTPUT}"
+echo "# NULL thread count (not an error)"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
+
+set +e
+echo "# Missing indexroot (error)"
+query_vt "SELECT name FROM gufi_vt_pentries();"
+
+echo "# Bad indexroot"
+rm -rf "${BADDIR}"
+query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | sed "s/${BADDIR//\//\\/}/baddir/g"
+
+echo "# Empty string thread count (error)"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;"
+
+echo "# Zero thread count (error)"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
+
+echo "# Bad SQL"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL, 'bad SQL') ORDER BY name ASC, size ASC;"
+set -e
+) | replace | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_vt.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -72,15 +73,24 @@ int print_parallel(void *args, int count, char **data, char **columns) {
 
     PrintArgs_t *print = (PrintArgs_t *) args;
     struct OutputBuffer *ob = print->output_buffer;
+    const int *types = print->types;
 
     size_t *lens = malloc(count * sizeof(size_t));
-    size_t row_len = count - 1 + 1; /* one delimiter per column except last column + newline */
+    size_t row_len = 0;
     for(int i = 0; i < count; i++) {
         lens[i] = 0;
         if (data[i]) {
             lens[i] = strlen(data[i]);
             row_len += lens[i];
         }
+    }
+
+    if (types) {
+        row_len += sizeof(count);                            /* start row with column count */
+        row_len += count * (sizeof(char) + sizeof(size_t));  /* type and length per column */
+    }
+    else {
+        row_len += count - 1 + 1; /* one delimiter per column except last column + newline */
     }
 
     /* if a row cannot fit the buffer for whatever reason, flush the existing buffer */
@@ -100,16 +110,47 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         if (print->mutex) {
             pthread_mutex_lock(print->mutex);
         }
+
+        /* write column count */
+        if (types) {
+            fwrite(&count, sizeof(char), sizeof(count), print->outfile);
+        }
+
         const int last = count - 1;
         for(int i = 0; i < last; i++) {
+            if (types) {
+                const char col_type = types[i];
+                fwrite(&col_type, sizeof(char), sizeof(col_type), print->outfile);
+
+                fwrite(&lens[i], sizeof(char), sizeof(lens[i]), print->outfile);
+            }
+
             if (data[i]) {
                 fwrite(data[i], sizeof(char), lens[i], print->outfile);
             }
-            fwrite(&print->delim, sizeof(char), 1, print->outfile);
+
+            if (!types) {
+                fwrite(&print->delim, sizeof(char), 1, print->outfile);
+            }
         }
+
         /* print last column with no follow up delimiter */
-        fwrite(data[last], sizeof(char), lens[last], print->outfile);
-        fwrite("\n", sizeof(char), 1, print->outfile);
+
+        if (types) {
+            const char col_type = types[last];
+            fwrite(&col_type, sizeof(char), sizeof(col_type), print->outfile);
+
+            fwrite(&lens[last], sizeof(char), sizeof(lens[last]), print->outfile);
+        }
+
+        if (data[last]) {
+            fwrite(data[last], sizeof(char), lens[last], print->outfile);
+        }
+
+        if (!types) {
+            fwrite("\n", sizeof(char), 1, print->outfile);
+        }
+
         ob->count++;
         if (print->mutex) {
             pthread_mutex_unlock(print->mutex);
@@ -121,18 +162,37 @@ int print_parallel(void *args, int count, char **data, char **columns) {
     else {
         char *buf = ob->buf;
         size_t filled = ob->filled;
+
+        /* write column count */
+        if (types) {
+            memcpy(&buf[filled], &count, sizeof(count));
+            filled += sizeof(count);
+        }
+
         for(int i = 0; i < count; i++) {
+            if (types) {
+                buf[filled] = types[i];
+                filled++;
+
+                memcpy(&buf[filled], &lens[i], sizeof(lens[i]));
+                filled += sizeof(lens[i]);
+            }
+
             if (data[i]) {
                 memcpy(&buf[filled], data[i], lens[i]);
                 filled += lens[i];
             }
 
-            buf[filled] = print->delim;
-            filled++;
+            if (!types) {
+                buf[filled] = print->delim;
+                filled++;
+            }
         }
 
-        /* replace final delimiter with newline */
-        buf[filled - 1] = '\n';
+        if (!types) {
+            /* replace final delimiter with newline */
+            buf[filled - 1] = '\n';
+        }
 
         ob->filled = filled;
         ob->count++;

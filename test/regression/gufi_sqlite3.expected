@@ -43,6 +43,23 @@ $ (echo "CREATE TABLE new_table(i INT);"; echo "INSERT INTO new_table VALUES (6)
 $ gufi_sqlite3 "search"
 Error: Could not open database file "search"
 
+# virtual table
+$ echo "SELECT size, path || '/' || name FROM gufi_vt_pentries('prefix') ORDER BY size ASC;" | gufi_sqlite3 -d "|"
+0|prefix/old_file
+1|prefix/directory/executable
+2|prefix/directory/readonly
+3|prefix/directory/writable
+4|prefix/directory/subdirectory/directory_symlink
+5|prefix/directory/subdirectory/repeat_name
+9|prefix/file_symlink
+10|prefix/.hidden
+11|prefix/leaf_directory/leaf_file1
+12|prefix/leaf_directory/leaf_file2
+14|prefix/repeat_name
+15|prefix/unusual#? directory ,/unusual, name?#
+1024|prefix/1KB
+1048576|prefix/1MB
+
 # bad SQL
 $ (echo "CREATE TABLE;") | gufi_sqlite3
 Error: SQL error: near ";": syntax error

@@ -228,7 +228,8 @@ int process_queries(PoolArgs_t *pa,
         if (in->sql.sum.len) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
             /* put in the path relative to the user's input */
-            querydb(&gqw->work, dbname, dbname_len, db, in->sql.sum.data, pa, id, print_parallel, &recs);
+            querydb(&gqw->work, dbname, dbname_len, db, in->sql.sum.data,
+                    in->types.sum, pa, id, print_parallel, &recs);
         } else {
             recs = 1;
         }
@@ -238,7 +239,8 @@ int process_queries(PoolArgs_t *pa,
         /* if we have recs (or are running an OR) query the entries table */
         if (recs > 0) {
             if (in->sql.ent.len) {
-                querydb(&gqw->work, dbname, dbname_len, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
+                querydb(&gqw->work, dbname, dbname_len, db, in->sql.ent.data,
+                        in->types.ent, pa, id, print_parallel, &recs); /* recs is not used */
             }
         }
     }

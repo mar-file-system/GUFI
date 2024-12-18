@@ -157,12 +157,14 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
 
     /* normally expect STDOUT/OUTFILE to have SQL to run, but OUTDB can have SQL to run as well */
     if ((in->output != OUTDB) || in->sql.agg.len) {
-        PrintArgs_t pa;
-        pa.output_buffer = &aggregate->ob;
-        pa.delim = in->delim;
-        pa.mutex = NULL;
-        pa.outfile = aggregate->outfile;
-        pa.rows = 0;
+        PrintArgs_t pa = {
+            .output_buffer = &aggregate->ob,
+            .delim = in->delim,
+            .mutex = NULL,
+            .outfile = aggregate->outfile,
+            .rows = 0,
+            .types = in->types.agg,
+        };
 
         char *err = NULL;
         if (sqlite3_exec(aggregate->db, in->sql.agg.data, print_parallel, &pa, &err) != SQLITE_OK) {

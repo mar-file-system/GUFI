@@ -178,6 +178,24 @@ struct input {
        refstr_t fin;
    } sql;
 
+   /*
+    * if outputting to STDOUT or OUTFILE, get list of
+    * types of final output to prefix columns with
+    *
+    * set up by gufi_query but cleaned up by input_fini
+    */
+   struct {
+       int prefix;
+
+       /* set if not aggregating */
+       int *tsum;
+       int *sum;
+       int *ent;
+
+       /* set if aggregating */
+       int *agg;
+   } types;
+
    int  printdir;
    int  printing;
    int  printheader;
