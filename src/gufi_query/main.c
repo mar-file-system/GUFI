@@ -78,8 +78,8 @@ OF SUCH DAMAGE.
 
 #include "gufi_query/aggregate.h"
 #include "gufi_query/gqw.h"
+#include "gufi_query/handle_sql.h"
 #include "gufi_query/processdir.h"
-#include "gufi_query/validate_inputs.h"
 
 static void sub_help(void) {
    printf("GUFI_index        find GUFI index here\n");
@@ -93,9 +93,9 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    process_args_and_maybe_exit("hHvT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:s:" COMPRESS_OPT "Q:", 1, "GUFI_index ...", &in);
+    process_args_and_maybe_exit("hHvT:S:E:an:jo:d:O:uI:F:y:z:J:K:G:mB:wxk:M:s:" COMPRESS_OPT "Q:", 1, "GUFI_index ...", &in);
 
-    if (validate_inputs(&in) != 0) {
+    if (handle_sql(&in) != 0) {
         input_fini(&in);
         return EXIT_FAILURE;
     }

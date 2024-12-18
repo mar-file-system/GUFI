@@ -62,36 +62,11 @@ OF SUCH DAMAGE.
 
 
 
-#include "gufi_query/query.h"
-#include "print.h"
-#include "utils.h"
+#ifndef GUFI_QUERY_HANDLE_SQL_H
+#define GUFI_QUERY_HANDLE_SQL_H
 
-/* wrapper wround sqlite3_exec to pass arguments and check for errors */
-void querydb(struct work *work,
-             const char *dbname, const size_t dbname_len,
-             sqlite3 *db, const char *query, int *types,
-             PoolArgs_t *pa, int id,
-             int (*callback)(void *, int, char **, char**), int *rc) {
-    ThreadArgs_t *ta = &pa->ta[id];
-    PrintArgs_t args = {
-        .output_buffer = &ta->output_buffer,
-        .delim = pa->in->delim,
-        .mutex = pa->stdout_mutex,
-        .outfile = ta->outfile,
-        .rows = 0,
-        .types = types,
-    };
+#include "bf.h"
 
-    char *err = NULL;
-#ifdef SQL_EXEC
-    if (sqlite3_exec(db, query, callback, &args, &err) != SQLITE_OK) {
-        char buf[MAXPATH];
-        present_user_path(dbname, dbname_len,
-                          &work->root_parent, work->root_basename_len, &work->orig_root,
-                          buf, sizeof(buf));
-        sqlite_print_err_and_free(err, stderr, "Error: %s: %s: \"%s\"\n", err, buf, query);
-    }
+int handle_sql(struct input *in);
+
 #endif
-
-    *rc = args.rows;
-}

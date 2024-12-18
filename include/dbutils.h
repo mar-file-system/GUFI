@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 
 #include "SinglyLinkedList.h"
+#include "addqueryfuncs.h"
 #include "template_db.h"
 #include "utils.h"
 #include "xattrs.h"
@@ -91,18 +92,24 @@ extern const char *SQLITE_MEMORY;
 #define DROP_TABLE(name) "DROP TABLE IF EXISTS " #name ";"
 #define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " #name ";"
 
-#define READDIRPLUS       "readdirplus"
+#define READDIRPLUS      "readdirplus"
+#define READDIRPLUS_SCHEMA(name)                    \
+    "CREATE TABLE " name "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, suspect INT64);"
 extern const char READDIRPLUS_CREATE[];
 extern const char READDIRPLUS_INSERT[];
 
 /* contains all file and link metadata for the current directory */
 /* prefer pentries over entries */
 #define ENTRIES           "entries"
+#define ENTRIES_SCHEMA(name, extra_cols)            \
+    "CREATE TABLE " name "(" extra_cols "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);"
 extern const char ENTRIES_CREATE[];
 extern const char ENTRIES_INSERT[];
 
 /* directory metadata + aggregate data */
 #define SUMMARY           "summary"
+#define SUMMARY_SCHEMA(name, extra_cols)            \
+    "CREATE TABLE " name "(" extra_cols "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode TEXT, isroot INT64, rollupscore INT64);"
 extern const char SUMMARY_CREATE[];
 
 /* view of summary table with rollups */
@@ -111,6 +118,8 @@ extern const char VRSUMMARY_CREATE[];
 
 /* pentries pulled from children */
 #define PENTRIES_ROLLUP   "pentries_rollup"
+#define PENTRIES_ROLLUP_SCHEMA(name)                \
+    "CREATE TABLE " name "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT, pinode TEXT, ppinode TEXT);"
 extern const char PENTRIES_ROLLUP_CREATE[];
 extern const char PENTRIES_ROLLUP_INSERT[];
 
@@ -118,15 +127,19 @@ extern const char PENTRIES_ROLLUP_INSERT[];
 #define PENTRIES          "pentries"
 extern const char PENTRIES_CREATE[];
 
+/* vrentries is not created because rolled up entries tables are not correct */
+
 /* view of pentries view with rollups */
 #define VRPENTRIES        "vrpentries"
 extern const char VRPENTRIES_CREATE[];
 
 /* aggregate data of tree starting at current directory */
 #define TREESUMMARY       "treesummary"
-#define TREESUMMARY_CREATE                                              \
-    DROP_TABLE(TREESUMMARY)                                             \
-    "CREATE TABLE " TREESUMMARY "(inode TEXT, pinode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, totextdbs INT64, rectype INT64, uid INT64, gid INT64);"
+#define TREESUMMARY_SCHEMA(name, extra_cols)        \
+    "CREATE TABLE " name "(" extra_cols "inode TEXT, pinode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, totextdbs INT64, rectype INT64, uid INT64, gid INT64);"
+#define TREESUMMARY_CREATE                          \
+    DROP_TABLE(TREESUMMARY)                         \
+    TREESUMMARY_SCHEMA(TREESUMMARY, "")
 
 extern const char TREESUMMARY_EXISTS[];
 
@@ -202,9 +215,6 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su, int rectype, int uid, int gid);
 
-int addqueryfuncs(sqlite3 *db);
-int addqueryfuncs_with_context(sqlite3 *db, struct work *work);
-
 /* xattr db list item */
 struct xattr_db {
     long long int pinode;
@@ -257,6 +267,8 @@ enum CheckRollupScore {
 
 int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
                                  const enum CheckRollupScore check_rollupscore);
+
+int *get_col_types(sqlite3 *db, const refstr_t *sql, int *cols);
 
 #ifdef __cplusplus
 }

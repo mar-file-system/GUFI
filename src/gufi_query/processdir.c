@@ -214,14 +214,14 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             if (in->andor == AND) {
                 /* make sure the treesummary table exists */
                 querydb(&gqw->work, dbname, dbname_len, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
-                        "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
+                        "WHERE (type == 'table') AND (name == '" TREESUMMARY "');", NULL,
                         pa, id, count_rows, &recs);
                 if (recs < 1) {
                     recs = -1;
                 }
                 else {
                     /* run in->sql.tsum */
-                    querydb(&gqw->work, dbname, dbname_len, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
+                    querydb(&gqw->work, dbname, dbname_len, db, in->sql.tsum.data, in->types.tsum, pa, id, print_parallel, &recs);
                 }
             }
             /* this is an OR or we got a record back. go on to summary/entries */

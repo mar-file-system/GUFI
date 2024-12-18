@@ -95,7 +95,6 @@ int main(int argc, char *argv[]) {
     }
 
     addqueryfuncs(db);
-    addhistfuncs(db);
 
     /* no buffering */
     struct OutputBuffer ob;
@@ -107,6 +106,7 @@ int main(int argc, char *argv[]) {
         .mutex = NULL,
         .outfile = stdout,
         .rows = 0,
+        .types = NULL,
     };
 
     char *err = NULL;

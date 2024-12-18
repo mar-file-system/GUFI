@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,72 +61,74 @@
 
 
 
-name: Codecov
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-on: [push, pull_request]
+OUTPUT="gufi_vt.out"
 
-env:
-  CC: gcc
-  CXX: g++
-  DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -pedantic" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -pedantic -std=c++11" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On -DGCOV=On -DCMAKE_BUILD_TYPE=Debug
+LOAD=".load @CMAKE_BINARY_DIR@/src/gufi_vt"
 
-jobs:
-  CodeCoverage:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+query_vt() {
+    sql="$1"
+    echo "$ ("
+    echo "    echo \"${LOAD}\""
+    echo "    echo \"${sql}\""
+    echo ") | ${SQLITE3}"
+    (
+        echo "${LOAD}"
+        echo "${sql}"
+    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}" 2>&1
+    echo
+}
 
-    - uses: actions/cache@v4
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-CodeCoverage
+(
+echo "# Generate treesummary tables in all directories"
+run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | sed '/^Started .*$/d'
 
-    - name: Ubuntu Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
+echo "# Query treesummary"
+query_vt "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('${INDEXROOT}', ${THREADS}) ORDER BY minsize ASC, maxsize ASC;"
 
-    - name: Coverage Prerequisites
-      run:  |
-            sudo apt install gcovr
-            sudo apt install g++
-            python3 -m pip install coverage
-            python3 -m pip install pytest
+for name in summary entries pentries vrsummary vrpentries
+do
+    echo "# Query ${name}"
+    query_vt "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_${name}('${INDEXROOT}', ${THREADS}) ORDER BY name ASC, size ASC;"
+done
 
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+echo "# Query with WHERE size < 10"
+query_vt "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size < 10 ORDER BY name ASC, size ASC;"
 
-    - name: Build
-      run:  cmake --build ${{ github.workspace }}/build -j
+echo "# Query with WHERE size > 10"
+query_vt "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size > 10 ORDER BY name ASC, size ASC;"
 
-    - name: Test
-      working-directory: ${{ github.workspace }}/build
-      run:  ctest || true
+echo "# Query entries in directory where name == 'directory'"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL FROM summary WHERE name == ''directory'';') ORDER BY name ASC, size ASC;"
 
-    - name: Delete files not reported for coverage
-      run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bfwreaddirplus2db.*" -o -name "bffuse.*" -o -name "bfresultfuse.*" -o -name "dfw.*" -o -name "tsmepoch2time.*" -o -name "tsmtime2epoch.*" -o -path "*/test/*" -o \( -path "*/gufi_vt.dir/*" -a -not -name "gufi_vt.*" \) \) -delete
+echo "# Query directories that contain entries larger than 1024 (only 1: ${INDEXROOT})"
+query_vt "SELECT name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL FROM summary WHERE maxsize > 1024;') ORDER BY name ASC, size ASC;"
 
-    - name: Generate Python Coverage Report
-      run:  |
-            export PYTHONPATH="${{ github.workspace }}/build/contrib::${{ github.workspace }}/build/scripts:${PYTHONPATH}"
+echo "# Paths"
+query_vt "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
 
-            coverage run -m pytest \
-            ${{ github.workspace }}/build/test/unit/python/test_gufi_common.py \
-            ${{ github.workspace }}/build/test/unit/python/test_gufi_config.py
+echo "# Make sure all types work"
+query_vt "SELECT name, size, size * 1.0, CAST(name AS BLOB), NULL FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
 
-            export GUFI_PYTHON_TEST_COVERAGE="coverage run -a"
-            (${{ github.workspace }}/build/test/regression/gufi_find.sh                || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/gufi_getfattr.sh            || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/gufi_ls.sh                  || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/gufi_stat.sh                || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/gufi_stats.sh               || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/longitudinal_snapshot.sh    || true) > /dev/null 2>&1
+echo "# Missing thread count (not an error)"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}') ORDER BY name ASC, size ASC;"
 
-            coverage xml --omit="${{ github.workspace }}/build/contrib/hashes.py,,${{ github.workspace }}/build/test/*,${{ github.workspace }}/build/test/regression/*,${{ github.workspace }}/build/test/unit/python/*"
-            rm .coverage  # If not removed, codecov will attempt to run coverage xml which will not account for our omissions
+echo "# NULL thread count (not an error)"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        verbose: true
-        fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
+set +e
+echo "# Missing indexroot (error)"
+query_vt "SELECT name FROM gufi_vt_pentries();"
+
+echo "# Empty string thread count (error)"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;"
+
+echo "# Zero thread count (error)"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
+set -e
+) | replace | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_vt.expected "${OUTPUT}"
+rm "${OUTPUT}"

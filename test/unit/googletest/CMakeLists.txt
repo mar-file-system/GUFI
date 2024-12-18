@@ -76,6 +76,7 @@ if (CMAKE_CXX_COMPILER)
     bf.cpp
     compress.cpp
     debug.cpp
+    handle_sql.cpp
     histogram.cpp
     print.cpp
     trie.cpp

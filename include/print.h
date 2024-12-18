@@ -82,6 +82,7 @@ typedef struct PrintArgs {
     pthread_mutex_t *mutex;               /* mutex for printing to stdout */
     FILE *outfile;
     size_t rows;                          /* number of rows returned by the query */
+    int *types;                           /* if set, prefix output with 1 octet type and 4 digit human readable length */
     /* size_t printed;                    /\* number of records printed by the callback *\/ */
 } PrintArgs_t;
 

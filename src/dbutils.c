@@ -76,27 +76,28 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "external.h"
 #include "histogram.h"
+#include "trie.h"
 
 static const char SQLITE_MEMORY_ARRAY[] = ":memory:";
 const char *SQLITE_MEMORY = SQLITE_MEMORY_ARRAY;
 
 const char READDIRPLUS_CREATE[] =
     DROP_TABLE(READDIRPLUS)
-    "CREATE TABLE " READDIRPLUS "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, suspect INT64);";
+    READDIRPLUS_SCHEMA(READDIRPLUS);
 
 const char READDIRPLUS_INSERT[] =
     "INSERT INTO " READDIRPLUS " VALUES (@path, @type, @inode, @pinode, @suspect);";
 
 const char ENTRIES_CREATE[] =
     DROP_TABLE(ENTRIES)
-    "CREATE TABLE " ENTRIES "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+    ENTRIES_SCHEMA(ENTRIES, "");
 
 const char ENTRIES_INSERT[] =
     "INSERT INTO " ENTRIES " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @crtime, @ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2);";
 
 const char SUMMARY_CREATE[] =
     DROP_TABLE(SUMMARY)
-    "CREATE TABLE " SUMMARY "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode TEXT, isroot INT64, rollupscore INT64);";
+    SUMMARY_SCHEMA(SUMMARY, "");
 
 static const char SUMMARY_INSERT[] =
     "INSERT INTO " SUMMARY " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @totfiles, @totlinks, @minuid, @maxuid, @mingid, @maxgid, @minsize, @maxsize, @totzero, @totltk, @totmtk, @totltm, @totmtm, @totmtg, @totmtt, @totsize, @minctime, @maxctime, @minmtime, @maxmtime, @minatime, @maxatime, @minblocks, @maxblocks, @totxattr, @depth, @mincrtime, @maxcrtime, @minossint1, @maxossint1, @totossint1, @minossint2, @maxossint2, @totossint2, @minossint3, @maxossint3, @totossint3, @minossint4, @maxossint4, @totossint4, @rectype, @pinode, @isroot, @rollupscore);";
@@ -107,7 +108,7 @@ const char VRSUMMARY_CREATE[] =
 
 const char PENTRIES_ROLLUP_CREATE[] =
     DROP_TABLE(PENTRIES_ROLLUP)
-    "CREATE TABLE " PENTRIES_ROLLUP "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT, pinode TEXT, ppinode TEXT);";
+    PENTRIES_ROLLUP_SCHEMA(PENTRIES_ROLLUP);
 
 const char PENTRIES_ROLLUP_INSERT[] =
     "INSERT INTO " PENTRIES_ROLLUP " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @crtime, @ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2, @pinode, @ppinode);";
@@ -753,572 +754,6 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     return !!err;
 }
 
-/* return the directory you are currently in */
-static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc; (void) argv;
-    struct work *work = (struct work *) sqlite3_user_data(context);
-    size_t user_dirname_len = work->orig_root.len + work->name_len - work->root_parent.len - work->root_basename_len;
-    char *user_dirname = malloc(user_dirname_len + 1);
-
-    SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-               work->orig_root.data, work->orig_root.len,
-               work->name + work->root_parent.len + work->root_basename_len, work->name_len - work->root_parent.len - work->root_basename_len);
-
-    sqlite3_result_text(context, user_dirname, user_dirname_len, free);
-}
-
-/* return the basename of the directory you are currently in */
-static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc; (void) argv;
-    struct work *work = (struct work *) sqlite3_user_data(context);
-
-    sqlite3_result_text(context, work->name + work->name_len - work->basename_len,
-                        work->basename_len, SQLITE_STATIC);
-}
-
-/* return the fullpath of the directory you are currently in */
-static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc; (void) argv;
-    struct work *work = (struct work *) sqlite3_user_data(context);
-
-    if (!work->fullpath) {
-        work->fullpath = realpath(work->name, NULL);
-        work->fullpath_len = strlen(work->fullpath);
-    }
-
-    sqlite3_result_text(context, work->fullpath, work->fullpath_len, SQLITE_STATIC);
-}
-
-/*
- * Usage:
- *     SELECT rpath(sname, sroll)
- *     FROM vrsummary;
- *
- *     SELECT rpath(sname, sroll) || "/" || name
- *     FROM vrpentries;
- */
-static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc;
-
-    /* work->name contains the current directory being operated on */
-    struct work *work = (struct work *) sqlite3_user_data(context);
-    const int rollupscore = sqlite3_value_int(argv[1]);
-
-    size_t user_dirname_len = 0;
-    char *user_dirname = NULL;
-
-    const size_t root_len = work->root_parent.len + work->root_basename_len;
-
-    if (rollupscore == 0) { /* use work->name */
-        user_dirname_len = work->orig_root.len + work->name_len - root_len;
-        user_dirname = malloc(user_dirname_len + 1);
-
-        SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                   work->orig_root.data, work->orig_root.len,
-                   work->name + root_len, work->name_len - root_len);
-    }
-    else { /* reconstruct full path out of argv[0] */
-        refstr_t input;
-        input.data = (char *) sqlite3_value_text(argv[0]);
-        input.len  = strlen(input.data);
-
-        /*
-         * fullpath = work->name[:-work->basename_len] + input
-         */
-        const size_t fullpath_len = work->name_len - work->basename_len + input.len;
-        char *fullpath = malloc(fullpath_len + 1);
-        SNFORMAT_S(fullpath, fullpath_len + 1, 2,
-                   work->name, work->name_len - work->basename_len,
-                   input.data, input.len);
-
-        /*
-         * replace fullpath prefix with original user input
-         */
-        user_dirname_len = work->orig_root.len + fullpath_len - root_len;
-        user_dirname = malloc(user_dirname_len + 1);
-        SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                   work->orig_root.data, work->orig_root.len,
-                   fullpath + root_len, fullpath_len - root_len);
-
-        free(fullpath);
-    }
-
-    sqlite3_result_text(context, user_dirname, user_dirname_len, free);
-}
-
-static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc;
-
-    const char *text = (char *) sqlite3_value_text(argv[0]);
-
-    const int fuid = atoi(text);
-    struct passwd *fmypasswd = getpwuid(fuid);
-    const char *show = fmypasswd?fmypasswd->pw_name:text;
-
-    sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
-}
-
-static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc;
-
-    const char *text = (char *) sqlite3_value_text(argv[0]);
-
-    const int fgid = atoi(text);
-    struct group *fmygroup = getgrgid(fgid);
-    const char *show = fmygroup?fmygroup->gr_name:text;
-
-    sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
-}
-
-static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc;
-    int fmode;
-    char tmode[64];
-    fmode = sqlite3_value_int(argv[0]);
-    modetostr(tmode, sizeof(tmode), fmode);
-    sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
-}
-
-static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc;
-
-    const char *fmt = (char *) sqlite3_value_text(argv[0]); /* format    */
-    const time_t t = sqlite3_value_int64(argv[1]);          /* timestamp */
-
-    char buf[MAXPATH];
-    #ifdef LOCALTIME_R
-    struct tm tm;
-    strftime(buf, sizeof(buf), fmt, localtime_r(&t, &tm));
-    #else
-    strftime(buf, sizeof(buf), fmt, localtime(&t));
-    #endif
-    sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
-}
-
-/* uint64_t goes up to E */
-static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E'};
-
-/*
- * Returns the number of blocks required to store a given size
- * Unfilled blocks count as one full block (round up)
- *
- * This function attempts to replicate ls output and is mainly
- * intended for gufi_ls, so use with caution.
- *
- * blocksize(1024, "K")    -> 1K
- * blocksize(1024, "1K")   -> 1
- * blocksize(1024, "KB")   -> 2KB
- * blocksize(1024, "1KB")  -> 2
- * blocksize(1024, "KiB")  -> 1K
- * blocksize(1024, "1KiB") -> 1
- */
-static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc;
-
-    const char *size_s = (const char *) sqlite3_value_text(argv[0]);
-    const char *unit_s = (const char *) sqlite3_value_text(argv[1]);
-    const size_t unit_s_len = strlen(unit_s);
-
-    uint64_t size = 0;
-    if (sscanf(size_s, "%" PRIu64, &size) != 1) {
-        sqlite3_result_error(context, "Bad blocksize size", -1);
-        return;
-    }
-
-    /* whether or not a coefficent was found - affects printing */
-    uint64_t unit_size = 0;
-    const int coefficient_found = sscanf(unit_s, "%" PRIu64, &unit_size);
-    if (coefficient_found == 1) {
-        if (unit_size == 0) {
-            sqlite3_result_error(context, "Bad blocksize unit", -1);
-            return;
-        }
-    }
-    else {
-        /* if there were no numbers, default to 1 */
-        unit_size = 1;
-    }
-
-    /*
-     * get block size suffix i.e. 1KB -> KB
-     */
-    const char *unit = unit_s;
-    {
-        /*
-         * find first non-numerical character
-         * decimal points are not accepted, and will break this loop
-         */
-        size_t offset = 0;
-        while ((offset < unit_s_len) &&
-               (('0' <= unit[offset]) && (unit[offset] <= '9'))) {
-            offset++;
-        }
-
-        unit += offset;
-    }
-
-    const size_t len = strlen(unit);
-
-    /* suffix is too long */
-    if (len > 3) {
-        sqlite3_result_error(context, "Bad blocksize unit", -1);
-        return;
-    }
-
-    /* suffix is optional */
-    if (len) {
-        if ((len > 1) && (unit[len - 1] != 'B')) {
-            sqlite3_result_error(context, "Bad blocksize unit", -1);
-            return;
-        }
-
-        uint64_t multiplier = 1024;
-        if (len == 2) {
-            multiplier = 1000;
-        }
-        else if (len == 3) {
-            if (unit[1] != 'i') {
-                sqlite3_result_error(context, "Bad blocksize unit", -1);
-                return;
-            }
-        }
-
-        int found = 0;
-        for(size_t i = 0; i < sizeof(SIZE); i++) {
-            unit_size *= multiplier;
-            if (unit[0] == SIZE[i]) {
-                found = 1;
-                break;
-            }
-        }
-
-        if (!found) {
-            sqlite3_result_error(context, "Bad blocksize unit", -1);
-            return;
-        }
-    }
-
-    const uint64_t blocks = (size / unit_size) + (!!(size % unit_size));
-
-    char buf[MAXPATH];
-    size_t buf_len = snprintf(buf, sizeof(buf), "%" PRIu64, blocks);
-
-    /* add unit to block count */
-    if (!coefficient_found) {
-        buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "%s", unit);
-    }
-
-    sqlite3_result_text(context, buf, buf_len, SQLITE_TRANSIENT);
-}
-
-/* Returns a string containg the size with as large of a unit as reasonable */
-static void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc;
-
-    char buf[MAXPATH];
-
-    const char *size_s = (const char *) sqlite3_value_text(argv[0]);
-    double size = 0;
-
-    if (sscanf(size_s, "%lf", &size) != 1) {
-        sqlite3_result_error(context, "Bad size", -1);
-        return;
-    }
-
-    size_t unit_index = 0;
-    while (size >= 1024) {
-        size /= 1024;
-        unit_index++;
-    }
-
-    if (unit_index == 0) {
-        snprintf(buf, sizeof(buf), "%.1f", size);
-    }
-    else {
-        snprintf(buf, sizeof(buf), "%.1f%c", size, SIZE[unit_index - 1]);
-    }
-
-    sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
-}
-
-static void relative_level(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc; (void) argv;
-
-    size_t level = (size_t) (uintptr_t) sqlite3_user_data(context);
-    sqlite3_result_int64(context, level);
-}
-
-static void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc; (void) argv;
-
-    refstr_t *root = (refstr_t *) sqlite3_user_data(context);
-    sqlite3_result_text(context, root->data, root->len, SQLITE_STATIC);
-}
-
-static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc;
-
-    char *path = (char *) sqlite3_value_text(argv[0]);
-
-    if (!path) {
-        sqlite3_result_text(context, "", 0, SQLITE_TRANSIENT);
-        return;
-    }
-
-    const size_t path_len = strlen(path);
-
-    /* remove trailing slashes */
-    const size_t trimmed_len = trailing_non_match_index(path, path_len, "/", 1);
-    if (!trimmed_len) {
-        sqlite3_result_text(context, "/", 1, SQLITE_STATIC);
-        return;
-    }
-
-    /* basename(work->name) will be the same as the first part of the input path, so remove it */
-    const size_t offset = trailing_match_index(path, trimmed_len, "/", 1);
-
-    const size_t bn_len = trimmed_len - offset;
-    char *bn = path + offset;
-
-    sqlite3_result_text(context, bn, bn_len, SQLITE_STATIC);
-}
-
-/*
- * One pass standard deviation (sample)
- * https://mathcentral.uregina.ca/QQ/database/QQ.09.06/h/murtaza1.html
- */
-typedef struct {
-    double sum;
-    double sum_sq;
-    uint64_t count;
-} stdev_t;
-
-static void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc;
-    stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
-    const double value = sqlite3_value_double(argv[0]);
-
-    data->sum += value;
-    data->sum_sq += value * value;
-    data->count++;
-}
-
-static void stdevs_final(sqlite3_context *context) {
-    stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
-
-    if (data->count < 2) {
-        sqlite3_result_null(context);
-    }
-    else {
-        const double variance = ((data->count * data->sum_sq) - (data->sum * data->sum)) / (data->count * (data->count - 1));
-        sqlite3_result_double(context, sqrt(variance));
-    }
-}
-
-static void stdevp_final(sqlite3_context *context) {
-    stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
-
-    if (data->count < 2) {
-        sqlite3_result_null(context);
-    }
-    else {
-        const double variance = ((data->count * data->sum_sq) - (data->sum * data->sum)) / (data->count * data->count);
-        sqlite3_result_double(context, sqrt(variance));
-    }
-}
-
-static void median_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc;
-    sll_t *data = (sll_t *) sqlite3_aggregate_context(context, sizeof(*data));
-    if (sll_get_size(data) == 0) {
-        sll_init(data);
-    }
-
-    const double value = sqlite3_value_double(argv[0]);
-    sll_push(data, (void *) (uintptr_t) value);
-}
-
-/* /\* */
-/*  * find kth largest element */
-/*  * */
-/*  * Adapted from code by Russell Cohen */
-/*  * https://rcoh.me/posts/linear-time-median-finding/ */
-/*  *\/ */
-/* static double quickselect(sll_t *sll, uint64_t count, uint64_t k) { */
-/*     /\* cache unused values here since partitioning destroys the original list *\/ */
-/*     sll_t cache; */
-/*     sll_init(&cache); */
-
-/*     sll_t lt, eq, gt; */
-/*     sll_init(&lt); */
-/*     sll_init(&eq); */
-/*     sll_init(&gt); */
-
-/*     while (count > 1) { */
-/*         /\* TODO: Better pivot selection *\/ */
-/*         const uint64_t pivot_idx = (rand() * rand()) % count; */
-/*         double pivot = 0; */
-/*         size_t i = 0; */
-/*         sll_loop(sll, node) { */
-/*             if (i == pivot_idx) { */
-/*                 pivot = (double) (uintptr_t) sll_node_data(node); */
-/*                 break; */
-/*             } */
-/*             i++; */
-/*         } */
-
-/*         sll_node_t *node = NULL; */
-/*         while ((node = sll_head_node(sll))) { */
-/*             const double value = (double) (uint64_t) sll_node_data(node); */
-/*             if (value < pivot) { */
-/*                 sll_move_append_first(&lt, sll, 1); */
-/*             } */
-/*             else if (value > pivot) { */
-/*                 sll_move_append_first(&gt, sll, 1); */
-/*             } */
-/*             else { */
-/*                 sll_move_append_first(&eq, sll, 1); */
-/*             } */
-/*         } */
-
-/*         /\* sll is empty at this point *\/ */
-
-/*         const uint64_t lt_size = sll_get_size(&lt); */
-/*         const uint64_t eq_size = sll_get_size(&eq); */
-
-/*         if (k < lt_size) { */
-/*             sll_move_append(sll,    &lt); */
-/*             sll_move_append(&cache, &eq); */
-/*             sll_move_append(&cache, &gt); */
-/*         } */
-/*         else if (k < (lt_size + eq_size)) { */
-/*             sll_move_append(&cache, &lt); */
-/*             sll_move_append(sll,    &eq); */
-/*             sll_move_append(&cache, &gt); */
-/*             break; */
-/*         } */
-/*         else { */
-/*             k -= lt_size + eq_size; */
-/*             sll_move_append(&cache, &lt); */
-/*             sll_move_append(&cache, &eq); */
-/*             sll_move_append(sll,    &gt); */
-/*         } */
-
-/*         count = sll_get_size(sll); */
-/*     } */
-
-/*     /\* restore original list's contents (different order) *\/ */
-/*     sll_move_append(sll, &cache); */
-
-/*     return (double) (uintptr_t) sll_node_data(sll_head_node(sll)); */
-/* } */
-
-static int cmp_double(const void *lhs, const void *rhs) {
-    return * (double *) lhs - * (double *) rhs;
-}
-
-static void median_final(sqlite3_context *context) {
-    sll_t *data = (sll_t *) sqlite3_aggregate_context(context, sizeof(*data));
-
-    const uint64_t count = sll_get_size(data);
-    double median = 0;
-
-    /* skip some mallocs */
-    if (count == 0) {
-        sqlite3_result_null(context);
-        goto cleanup;
-    }
-    else if (count == 1) {
-        median = (double) (uintptr_t) sll_node_data(sll_head_node(data));
-        goto ret_median;
-    }
-    else if (count == 2) {
-        median = ((double) (uintptr_t) sll_node_data(sll_head_node(data)) +
-                  (double) (uintptr_t) sll_node_data(sll_tail_node(data))) / 2.0;
-        goto ret_median;
-    }
-
-    const uint64_t half = count / 2;
-
-    double *arr = malloc(count * sizeof(double));
-    size_t i = 0;
-    sll_loop(data, node) {
-        arr[i++] = (double) (uintptr_t) sll_node_data(node);
-    }
-
-    qsort(arr, count, sizeof(double), cmp_double);
-
-    median = arr[half];
-    if (!(count & 1)) {
-        median += arr[half - 1];
-        median /= 2.0;
-    }
-    free(arr);
-
-    /* median = quickselect(data, count, half); */
-    /* if (!(count & 1)) { */
-    /*     median += quickselect(data, count, half - 1); */
-    /*     median /= 2.0; */
-    /* } */
-
-  ret_median:
-    sqlite3_result_double(context, median);
-
-  cleanup:
-    sll_destroy(data, NULL);
-}
-
-int addqueryfuncs(sqlite3 *db) {
-    return !(
-        (sqlite3_create_function(db,   "uidtouser",           1,   SQLITE_UTF8,
-                                 NULL, &uidtouser,                 NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "gidtogroup",          1,   SQLITE_UTF8,
-                                 NULL, &gidtogroup,                NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "modetotxt",           1,   SQLITE_UTF8,
-                                 NULL, &modetotxt,                 NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "strftime",            2,   SQLITE_UTF8,
-                                 NULL, &sqlite3_strftime,          NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "blocksize",           2,   SQLITE_UTF8,
-                                 NULL, &blocksize,                 NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "human_readable_size", 1,   SQLITE_UTF8,
-                                 NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
-                                 NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
-                                 NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "stdevp",              1,   SQLITE_UTF8,
-                                 NULL, NULL,  stdev_step,          stdevp_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "median",              1,   SQLITE_UTF8,
-                                 NULL, NULL,  median_step,         median_final) == SQLITE_OK) &&
-        addhistfuncs(db)
-        );
-}
-
-int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
-    return !(
-        (sqlite3_create_function(db,  "path",                      0, SQLITE_UTF8,
-                                 work,                             &path,           NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "epath",                     0, SQLITE_UTF8,
-                                 work,                             &epath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "fpath",                     0, SQLITE_UTF8,
-                                 work,                             &fpath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "rpath",                     2, SQLITE_UTF8,
-                                 work,                             &rpath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "starting_point",            0,  SQLITE_UTF8,
-                                 (void *) &work->orig_root,        &starting_point, NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "level",                     0,  SQLITE_UTF8,
-                                 (void *) (uintptr_t) work->level, &relative_level, NULL, NULL) == SQLITE_OK)
-        );
-}
-
 struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  const char *path, const size_t path_len,
                                  struct input *in,
@@ -1755,4 +1190,89 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
     tsum.totsubdirs--;
 
     return inserttreesumdb(dirname, db, &tsum, 0, 0, 0);
+}
+
+/*
+ * subset of known string to SQLite type conversions
+ *
+ * https://www.sqlite.org/datatype3.html
+ * https://www.sqlite.org/c3ref/c_blob.html
+ */
+static trie_t *sqlite3_types(void) {
+    trie_t *types = trie_alloc();
+
+    trie_insert(types, "INT",     3, (void *) (uintptr_t) SQLITE_INTEGER, NULL);
+    trie_insert(types, "INTEGER", 7, (void *) (uintptr_t) SQLITE_INTEGER, NULL);
+    trie_insert(types, "INT64",   5, (void *) (uintptr_t) SQLITE_INTEGER, NULL);
+
+    trie_insert(types, "FLOAT",   5, (void *) (uintptr_t) SQLITE_FLOAT,   NULL);
+    trie_insert(types, "DOUBLE",  6, (void *) (uintptr_t) SQLITE_FLOAT,   NULL);
+    trie_insert(types, "REAL",    4, (void *) (uintptr_t) SQLITE_FLOAT,   NULL);
+
+    trie_insert(types, "TEXT",    4, (void *) (uintptr_t) SQLITE_TEXT,    NULL);
+
+    trie_insert(types, "BLOB",    4, (void *) (uintptr_t) SQLITE_BLOB,    NULL);
+
+    trie_insert(types, "NULL",    4, (void *) (uintptr_t) SQLITE_NULL,    NULL);
+
+    return types;
+}
+
+int *get_col_types(sqlite3 *db, const refstr_t *sql, int *cols) {
+    int rc = SQLITE_OK;
+
+    /* parse sql */
+    sqlite3_stmt *stmt = NULL;
+    rc = sqlite3_prepare_v2(db, sql->data, sql->len, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: Could not prepare '%s' for getting column types: %s (%d)\n",
+                sql->data, sqlite3_errstr(rc), rc);
+        return NULL;
+    }
+
+    /* /\* */
+    /*  * need to step if calling sqlite3_column_type, but requires */
+    /*  * that the table has at least 1 row of actual values */
+    /*  *\/ */
+    /* rc = sqlite3_step(stmt); */
+    /* if (rc != SQLITE_ROW) { */
+    /*     fprintf(stderr, "Error: Failed to evaluate SQL statement '%s': %s (%d)\n", */
+    /*             sql->data, sqlite3_errstr(rc), rc); */
+    /*     return NULL; */
+    /* } */
+
+    /* get column count */
+    *cols = sqlite3_column_count(stmt);
+    if (*cols == 0) {
+        fprintf(stderr, "Error: '%s' was detected to have 0 columns\n", sql->data);
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
+
+    trie_t *str2type = sqlite3_types();
+
+    /* get each column's type */
+    int *types = malloc(*cols * sizeof(int));
+    for(int i = 0; i < *cols; i++) {
+        const char *type = sqlite3_column_decltype(stmt, i);
+        if (!type) {
+            types[i] = SQLITE_NULL;
+            continue;
+        }
+
+        const size_t type_len = strlen(type);
+
+        void *sql_type = NULL;
+        if (trie_search(str2type, type, type_len, &sql_type) == 1) {
+            types[i] = (uintptr_t) sql_type;
+        }
+        else {
+            types[i] = 0; /* unknown type */
+        }
+    }
+
+    trie_free(str2type);
+
+    sqlite3_finalize(stmt);
+    return types;
 }

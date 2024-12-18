@@ -72,6 +72,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
 
     PrintArgs_t *print = (PrintArgs_t *) args;
     struct OutputBuffer *ob = print->output_buffer;
+    const int *types = print->types;
 
     size_t *lens = malloc(count * sizeof(size_t));
     size_t row_len = count - 1 + 1; /* one delimiter per column except last column + newline */
@@ -81,6 +82,10 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             lens[i] = strlen(data[i]);
             row_len += lens[i];
         }
+    }
+
+    if (types) {
+        row_len += count * 5; /* 1 octet type and 4 digit human readable length per column */
     }
 
     /* if a row cannot fit the buffer for whatever reason, flush the existing buffer */
@@ -102,12 +107,28 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         }
         const int last = count - 1;
         for(int i = 0; i < last; i++) {
+            if (types) {
+                const char col_type = types[i];
+                fwrite(&col_type, sizeof(char), sizeof(col_type), print->outfile);
+
+                char buf[5];
+                const size_t len = snprintf(buf, sizeof(buf), "%04zu", lens[i]);
+                fwrite(buf, sizeof(char), len, print->outfile);
+            }
             if (data[i]) {
                 fwrite(data[i], sizeof(char), lens[i], print->outfile);
             }
             fwrite(&print->delim, sizeof(char), 1, print->outfile);
         }
         /* print last column with no follow up delimiter */
+        if (types) {
+            const char col_type = types[last];
+            fwrite(&col_type, sizeof(char), sizeof(col_type), print->outfile);
+
+            char buf[5];
+            const size_t len = snprintf(buf, sizeof(buf), "%04zu", lens[last]);
+            fwrite(buf, sizeof(char), len, print->outfile);
+        }
         fwrite(data[last], sizeof(char), lens[last], print->outfile);
         fwrite("\n", sizeof(char), 1, print->outfile);
         ob->count++;
@@ -122,6 +143,13 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         char *buf = ob->buf;
         size_t filled = ob->filled;
         for(int i = 0; i < count; i++) {
+            if (types) {
+                buf[filled] = types[i];
+                filled++;
+
+                const ssize_t len = snprintf(&buf[filled], ob->capacity - filled, "%04zu", lens[i]);
+                filled += len;
+            }
             if (data[i]) {
                 memcpy(&buf[filled], data[i], lens[i]);
                 filled += lens[i];

@@ -71,7 +71,7 @@ OF SUCH DAMAGE.
 
 void querydb(struct work *work,
              const char *dbname, const size_t dbname_len,
-             sqlite3 *db, const char *query,
+             sqlite3 *db, const char *query, int *types,
              PoolArgs_t *pa, int id,
              int (*callback)(void *, int, char **, char**), int *rc);
 
