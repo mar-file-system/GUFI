@@ -119,7 +119,7 @@ int serialize_bucket(sqlite3_context *context,
 }
 
 /* log2_hist(string/value, bucket_count) */
-static void log2_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+void log2_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
     log2_hist_t *hist = (log2_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (hist->buckets == NULL) {
@@ -169,7 +169,7 @@ static ssize_t serialize_log2_bucket(char *curr, const size_t avail, void *key, 
     return snprintf(curr, avail, "%zu:%zu;", exp, hist->buckets[exp]);
 }
 
-static void log2_hist_final(sqlite3_context *context) {
+void log2_hist_final(sqlite3_context *context) {
     log2_hist_t *hist = (log2_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (hist->buckets == NULL) {
         sqlite3_result_text(context, "0;0;0;", -1, SQLITE_TRANSIENT);
@@ -233,7 +233,7 @@ void log2_hist_free(log2_hist_t *hist) {
 }
 
 /* mode_hist(mode) */
-static void mode_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+void mode_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
     mode_hist_t *hist = (mode_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     const mode_t mode = (mode_t) sqlite3_value_int(argv[0]) & 0777;
@@ -246,7 +246,7 @@ static ssize_t serialize_mode_bucket(char *curr, const size_t avail, void *key, 
     return snprintf(curr, avail, "%03o:%zu;", (unsigned int) mode, hist->buckets[mode]);
 }
 
-static void mode_hist_final(sqlite3_context *context) {
+void mode_hist_final(sqlite3_context *context) {
     mode_hist_t *hist = (mode_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
 
     size_t size = DEFAULT_HIST_ALLOC;
@@ -299,7 +299,7 @@ typedef struct sqlite_time_hist {
     int init;
 } sqlite_time_hist_t;
 
-static void time_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+void time_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
     sqlite_time_hist_t *hist = (sqlite_time_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (hist->init == 0) {
@@ -329,7 +329,7 @@ static ssize_t serialize_time_bucket(char *curr, const size_t avail, void *key, 
     return snprintf(curr, avail, "%zu:%zu;", (size_t) TIME_BUCKETS[bucket].seconds, hist->buckets[bucket]);
 }
 
-static void time_hist_final(sqlite3_context *context) {
+void time_hist_final(sqlite3_context *context) {
     sqlite_time_hist_t *hist = (sqlite_time_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
 
     if (hist->init == 0) {
@@ -414,7 +414,7 @@ typedef struct sqlite_category_hist {
     int keep_1;
 } sqlite_category_hist_t;
 
-static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+void category_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
     sqlite_category_hist_t *hist = (sqlite_category_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (!hist->trie) {
@@ -468,7 +468,7 @@ static void free_str(void *ptr) {
     free(str);
 }
 
-static void category_hist_final(sqlite3_context *context) {
+void category_hist_final(sqlite3_context *context) {
     sqlite_category_hist_t *hist = (sqlite_category_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (!hist->trie) {
         hist->trie = trie_alloc();
@@ -658,7 +658,7 @@ void category_hist_free(category_hist_t *hist) {
 }
 
 /* add a histogram into an existing histogram */
-static void category_hist_combine_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+void category_hist_combine_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argv; (void) argc;
     sqlite_category_hist_t *hist = (sqlite_category_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (!hist->trie) {
@@ -683,7 +683,7 @@ static ssize_t serialize_mode(char *curr, const size_t avail, void *key, void *d
     return snprintf(curr, avail, "%zu:%s:%zu;", mode->len, mode->data, *count);
 }
 
-static void mode_count_final(sqlite3_context *context) {
+void mode_count_final(sqlite3_context *context) {
     sqlite_category_hist_t *hist = (sqlite_category_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
 
     if (!hist->trie) {
@@ -779,21 +779,4 @@ mode_count_t *mode_count_parse(const char *str) {
 void mode_count_free(mode_count_t *mc) {
     free(mc->mode);
     free(mc);
-}
-
-int addhistfuncs(sqlite3 *db) {
-    return (
-        (sqlite3_create_function(db,   "log2_hist",             2,  SQLITE_UTF8,
-                                 NULL, NULL,  log2_hist_step,             log2_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "mode_hist",             1,  SQLITE_UTF8,
-                                 NULL, NULL,  mode_hist_step,             mode_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "time_hist",             2,  SQLITE_UTF8,
-                                 NULL, NULL,  time_hist_step,             time_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "category_hist",         2,  SQLITE_UTF8,
-                                 NULL, NULL,  category_hist_step,         category_hist_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "category_hist_combine", 1,  SQLITE_UTF8,
-                                 NULL, NULL,  category_hist_combine_step, category_hist_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "mode_count",            1,  SQLITE_UTF8,
-                                 NULL, NULL,  category_hist_step,         mode_count_final)    == SQLITE_OK)
-        );
 }

@@ -105,6 +105,12 @@ run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll) F
 echo "# Get all directory and non-directory names and their xattrs"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, xattr_name, xattr_value FROM vrxpentries;\" -x \"${INDEXROOT}\""
 
+echo "# Output TLV columns (no aggregation)"
+run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | od -x --endian=big"
+
+echo "# Output TLV columns (with aggregation)"
+run_no_sort "${GUFI_QUERY} -u -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | od -x --endian=big"
+
 echo "#####################################"
 echo "# Invalid Inputs                    #"
 echo "#####################################"

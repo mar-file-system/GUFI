@@ -255,12 +255,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* ********************************************** */
     const size_t next_level = cp->level + 1;
 
-    struct PrintArgs print;
-    print.output_buffer = &pa->obufs.buffers[id];
-    print.delim = '/';
-    print.mutex = pa->obufs.mutex;
-    print.outfile = stdout;
-    print.rows = 0;
+    struct PrintArgs print = {
+        .output_buffer = &pa->obufs.buffers[id],
+        .delim = '/',
+        .mutex = pa->obufs.mutex,
+        .outfile = stdout,
+        .rows = 0,
+        .types = NULL,
+    };
 
     char *buf[] = {NULL, NULL};     /* passed to print_parallel */
 

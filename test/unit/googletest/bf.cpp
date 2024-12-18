@@ -85,6 +85,7 @@ static const std::string n = "-n"; static const std::string n_arg = "1";
 static const std::string d = "-d"; static const std::string d_arg = "|";
 static const std::string o = "-o"; static const std::string o_arg = "o arg";
 static const std::string O = "-O"; static const std::string O_arg = "O arg";
+static const std::string u = "-u";
 static const std::string I = "-I"; static const std::string I_arg = "I arg";
 static const std::string T = "-T"; static const std::string T_arg = "T arg";
 static const std::string S = "-S"; static const std::string S_arg = "S arg";
@@ -151,6 +152,7 @@ static void check_input(struct input *in, const bool helped,
     EXPECT_EQ(in->printrows,                          flags);
     EXPECT_EQ(in->buildindex,                         flags);
     EXPECT_EQ(in->andor,                              flags);
+    EXPECT_EQ(in->types.prefix,                       flags);
     EXPECT_EQ(in->insertfl,                           flags);
     EXPECT_EQ(in->insertdir,                          flags);
     EXPECT_EQ(in->suspectd,                           flags);
@@ -263,7 +265,7 @@ TEST(parse_cmd_line, help) {
 }
 
 TEST(parse_cmd_line, debug) {
-    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:s:";
+    const char opts[] = "HxpPNVban:d:i:t:o:O:uI:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:s:";
 
     const char *argv[] = {
         exec.c_str(),
@@ -277,6 +279,7 @@ TEST(parse_cmd_line, debug) {
         a.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
+        u.c_str(),
         I.c_str(), I_arg.c_str(),
         T.c_str(), T_arg.c_str(),
         S.c_str(), S_arg.c_str(),
@@ -331,7 +334,7 @@ TEST(parse_cmd_line, debug) {
 }
 
 TEST(parse_cmd_line, flags) {
-    const char opts[] = "xpPNVbarRYZmwjX" COMPRESS_OPT "q";
+    const char opts[] = "xpPNVbaurRYZmwjX" COMPRESS_OPT "q";
 
     const char *argv[] = {
         exec.c_str(),
@@ -342,6 +345,7 @@ TEST(parse_cmd_line, flags) {
         V.c_str(),
         b.c_str(),
         a.c_str(),
+        u.c_str(),
         r.c_str(),
         R.c_str(),
         Y.c_str(),

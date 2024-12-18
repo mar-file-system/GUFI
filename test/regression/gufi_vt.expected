@@ -1,0 +1,235 @@
+# Generate treesummary tables in all directories
+$ gufi_treesummary_all "prefix"
+
+# Query treesummary
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('prefix', 2) ORDER BY minsize ASC, maxsize ASC;"
+) | sqlite3
+-1|0|-1|0
+0|1048576|0|1048576
+1|5|1|5
+5|5|4|5
+11|12|11|12
+15|15|15|15
+
+# Query summary
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_summary('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+directory|7|drwxrwxr-x|Thu Jan 01 00:00:07 UTC 1970
+empty_directory|8|drwxrwxr-x|Thu Jan 01 00:00:08 UTC 1970
+leaf_directory|13|drwxrwxr-x|Thu Jan 01 00:00:13 UTC 1970
+prefix|17|drwxrwxr-x|Thu Jan 01 00:00:17 UTC 1970
+subdirectory|6|drwxrwxr-x|Thu Jan 01 00:00:06 UTC 1970
+unusual#? directory ,|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
+
+# Query entries
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_entries('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden|10|-rw-rw-r--|Thu Jan 01 00:00:10 UTC 1970
+1KB|1024|-rw-rw-r--|Thu Jan 01 00:17:04 UTC 1970
+1MB|1048576|-rw-rw-r--|Tue Jan 13 03:16:16 UTC 1970
+directory_symlink|4|lrwxrwxrwx|Thu Jan 01 00:00:04 UTC 1970
+executable|1|-rwxrwxrwx|Thu Jan 01 00:00:01 UTC 1970
+file_symlink|9|lrwxrwxrwx|Thu Jan 01 00:00:09 UTC 1970
+leaf_file1|11|-rw-rw-r--|Thu Jan 01 00:00:11 UTC 1970
+leaf_file2|12|-rw-rw-r--|Thu Jan 01 00:00:12 UTC 1970
+old_file|0|-rw-rw-r--|Thu Jan 01 00:00:00 UTC 1970
+readonly|2|-r--r--r--|Thu Jan 01 00:00:02 UTC 1970
+repeat_name|5|-rw-rw-r--|Thu Jan 01 00:00:05 UTC 1970
+repeat_name|14|-rw-rw-r--|Thu Jan 01 00:00:14 UTC 1970
+unusual, name?#|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
+writable|3|-rw-rw-rw-|Thu Jan 01 00:00:03 UTC 1970
+
+# Query pentries
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_pentries('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden|10|-rw-rw-r--|Thu Jan 01 00:00:10 UTC 1970
+1KB|1024|-rw-rw-r--|Thu Jan 01 00:17:04 UTC 1970
+1MB|1048576|-rw-rw-r--|Tue Jan 13 03:16:16 UTC 1970
+directory_symlink|4|lrwxrwxrwx|Thu Jan 01 00:00:04 UTC 1970
+executable|1|-rwxrwxrwx|Thu Jan 01 00:00:01 UTC 1970
+file_symlink|9|lrwxrwxrwx|Thu Jan 01 00:00:09 UTC 1970
+leaf_file1|11|-rw-rw-r--|Thu Jan 01 00:00:11 UTC 1970
+leaf_file2|12|-rw-rw-r--|Thu Jan 01 00:00:12 UTC 1970
+old_file|0|-rw-rw-r--|Thu Jan 01 00:00:00 UTC 1970
+readonly|2|-r--r--r--|Thu Jan 01 00:00:02 UTC 1970
+repeat_name|5|-rw-rw-r--|Thu Jan 01 00:00:05 UTC 1970
+repeat_name|14|-rw-rw-r--|Thu Jan 01 00:00:14 UTC 1970
+unusual, name?#|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
+writable|3|-rw-rw-rw-|Thu Jan 01 00:00:03 UTC 1970
+
+# Query vrsummary
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_vrsummary('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+directory|7|drwxrwxr-x|Thu Jan 01 00:00:07 UTC 1970
+empty_directory|8|drwxrwxr-x|Thu Jan 01 00:00:08 UTC 1970
+leaf_directory|13|drwxrwxr-x|Thu Jan 01 00:00:13 UTC 1970
+prefix|17|drwxrwxr-x|Thu Jan 01 00:00:17 UTC 1970
+subdirectory|6|drwxrwxr-x|Thu Jan 01 00:00:06 UTC 1970
+unusual#? directory ,|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
+
+# Query vrpentries
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_vrpentries('prefix', 2) ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden|10|-rw-rw-r--|Thu Jan 01 00:00:10 UTC 1970
+1KB|1024|-rw-rw-r--|Thu Jan 01 00:17:04 UTC 1970
+1MB|1048576|-rw-rw-r--|Tue Jan 13 03:16:16 UTC 1970
+directory_symlink|4|lrwxrwxrwx|Thu Jan 01 00:00:04 UTC 1970
+executable|1|-rwxrwxrwx|Thu Jan 01 00:00:01 UTC 1970
+file_symlink|9|lrwxrwxrwx|Thu Jan 01 00:00:09 UTC 1970
+leaf_file1|11|-rw-rw-r--|Thu Jan 01 00:00:11 UTC 1970
+leaf_file2|12|-rw-rw-r--|Thu Jan 01 00:00:12 UTC 1970
+old_file|0|-rw-rw-r--|Thu Jan 01 00:00:00 UTC 1970
+readonly|2|-r--r--r--|Thu Jan 01 00:00:02 UTC 1970
+repeat_name|5|-rw-rw-r--|Thu Jan 01 00:00:05 UTC 1970
+repeat_name|14|-rw-rw-r--|Thu Jan 01 00:00:14 UTC 1970
+unusual, name?#|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
+writable|3|-rw-rw-rw-|Thu Jan 01 00:00:03 UTC 1970
+
+# Query with WHERE size < 10
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size FROM gufi_vt_pentries('prefix', 2) WHERE size < 10 ORDER BY name ASC, size ASC;"
+) | sqlite3
+directory_symlink|4
+executable|1
+file_symlink|9
+old_file|0
+readonly|2
+repeat_name|5
+writable|3
+
+# Query with WHERE size > 10
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size FROM gufi_vt_pentries('prefix', 2) WHERE size > 10 ORDER BY name ASC, size ASC;"
+) | sqlite3
+1KB|1024
+1MB|1048576
+leaf_file1|11
+leaf_file2|12
+repeat_name|14
+unusual, name?#|15
+
+# Query entries in directory where name == 'directory'
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') ORDER BY name ASC, size ASC;"
+) | sqlite3
+directory
+executable
+readonly
+writable
+
+# Query directories that contain entries larger than 1024 (only 1: prefix)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT rowid, name, size, mtime FROM gufi_vt_pentries('prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;"
+) | sqlite3
+1|.hidden|10|10
+2|1KB|1024|1024
+3|1MB|1048576|1048576
+4|file_symlink|9|9
+5|old_file|0|0
+6|repeat_name|14|14
+
+# Paths
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('prefix', 2) WHERE name == '.hidden';"
+) | sqlite3
+prefix|prefix|prefix|prefix
+
+# Make sure all types work
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name, size, size * 1.0, CAST(name AS BLOB), NULL FROM gufi_vt_pentries('prefix', 2) WHERE name == '.hidden';"
+) | sqlite3
+.hidden|10|10.0|.hidden|
+
+# Missing thread count (not an error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix') ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden
+1KB
+1MB
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
+# NULL thread count (not an error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', NULL) ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden
+1KB
+1MB
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
+# Missing indexroot (error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries();"
+) | sqlite3
+Parse error near line 2: no query solution
+
+# Bad indexroot
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('baddir') ORDER BY name ASC, size ASC;"
+) | sqlite3
+Could not get realpath of "baddir": No such file or directory (2)
+
+# Empty string thread count (error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', '') ORDER BY name ASC, size ASC;"
+) | sqlite3
+Runtime error near line 2: Bad thread count: '' (19)
+
+# Zero thread count (error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', 0) ORDER BY name ASC, size ASC;"
+) | sqlite3
+Runtime error near line 2: Bad thread count: '0' (19)
+
+# Bad SQL
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', NULL, 'bad SQL') ORDER BY name ASC, size ASC;"
+) | sqlite3
+Error: Could not prepare 'bad SQL' for getting column types: SQL logic error (1)
+

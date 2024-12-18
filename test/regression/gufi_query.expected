@@ -14,6 +14,7 @@ options:
   -o <out_fname>         output file (one-per-thread, with thread-id suffix)
   -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
   -O <out_DB>            output DB
+  -u                     prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
   -I <SQL_init>          SQL init
   -F <SQL_fin>           SQL cleanup
   -y <min level>         minimum level to go down
@@ -218,6 +219,19 @@ prefix/old_file
 prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
+
+# Output TLV columns (no aggregation)
+$ gufi_query -u -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix" | od -x --endian=big
+0000000 0200 0000 0307 0000 0000 0000 002e 6869
+0000020 6464 656e 0102 0000 0000 0000 0031 3000
+0000037
+
+# Output TLV columns (with aggregation)
+$ gufi_query -u -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix" | od -x --endian=big
+0000000 0200 0000 030d 0000 0000 0000 0073 6561
+0000020 7263 682f 7072 6566 6978 0102 0000 0000
+0000040 0000 0031 3700
+0000045
 
 #####################################
 # Invalid Inputs                    #

@@ -106,6 +106,7 @@ set(GUFI_SOURCES
   OutputBuffers.c
   QueuePerThreadPool.c
   SinglyLinkedList.c
+  addqueryfuncs.c
   bf.c
   compress.c
   dbutils.c
@@ -199,10 +200,10 @@ add_library(gufi_query_lib OBJECT
   gufi_query/aggregate.c
   gufi_query/external.c
   gufi_query/gqw.c
+  gufi_query/handle_sql.c
   gufi_query/process_queries.c
   gufi_query/processdir.c
   gufi_query/query.c
-  gufi_query/validate_inputs.c
 )
 
 add_dependencies(gufi_query_lib GUFI)
@@ -211,6 +212,29 @@ build_and_install_one(${BIN} TRUE gufi_query
   gufi_query/main.c
   $<TARGET_OBJECTS:gufi_query_lib>
 )
+
+# build custom SQLite virtual tables
+add_library(gufi_vt MODULE
+  gufi_vt.c
+
+  # have to recompile with -fPIC
+  SinglyLinkedList.c
+  addqueryfuncs.c
+  histogram.c
+  trie.c
+  utils.c
+)
+set_target_properties(gufi_vt PROPERTIES PREFIX "")
+if(APPLE)
+  set(EXT "dylib")
+elseif (CYGWIN)
+  set(EXT "dll.a")
+else ()
+  set(EXT "so")
+endif()
+target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
+add_dependencies(gufi_vt install_dependencies)
+install(TARGETS gufi_vt DESTINATION ${LIB} COMPONENT Server)
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)

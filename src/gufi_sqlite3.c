@@ -67,8 +67,11 @@ OF SUCH DAMAGE.
 
 #include "OutputBuffers.h"
 #include "dbutils.h"
-#include "histogram.h"
 #include "print.h"
+
+/* don't ask */
+#define SQLITE_CORE
+#include "../src/gufi_vt.c"
 
 static void sub_help(void) {
     printf("db                       db file path\n");
@@ -94,8 +97,15 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    addqueryfuncs(db);
-    addhistfuncs(db);
+    char *err = NULL;
+
+    /* this calls addqueryfuncs */
+    if (sqlite3_gufivt_init(db, &err, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Error: Could not initialize virtual tables \"%s\"\n", err);
+        sqlite3_free(err);
+        input_fini(&in);
+        return EXIT_FAILURE;
+    }
 
     /* no buffering */
     struct OutputBuffer ob;
@@ -107,9 +117,8 @@ int main(int argc, char *argv[]) {
         .mutex = NULL,
         .outfile = stdout,
         .rows = 0,
+        .types = NULL,
     };
-
-    char *err = NULL;
 
     /* if using in-memory db or no SQL statements following db path, read from stdin */
     if (args_left < 2) {

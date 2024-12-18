@@ -62,11 +62,82 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_VALIDATE_INPUTS_H
-#define GUFI_QUERY_VALIDATE_INPUTS_H
+#include <cstdlib>
+#include <cstring>
+
+#include <gtest/gtest.h>
+
+extern "C" {
 
 #include "bf.h"
+#include "dbutils.h"
+#include "gufi_query/handle_sql.h"
 
-int validate_inputs(struct input *in);
+}
 
-#endif
+TEST(handle_sql, no_aggregation) {
+    // not testing treesummary for now
+    const char S_GOOD[] = "SELECT name FROM " SUMMARY ";";
+    const char S_BAD[]  = "INSERT INTO " SUMMARY "(name) VALUES ('');";
+    const char E_GOOD[] = "SELECT name FROM " ENTRIES ";";
+    const char E_BAD[]  = "INSERT INTO " ENTRIES "(name) VALUES ('');";
+
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    in.types.prefix = 1;
+
+    for(const char *S : {(const char *) nullptr, S_GOOD, S_BAD}) {
+        in.sql.sum.data = S?S:nullptr;
+        in.sql.sum.len = S?strlen(S):0;
+
+        for(const char *E : {(const char *) nullptr, E_GOOD, E_BAD}) {
+            in.sql.ent.data = E?E:nullptr;
+            in.sql.ent.len = E?strlen(E):0;
+
+            /* Bad SQL -> return -1 */
+            const int expected = -((S == S_BAD) || (E == E_BAD));
+
+            EXPECT_EQ(handle_sql(&in), expected);
+
+            free(in.types.ent);
+            in.types.ent = nullptr;
+            free(in.types.sum);
+            in.types.sum = nullptr;
+            free(in.types.tsum);
+            in.types.tsum = nullptr;
+        }
+    }
+
+    input_fini(&in);
+}
+
+TEST(handle_sql, aggregation) {
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    in.types.prefix = 1;
+
+    const char I[]      = "CREATE TABLE;";
+    const char J[]      = "INSERT INTO";
+    const char K_GOOD[] = "CREATE TABLE agg(i INT)";
+    const char K_BAD[]  = "CREATE TABLE";
+    const char G_GOOD[] = "SELECT i FROM agg";
+    const char G_BAD[]  = "INSERT INT agg (i) VALUES (0);";
+
+    in.sql.init.data = I; in.sql.init.len = strlen(I);
+    in.sql.intermediate.data = J; in.sql.intermediate.len = strlen(J);
+
+    in.sql.init_agg.data = K_GOOD; in.sql.init_agg.len = strlen(K_GOOD);
+    in.sql.agg.data = G_GOOD; in.sql.agg.len = strlen(G_GOOD);
+    EXPECT_EQ(handle_sql(&in), 0);
+
+    free(in.types.agg);
+    in.types.agg = nullptr;
+
+    in.sql.agg.data = G_BAD; in.sql.agg.len = strlen(G_BAD);
+    EXPECT_EQ(handle_sql(&in), -1);
+
+    in.sql.init_agg.data = K_BAD; in.sql.init_agg.len = strlen(K_BAD);
+    EXPECT_EQ(handle_sql(&in), -1);
+
+    input_fini(&in);
+}

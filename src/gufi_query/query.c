@@ -69,16 +69,18 @@ OF SUCH DAMAGE.
 /* wrapper wround sqlite3_exec to pass arguments and check for errors */
 void querydb(struct work *work,
              const char *dbname, const size_t dbname_len,
-             sqlite3 *db, const char *query,
+             sqlite3 *db, const char *query, const int *types,
              PoolArgs_t *pa, int id,
              int (*callback)(void *, int, char **, char**), int *rc) {
     ThreadArgs_t *ta = &pa->ta[id];
-    PrintArgs_t args;
-    args.output_buffer = &ta->output_buffer;
-    args.delim = pa->in->delim;
-    args.mutex = pa->stdout_mutex;
-    args.outfile = ta->outfile;
-    args.rows = 0;
+    PrintArgs_t args = {
+        .output_buffer = &ta->output_buffer,
+        .delim = pa->in->delim,
+        .mutex = pa->stdout_mutex,
+        .outfile = ta->outfile,
+        .rows = 0,
+        .types = types,
+    };
 
     char *err = NULL;
 #ifdef SQL_EXEC

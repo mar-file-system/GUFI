@@ -64,13 +64,14 @@ OF SUCH DAMAGE.
 
 #include <cstdio>
 #include <cstring>
+#include <sqlite3.h>
 #include <string>
 
 #include <gtest/gtest.h>
 
 #include "print.h"
 
-static void print_parallel_mutex(pthread_mutex_t *mutex) {
+static void print_parallel_mutex_actual(pthread_mutex_t *mutex) {
     const std::string A   = "A";
     const std::string BC  = "BC";
     const std::string D   = "D";
@@ -103,6 +104,7 @@ static void print_parallel_mutex(pthread_mutex_t *mutex) {
     pa.mutex = mutex;
     pa.outfile = file;
     pa.rows = 0;
+    pa.types = nullptr;
 
     // A\n is buffered in OutputBuffer and takes up all available space
     {
@@ -171,15 +173,100 @@ static void print_parallel_mutex(pthread_mutex_t *mutex) {
     }
 
     fclose(file);
-    OutputBuffer_destroy(&ob);
     delete [] buf;
+    OutputBuffer_destroy(&ob);
 }
 
-TEST(print, parallel_w_mutex) {
+TEST(print_parallel, mutex) {
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    print_parallel_mutex(&mutex);
+    print_parallel_mutex_actual(&mutex);
+    print_parallel_mutex_actual(nullptr);
 }
 
-TEST(print, parallel_wo_mutex) {
-    print_parallel_mutex(nullptr);
+static void print_parallel_tlv_actual(const bool use_len) {
+    const std::string INTEGER = "1";
+    const std::string FLOAT   = "1.0";
+    const std::string TEXT    = "text";
+    const std::string BLOB    = "blob";
+    const std::string NULL_   = "NULL";
+    const std::string DATE    = "date";
+
+    const char *DATA[] = {
+        INTEGER.c_str(),
+        FLOAT.c_str(),
+        TEXT.c_str(),
+        BLOB.c_str(),
+        NULL_.c_str(),
+        DATE.c_str(),
+    };
+
+    const std::size_t COL_COUNT = sizeof(DATA) / sizeof(DATA[0]);
+
+    const int TYPES[] = {
+        SQLITE_INTEGER,
+        SQLITE_FLOAT,
+        SQLITE_TEXT,
+        SQLITE_BLOB,
+        SQLITE_NULL,
+        0,
+    };
+
+    const std::size_t total_len =
+        sizeof(int) +               // number of columns
+        INTEGER.size() + FLOAT.size() + TEXT.size() +
+        BLOB.size() + NULL_.size() + DATE.size() +
+        COL_COUNT +                 // 1 octet types
+        COL_COUNT * sizeof(size_t)  // lengths
+        ;
+
+    struct OutputBuffer ob;
+    EXPECT_EQ(OutputBuffer_init(&ob, use_len?total_len + 1:1), &ob);
+
+    char *buf = new char[total_len + 1]();
+    FILE *file = fmemopen(buf, total_len + 1, "w+b");
+    ASSERT_NE(file, nullptr);
+
+    PrintArgs pa;
+    pa.output_buffer = &ob;
+    pa.delim = '|'; // ignored
+    pa.mutex = nullptr;
+    pa.outfile = file;
+    pa.rows = 0;
+    pa.types = TYPES;
+
+    EXPECT_EQ(print_parallel(&pa, COL_COUNT, (char **) DATA, nullptr), 0);
+    EXPECT_EQ(ob.filled, use_len?total_len:0);
+    EXPECT_EQ(OutputBuffer_flush(&ob, file), use_len?total_len:0);
+    EXPECT_EQ(fflush(file), 0);
+    EXPECT_EQ(pa.rows, (std::size_t) 1);
+
+    char *curr = buf;
+
+    // column_count
+    EXPECT_EQ((std::size_t) * (int *) curr, COL_COUNT);
+    curr += sizeof(int);
+
+    for(std::size_t i = 0; i < COL_COUNT; i++) {
+        // type
+        EXPECT_EQ(*curr, (char) TYPES[i]);
+        curr++;
+
+        // length
+        const size_t len = * (size_t *) curr;
+        curr += sizeof(size_t);
+
+        // value
+        EXPECT_EQ(len, strlen(DATA[i]));
+        EXPECT_EQ(std::string(curr, len), DATA[i]);
+        curr += len;
+    }
+
+    fclose(file);
+    delete [] buf;
+    OutputBuffer_destroy(&ob);
+}
+
+TEST(print_parallel, tlv) {
+    print_parallel_tlv_actual(true);
+    print_parallel_tlv_actual(false);
 }

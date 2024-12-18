@@ -124,6 +124,7 @@ void test_common(PoolArgs *pa) {
         print.mutex = nullptr;
         print.outfile = file;
         print.rows = 0;
+        print.types = nullptr;
 
         // read from the database being processed
         // no need for WHERE - there should only be 1 table
