@@ -66,11 +66,13 @@
 case "@CMAKE_SYSTEM_NAME@" in
     "Linux" | "CYGWIN")
         os_setfattr() {
+            # shellcheck disable=SC2215
             @SETFATTR@ -n "$1" -v "$2" "$3"
         }
         ;;
     "APPLE" | "Darwin")
         os_setfattr() {
+            # shellcheck disable=SC2215
             @XATTR@ -w "$1" "$2" "$3"
         }
         ;;

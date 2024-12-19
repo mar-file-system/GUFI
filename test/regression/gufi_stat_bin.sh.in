@@ -140,13 +140,13 @@ nonprintable=('a' 'b' 'e' 'f' 'n' 'r' 't' 'v')
 
 for c in "${nonprintable[@]}"
 do
-    echo -n "\\${c} -> "
+    printf "\\%c -> " "${c}"
     # shellcheck disable=SC2016
     "${GUFI_STAT_BIN}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | @AWK@ '{ print $2 }'
 done
 
 # do this separately to not deal with "\\${c}\n" -> "\\\\n"
-echo -n "\\\\ -> "
+printf "\\\\\\\\ -> "
 "${GUFI_STAT_BIN}" -f "\\\\\n" "${INDEXROOT}/old_file"
 
 printable=(

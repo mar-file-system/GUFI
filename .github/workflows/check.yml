@@ -152,33 +152,39 @@ jobs:
   Python2:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
+    container:
+      image: centos:8
     steps:
     - uses: actions/checkout@v4
 
     - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-debug-prints
+        key:  ${{ runner.os }}-Python2
 
-    - name: Ubuntu Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
+    - name: CentOS 8 Prerequisites
+      run:  contrib/CI/centos8.sh
 
     - name: Install Python 2
-      run:  sudo apt -y install python2
+      run:  yum -y install python2
 
     - name: Install Matplotlib
       run:  |
-            sudo apt -y install curl
+            yum -y install curl
             curl --insecure https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
-            sudo python2 get-pip.py
+            python2 get-pip.py
             python2 -m pip install --upgrade pip
             python2 -m pip install matplotlib
 
     - name: Configure CMake For Core Tests
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DPYTHON_INTERPRETER=python2
+      run:  |
+            mkdir -p build
+            cd build
+            cmake .. ${{ env.COMMON_CONFIG }} -DPYTHON_INTERPRETER=python2
 
     - name: Build
-      run:  cmake --build ${{ github.workspace }}/build -j
+      working-directory: ${{ github.workspace }}/build
+      run:  make -j
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
@@ -304,7 +310,7 @@ jobs:
     - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-debug-prints
+        key:  ${{ runner.os }}-without-jemalloc
 
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
