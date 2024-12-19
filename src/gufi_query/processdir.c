@@ -65,24 +65,19 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <utime.h>
 
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-#include "OutputBuffers.h"
-#endif
 #include "bf.h"
 #include "compress.h"
 #include "dbutils.h"
-#include "debug.h"
 #include "external.h"
 #include "gufi_query/PoolArgs.h"
-#include "gufi_query/debug.h"
 #include "gufi_query/external.h"
 #include "gufi_query/gqw.h"
 #include "gufi_query/process_queries.h"
 #include "gufi_query/processdir.h"
 #include "gufi_query/query.h"
-#include "gufi_query/timers.h"
 #include "print.h"
 #include "utils.h"
 
@@ -170,15 +165,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                                          gqw->sqlite3_name, gqw->sqlite3_name_len,
                                          "/" DBNAME, DBNAME_LEN + 1);
 
-    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-    timestamps_t ts;
-    timestamps_init(&ts, &pa->start_time);
-    #endif
-
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
-    thread_timestamp_start(opendir_call, &ts.tts[tts_opendir_call]);
     dir = opendir(gqw->work.name);
-    thread_timestamp_end(opendir_call);
 
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
@@ -186,11 +174,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     int rc = 0;
-    thread_timestamp_start(lstat_db_call, &ts.tts[tts_lstat_db_call]);
     if (in->keep_matime) {
         rc = save_matime(gqw, dbpath, sizeof(dbpath), &dbtime);
     }
-    thread_timestamp_end(lstat_db_call);
 
     if (rc != 0) {
         goto close_dir;
@@ -198,21 +184,16 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (gqw->work.level >= in->min_level) {
         #if OPENDB
-        thread_timestamp_start(attachdb_call, &ts.tts[tts_attachdb_call]);
         db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
-        thread_timestamp_end(attachdb_call);
-        increment_query_count(ta);
         #endif
 
         /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
         #ifdef ADDQUERYFUNCS
-        thread_timestamp_start(addqueryfuncs_call, &ts.tts[tts_addqueryfuncs_call]);
         if (db) {
             if (addqueryfuncs_with_context(db, &gqw->work) != 0) {
                 fprintf(stderr, "Could not add functions to sqlite\n");
             }
         }
-        thread_timestamp_end(addqueryfuncs_call);
         #endif
     }
 
@@ -232,21 +213,15 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             /* if this is OR, as well as no-sql-to-run, skip this query */
             if (in->andor == AND) {
                 /* make sure the treesummary table exists */
-                thread_timestamp_start(sqltsumcheck, &ts.tts[tts_sqltsumcheck]);
                 querydb(&gqw->work, dbname, dbname_len, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
                         "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
                         pa, id, count_rows, &recs);
-                thread_timestamp_end(sqltsumcheck);
-                increment_query_count(ta);
                 if (recs < 1) {
                     recs = -1;
                 }
                 else {
                     /* run in->sql.tsum */
-                    thread_timestamp_start(sqltsum, &ts.tts[tts_sqltsum]);
                     querydb(&gqw->work, dbname, dbname_len, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
-                    thread_timestamp_end(sqltsum);
-                    increment_query_count(ta);
                 }
             }
             /* this is an OR or we got a record back. go on to summary/entries */
@@ -267,14 +242,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             if (in->process_xattrs) {
                 setup_xattrs_views(in, db,
                                    &gqw->work,
-                                   &extdb_count
-                                   #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                                   , &ts.tts[tts_xattrprep_call]
-                                   #endif
-                                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                   , &ta->queries
-                                   #endif
-                    );
+                                   &extdb_count);
             }
 
             const size_t xattr_db_count = extdb_count;
@@ -296,31 +264,19 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 /* the only time there are no rows in the summary table is at the index root's parent */
                 if (sll_get_size(&dir_inodes) == 0) {
                     /* attach external dbs and create views specified by input args */
-                    attach_extdbs(in, db, "", 0, &extdb_count
-                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                  , &ta->queries
-                                  #endif
-                        );
+                    attach_extdbs(in, db, "", 0, &extdb_count);
 
                     /* create view for attaching external dbs to */
                     create_extdb_views_noiter(db);
 
                     /* run queries */
-                    process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
-                                    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                                    , &ts
-                                    #endif
-                        );
+                    process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count);
 
                     /* drop views for attaching GUFI tables to */
                     drop_extdb_views(db);
 
                     /* detach each external db */
-                    detach_extdbs(in, db, NULL, 0, &extdb_count
-                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                  , &ta->queries
-                                  #endif
-                            );
+                    detach_extdbs(in, db, NULL, 0, &extdb_count);
                 }
                 else {
                     /* don't want to shadow descend function */
@@ -340,31 +296,19 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                         const size_t dir_inode_len = strlen(dir_inode);
 
                         /* attach external dbs and create views specified by input args */
-                        attach_extdbs(in, db, dir_inode, dir_inode_len, &extdb_count
-                                      #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                      , &ta->queries
-                                      #endif
-                            );
+                        attach_extdbs(in, db, dir_inode, dir_inode_len, &extdb_count);
 
                         /* create views for attaching GUFI tables to */
                         create_extdb_views_iter(db, dir_inode);
 
                         /* run queries */
-                        process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, desc, &subdirs_walked_count
-                                        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                                        , &ts
-                                        #endif
-                            );
+                        process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, desc, &subdirs_walked_count);
 
                         /* drop views for attaching GUFI tables to */
                         drop_extdb_views(db);
 
                         /* detach each external db */
-                        detach_extdbs(in, db, dir_inode, dir_inode_len, &extdb_count
-                                      #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                      , &ta->queries
-                                      #endif
-                            );
+                        detach_extdbs(in, db, dir_inode, dir_inode_len, &extdb_count);
 
                         /* only descend once */
                         desc = 0;
@@ -377,11 +321,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 /* external databases views were created in PoolArgs_init */
 
                 /* run queries */
-                process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
-                                #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                                , &ts
-                                #endif
-                    );
+                process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count);
             }
 
             if (xattr_db_count != extdb_count) {
@@ -391,72 +331,38 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             /* drop xattrs view */
             if (in->process_xattrs) {
-                thread_timestamp_start(xattrdone_call, &ts.tts[tts_xattrdone_call]);
                 external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
                                              &EXTERNAL_TYPE_XATTR,
                                              NULL,
                                              external_decrement_attachname,
-                                             &extdb_count
-                                             query_count_arg);
-                thread_timestamp_end(xattrdone_call);
+                                             &extdb_count);
             }
         }
     }
     else {
         /* if the database was not opened or not deep enough, still have to descend */
-        process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
-                        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                        , &ts
-                        #endif
-            );
+        process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count);
     }
 
     #ifdef OPENDB
-    thread_timestamp_start(detachdb_call, &ts.tts[tts_detachdb_call]);
     if (db) {
         detachdb_cached(dbname, db, pa->detach, 1);
-        increment_query_count(ta);
     }
-    thread_timestamp_end(detachdb_call);
     #endif
 
     /* restore mtime and atime */
-    thread_timestamp_start(utime_call, &ts.tts[tts_utime_call]);
     if (db) {
         if (in->keep_matime) {
             restore_matime(dbpath, &dbtime);
         }
     }
-    thread_timestamp_end(utime_call);
 
   close_dir:
-    ;
-    thread_timestamp_start(closedir_call, &ts.tts[tts_closedir_call]);
     closedir(dir);
-    thread_timestamp_end(closedir_call);
 
   out_free:
-    ;
-
-    thread_timestamp_start(free_work, &ts.tts[tts_free_work]);
-
     free(gqw->work.fullpath);
     free(gqw);
-
-    thread_timestamp_end(free_work);
-
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    struct OutputBuffers *debug_buffers = NULL;
-    QPTPool_get_debug_buffers(ctx, &debug_buffers);
-    timestamps_print(debug_buffers, id, &ts, dir, db);
-    #endif
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    timestamps_sum(&pa->tt, &ts);
-    #endif
-
-    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-    timestamps_destroy(&ts);
-    #endif
 
     return 0;
 }

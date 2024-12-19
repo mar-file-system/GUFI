@@ -70,11 +70,7 @@ OF SUCH DAMAGE.
 
 void attach_extdbs(struct input *in, sqlite3 *db,
                    const char *dir_inode, const size_t dir_inode_len,
-                   size_t *extdb_count
-                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                   , size_t *query_count
-                   #endif
-    );
+                   size_t *extdb_count);
 
 /* create views without iterating through tables */
 int create_extdb_views_noiter(sqlite3 *db);
@@ -86,9 +82,5 @@ void drop_extdb_views(sqlite3 *db);
 
 void detach_extdbs(struct input *in, sqlite3 *db,
                                  const char *dir_inode, const size_t dir_inode_len,
-                                 size_t *extdb_count
-                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                 , size_t *query_count
-                                 #endif
-    );
+                                 size_t *extdb_count);
 #endif

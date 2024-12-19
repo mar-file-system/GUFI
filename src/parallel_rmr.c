@@ -78,11 +78,7 @@ OF SUCH DAMAGE.
 /* Subdirectories are already gone, so    */
 /* they don't have to processed at the    */
 /* current level.                         */
-static int rm_dir(void *args timestamp_sig) {
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    (void) timestamp_buffers;
-    #endif
-
+static int rm_dir(void *args) {
     struct BottomUp *dir = (struct BottomUp *) args;
 
     int rc = 0;
@@ -113,27 +109,13 @@ int main(int argc, char * argv[]) {
     struct input in;
     process_args_and_maybe_exit("hHvn:", 1, "directory ...", &in);
 
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    epoch = since_epoch(&now);
-
-    timestamp_print_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
-    #endif
-
     const int rc = parallel_bottomup(argv + idx, argc - idx,
                                      in.maxthreads,
                                      sizeof(struct BottomUp),
                                      NULL, rm_dir,
                                      1,
                                      0,
-                                     NULL
-                                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                     , timestamp_buffers
-                                     #endif
-        );
-
-    timestamp_print_destroy(timestamp_buffers);
+                                     NULL);
 
     input_fini(&in);
 

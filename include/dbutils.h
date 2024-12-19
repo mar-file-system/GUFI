@@ -71,7 +71,6 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 
 #include "SinglyLinkedList.h"
-#include "debug.h"
 #include "template_db.h"
 #include "utils.h"
 #include "xattrs.h"
@@ -234,14 +233,7 @@ void destroy_xattr_db(void *ptr);
 int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns);
 
 void setup_xattrs_views(struct input *in, sqlite3 *db,
-                        struct work *work, size_t *extdb_count
-                        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                        , struct start_end *se
-                        #endif
-                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                        , size_t *queries
-                        #endif
-    );
+                        struct work *work, size_t *extdb_count);
 
 /* convert characters in sqlite URI paths */
 size_t sqlite_uri_path(char *dst, size_t dst_size,

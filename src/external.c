@@ -283,11 +283,7 @@ int external_concatenate(sqlite3 *db,
                          void *filename_args,
                          size_t (*set_attachname)(char *dst, const size_t dst_size,
                                                   void *args),
-                         void *attachname_args
-                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                         , size_t *query_count
-                         #endif
-    ) {
+                         void *attachname_args) {
     /* Not checking arguments */
 
     int           rec_count = 0;
@@ -310,9 +306,6 @@ int external_concatenate(sqlite3 *db,
         /* step through each external file recorded in the main database */
         sqlite3_stmt *res = NULL;
         const int rc = sqlite3_prepare_v2(db, get_mappings, get_mappings_len, &res, NULL);
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-        (*query_count)++;
-        #endif
         if (rc != SQLITE_OK) {
             sqlite_print_err_and_free(NULL, stderr, "Error: Could not get external file names from table '%s': '%s': err %s (%d)\n", EXTERNAL_DBS, get_mappings, sqlite3_errmsg(db), rc);
             return -1;
@@ -365,9 +358,6 @@ int external_concatenate(sqlite3 *db,
     /* create view */
     char *err = NULL;
     const int rc = sqlite3_exec(db, unioncmd, NULL, NULL, &err);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
     if (rc != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Create external data view \"%s\" failed: %s: %s\n", viewname->data, err, unioncmd);
         return -1;
@@ -401,18 +391,11 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
                                   const refstr_t *extra,
                                   size_t (*set_attachname)(char *dst, const size_t dst_size,
                                                            void *args),
-                                  void *attachname_args
-                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                  , size_t *query_count
-                                  #endif
-    )
+                                  void *attachname_args)
 {
     if (drop_view) {
         char *err = NULL;
         const int rc = sqlite3_exec(db, drop_view, NULL, NULL, &err);
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-        (*query_count)++;
-        #endif
         if (rc != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr, "Warning: Could not drop view: %s\n", err);
         }
@@ -434,9 +417,6 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
 
         char *err = NULL;
         const int rc = sqlite3_exec(db, get_extdbs, external_detach, &args, &err);
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-        (*query_count)++;
-        #endif
         if (rc != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr, "Warning: Could not detach external database: %s\n", err);
         }

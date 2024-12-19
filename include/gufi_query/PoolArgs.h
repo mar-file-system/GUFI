@@ -68,16 +68,10 @@ OF SUCH DAMAGE.
 #include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
-#ifdef DEBUG
-#include <time.h>
-#endif
 
 #include "OutputBuffers.h"
 #include "bf.h"
 #include "dbutils.h"
-#if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-#include "gufi_query/timers.h"
-#endif
 #include "trie.h"
 
 typedef struct ThreadArgs {
@@ -85,10 +79,6 @@ typedef struct ThreadArgs {
     sqlite3 *outdb;                    /* either user named or in-memory */
     FILE *outfile;                     /* always points to STDOUT or a user defined file */
     struct OutputBuffer output_buffer; /* only used when outputting to STDOUT or OUTFILE */
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    size_t queries;                    /* query count */
-    #endif
 } ThreadArgs_t;
 
 typedef struct PoolArgs {
@@ -98,14 +88,6 @@ typedef struct PoolArgs {
     pthread_mutex_t *stdout_mutex;
 
     char detach[MAXSQL];               /* cache SQL statement for detaching index dbs */
-
-    #if defined(DEBUG)
-    struct timespec start_time;
-    #endif
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    total_time_t tt;
-    #endif
 } PoolArgs_t;
 
 int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex);

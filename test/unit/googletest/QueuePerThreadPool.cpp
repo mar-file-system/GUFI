@@ -112,11 +112,7 @@ TEST(QueuePerThreadPool, no_start_stop) {
 /* C Standard 6.10.3/C++ Standard 16.3 Macro replacement */
 static void *qptpool_init_with_props(const size_t threads = -1,
                                      const uint64_t queue_limit = 0) {
-    return QPTPool_init_with_props(threads, nullptr, nullptr, nullptr, queue_limit, "", 0, 0
-                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                   , nullptr
-                                   #endif
-        );
+    return QPTPool_init_with_props(threads, nullptr, nullptr, nullptr, queue_limit, "", 0, 0);
 }
 
 TEST(QueuePreThreadPool, bad_init) {
@@ -856,11 +852,7 @@ TEST(QueuePerThreadPool, prop_queue_limit) {
         EXPECT_EQ(rmdir(dir), 0);
 
         // good
-        QPTPool_t *pool = QPTPool_init_with_props(THREADS, nullptr, nullptr, nullptr, 1, "", 0, 0
-                                                  #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                                  , nullptr
-                                                  #endif
-            );
+        QPTPool_t *pool = QPTPool_init_with_props(THREADS, nullptr, nullptr, nullptr, 1, "", 0, 0);
         EXPECT_NE(pool, nullptr);
         QPTPool_destroy(pool);
     }
@@ -934,29 +926,3 @@ TEST(QueuePerThreadPool, prop_steal) {
         QPTPool_destroy(pool);
     }
 }
-
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-TEST(QueuePerThreadPool, prop_debug_buffers) {
-    // bad state
-    {
-        setup_pool(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_debug_buffers(pool, nullptr), 1);
-        QPTPool_stop(pool);
-        QPTPool_destroy(pool);
-    }
-
-    {
-        QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
-        struct OutputBuffers *set_debug_buffers = reinterpret_cast<struct OutputBuffers *>(1);
-        EXPECT_EQ(QPTPool_set_debug_buffers(nullptr, set_debug_buffers), 1);
-        EXPECT_EQ(QPTPool_set_debug_buffers(pool,    set_debug_buffers), 0);
-
-        struct OutputBuffers *get_debug_buffers = nullptr;
-        EXPECT_EQ(QPTPool_get_debug_buffers(nullptr, &get_debug_buffers), 1);
-        EXPECT_EQ(QPTPool_get_debug_buffers(pool,    nullptr),            0);
-        EXPECT_EQ(QPTPool_get_debug_buffers(pool,    &get_debug_buffers), 0);
-        EXPECT_EQ(get_debug_buffers, set_debug_buffers);
-        QPTPool_destroy(pool);
-    }
-}
-#endif

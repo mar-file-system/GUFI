@@ -70,11 +70,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "utils.h"
 
-static int treesummary(void *args timestamp_sig) {
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    (void) timestamp_buffers;
-    #endif
-
+static int treesummary(void *args) {
     struct BottomUp *dir = (struct BottomUp *) args;
 
     char dbname[MAXPATH];
@@ -115,11 +111,7 @@ int main(int argc, char *argv[]) {
                              NULL, treesummary,
                              0,
                              0,
-                             NULL
-                             #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                             , NULL
-                             #endif
-        );
+                             NULL);
 
     input_fini(&in);
 

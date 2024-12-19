@@ -164,11 +164,7 @@ int external_concatenate(sqlite3 *db,
                          void *filename_args,
                          size_t (*set_attachname)(char *dst, const size_t dst_size,
                                                   void *args),
-                         void *attachname_args
-                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                         , size_t *query_count
-                         #endif
-    );
+                         void *attachname_args);
 
 /*
  * external_concatenate_cleanup
@@ -187,11 +183,7 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
                                   const refstr_t *extra,
                                   size_t (*set_attachname)(char *dst, const size_t dst_size,
                                                            void *args),
-                                  void *attachname_args
-                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                  , size_t *query_count
-                                  #endif
-    );
+                                  void *attachname_args);
 
 size_t external_increment_attachname(char *dst, const size_t dst_size,
                                      void *args);
@@ -225,11 +217,7 @@ typedef struct external_user_setup {
  */
 int external_with_template(sqlite3 *db,
                            const refstr_t *type,
-                           sll_t *eus
-                           #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                           , size_t *query_count
-                           #endif
-    );
+                           sll_t *eus);
 
 /*
  * external_with_template_cleanup
@@ -244,11 +232,7 @@ int external_with_template(sqlite3 *db,
  */
 int external_with_template_cleanup(sqlite3 *db,
                                    const refstr_t *type,
-                                   sll_t *eus
-                                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                   , size_t *query_count
-                                   #endif
-    );
+                                   sll_t *eus);
 
 #ifdef __cplusplus
 }

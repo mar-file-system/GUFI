@@ -133,35 +133,4 @@ foreach(file ${USEFUL})
     configure_file("${file}" "${file}" @ONLY)
 endforeach()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_subdirectory(debug)
-endif()
-
 add_subdirectory(CI)
-if (GIT_FOUND)
-  # git -C <path>
-  set(GIT_PERFORMANCE_VERSION "1.8.5")
-
-  if (CMAKE_VERSION GREATER "3.14")
-    set(GIT_VERSION "${GIT_VERSION_STRING}")
-  else()
-    execute_process(COMMAND ${GIT_EXECUTABLE} --version
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-      OUTPUT_VARIABLE GIT_VERSION_STRING
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX MATCH "[0-9]+\.[0-9]+(\.[0-9]+)?" GIT_VERSION "${GIT_VERSION_STRING}")
-  endif()
-  message(STATUS "git version: ${GIT_VERSION}")
-
-  # VERSION_GREATER_EQUAL was introduced in CMake 3.7
-  if (GIT_VERSION VERSION_LESS GIT_PERFORMANCE_VERSION)
-    message(STATUS "Not adding performance history framework (need git 1.8.5+)")
-  else()
-    if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND PRINT_CUMULATIVE_TIMES)
-      message(STATUS "Adding performance history framework")
-      add_subdirectory(performance)
-    else()
-      message(STATUS "Not adding performance history framework (need PRINT_CUMULATIVE_TIMES enabled)")
-    endif()
-  endif()
-endif()

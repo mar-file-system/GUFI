@@ -1500,11 +1500,9 @@ static size_t xattr_modify_filename(char **dst, const size_t dst_size,
                       src, src_len);
 }
 
-static int create_view(const char *name, sqlite3 *db, const char *query, size_t *query_counter) {
+static int create_view(const char *name, sqlite3 *db, const char *query) {
     char *err = NULL;
     const int rc = sqlite3_exec(db, query, NULL, NULL, &err);
-
-    (*query_counter)++;
 
     if (rc != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Create %s view failed: %s\n", name, err);
@@ -1514,44 +1512,28 @@ static int create_view(const char *name, sqlite3 *db, const char *query, size_t 
     return 1;
 }
 
-static int xattr_create_views(sqlite3 *db
-                              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                              , size_t *query_count
-                              #endif
-    ) {
-    #if !(defined(DEBUG) && defined(CUMULATIVE_TIMES))
-    static size_t query_count_stack = 0;
-    static size_t *query_count = &query_count_stack;
-    #endif
-
+static int xattr_create_views(sqlite3 *db) {
     /* create LEFT JOIN views (all rows, with and without xattrs) */
     /* these should run once, and be no-ops afterwards since the backing data of the views get swapped out */
 
     return !(
         /* entries, pentries, summary */
-        create_view(XENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " XENTRIES " AS SELECT " ENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " ENTRIES " LEFT JOIN " XATTRS " ON " ENTRIES ".inode == " XATTRS ".inode;", query_count) &&
+        create_view(XENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " XENTRIES " AS SELECT " ENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " ENTRIES " LEFT JOIN " XATTRS " ON " ENTRIES ".inode == " XATTRS ".inode;") &&
 
-        create_view(XPENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " XPENTRIES " AS SELECT " PENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " PENTRIES " LEFT JOIN " XATTRS " ON " PENTRIES ".inode == " XATTRS ".inode;", query_count) &&
+        create_view(XPENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " XPENTRIES " AS SELECT " PENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " PENTRIES " LEFT JOIN " XATTRS " ON " PENTRIES ".inode == " XATTRS ".inode;") &&
 
-        create_view(XSUMMARY, db, "CREATE TEMP VIEW IF NOT EXISTS " XSUMMARY " AS SELECT " SUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " SUMMARY " LEFT JOIN " XATTRS " ON " SUMMARY ".inode == " XATTRS ".inode;", query_count) &&
+        create_view(XSUMMARY, db, "CREATE TEMP VIEW IF NOT EXISTS " XSUMMARY " AS SELECT " SUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " SUMMARY " LEFT JOIN " XATTRS " ON " SUMMARY ".inode == " XATTRS ".inode;") &&
 
         /* vrpentries and vrsummary */
         /* vrentries is not available because rolled up entries tables are not correct */
-        create_view(VRXPENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " VRXPENTRIES " AS SELECT " VRPENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRPENTRIES " LEFT JOIN " XATTRS " ON " VRPENTRIES ".inode == " XATTRS ".inode;", query_count) &&
+        create_view(VRXPENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " VRXPENTRIES " AS SELECT " VRPENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRPENTRIES " LEFT JOIN " XATTRS " ON " VRPENTRIES ".inode == " XATTRS ".inode;") &&
 
-        create_view(VRXSUMMARY, db, "CREATE TEMP VIEW IF NOT EXISTS " VRXSUMMARY " AS SELECT " VRSUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRSUMMARY " LEFT JOIN " XATTRS " ON " VRSUMMARY ".inode == " XATTRS ".inode;", query_count)
+        create_view(VRXSUMMARY, db, "CREATE TEMP VIEW IF NOT EXISTS " VRXSUMMARY " AS SELECT " VRSUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRSUMMARY " LEFT JOIN " XATTRS " ON " VRSUMMARY ".inode == " XATTRS ".inode;")
         );
 }
 
 void setup_xattrs_views(struct input *in, sqlite3 *db,
-                        struct work *work, size_t *extdb_count
-                        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                        , struct start_end *se
-                        #endif
-                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                        , size_t *queries
-                        #endif
-    ) {
+                        struct work *work, size_t *extdb_count) {
     static const refstr_t XATTRS_REF = {
         .data = XATTRS,
         .len  = sizeof(XATTRS) - 1,
@@ -1573,8 +1555,6 @@ void setup_xattrs_views(struct input *in, sqlite3 *db,
         .len  = sizeof(XATTRS_TEMPLATE) - 1,
     };
 
-    thread_timestamp_start(xattrprep_call, se);
-
     /* always set up xattrs view */
     external_concatenate(db,
                          in->process_xattrs?&EXTERNAL_TYPE_XATTR:NULL,
@@ -1584,20 +1564,10 @@ void setup_xattrs_views(struct input *in, sqlite3 *db,
                          &XATTRS_AVAIL_REF,
                          in->process_xattrs?&XATTRS_AVAIL_REF:&XATTRS_TEMPLATE_REF,
                          in->process_xattrs?xattr_modify_filename:NULL, work,
-                         external_increment_attachname, extdb_count
-                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                         , queries
-                         #endif
-    );
+                         external_increment_attachname, extdb_count);
 
     /* set up xattr variant views */
-    xattr_create_views(db
-                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                       , queries
-                       #endif
-        );
-
-    thread_timestamp_end(xattrprep_call);
+    xattr_create_views(db);
 }
 
 /*

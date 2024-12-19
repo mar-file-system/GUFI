@@ -71,17 +71,12 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/gqw.h"
-#include "gufi_query/timers.h"
 
 int process_queries(PoolArgs_t *pa,
                     QPTPool_t *ctx, const int id,
                     DIR *dir,
                     gqw_t *gqw, sqlite3 *db,
                     const char *dbname, const size_t dbname_len,
-                    const int descend, size_t *subdirs_walked_count
-                    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                    , timestamps_t *ts
-                    #endif
-    );
+                    const int descend, size_t *subdirs_walked_count);
 
 #endif

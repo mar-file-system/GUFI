@@ -83,27 +83,3 @@ TEST(debug, nsec) {
 TEST(debug, sec) {
     EXPECT_EQ(sec(nsecs_per_sec), 1.0L);
 }
-
-TEST(debug, print_timer) {
-    epoch = 0;
-
-    struct start_end se = { {1, 0}, {2, 0} };
-
-    struct OutputBuffers obufs;
-    memset(&obufs, 0, sizeof(obufs));
-    EXPECT_EQ(print_timer(nullptr, 0, "", &se), -1);
-    EXPECT_EQ(print_timer(&obufs,  0, "", &se), -1);
-
-    ASSERT_EQ(OutputBuffers_init(&obufs, 1, (std::size_t) 4096, nullptr), &obufs);
-    EXPECT_EQ(obufs.mutex, nullptr);
-    ASSERT_NE(obufs.buffers, nullptr);
-
-    struct OutputBuffer &obuf = obufs.buffers[0];
-    EXPECT_EQ(obuf.capacity, (std::size_t) 4096);
-    EXPECT_EQ(obuf.filled, (std::size_t) 0);
-    EXPECT_EQ(obuf.count, (std::size_t) 0);
-
-    EXPECT_EQ(print_timer(&obufs, 0, "", &se), 0);
-
-    EXPECT_NO_THROW(OutputBuffers_destroy(&obufs));
-}

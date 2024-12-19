@@ -94,25 +94,3 @@ uint64_t nsec(struct start_end *se) {
 long double sec(uint64_t ns) {
     return ((long double) ns) / 1e9L;
 }
-
-int print_timer(struct OutputBuffers *obufs, const size_t id,
-                const char *name, struct start_end *se) {
-    if (!obufs || !obufs->buffers) {
-        return -1;
-    }
-
-    char str[1024];
-    SNPRINTF(str, sizeof(str), "%zu %s %" PRIu64 " %" PRIu64,
-             id, name, since_epoch(&se->start) - epoch, since_epoch(&se->end) - epoch);
-
-    PrintArgs_t pa = {
-        .output_buffer = &obufs->buffers[id],
-        .delim = ' ',
-        .mutex = obufs->mutex,
-        .outfile = stderr,
-        .rows = 0,
-    };
-
-    char *ptr = str; /* (char **) &str is not correct */
-    return print_parallel(&pa, 1, &ptr, NULL);
-}

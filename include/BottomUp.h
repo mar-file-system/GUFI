@@ -73,19 +73,9 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
 #include "bf.h"
-#include "debug.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-    #include "OutputBuffers.h"
-    #define timestamp_sig  , struct OutputBuffers *timestamp_buffers
-    #define timestamp_args , timestamp_buffers
-#else
-    #define timestamp_sig
-    #define timestamp_args
 #endif
 
 /*
@@ -124,8 +114,7 @@ struct BottomUp {
 
 /* Signature of function for processing */
 /* directories while traversing a tree */
-typedef int (*BU_f)(void *user_struct
-                    timestamp_sig);
+typedef int (*BU_f)(void *user_struct);
 
 /* ****************************************************************** */
 /*
@@ -138,20 +127,12 @@ typedef int (*BU_f)(void *user_struct
  * might expect. Note that non-BottomUp threads will not have the
  * QPTPool arg argument available to them because it will have been
  * assigned to an opaque value by BottomUp.
-
- * timestamp_buffers should have at least thread_count + 1
- * buffers. The extra buffer contains data printed to it that is
- * relevant to the thread pool but is from outside the thread pool.
  */
 QPTPool_t *parallel_bottomup_init(const size_t thread_count,
                                   const size_t user_struct_size,
                                   BU_f descend, BU_f ascend,
                                   const int track_non_dirs,
-                                  const int generate_alt_name
-                                  #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                  , struct OutputBuffers *timestamp_buffers
-                                  #endif
-    );
+                                  const int generate_alt_name);
 
 int parallel_bottomup_enqueue(QPTPool_t *pool,
                               const char *path, const size_t len,
@@ -174,11 +155,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       BU_f descend, BU_f ascend,
                       const int track_non_dirs,
                       const int generate_alt_name,
-                      void *extra_args
-                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                      , struct OutputBuffers *debug_buffers
-                      #endif
-);
+                      void *extra_args);
 
 /* free a struct BottomUp */
 void bottomup_destroy(void *p);

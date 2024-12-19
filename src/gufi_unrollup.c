@@ -183,12 +183,6 @@ int main(int argc, char *argv[]) {
     struct input in;
     process_args_and_maybe_exit("hHvn:", 1, "GUFI_index ...", &in);
 
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    epoch = since_epoch(NULL);
-
-    timestamp_print_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
-    #endif
-
     QPTPool_t *pool = QPTPool_init(in.maxthreads, NULL);
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
@@ -234,11 +228,6 @@ int main(int argc, char *argv[]) {
 
     QPTPool_stop(pool);
     QPTPool_destroy(pool);
-
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    timestamp_print_destroy(timestamp_buffers);
-    #endif
-
     input_fini(&in);
 
     return EXIT_SUCCESS;

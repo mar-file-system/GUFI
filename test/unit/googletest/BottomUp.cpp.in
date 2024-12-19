@@ -71,25 +71,13 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-#include "OutputBuffers.h"
-#endif
-
-static BU_f zero = [](void *args timestamp_sig) -> int {
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    (void) timestamp_buffers;
-    #endif
-
+static BU_f zero = [](void *args) -> int {
     (void) args;
 
     return 0;
 };
 
-static BU_f one = [](void *args timestamp_sig) -> int {
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    (void) timestamp_buffers;
-    #endif
-
+static BU_f one = [](void *args) -> int {
     (void) args;
 
     return 1;
@@ -109,11 +97,7 @@ static int parallel_bottomup_wrapper(char **root_names, const size_t root_count,
                              descend, ascend,
                              track_non_dirs,
                              generate_alt_name,
-                             extra_args
-                             #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                             , nullptr
-                             #endif
-        );
+                             extra_args);
 }
 
 static const std::string ROOT = "@CMAKE_BINARY_DIR@";
@@ -189,19 +173,4 @@ TEST(BottomUp, bad) {
     EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
                                         zero, one, 0, THREAD_COUNT, nullptr), -1);
-
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    struct OutputBuffers obs;
-    ASSERT_EQ(OutputBuffers_init(&obs, THREAD_COUNT + 1, 1024, nullptr), &obs);
-
-    obs.count = THREAD_COUNT;
-    EXPECT_EQ(parallel_bottomup(nullptr, 0, THREAD_COUNT, sizeof(struct BottomUp),
-                                zero, zero, 0, 0, nullptr, &obs), -1);
-
-    obs.count = THREAD_COUNT + 1;
-    EXPECT_EQ(parallel_bottomup(nullptr, 0, THREAD_COUNT, sizeof(struct BottomUp),
-                                zero, zero, 0, 0, nullptr, &obs), 0);
-
-    OutputBuffers_destroy(&obs);
-    #endif
 }

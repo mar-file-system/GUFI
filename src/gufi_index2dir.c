@@ -315,23 +315,9 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
 
     size_t ext_xattrs = 0;
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    size_t queries = 0;
-    #endif
-
     if (pa->in.process_xattrs) {
-        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-        struct start_end xattrprep_call; /* not used after setup_xattrs_views */
-        #endif
         setup_xattrs_views(&pa->in, db,
-                           work, &ext_xattrs
-                           #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                           , &xattrprep_call
-                           #endif
-                           #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                           , &queries
-                           #endif
-            );
+                           work, &ext_xattrs);
     }
 
     struct DirCallbackArgs dcba = {
@@ -357,11 +343,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
                                      &EXTERNAL_TYPE_XATTR,
                                      NULL,
                                      external_decrement_attachname,
-                                     &ext_xattrs
-                                     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                     , &queries
-                                     #endif
-            );
+                                     &ext_xattrs);
     }
 
     /* ignore errors */

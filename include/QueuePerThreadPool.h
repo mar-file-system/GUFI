@@ -67,10 +67,6 @@ OF SUCH DAMAGE.
 
 #include <inttypes.h>
 
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-#include "OutputBuffers.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -104,9 +100,6 @@ int QPTPool_set_next(QPTPool_t *ctx, QPTPoolNextFunc_t func, void *args);
 int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit); /* count; same for all threads */
 int QPTPool_set_swap_prefix(QPTPool_t *ctx, const char *swap_prefix);
 int QPTPool_set_steal(QPTPool_t *ctx, const uint64_t num, const uint64_t denom);
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-int QPTPool_set_debug_buffers(QPTPool_t *ctx, struct OutputBuffers *debug_buffers);
-#endif
 
 /* Get QPTPool context properties */
 int QPTPool_get_nthreads(QPTPool_t *ctx, size_t *nthreads);
@@ -115,19 +108,12 @@ int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args);
 int QPTPool_get_queue_limit(QPTPool_t *ctx, uint64_t *queue_limit);
 int QPTPool_get_swap_prefix(QPTPool_t *ctx, const char **swap_prefix);
 int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom);
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-int QPTPool_get_debug_buffers(QPTPool_t *ctx, struct OutputBuffers **debug_buffers);
-#endif
 
 /* calls QPTPool_init and QPTPool_set_* functions */
 QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
                                    QPTPoolNextFunc_t next_func, void *next_args,
                                    const uint64_t queue_limit, const char *swap_prefix,
-                                   const uint64_t steal_num, const uint64_t steal_denom
-                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                   , struct OutputBuffers *debug_buffers
-                                   #endif
-    );
+                                   const uint64_t steal_num, const uint64_t steal_denom);
 
 /*
  * QPTPool_init only allocates memory - call this to start threads

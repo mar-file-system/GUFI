@@ -223,10 +223,6 @@ TEST(external, concatenate) {
 
     const char drop_view[] = "DROP VIEW " VIEWNAME ";";
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    std::size_t query_count = 0;
-    #endif
-
     int rc = 0;
 
     rc = external_concatenate(nullptr,
@@ -237,11 +233,7 @@ TEST(external, concatenate) {
                               &external_dbs,
                               &external_dbs,
                               nullptr, nullptr,
-                              nullptr, nullptr
-                              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                              , &query_count
-                              #endif
-        );
+                              nullptr, nullptr);
     EXPECT_EQ(rc, -1);
 
     sqlite3 *db = opendb(SQLITE_MEMORY, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0,
@@ -257,21 +249,13 @@ TEST(external, concatenate) {
                               &external_dbs,
                               &external_dbs,
                               nullptr, nullptr,
-                              nullptr, nullptr
-                              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                              , &query_count
-                              #endif
-                  );
+                              nullptr, nullptr);
     EXPECT_EQ(rc, 0);
 
     external_concatenate_cleanup(db, drop_view,
                                  &type,
                                  nullptr,
-                                 nullptr, nullptr
-                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                 , &query_count
-                                 #endif
-        );
+                                 nullptr, nullptr);
 
     // add one external db to run attach concatenate
     EXPECT_EQ(sqlite3_exec(db,
@@ -289,21 +273,13 @@ TEST(external, concatenate) {
                               &external_dbs,
                               &external_dbs,
                               nullptr, nullptr,
-                              nullptr, nullptr
-                              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                              , &query_count
-                              #endif
-        );
+                              nullptr, nullptr);
     EXPECT_EQ(rc, 0);
 
     external_concatenate_cleanup(db, drop_view,
                                  &type,
                                  nullptr,
-                                 nullptr, nullptr
-                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                 , &query_count
-                                 #endif
-        );
+                                 nullptr, nullptr);
 
     // modify_filename changes the filename to CMAKE_BINARY_DIR which fails to attach
     rc = external_concatenate(db,
@@ -314,21 +290,13 @@ TEST(external, concatenate) {
                               &external_dbs,
                               &external_dbs,
                               bad_filename, nullptr,
-                              nullptr, nullptr
-                              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                              , &query_count
-                              #endif
-        );
+                              nullptr, nullptr);
     EXPECT_EQ(rc, 0);
 
     external_concatenate_cleanup(db, drop_view,
                                  &type,
                                  nullptr,
-                                 nullptr, nullptr
-                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                 , &query_count
-                                 #endif
-        );
+                                 nullptr, nullptr);
 
     sqlite3_close(db);
 
@@ -336,30 +304,17 @@ TEST(external, concatenate) {
     external_concatenate_cleanup(nullptr, drop_view,
                                  &type,
                                  nullptr,
-                                 nullptr, nullptr
-                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                 , &query_count
-                                 #endif
-        );
+                                 nullptr, nullptr);
 
     // no drop view, drop type but bad db
     external_concatenate_cleanup(nullptr, drop_view,
                                  &type,
                                  NULL,
-                                 NULL, NULL
-                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                 , &query_count
-                                 #endif
-        );
-
+                                 NULL, NULL);
 
     // no drop view, no type
     external_concatenate_cleanup(db, nullptr,
                                  nullptr,
                                  nullptr,
-                                 nullptr, nullptr
-                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                 , &query_count
-                                 #endif
-        );
+                                 nullptr, nullptr);
 }

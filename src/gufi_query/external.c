@@ -67,11 +67,7 @@ OF SUCH DAMAGE.
 
 void attach_extdbs(struct input *in, sqlite3 *db,
                    const char *dir_inode, const size_t dir_inode_len,
-                   size_t *extdb_count
-                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                   , size_t *query_count
-                   #endif
-    ) {
+                   size_t *extdb_count) {
     /*
      * for each external database basename provided by the
      * caller, create a view
@@ -117,11 +113,7 @@ void attach_extdbs(struct input *in, sqlite3 *db,
                              &user->table,
                              &user->template_table,
                              NULL, NULL,
-                             external_increment_attachname, extdb_count
-                             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                             , query_count
-                             #endif
-                             );
+                             external_increment_attachname, extdb_count);
 
     }
 }
@@ -183,11 +175,7 @@ void drop_extdb_views(sqlite3 *db) {
 
 void detach_extdbs(struct input *in, sqlite3 *db,
                                  const char *dir_inode, const size_t dir_inode_len,
-                                 size_t *extdb_count
-                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                 , size_t *query_count
-                                 #endif
-    ) {
+                                 size_t *extdb_count) {
     /* detach each external db */
     sll_loop(&in->external_attach, node) {
         eus_t *user = (eus_t *) sll_node_data(node);
@@ -219,11 +207,7 @@ void detach_extdbs(struct input *in, sqlite3 *db,
                                          &EXTERNAL_TYPE_USER_DB,
                                          &basename_comp_ref,
                                          external_decrement_attachname,
-                                         extdb_count
-                                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                         , query_count
-                                         #endif
-                );
+                                         extdb_count);
         }
         else {
             char *err = NULL;

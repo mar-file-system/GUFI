@@ -68,7 +68,7 @@ env:
   CC: gcc
   CXX: g++
   DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -pedantic" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -pedantic -std=c++11" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On -DGCOV=On -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On -DPRINT_PER_THREAD_STATS=On -DPRINT_QPTPOOL_QUEUE_SIZE=On
+  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -pedantic" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -pedantic -std=c++11" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On -DGCOV=On -DCMAKE_BUILD_TYPE=Debug
 
 jobs:
   CodeCoverage:
@@ -83,11 +83,6 @@ jobs:
 
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
-
-    - name: Install matplotlib
-      run:  |
-            sudo apt -y install python3-pip
-            python3 -m pip install matplotlib
 
     - name: Coverage Prerequisites
       run:  |
@@ -107,18 +102,13 @@ jobs:
       run:  ctest || true
 
     - name: Delete files not reported for coverage
-      run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bffuse.*" -o -name "bfresultfuse.*" -o -name "dfw.*" -o -name "tsmepoch2time.*" -o -name "tsmtime2epoch.*" -o -path "*/test/*" \) -delete
+      run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bfwreaddirplus2db.*" -o -name "bffuse.*" -o -name "bfresultfuse.*" -o -name "dfw.*" -o -name "tsmepoch2time.*" -o -name "tsmtime2epoch.*" -o -path "*/test/*" \) -delete
 
     - name: Generate Python Coverage Report
       run:  |
-            export PYTHONPATH="${{ github.workspace }}/build/contrib:${{ github.workspace }}/build/contrib/performance:${{ github.workspace }}/build/scripts:${PYTHONPATH}"
+            export PYTHONPATH="${{ github.workspace }}/build/contrib::${{ github.workspace }}/build/scripts:${PYTHONPATH}"
 
             coverage run -m pytest \
-            ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/extraction.py \
-            ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/graph.py \
-            ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py \
-            ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/stats.py \
-            ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/utils.py \
             ${{ github.workspace }}/build/test/unit/python/test_gufi_common.py \
             ${{ github.workspace }}/build/test/unit/python/test_gufi_config.py
 
@@ -130,7 +120,7 @@ jobs:
             (${{ github.workspace }}/build/test/regression/gufi_stats.sh               || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/longitudinal_snapshot.sh    || true) > /dev/null 2>&1
 
-            coverage xml --omit="${{ github.workspace }}/build/contrib/hashes.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/*,${{ github.workspace }}/build/test/*,${{ github.workspace }}/build/test/regression/*,${{ github.workspace }}/build/test/unit/python/*"
+            coverage xml --omit="${{ github.workspace }}/build/contrib/hashes.py,,${{ github.workspace }}/build/test/*,${{ github.workspace }}/build/test/regression/*,${{ github.workspace }}/build/test/unit/python/*"
             rm .coverage  # If not removed, codecov will attempt to run coverage xml which will not account for our omissions
 
     - name: Upload coverage to Codecov
