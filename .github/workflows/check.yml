@@ -118,7 +118,7 @@ jobs:
     - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-cmake-3.1.0
+        key:  ${{ runner.os }}-old-cmake
 
     - name: CentOS 8 Prerequisites
       run:  contrib/CI/centos8.sh
@@ -130,7 +130,7 @@ jobs:
       run:  yum -y autoremove cmake3
 
     - name: Install CMake 3.1.0
-      run:  contrib/CI/cmake-download.sh 3.1.0 linux-x86_64 | tail -n 1 | sed 's/linux/Linux/g' >> "${GITHUB_PATH}"
+      run:  contrib/CI/cmake-download.sh 3.5.0 linux-x86_64 | tail -n 1 | sed 's/linux/Linux/g' >> "${GITHUB_PATH}"
 
     - name: Check CMake Version
       run:  cmake --version

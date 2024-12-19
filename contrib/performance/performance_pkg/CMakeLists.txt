@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.5.0)
 
 set(PERFORMANCE_PKG
   __init__.py

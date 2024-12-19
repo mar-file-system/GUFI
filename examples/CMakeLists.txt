@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.5.0)
 
 # copy test scripts into the test directory within the build directory
 # list these explicitly to prevent random garbage from getting in
