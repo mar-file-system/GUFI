@@ -231,7 +231,7 @@ TEST(swap, stop_twice) {
 }
 
 TEST(swap, nonexistant_prefix) {
-    char parent[] = "XXXXXX";
+    char parent[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     ASSERT_NE(mkdtemp(parent), nullptr);
 
     char prefix[1024];

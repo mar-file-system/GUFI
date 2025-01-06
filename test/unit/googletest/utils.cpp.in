@@ -400,7 +400,7 @@ TEST(shortpath, split) {
 }
 
 TEST(dupdir, parentfirst) {
-    char root[] = "XXXXXX";
+    char root[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
     char parent[MAXPATH];
@@ -444,7 +444,7 @@ TEST(dupdir, parentfirst) {
 }
 
 TEST(dupdir, childtfirst) {
-    char root[] = "XXXXXX";
+    char root[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
     char parent[MAXPATH];
@@ -509,7 +509,7 @@ TEST(dupdir, childtfirst) {
 }
 
 TEST(dupdir, fileasdir) {
-    char parent[] = "XXXXXX";
+    char parent[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     const int fd = mkstemp(parent);
     ASSERT_GE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -527,7 +527,7 @@ TEST(dupdir, fileasdir) {
 }
 
 TEST(mkpath, parentfirst) {
-    char root[] = "XXXXXX";
+    char root[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
     char parent[MAXPATH];
@@ -576,7 +576,7 @@ TEST(mkpath, parentfirst) {
 }
 
 TEST(mkpath, childfirst) {
-    char root[] = "XXXXXX";
+    char root[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
     char parent[MAXPATH];
@@ -622,7 +622,7 @@ TEST(mkpath, childfirst) {
 }
 
 TEST(mkpath, fileasdir) {
-    char parent[] = "XXXXXX";
+    char parent[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     const int fd = mkstemp(parent);
     ASSERT_GE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -846,7 +846,7 @@ TEST(setup_directory_skip, file) {
         "skip0", // duplicate
     };
 
-    char skip_name[] = "XXXXXX";
+    char skip_name[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     const int skip_fd = mkstemp(skip_name);
     ASSERT_NE(skip_fd, -1);
     EXPECT_EQ(close(skip_fd), 0);
@@ -876,7 +876,7 @@ TEST(setup_directory_skip, bad) {
     trie_t *skip = trie_alloc();
     ASSERT_NE(skip, nullptr);
 
-    char name[] = "XXXXXX";
+    char name[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     const int fd = mkstemp(name);
     ASSERT_GT(fd, -1);
     EXPECT_EQ(setup_directory_skip(skip, name), 0);
@@ -947,8 +947,8 @@ TEST(getline, fd) {
 
     memset(LINE, 'X', LINE_LEN);
 
-    char name[7];
-    snprintf(name, sizeof(name), "XXXXXX");
+    char name[sizeof("@TEST_WORKING_DIRECTORY@/") + 7];
+    snprintf(name, sizeof(name), "@TEST_WORKING_DIRECTORY@/XXXXXX");
     const int fd = mkstemp(name);
     ASSERT_GT(fd, -1);
     EXPECT_EQ(remove(name), 0);
@@ -1035,7 +1035,7 @@ TEST(copyfd, good) {
     std::mt19937 gen(rd());
     std::uniform_int_distribution <> dist(0, 255);
 
-    char srcname[] = "XXXXXX";
+    char srcname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     int src = mkstemp(srcname);
     ASSERT_GT(src, -1);
 
@@ -1063,7 +1063,7 @@ TEST(copyfd, good) {
 
     for(std::size_t i = 0; i < sizeof(offsets) / sizeof(offsets[0]); i++) {
         // new dst each time
-        char dstname[] = "XXXXXX";
+        char dstname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
         int dst = mkstemp(dstname);
         ASSERT_GT(dst, -1);
 
@@ -1100,11 +1100,11 @@ TEST(copyfd, good) {
 }
 
 TEST(copyfd, bad) {
-    char srcname[] = "XXXXXX";
+    char srcname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     int src = mkstemp(srcname);
     ASSERT_GT(src, -1);
 
-    char dstname[] = "XXXXXX";
+    char dstname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     int dst = mkstemp(dstname);
     ASSERT_GT(dst, -1);
 
@@ -1119,7 +1119,7 @@ TEST(copyfd, bad) {
 }
 
 TEST(set_metadata, bad) {
-    char dir[] = "XXXXXX";
+    char dir[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     ASSERT_NE(mkdtemp(dir), nullptr);
 
     char path[MAXPATH];
@@ -1143,7 +1143,7 @@ TEST(set_metadata, bad) {
 }
 
 TEST(write_read, size) {
-    char filename[] = "XXXXXX";
+    char filename[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     int fd = mkstemp(filename);
     ASSERT_GT(fd, -1);
     EXPECT_EQ(remove(filename), 0);

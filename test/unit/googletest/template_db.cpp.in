@@ -108,8 +108,8 @@ TEST(template_db, create_copy) {
     struct stat st;
     EXPECT_EQ(lstat(template_name, &st), -1);
 
-    char dst_name[7];
-    snprintf(dst_name, sizeof(dst_name), "XXXXXX");
+    char dst_name[sizeof("@TEST_WORKING_DIRECTORY@/") + 7];
+    snprintf(dst_name, sizeof(dst_name), "@TEST_WORKING_DIRECTORY@/XXXXXX");
     int dst = mkstemp(dst_name);
     ASSERT_NE(dst, -1);
     EXPECT_EQ(close(dst), 0);
@@ -157,7 +157,7 @@ TEST(create_empty_dbdb, good) {
     ASSERT_EQ(create_template(&tdb, create_test_tables, template_name), 0);
 
     // create new directory
-    char dirname[] = "XXXXXX" ;
+    char dirname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX" ;
     ASSERT_NE(mkdtemp(dirname), nullptr);
 
     refstr_t dst;
@@ -173,10 +173,9 @@ TEST(create_empty_dbdb, good) {
 
     // create file under dirname not called db.db
     char filename[MAXPATH];
-    SNFORMAT_S(filename, sizeof(filename), 3,
+    SNFORMAT_S(filename, sizeof(filename), 2,
                dst.data, dst.len,
-               "/", (std::size_t) 1,
-               "XXXXXX", 6);
+               "/XXXXXX", (std::size_t) 7);
     const int fd = mkstemp(filename);
     ASSERT_GT(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -189,8 +188,8 @@ TEST(create_empty_dbdb, good) {
     // symlink to <dirname>
     char symlinktarget[MAXPATH];
     SNFORMAT_S(symlinktarget, sizeof(symlinktarget), 2,
-               "../", (std::size_t) 3,
-               dst.data, dst.len);
+               dst.data, dst.len,
+               "/..", (std::size_t) 3);
 
     // symink to directory causes error
     ASSERT_EQ(symlink(symlinktarget, dbname), 0);
@@ -216,7 +215,7 @@ TEST(create_empty_dbdb, good) {
 }
 
 TEST(create_empty_dbdb, path_is_file) {
-    char filename[] = "XXXXXX" ;
+    char filename[] = "@TEST_WORKING_DIRECTORY@/XXXXXX" ;
     const int fd = mkstemp(filename);
     ASSERT_GT(fd, -1);
     EXPECT_EQ(close(fd), 0);

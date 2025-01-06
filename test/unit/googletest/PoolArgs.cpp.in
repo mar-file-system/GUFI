@@ -178,7 +178,7 @@ TEST(PoolArgs, OUTFILE) {
 
     char outname[MAXPATH];
     in.outname.data = outname;
-    in.outname.len = snprintf(outname, sizeof(outname), "XXXXXX");
+    in.outname.len = snprintf(outname, sizeof(outname), "@TEST_WORKING_DIRECTORY@/XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -219,7 +219,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
 
     char outname[MAXPATH];
     in.outname.data = outname;
-    in.outname.len = snprintf(outname, sizeof(outname), "XXXXXX");
+    in.outname.len = snprintf(outname, sizeof(outname), "@TEST_WORKING_DIRECTORY@/XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -262,7 +262,7 @@ TEST(PoolArgs, OUTDB) {
 
     char outname[MAXPATH];
     in.outname.data = outname;
-    in.outname.len = snprintf(outname, sizeof(outname), "XXXXXX");
+    in.outname.len = snprintf(outname, sizeof(outname), "@TEST_WORKING_DIRECTORY@/XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -299,7 +299,7 @@ TEST(PoolArgs, OUTDB_aggregate) {
 
     char outname[MAXPATH];
     in.outname.data = outname;
-    in.outname.len = snprintf(outname, sizeof(outname), "XXXXXX");
+    in.outname.len = snprintf(outname, sizeof(outname), "@TEST_WORKING_DIRECTORY@/XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -341,11 +341,11 @@ TEST(PoolArgs, bad_outdb) {
     struct input in;
     setup_input(&in, OUTDB, false);
 
-    char parent[7];
-    snprintf(parent, sizeof(parent), "XXXXXX");
+    char parent[sizeof("@TEST_WORKING_DIRECTORY@/") + 7];
+    snprintf(parent, sizeof(parent), "@TEST_WORKING_DIRECTORY@/XXXXXX");
     ASSERT_EQ(mkdtemp(parent), parent);
 
-    char prefix[13];
+    char prefix[sizeof(parent) + 6];
     snprintf(prefix, sizeof(prefix), "%s/outdb", parent);
 
     in.outname.data = prefix;
@@ -365,11 +365,11 @@ TEST(PoolArgs, bad_outfile) {
     struct input in;
     setup_input(&in, OUTFILE, false);
 
-    char parent[7];
-    snprintf(parent, sizeof(parent), "XXXXXX");
+    char parent[sizeof("@TEST_WORKING_DIRECTORY@/") + 7];
+    snprintf(parent, sizeof(parent), "@TEST_WORKING_DIRECTORY@/XXXXXX");
     ASSERT_EQ(mkdtemp(parent), parent);
 
-    char prefix[15];
+    char prefix[sizeof(parent) + 8];
     snprintf(prefix, sizeof(prefix), "%s/outfile", parent);
 
     in.outname.data = prefix;

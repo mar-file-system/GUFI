@@ -269,7 +269,7 @@ jobs:
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DDEP_USE_JEMALLOC=Off
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DDEP_USE_JEMALLOC=Off -DTEST_WORKING_DIRECTORY="$(pwd)"
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j

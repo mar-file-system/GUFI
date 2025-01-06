@@ -127,7 +127,7 @@ jobs:
       run:  contrib/CI/macos.sh
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY="$(pwd)"
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j

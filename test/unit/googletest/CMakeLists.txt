@@ -71,7 +71,6 @@ if (CMAKE_CXX_COMPILER)
   include_directories(${DEP_INSTALL_PREFIX}/googletest/include)
   set(TEST_SRC
     OutputBuffers.cpp
-    PoolArgs.cpp
     QueuePerThreadPool.cpp
     SinglyLinkedList.cpp
     bf.cpp
@@ -79,27 +78,27 @@ if (CMAKE_CXX_COMPILER)
     debug.cpp
     histogram.cpp
     print.cpp
-    swap.cpp
-    template_db.cpp
-    trace.cpp
     trie.cpp
-    utils.cpp
-    xattrs.cpp
   )
 
-  # these test files use CMAKE_BINARY_DIR
+  # these test files use CMake variables
   set(NEED_PATH
     BottomUp.cpp
+    PoolArgs.cpp
     aggregate.cpp
     dbutils.cpp
     external.cpp
+    swap.cpp
+    template_db.cpp
+    trace.cpp
     utils.cpp
-    )
+    xattrs.cpp
+  )
   foreach(SRC ${NEED_PATH})
     configure_file("${SRC}.in" "${SRC}" @ONLY)
     list(APPEND TEST_SRC
       "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
-      )
+    )
   endforeach()
 
   add_executable(unit_tests ${TEST_SRC} $<TARGET_OBJECTS:gufi_query_lib>)

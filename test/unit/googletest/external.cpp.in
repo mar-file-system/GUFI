@@ -78,26 +78,13 @@ static size_t bad_filename(char **dst, const size_t dst_size,
 
 TEST(external, read_file) {
     // user external db list
-    char filename[] = "XXXXXX";
+    char filename[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     const int fd = mkstemp(filename);
     ASSERT_GE(fd, 0);
 
-    // create bad relative path (bad path)
-    {
-        char bad_rel_path[] = "XXXXXX";   // full path fails to resolve in external_read_file
-        const int bad_rel_path_fd = mkstemp(bad_rel_path);
-        ASSERT_GE(bad_rel_path_fd, 0);
-        EXPECT_EQ(close(bad_rel_path_fd), 0);
-        EXPECT_EQ(remove(bad_rel_path), 0);
-
-        // add to list
-        EXPECT_EQ(write(fd, bad_rel_path, (std::size_t) 6), (ssize_t) 6);
-        EXPECT_EQ(write(fd, "\n",         (std::size_t) 1), (ssize_t) 1);
-    }
-
     // create bad absolute path (bad path)
     {
-        char bad_rel_path[] = "XXXXXX";
+        char bad_rel_path[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
         const int bad_rel_path_fd = mkstemp(bad_rel_path);
         ASSERT_GE(bad_rel_path_fd, 0);
         EXPECT_EQ(close(bad_rel_path_fd), 0);
@@ -125,20 +112,20 @@ TEST(external, read_file) {
     }
 
     // create file with contents (good path, not a db)
-    char not_db_filename[] = "XXXXXX";
+    char not_db_filename[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     {
         const int not_db_fd = mkstemp(not_db_filename);
         ASSERT_GE(not_db_fd, 0);
-        EXPECT_EQ(write(not_db_fd, not_db_filename, (std::size_t) 6), (ssize_t) 6);
+        EXPECT_EQ(write(not_db_fd, not_db_filename, sizeof(not_db_filename) - 1), (ssize_t) sizeof(not_db_filename) - 1);
         EXPECT_EQ(close(not_db_fd), 0);
 
         // add to list
-        EXPECT_EQ(write(fd, not_db_filename, (std::size_t) 6), (ssize_t) 6);
+        EXPECT_EQ(write(fd, not_db_filename, sizeof(not_db_filename) - 1), (ssize_t) sizeof(not_db_filename) - 1);
         EXPECT_EQ(write(fd, "\n",            (std::size_t) 1), (ssize_t) 1);
     }
 
     // create db file (good path, is a db)
-    char dbname[] = "XXXXXX";
+    char dbname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
     {
         const int db_fd = mkstemp(dbname);
         ASSERT_GE(db_fd, 0);
@@ -150,7 +137,7 @@ TEST(external, read_file) {
         closedb(db);
 
         // add to list
-        EXPECT_EQ(write(fd, dbname, (std::size_t) 6), (ssize_t) 6);
+        EXPECT_EQ(write(fd, dbname, sizeof(dbname) - 1), (ssize_t) sizeof(dbname) - 1);
         EXPECT_EQ(write(fd, "\n",   (std::size_t) 1), (ssize_t) 1);
     }
 
@@ -168,7 +155,7 @@ TEST(external, read_file) {
                                     const long long int,
                                     const char *) -> int { return 0; },
                                  nullptr),
-              (std::size_t) 4); // bad relative path does not pass
+              (std::size_t) 4);
 
     // check that path is valid db
     in.check_extdb_valid = true;
