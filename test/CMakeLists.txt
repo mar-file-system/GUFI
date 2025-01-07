@@ -62,6 +62,10 @@
 
 cmake_minimum_required(VERSION 3.5.0)
 
+# allow for the test working directory to be moved
+set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
+execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}")
+
 # add regression tests
 add_subdirectory(regression)
 
@@ -99,10 +103,6 @@ foreach(TEST
   # copy the script into the build directory for easy access
   configure_file("${TEST}" "${TEST}" @ONLY)
 endforeach()
-
-# allow for the test working directory to be moved
-set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
-execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}")
 
 set(TESTTAR "${CMAKE_CURRENT_SOURCE_DIR}/testdir.tar")
 set(TESTDIR "${TEST_WORKING_DIRECTORY}/testdir")
