@@ -380,46 +380,6 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
     return dst_len - max_len - 1;
 }
 
-/*
- * Returns size of a dynamically sized struct work_packed.
- *
- * Size of base struct plus size of stored name plus NUL terminator.
- */
-size_t struct_work_size(struct work *w) {
-    return sizeof(*w) + w->name_len + 1;
-}
-
-/*
- * Allocates a new struct work on the heap with enough room to
- * fit the given `basename` with an optional `prefix`.
- *
- * Initializes the following fields:
- *   - name
- *   - name_len
- */
-struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
-                                const char *basename, const size_t basename_len) {
-    /* +1 for path separator */
-    const size_t name_total = prefix_len + 1 + basename_len;
-
-    struct work *w = calloc(1, sizeof(*w) + name_total + 1);
-    w->name = (char *) &w[1];
-    if (prefix_len == 0) {
-        w->name_len = SNFORMAT_S(w->name, name_total + 1, 1,
-                                 basename, basename_len);
-    } else {
-        w->name_len = SNFORMAT_S(w->name, name_total + 1, 3,
-                                 prefix, prefix_len,
-                                 "/", (size_t) 1,
-                                 basename, basename_len);
-    }
-
-    // TODO: should this initialize basename length?
-    // check how many callers use / need that...
-
-    return w;
-}
-
 /* convert a mode to a human readable string */
 char *modetostr(char *str, const size_t size, const mode_t mode)
 {
