@@ -62,104 +62,42 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef DESCEND_H
+#define DESCEND_H
 
 #include <dirent.h>
-#include <stdio.h>
-#include <sys/types.h>
 
 #include "bf.h"
-#include "config.h"
-#include "descend.h"
-#include "trie.h"
-#include "xattrs.h"
+#include "QueuePerThreadPool.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Wrapper around snprintf to catch issues and print them to stderr */
-int SNPRINTF(char *str, size_t size, const char *format, ...);
+typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
 
-/* Equivalent to snprintf printing only strings. Variadic arguments
-   should be pairs of strings and their lengths (to try to prevent
-   unnecessary calls to strlen). Make sure to typecast the lengths
-   to size_t or weird bugs may occur */
-size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...);
-
-static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
-    return (lhs > rhs)?lhs:rhs;
-}
-
-uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads);
-
-int zeroit(struct sum *summary);
-
-int sumit(struct sum *summary, struct entry_data *data);
-
-int tsumit (struct sum *sumin, struct sum *smout);
-
-// given a possibly-multi-level path of directories (final component is
-// also a dir), create the parent dirs all the way down.
-//
-int mkpath(char*path, mode_t mode, uid_t uid, gid_t gid);
-
-int dupdir(const char *path, struct stat *stat);
-
-int shortpath(const char *name, char *nameout, char *endname);
-
-/* convert a mode to a human readable string */
-char *modetostr(char *str, const size_t size, const mode_t mode);
-
-/* find the index of the first match, walking backwards */
-size_t trailing_match_index(const char *str, size_t len,
-                            const char *match, const size_t match_count);
-
-/* find the index of the first non-match, walking backwards */
-size_t trailing_non_match_index(const char *str, size_t len,
-                                const char *not_match, const size_t not_match_count);
+struct descend_counters {
+    size_t dirs;
+    size_t dirs_insitu;
+    size_t nondirs;
+    size_t nondirs_processed;
+    size_t external_dbs;
+};
 
 /*
- * convenience function to find first slash before the basename
- *
- * used for processing input paths that have been run through realpath
+ * Push the subdirectories in the current directory onto the queue
+ * and process non directories using a user provided function
  */
-size_t dirname_len(const char *path, size_t len);
+int descend(QPTPool_t *ctx, const size_t id, void *args,
+            struct input *in, struct work *work, ino_t inode,
+            DIR *dir, const int skip_db,
+            QPTPoolFunc_t processdir, process_nondir_f processnondir, void *nondir_args,
+            struct descend_counters *counters);
 
-/* add contents of filename into skip */
-ssize_t setup_directory_skip(trie_t *skip, const char *filename);
-
-/* strstr/strtok replacement */
-char *split(char *src, const char *delim, const size_t delim_len, const char *end);
-
-ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_t default_size);
-
-ssize_t copyfd(int src_fd, off_t src_off,
-               int dst_fd, off_t dst_off,
-               size_t size);
-
-/* replace root of actual path being walked with original user inputted root */
-size_t present_user_path(const char *path, size_t path_len,
-                         refstr_t *root_parent, const size_t root_basename_len, refstr_t *orig_root,
-                         char *buf, size_t len);
-
-/* set metadata on given path */
-void set_metadata(const char *path, struct stat *st, struct xattrs *xattrs);
-
-void dump_memory_usage(void);
-
-/* write as much as possible up to size bytes */
-ssize_t write_size(const int fd, const void *data, const size_t size);
-
-/* read as much as possible up to size bytes */
-ssize_t read_size(const int fd, void *buf, const size_t size);
-
-/* Get a directory file descriptor from a given DIR *, infallibly */
-int gufi_dirfd(DIR *d);
+/* decompress work struct coming out of descend() */
+void decompress_work(struct work **dst, void *src);
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif

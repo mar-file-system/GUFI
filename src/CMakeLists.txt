@@ -110,6 +110,7 @@ set(GUFI_SOURCES
   compress.c
   dbutils.c
   debug.c
+  descend.c
   external.c
   histogram.c
   print.c
