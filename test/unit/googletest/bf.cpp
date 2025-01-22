@@ -83,8 +83,6 @@ static const std::string b = "-b";
 static const std::string a = "-a";
 static const std::string n = "-n"; static const std::string n_arg = "1";
 static const std::string d = "-d"; static const std::string d_arg = "|";
-static const std::string i = "-i"; static const std::string i_arg = "i arg";
-static const std::string t = "-t"; static const std::string t_arg = "t arg";
 static const std::string o = "-o"; static const std::string o_arg = "o arg";
 static const std::string O = "-O"; static const std::string O_arg = "O arg";
 static const std::string I = "-I"; static const std::string I_arg = "I arg";
@@ -192,8 +190,6 @@ static void check_input(struct input *in, const bool helped,
     if (options) {
         EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);
         EXPECT_EQ(in->delim,                          '|');
-        EXPECT_EQ(in->nameto,                         t_arg);
-        EXPECT_EQ(in->name,                           i_arg);
         // not checking -o and -O here
         EXPECT_EQ(in->sql.init,                       I_arg);
         EXPECT_EQ(in->sql.tsum,                       T_arg);
@@ -304,8 +300,6 @@ TEST(parse_cmd_line, debug) {
         a.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
-        i.c_str(), i_arg.c_str(),
-        t.c_str(), t_arg.c_str(),
         I.c_str(), I_arg.c_str(),
         T.c_str(), T_arg.c_str(),
         S.c_str(), S_arg.c_str(),
@@ -401,8 +395,6 @@ TEST(parse_cmd_line, options) {
         exec.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
-        i.c_str(), i_arg.c_str(),
-        t.c_str(), t_arg.c_str(),
         I.c_str(), I_arg.c_str(),
         T.c_str(), T_arg.c_str(),
         S.c_str(), S_arg.c_str(),

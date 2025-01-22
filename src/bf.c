@@ -154,8 +154,6 @@ void print_help(const char* prog_name,
       case 'a': printf("  -a                     AND/OR (SQL query combination)"); break;
       case 'n': printf("  -n <threads>           number of threads"); break;
       case 'd': printf("  -d <delim>             delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
-      case 'i': printf("  -i <input_dir>         input directory path"); break;
-      case 't': printf("  -t <to_dir>            build GUFI index (under) here"); break;
       case 'o': printf("  -o <out_fname>         output file (one-per-thread, with thread-id suffix)"); break;
       case 'O': printf("  -O <out_DB>            output DB"); break;
       case 'I': printf("  -I <SQL_init>          SQL init"); break;
@@ -209,9 +207,6 @@ void show_input(struct input* in, int retval) {
    printf("in.buildindex               = %d\n",            in->buildindex);
    printf("in.maxthreads               = %zu\n",           in->maxthreads);
    printf("in.delim                    = '%c'\n",          in->delim);
-   printf("in.name                     = '%s'\n",          in->name.data);
-   printf("in.name_len                 = '%zu'\n",         in->name.len);
-   printf("in.nameto                   = '%s'\n",          in->nameto.data);
    printf("in.andor                    = %d\n",            (int) in->andor);
    printf("in.process_xattrs           = %d\n",            in->process_xattrs);
    printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
@@ -346,14 +341,6 @@ int parse_cmd_line(int         argc,
          else {
              in->delim = optarg[0];
          }
-         break;
-
-      case 't':
-         INSTALL_STR(&in->nameto, optarg);
-         break;
-
-      case 'i':
-         INSTALL_STR(&in->name, optarg);
          break;
 
       case 'o':
