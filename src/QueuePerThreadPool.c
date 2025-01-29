@@ -560,10 +560,6 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
     }
 
     QPTPool_t *ctx = malloc(sizeof(QPTPool_t));
-    if (!ctx) {
-        return NULL;
-    }
-
     ctx->nthreads = nthreads;
     ctx->queue_limit = queue_limit;
     ctx->swap_prefix = swap_prefix;
@@ -578,6 +574,7 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
     ctx->incomplete = 0;
     ctx->swapped = 0;
 
+    /* this can fail since nthreads is user input */
     ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
     if (!ctx->data) {
         free(ctx);

@@ -126,11 +126,6 @@ static void new_pathname(struct BottomUp *work, const char *dirname, size_t dirn
     }
 
     char *path = calloc(new_len + 1, sizeof(char));  // Additional +1 for null terminator
-    if (!path) {
-        fprintf(stderr, "%s(): out of memory", __func__);
-        /* No point in continuing if we run out of memory: */
-        exit(1);
-    }
 
     if (basename) {
         SNFORMAT_S(path, new_len + 1, 3, dirname, dirname_len, "/", (size_t) 1, basename, basename_len);
@@ -184,12 +179,6 @@ static int new_alt_pathname(struct BottomUp *work, const char *dirname, size_t d
     }
 
     char *path = calloc(new_len + 1, sizeof(char));
-    if (!path) {
-        fprintf(stderr, "%s(): out of memory", __func__);
-        /* No point in continuing if we run out of memory: */
-        exit(1);
-    }
-
     memcpy(path, buf, new_len);
 
     work->alt_name = path;
