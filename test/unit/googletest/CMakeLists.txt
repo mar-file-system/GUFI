@@ -71,6 +71,7 @@ if (CMAKE_CXX_COMPILER)
   include_directories(${DEP_INSTALL_PREFIX}/googletest/include)
   set(TEST_SRC
     OutputBuffers.cpp
+    PoolArgs.cpp
     QueuePerThreadPool.cpp
     SinglyLinkedList.cpp
     bf.cpp
@@ -78,21 +79,21 @@ if (CMAKE_CXX_COMPILER)
     debug.cpp
     histogram.cpp
     print.cpp
+    swap.cpp
+    template_db.cpp
+    trace.cpp
     trie.cpp
+    utils.cpp
+    xattrs.cpp
   )
 
   # these test files use CMake variables
   set(NEED_PATH
     BottomUp.cpp
-    PoolArgs.cpp
     aggregate.cpp
     dbutils.cpp
+    descend.cpp
     external.cpp
-    swap.cpp
-    template_db.cpp
-    trace.cpp
-    utils.cpp
-    xattrs.cpp
   )
   foreach(SRC ${NEED_PATH})
     configure_file("${SRC}.in" "${SRC}" @ONLY)
@@ -104,7 +105,7 @@ if (CMAKE_CXX_COMPILER)
   add_executable(unit_tests ${TEST_SRC} $<TARGET_OBJECTS:gufi_query_lib>)
   target_link_libraries(unit_tests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
 
-  add_test(NAME unit_tests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/unit_tests"
+  add_test(NAME unit_tests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/unit_tests" --gtest_shuffle
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
   set_tests_properties(unit_tests PROPERTIES LABELS "unit")
 endif()

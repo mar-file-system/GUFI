@@ -803,7 +803,7 @@ TEST(get_rollupscore, nullptr) {
 TEST(bottomup_collect_treesummary, nullptr) {
     EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", nullptr, ROLLUPSCORE_KNOWN_YES), 1);
 
-    char dirname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char dirname[] = "XXXXXX";
     ASSERT_EQ(mkdtemp(dirname), dirname);
 
     sll_t sll;

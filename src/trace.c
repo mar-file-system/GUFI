@@ -393,7 +393,8 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     empty += !work->entries;
     work->entries += external;
 
-    QPTPool_enqueue(ctx, id, sta->processdir, work);
+    QPTPool_enqueue_swappable(ctx, id, sta->processdir, work,
+                              row_serialize_and_free, row_alloc_and_deserialize);
 
   done:
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);

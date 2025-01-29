@@ -1,0 +1,274 @@
+/*
+This file is part of GUFI, which is part of MarFS, which is released
+under the BSD license.
+
+
+Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+From Los Alamos National Security, LLC:
+LA-CC-15-039
+
+Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+Copyright 2017. Los Alamos National Security, LLC. This software was produced
+under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+the U.S. Department of Energy. The U.S. Government has rights to use,
+reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+modified to produce derivative works, such modified software should be
+clearly marked, so as not to confuse it with the version available from
+LANL.
+
+THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+*/
+
+
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <dirent.h>
+#include <pthread.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <gtest/gtest.h>
+
+#include "QueuePerThreadPool.h"
+#include "descend.h"
+
+TEST(descend, builddir) {
+    struct input in = {};
+
+    // need to put under CMAKE_BINARY_DIR
+    // or will end up in TEST_WORKING_DIRECTORY
+
+    // processed by descend
+    const char linkname[] = "@CMAKE_BINARY_DIR@/testlink";
+    ASSERT_EQ(symlink(linkname, linkname), 0);
+
+    // ignored by descend
+    const char pipename[] = "@CMAKE_BINARY_DIR@/testpipe";
+    ASSERT_EQ(mkfifo(pipename, S_IRUSR | S_IWUSR), 0);
+
+    const char root[] = "@CMAKE_BINARY_DIR@";
+    struct work *work = new_work_with_name(nullptr, 0, root, strlen(root));
+
+    DIR *dir = opendir(work->name);
+    ASSERT_NE(dir, nullptr);
+
+    QPTPool_t *pool = QPTPool_init(1, nullptr);
+    ASSERT_NE(pool, nullptr);
+    EXPECT_EQ(QPTPool_start(pool), 0);
+
+    struct descend_counters ctrs;
+
+    // bad work; rest of inputs don't matter
+    EXPECT_EQ(descend(nullptr, 0, nullptr, nullptr, nullptr, 0, nullptr,
+                      0, nullptr, nullptr, nullptr,
+                      nullptr), 1);
+
+    // work->level == in->max_level - not descending
+    {
+        EXPECT_EQ(descend(nullptr, 0, nullptr, &in, work, 0, dir,
+                          0, nullptr,
+                          nullptr, nullptr,
+                          &ctrs), 0);
+
+        EXPECT_EQ(ctrs.dirs,              (std::size_t) 0);
+        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs,           (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
+    }
+
+    // good descend
+    {
+        rewinddir(dir);
+        in.max_level = 1;
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 0,
+                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                              free(data);
+                              return 0;
+                          },
+                          nullptr, nullptr,
+                          &ctrs), 0);
+
+        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
+        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
+        in.max_level = (size_t) -1;
+    }
+
+    // good descend with skip_db
+    {
+        rewinddir(dir);
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 1,
+                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                              free(data);
+                              return 0;
+                          },
+                          nullptr, nullptr,
+                          &ctrs), 0);
+
+        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
+        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
+    }
+
+    // good descend with some in-situ processing
+    {
+        rewinddir(dir);
+        in.subdir_limit = 1;
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 0,
+                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                              free(data);
+                              return 0;
+                          },
+                          nullptr, nullptr,
+                          &ctrs), 0);
+
+        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
+        EXPECT_NE(ctrs.dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
+    }
+
+    QPTPool_stop(pool);
+    QPTPool_destroy(pool);
+
+    EXPECT_EQ(closedir(dir),    0);
+    free(work);
+    EXPECT_EQ(unlink(pipename), 0);
+    EXPECT_EQ(unlink(linkname), 0);
+}
+
+TEST(descend, swap) {
+    struct input in = {};
+    in.max_level = 1;
+
+    char root[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(root), nullptr);
+
+    struct Args {
+        pthread_mutex_t mutex;
+        pthread_cond_t cond;
+        bool running;
+    };
+
+    Args args;
+    args.mutex = PTHREAD_MUTEX_INITIALIZER;
+    args.cond = PTHREAD_COND_INITIALIZER;
+    args.running = false;
+
+    QPTPool_t *pool = QPTPool_init(1, nullptr);
+    ASSERT_NE(pool, nullptr);
+    EXPECT_EQ(QPTPool_set_queue_limit(pool, 1), 0); // if the WAIT queue already has 1 item, swap out the new item
+    EXPECT_EQ(QPTPool_start(pool), 0);
+
+    // enqueue stuck thread
+    pthread_mutex_lock(&args.mutex);
+    QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
+                         [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                             Args *args = (Args *) data;
+
+                             // alert the main thread that this thread has started
+                             // (has been removed from the WAIT queue)
+                             pthread_mutex_lock(&args->mutex);
+                             args->running = true;
+                             pthread_cond_broadcast(&args->cond);
+
+                             // block until main thread wants to stop this thread
+                             while (args->running) {
+                                 pthread_cond_wait(&args->cond, &args->mutex);
+                             }
+                             pthread_mutex_unlock(&args->mutex);
+
+                             return 0;
+                         }, &args,
+                         nullptr, nullptr);
+
+    // wait until the first thread starts
+    while (!args.running) {
+        pthread_cond_wait(&args.cond, &args.mutex);
+    }
+    pthread_mutex_unlock(&args.mutex);
+
+    // enqueue item into WAIT queue
+    QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
+                         [](QPTPool_t *, const size_t, void *, void *) -> int {
+                             // no-op
+                             return 0;
+                         }, nullptr,
+                         nullptr, nullptr);
+
+    // descend to swap
+    struct work *work = new_work_with_name(nullptr, 0, root, strlen(root));
+
+    DIR *dir = opendir(work->name);
+    ASSERT_NE(dir, nullptr);
+
+    struct descend_counters ctrs;
+
+    EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 0,
+                      [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                          free(data);
+                          return 0;
+                      },
+                      nullptr, nullptr,
+                      &ctrs), 0);
+
+    // allow the first thread to complete
+    pthread_mutex_lock(&args.mutex);
+    args.running = false;
+    pthread_cond_broadcast(&args.cond);
+    pthread_mutex_unlock(&args.mutex);
+
+    QPTPool_stop(pool);
+    QPTPool_destroy(pool);
+
+    EXPECT_EQ(closedir(dir), 0);
+    free(work);
+
+    EXPECT_EQ(remove(root), 0);
+}

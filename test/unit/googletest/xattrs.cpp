@@ -107,7 +107,7 @@ TEST(xattrs, alloc) {
 }
 
 TEST(xattrs, get) {
-    char name[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char name[] = "XXXXXX";
     const int fd = mkstemp(name);
     ASSERT_NE(fd, -1);
     close(fd);

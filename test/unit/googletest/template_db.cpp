@@ -108,8 +108,7 @@ TEST(template_db, create_copy) {
     struct stat st;
     EXPECT_EQ(lstat(template_name, &st), -1);
 
-    char dst_name[sizeof("@TEST_WORKING_DIRECTORY@/") + 7];
-    snprintf(dst_name, sizeof(dst_name), "@TEST_WORKING_DIRECTORY@/XXXXXX");
+    char dst_name[] = "XXXXXX";
     int dst = mkstemp(dst_name);
     ASSERT_NE(dst, -1);
     EXPECT_EQ(close(dst), 0);
@@ -157,7 +156,7 @@ TEST(create_empty_dbdb, good) {
     ASSERT_EQ(create_template(&tdb, create_test_tables, template_name), 0);
 
     // create new directory
-    char dirname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX" ;
+    char dirname[] = "XXXXXX";
     ASSERT_NE(mkdtemp(dirname), nullptr);
 
     refstr_t dst;
@@ -181,6 +180,7 @@ TEST(create_empty_dbdb, good) {
     EXPECT_EQ(close(fd), 0);
 
     // symlink to file is ok
+    ASSERT_EQ(symlink(filename + dst.len + 1, dbname), 0);
     EXPECT_EQ(create_empty_dbdb(&tdb, &dst, -1, -1), 0);
     EXPECT_EQ(unlink(dbname), 0);
     EXPECT_EQ(unlink(filename), 0);
@@ -192,7 +192,7 @@ TEST(create_empty_dbdb, good) {
                "/..", (std::size_t) 3);
 
     // symink to directory causes error
-    ASSERT_EQ(symlink(symlinktarget, dbname), 0);
+    ASSERT_EQ(symlink(symlinktarget + dst.len + 1, dbname), 0);
     EXPECT_EQ(create_empty_dbdb(&tdb, &dst, -1, -1), -1);
     EXPECT_EQ(unlink(dbname), 0);
 
@@ -215,7 +215,7 @@ TEST(create_empty_dbdb, good) {
 }
 
 TEST(create_empty_dbdb, path_is_file) {
-    char filename[] = "@TEST_WORKING_DIRECTORY@/XXXXXX" ;
+    char filename[] = "XXXXXX";
     const int fd = mkstemp(filename);
     ASSERT_GT(fd, -1);
     EXPECT_EQ(close(fd), 0);

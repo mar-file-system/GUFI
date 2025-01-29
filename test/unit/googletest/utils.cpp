@@ -400,7 +400,7 @@ TEST(shortpath, split) {
 }
 
 TEST(dupdir, parentfirst) {
-    char root[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
     char parent[MAXPATH];
@@ -444,7 +444,7 @@ TEST(dupdir, parentfirst) {
 }
 
 TEST(dupdir, childtfirst) {
-    char root[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
     char parent[MAXPATH];
@@ -509,7 +509,7 @@ TEST(dupdir, childtfirst) {
 }
 
 TEST(dupdir, fileasdir) {
-    char parent[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char parent[] = "XXXXXX";
     const int fd = mkstemp(parent);
     ASSERT_GE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -527,7 +527,7 @@ TEST(dupdir, fileasdir) {
 }
 
 TEST(mkpath, parentfirst) {
-    char root[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
     char parent[MAXPATH];
@@ -576,7 +576,7 @@ TEST(mkpath, parentfirst) {
 }
 
 TEST(mkpath, childfirst) {
-    char root[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
     char parent[MAXPATH];
@@ -622,7 +622,7 @@ TEST(mkpath, childfirst) {
 }
 
 TEST(mkpath, fileasdir) {
-    char parent[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char parent[] = "XXXXXX";
     const int fd = mkstemp(parent);
     ASSERT_GE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -633,113 +633,6 @@ TEST(mkpath, fileasdir) {
     EXPECT_EQ(mkpath(child, S_IRWXU, geteuid(), getegid()), -1);
 
     EXPECT_EQ(remove(parent), 0);
-}
-
-TEST(descend, builddir) {
-    struct input in = {};
-
-    // need to put under CMAKE_BINARY_DIR
-    // or will end up in TEST_WORKING_DIRECTORY
-
-    // processed by descend
-    const char linkname[] = "@CMAKE_BINARY_DIR@/testlink";
-    ASSERT_EQ(symlink(linkname, linkname), 0);
-
-    // ignored by descend
-    const char pipename[] = "@CMAKE_BINARY_DIR@/testpipe";
-    ASSERT_EQ(mkfifo(pipename, S_IRUSR | S_IWUSR), 0);
-
-    const char root[] = "@CMAKE_BINARY_DIR@";
-    struct work *work = new_work_with_name(NULL, 0, root, strlen(root));
-
-    DIR *dir = opendir(work->name);
-    ASSERT_NE(dir, nullptr);
-
-    QPTPool_t *pool = QPTPool_init(1, nullptr);
-    ASSERT_NE(pool, nullptr);
-    EXPECT_EQ(QPTPool_start(pool), 0);
-
-    struct descend_counters ctrs;
-
-    // bad work; rest of inputs don't matter
-    EXPECT_EQ(descend(nullptr, 0, nullptr, nullptr, nullptr, 0, nullptr,
-                      0, nullptr, nullptr, nullptr,
-                      nullptr), 1);
-
-    // work->level == in->max_level - not descending
-    {
-        EXPECT_EQ(descend(nullptr, 0, nullptr, &in, work, 0, dir,
-                          0, nullptr,
-                          nullptr, nullptr,
-                          &ctrs), 0);
-
-        EXPECT_EQ(ctrs.dirs,              (std::size_t) 0);
-        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
-        EXPECT_EQ(ctrs.nondirs,           (std::size_t) 0);
-        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
-    }
-
-    // good descend
-    {
-        rewinddir(dir);
-        in.max_level = 1;
-        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 0,
-                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
-                              free(data);
-                              return 0;
-                          },
-                          nullptr, nullptr,
-                          &ctrs), 0);
-
-        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
-        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
-        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
-        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
-        in.max_level = (size_t) -1;
-    }
-
-    // good descend with skip_db
-    {
-        rewinddir(dir);
-        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 1,
-                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
-                              free(data);
-                              return 0;
-                          },
-                          nullptr, nullptr,
-                          &ctrs), 0);
-
-        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
-        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
-        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
-        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
-    }
-
-    // good descend with some in-situ processing
-    {
-        rewinddir(dir);
-        in.subdir_limit = 1;
-        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 0,
-                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
-                              free(data);
-                              return 0;
-                          },
-                          nullptr, nullptr,
-                          &ctrs), 0);
-
-        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
-        EXPECT_NE(ctrs.dirs_insitu,       (std::size_t) 0);
-        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
-        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
-    }
-
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
-
-    EXPECT_EQ(closedir(dir),    0);
-    free(work);
-    EXPECT_EQ(unlink(pipename), 0);
-    EXPECT_EQ(unlink(linkname), 0);
 }
 
 static char *another_modetostr(char *str, const mode_t mode) {
@@ -846,7 +739,7 @@ TEST(setup_directory_skip, file) {
         "skip0", // duplicate
     };
 
-    char skip_name[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char skip_name[] = "XXXXXX";
     const int skip_fd = mkstemp(skip_name);
     ASSERT_NE(skip_fd, -1);
     EXPECT_EQ(close(skip_fd), 0);
@@ -876,7 +769,7 @@ TEST(setup_directory_skip, bad) {
     trie_t *skip = trie_alloc();
     ASSERT_NE(skip, nullptr);
 
-    char name[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char name[] = "XXXXXX";
     const int fd = mkstemp(name);
     ASSERT_GT(fd, -1);
     EXPECT_EQ(setup_directory_skip(skip, name), 0);
@@ -947,8 +840,7 @@ TEST(getline, fd) {
 
     memset(LINE, 'X', LINE_LEN);
 
-    char name[sizeof("@TEST_WORKING_DIRECTORY@/") + 7];
-    snprintf(name, sizeof(name), "@TEST_WORKING_DIRECTORY@/XXXXXX");
+    char name[] = "XXXXXX";
     const int fd = mkstemp(name);
     ASSERT_GT(fd, -1);
     EXPECT_EQ(remove(name), 0);
@@ -1035,7 +927,7 @@ TEST(copyfd, good) {
     std::mt19937 gen(rd());
     std::uniform_int_distribution <> dist(0, 255);
 
-    char srcname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char srcname[] = "XXXXXX";
     int src = mkstemp(srcname);
     ASSERT_GT(src, -1);
 
@@ -1063,7 +955,7 @@ TEST(copyfd, good) {
 
     for(std::size_t i = 0; i < sizeof(offsets) / sizeof(offsets[0]); i++) {
         // new dst each time
-        char dstname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+        char dstname[] = "XXXXXX";
         int dst = mkstemp(dstname);
         ASSERT_GT(dst, -1);
 
@@ -1100,11 +992,11 @@ TEST(copyfd, good) {
 }
 
 TEST(copyfd, bad) {
-    char srcname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char srcname[] = "XXXXXX";
     int src = mkstemp(srcname);
     ASSERT_GT(src, -1);
 
-    char dstname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char dstname[] = "XXXXXX";
     int dst = mkstemp(dstname);
     ASSERT_GT(dst, -1);
 
@@ -1119,7 +1011,7 @@ TEST(copyfd, bad) {
 }
 
 TEST(set_metadata, bad) {
-    char dir[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char dir[] = "XXXXXX";
     ASSERT_NE(mkdtemp(dir), nullptr);
 
     char path[MAXPATH];
@@ -1143,7 +1035,7 @@ TEST(set_metadata, bad) {
 }
 
 TEST(write_read, size) {
-    char filename[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char filename[] = "XXXXXX";
     int fd = mkstemp(filename);
     ASSERT_GT(fd, -1);
     EXPECT_EQ(remove(filename), 0);

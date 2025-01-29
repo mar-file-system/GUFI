@@ -295,7 +295,7 @@ TEST(scout_trace, no_cleanup) {
     ASSERT_EQ(rc, (int) len);
 
     // write trace to file
-    char tracename[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char tracename[] = "XXXXXX";
     const int fd = mkstemp(tracename);
     ASSERT_GT(fd, -1);
     ASSERT_EQ(write(fd, line, len), (ssize_t) len);
@@ -321,16 +321,70 @@ TEST(scout_trace, no_cleanup) {
 
     QPTPool_t *pool = QPTPool_init(1, nullptr);
     ASSERT_NE(pool, nullptr);
+    EXPECT_EQ(QPTPool_set_queue_limit(pool, 1), 0); // if the WAIT queue already has 1 item, swap out the new item
     ASSERT_EQ(QPTPool_start(pool), 0);
 
+    struct Args {
+        pthread_mutex_t mutex;
+        pthread_cond_t cond;
+        bool running;
+    };
+
+    Args args;
+    args.mutex = PTHREAD_MUTEX_INITIALIZER;
+    args.cond = PTHREAD_COND_INITIALIZER;
+    args.running = false;
+
+    // enqueue stuck thread
+    pthread_mutex_lock(&args.mutex);
+    QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
+                         [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                             Args *args = (Args *) data;
+
+                             // alert the main thread that this thread has started
+                             // (has been removed from the WAIT queue)
+                             pthread_mutex_lock(&args->mutex);
+                             args->running = true;
+                             pthread_cond_broadcast(&args->cond);
+
+                             // block until main thread wants to stop this thread
+                             while (args->running) {
+                                 pthread_cond_wait(&args->cond, &args->mutex);
+                             }
+                             pthread_mutex_unlock(&args->mutex);
+                             return 0;
+                         }, &args,
+                         nullptr, nullptr);
+
+    // wait until the first thread starts
+    while (!args.running) {
+        pthread_cond_wait(&args.cond, &args.mutex);
+    }
+    pthread_mutex_unlock(&args.mutex);
+
+    // enqueue item into WAIT queue
+    QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
+                         [](QPTPool_t *, const size_t, void *, void *) -> int {
+                             // no-op
+                             return 0;
+                         }, nullptr,
+                         nullptr, nullptr);
+
     // not enqueuing scout_trace
-    // struct (on statck) is not cleaned up, so should not throw
+    // struct (on stack) is not cleaned up, so should not throw
     EXPECT_EQ(scout_trace(pool, 0, &sta, nullptr), 0);
+
+    // allow the first thread to complete
+    pthread_mutex_lock(&args.mutex);
+    args.running = false;
+    pthread_cond_broadcast(&args.cond);
+    pthread_mutex_unlock(&args.mutex);
+
     EXPECT_EQ(scout_trace(pool, 0, &sta, nullptr), 0);
 
     QPTPool_stop(pool);
-    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 2);
-    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 2);
+    EXPECT_GT(QPTPool_threads_started(pool),   (uint64_t) 4);
+    EXPECT_GT(QPTPool_threads_completed(pool), (uint64_t) 4);
     QPTPool_destroy(pool);
 
     EXPECT_EQ(stats.remaining,  (size_t)   0);

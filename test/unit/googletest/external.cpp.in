@@ -73,18 +73,18 @@ OF SUCH DAMAGE.
 static size_t bad_filename(char **dst, const size_t dst_size,
                            const char *, const size_t,
                            void *) {
-    return SNPRINTF(*dst, dst_size, "@CMAKE_BINARY_DIR@");
+    return SNPRINTF(*dst, dst_size, ".");
 }
 
 TEST(external, read_file) {
     // user external db list
-    char filename[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char filename[] = "XXXXXX";
     const int fd = mkstemp(filename);
     ASSERT_GE(fd, 0);
 
     // create bad absolute path (bad path)
     {
-        char bad_rel_path[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+        char bad_rel_path[] = "XXXXXX";
         const int bad_rel_path_fd = mkstemp(bad_rel_path);
         ASSERT_GE(bad_rel_path_fd, 0);
         EXPECT_EQ(close(bad_rel_path_fd), 0);
@@ -112,7 +112,7 @@ TEST(external, read_file) {
     }
 
     // create file with contents (good path, not a db)
-    char not_db_filename[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char not_db_filename[] = "XXXXXX";
     {
         const int not_db_fd = mkstemp(not_db_filename);
         ASSERT_GE(not_db_fd, 0);
@@ -125,7 +125,7 @@ TEST(external, read_file) {
     }
 
     // create db file (good path, is a db)
-    char dbname[] = "@TEST_WORKING_DIRECTORY@/XXXXXX";
+    char dbname[] = "XXXXXX";
     {
         const int db_fd = mkstemp(dbname);
         ASSERT_GE(db_fd, 0);

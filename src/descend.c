@@ -117,21 +117,11 @@ static int work_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function.
  *
- * work->statuso should be filled before calling descend.
- *
- * If work->recursion_level > 0, the work item that is passed
- * into the processdir function will be allocated on the stack
- * instead of on the heap, so do not free it.
- *
- * if a child file/link is selected for external tracking, add
- * it to EXTERNAL_DBS_PWD in addition to ENTRIES.
- *
- * Ownership of struct work:
- *  - if descend() allocates a struct work using new_work_with_name(), and it is
- *    passed off to a processdir or processnondir function, then that function
- *    takes ownership of that struct work and must eventually free() it.
- * - if descend() does not pass of a new struct work to anyone, then it retains
- *   ownership and free()s it.
+ * processdir() should always free the work item it is
+ * processing. processnondir() should not free the work item it is
+ * processing. This is an artifact left over from when the work item
+ * was allocated on the stack and only copied to a dynamically
+ * allocated space when the entry was a directory.
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
