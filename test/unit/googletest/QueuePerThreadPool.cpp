@@ -288,7 +288,7 @@ TEST(QueuePerThreadPool, enqueue_internal) {
     QPTPool_destroy(pool);
 }
 
-static int test_serialize_address(const int fd, QPTPoolFunc_t func, void *work, size_t *size) {
+static int test_serialize_address(const int fd, QPTPool_f func, void *work, size_t *size) {
     if (write_size(fd, (void *) (uintptr_t) &func, sizeof(func)) != sizeof(func)) {
         return 1;
     }
@@ -302,7 +302,7 @@ static int test_serialize_address(const int fd, QPTPoolFunc_t func, void *work, 
     return 0;
 }
 
-static int test_deserialize_address(const int fd, QPTPoolFunc_t *func, void **work) {
+static int test_deserialize_address(const int fd, QPTPool_f *func, void **work) {
     if (read_size(fd, (void *) (uintptr_t) func, sizeof(*func)) != sizeof(*func)) {
         return 1;
     }

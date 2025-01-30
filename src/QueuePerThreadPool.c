@@ -129,7 +129,7 @@ struct worker_function_args {
 
 /* struct that is created when something is enqueued */
 struct queue_item {
-    QPTPoolFunc_t func;
+    QPTPool_f func;
     void *work;
 };
 
@@ -642,8 +642,40 @@ int QPTPool_start(QPTPool_t *ctx) {
     return 0;
 }
 
+int QPTPool_generic_serialize_and_free(const int fd, QPTPool_f func, void *work, const size_t len, size_t *size) {
+    if ((write_size(fd, &func, sizeof(func)) != sizeof(func)) ||
+        (write_size(fd, &len, sizeof(len)) != sizeof(len)) ||
+        (write_size(fd, work, len) != (ssize_t) len)) {
+        return 1;
+    }
+
+    *size += sizeof(func) + sizeof(len) + len;
+
+    free(work);
+
+    return 0;
+}
+
+int QPTPool_generic_alloc_and_deserialize(const int fd, QPTPool_f *func, void **work) {
+    size_t len = 0;
+    if ((read_size(fd, func, sizeof(*func)) != sizeof(*func)) ||
+        (read_size(fd, &len, sizeof(len)) != sizeof(len))) {
+        return 1;
+    }
+
+    void *data = malloc(len);
+    if (read_size(fd, data, len) != (ssize_t) len) {
+        free(data);
+        return 1;
+    }
+
+    *work = data;
+
+    return 0;
+}
+
 /* id selects the next_queue variable to use, not where the work will be placed */
-QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work) {
+QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPool_f func, void *new_work) {
     /* Not checking arguments */
 
     struct queue_item *qi = malloc(sizeof(struct queue_item));
@@ -676,9 +708,9 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFu
 }
 
 static int write_swap(struct Swap *swap,
-                      serialize_and_free serialize,
-                      alloc_and_deserialize deserialize,
-                      QPTPoolFunc_t func, void *work) {
+                      QPTPool_serialize_and_free_f serialize,
+                      QPTPool_alloc_and_deserialize_f deserialize,
+                      QPTPool_f func, void *work) {
     /* Not checking arguments */
 
     const int fd = swap->write.fd;
@@ -703,9 +735,9 @@ static int write_swap(struct Swap *swap,
 }
 
 static int read_swap(struct Swap *swap,
-                     serialize_and_free *serialize,
-                     alloc_and_deserialize *deserialize,
-                     QPTPoolFunc_t *func, void **work) {
+                     QPTPool_serialize_and_free_f *serialize,
+                     QPTPool_alloc_and_deserialize_f *deserialize,
+                     QPTPool_f *func, void **work) {
     /* Not checking arguments */
 
     const int fd = swap->read.fd;
@@ -721,9 +753,9 @@ static int read_swap(struct Swap *swap,
     return 0;
 }
 
-QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work,
-                                                serialize_and_free serialize,
-                                                alloc_and_deserialize deserialize) {
+QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id, QPTPool_f func, void *new_work,
+                                                QPTPool_serialize_and_free_f serialize,
+                                                QPTPool_alloc_and_deserialize_f deserialize) {
     /* Not checking arguments */
 
     QPTPoolThreadData_t *data = &ctx->data[id];
@@ -767,9 +799,9 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id,
 }
 
 QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTPool_enqueue_dst_t queue,
-                                           QPTPoolFunc_t func, void *new_work,
-                                           serialize_and_free serialize,
-                                           alloc_and_deserialize deserialize) {
+                                           QPTPool_f func, void *new_work,
+                                           QPTPool_serialize_and_free_f serialize,
+                                           QPTPool_alloc_and_deserialize_f deserialize) {
     /* Not checking other arguments */
 
     if ((queue != QPTPool_enqueue_WAIT) &&
@@ -877,9 +909,9 @@ static int QPTPool_wait_swapped_once(QPTPool_t *ctx, const size_t id, void *data
 
     size_t count = 0;
 
-    serialize_and_free serialize = NULL;
-    alloc_and_deserialize deserialize = NULL;
-    QPTPoolFunc_t func = NULL;
+    QPTPool_serialize_and_free_f serialize = NULL;
+    QPTPool_alloc_and_deserialize_f deserialize = NULL;
+    QPTPool_f func = NULL;
     void *work = NULL;
 
     /* read everything out of swap and enqueue */

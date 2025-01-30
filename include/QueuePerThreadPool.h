@@ -131,7 +131,7 @@ int QPTPool_start(QPTPool_t *ctx);
  * @param args     any extra data to make accessible to all functions that this thread pool runs
  * @return 0 if successful, non-zero if not
  */
-typedef int (*QPTPoolFunc_t)(QPTPool_t *ctx, const size_t id, void *data, void *args);
+typedef int (*QPTPool_f)(QPTPool_t *ctx, const size_t id, void *data, void *args);
 
 /* which queue a new work item will be placed in */
 typedef enum QPTPool_enqueue_dst {
@@ -141,8 +141,12 @@ typedef enum QPTPool_enqueue_dst {
 } QPTPool_enqueue_dst_t;
 
 /* function signatures for serializing and deserializing data to swap */
-typedef int (*serialize_and_free)(const int fd, QPTPoolFunc_t func, void *work, size_t *size);
-typedef int (*alloc_and_deserialize)(const int fd, QPTPoolFunc_t *func, void **work);
+typedef int (*QPTPool_serialize_and_free_f)(const int fd, QPTPool_f func, void *work, size_t *size);
+typedef int (*QPTPool_alloc_and_deserialize_f)(const int fd, QPTPool_f *func, void **work);
+
+int QPTPool_generic_serialize_and_free(const int fd, QPTPool_f func, void *work, const size_t len,
+                                       size_t *size);
+int QPTPool_generic_alloc_and_deserialize(const int fd, QPTPool_f *func, void **work);
 
 /*
  * Enqueue data and a function to process the data. Pushes to
@@ -157,7 +161,7 @@ typedef int (*alloc_and_deserialize)(const int fd, QPTPoolFunc_t *func, void **w
  * @param new_work the work to be processed by func
  */
 QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id,
-                                      QPTPoolFunc_t func, void *new_work);
+                                      QPTPool_f func, void *new_work);
 
 /*
  * Enqueue data and a function to process the data. Pushes to
@@ -177,9 +181,9 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id,
  * @param deserialize function to allocate space and fill in new_work
  */
 QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id,
-                                                QPTPoolFunc_t func, void *new_work,
-                                                serialize_and_free serialize,
-                                                alloc_and_deserialize deserialze);
+                                                QPTPool_f func, void *new_work,
+                                                QPTPool_serialize_and_free_f serialize,
+                                                QPTPool_alloc_and_deserialize_f deserialze);
 /*
  * Enqueue data and a function to process the data. Pushes directly to
  * thread[id] instead of thread[id]->next_queue. The queue_limit is
@@ -198,9 +202,9 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id,
  * @param deserialize function to allocate space and fill in new_work
  */
 QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTPool_enqueue_dst_t queue,
-                                           QPTPoolFunc_t func, void *new_work,
-                                           serialize_and_free serialize,
-                                           alloc_and_deserialize deserialize);
+                                           QPTPool_f func, void *new_work,
+                                           QPTPool_serialize_and_free_f serialize,
+                                           QPTPool_alloc_and_deserialize_f deserialize);
 
 /* Wait for all in-memory work to be processed but do not clean up threads */
 uint64_t QPTPool_wait_mem(QPTPool_t *ctx);

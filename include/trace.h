@@ -127,7 +127,7 @@ struct ScoutTraceArgs {
     struct TraceRange tr;
 
     /* data argument will be a struct row */
-    QPTPoolFunc_t processdir;
+    QPTPool_f processdir;
 
     /* if provided, call at end of scout_trace */
     void (*free)(void *);
@@ -140,7 +140,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
 
 size_t enqueue_traces(char **traceames, int *tracefds, const size_t trace_count,
                       const char delim, const size_t max_parts,
-                      QPTPool_t *ctx, QPTPoolFunc_t func,
+                      QPTPool_t *ctx, QPTPool_f func,
                       struct ScoutTraceStats *stats);
 
 #ifdef __cplusplus

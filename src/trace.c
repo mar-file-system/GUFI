@@ -205,9 +205,9 @@ struct row *row_init(const int trace, const size_t first_delim, char *line,
     return row;
 }
 
-static int row_serialize_and_free(const int fd, QPTPoolFunc_t func, void *work, size_t *size) {
+static int row_serialize_and_free(const int fd, QPTPool_f func, void *work, size_t *size) {
     struct row *row = (struct row *) work;
-    if ((write_size(fd, (void *) (uintptr_t) &func, sizeof(func)) != sizeof(func)) ||
+    if ((write_size(fd, &func, sizeof(func)) != sizeof(func)) ||
         (write_size(fd, row, sizeof(*row)) != sizeof(*row)) ||
         (write_size(fd, row->line, row->len) != (ssize_t) row->len)) {
         return 1;
@@ -220,19 +220,15 @@ static int row_serialize_and_free(const int fd, QPTPoolFunc_t func, void *work, 
     return 0;
 }
 
-static int row_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **work) {
-    if (read_size(fd, (void *) (uintptr_t) func, sizeof(*func)) != sizeof(*func)) {
-        return 1;
-    }
-
+static int row_alloc_and_deserialize(const int fd, QPTPool_f *func, void **work) {
     struct row *row = malloc(sizeof(*row));
-    if (read_size(fd, row, sizeof(*row)) != sizeof(*row)) {
+    if ((read_size(fd, (void *) (uintptr_t) func, sizeof(*func)) != sizeof(*func)) ||
+        (read_size(fd, row, sizeof(*row)) != sizeof(*row))) {
         free(row);
         return 1;
     }
 
     row->line = malloc(row->len);
-
     if (read_size(fd, row->line, row->len) != (ssize_t) row->len) {
         row_destroy(&row);
         return 1;
@@ -548,7 +544,7 @@ static void *fill_scout_args(struct TraceRange *tr, void *args) {
 
 size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
                         const char delim, const size_t max_parts,
-                        QPTPool_t *ctx, QPTPoolFunc_t func,
+                        QPTPool_t *ctx, QPTPool_f func,
                         struct ScoutTraceStats *stats) {
     memset(stats, 0, sizeof(*stats));
     clock_gettime(CLOCK_MONOTONIC, &stats->time.start);

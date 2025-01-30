@@ -73,38 +73,11 @@ OF SUCH DAMAGE.
 #include "print.h"
 #include "utils.h"
 
-static int gqw_serialize_and_free(const int fd, QPTPoolFunc_t func, void *work, size_t *size) {
+static int gqw_serialize_and_free(const int fd, QPTPool_f func, void *work, size_t *size) {
     gqw_t *gqw = (gqw_t *) work;
     const size_t len = gqw->work.compressed.yes?gqw->work.compressed.len:sizeof(*gqw);
 
-    if ((write_size(fd, (void *) (uintptr_t) &func, sizeof(func)) != sizeof(func)) ||
-        (write_size(fd, &len, sizeof(len)) != sizeof(len)) ||
-        (write_size(fd, gqw, len) != (ssize_t) len)) {
-        return 1;
-    }
-
-    *size += sizeof(func) + len;
-
-    free(work);
-
-    return 0;
-}
-
-static int gqw_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **work) {
-    size_t len = 0;
-    if ((read_size(fd, (void *) (uintptr_t) func, sizeof(*func)) != sizeof(*func)) ||
-        (read_size(fd, &len, sizeof(len)) != sizeof(len))) {
-        return 1;
-    }
-
-    gqw_t *gqw = malloc(len);
-    if (read_size(fd, gqw, len) != (ssize_t) len) {
-        return 1;
-    }
-
-    *work = gqw;
-
-    return 0;
+    return QPTPool_generic_serialize_and_free(fd, func, work, len, size);
 }
 
 /* Push the subdirectories in the current directory onto the queue */
@@ -113,7 +86,7 @@ static size_t descend2(QPTPool_t *ctx,
                        gqw_t *gqw,
                        DIR *dir,
                        trie_t *skip_names,
-                       QPTPoolFunc_t func,
+                       QPTPool_f func,
                        const size_t max_level,
                        const int comp) {
     /* Not checking arguments */
@@ -163,7 +136,7 @@ static size_t descend2(QPTPool_t *ctx,
                 /* push the subdirectory into the queue for processing */
                 QPTPool_enqueue_swappable(ctx, id, func, clone,
                                           gqw_serialize_and_free,
-                                          gqw_alloc_and_deserialize);
+                                          QPTPool_generic_alloc_and_deserialize);
 
                 pushed++;
             }

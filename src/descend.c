@@ -71,46 +71,11 @@ OF SUCH DAMAGE.
 #include "descend.h"
 #include "utils.h"
 
-static int work_serialize_and_free(const int fd, QPTPoolFunc_t func, void *work, size_t *size) {
-    if (write_size(fd, &func, sizeof(func)) != sizeof(func)) {
-        return 1;
-    }
-
+static int work_serialize_and_free(const int fd, QPTPool_f func, void *work, size_t *size) {
     struct work *w = (struct work *) work;
     const size_t len = w->compressed.yes?w->compressed.len:sizeof(*w);
 
-    if ((write_size(fd, &len, sizeof(len)) != sizeof(len)) ||
-        (write_size(fd, w, len) != (ssize_t) len)) {
-        return 1;
-    }
-
-    free(work);
-
-    *size += sizeof(func) + len;
-
-    return 0;
-}
-
-static int work_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **work) {
-    if (read_size(fd, func, sizeof(*func)) != sizeof(*func)) {
-        return 1;
-    }
-
-    size_t len = 0;
-
-    if (read_size(fd, &len, sizeof(len)) != sizeof(len)) {
-        return 1;
-    }
-
-    struct work *w = malloc(len);
-
-    if (read_size(fd, w, len) != (ssize_t) len) {
-        return 1;
-    }
-
-    *work = w;
-
-    return 0;
+    return QPTPool_generic_serialize_and_free(fd, func, work, len, size);
 }
 
 /*
@@ -126,7 +91,7 @@ static int work_alloc_and_deserialize(const int fd, QPTPoolFunc_t *func, void **
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
             DIR *dir, const int skip_db,
-            QPTPoolFunc_t processdir, process_nondir_f processnondir, void *nondir_args,
+            QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters) {
     if (!work) {
         return 1;
@@ -199,7 +164,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
                     struct work *copy = compress_struct(in->compress, child, struct_work_size(child));
                     QPTPool_enqueue_swappable(ctx, id, processdir, copy,
-                                              work_serialize_and_free, work_alloc_and_deserialize);
+                                              work_serialize_and_free, QPTPool_generic_alloc_and_deserialize);
                 }
                 else {
                     /*
