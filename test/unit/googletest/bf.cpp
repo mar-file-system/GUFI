@@ -144,48 +144,25 @@ static void check_input(struct input *in, const bool helped,
                         const bool flags, const bool options) {
     EXPECT_EQ(in->helped,                             static_cast<int>(helped));
 
-    if (flags) {
-        EXPECT_EQ(in->process_xattrs,                 1);
-        EXPECT_EQ(in->printing,                       1);
-        EXPECT_EQ(in->printdir,                       1);
-        EXPECT_EQ(in->printheader,                    1);
-        EXPECT_EQ(in->printrows,                      1);
-        EXPECT_EQ(in->buildindex,                     1);
-        EXPECT_EQ(in->andor,                          1);
-        EXPECT_EQ(in->insertfl,                       1);
-        EXPECT_EQ(in->insertdir,                      1);
-        EXPECT_EQ(in->suspectd,                       1);
-        EXPECT_EQ(in->suspectfl,                      1);
-        EXPECT_EQ(in->keep_matime,                    1);
-        EXPECT_EQ(in->open_flags,                     SQLITE_OPEN_READWRITE);
-        EXPECT_EQ(in->terse,                          1);
-        EXPECT_EQ(in->dry_run,                        1);
-        #if HAVE_ZLIB
-        EXPECT_EQ(in->compress,                       1);
-        #endif
-        EXPECT_EQ(in->check_extdb_valid,              1);
-    }
-    else {
-        EXPECT_EQ(in->process_xattrs,                 0);
-        EXPECT_EQ(in->printing,                       0);
-        EXPECT_EQ(in->printdir,                       0);
-        EXPECT_EQ(in->printheader,                    0);
-        EXPECT_EQ(in->printrows,                      0);
-        EXPECT_EQ(in->buildindex,                     0);
-        EXPECT_EQ(in->andor,                          0);
-        EXPECT_EQ(in->insertfl,                       0);
-        EXPECT_EQ(in->insertdir,                      0);
-        EXPECT_EQ(in->suspectd,                       0);
-        EXPECT_EQ(in->suspectfl,                      0);
-        EXPECT_EQ(in->keep_matime,                    0);
-        EXPECT_EQ(in->open_flags,                     SQLITE_OPEN_READONLY);
-        EXPECT_EQ(in->terse,                          0);
-        EXPECT_EQ(in->dry_run,                        0);
-        #if HAVE_ZLIB
-        EXPECT_EQ(in->compress,                       0);
-        #endif
-        EXPECT_EQ(in->check_extdb_valid,              0);
-    }
+    EXPECT_EQ(in->process_xattrs,                     flags);
+    EXPECT_EQ(in->printing,                           flags);
+    EXPECT_EQ(in->printdir,                           flags);
+    EXPECT_EQ(in->printheader,                        flags);
+    EXPECT_EQ(in->printrows,                          flags);
+    EXPECT_EQ(in->buildindex,                         flags);
+    EXPECT_EQ(in->andor,                              flags);
+    EXPECT_EQ(in->insertfl,                           flags);
+    EXPECT_EQ(in->insertdir,                          flags);
+    EXPECT_EQ(in->suspectd,                           flags);
+    EXPECT_EQ(in->suspectfl,                          flags);
+    EXPECT_EQ(in->keep_matime,                        flags);
+    EXPECT_EQ(in->open_flags,                         flags?SQLITE_OPEN_READWRITE:SQLITE_OPEN_READONLY);
+    EXPECT_EQ(in->terse,                              flags);
+    EXPECT_EQ(in->dry_run,                            flags);
+    #if HAVE_ZLIB
+    EXPECT_EQ(in->compress,                           flags);
+    #endif
+    EXPECT_EQ(in->check_extdb_valid,                  flags);
 
     if (options) {
         EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);

@@ -609,13 +609,13 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find,
 }
 
 TEST(QueuePerThreadPool, steal_nothing) {
-    test_steal(QPTPool_enqueue_WAIT,     false, 0);
-    test_steal(QPTPool_enqueue_WAIT,     false, 1);
+    test_steal(QPTPool_enqueue_WAIT, false, 0);
+    test_steal(QPTPool_enqueue_WAIT, false, 1);
 }
 
 TEST(QueuePerThreadPool, steal_waiting) {
-    test_steal(QPTPool_enqueue_WAIT,     true, 0);
-    test_steal(QPTPool_enqueue_WAIT,     true, 1);
+    test_steal(QPTPool_enqueue_WAIT, true, 0);
+    test_steal(QPTPool_enqueue_WAIT, true, 1);
 }
 
 TEST(QueuePerThreadPool, steal_claimed) {

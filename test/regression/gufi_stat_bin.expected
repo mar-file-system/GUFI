@@ -58,8 +58,8 @@ prefix/unusual#? directory
 # bad print format specifier
 ?
 
-'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' prefix/directory/subdirectory/directory_symlink 777 lrwxrwxrwx ? ? a1ff symbolic link   'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' - 0 1970-01-01 00:00:04 +0000 4 1970-01-01 00:00:04 +0000 4
-'prefix/file_symlink' -> 'prefix/1KB' prefix/file_symlink 777 lrwxrwxrwx ? ? a1ff symbolic link   'prefix/file_symlink' -> 'prefix/1KB' - 0 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9
+'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' prefix/directory/subdirectory/directory_symlink 777 lrwxrwxrwx -- -- ? ? a1ff symbolic link 'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' - 0 1970-01-01 00:00:04 +0000 4 1970-01-01 00:00:04 +0000 4
+'prefix/file_symlink' -> 'prefix/1KB' prefix/file_symlink 777 lrwxrwxrwx -- -- ? ? a1ff symbolic link 'prefix/file_symlink' -> 'prefix/1KB' - 0 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9
 
 # escape character parsing
 \a -> 07

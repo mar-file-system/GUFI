@@ -155,7 +155,7 @@ static void print_parallel_mutex(pthread_mutex_t *mutex) {
 
     // print all data as one row, which is too big for the buffer, so it gets flushed immediately
     {
-        const std::string ROW = A + SEP + BC + SEP + D + SEP + SEP +NL; // final separator is for NULL data column, not line end
+        const std::string ROW = A + SEP + BC + SEP + D + SEP + SEP + NL; // final separator is for NULL data column, not line end
 
         EXPECT_EQ(ob.filled, (std::size_t) 0);
 

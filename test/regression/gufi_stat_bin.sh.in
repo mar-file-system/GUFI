@@ -131,8 +131,8 @@ echo
 
 for entry in "${symlinks[@]}"
 do
-    "${GUFI_STAT_BIN}" -f '%N %n %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
-done
+    "${GUFI_STAT_BIN}" -f '%N %n %a %A %b %B %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+done | awk '{ $7="--"; $8="--"; print $0 }'
 echo
 
 echo "# escape character parsing"
