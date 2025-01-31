@@ -497,9 +497,8 @@ static ssize_t split_file(const char *name, const int fd, const size_t max_parts
     off_t start = starting_offset;
     off_t end = start + jump;
 
-    int rc = 0;
     while ((start < st.st_size) &&
-           ((rc = find_end(fd, &end, end_args)) == 0)) {
+           (find_end(fd, &end, end_args) == 0)) {
         struct TraceRange tr = {
             .fd = fd,
             .start = start,
