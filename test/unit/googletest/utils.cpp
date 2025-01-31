@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
+#include "bf.h"
 #include "utils.h"
 
 TEST(SNPRINTF, bad) {
@@ -98,6 +99,14 @@ TEST(SNFORMAT_S, fill_buffer) {
     EXPECT_EQ(SNFORMAT_S(buf, 5, 1, "0123456789", (size_t) 10), (size_t) 4);
     EXPECT_STREQ(buf, "0123");
     EXPECT_EQ(buf[4], '\0');
+}
+
+TEST(get, queue_limit) {
+    EXPECT_EQ(get_queue_limit(0,                0), (uint64_t) 0); // not set
+    EXPECT_EQ(get_queue_limit(0,                1), (uint64_t) 0); // not set
+    EXPECT_EQ(get_queue_limit(1 * sizeof(work), 1), (uint64_t) 1); // max(1, 1)
+    EXPECT_EQ(get_queue_limit(1 * sizeof(work), 2), (uint64_t) 1); // max(0, 1)
+    EXPECT_EQ(get_queue_limit(2 * sizeof(work), 1), (uint64_t) 2); // max(2, 1)
 }
 
 TEST(summary, zeroit) {

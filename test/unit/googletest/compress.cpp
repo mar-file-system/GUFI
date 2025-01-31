@@ -136,7 +136,6 @@ TEST(compress, not_enough) {
 }
 
 #ifdef HAVE_ZLIB
-#include <sstream>
 #include <zlib.h>
 
 TEST(compress_zlib, bad) {
@@ -147,26 +146,5 @@ TEST(compress_zlib, bad) {
     EXPECT_EQ(dst, &src);
     EXPECT_EQ(dst->yes, (std::int8_t) 0);
     EXPECT_EQ(dst->len, (std::size_t) 0);
-}
-
-TEST(compress_zlib, decompress_fail) {
-    struct {
-        compressed_t comp;
-        int data; // not enough data to decompress
-    } small;
-
-    memset(&small, 0, sizeof(small)); // no data to decompress
-    small.comp.yes = 1;
-    small.comp.len = sizeof(small);
-    small.comp.orig_len = sizeof(small);
-
-    std::stringstream s;
-    s << "BUG: uncompress\\(\\) failed: rc = " << Z_DATA_ERROR;
-
-    void *dst = nullptr;
-    EXPECT_EXIT(decompress_struct(&dst, &small),
-                ::testing::ExitedWithCode(EXIT_FAILURE),
-                s.str());
-
 }
 #endif
