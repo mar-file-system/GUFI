@@ -65,12 +65,20 @@ set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 OUTPUT="gufi_trace2index.out"
+
+THREADS=4 # need at least 2 scout threads
+TRACES=()
+for (( i = 0; i < THREADS; i++ ));
+do
+    TRACES+=("${TRACE}.${i}")
+done
+
 EMPTY_LAST_DIR_TRACE="empty_last_dir.trace"
 BIG_DIR_TRACE="big.dir.trace"
 BIG_DIR_INDEX="big.dir.index"
 
 cleanup() {
-    rm -rf "${EMPTY_LAST_DIR_TRACE}" "${BIG_DIR_TRACE}" "${BIG_DIR_INDEX}"
+    rm -rf "${TRACES[@]}" "${EMPTY_LAST_DIR_TRACE}" "${BIG_DIR_TRACE}" "${BIG_DIR_INDEX}"
 }
 
 cleanup_exit() {
@@ -100,7 +108,7 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"
 ) > "${TRACE}"
 
 # generate the index
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${SEARCH}\""
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\""
 
 # compare contents
 src_contents=$(find "${SRCDIR}" | sort)
@@ -129,7 +137,7 @@ echo
 ) > "${BIG_DIR_TRACE}"
 
 echo "# create index with a directory containing a lot of files "
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\"" "${BIG_DIR_TRACE}" "\"${BIG_DIR_INDEX}\""
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" ${BIG_DIR_TRACE}" "\"${BIG_DIR_INDEX}\""
 run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT COUNT(*) FROM entries;\" \"${BIG_DIR_INDEX}/${SRCDIR}\""
 # ###########################################################
 
@@ -158,7 +166,7 @@ run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \
 echo
 
 echo "# cannot find delimiter of first line"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\""
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\"" | sed '/Error: Line at offset /d'
 echo
 
 echo "# first line does not start with a directory"

@@ -16,13 +16,13 @@ output_dir        build GUFI index here
 
 $ generatetree prefix
 
-$ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
-Creating GUFI Traces trace with 2 threads
+$ gufi_dir2trace -d "|" -n 4 -x "prefix" "trace"
+Creating GUFI Traces trace with 4 threads
 Total Dirs:          6
 Total Files:         14
 
-$ gufi_trace2index -d "|" "trace" "search"
-Creating GUFI Index search with 1 threads
+$ gufi_trace2index -d "|" -n 4 "trace" "search"
+Creating GUFI Index search with 4 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
@@ -88,8 +88,8 @@ $ gufi_query -d " " -E "SELECT COUNT(*) FROM entries;" "big.dir.index/prefix"
 100001
 
 # create index from a trace file whose last item is an empty directory
-$ gufi_trace2index -d "|" -n 2 "empty_last_dir.trace" "search"
-Creating GUFI Index search with 2 threads
+$ gufi_trace2index -d "|" -n 4 "empty_last_dir.trace" "search"
+Creating GUFI Index search with 4 threads
 Dirs:                7 (2 empty)
 Files:               14
 Total:               21
@@ -98,18 +98,18 @@ Total Dirs:          7
 Total Files:         14
 
 # bad trace path
-$ gufi_trace2index -d "|" -n 2 "" "search"
+$ gufi_trace2index -d "|" -n 4 "" "search"
 Could not open "": No such file or directory (2)
 Failed to open trace file for each thread
 
 # bad index path
-$ gufi_trace2index -d "|" -n 2 "trace" "prefix/1KB" 2> >(sort)
+$ gufi_trace2index -d "|" -n 4 "trace" "prefix/1KB" 2> >(sort)
 Could not create directory prefix/1KB
 
 
 # empty trace (no error message)
-$ gufi_trace2index -d "|" -n 2 "badtrace" "search"
-Creating GUFI Index search with 2 threads
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Creating GUFI Index search with 4 threads
 Dirs:                0 (0 empty)
 Files:               0
 Total:               0
@@ -119,9 +119,9 @@ Total Files:         0
 
 
 # trace with empty line at front
-$ gufi_trace2index -d "|" -n 2 "badtrace" "search"
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
 Could not get the first line of trace "badtrace"
-Creating GUFI Index search with 2 threads
+Creating GUFI Index search with 4 threads
 Dirs:                0 (0 empty)
 Files:               0
 Total:               0
@@ -131,9 +131,9 @@ Total Files:         0
 
 
 # cannot find delimiter of first line
-$ gufi_trace2index -d "&" -n 2 "trace" "search"
+$ gufi_trace2index -d "&" -n 4 "trace" "search"
 Could not find the specified delimiter in "trace"
-Creating GUFI Index search with 2 threads
+Creating GUFI Index search with 4 threads
 Dirs:                0 (0 empty)
 Files:               0
 Total:               0
@@ -143,9 +143,9 @@ Total Files:         0
 
 
 # first line does not start with a directory
-$ gufi_trace2index -d "|" -n 2 "badtrace" "search"
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
 First line of "badtrace" is not a directory
-Creating GUFI Index search with 2 threads
+Creating GUFI Index search with 4 threads
 Dirs:                0 (0 empty)
 Files:               0
 Total:               0
@@ -155,9 +155,10 @@ Total Files:         0
 
 
 # file delimiter not found
-$ gufi_trace2index -d "|" -n 2 "badtrace" "search"
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: Line at offset 48 does not have a delimiter
 Scout encountered bad line ending at "badtrace" offset 62
-Creating GUFI Index search with 2 threads
+Creating GUFI Index search with 4 threads
 Dirs:                0 (0 empty)
 Files:               0
 Total:               0
