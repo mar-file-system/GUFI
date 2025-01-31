@@ -97,15 +97,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    char *err = NULL;
-
     /* this calls addqueryfuncs */
-    if (sqlite3_gufivt_init(db, &err, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Error: Could not initialize virtual tables \"%s\"\n", err);
-        sqlite3_free(err);
-        input_fini(&in);
-        return EXIT_FAILURE;
-    }
+    sqlite3_gufivt_init(db, NULL, NULL);
 
     /* no buffering */
     struct OutputBuffer ob;
@@ -121,6 +114,7 @@ int main(int argc, char *argv[]) {
     };
 
     /* if using in-memory db or no SQL statements following db path, read from stdin */
+    char *err = NULL;
     if (args_left < 2) {
         char *line = NULL;
         size_t len = 0;
