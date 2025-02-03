@@ -278,7 +278,7 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
         sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL);
 
         /* load the sqlite3-pcre extension */
-        sqlite3_extension_init(db, NULL, NULL) ;
+        sqlite3_pcre2_init(db, NULL, NULL);
     }
 
     if (modifydb) {
