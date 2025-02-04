@@ -62,13 +62,13 @@ OF SUCH DAMAGE.
 
 
 
-#include <sqlite3ext.h>
-SQLITE_EXTENSION_INIT1
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <sqlite3ext.h>
+SQLITE_EXTENSION_INIT1
 
 #include "addqueryfuncs.h"
 #include "bf.h"
@@ -331,9 +331,9 @@ static int gufi_vtConnect(sqlite3 *db,
 #define GUFI_VT_ARG_COLUMNS          "indexroot TEXT HIDDEN, threads INT64 HIDDEN, " \
                                      "T TEXT HIDDEN, S TEXT HIDDEN, "
 
-#define GUFI_VT_EXTRA_COLUMNS        "path TEXT, epath TEXT, fpath TEXT, rpath TEXT, "
-#define GUFI_VT_EXTRA_COLUMNS_SQL    "path(), epath(), fpath(), path(), "
-#define GUFI_VT_EXTRA_COLUMNS_SQL_VR "path(), epath(), fpath(), rpath(sname, sroll), "
+#define GUFI_VT_EXTRA_COLUMNS        "path TEXT, epath TEXT, fpath TEXT, rpath TEXT, level INT64, "
+#define GUFI_VT_EXTRA_COLUMNS_SQL    "path(), epath(), fpath(), path(), level(), "
+#define GUFI_VT_EXTRA_COLUMNS_SQL_VR "path(), epath(), fpath(), rpath(sname, sroll), level(), "
 
 #define GUFI_VT_ALL_COLUMNS          GUFI_VT_ARG_COLUMNS \
                                      GUFI_VT_EXTRA_COLUMNS

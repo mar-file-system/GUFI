@@ -520,6 +520,32 @@ void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
     sqlite3_result_text(context, root->data, root->len, SQLITE_STATIC);
 }
 
+int addqueryfuncs(sqlite3 *db) {
+    return !(
+        (sqlite3_create_function(db,   "uidtouser",           1,   SQLITE_UTF8,
+                                 NULL, &uidtouser,                 NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "gidtogroup",          1,   SQLITE_UTF8,
+                                 NULL, &gidtogroup,                NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "modetotxt",           1,   SQLITE_UTF8,
+                                 NULL, &modetotxt,                 NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "strftime",            2,   SQLITE_UTF8,
+                                 NULL, &sqlite3_strftime,          NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "blocksize",           2,   SQLITE_UTF8,
+                                 NULL, &blocksize,                 NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "human_readable_size", 1,   SQLITE_UTF8,
+                                 NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
+                                 NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
+                                 NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "stdevp",              1,   SQLITE_UTF8,
+                                 NULL, NULL,  stdev_step,          stdevp_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "median",              1,   SQLITE_UTF8,
+                                 NULL, NULL,  median_step,         median_final) == SQLITE_OK) &&
+        addhistfuncs(db)
+        );
+}
+
 int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
     return !(
         (sqlite3_create_function(db,  "path",                      0, SQLITE_UTF8,

@@ -113,6 +113,7 @@ set(GUFI_SOURCES
   debug.c
   descend.c
   external.c
+  gufi_vt.c
   histogram.c
   print.c
   swap.c
@@ -124,6 +125,7 @@ set(GUFI_SOURCES
 )
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
+target_compile_definitions(GUFI PUBLIC SQLITE_CORE)
 set_source_files_properties(bf.c PROPERTIES COMPILE_FLAGS -DGUFI_VERSION="${VERSION_STRING}")
 
 #If the GPFS library exists, build the gpfs scan tool
@@ -207,6 +209,7 @@ add_library(gufi_query_lib OBJECT
 )
 
 add_dependencies(gufi_query_lib GUFI)
+target_compile_definitions(gufi_query_lib PUBLIC SQLITE_CORE)
 
 build_and_install_one(${BIN} TRUE gufi_query
   gufi_query/main.c

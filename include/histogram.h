@@ -68,19 +68,24 @@ OF SUCH DAMAGE.
 #include <stddef.h>
 #include <time.h>
 
+#ifdef SQLITE_CORE
 #include <sqlite3.h>
+#else
+#include <sqlite3ext.h>
+SQLITE_EXTENSION_INIT3
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* use this to add histogram functions to a sqlite database handle */
+int addhistfuncs(sqlite3 *db);
+
 /*
  * Public API for parsing returned strings.
  *
  * These structs are intended for external use.
- *
- * Ignore the *_step and *_final functions. They are sqlite3 UDFs that
- * need to be exposed here to get linking to work for some reason.
  */
 
 /* ********************************************* */
@@ -108,8 +113,6 @@ typedef struct log2_hist {
     size_t ge;       /* len >= 2^count */
 } log2_hist_t;
 
-void log2_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv);
-void log2_hist_final(sqlite3_context *context);
 log2_hist_t *log2_hist_parse(const char *str);
 void log2_hist_free(log2_hist_t *hist);
 /* ********************************************* */
@@ -128,8 +131,6 @@ typedef struct mode_hist {
     size_t buckets[512];
 } mode_hist_t;
 
-void mode_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv);
-void mode_hist_final(sqlite3_context *context);
 mode_hist_t *mode_hist_parse(const char *str);
 void mode_hist_free(mode_hist_t *hist);
 /* ********************************************* */
@@ -169,8 +170,6 @@ typedef struct time_hist {
     time_t ref;
 } time_hist_t;
 
-void time_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv);
-void time_hist_final(sqlite3_context *context);
 time_hist_t *time_hist_parse(const char *str);
 void time_hist_free(time_hist_t *hist);
 /* ********************************************* */
@@ -198,9 +197,6 @@ typedef struct category_hist {
     size_t count;
 } category_hist_t;
 
-void category_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv);
-void category_hist_combine_step(sqlite3_context *context, int argc, sqlite3_value **argv);
-void category_hist_final(sqlite3_context *context);
 category_hist_t *category_hist_parse(const char *str);
 category_hist_t *category_hist_combine(category_hist_t *lhs, category_hist_t *rhs);
 void category_hist_free(category_hist_t *hist);
@@ -220,28 +216,9 @@ typedef struct mode_count {
     size_t count;
 } mode_count_t;
 
-void mode_count_final(sqlite3_context *context);
 mode_count_t *mode_count_parse(const char *str);
 void mode_count_free(mode_count_t *mc);
 /* ********************************************* */
-
-/* use this to add histogram functions to a sqlite database handle */
-static inline int addhistfuncs(sqlite3 *db) {
-    return (
-        (sqlite3_create_function(db,   "log2_hist",             2,  SQLITE_UTF8,
-                                 NULL, NULL,  log2_hist_step,             log2_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "mode_hist",             1,  SQLITE_UTF8,
-                                 NULL, NULL,  mode_hist_step,             mode_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "time_hist",             2,  SQLITE_UTF8,
-                                 NULL, NULL,  time_hist_step,             time_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "category_hist",         2,  SQLITE_UTF8,
-                                 NULL, NULL,  category_hist_step,         category_hist_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "category_hist_combine", 1,  SQLITE_UTF8,
-                                 NULL, NULL,  category_hist_combine_step, category_hist_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "mode_count",            1,  SQLITE_UTF8,
-                                 NULL, NULL,  category_hist_step,         mode_count_final)    == SQLITE_OK)
-        );
-}
 
 #ifdef __cplusplus
 }

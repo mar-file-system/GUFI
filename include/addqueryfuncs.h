@@ -65,7 +65,12 @@ OF SUCH DAMAGE.
 #ifndef ADDQUERYFUNCS_H
 #define ADDQUERYFUNCS_H
 
+#ifdef SQLITE_CORE
 #include <sqlite3.h>
+#else
+#include <sqlite3ext.h>
+SQLITE_EXTENSION_INIT3
+#endif
 
 #include "bf.h"
 #include "histogram.h"
@@ -74,47 +79,7 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-/* list of functions to add to a SQLite3 db handle that do not have user data/context */
-
-void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv);
-void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv);
-void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv);
-void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv);
-void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv);
-void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv);
-void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv);
-void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv);
-void stdevs_final(sqlite3_context *context);
-void stdevp_final(sqlite3_context *context);
-void median_step(sqlite3_context *context, int argc, sqlite3_value **argv);
-void median_final(sqlite3_context *context);
-
-static inline int addqueryfuncs(sqlite3 *db) {
-    return !(
-        (sqlite3_create_function(db,   "uidtouser",           1,   SQLITE_UTF8,
-                                 NULL, &uidtouser,                 NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "gidtogroup",          1,   SQLITE_UTF8,
-                                 NULL, &gidtogroup,                NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "modetotxt",           1,   SQLITE_UTF8,
-                                 NULL, &modetotxt,                 NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "strftime",            2,   SQLITE_UTF8,
-                                 NULL, &sqlite3_strftime,          NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "blocksize",           2,   SQLITE_UTF8,
-                                 NULL, &blocksize,                 NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "human_readable_size", 1,   SQLITE_UTF8,
-                                 NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
-                                 NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
-                                 NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "stdevp",              1,   SQLITE_UTF8,
-                                 NULL, NULL,  stdev_step,          stdevp_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "median",              1,   SQLITE_UTF8,
-                                 NULL, NULL,  median_step,         median_final) == SQLITE_OK) &&
-        addhistfuncs(db)
-        );
-}
-
+int addqueryfuncs(sqlite3 *db);
 int addqueryfuncs_with_context(sqlite3 *db, struct work *work);
 
 #ifdef __cplusplus

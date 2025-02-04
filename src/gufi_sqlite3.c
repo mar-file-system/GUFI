@@ -69,9 +69,10 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "print.h"
 
-/* don't ask */
-#define SQLITE_CORE
-#include "../src/gufi_vt.c"
+int sqlite3_gufivt_init(
+    sqlite3 *db,
+    char **pzErrMsg,
+    const sqlite3_api_routines *pApi);
 
 static void sub_help(void) {
     printf("db                       db file path\n");
