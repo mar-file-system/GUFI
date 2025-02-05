@@ -180,14 +180,6 @@ static int cpr_link(struct work *work, struct entry_data *ed, struct input *in) 
 
     str_t dst = create_dst_name(in, work);
 
-    /* see man 2 readlink */
-    const ssize_t len = readlink(work->name, ed->linkname, sizeof(ed->linkname));
-    if ((len < 0) || (len == sizeof(ed->linkname))) {
-        print_error_and_goto("Could not readlink", work->name, cleanup);
-    }
-
-    ed->linkname[len] = '\0';
-
     if (symlink(ed->linkname, dst.data) != 0) {
         print_error_and_goto("Could not create link", dst.data, cleanup);
     }
@@ -386,10 +378,21 @@ int main(int argc, char * argv[]) {
         }
         else if (S_ISLNK(st.st_mode)) {
             struct entry_data ed;
-            /* readlink in cpr_link */
 
-            /* copy right here instead of enqueuing */
-            cpr_link(work, &ed, &in);
+            /* see man 2 readlink */
+            const ssize_t link_len = readlink(work->name, ed.linkname, sizeof(ed.linkname));
+            if ((link_len < 0) || (link_len == sizeof(ed.linkname))) {
+                const int err = errno;
+                fprintf(stderr, "Error: Could not read link \"%s\": %s (%d)\n",
+                        work->name, strerror(err), err);
+                rc = 1;
+            }
+            else {
+                ed.linkname[link_len] = '\0';
+
+                /* copy right here instead of enqueuing */
+                cpr_link(work, &ed, &in);
+            }
 
             free(work);
         }

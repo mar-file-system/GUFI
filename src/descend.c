@@ -193,9 +193,9 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             /* non directories */
             else if (S_ISLNK(child_ed.statuso.st_mode)) {
                 child_ed.type = 'l';
-                if (child_ed.lstat_called) {
-                    readlink(child->name, child_ed.linkname, MAXPATH);
-                }
+                const ssize_t link_len = readlink(child->name, child_ed.linkname, MAXPATH);
+                /* check for error? */
+                child_ed.linkname[link_len] = '\0';
             }
             else if (S_ISREG(child_ed.statuso.st_mode)) {
                 child_ed.type = 'f';

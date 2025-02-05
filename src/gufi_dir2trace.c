@@ -111,10 +111,6 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         if (fstatat(ed->parent_fd, basename, &ed->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
             return 1;
         }
-
-        if (ed->type == 'l') {
-            readlink(entry->name, ed->linkname, MAXPATH);
-        }
     }
 
     worktofile(nda->fp, nda->in->delim, entry->root_parent.len, entry, ed);

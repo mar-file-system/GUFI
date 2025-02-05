@@ -142,11 +142,6 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         }
     }
 
-    if (ed->type == 'l') {
-        readlink(entry->name, ed->linkname, MAXPATH);
-        /* error? */
-    }
-
     if (in->process_xattrs) {
         insertdbgo_xattrs(in, &nda->ed.statuso, entry, ed,
                           &nda->xattr_db_list, nda->temp_xattr,
