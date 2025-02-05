@@ -222,16 +222,17 @@ prefix/unusual#? directory ,/unusual, name?#
 
 # Output TLV columns (no aggregation)
 $ gufi_query -u -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix" | od -x --endian=big
-0000000 0200 0000 0307 0000 0000 0000 002e 6869
-0000020 6464 656e 0102 0000 0000 0000 0031 3000
-0000037
+0000000 2700 0000 0000 0000 0200 0000 0307 0000
+0000020 0000 0000 002e 6869 6464 656e 0102 0000
+0000040 0000 0000 0031 3000
+0000047
 
 # Output TLV columns (with aggregation)
 $ gufi_query -u -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix" | od -x --endian=big
-0000000 0200 0000 030d 0000 0000 0000 0073 6561
-0000020 7263 682f 7072 6566 6978 0102 0000 0000
-0000040 0000 0031 3700
-0000045
+0000000 2d00 0000 0000 0000 0200 0000 030d 0000
+0000020 0000 0000 0073 6561 7263 682f 7072 6566
+0000040 6978 0102 0000 0000 0000 0031 3700
+0000055
 
 #####################################
 # Invalid Inputs                    #

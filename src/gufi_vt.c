@@ -205,44 +205,36 @@ static const size_t TL = sizeof(char) + sizeof(size_t);
 
 /* read TLV rows terminated by newline - this only works because type is in the range [1, 5] */
 static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
-    size_t size = sizeof(int);
-    char *buf = malloc(size);
+    static const size_t ROW_PREFIX = sizeof(size_t) + sizeof(int);
+    char *buf = NULL;
     char *curr = buf;
-    ptrdiff_t curr_offset = 0;
 
     size_t *starts = NULL; /* index of where each column starts in buf */
-    int count = 0;         /* number of columns */
+    size_t row_len = 0;
+    int count = 0;
 
-    // each row is prefixed with a count
-    if (fread(curr, sizeof(char), sizeof(int), pCur->output) != sizeof(int)) {
+    /* row length */
+    if (fread(&row_len, sizeof(char), sizeof(row_len), pCur->output) != sizeof(row_len)) {
+        if (ferror(pCur->output)) { /* eof at other reads are always errors */
+            fprintf(stderr, "Error: Could not read row length\n");
+        }
         goto error;
     }
 
-    count = * (int *) curr;
+    /* column count */
+    if (fread(&count, sizeof(char), sizeof(count), pCur->output) != sizeof(count)) {
+        fprintf(stderr, "Error: Could not read column count\n");
+        goto error;
+    }
+
+    /* buf does not contain row prefix */
+    buf = malloc(row_len - ROW_PREFIX);
+    curr = buf;
     starts = malloc(count * sizeof(size_t));
 
-    curr += sizeof(int);
-
-    char *new_buf = NULL;
     for(int i = 0; i < count; i++) {
+        /* column start points to type */
         starts[i] = curr - buf;
-
-        /* add space for type and length */
-        size += TL;
-
-        curr_offset = curr - buf;
-
-        /* reallocate buffer for type and length */
-        new_buf = realloc(buf, size);
-        if (!new_buf) {
-            const int err = errno;
-            fprintf(stderr, "Error: Could not resize buffer for reading column type and length. New size: %zu: %s (%d)\n",
-                    size, strerror(err), err);
-            goto error;
-        }
-
-        buf = new_buf;
-        curr = buf + curr_offset;
 
         /* read type and length */
         const size_t tl = fread(curr, sizeof(char), TL, pCur->output);
@@ -253,26 +245,11 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
 
         const size_t value_len = * (size_t *) (curr + sizeof(char));
 
-        size += value_len;         /* update buffer size with value length */
-        curr += TL;                /* to go to end of buffer/start of value */
-
-        curr_offset = curr - buf;
-
-        /* allocate space for value */
-        new_buf = realloc(buf, size);
-        if (!new_buf) {
-            const int err = errno;
-            fprintf(stderr, "Error: Could not resize buffer for reading column value. New size: %zu: %s (%d)\n",
-                    size, strerror(err), err);
-            goto error;
-        }
-
-        buf = new_buf;
-        curr = buf + curr_offset;
+        curr += TL;   /* to go to start of value */
 
         const size_t v = fread(curr, sizeof(char), value_len, pCur->output);
         if (v != value_len) {
-            fprintf(stderr, "Eror: Could not read %zu octets. Got %zu\n", value_len, v);
+            fprintf(stderr, "Error: Could not read %zu octets. Got %zu\n", value_len, v);
             goto error;
         }
 
@@ -280,7 +257,7 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
     }
 
     pCur->row = buf;
-    pCur->len = size;
+    pCur->len = row_len;
     pCur->col_starts = starts;
     pCur->col_count = count;
 

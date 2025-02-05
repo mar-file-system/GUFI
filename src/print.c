@@ -86,7 +86,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
     }
 
     if (types) {
-        row_len += sizeof(count);                            /* start row with column count */
+        row_len += sizeof(row_len) + sizeof(count);          /* start row with row length and column count */
         row_len += count * (sizeof(char) + sizeof(size_t));  /* type and length per column */
     }
     else {
@@ -111,8 +111,11 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             pthread_mutex_lock(print->mutex);
         }
 
-        /* write column count */
         if (types) {
+            /* write total row length */
+            fwrite(&row_len, sizeof(char), sizeof(row_len), print->outfile);
+
+            /* write column count */
             fwrite(&count, sizeof(char), sizeof(count), print->outfile);
         }
 
@@ -163,8 +166,12 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         char *buf = ob->buf;
         size_t filled = ob->filled;
 
-        /* write column count */
         if (types) {
+            /* write row length */
+            memcpy(&buf[filled], &row_len, sizeof(row_len));
+            filled += sizeof(row_len);
+
+            /* write column count */
             memcpy(&buf[filled], &count, sizeof(count));
             filled += sizeof(count);
         }

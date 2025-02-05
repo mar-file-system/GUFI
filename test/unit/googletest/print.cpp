@@ -212,6 +212,7 @@ static void print_parallel_tlv_actual(const bool use_len) {
     };
 
     const std::size_t total_len =
+        sizeof(std::size_t) +       // row length
         sizeof(int) +               // number of columns
         INTEGER.size() + FLOAT.size() + TEXT.size() +
         BLOB.size() + NULL_.size() + DATE.size() +
@@ -241,6 +242,10 @@ static void print_parallel_tlv_actual(const bool use_len) {
     EXPECT_EQ(pa.rows, (std::size_t) 1);
 
     char *curr = buf;
+
+    // column_count
+    EXPECT_EQ((std::size_t) * (int *) curr, total_len);
+    curr += sizeof(std::size_t);
 
     // column_count
     EXPECT_EQ((std::size_t) * (int *) curr, COL_COUNT);
