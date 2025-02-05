@@ -197,9 +197,6 @@ struct input {
    } types;
 
    int  printdir;
-   int  printing;
-   int  printheader;
-   int  printrows;
    int  helped;               /* support parsing of per-app sub-options */
    int  printed_version;
    char delim;

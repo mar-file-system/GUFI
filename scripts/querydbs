@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -46,7 +46,7 @@
 # modified to produce derivative works, such modified software should be
 # clearly marked, so as not to confuse it with the version available from
 # LANL.
-#
+
 # THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 # THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -61,53 +61,74 @@
 
 
 
-set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+import argparse
+import sys
+import subprocess
 
-OUTDB="outdb"
-TABLE="out"
-THREADS="2"
+import gufi_common
+import gufi_config
 
-cleanup() {
-    rm -f ${OUTDB} ${OUTDB}.*
-}
+def parse_args(argv):
+    parser = argparse.ArgumentParser('querydbs', description='Query GUFI result dbs')
 
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
+    parser.add_argument('table_name',
+                        help='name of table in database file to attach; also used for view name: \'v<table_name>\'')
+    parser.add_argument('SQL',
+                        help='arbitrary SQL executed on view')
 
-trap cleanup_exit EXIT
+    parser.add_argument('db',
+                        nargs='+',
+                        help='path of source database file(s) to add to view')
 
-cleanup
+    parser.add_argument('-d',
+                        type=gufi_common.get_char,
+                        dest='delim',
+                        default='|',
+                        help='delimiter')
 
-OUTPUT="querydbs.out"
+    parser.add_argument('--attach-prefix',
+                        metavar='name',
+                        default='querydbs_prefix',
+                        help='name when attaching dbs')
 
-(
-echo "# ${QUERYDBS} help" | replace
-run_no_sort "${QUERYDBS} --help" | replace_argparse
+    parser.add_argument('--verbose', '-V',
+                        action='store_true',
+                        help='Show the equivalent shell command passing raw SQL into gufi_sqlite3')
 
-echo "# Use ${GUFI_QUERY} to generate per-thread result database files" | replace
-run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type=='f');\" \"${INDEXROOT}\""
+    return parser.parse_args(argv[1:])
 
-echo "# Query all per-thread result databse files at once"
-run_no_sort "${QUERYDBS} -d '|' --verbose \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${OUTDB}.*"
+def run(argv, config_path):
+    # find and parse the configuration file first
+    config = gufi_config.Server(config_path)
 
-echo "# Bad Query"
-run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"Bad Query\" ${OUTDB}.*"
+    args = parse_args(argv)
 
-many=""
-for (( i = 0; i < 254 / THREADS; i++))
-do
-    many+="${OUTDB}.* "
-done
+    attach = [] # ATTACH '<db>' AS <attach_prefix><index>;
+    select = [] # SELECT * FROM <attach_prefix><index>.<table_name>
 
-echo "# Attach maximum number of database files"
-run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many}| wc -l"
+    for i, db in enumerate(args.db):
+        attach_name = '{}{}'.format(args.attach_prefix, i)
+        attach += ['ATTACH \'{}\' AS {};'.format(db, attach_name)]
+        select += ['SELECT * FROM {}.{}'.format(attach_name, args.table_name)]
 
-echo "# Attach too many database files"
-run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many} ${OUTDB}.*"
-) | sed "s/${SRCDIR//\//\\/}\\///g;" | tee "${OUTPUT}"
+    # CREATE TEMP VIEW v<table_name> AS SELECT * FROM <attach_prefix><index>.<table_name> ... ;
+    union_all = 'CREATE TEMP VIEW v{} AS '.format(args.table_name) + ' UNION ALL '.join(select) + ';'
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"
-rm "${OUTPUT}"
+    cmd = [config.sqlite3,'-d', args.delim]
+    sql = attach + [union_all, args.SQL]
+    stdin = '\n'.join(sql)
+
+    if args.verbose:
+        print('(')
+        for line in sql:
+            print('    echo "{}"'.format(line))
+        print(') {} -d "{}"'.format(cmd[0], cmd[2]))
+        sys.stdout.flush()
+
+    query = subprocess.Popen(cmd, stdin=subprocess.PIPE)    # pylint: disable=consider-using-with
+    query.communicate(stdin.encode())                       # block until query finishes
+
+    return query.returncode
+
+if __name__ == '__main__':
+    sys.exit(run(sys.argv, gufi_config.PATH))

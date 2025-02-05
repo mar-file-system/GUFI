@@ -1,51 +1,56 @@
 # querydbs help
-$ querydbs
-usage: querydbs [options] table_name SQL DB_name [DB_name ...]
-options:
-  -h                     help
-  -H                     show assigned input values (debugging)
-  -v                     version
-  -N                     print column-names (header) for DB results
-  -V                     print column-values (rows) for DB results
-  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
+$ querydbs --help
+usage: querydbs [-h] [-d DELIM] [--attach-prefix name] [--verbose]
+                table_name SQL db [db ...]
 
-table_name               name of table in database file to attach; also used for view table name: 'v<table_name>'
-SQL                      arbitrary SQL executed on view
-DB_name                  path of source database file(s) to add to view
+Query GUFI result dbs
+
+positional arguments:
+  table_name            name of table in database file to attach; also used
+                        for view name: 'v<table_name>'
+  SQL                   arbitrary SQL executed on view
+  db                    path of source database file(s) to add to view
+
+options:
+  -h, --help            show this help message and exit
+  -d DELIM              delimiter
+  --attach-prefix name  name when attaching dbs
+  --verbose, -V         Show the equivalent shell command passing raw SQL into
+                        gufi_sqlite3
 
 # Use gufi_query to generate per-thread result database files
 $ gufi_query -n 2 -O "outdb" -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type=='f');" "prefix"
 
 # Query all per-thread result databse files at once
-$ querydbs -d '|' -NV "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.*
-name|size|
-old_file|0|
-directory/executable|1|
-directory/readonly|2|
-directory/writable|3|
-directory/subdirectory/repeat_name|5|
-.hidden|10|
-leaf_directory/leaf_file1|11|
-leaf_directory/leaf_file2|12|
-repeat_name|14|
-unusual#? directory ,/unusual, name?#|15|
-1KB|1024|
-1MB|1048576|
-query returned 12 records
-
-# Query all per-thread result databse files at once without printing results
-$ querydbs -d '|' "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.*
-query returned 12 records
+$ querydbs -d '|' --verbose "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.*
+(
+    echo "ATTACH 'outdb.0' AS querydbs_prefix0;"
+    echo "ATTACH 'outdb.1' AS querydbs_prefix1;"
+    echo "CREATE TEMP VIEW vout AS SELECT * FROM querydbs_prefix0.out UNION ALL SELECT * FROM querydbs_prefix1.out;"
+    echo "SELECT name, size FROM vout ORDER BY size ASC, name ASC"
+) gufi_sqlite3 -d "|"
+old_file|0
+directory/executable|1
+directory/readonly|2
+directory/writable|3
+directory/subdirectory/repeat_name|5
+.hidden|10
+leaf_directory/leaf_file1|11
+leaf_directory/leaf_file2|12
+repeat_name|14
+unusual#? directory ,/unusual, name?#|15
+1KB|1024
+1MB|1048576
 
 # Bad Query
 $ querydbs -d '|' "out" "Bad Query" outdb.*
-Error: User query failed: near "Bad": syntax error
+Error: SQL error: near "Bad": syntax error
 
 # Attach maximum number of database files
-$ querydbs -d '|' -NV "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* |tail -n 1
-query returned 1524 records
+$ querydbs -d '|' "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* | wc -l
+1524
 
 # Attach too many database files
-$ querydbs -d '|' -NV "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.*  outdb.*
-Cannot attach database as "querydbs_src254": too many attached databases - max 254
+$ querydbs -d '|' "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.*  outdb.*
+Error: SQL error: too many attached databases - max 254
 

@@ -100,6 +100,10 @@ endforeach()
 configure_file(gufi_jail gufi_jail @ONLY)
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail" DESTINATION "${BIN}" COMPONENT Server)
 
+# not prefixed with gufi_ and no client tool
+configure_file(querydbs querydbs @ONLY)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs" DESTINATION "${BIN}" COMPONENT Server)
+
 foreach(LIBRARY ${LIBRARIES})
   configure_file("${LIBRARY}" "${LIBRARY}" @ONLY)
 

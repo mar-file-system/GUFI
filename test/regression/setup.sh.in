@@ -126,18 +126,7 @@ export LC_ALL="C"
 export PATH="@CMAKE_BINARY_DIR@/scripts:${PATH}"
 export PYTHONPATH="@CMAKE_BINARY_DIR@/scripts:@CMAKE_CURRENT_BINARY_DIR@:${PYTHONPATH}"
 
-# generate a fake config file
-# shellcheck disable=SC2046
-CONFIG="$(@PYTHON_INTERPRETER@ -c 'import gufi_tool, os; print(os.path.realpath(gufi_tool.CONFIG_PATH))')"
-(
-    echo "Threads=1"
-    echo "Query=@CMAKE_BINARY_DIR@/src/gufi_query"
-    echo "Stat=@CMAKE_BINARY_DIR@/src/gufi_stat_bin"
-    echo "IndexRoot=${SEARCH}"
-    echo "OutputBuffer=4096"
-) > "${CONFIG}"
-chmod 666 "${CONFIG}"
-
+# fill in skip file here (after setup_cleanup)
 echo "directory" > "${SKIP}"
 
 # paths of all executables
@@ -173,7 +162,7 @@ LONGITUDINAL_SNAPSHOT="@CMAKE_BINARY_DIR@/contrib/longitudinal_snapshot.py"
 OLDBIGFILES="@CMAKE_BINARY_DIR@/examples/oldbigfiles"
 PARALLEL_CPR="@CMAKE_BINARY_DIR@/src/parallel_cpr"
 PARALLEL_RMR="@CMAKE_BINARY_DIR@/src/parallel_rmr"
-QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
+QUERYDBS="${GUFI_TOOL} querydbs"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
 TREEDIFF="@CMAKE_BINARY_DIR@/contrib/treediff"
 USERFILESPACEHOG="@CMAKE_BINARY_DIR@/examples/userfilespacehog"
@@ -186,6 +175,19 @@ DIFF="@DIFF@"
 GREP="@GREP@"
 
 PWD="$(pwd)"
+
+# generate a fake config file
+# shellcheck disable=SC2046
+CONFIG="$(@PYTHON_INTERPRETER@ -c 'import gufi_tool, os; print(os.path.realpath(gufi_tool.CONFIG_PATH))')"
+(
+    echo "Threads=1"
+    echo "Query=${GUFI_QUERY}"
+    echo "Sqlite3=${GUFI_SQLITE3}"
+    echo "Stat=${GUFI_STAT_BIN}"
+    echo "IndexRoot=${SEARCH}"
+    echo "OutputBuffer=4096"
+) > "${CONFIG}"
+chmod 666 "${CONFIG}"
 
 # common strings that need replacing
 replace() {

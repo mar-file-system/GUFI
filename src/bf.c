@@ -150,10 +150,7 @@ void print_help(const char* prog_name,
       case 'H': printf("  -H                     show assigned input values (debugging)"); break;
       case 'v': printf("  -v                     version"); break;
       case 'x': printf("  -x                     index/query xattrs"); break;
-      case 'p': printf("  -p                     print file-names"); break;
       case 'P': printf("  -P                     print directories as they are encountered"); break;
-      case 'N': printf("  -N                     print column-names (header) for DB results"); break;
-      case 'V': printf("  -V                     print column-values (rows) for DB results"); break;
       case 'b': printf("  -b                     build GUFI index tree"); break;
       case 'a': printf("  -a                     AND/OR (SQL query combination)"); break;
       case 'n': printf("  -n <threads>           number of threads"); break;
@@ -205,10 +202,7 @@ void print_help(const char* prog_name,
 
 // DEBUGGING
 void show_input(struct input* in, int retval) {
-   printf("in.printing                 = %d\n",            in->printing);
    printf("in.printdir                 = %d\n",            in->printdir);
-   printf("in.printheader              = %d\n",            in->printheader);
-   printf("in.printrows                = %d\n",            in->printrows);
    printf("in.buildindex               = %d\n",            in->buildindex);
    printf("in.maxthreads               = %zu\n",           in->maxthreads);
    printf("in.delim                    = '%c'\n",          in->delim);
@@ -312,20 +306,8 @@ int parse_cmd_line(int         argc,
          in->process_xattrs = 1;
          break;
 
-      case 'p':               // print file name/path?
-         in->printing = 1;
-         break;
-
       case 'P':               // print dirs?
          in->printdir = 1;
-         break;
-
-      case 'N':               // print DB-result column-names?  (i.e. header)
-         in->printheader = 1;
-         break;
-
-      case 'V':               // print DB-result row-values?
-         in->printrows = 1;
          break;
 
       case 'b':               // build index?

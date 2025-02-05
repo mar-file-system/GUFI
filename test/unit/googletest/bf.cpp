@@ -75,10 +75,7 @@ static const std::string exec = "exec"; // argv[0]
 static const std::string h = "-h";
 static const std::string H = "-H";
 static const std::string x = "-x";
-static const std::string p = "-p";
 static const std::string P = "-P";
-static const std::string N = "-N";
-static const std::string V = "-V";
 static const std::string b = "-b";
 static const std::string a = "-a";
 static const std::string n = "-n"; static const std::string n_arg = "1";
@@ -146,10 +143,7 @@ static void check_input(struct input *in, const bool helped,
     EXPECT_EQ(in->helped,                             static_cast<int>(helped));
 
     EXPECT_EQ(in->process_xattrs,                     flags);
-    EXPECT_EQ(in->printing,                           flags);
     EXPECT_EQ(in->printdir,                           flags);
-    EXPECT_EQ(in->printheader,                        flags);
-    EXPECT_EQ(in->printrows,                          flags);
     EXPECT_EQ(in->buildindex,                         flags);
     EXPECT_EQ(in->andor,                              flags);
     EXPECT_EQ(in->types.prefix,                       flags);
@@ -265,16 +259,13 @@ TEST(parse_cmd_line, help) {
 }
 
 TEST(parse_cmd_line, debug) {
-    const char opts[] = "HxpPNVban:d:i:t:o:O:uI:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:s:";
+    const char opts[] = "HxPban:d:i:t:o:O:uI:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:s:";
 
     const char *argv[] = {
         exec.c_str(),
         H.c_str(),
         x.c_str(),
-        p.c_str(),
         P.c_str(),
-        N.c_str(),
-        V.c_str(),
         b.c_str(),
         a.c_str(),
         n.c_str(), n_arg.c_str(),
@@ -334,15 +325,12 @@ TEST(parse_cmd_line, debug) {
 }
 
 TEST(parse_cmd_line, flags) {
-    const char opts[] = "xpPNVbaurRYZmwjX" COMPRESS_OPT "q";
+    const char opts[] = "xPbaurRYZmwjX" COMPRESS_OPT "q";
 
     const char *argv[] = {
         exec.c_str(),
         x.c_str(),
-        p.c_str(),
         P.c_str(),
-        N.c_str(),
-        V.c_str(),
         b.c_str(),
         a.c_str(),
         u.c_str(),

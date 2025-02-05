@@ -69,6 +69,10 @@ Threads=@CORES@
 # single path string
 Query=@CMAKE_INSTALL_PREFIX@/bin/gufi_query
 
+# absolute path to gufi_sqlite3
+# single path string
+Sqlite3=@CMAKE_INSTALL_PREFIX@/bin/gufi_sqlite3
+
 # absolute path to gufi_stat_bin
 # single path string
 Stat=@CMAKE_INSTALL_PREFIX@/bin/gufi_stat_bin

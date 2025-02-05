@@ -121,6 +121,7 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
 class Server(Config):
     THREADS      = 'Threads'      # number of threads to use
     QUERY        = 'Query'        # absolute path of gufi_query
+    SQLITE3      = 'Sqlite3'      # absolute path of gufi_sqlite3
     STAT         = 'Stat'         # absolute path of gufi_stat_bin
     INDEXROOT    = 'IndexRoot'    # absolute path of root directory for GUFI to traverse
     OUTPUTBUFFER = 'OutputBuffer' # size of per-thread buffers used to buffer prints
@@ -129,6 +130,7 @@ class Server(Config):
     SETTINGS = {
         THREADS      : gufi_common.get_positive,
         QUERY        : os.path.normpath,
+        SQLITE3      : os.path.normpath,
         STAT         : os.path.normpath,
         INDEXROOT    : os.path.normpath,
         OUTPUTBUFFER : gufi_common.get_non_negative
@@ -147,6 +149,11 @@ class Server(Config):
     def query(self):
         '''return absolute path of gufi_query'''
         return self.config[Server.QUERY]
+
+    @property
+    def sqlite3(self):
+        '''return absolute path of gufi_sqlite3'''
+        return self.config[Server.SQLITE3]
 
     @property
     def stat(self):

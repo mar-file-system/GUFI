@@ -187,7 +187,6 @@ set(C_SOURCES
   gufi_unrollup.c
   parallel_cpr.c
   parallel_rmr.c
-  querydbs.c
 )
 
 # build the C executables

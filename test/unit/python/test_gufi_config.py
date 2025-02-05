@@ -88,6 +88,7 @@ class TestServerConfig(unittest.TestCase):
     default = {
         gufi_config.Server.THREADS      : 5,
         gufi_config.Server.QUERY        : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_query'),
+        gufi_config.Server.SQLITE3      : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_sqlite3'),
         gufi_config.Server.STAT         : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_stat'),
         gufi_config.Server.INDEXROOT    : '@CMAKE_BINARY_DIR@',
         gufi_config.Server.OUTPUTBUFFER : 1024,
@@ -101,6 +102,8 @@ class TestServerConfig(unittest.TestCase):
                          config.threads)
         self.assertEqual(TestServerConfig.default[gufi_config.Server.QUERY],
                          config.query)
+        self.assertEqual(TestServerConfig.default[gufi_config.Server.SQLITE3],
+                         config.sqlite3)
         self.assertEqual(TestServerConfig.default[gufi_config.Server.STAT],
                          config.stat)
         self.assertEqual(TestServerConfig.default[gufi_config.Server.INDEXROOT],
