@@ -119,6 +119,7 @@ jobs:
             (${{ github.workspace }}/build/test/regression/gufi_stat.sh                || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_stats.sh               || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/longitudinal_snapshot.sh    || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/querydbs.sh                 || true) > /dev/null 2>&1
 
             coverage xml --omit="${{ github.workspace }}/build/contrib/hashes.py,,${{ github.workspace }}/build/test/*,${{ github.workspace }}/build/test/regression/*,${{ github.workspace }}/build/test/unit/python/*"
             rm .coverage  # If not removed, codecov will attempt to run coverage xml which will not account for our omissions
