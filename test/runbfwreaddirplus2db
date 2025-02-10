@@ -68,10 +68,7 @@ SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
 DIR="$(dirname ${SCRIPT})"
 BFWREADDIRPLUS2DB="$(realpath ${DIR}/../src/bfwreaddirplus2db)"
 
-export PYTHONPATH="${DIR}/../scripts:${PYTHONPATH}"
 . "${DIR}/regression/setup.sh" 0
-QUERYDBS="${DIR}/regression/gufi_tool.py querydbs"
-
 
 # NOTE: The destination GUFI-tree is optional
 #       i.e. You can use bfwi just to do a breadth-first scan of the source-tree.

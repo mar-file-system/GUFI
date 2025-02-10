@@ -68,9 +68,7 @@ SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
 DIR="$(dirname ${SCRIPT})"
 BFQ="${DIR}/../src/gufi_query"
 
-export PYTHONPATH="${DIR}/../scripts:${PYTHONPATH}"
 . "${DIR}/regression/setup.sh" 0
-QUERYDBS="${DIR}/regression/gufi_tool.py querydbs"
 
 echo "query to create db insert recs from entry query into out db big files and run querydbs"
 rm -f outdb*
