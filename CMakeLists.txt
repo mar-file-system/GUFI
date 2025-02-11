@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.16.0)
 
 # Don't allow in-source build
 get_filename_component(CMAKE_SOURCE_DIR "${CMAKE_SOURCE_DIR}" REALPATH)
@@ -132,8 +132,8 @@ if ((GIT_FOUND) AND (EXISTS "${CMAKE_SOURCE_DIR}/.git"))
 endif()
 message(STATUS "GUFI ${VERSION_STRING}")
 
-# Require C99
-set(CMAKE_C_STANDARD 99)
+# Require C11
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Need _XOPEN_SRC
@@ -155,10 +155,16 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   endif()
 endif()
 
-# Only enable C++ if support is found
+if (CYGWIN)
+  set(DEP_AI OFF)
+else()
+  set(DEP_AI ON CACHE BOOL "Whether or not to build and link with SQLite AI modules")
+endif()
+
+# Only enable C++ if support is found or if llama.cpp is rquired
 include(CheckLanguage)
 check_language(CXX)
-if (CMAKE_CXX_COMPILER)
+if (CMAKE_CXX_COMPILER OR DEP_AI)
   enable_language(CXX)
 
   # GCC prior to 4.9.3 doesn't have full standard support
@@ -295,16 +301,26 @@ set(CLIENT                 OFF                                CACHE BOOL   "Whet
 set(DEP_PATCH_SQLITE3_OPEN OFF                                CACHE BOOL   "Whether or not to patch SQLite3 open")
 set(DEP_USE_JEMALLOC       ON                                 CACHE BOOL   "Whether or not to build and link with jemalloc")
 set(DEP_OPTIONS --threads "${DEP_BUILD_THREADS}")
-if (CMAKE_CXX_COMPILER)
-  set(DEP_OPTIONS ${DEP_OPTIONS} --cxx)
-endif()
 if (DEP_PATCH_SQLITE3_OPEN)
   set(DEP_OPTIONS ${DEP_OPTIONS} --patch-sqlite3-open)
 endif()
 if (DEP_USE_JEMALLOC)
   set(DEP_OPTIONS ${DEP_OPTIONS} --jemalloc)
 endif()
+if (DEP_AI)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --AI)
+endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}" "${CMAKE_VERSION}" "${CMAKE_SYSTEM_NAME}")
+
+# llama.cpp uses OpenMP (not required, but left enabled)
+if (DEP_AI)
+  if (UNIX AND NOT APPLE)
+    find_package(OpenMP REQUIRED COMPONENTS C)
+    message(STATUS "OpenMP CFLAGS: ${OpenMP_C_FLAGS}")
+  else()
+    set(OpenMP_C_FLAGS)
+  endif()
+endif()
 
 # Find zlib
 pkg_search_module(ZLIB zlib)
@@ -384,25 +400,55 @@ endif()
 
 # everyone includes (-I) these paths, whether or not they need them
 set(COMMON_INCLUDES
-  ${CMAKE_SOURCE_DIR}/include
-  ${XATTR_INCLUDEDIR}
-  ${DEP_INSTALL_PREFIX}/sqlite3/include
-  ${DEP_INSTALL_PREFIX}/sqlite3-pcre
-  ${DEP_INSTALL_PREFIX}/sqlite-vec/include
+  "${CMAKE_SOURCE_DIR}/include"
+  "${XATTR_INCLUDEDIR}"
+  "${DEP_INSTALL_PREFIX}/sqlite3/include"
+  "${DEP_INSTALL_PREFIX}/sqlite3-pcre"
 )
+
+if (DEP_AI)
+  list(APPEND COMMON_INCLUDES
+    "${DEP_INSTALL_PREFIX}/sqlite-vec/include"
+    "${DEP_INSTALL_PREFIX}/sqlite-lembed/include"
+    "${DEP_INSTALL_PREFIX}/llama.cpp/include"
+  )
+endif()
 
 include_directories(${COMMON_INCLUDES})
 
 # set of libraries needed by the final binaries
 set(COMMON_LIBRARIES
   GUFI
-  ${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libsqlite_vec0.a
-  ${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
-  ${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
+  "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a"
+  "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a"
   ${PCRE2_LDFLAGS}
   Threads::Threads
-  m
 )
+
+if (DEP_AI)
+  list(APPEND COMMON_LIBRARIES
+    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libsqlite_vec0.a"
+    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/libsqlite-lembed0.a"
+    -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama -lstdc++ ${OpenMP_C_FLAGS}
+    -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
+  )
+
+  if (APPLE)
+    find_library(METAL Metal)           # REQUIRED was not added until CMake 3.18
+    if (NOT METAL)
+      message(FATAL_ERROR "Could not find Metal Framework")
+    endif()
+    find_library(ACCELERATE Accelerate) # REQUIRED was not added until CMake 3.18
+    if (NOT ACCELERATE)
+      message(FATAL_ERROR "Could not find Accelerate Framework")
+    endif()
+
+    list(APPEND COMMON_LIBRARIES
+      ${ACCELERATE}
+      ${METAL}
+    )
+  endif()
+endif()
 
 if (ZLIB_FOUND)
   list(APPEND COMMON_LIBRARIES
@@ -412,11 +458,12 @@ endif()
 
 if (DEP_USE_JEMALLOC)
   list(APPEND COMMON_LIBRARIES
-    ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
+    "${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a"
   )
 endif()
 
 list(APPEND COMMON_LIBRARIES
+  m
   dl
 )
 

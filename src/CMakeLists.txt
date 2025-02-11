@@ -93,6 +93,12 @@ if (LOCALTIME_R)
   set_source_files_properties(addqueryfuncs.c PROPERTIES COMPILE_FLAGS -DLOCALTIME_R)
 endif()
 set_source_files_properties(bf.c PROPERTIES COMPILE_FLAGS -DGUFI_VERSION="${VERSION_STRING}")
+if (DEP_AI)
+  set_property(SOURCE dbutils.c APPEND_STRING PROPERTY COMPILE_FLAGS -DHAVE_AI=1 )
+  set_property(SOURCE dbutils.c APPEND_STRING PROPERTY COMPILE_FLAGS -I"${DEP_INSTALL_PREFIX}/sqlite-vec/include")
+  set_property(SOURCE dbutils.c APPEND_STRING PROPERTY COMPILE_FLAGS -I"${DEP_INSTALL_PREFIX}/sqlite-lembed/include")
+  set_property(SOURCE dbutils.c APPEND_STRING PROPERTY COMPILE_FLAGS -I"${DEP_INSTALL_PREFIX}/llama.cpp/include")
+endif()
 
 #If the GPFS library exists, build the gpfs scan tool
 if (GPFS_LIB AND GPFS_BUILD)

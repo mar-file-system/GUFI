@@ -61,32 +61,46 @@
 
 
 
+# build and install sqlite-vec
+
 set -e
 
-# Set Timezone to skip an interactive prompt when running apt-get update
-TZ=America/Denver
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# install sqlite3 first
+"${SCRIPT_PATH}/sqlite3.sh"
 
-apt update
+# Assume all paths exist
 
-# install libraries
-apt -y install \
-    libattr1-dev \
-    libfuse-dev \
-    libomp-dev \
-    libpcre2-dev \
-    zlib1g-dev
+lembed_name="sqlite-lembed"
+lembed_prefix="${INSTALL_DIR}/${lembed_name}"
+if [[ ! -d "${lembed_prefix}" ]]; then
+    lembed_build="${BUILD_DIR}/sqlite-lembed"
 
-# install required packages
-apt -y install \
-    attr \
-    autoconf \
-    clang \
-    cmake \
-    gettext \
-    git \
-    patch \
-    pkg-config \
-    python3 \
-    python3-pip \
-    sudo
+    # not providing tarball in order to get submodules
+    if [[ ! -d "${lembed_build}" ]]; then
+        git clone --recurse-submodule https://github.com/asg017/sqlite-lembed.git "${lembed_build}"
+    fi
+
+    # build llama.cpp submodule
+    llama_install="${INSTALL_DIR}/llama.cpp"
+    if [[ ! -d "${llama_install}" ]]; then
+        cd "${lembed_build}/vendor/llama.cpp"
+        mkdir -p build
+        cd build
+        CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_install}" -DCMAKE_INSTALL_LIBDIR=lib
+        make -j "${THREADS}"
+        make -j "${THREADS}" install
+    fi
+
+    cd "${lembed_build}"
+    make sqlite-lembed.h
+    # copied from sqlite-vec Makefile
+    "${CC}" -c -g3 -O3 -DSQLITE_EXTRA_INIT=core_init -DSQLITE_CORE \
+            -DSQLITE_ENABLE_STMT_SCANSTATUS -DSQLITE_ENABLE_BYTECODE_VTAB \
+            -DSQLITE_ENABLE_EXPLAIN_COMMENTS \
+            -I"${llama_install}/include" \
+            -I"${INSTALL_DIR}/sqlite3/include" \
+            sqlite-lembed.c -o libsqlite-lembed0.a
+    mkdir -p "${lembed_prefix}/include" "${lembed_prefix}/lib"
+    cp sqlite-lembed.h "${lembed_prefix}/include"
+    cp libsqlite-lembed0.a "${lembed_prefix}/lib"
+fi
