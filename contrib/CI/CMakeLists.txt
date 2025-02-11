@@ -60,7 +60,5 @@
 
 
 
-cmake_minimum_required(VERSION 3.5.0)
-
 configure_file(generic_rpm.sh.in generic_rpm.sh @ONLY)
 configure_file(rpms.sh.in        rpms.sh        @ONLY)

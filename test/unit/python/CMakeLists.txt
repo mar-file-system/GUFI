@@ -60,8 +60,6 @@
 
 
 
-cmake_minimum_required(VERSION 3.5.0)
-
 set(TESTS
   gufi_common
   gufi_config

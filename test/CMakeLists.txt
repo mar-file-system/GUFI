@@ -60,8 +60,6 @@
 
 
 
-cmake_minimum_required(VERSION 3.5.0)
-
 # allow for the test working directory to be moved
 set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
 execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}")

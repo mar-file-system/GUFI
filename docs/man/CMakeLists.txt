@@ -60,8 +60,6 @@
 
 
 
-cmake_minimum_required(VERSION 3.5.0)
-
 set(MAN_PAGES
   bfwreaddirplus2db.1
   gufi_dir2index.1

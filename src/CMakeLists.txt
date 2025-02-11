@@ -60,8 +60,6 @@
 
 
 
-cmake_minimum_required(VERSION 3.5.0)
-
 include(CheckSymbolExists)
 check_symbol_exists(localtime_r "time.h" LOCALTIME_R)
 if (LOCALTIME_R)

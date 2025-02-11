@@ -60,8 +60,6 @@
 
 
 
-cmake_minimum_required(VERSION 3.5.0)
-
 set(CONTRIB_SOURCES
   gendir.c                # simple source tree generator
   treediff.c              # walk two trees and print the names that don't match
