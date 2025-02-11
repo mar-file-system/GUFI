@@ -80,9 +80,9 @@ else
 fi
 
 THREADS="1"
-BUILD_CXX="false"
 PATCH_SQLITE3_OPEN="false"
 JEMALLOC="false"
+AI="false"
 
 # https://stackoverflow.com/a/14203146
 # Bruno Bronosky
@@ -96,14 +96,14 @@ case $key in
         THREADS="$2"
         shift # past count
         ;;
-    --cxx)
-        BUILD_CXX="true"
-        ;;
     --patch-sqlite3-open)
         PATCH_SQLITE3_OPEN="true"
         ;;
     --jemalloc)
         JEMALLOC="true"
+        ;;
+    --AI)
+        AI="true"
         ;;
     *)    # unknown option
         POSITIONAL+=("$1") # save it in an array for later
@@ -151,8 +151,13 @@ source "${SCRIPT_PATH}/sqlite3.sh" "${PATCH_SQLITE3_OPEN}"
 echo "Installing SQLite3 PCRE"
 source "${SCRIPT_PATH}/sqlite3-pcre.sh"
 
-echo "Installing SQLite3 vec"
-source "${SCRIPT_PATH}/sqlite-vec.sh"
+if [[ "${AI}" == "true" ]]; then
+    echo "Installing SQLite3 vec"
+    source "${SCRIPT_PATH}/sqlite-vec.sh"
+
+    echo "Installing SQLite3 lembed"
+    source "${SCRIPT_PATH}/sqlite-lembed.sh"
+fi
 
 if [[ "${JEMALLOC}" == "true" ]]; then
     echo "Installing jemalloc"
@@ -164,9 +169,7 @@ HIGHEST_VERSION=$( (echo "${CMAKE_VERSION}"; echo "${ACCEPTABLE_VERSION}") | sor
 
 if [[ "${CMAKE_SYSTEM_NAME}" != "CYGWIN" ]]; then
     if [[ "${CMAKE_VERSION}" == "${HIGHEST_VERSION}" ]]; then
-        if [[ "${BUILD_CXX}" == "true" ]]; then
-            echo "Installing GoogleTest"
-            source "${SCRIPT_PATH}/googletest.sh"
-        fi
+        echo "Installing GoogleTest"
+        source "${SCRIPT_PATH}/googletest.sh"
     fi
 fi
