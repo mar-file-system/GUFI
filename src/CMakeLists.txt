@@ -66,38 +66,6 @@ if (LOCALTIME_R)
   add_definitions(-DLOCALTIME_R)
 endif()
 
-# ##########################################
-# flags that can be used to modify code
-# behavior at compile time for some binaries.
-#
-# All of these should be left at their
-# default values when running the ctest.
-#
-# All binaries should be able to run
-# even if all of the values are changed.
-#
-
-# opendb can be turned off
-# addqueryfuncs fails silently if not turned off
-# sqlite3_exec fails with error message if not turned off
-option(RUN_OPENDB "Whether or not to enable opening databases" ON)
-if (RUN_OPENDB)
-  add_definitions(-DOPENDB=1)
-endif()
-
-# addqueryfuncs can be turned off
-option(RUN_ADDQUERYFUNCS "Add custom functions to opened databases" ON)
-if (RUN_ADDQUERYFUNCS)
-  add_definitions(-DADDQUERYFUNCS=1)
-endif()
-
-# sqlite3_exec can be turned off
-option(RUN_SQL_EXEC "Call sqlite3_exec" ON)
-if (RUN_SQL_EXEC)
-  add_definitions(-DSQL_EXEC=1)
-endif()
-# ##########################################
-
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES
   BottomUp.c

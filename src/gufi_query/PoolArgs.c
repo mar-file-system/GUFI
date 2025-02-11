@@ -105,11 +105,9 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             break;
         }
 
-        #ifdef ADDQUERYFUNCS
         if (addqueryfuncs(ta->outdb) != 0) {
             fprintf(stderr, "Warning: Could not add functions to sqlite\n");
         }
-        #endif
 
         /* create empty xattr tables to UNION to */
         char *err = NULL;

@@ -183,18 +183,14 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     if (gqw->work.level >= in->min_level) {
-        #if OPENDB
         db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
-        #endif
 
         /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
-        #ifdef ADDQUERYFUNCS
         if (db) {
             if (addqueryfuncs_with_context(db, &gqw->work) != 0) {
                 fprintf(stderr, "Could not add functions to sqlite\n");
             }
         }
-        #endif
     }
 
     /* get number of subdirs walked on first call to process_queries */
@@ -346,11 +342,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count);
     }
 
-    #ifdef OPENDB
     if (db) {
         detachdb_cached(dbname, db, pa->detach, 1);
     }
-    #endif
 
     /* restore mtime and atime */
     if (db) {

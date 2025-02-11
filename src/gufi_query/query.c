@@ -83,7 +83,6 @@ void querydb(struct work *work,
     };
 
     char *err = NULL;
-#ifdef SQL_EXEC
     if (sqlite3_exec(db, query, callback, &args, &err) != SQLITE_OK) {
         char buf[MAXPATH];
         present_user_path(dbname, dbname_len,
@@ -91,7 +90,6 @@ void querydb(struct work *work,
                           buf, sizeof(buf));
         sqlite_print_err_and_free(err, stderr, "Error: %s: %s: \"%s\"\n", err, buf, query);
     }
-#endif
 
     *rc = args.rows;
 }
