@@ -62,9 +62,6 @@
 
 include(CheckSymbolExists)
 check_symbol_exists(localtime_r "time.h" LOCALTIME_R)
-if (LOCALTIME_R)
-  add_definitions(-DLOCALTIME_R)
-endif()
 
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES
@@ -92,6 +89,9 @@ set(GUFI_SOURCES
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 target_compile_definitions(GUFI PUBLIC SQLITE_CORE)
+if (LOCALTIME_R)
+  set_source_files_properties(addqueryfuncs.c PROPERTIES COMPILE_FLAGS -DLOCALTIME_R)
+endif()
 set_source_files_properties(bf.c PROPERTIES COMPILE_FLAGS -DGUFI_VERSION="${VERSION_STRING}")
 
 #If the GPFS library exists, build the gpfs scan tool
