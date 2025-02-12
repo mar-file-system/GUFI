@@ -168,14 +168,6 @@ jobs:
     - name: Install Python 2
       run:  yum -y install python2
 
-    - name: Install Matplotlib
-      run:  |
-            yum -y install curl
-            curl --insecure https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
-            python2 get-pip.py
-            python2 -m pip install --upgrade pip
-            python2 -m pip install matplotlib
-
     - name: Configure CMake For Core Tests
       run:  |
             mkdir -p build
