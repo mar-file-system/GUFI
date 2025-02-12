@@ -65,8 +65,6 @@ set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_vt.out"
-
-LOAD=".load @CMAKE_BINARY_DIR@/src/gufi_vt"
 BADDIR=$(mktemp -d "${INDEXROOT}.XXXXXX")
 
 cleanup() {
@@ -82,6 +80,8 @@ trap cleanup_exit EXIT
 
 cleanup
 
+LOAD=".load @CMAKE_BINARY_DIR@/src/gufi_vt"
+
 query_vt() {
     sql="$1"
     echo "$ ("
@@ -95,62 +95,30 @@ query_vt() {
     echo
 }
 
+. "@CMAKE_CURRENT_BINARY_DIR@/gufi_vt.common"
+
 (
-echo "# Generate treesummary tables in all directories"
-run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | sed '/^Started .*$/d'
+    run_tests query_vt
 
-echo "# Query treesummary"
-query_vt "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('${INDEXROOT}', ${THREADS}) ORDER BY minsize ASC, maxsize ASC;"
+    # errors
 
-for name in summary entries pentries vrsummary vrpentries
-do
-    echo "# Query ${name}"
-    query_vt "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_${name}('${INDEXROOT}', ${THREADS}) ORDER BY name ASC, size ASC;"
-done
+    set +e
+    echo "# Missing indexroot (error)"
+    query_vt "SELECT name FROM gufi_vt_pentries();"
 
-echo "# Query with WHERE size < 10"
-query_vt "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size < 10 ORDER BY name ASC, size ASC;"
+    echo "# Bad indexroot"
+    rm -rf "${BADDIR}"
+    query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | sed "s/${BADDIR//\//\\/}/baddir/g"
 
-echo "# Query with WHERE size > 10"
-query_vt "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size > 10 ORDER BY name ASC, size ASC;"
+    echo "# Empty string thread count (error)"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;"
 
-echo "# Query entries in directory where name == 'directory'"
-echo "# WHERE type != 'd' is necessary to remove results from S query"
-query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') WHERE type != 'd' ORDER BY name ASC, size ASC;"
+    echo "# Zero thread count (error)"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
 
-echo "# Query directories that contain entries larger than 1024 (only 1: ${INDEXROOT})"
-echo "# WHERE type != 'd' is necessary to remove results from S query"
-query_vt "SELECT rowid, name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;"
-
-echo "# Paths"
-query_vt "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
-
-echo "# Make sure all types work"
-query_vt "SELECT name, size, size * 1.0, CAST(name AS BLOB), NULL FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
-
-echo "# Missing thread count (not an error)"
-query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}') ORDER BY name ASC, size ASC;"
-
-echo "# NULL thread count (not an error)"
-query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
-
-set +e
-echo "# Missing indexroot (error)"
-query_vt "SELECT name FROM gufi_vt_pentries();"
-
-echo "# Bad indexroot"
-rm -rf "${BADDIR}"
-query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | sed "s/${BADDIR//\//\\/}/baddir/g"
-
-echo "# Empty string thread count (error)"
-query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;"
-
-echo "# Zero thread count (error)"
-query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
-
-echo "# Bad SQL"
-query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL, 'bad SQL') ORDER BY name ASC, size ASC;"
-set -e
+    echo "# Bad SQL"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL, 'bad SQL') ORDER BY name ASC, size ASC;"
+    set -e
 ) | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_vt.expected "${OUTPUT}"

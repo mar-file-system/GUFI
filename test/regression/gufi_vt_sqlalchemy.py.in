@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,20 +61,58 @@
 
 
 
+import argparse
+import os
+import sys
 
-set -e
+import sqlalchemy
 
-# install Extra Packages for Enterprise Linux (EPEL)
-dnf -y install epel-release
+import gufi_config
+import gufi_common
 
-# install libraries
-dnf -y --enablerepo=devel install fuse-devel libattr-devel pcre2-devel zlib-devel
+# enable extension loading and load gufi_vt
+# https://stackoverflow.com/a/48869774/341683
+def load_extension(conn, _):
+    conn.enable_load_extension(True)
+    conn.load_extension('@CMAKE_BINARY_DIR@/src/gufi_vt')
+    conn.enable_load_extension(False)
 
-# install required packages
-dnf -y install attr autoconf clang cmake3 findutils fuse git make patch pkgconfig python3 python3-pip sudo
+def parse_args(argv):
+    parser = argparse.ArgumentParser('gufi_vt in SQLAlchemy',
+                                     description='gufi_vt in SQLAlchemy Test Script')
 
-# SQLAlchemy needs Python.h
-yum -y install python3-devel
+    parser.add_argument('SQL',
+                        nargs='+',
+                        help='SQL statements to run')
 
-# install pip packages
-python3 -m pip install sqlalchemy
+    gufi_common.add_delim_flag(parser)
+
+    parser.add_argument('--debug',
+                        action='store_true',
+                        help='Turn on SQLAlchemy debug prints')
+
+    return parser.parse_args(argv[1:])
+
+def run(argv, config_path):
+    config = gufi_config.Server(config_path)
+    args = parse_args(argv)
+
+    # add gufi_query directory to PATH
+    os.environ['PATH'] += os.pathsep + os.path.dirname(config.query)
+
+    # open an in-memory SQLite db through SQLAlchemy
+    engine = sqlalchemy.create_engine('sqlite://', echo=args.debug)
+
+    # call load_extension when a connection is made with this engine
+    sqlalchemy.event.listen(engine, 'connect', load_extension)
+
+    with engine.connect() as conn:
+        for query in args.SQL:
+            rows = conn.execute(sqlalchemy.text(query))
+            for row in rows:
+                for col in row[:-1]:
+                    print(col, end=args.delim)
+                print(row[-1])
+
+if __name__ == '__main__':
+    sys.exit(run(sys.argv, gufi_config.PATH))

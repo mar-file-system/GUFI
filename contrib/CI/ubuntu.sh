@@ -86,4 +86,8 @@ apt -y install \
     patch \
     pkg-config \
     python3 \
+    python3-pip \
     sudo
+
+# install pip packages
+PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install sqlalchemy

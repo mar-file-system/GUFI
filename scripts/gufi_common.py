@@ -308,14 +308,17 @@ def print_query(query_tokens):
     print('GUFI query is \n  {0}'.format(formatted_string))
     sys.stdout.flush()
 
-def add_common_flags(parser):
-    '''Common GUFI tool flags'''
+def add_delim_flag(parser):
     parser.add_argument('--delim',
                         dest='delim',
                         metavar='c',
                         type=get_char,
                         default=' ',
                         help='delimiter separating output columns')
+
+def add_common_flags(parser):
+    '''Common GUFI tool flags'''
+    add_delim_flag(parser)
 
     parser.add_argument('--in-memory-name',
                         dest='inmemory_name',

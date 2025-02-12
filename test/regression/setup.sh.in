@@ -164,6 +164,7 @@ PARALLEL_CPR="@CMAKE_BINARY_DIR@/src/parallel_cpr"
 PARALLEL_RMR="@CMAKE_BINARY_DIR@/src/parallel_rmr"
 QUERYDBS="${GUFI_TOOL} querydbs"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
+SQLALCHEMY="${GUFI_TOOL} sqlalchemy"
 TREEDIFF="@CMAKE_BINARY_DIR@/contrib/treediff"
 USERFILESPACEHOG="@CMAKE_BINARY_DIR@/examples/userfilespacehog"
 USERFILESPACEHOGUSESUMMARY="@CMAKE_BINARY_DIR@/examples/userfilespacehogusesummary"
@@ -225,6 +226,7 @@ replace() {
     s/${PARALLEL_RMR//\//\\/}/parallel_rmr/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
     s/${SPLIT_TRACE//\//\\/}/split_trace/g;
+    s/${SQLALCHEMY//\//\\/}/gufi_vt_sqlalchemy/g;
     s/${TREEDIFF//\//\\/}/treediff/g;
     s/${USERFILESPACEHOG//\//\\/}/userfilespacehog/g;
     s/${USERFILESPACEHOGUSESUMMARY//\//\\/}/userfilespacehogusesummary/g;

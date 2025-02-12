@@ -130,6 +130,26 @@ if (CMAKE_CXX_COMPILER)
   )
 endif()
 
+# replacement main for python scripts
+configure_file(gufi_tool.py.in gufi_tool.py @ONLY)
+
+# gufi_vt.common is always required by gufi_vt test
+configure_file(gufi_vt.common gufi_vt.common @ONLY)
+
+# check for SQLAlchemy and add test if found
+execute_process(COMMAND "${PYTHON_INTERPRETER}" -c "import sqlalchemy"
+  RESULT_VARIABLE SQLALCHEMY_RC
+  OUTPUT_QUIET ERROR_QUIET)
+if (SQLALCHEMY_RC EQUAL 0)
+  message(STATUS "SQLAlchemy found. Adding test.")
+  list(APPEND PYTHON
+    gufi_vt_sqlalchemy
+  )
+  configure_file(gufi_vt_sqlalchemy.py.in gufi_vt_sqlalchemy.py @ONLY)
+else()
+  message(STATUS "SQLAlchemy not found.")
+endif()
+
 # .sh and .expected
 set(SH_AND_EXPECTED
   ${BINARIES}
@@ -137,8 +157,6 @@ set(SH_AND_EXPECTED
   ${EXAMPLES}
   ${OTHERS}
 )
-
-configure_file(gufi_tool.py.in gufi_tool.py)
 
 foreach(NAME ${SH_AND_EXPECTED})
   configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)

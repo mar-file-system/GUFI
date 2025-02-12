@@ -60,21 +60,46 @@
 # OF SUCH DAMAGE.
 
 
+# source this file and pass in the name of a function
+# that takes in 1 SQL statement as an argument
+run_tests() {
+    func="$1"
 
+    echo "# Generate treesummary tables in all directories"
+    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | sed '/^Started .*$/d'
 
-set -e
+    echo "# Query treesummary"
+    "${func}" "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('${INDEXROOT}', ${THREADS}) ORDER BY minsize ASC, maxsize ASC;"
 
-# install Extra Packages for Enterprise Linux (EPEL)
-dnf -y install epel-release
+    for name in summary entries pentries vrsummary vrpentries
+    do
+        echo "# Query ${name}"
+        "${func}" "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_${name}('${INDEXROOT}', ${THREADS}) ORDER BY name ASC, size ASC;"
+    done
 
-# install libraries
-dnf -y --enablerepo=devel install fuse-devel libattr-devel pcre2-devel zlib-devel
+    echo "# Query with WHERE size < 10"
+    "${func}" "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size < 10 ORDER BY name ASC, size ASC;"
 
-# install required packages
-dnf -y install attr autoconf clang cmake3 findutils fuse git make patch pkgconfig python3 python3-pip sudo
+    echo "# Query with WHERE size > 10"
+    "${func}" "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size > 10 ORDER BY name ASC, size ASC;"
 
-# SQLAlchemy needs Python.h
-yum -y install python3-devel
+    echo "# Query entries in directory where name == 'directory'"
+    echo "# WHERE type != 'd' is necessary to remove results from S query"
+    "${func}" "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') WHERE type != 'd' ORDER BY name ASC, size ASC;"
 
-# install pip packages
-python3 -m pip install sqlalchemy
+    echo "# Query directories that contain entries larger than 1024 (only 1: ${INDEXROOT})"
+    echo "# WHERE type != 'd' is necessary to remove results from S query"
+    "${func}" "SELECT rowid, name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;"
+
+    echo "# Paths"
+    "${func}" "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
+
+    echo "# Make sure all types work"
+    "${func}" "SELECT name, size, size * 1.0, CAST(name AS BLOB), NULL FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
+
+    echo "# Missing thread count (not an error)"
+    "${func}" "SELECT name FROM gufi_vt_pentries('${INDEXROOT}') ORDER BY name ASC, size ASC;"
+
+    echo "# NULL thread count (not an error)"
+    "${func}" "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
+}
