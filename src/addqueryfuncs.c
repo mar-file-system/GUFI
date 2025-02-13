@@ -300,6 +300,46 @@ void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv) {
 }
 
 /*
+ * get the offset into a string of words at the end of word[n]
+ * if n > # of words, return the string length
+ * if the delimiter is not found, then the whole string is the first and only word
+ *
+ * argv[0] = string
+ * argv[1] = n
+ * argv[2] = delimiters (default = ' ')
+ */
+void word_n_end(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    char *buf = (char *) sqlite3_value_text(argv[0]);
+    const sqlite3_int64 len = sqlite3_value_bytes(argv[0]);
+    const sqlite3_int64 n = sqlite3_value_int64(argv[1]);
+    static const char SPACE[] = " ";
+    const char *delim = SPACE;
+    if (argc > 2) {
+        delim = (const char *) sqlite3_value_text(argv[2]);
+    }
+
+    char *token = NULL;
+    char *saveptr = NULL;
+
+    token = strtok_r(buf, delim, &saveptr);
+    for(sqlite3_int64 i = 0; (i < n) && token; i++) {
+        token = strtok_r(NULL, delim, &saveptr);
+    }
+
+    #if defined(__APPLE__)
+    if (saveptr) {
+    #endif
+        const sqlite3_int64 diff = saveptr - buf;
+        sqlite3_result_int64(context, diff - (diff != len));
+    #if defined(__APPLE__)
+    }
+    else { /* handle macos behavior */
+        sqlite3_result_int64(context, len);
+    }
+    #endif
+}
+
+/*
  * One pass standard deviation (sample)
  * https://mathcentral.uregina.ca/QQ/database/QQ.09.06/h/murtaza1.html
  */
@@ -536,6 +576,8 @@ int addqueryfuncs(sqlite3 *db) {
                                  NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
                                  NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "word_n_end",         -1,   SQLITE_UTF8,
+                                 NULL, &word_n_end,                NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
                                  NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&
         (sqlite3_create_function(db,   "stdevp",              1,   SQLITE_UTF8,

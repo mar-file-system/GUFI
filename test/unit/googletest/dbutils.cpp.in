@@ -580,6 +580,53 @@ TEST(addqueryfuncs, basename) {
     sqlite3_close(db);
 }
 
+static void word_n_end_test(sqlite3 *db, const char *str, const size_t n,
+                            const char *delim, const size_t offset) {
+    char sql[MAXSQL];
+    if (delim) {
+        snprintf(sql, sizeof(sql), "SELECT word_n_end('%s', %zu, '%s');", str, n, delim);
+    }
+    else {
+        snprintf(sql, sizeof(sql), "SELECT word_n_end('%s', %zu);", str, n);
+    }
+
+    char buf[MAXPATH] = {};
+    char *output = buf;
+    ASSERT_EQ(sqlite3_exec(db, sql, copy_columns_callback, &output, nullptr), SQLITE_OK);
+
+    char expected[MAXSQL];
+    snprintf(expected, sizeof(expected), "%zu", offset);
+    EXPECT_STREQ(output, expected);
+}
+
+TEST(addqueryfuncs, word_n_end) {
+    static const char   STR[]      = "a bc def ghij klmno pqrstu";
+    static const size_t END[]      = {1, 4, 8, 13, 19, 26}; // one char after string
+    static const size_t WORD_COUNT = sizeof(END) / sizeof(END[0]);
+
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db), 0);
+
+    // check that each word ends at the expected place
+    for(size_t n = 0; n < WORD_COUNT; n++) {
+        word_n_end_test(db, STR, n, nullptr, END[n]);
+    }
+
+    // n is too big - should return length of STR
+    word_n_end_test(db, STR, WORD_COUNT * 2, nullptr, END[WORD_COUNT - 1]);
+
+    // delimiter contains a char that is not found and a char that is
+    word_n_end_test(db, STR, 0, "; ", END[0]);
+
+    // delimiter is now ';', which is not found
+    word_n_end_test(db, STR, 0, ";", END[WORD_COUNT - 1]);
+
+    sqlite3_close(db);
+}
+
 static int double_callback(void *arg, int, char **data, char **) {
     if (!data[0]) {
         return SQLITE_ERROR;
