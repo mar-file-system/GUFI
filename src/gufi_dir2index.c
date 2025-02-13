@@ -149,6 +149,12 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
                           nda->xattrs_res, nda->xattr_files_res);
     }
 
+    /* read external files before modifying the entry's path */
+    if (strncmp(entry->name + entry->name_len - entry->basename_len,
+                EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
+        external_read_file(in, entry, process_external, nda->db);
+    }
+
     /* get entry relative path (use extra buffer to prevent memcpy overlap) */
     char relpath[MAXPATH];
     const size_t relpath_len = SNFORMAT_S(relpath, MAXPATH, 1,
@@ -161,11 +167,6 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
 
     /* add entry + xattr names into bulk insert */
     insertdbgo(entry, ed, nda->entries_res);
-
-    if (strncmp(entry->name + entry->name_len - entry->basename_len,
-                EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
-        external_read_file(in, entry, process_external, nda->db);
-    }
 
 out:
     return rc;
