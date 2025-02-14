@@ -74,17 +74,6 @@ PATHS=(
     "${BUILD}/test"
 )
 
-# performance history framework is optional
-PERF="${BUILD}/contrib/performance"
-if [[ -d "${PERF}" ]]
-then
-    export PYTHONPATH="${PERF}:${PYTHONPATH}"
-    while IFS= read -r -d $'\0' path
-    do
-        PATHS+=("${path}")
-    done < <(find "${PERF}" -type d -print0)
-fi
-
 # shellcheck disable=SC2044
 while IFS= read -r -d $'\0' path
 do
