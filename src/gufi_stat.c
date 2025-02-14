@@ -230,12 +230,15 @@ static int print_callback(void * args, int count, char **data, char **columns) {
             }
         }
         else {
+            const char *start = f;
+
             f++;
 
             /* if the first character starts a number */
             int width = 0;
-            if (*f && (((*f == '-') || (*f == '+') ||
-                        (('0' <= *f) && (*f <= '9'))))) {
+            if (*f &&
+                (((*f == '-') || (*f == '+') ||
+                 (('0' <= *f) && (*f <= '9'))))) {
                 int multiplier = 1;
                 if (*f == '-') {
                     multiplier = -1;
@@ -246,12 +249,18 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                 }
 
                 /* get width */
-                while (*f && ('0' <= *f) && (*f <= '9')) {
+                while (*f &&
+                       ('0' <= *f) && (*f <= '9')) {
                     width = (width * 10) + (*f - '0');
                     f++;
                 }
 
                 width *= multiplier;
+            }
+
+            if (!*f) {
+                fprintf(stderr, "gufi_stat: bad format sequence: \"%s\"\n", start);
+                continue;
             }
 
             char format[MAXPATH] = "%";

@@ -126,8 +126,10 @@ echo "# custom print format"
 echo
 
 echo "# bad print format specifier"
-"${GUFI_STAT_BIN}" -f '%e\n' "${INDEXROOT}"
-echo
+run_no_sort "${GUFI_STAT_BIN}" -f '%e'   "${INDEXROOT}"; echo
+run_no_sort "${GUFI_STAT_BIN}" -f '%-60' "${INDEXROOT}"
+run_no_sort "${GUFI_STAT_BIN}" -f '%+'   "${INDEXROOT}"
+run_no_sort "${GUFI_STAT_BIN}" -f '%'    "${INDEXROOT}"
 
 for entry in "${symlinks[@]}"
 do
