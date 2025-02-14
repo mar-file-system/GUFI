@@ -202,6 +202,7 @@ void print_help(const char* prog_name,
 
 // DEBUGGING
 void show_input(struct input* in, int retval) {
+   printf("in.printed_version          = %d\n",            in->printed_version);
    printf("in.printdir                 = %d\n",            in->printdir);
    printf("in.buildindex               = %d\n",            in->buildindex);
    printf("in.maxthreads               = %zu\n",           in->maxthreads);
@@ -300,7 +301,7 @@ int parse_cmd_line(int         argc,
       case 'v':
           printf(STR(GUFI_VERSION) "\n");
           in->printed_version = 1;
-          return 0;
+          break;
 
       case 'x':               // enable xattr processing
          in->process_xattrs = 1;
@@ -524,6 +525,10 @@ int parse_cmd_line(int         argc,
    // make sure min_level <= max_level
    if (retval == 0) {
        retval = -(in->min_level > in->max_level);
+   }
+
+   if (in->printed_version) {
+       return -1;
    }
 
    // caller requires given number of positional args, after the options.

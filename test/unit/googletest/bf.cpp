@@ -74,6 +74,7 @@ static const std::string exec = "exec"; // argv[0]
 
 static const std::string h = "-h";
 static const std::string H = "-H";
+static const std::string v = "-v";
 static const std::string x = "-x";
 static const std::string P = "-P";
 static const std::string b = "-b";
@@ -138,9 +139,11 @@ TEST(input, nullptr) {
     EXPECT_NO_THROW(input_fini(nullptr));
 }
 
-static void check_input(struct input *in, const bool helped,
+static void check_input(struct input *in, const bool helped, const bool version,
                         const bool flags, const bool options) {
     EXPECT_EQ(in->helped,                             static_cast<int>(helped));
+
+    EXPECT_EQ(in->printed_version,                    version);
 
     EXPECT_EQ(in->process_xattrs,                     flags);
     EXPECT_EQ(in->printdir,                           flags);
@@ -253,7 +256,32 @@ TEST(parse_cmd_line, help) {
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
 
-    check_input(&in, true, false, false);
+    check_input(&in, true, false, false, false);
+
+    input_fini(&in);
+}
+
+TEST(parse_cmd_line, version) {
+    const char opts[] = "v";
+
+    const char *argv[] = {
+        exec.c_str(),
+        v.c_str(),
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]);
+
+    const int fd = dup(STDOUT_FILENO);
+    ASSERT_NE(fd, -1);
+    EXPECT_EQ(close(STDOUT_FILENO), 0);;
+
+    struct input in;
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+
+    ASSERT_EQ(dup(fd), STDOUT_FILENO);
+    EXPECT_EQ(close(fd), 0);
+
+    check_input(&in, false, true, false, false);
 
     input_fini(&in);
 }
@@ -319,7 +347,7 @@ TEST(parse_cmd_line, debug) {
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
 
-    check_input(&in, true, true, true);
+    check_input(&in, true, false, true, true);
 
     input_fini(&in);
 }
@@ -352,7 +380,7 @@ TEST(parse_cmd_line, flags) {
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-    check_input(&in, false, true, false);
+    check_input(&in, false, false, true, false);
 
     input_fini(&in);
 }
@@ -392,7 +420,7 @@ TEST(parse_cmd_line, options) {
 
     struct input in;
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-    check_input(&in, false, false, true);
+    check_input(&in, false, false, false, true);
 
     input_fini(&in);
 }
@@ -542,7 +570,7 @@ TEST(parse_cmd_line, positional) {
     // 1, since no options were read
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, "", 0, "", &in), 1);
 
-    check_input(&in, false, false, false);
+    check_input(&in, false, false, false, false);
 
     input_fini(&in);
 }
@@ -562,7 +590,7 @@ TEST(parse_cmd_line, unused) {
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
 
-    check_input(&in, true, false, false);
+    check_input(&in, true, false, false, false);
 
     input_fini(&in);
 }
@@ -582,7 +610,7 @@ TEST(parse_cmd_line, invalid) {
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
 
-    check_input(&in, true, false, false);
+    check_input(&in, true, false, false, false);
 
     input_fini(&in);
 }

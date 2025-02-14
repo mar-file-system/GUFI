@@ -147,6 +147,8 @@ TEST(insertdbprep, nullptr) {
 TEST(insertdbgo_xattrs_avail, nullptr) {
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
+    EXPECT_NE(insertdbgo_xattrs_avail(&ed, nullptr), SQLITE_OK);
+
     ed.xattrs.count = 1;
     struct xattr xattr;
     ed.xattrs.pairs = &xattr;
