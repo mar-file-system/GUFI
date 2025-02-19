@@ -90,4 +90,4 @@ apt -y install \
     sudo
 
 # install pip packages
-PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install sqlalchemy
+PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install pugsql sqlalchemy

@@ -145,7 +145,25 @@ if (SQLALCHEMY_RC EQUAL 0)
   list(APPEND PYTHON
     gufi_vt_sqlalchemy
   )
+
+  # python wrapper tool (not part of scripts)
   configure_file(gufi_vt_sqlalchemy.py.in gufi_vt_sqlalchemy.py @ONLY)
+
+  # check for pugsql and add test if found
+  execute_process(COMMAND "${PYTHON_INTERPRETER}" -c "import pugsql"
+    RESULT_VARIABLE PUGSQL_RC
+    OUTPUT_QUIET ERROR_QUIET)
+  if (PUGSQL_RC EQUAL 0)
+    message(STATUS "pugsql found. Adding test.")
+    list(APPEND PYTHON
+      gufi_vt_pugsql
+      )
+
+    # python wrapper tool (not part of scripts)
+    configure_file(gufi_vt_pugsql.py.in gufi_vt_pugsql.py @ONLY)
+  else()
+    message(STATUS "pugsql not found.")
+  endif()
 else()
   message(STATUS "SQLAlchemy not found.")
 endif()

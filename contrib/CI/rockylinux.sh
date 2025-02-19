@@ -77,4 +77,4 @@ dnf -y install attr autoconf clang cmake3 findutils fuse git make patch pkgconfi
 yum -y install python3-devel
 
 # install pip packages
-python3 -m pip install sqlalchemy
+python3 -m pip install pugsql sqlalchemy

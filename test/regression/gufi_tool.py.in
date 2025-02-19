@@ -76,6 +76,7 @@ TOOLS = {
     'find'       : os.path.join(SCRIPTS, 'gufi_find'),
     'getfattr'   : os.path.join(SCRIPTS, 'gufi_getfattr'),
     'ls'         : os.path.join(SCRIPTS, 'gufi_ls'),
+    'pugsql'     : os.path.join(RTESTS,  'gufi_vt_pugsql.py'),
     'querydbs'   : os.path.join(SCRIPTS, 'querydbs'),
     'stat'       : os.path.join(SCRIPTS, 'gufi_stat'),
     'stats'      : os.path.join(SCRIPTS, 'gufi_stats'),

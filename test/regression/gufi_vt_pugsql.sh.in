@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+
+OUTPUT="gufi_vt_pugsql.out"
+
+# directory containing PugSQL .sql files
+QUERIES="queries"
+
+cleanup() {
+    rm -rf "${QUERIES}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+generate_queries_sql() {
+    # run in subshell
+    (
+        mkdir -p "${QUERIES}"
+
+        cd "${QUERIES}"
+
+        (
+            echo "-- :name treesummary :many"
+            echo "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('${INDEXROOT}', ${THREADS}) ORDER BY minsize ASC, maxsize ASC;"
+        ) > "treesummary.sql"
+
+        for name in summary entries pentries vrsummary vrpentries
+        do
+            (
+                echo "-- :name ${name} :many"
+                echo "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_${name}('${INDEXROOT}', ${THREADS}) ORDER BY name ASC, size ASC;"
+            ) > "${name}.sql"
+        done
+
+        (
+            echo "-- :name size_lt_10 :many"
+            echo  "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size < 10 ORDER BY name ASC, size ASC;"
+        ) > "size_lt_10.sql"
+
+        (
+            echo "-- :name size_gt_10 :many"
+            echo "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size > 10 ORDER BY name ASC, size ASC;"
+        ) > "size_gt_10.sql"
+
+        (
+            echo "-- :name directory :many"
+            echo "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') WHERE type != 'd' ORDER BY name ASC, size ASC;"
+        ) > "directory.sql"
+
+        (
+            echo "-- :name gt_1024 :many"
+            echo "SELECT rowid, name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;"
+        ) > "gt_1024.sql"
+
+        (
+            echo "-- :name paths :many"
+            echo "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
+        ) > "paths.sql"
+
+        (
+            echo "-- :name types :many"
+            echo "SELECT name, size, size * 1.0, CAST(name AS BLOB), NULL FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
+        ) > "types.sql"
+
+        (
+            echo "-- :name no_thread_count :many"
+            echo "SELECT name FROM gufi_vt_pentries('${INDEXROOT}') ORDER BY name ASC, size ASC;"
+        ) > "no_thread_count.sql"
+
+        (
+            echo "-- :name NULL_thread_count :many"
+            echo "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
+        ) > "NULL_thread_count.sql"
+    )
+}
+
+query_vt() {
+    run_no_sort "${PUGSQL} \"${QUERIES}\" \"${1}\""
+}
+
+(
+    echo "# Generate treesummary tables in all directories"
+    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | sed '/^Started .*$/d'
+
+    generate_queries_sql
+
+    while IFS= read -r path
+    do
+        echo "------------------------------------------------"
+        echo
+        echo "$ cat ${path}"
+        cat  "${path}"
+        echo
+
+        name=$(basename "${path}" | sed 's/\.sql//g')
+        run_no_sort "${PUGSQL} \"${QUERIES}\" \"${name}\""
+    done < <(find "${QUERIES}" -name "*.sql" | sort)
+    echo "------------------------------------------------"
+) | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_vt_pugsql.expected "${OUTPUT}"
+rm "${OUTPUT}"

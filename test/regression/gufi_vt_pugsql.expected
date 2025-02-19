@@ -1,0 +1,228 @@
+# Generate treesummary tables in all directories
+$ gufi_treesummary_all "prefix"
+
+------------------------------------------------
+
+$ cat queries/NULL_thread_count.sql
+-- :name NULL_thread_count :many
+SELECT name FROM gufi_vt_pentries('search/prefix', NULL) ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "NULL_thread_count"
+[('name', '.hidden')]
+[('name', '1KB')]
+[('name', '1MB')]
+[('name', 'directory_symlink')]
+[('name', 'executable')]
+[('name', 'file_symlink')]
+[('name', 'leaf_file1')]
+[('name', 'leaf_file2')]
+[('name', 'old_file')]
+[('name', 'readonly')]
+[('name', 'repeat_name')]
+[('name', 'repeat_name')]
+[('name', 'unusual, name?#')]
+[('name', 'writable')]
+
+------------------------------------------------
+
+$ cat queries/directory.sql
+-- :name directory :many
+SELECT name FROM gufi_vt_pentries('search/prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') WHERE type != 'd' ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "directory"
+[('name', 'executable')]
+[('name', 'readonly')]
+[('name', 'writable')]
+
+------------------------------------------------
+
+$ cat queries/entries.sql
+-- :name entries :many
+SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_entries('search/prefix', 2) ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "entries"
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', '.hidden'), ('size', 10), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:10 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', '1KB'), ('size', 1024), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:17:04 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', '1MB'), ('size', 1048576), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Tue Jan 13 03:16:16 UTC 1970')]
+[('modetotxt(mode)', 'lrwxrwxrwx'), ('name', 'directory_symlink'), ('size', 4), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:04 UTC 1970')]
+[('modetotxt(mode)', '-rwxrwxrwx'), ('name', 'executable'), ('size', 1), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:01 UTC 1970')]
+[('modetotxt(mode)', 'lrwxrwxrwx'), ('name', 'file_symlink'), ('size', 9), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:09 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'leaf_file1'), ('size', 11), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:11 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'leaf_file2'), ('size', 12), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:12 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'old_file'), ('size', 0), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:00 UTC 1970')]
+[('modetotxt(mode)', '-r--r--r--'), ('name', 'readonly'), ('size', 2), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:02 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 5), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:05 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 14), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:14 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, name?#'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-rw-'), ('name', 'writable'), ('size', 3), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:03 UTC 1970')]
+
+------------------------------------------------
+
+$ cat queries/gt_1024.sql
+-- :name gt_1024 :many
+SELECT rowid, name, size, mtime FROM gufi_vt_pentries('search/prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;
+
+$ pugsql "queries" "gt_1024"
+[('mtime', 10), ('name', '.hidden'), ('rowid', 1), ('size', 10)]
+[('mtime', 1024), ('name', '1KB'), ('rowid', 2), ('size', 1024)]
+[('mtime', 1048576), ('name', '1MB'), ('rowid', 3), ('size', 1048576)]
+[('mtime', 9), ('name', 'file_symlink'), ('rowid', 4), ('size', 9)]
+[('mtime', 0), ('name', 'old_file'), ('rowid', 5), ('size', 0)]
+[('mtime', 14), ('name', 'repeat_name'), ('rowid', 6), ('size', 14)]
+
+------------------------------------------------
+
+$ cat queries/no_thread_count.sql
+-- :name no_thread_count :many
+SELECT name FROM gufi_vt_pentries('search/prefix') ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "no_thread_count"
+[('name', '.hidden')]
+[('name', '1KB')]
+[('name', '1MB')]
+[('name', 'directory_symlink')]
+[('name', 'executable')]
+[('name', 'file_symlink')]
+[('name', 'leaf_file1')]
+[('name', 'leaf_file2')]
+[('name', 'old_file')]
+[('name', 'readonly')]
+[('name', 'repeat_name')]
+[('name', 'repeat_name')]
+[('name', 'unusual, name?#')]
+[('name', 'writable')]
+
+------------------------------------------------
+
+$ cat queries/paths.sql
+-- :name paths :many
+SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('search/prefix', 2) WHERE name == '.hidden';
+
+$ pugsql "queries" "paths"
+[('epath', 'prefix'), ('fpath', 'prefix'), ('path', 'prefix'), ('rpath', 'prefix')]
+
+------------------------------------------------
+
+$ cat queries/pentries.sql
+-- :name pentries :many
+SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_pentries('search/prefix', 2) ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "pentries"
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', '.hidden'), ('size', 10), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:10 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', '1KB'), ('size', 1024), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:17:04 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', '1MB'), ('size', 1048576), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Tue Jan 13 03:16:16 UTC 1970')]
+[('modetotxt(mode)', 'lrwxrwxrwx'), ('name', 'directory_symlink'), ('size', 4), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:04 UTC 1970')]
+[('modetotxt(mode)', '-rwxrwxrwx'), ('name', 'executable'), ('size', 1), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:01 UTC 1970')]
+[('modetotxt(mode)', 'lrwxrwxrwx'), ('name', 'file_symlink'), ('size', 9), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:09 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'leaf_file1'), ('size', 11), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:11 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'leaf_file2'), ('size', 12), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:12 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'old_file'), ('size', 0), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:00 UTC 1970')]
+[('modetotxt(mode)', '-r--r--r--'), ('name', 'readonly'), ('size', 2), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:02 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 5), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:05 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 14), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:14 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, name?#'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-rw-'), ('name', 'writable'), ('size', 3), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:03 UTC 1970')]
+
+------------------------------------------------
+
+$ cat queries/size_gt_10.sql
+-- :name size_gt_10 :many
+SELECT name, size FROM gufi_vt_pentries('search/prefix', 2) WHERE size > 10 ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "size_gt_10"
+[('name', '1KB'), ('size', 1024)]
+[('name', '1MB'), ('size', 1048576)]
+[('name', 'leaf_file1'), ('size', 11)]
+[('name', 'leaf_file2'), ('size', 12)]
+[('name', 'repeat_name'), ('size', 14)]
+[('name', 'unusual, name?#'), ('size', 15)]
+
+------------------------------------------------
+
+$ cat queries/size_lt_10.sql
+-- :name size_lt_10 :many
+SELECT name, size FROM gufi_vt_pentries('search/prefix', 2) WHERE size < 10 ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "size_lt_10"
+[('name', 'directory_symlink'), ('size', 4)]
+[('name', 'executable'), ('size', 1)]
+[('name', 'file_symlink'), ('size', 9)]
+[('name', 'old_file'), ('size', 0)]
+[('name', 'readonly'), ('size', 2)]
+[('name', 'repeat_name'), ('size', 5)]
+[('name', 'writable'), ('size', 3)]
+
+------------------------------------------------
+
+$ cat queries/summary.sql
+-- :name summary :many
+SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_summary('search/prefix', 2) ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "summary"
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'directory'), ('size', 7), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:07 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'empty_directory'), ('size', 8), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:08 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'leaf_directory'), ('size', 13), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:13 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'prefix'), ('size', 17), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:17 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'subdirectory'), ('size', 6), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:06 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'unusual#? directory ,'), ('size', 16), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:16 UTC 1970')]
+
+------------------------------------------------
+
+$ cat queries/treesummary.sql
+-- :name treesummary :many
+SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('search/prefix', 2) ORDER BY minsize ASC, maxsize ASC;
+
+$ pugsql "queries" "treesummary"
+[('maxmtime', 0), ('maxsize', 0), ('minmtime', -1), ('minsize', -1)]
+[('maxmtime', 1048576), ('maxsize', 1048576), ('minmtime', 0), ('minsize', 0)]
+[('maxmtime', 5), ('maxsize', 5), ('minmtime', 1), ('minsize', 1)]
+[('maxmtime', 5), ('maxsize', 5), ('minmtime', 4), ('minsize', 5)]
+[('maxmtime', 12), ('maxsize', 12), ('minmtime', 11), ('minsize', 11)]
+[('maxmtime', 15), ('maxsize', 15), ('minmtime', 15), ('minsize', 15)]
+
+------------------------------------------------
+
+$ cat queries/types.sql
+-- :name types :many
+SELECT name, size, size * 1.0, CAST(name AS BLOB), NULL FROM gufi_vt_pentries('search/prefix', 2) WHERE name == '.hidden';
+
+$ pugsql "queries" "types"
+[('CAST(name AS BLOB)', b'.hidden'), ('NULL', None), ('name', '.hidden'), ('size', 10), ('size * 1.0', 10.0)]
+
+------------------------------------------------
+
+$ cat queries/vrpentries.sql
+-- :name vrpentries :many
+SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_vrpentries('search/prefix', 2) ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "vrpentries"
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', '.hidden'), ('size', 10), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:10 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', '1KB'), ('size', 1024), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:17:04 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', '1MB'), ('size', 1048576), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Tue Jan 13 03:16:16 UTC 1970')]
+[('modetotxt(mode)', 'lrwxrwxrwx'), ('name', 'directory_symlink'), ('size', 4), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:04 UTC 1970')]
+[('modetotxt(mode)', '-rwxrwxrwx'), ('name', 'executable'), ('size', 1), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:01 UTC 1970')]
+[('modetotxt(mode)', 'lrwxrwxrwx'), ('name', 'file_symlink'), ('size', 9), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:09 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'leaf_file1'), ('size', 11), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:11 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'leaf_file2'), ('size', 12), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:12 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'old_file'), ('size', 0), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:00 UTC 1970')]
+[('modetotxt(mode)', '-r--r--r--'), ('name', 'readonly'), ('size', 2), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:02 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 5), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:05 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 14), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:14 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, name?#'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-rw-'), ('name', 'writable'), ('size', 3), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:03 UTC 1970')]
+
+------------------------------------------------
+
+$ cat queries/vrsummary.sql
+-- :name vrsummary :many
+SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_vrsummary('search/prefix', 2) ORDER BY name ASC, size ASC;
+
+$ pugsql "queries" "vrsummary"
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'directory'), ('size', 7), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:07 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'empty_directory'), ('size', 8), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:08 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'leaf_directory'), ('size', 13), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:13 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'prefix'), ('size', 17), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:17 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'subdirectory'), ('size', 6), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:06 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'unusual#? directory ,'), ('size', 16), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:16 UTC 1970')]
+
+------------------------------------------------

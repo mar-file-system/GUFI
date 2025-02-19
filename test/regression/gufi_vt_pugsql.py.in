@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,23 +61,63 @@
 
 
 
-set -e
+import argparse
+import os
+import sys
 
-export HOMEBREW_NO_AUTO_UPDATE=1
-export HOMEBREW_NO_INSTALL_CLEANUP=1
+import pugsql
+import sqlalchemy
 
-# Install GNU grep
-brew install grep
-brew --prefix grep
-# shellcheck disable=SC2016
-echo "$(brew --prefix)/opt/grep/libexec/gnubin" >> "${GITHUB_PATH}"
+import gufi_config
 
-# install required packages
-brew install autoconf coreutils cmake pcre2 python
+# enable extension loading and load gufi_vt
+# https://stackoverflow.com/a/48869774/341683
+def load_extension(conn, _):
+    conn.enable_load_extension(True)
+    conn.load_extension('@CMAKE_BINARY_DIR@/src/gufi_vt')
+    conn.enable_load_extension(False)
 
-# get osxfuse from homebrew/cask
-brew tap homebrew/cask
-brew install --cask osxfuse || true # brew 4.0.0 switches to macfuse, but pkg-config can't find it
+def parse_args(argv):
+    parser = argparse.ArgumentParser('gufi_vt in PugSQL',
+                                     description='gufi_vt in PugSQL Test Script')
 
-# install pip packages
-PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install pugsql sqlalchemy
+    parser.add_argument('queries',
+                        type=str,
+                        help='path containing PugSQL *.sql files')
+
+    parser.add_argument('name',
+                        nargs='+',
+                        help='name of PugSQL query to run')
+
+    parser.add_argument('--debug',
+                        action='store_true',
+                        help='Turn on SQLAlchemy debug prints')
+
+    return parser.parse_args(argv[1:])
+
+def run(argv, config_path):
+    config = gufi_config.Server(config_path)
+    args = parse_args(argv)
+
+    # add gufi_query directory to PATH
+    os.environ['PATH'] += os.pathsep + os.path.dirname(config.query)
+
+    # open an in-memory SQLite db through SQLAlchemy
+    engine = sqlalchemy.create_engine('sqlite://', echo=args.debug)
+
+    # call load_extension when a connection is made with this engine
+    sqlalchemy.event.listen(engine, 'connect', load_extension)
+
+    queries = pugsql.module(args.queries)
+
+    # use the SQLAlchemy engine
+    queries.setengine(engine)
+
+    # pass functions to run through stdin
+    for name in args.name:
+        rows = getattr(queries, name.rstrip())()
+        for row in rows:
+            print(sorted(row.items()))
+
+if __name__ == '__main__':
+    sys.exit(run(sys.argv, gufi_config.PATH))
