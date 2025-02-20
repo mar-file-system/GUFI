@@ -128,7 +128,7 @@ set(USEFUL
 )
 
 foreach(file ${USEFUL})
-    configure_file("${file}" "${file}" @ONLY)
+  configure_file("${file}" "${file}" @ONLY)
 endforeach()
 
 add_subdirectory(CI)

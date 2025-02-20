@@ -63,7 +63,7 @@
 set(TESTS
   gufi_common
   gufi_config
-  )
+)
 
 foreach(TEST ${TESTS})
   configure_file("test_${TEST}.py" "test_${TEST}.py" @ONLY)

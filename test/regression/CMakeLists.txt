@@ -246,7 +246,6 @@ if (SUDO)
     foreach(NAME ${SUDO_OTHERS})
       set_tests_properties("${NAME}" PROPERTIES LABELS "regression;sudo")
     endforeach()
-
   endif()
 else()
   message(STATUS "sudo executable not found. Not running tests requiring sudo.")

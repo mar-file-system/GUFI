@@ -79,5 +79,5 @@ foreach(EXAMPLE
     userfilespacehog
     userfilespacehogusesummary)
   # copy the scropt into the build directory for easy access
-  configure_file(${EXAMPLE} ${CMAKE_CURRENT_BINARY_DIR}/${EXAMPLE} COPYONLY)
+  configure_file("${EXAMPLE}" "${EXAMPLE}" COPYONLY)
 endforeach()

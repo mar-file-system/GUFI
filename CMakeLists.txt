@@ -87,26 +87,26 @@ find_package(Git)                     # not required
 set(VERSION_STRING "${GUFI_VERSION}") # default to CMake project version
 if ((GIT_FOUND) AND (EXISTS "${CMAKE_SOURCE_DIR}/.git"))
   # get latest tag
-  execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --abbrev=0
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     OUTPUT_VARIABLE GIT_TAG
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   # get commit of latest tag
-  execute_process(COMMAND ${GIT_EXECUTABLE} rev-list -n 1 "${GIT_TAG}"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  execute_process(COMMAND "${GIT_EXECUTABLE}" rev-list -n 1 "${GIT_TAG}"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     OUTPUT_VARIABLE GIT_TAG_COMMIT
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   # git HEAD commit hash
-  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse HEAD
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     OUTPUT_VARIABLE GIT_HEAD_COMMIT
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   # check if anything has changed
-  execute_process(COMMAND ${GIT_EXECUTABLE} status --porcelain --untracked-files=no
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  execute_process(COMMAND "${GIT_EXECUTABLE}" status --porcelain --untracked-files=no
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     OUTPUT_VARIABLE GIT_HEAD_MODIFIED
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   string(LENGTH "${GIT_HEAD_MODIFIED}" GIT_HEAD_MODIFIED_LEN)
@@ -119,8 +119,8 @@ if ((GIT_FOUND) AND (EXISTS "${CMAKE_SOURCE_DIR}/.git"))
   if (GIT_TAG_COMMIT STREQUAL GIT_HEAD_COMMIT)
     set(VERSION_STRING "${GIT_TAG}")
   else()
-    execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short "${GIT_HEAD_COMMIT}"
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --short "${GIT_HEAD_COMMIT}"
+      WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
       OUTPUT_VARIABLE GIT_HEAD_COMMIT_SHORT
       OUTPUT_STRIP_TRAILING_WHITESPACE)
 

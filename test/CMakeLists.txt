@@ -97,7 +97,8 @@ foreach(TEST
     runuidgidummary
     runuserfilespacehog
     runuserfilespacehogusesummary
-    runtests)
+    runtests
+  )
   # copy the script into the build directory for easy access
   configure_file("${TEST}" "${TEST}" @ONLY)
 endforeach()

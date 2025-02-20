@@ -127,7 +127,7 @@ function(build_and_install_one PATH LINK_GUFI TARGET)
   endif()
 
   # install the executable
-  install(TARGETS ${TARGET} DESTINATION ${PATH} COMPONENT Server)
+  install(TARGETS ${TARGET} DESTINATION "${PATH}" COMPONENT Server)
 endfunction()
 
 function(build_and_install PATH LINK_GUFI)
@@ -216,7 +216,7 @@ endif()
 target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}")
 target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
 add_dependencies(gufi_vt install_dependencies)
-install(TARGETS gufi_vt DESTINATION ${LIB} COMPONENT Server)
+install(TARGETS gufi_vt DESTINATION "${LIB}" COMPONENT Server)
 
 add_library(run_vt MODULE
   run_vt.c
@@ -226,7 +226,7 @@ add_dependencies(run_vt install_dependencies)
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
-build_and_install(${BIN} FALSE ${MISC_SOURCES})
+build_and_install("${BIN}" FALSE ${MISC_SOURCES})
 
 # only build bffuse and bfresultfuse if FUSE is found
 if (MY_FUSE_FOUND AND FUSE_BUILD)
@@ -245,7 +245,7 @@ if (MY_FUSE_FOUND AND FUSE_BUILD)
   target_link_libraries(bfresultfuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
 
   # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/${BIN}
-  install(TARGETS bffuse bfresultfuse DESTINATION ${BIN} COMPONENT Server)
+  install(TARGETS bffuse bfresultfuse DESTINATION "${BIN}" COMPONENT Server)
 endif()
 
 # only build db2 sources if db2 is found

@@ -60,18 +60,18 @@
 
 
 
-SET(LATEX_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/pdfs)
+SET(LATEX_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/pdfs")
 
 INCLUDE(UseLATEX)
 
 set(image_path "images")
 
-file(RELATIVE_PATH license ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/LICENSE.txt)
+file(RELATIVE_PATH license "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 set(common_inputs
-  GUFIText.sty
-  ${license}
-  sections/license.tex
-  )
+    GUFIText.sty
+    "${license}"
+    sections/license.tex
+)
 
 set(gufi_developer_inputs
     sections/introduction.tex
@@ -103,7 +103,7 @@ set(gufi_developer_inputs
     sections/bottomup.tex
     sections/printing.tex
     sections/optimizations.tex
-    )
+)
 
 set(gufi_administrator_inputs
     sections/introduction.tex
@@ -131,7 +131,7 @@ set(gufi_administrator_inputs
     sections/utility.tex
     sections/reconstruct.tex
     sections/deploy.tex
-    )
+)
 
 set(gufi_user_inputs
     sections/introduction.tex
@@ -140,22 +140,22 @@ set(gufi_user_inputs
     sections/gufi_ls.tex
     sections/gufi_stats.tex
     sections/gufi_stat.tex
-    )
+)
 
 ADD_LATEX_DOCUMENT(
     gufi_developer.tex
     INPUTS ${common_inputs} ${gufi_developer_inputs}
-    IMAGE_DIRS ${image_path}
-    )
+    IMAGE_DIRS "${image_path}"
+)
 
 ADD_LATEX_DOCUMENT(
     gufi_administrator.tex
     INPUTS ${common_inputs} ${gufi_administrator_inputs}
-    IMAGE_DIRS ${image_path}
-    )
+    IMAGE_DIRS "${image_path}"
+)
 
 ADD_LATEX_DOCUMENT(
     gufi_user.tex
     INPUTS ${common_inputs} ${gufi_user_inputs}
-    IMAGE_DIRS ${image_path}
-    )
+    IMAGE_DIRS "${image_path}"
+)
