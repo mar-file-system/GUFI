@@ -78,6 +78,3 @@ brew install autoconf coreutils cmake pcre2 python
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
 brew install --cask osxfuse || true # brew 4.0.0 switches to macfuse, but pkg-config can't find it
-
-# install pip packages
-PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install pugsql sqlalchemy
