@@ -114,8 +114,11 @@ run_no_sort "(echo \"CREATE TABLE new_table(i INT);\";" \
 echo "# directory as db"
 run_no_sort "${GUFI_SQLITE3} \"${SEARCH}\""
 
-echo "# virtual table"
+echo "# gufi_vt_*"
 PATH="@CMAKE_BINARY_DIR@/src:${PATH}" run_no_sort "echo \"SELECT size, path || '/' || name FROM gufi_vt_pentries('${INDEXROOT}') ORDER BY size ASC;\" | ${GUFI_SQLITE3} -d \"|\""
+
+echo "# gufi_vt"
+PATH="@CMAKE_BINARY_DIR@/src:${PATH}" run_no_sort "echo -n \"CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='SELECT path() || '/' || name AS fullpath, size FROM pentries;'); SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;\" | ${GUFI_SQLITE3} -d \"|\""
 
 echo "# bad SQL"
 run_no_sort "(echo \"CREATE TABLE;\") |" \

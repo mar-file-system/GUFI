@@ -835,7 +835,8 @@ TEST(get_col_types, have_cols) {
     str.data = "SELECT * FROM test;";
     str.len = strlen(str.data);
 
-    int *types = get_col_types(db, &str, &cols);
+    int *types = nullptr;
+    EXPECT_EQ(get_col_types(db, &str, &types, &cols), 0);
     ASSERT_NE(types, nullptr);
 
     const int expected[] = { SQLITE_INTEGER, SQLITE_FLOAT, SQLITE_TEXT, SQLITE_BLOB, SQLITE_NULL, 0};
@@ -865,7 +866,8 @@ TEST(get_col_types, no_cols) {
     str.data = "INSERT INTO test (i) VALUES (0);";
     str.len = strlen(str.data);
 
-    int *types = get_col_types(db, &str, &cols);
+    int *types = nullptr;
+    EXPECT_EQ(get_col_types(db, &str, &types, &cols), -1);
     EXPECT_EQ(types, nullptr);
 
     sqlite3_close(db);
@@ -875,6 +877,7 @@ TEST(get_col_types, bad) {
     sqlite3 *db = nullptr;
     refstr_t str = {};
     int cols = 0;
+    int *types = nullptr;
 
     ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db,
                               SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
@@ -883,14 +886,20 @@ TEST(get_col_types, bad) {
     ASSERT_EQ(sqlite3_exec(db, CREATE_TABLE_TEST,
                            nullptr, nullptr, nullptr), SQLITE_OK);
 
-    EXPECT_EQ(get_col_types(nullptr, &str, &cols), nullptr);
-    EXPECT_EQ(get_col_types(db,      &str, &cols), nullptr);
+    // bad db
+    EXPECT_EQ(get_col_types(nullptr, &str, &types, &cols), -1);
+    EXPECT_EQ(types, nullptr);
+
+    // bad SQL
+    EXPECT_EQ(get_col_types(db,      &str, &types, &cols), -1);
+    EXPECT_EQ(types, nullptr);
+
     // &cols == nullptr will break
 
     str.data = "bad SQL";
     str.len = strlen(str.data);
 
-    int *types = get_col_types(db, &str, &cols);
+    EXPECT_EQ(get_col_types(db, &str, &types, &cols), -1);
     EXPECT_EQ(types, nullptr);
 
     sqlite3_close(db);

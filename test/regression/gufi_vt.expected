@@ -1,3 +1,5 @@
+# ######################################
+# gufi_vt_*
 # Generate treesummary tables in all directories
 $ gufi_treesummary_all "prefix"
 
@@ -122,29 +124,6 @@ leaf_file2|12
 repeat_name|14
 unusual, name?#|15
 
-# Query entries in directory where name == 'directory'
-# WHERE type != 'd' is necessary to remove results from S query
-$ (
-    echo ".load gufi_vt"
-    echo "SELECT name FROM gufi_vt_pentries('prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') WHERE type != 'd' ORDER BY name ASC, size ASC;"
-) | sqlite3
-executable
-readonly
-writable
-
-# Query directories that contain entries larger than 1024 (only 1: prefix)
-# WHERE type != 'd' is necessary to remove results from S query
-$ (
-    echo ".load gufi_vt"
-    echo "SELECT rowid, name, size, mtime FROM gufi_vt_pentries('prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;"
-) | sqlite3
-1|.hidden|10|10
-2|1KB|1024|1024
-3|1MB|1048576|1048576
-4|file_symlink|9|9
-5|old_file|0|0
-6|repeat_name|14|14
-
 # Paths
 $ (
     echo ".load gufi_vt"
@@ -199,12 +178,130 @@ repeat_name
 unusual, name?#
 writable
 
+# ######################################
+# gufi_vt
+
+# Manipulate column without alias
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT path() || '/' || name, size FROM pentries;");SELECT size, "path() || '/' || name" FROM gufi ORDER BY size ASC, "path() || '/' || name" ASC;"
+) | sqlite3
+0|prefix/old_file
+1|prefix/directory/executable
+2|prefix/directory/readonly
+3|prefix/directory/writable
+4|prefix/directory/subdirectory/directory_symlink
+5|prefix/directory/subdirectory/repeat_name
+9|prefix/file_symlink
+10|prefix/.hidden
+11|prefix/leaf_directory/leaf_file1
+12|prefix/leaf_directory/leaf_file2
+14|prefix/repeat_name
+15|prefix/unusual#? directory ,/unusual, name?#
+1024|prefix/1KB
+1048576|prefix/1MB
+
+# Manipulate column with alias
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT path() || '/' || name AS fullpath, size FROM pentries;");SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+) | sqlite3
+0|prefix/old_file
+1|prefix/directory/executable
+2|prefix/directory/readonly
+3|prefix/directory/writable
+4|prefix/directory/subdirectory/directory_symlink
+5|prefix/directory/subdirectory/repeat_name
+9|prefix/file_symlink
+10|prefix/.hidden
+11|prefix/leaf_directory/leaf_file1
+12|prefix/leaf_directory/leaf_file2
+14|prefix/repeat_name
+15|prefix/unusual#? directory ,/unusual, name?#
+1024|prefix/1KB
+1048576|prefix/1MB
+
+# S selects more columns than E - S columns get dropped and mapped incorrectly
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", S="SELECT * FROM summary;", E="SELECT path() || '/' || name AS fullpath, size FROM pentries;");SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+) | sqlite3
+0|prefix/old_file
+1|prefix/directory/executable
+2|prefix/directory/readonly
+3|prefix/directory/writable
+4|prefix/directory/subdirectory/directory_symlink
+5|prefix/directory/subdirectory/repeat_name
+9|prefix/file_symlink
+10|prefix/.hidden
+11|prefix/leaf_directory/leaf_file1
+12|prefix/leaf_directory/leaf_file2
+14|prefix/repeat_name
+15|prefix/unusual#? directory ,/unusual, name?#
+1024|prefix/1KB
+1048576|prefix/1MB
+d|directory
+d|empty_directory
+d|leaf_directory
+d|prefix
+d|subdirectory
+d|unusual#? directory ,
+
+# Multiple indexes
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT name, size, atime, mtime FROM pentries;", 'prefix', index="prefix", threads=2, n=2);SELECT size, atime, mtime, name FROM gufi ORDER BY size ASC, name ASC;"
+) | sqlite3
+0|0|0|old_file
+1|1|1|executable
+2|2|2|readonly
+3|3|3|writable
+4|4|4|directory_symlink
+5|5|5|repeat_name
+9|9|9|file_symlink
+10|10|10|.hidden
+11|11|11|leaf_file1
+12|12|12|leaf_file2
+14|14|14|repeat_name
+15|15|15|unusual, name?#
+1024|1024|1024|1KB
+1048576|1048576|1048576|1MB
+
+# Aggregate
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE intermediate (fullpath TEXT, size INT64);", E="INSERT INTO intermediate SELECT path() || '/' || name, size FROM pentries;", K="CREATE TABLE aggregate(fullpath TEXT, size INT64);", J="INSERT INTO aggregate SELECT * FROM intermediate;", G="SELECT * FROM aggregate;");SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+) | sqlite3
+0|prefix/old_file
+1|prefix/directory/executable
+2|prefix/directory/readonly
+3|prefix/directory/writable
+4|prefix/directory/subdirectory/directory_symlink
+5|prefix/directory/subdirectory/repeat_name
+9|prefix/file_symlink
+10|prefix/.hidden
+11|prefix/leaf_directory/leaf_file1
+12|prefix/leaf_directory/leaf_file2
+14|prefix/repeat_name
+15|prefix/unusual#? directory ,/unusual, name?#
+1024|prefix/1KB
+1048576|prefix/1MB
+
+# ######################################
+# errors
 # Missing indexroot (error)
 $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries();"
 ) | sqlite3
 Parse error near line 2: no query solution
+
+# Missing indexroot (error)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt();"
+) | sqlite3
+Runtime error near line 2: Missing indexroot (19)
 
 # Bad indexroot
 $ (
@@ -227,10 +324,47 @@ $ (
 ) | sqlite3
 Runtime error near line 2: Bad thread count: '0' (19)
 
-# Bad SQL
+# Bad thread count (error)
 $ (
     echo ".load gufi_vt"
-    echo "SELECT name FROM gufi_vt_pentries('prefix', NULL, 'bad SQL') ORDER BY name ASC, size ASC;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=a);"
 ) | sqlite3
-Error: Could not prepare 'bad SQL' for getting column types: SQL logic error (1)
+Runtime error near line 2: Bad thread count: a (21)
+
+# Zero thread count (error)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=0);"
+) | sqlite3
+Runtime error near line 2: Bad thread count: 0 (21)
+
+# Bad E
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', E='');"
+) | sqlite3
+Runtime error near line 2: vtable constructor failed: gufi
+
+# Bad E
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', E='DELETE FROM entries;');"
+) | sqlite3
+Error: 'DELETE FROM entries;' returns no data
+Runtime error near line 2: vtable constructor failed: gufi
+
+# Bad K
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', K='', G='');"
+) | sqlite3
+Runtime error near line 2: vtable constructor failed: gufi
+
+# Bad G
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', K='CREATE TABLE aggregate(i INT);', G='SELECT * FROM intermediate');"
+) | sqlite3
+Error: Could not prepare 'SELECT * FROM intermediate' for getting column types: SQL logic error (1)
+Runtime error near line 2: vtable constructor failed: gufi
 

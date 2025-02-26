@@ -170,17 +170,17 @@ int handle_sql(struct input *in) {
         /* if not aggregating, get types for T, S, and E */
         if (!in->sql.init_agg.len) {
             if (in->sql.tsum.len) {
-                if (!(in->types.tsum = get_col_types(db, &in->sql.tsum, &cols))) {
+                if (get_col_types(db, &in->sql.tsum, &in->types.tsum, &cols) != 0) {
                     goto error;
                 }
             }
             if (in->sql.sum.len) {
-                if (!(in->types.sum  = get_col_types(db, &in->sql.sum,  &cols))) {
+                if (get_col_types(db, &in->sql.sum,  &in->types.sum,  &cols) != 0) {
                     goto error;
                 }
             }
             if (in->sql.ent.len) {
-                if (!(in->types.ent  = get_col_types(db, &in->sql.ent,  &cols))) {
+                if (get_col_types(db, &in->sql.ent,  &in->types.ent,  &cols) != 0) {
                     goto error;
                 }
             }
@@ -195,7 +195,7 @@ int handle_sql(struct input *in) {
                 goto error;
             }
 
-            if (!(in->types.agg = get_col_types(db, &in->sql.agg, &cols))) {
+            if (get_col_types(db, &in->sql.agg, &in->types.agg, &cols) != 0) {
                 goto error;
             }
         }

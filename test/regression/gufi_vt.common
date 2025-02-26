@@ -83,14 +83,6 @@ run_tests() {
     echo "# Query with WHERE size > 10"
     "${func}" "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size > 10 ORDER BY name ASC, size ASC;"
 
-    echo "# Query entries in directory where name == 'directory'"
-    echo "# WHERE type != 'd' is necessary to remove results from S query"
-    "${func}" "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') WHERE type != 'd' ORDER BY name ASC, size ASC;"
-
-    echo "# Query directories that contain entries larger than 1024 (only 1: ${INDEXROOT})"
-    echo "# WHERE type != 'd' is necessary to remove results from S query"
-    "${func}" "SELECT rowid, name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;"
-
     echo "# Paths"
     "${func}" "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
 

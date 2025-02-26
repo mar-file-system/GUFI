@@ -113,16 +113,6 @@ generate_queries_sql() {
         ) > "size_gt_10.sql"
 
         (
-            echo "-- :name directory :many"
-            echo "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') WHERE type != 'd' ORDER BY name ASC, size ASC;"
-        ) > "directory.sql"
-
-        (
-            echo "-- :name gt_1024 :many"
-            echo "SELECT rowid, name, size, mtime FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;"
-        ) > "gt_1024.sql"
-
-        (
             echo "-- :name paths :many"
             echo "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
         ) > "paths.sql"
