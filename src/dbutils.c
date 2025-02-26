@@ -78,9 +78,6 @@ OF SUCH DAMAGE.
 #include "histogram.h"
 #include "trie.h"
 
-static const char SQLITE_MEMORY_ARRAY[] = ":memory:";
-const char *SQLITE_MEMORY = SQLITE_MEMORY_ARRAY;
-
 const char READDIRPLUS_CREATE[] =
     DROP_TABLE(READDIRPLUS)
     READDIRPLUS_SCHEMA(READDIRPLUS);
@@ -1218,7 +1215,7 @@ static trie_t *sqlite3_types(void) {
     return types;
 }
 
-int *get_col_types(sqlite3 *db, const refstr_t *sql, int *cols) {
+int get_col_types(sqlite3 *db, const refstr_t *sql, int **types, int *cols) {
     int rc = SQLITE_OK;
 
     /* parse sql */
@@ -1227,7 +1224,7 @@ int *get_col_types(sqlite3 *db, const refstr_t *sql, int *cols) {
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Could not prepare '%s' for getting column types: %s (%d)\n",
                 sql->data, sqlite3_errstr(rc), rc);
-        return NULL;
+        return -1;
     }
 
     /* /\* */
@@ -1244,19 +1241,19 @@ int *get_col_types(sqlite3 *db, const refstr_t *sql, int *cols) {
     /* get column count */
     *cols = sqlite3_column_count(stmt);
     if (*cols == 0) {
-        fprintf(stderr, "Error: '%s' was detected to have 0 columns\n", sql->data);
+        fprintf(stderr, "Error: '%s' returns no data\n", sql->data);
         sqlite3_finalize(stmt);
-        return NULL;
+        return -1;
     }
 
     trie_t *str2type = sqlite3_types();
 
     /* get each column's type */
-    int *types = malloc(*cols * sizeof(int));
+    *types = malloc(*cols * sizeof(int));
     for(int i = 0; i < *cols; i++) {
         const char *type = sqlite3_column_decltype(stmt, i);
         if (!type) {
-            types[i] = SQLITE_NULL;
+            (*types)[i] = SQLITE_NULL;
             continue;
         }
 
@@ -1264,15 +1261,59 @@ int *get_col_types(sqlite3 *db, const refstr_t *sql, int *cols) {
 
         void *sql_type = NULL;
         if (trie_search(str2type, type, type_len, &sql_type) == 1) {
-            types[i] = (uintptr_t) sql_type;
+            (*types)[i] = (uintptr_t) sql_type;
         }
         else {
-            types[i] = 0; /* unknown type */
+            (*types)[i] = 0; /* unknown type */
         }
     }
 
     trie_free(str2type);
 
     sqlite3_finalize(stmt);
-    return types;
+    return 0;
+}
+
+int get_col_names(sqlite3 *db, const refstr_t *sql, char ***names, size_t **lens, int *cols) {
+    int rc = SQLITE_OK;
+
+    /* parse sql */
+    sqlite3_stmt *stmt = NULL;
+    rc = sqlite3_prepare_v2(db, sql->data, sql->len, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: Could not prepare '%s' for getting column types: %s (%d)\n",
+                sql->data, sqlite3_errstr(rc), rc);
+        return -1;
+    }
+
+    /* get column count */
+    *cols = sqlite3_column_count(stmt);
+    if (*cols == 0) {
+        fprintf(stderr, "Error: '%s' returns no data\n", sql->data);
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+
+    /* get each column's type */
+    *names = malloc(*cols * sizeof(char *));
+    *lens = malloc(*cols * sizeof(size_t));
+    for(int i = 0; i < *cols; i++) {
+        const char *name = sqlite3_column_name(stmt, i);
+        if (!name) {
+            (*names)[i] = NULL;
+            (*lens)[i] = 0;
+            continue;
+        }
+
+        const size_t name_len = strlen(name);
+
+        (*names)[i] = malloc(name_len + 1);
+        memcpy((*names)[i], name, name_len);
+        (*names)[i][name_len] = '\0';
+
+        (*lens)[i] = name_len;
+    }
+
+    sqlite3_finalize(stmt);
+    return 0;
 }

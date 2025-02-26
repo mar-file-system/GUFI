@@ -157,7 +157,7 @@ if (SQLALCHEMY_RC EQUAL 0)
     message(STATUS "pugsql found. Adding test.")
     list(APPEND PYTHON
       gufi_vt_pugsql
-      )
+    )
 
     # python wrapper tool (not part of scripts)
     configure_file(gufi_vt_pugsql.py.in gufi_vt_pugsql.py @ONLY)

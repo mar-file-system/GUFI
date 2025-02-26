@@ -98,13 +98,57 @@ query_vt() {
 . "@CMAKE_CURRENT_BINARY_DIR@/gufi_vt.common"
 
 (
+    echo "# ######################################"
+    echo "# gufi_vt_*"
     run_tests query_vt
 
-    # errors
+    echo "# ######################################"
+    echo "# gufi_vt"
+    echo
+    echo "# Manipulate column without alias"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT path() || '/' || name, size FROM pentries;\");"
+        echo -n "SELECT size, \"path() || '/' || name\" FROM gufi ORDER BY size ASC, \"path() || '/' || name\" ASC;"
+    )
+    query_vt "${query}"
+
+    echo "# Manipulate column with alias"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT path() || '/' || name AS fullpath, size FROM pentries;\");"
+        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+    )
+    query_vt "${query}"
+
+    echo "# S selects more columns than E - S columns get dropped and mapped incorrectly"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT * FROM summary;\", E=\"SELECT path() || '/' || name AS fullpath, size FROM pentries;\");"
+        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+    )
+    query_vt "${query}"
+
+    echo "# Multiple indexes"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT name, size, atime, mtime FROM pentries;\", '${INDEXROOT}', index=\"${INDEXROOT}\", threads=${THREADS}, n=${THREADS});"
+        echo -n "SELECT size, atime, mtime, name FROM gufi ORDER BY size ASC, name ASC;"
+    )
+    query_vt "${query}"
+
+    echo "# Aggregate"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT, size INT64);\", E=\"INSERT INTO intermediate SELECT path() || '/' || name, size FROM pentries;\", K=\"CREATE TABLE aggregate(fullpath TEXT, size INT64);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate;\");"
+        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+    )
+    query_vt "${query}"
+
+    echo "# ######################################"
+    echo "# errors"
 
     set +e
     echo "# Missing indexroot (error)"
     query_vt "SELECT name FROM gufi_vt_pentries();"
+
+    echo "# Missing indexroot (error)"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt();"
 
     echo "# Bad indexroot"
     rm -rf "${BADDIR}"
@@ -116,8 +160,23 @@ query_vt() {
     echo "# Zero thread count (error)"
     query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
 
-    echo "# Bad SQL"
-    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL, 'bad SQL') ORDER BY name ASC, size ASC;"
+    echo "# Bad thread count (error)"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=a);"
+
+    echo "# Zero thread count (error)"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=0);"
+
+    echo "# Bad E"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='');"
+
+    echo "# Bad E"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='DELETE FROM entries;');"
+
+    echo "# Bad K"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='', G='');"
+
+    echo "# Bad G"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='CREATE TABLE aggregate(i INT);', G='SELECT * FROM intermediate');"
     set -e
 ) | replace | tee "${OUTPUT}"
 

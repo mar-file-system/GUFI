@@ -188,9 +188,13 @@ add_library(gufi_vt MODULE
   # have to recompile with -fPIC
   SinglyLinkedList.c
   addqueryfuncs.c
+  dbutils.c
+  external
   histogram.c
+  template_db.c
   trie.c
   utils.c
+  xattrs.c
 )
 set_target_properties(gufi_vt PROPERTIES PREFIX "")
 if(APPLE)
@@ -200,6 +204,10 @@ elseif (CYGWIN)
 else ()
   set(EXT "so")
 endif()
+# libsqlite3-pcre needs to be installed manually (since it does not
+# have a package) in order for gufi_vt to be usable if using rpm
+# installed files
+target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}")
 target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
 add_dependencies(gufi_vt install_dependencies)
 install(TARGETS gufi_vt DESTINATION ${LIB} COMPONENT Server)

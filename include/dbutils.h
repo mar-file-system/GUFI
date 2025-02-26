@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-extern const char *SQLITE_MEMORY;
+#define SQLITE_MEMORY ":memory:"
 
 #if defined(__APPLE__) || defined(__linux__)
 #define GUFI_SQLITE_VFS       "unix-none"
@@ -268,7 +268,10 @@ enum CheckRollupScore {
 int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
                                  const enum CheckRollupScore check_rollupscore);
 
-int *get_col_types(sqlite3 *db, const refstr_t *sql, int *cols);
+/* caller frees types */
+int get_col_types(sqlite3 *db, const refstr_t *sql, int **types, int *cols);
+/* caller frees names, names[i], and lens*/
+int get_col_names(sqlite3 *db, const refstr_t *sql, char ***names, size_t **lens, int *cols);
 
 #ifdef __cplusplus
 }

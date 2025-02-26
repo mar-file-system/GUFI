@@ -98,23 +98,6 @@ leaf_file2 12
 repeat_name 14
 unusual, name?# 15
 
-# Query entries in directory where name == 'directory'
-# WHERE type != 'd' is necessary to remove results from S query
-$ gufi_vt_sqlalchemy "SELECT name FROM gufi_vt_pentries('prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') WHERE type != 'd' ORDER BY name ASC, size ASC;"
-executable
-readonly
-writable
-
-# Query directories that contain entries larger than 1024 (only 1: search/prefix)
-# WHERE type != 'd' is necessary to remove results from S query
-$ gufi_vt_sqlalchemy "SELECT rowid, name, size, mtime FROM gufi_vt_pentries('prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;"
-1 .hidden 10 10
-2 1KB 1024 1024
-3 1MB 1048576 1048576
-4 file_symlink 9 9
-5 old_file 0 0
-6 repeat_name 14 14
-
 # Paths
 $ gufi_vt_sqlalchemy "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('prefix', 2) WHERE name == '.hidden';"
 prefix prefix prefix prefix

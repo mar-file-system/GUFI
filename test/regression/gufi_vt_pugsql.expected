@@ -25,17 +25,6 @@ $ pugsql "queries" "NULL_thread_count"
 
 ------------------------------------------------
 
-$ cat queries/directory.sql
--- :name directory :many
-SELECT name FROM gufi_vt_pentries('search/prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE name == ''directory'';') WHERE type != 'd' ORDER BY name ASC, size ASC;
-
-$ pugsql "queries" "directory"
-[('name', 'executable')]
-[('name', 'readonly')]
-[('name', 'writable')]
-
-------------------------------------------------
-
 $ cat queries/entries.sql
 -- :name entries :many
 SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_entries('search/prefix', 2) ORDER BY name ASC, size ASC;
@@ -55,20 +44,6 @@ $ pugsql "queries" "entries"
 [('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 14), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:14 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, name?#'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-rw-'), ('name', 'writable'), ('size', 3), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:03 UTC 1970')]
-
-------------------------------------------------
-
-$ cat queries/gt_1024.sql
--- :name gt_1024 :many
-SELECT rowid, name, size, mtime FROM gufi_vt_pentries('search/prefix', 2, NULL, 'SELECT NULL, NULL, NULL, NULL, NULL, * FROM summary WHERE maxsize > 1024;') WHERE type != 'd' ORDER BY rowid ASC;
-
-$ pugsql "queries" "gt_1024"
-[('mtime', 10), ('name', '.hidden'), ('rowid', 1), ('size', 10)]
-[('mtime', 1024), ('name', '1KB'), ('rowid', 2), ('size', 1024)]
-[('mtime', 1048576), ('name', '1MB'), ('rowid', 3), ('size', 1048576)]
-[('mtime', 9), ('name', 'file_symlink'), ('rowid', 4), ('size', 9)]
-[('mtime', 0), ('name', 'old_file'), ('rowid', 5), ('size', 0)]
-[('mtime', 14), ('name', 'repeat_name'), ('rowid', 6), ('size', 14)]
 
 ------------------------------------------------
 

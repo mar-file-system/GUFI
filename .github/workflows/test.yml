@@ -180,7 +180,8 @@ jobs:
       shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
 
     - name: Test
+      # https://cygwin.com/pipermail/cygwin/2005-May/133368.html
       run:  >-
-            export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
+            export PATH=/usr/bin:/usr/local/sqlite3-pcre:$(cygpath ${SYSTEMROOT})/system32 &&
             ctest --output-on-failure --test-dir build
       shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
