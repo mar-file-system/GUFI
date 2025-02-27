@@ -234,9 +234,19 @@ prefix
 prefix/.hidden
 prefix/1KB
 prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/writable
+prefix/empty_directory
 prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
 
 $ gufi_find -mindepth 3
 prefix/directory/subdirectory
@@ -457,6 +467,14 @@ abc
 $ gufi_find -printf '[\a][ \b][\f][\n][\r][\t][\v][\\\\]' -maxdepth 2 -type d
 [][ ][][
 ][][	][][\\]
+[][ ][][
+][][	][][\\]
+[][ ][][
+][][	][][\\]
+[][ ][][
+][][	][][\\]
+[][ ][][
+][][	][][\\]
 
 $ gufi_find -printf '%-22f %+22f'
 .hidden                               .hidden
@@ -503,6 +521,10 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 $ gufi_find -printf '%z %z \z' -maxdepth 2 -type d
+%z %z \z
+%z %z \z
+%z %z \z
+%z %z \z
 %z %z \z
 
 $ gufi_find --numresults 5

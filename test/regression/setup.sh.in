@@ -173,6 +173,7 @@ VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
 AWK="@AWK@"
+COLUMN="@COLUMN@"
 DIFF="@DIFF@"
 GREP="@GREP@"
 
@@ -245,6 +246,7 @@ replace() {
     s/${PWD//\//\\/}\\///g;
 
     s/${AWK//\//\\/}/awk/g;
+    s/${COLUMN//\//\\/}/column/g;
     s/${DIFF//\//\\/}/diff/g;
     s/${GREP//\//\\/}/grep/g;
 

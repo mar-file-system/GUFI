@@ -377,6 +377,7 @@ $ gufi_stats --skip "skip.bad" -r depth "prefix"
 Error: Cannot open skip file "skip.bad"
 
 $ gufi_stats    leaf-dirs "prefix"
+prefix/directory/subdirectory
 prefix/empty_directory
 prefix/leaf_directory
 prefix/unusual#? directory ,
@@ -388,6 +389,7 @@ prefix/leaf_directory
 prefix/unusual#? directory ,
 
 $ gufi_stats    leaf-depth "prefix"
+prefix/directory/subdirectory 3
 prefix/empty_directory 2
 prefix/leaf_directory 2
 prefix/unusual#? directory , 2
@@ -399,6 +401,7 @@ prefix/leaf_directory 2
 prefix/unusual#? directory , 2
 
 $ gufi_stats    leaf-files "prefix"
+prefix/directory/subdirectory 1
 prefix/empty_directory 0
 prefix/leaf_directory 2
 prefix/unusual#? directory , 1

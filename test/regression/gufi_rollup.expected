@@ -14,7 +14,7 @@ GUFI_index        GUFI index to roll up
 
 Creating GUFI Index search with 1 threads
 Total Dirs:          69
-Total Files:         96
+Total Non-Dirs:      96
 Roots:
     search
 
@@ -741,7 +741,7 @@ totextdbs 0
 No difference
 Creating GUFI Index search with 1 threads
 Total Dirs:          69
-Total Files:         96
+Total Non-Dirs:      96
 Roots:
     search
 

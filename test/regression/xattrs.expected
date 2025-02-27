@@ -1,7 +1,7 @@
 $ gufi_dir2index -x "prefix" "search"
 Creating GUFI Index search with 1 threads
 Total Dirs:          6
-Total Files:         25
+Total Non-Dirs:      25
 
 $ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d

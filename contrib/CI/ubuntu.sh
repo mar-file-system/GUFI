@@ -80,6 +80,7 @@ apt -y install \
 apt -y install \
     attr \
     autoconf \
+    bsdmainutils \
     clang \
     cmake \
     git \

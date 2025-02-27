@@ -7,6 +7,7 @@ options:
   -v                     version
   -n <threads>           number of threads
   -x                     index/query xattrs
+  -y <min level>         minimum level to go down
   -z <max level>         maximum level to go down
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
@@ -20,190 +21,236 @@ output_dir        build GUFI index here
 
 
 Index Everything:
-    Source Directory:
-        prefix
-        prefix/.hidden
-        prefix/1KB
-        prefix/1MB
-        prefix/directory
-        prefix/directory/executable
-        prefix/directory/readonly
-        prefix/directory/subdirectory
-        prefix/directory/subdirectory/directory_symlink
-        prefix/directory/subdirectory/repeat_name
-        prefix/directory/writable
-        prefix/empty_directory
-        prefix/file_symlink
-        prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2
-        prefix/old_file
-        prefix/repeat_name
-        prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#
 
     Creating GUFI Index search with 1 threads
     Total Dirs:          6
-    Total Files:         14
+    Total Non-Dirs:      14
 
-    GUFI Index:
-        prefix
-        prefix/.hidden
-        prefix/1KB
-        prefix/1MB
-        prefix/directory
-        prefix/directory/executable
-        prefix/directory/readonly
-        prefix/directory/subdirectory
-        prefix/directory/subdirectory/directory_symlink
-        prefix/directory/subdirectory/repeat_name
-        prefix/directory/writable
-        prefix/empty_directory
-        prefix/file_symlink
-        prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2
-        prefix/old_file
-        prefix/repeat_name
-        prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#
+    Source Directory:                                        GUFI Tree:
+        prefix                                                   prefix
+        prefix/.hidden                                           prefix/.hidden
+        prefix/1KB                                               prefix/1KB
+        prefix/1MB                                               prefix/1MB
+        prefix/directory                                         prefix/directory
+        prefix/directory/executable                              prefix/directory/executable
+        prefix/directory/readonly                                prefix/directory/readonly
+        prefix/directory/subdirectory                            prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                prefix/directory/writable
+        prefix/empty_directory                                   prefix/empty_directory
+        prefix/file_symlink                                      prefix/file_symlink
+        prefix/leaf_directory                                    prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
+        prefix/old_file                                          prefix/old_file
+        prefix/repeat_name                                       prefix/repeat_name
+        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
 
-Index up to level 0:
-    Source Directory:
-        prefix
+Index starting at level 0:
 
     Creating GUFI Index search with 1 threads
-    Total Dirs:          1
-    Total Files:         0
+    Total Dirs:          6
+    Total Non-Dirs:      14
 
-    GUFI Index:
-        prefix
+    Source Directory:                                        GUFI Tree:
+        prefix                                                   prefix
+        prefix/.hidden                                           prefix/.hidden
+        prefix/1KB                                               prefix/1KB
+        prefix/1MB                                               prefix/1MB
+        prefix/directory                                         prefix/directory
+        prefix/directory/executable                              prefix/directory/executable
+        prefix/directory/readonly                                prefix/directory/readonly
+        prefix/directory/subdirectory                            prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                prefix/directory/writable
+        prefix/empty_directory                                   prefix/empty_directory
+        prefix/file_symlink                                      prefix/file_symlink
+        prefix/leaf_directory                                    prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
+        prefix/old_file                                          prefix/old_file
+        prefix/repeat_name                                       prefix/repeat_name
+        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
 
-Index up to level 1:
-    Source Directory:
-        prefix
-        prefix/.hidden
-        prefix/1KB
-        prefix/1MB
-        prefix/directory
-        prefix/empty_directory
-        prefix/file_symlink
-        prefix/leaf_directory
-        prefix/old_file
-        prefix/repeat_name
-        prefix/unusual#? directory ,
+Index starting at level 1:
 
     Creating GUFI Index search with 1 threads
     Total Dirs:          5
-    Total Files:         6
+    Total Non-Dirs:      8
 
-    GUFI Index:
-        prefix
-        prefix/.hidden
-        prefix/1KB
-        prefix/1MB
-        prefix/directory
-        prefix/empty_directory
-        prefix/file_symlink
-        prefix/leaf_directory
-        prefix/old_file
-        prefix/repeat_name
-        prefix/unusual#? directory ,
+    Source Directory:                                        GUFI Tree:
+        prefix/directory                                         prefix/directory
+        prefix/directory/executable                              prefix/directory/executable
+        prefix/directory/readonly                                prefix/directory/readonly
+        prefix/directory/subdirectory                            prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                prefix/directory/writable
+        prefix/empty_directory                                   prefix/empty_directory
+        prefix/leaf_directory                                    prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
+        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
+
+Index starting at level 2:
+
+    Creating GUFI Index search with 1 threads
+    Total Dirs:          1
+    Total Non-Dirs:      2
+
+    Source Directory:                                        GUFI Tree:
+        prefix/directory/subdirectory                            prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
+
+Index starting at level 3:
+
+    Creating GUFI Index search with 1 threads
+    Total Dirs:          0
+    Total Non-Dirs:      0
+
+    Source Directory:      GUFI Tree:
+
+Index up to level 0:
+
+    Creating GUFI Index search with 1 threads
+    Total Dirs:          1
+    Total Non-Dirs:      6
+
+    Source Directory:            GUFI Tree:
+        prefix                       prefix
+        prefix/.hidden               prefix/.hidden
+        prefix/1KB                   prefix/1KB
+        prefix/1MB                   prefix/1MB
+        prefix/file_symlink          prefix/file_symlink
+        prefix/old_file              prefix/old_file
+        prefix/repeat_name           prefix/repeat_name
+
+Index up to level 1:
+
+    Creating GUFI Index search with 1 threads
+    Total Dirs:          5
+    Total Non-Dirs:      12
+
+    Source Directory:                                     GUFI Tree:
+        prefix                                                prefix
+        prefix/.hidden                                        prefix/.hidden
+        prefix/1KB                                            prefix/1KB
+        prefix/1MB                                            prefix/1MB
+        prefix/directory                                      prefix/directory
+        prefix/directory/executable                           prefix/directory/executable
+        prefix/directory/readonly                             prefix/directory/readonly
+        prefix/directory/writable                             prefix/directory/writable
+        prefix/empty_directory                                prefix/empty_directory
+        prefix/file_symlink                                   prefix/file_symlink
+        prefix/leaf_directory                                 prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                      prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                      prefix/leaf_directory/leaf_file2
+        prefix/old_file                                       prefix/old_file
+        prefix/repeat_name                                    prefix/repeat_name
+        prefix/unusual#? directory ,                          prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#          prefix/unusual#? directory ,/unusual, name?#
 
 Index up to level 2:
-    Source Directory:
-        prefix
-        prefix/.hidden
-        prefix/1KB
-        prefix/1MB
-        prefix/directory
-        prefix/directory/executable
-        prefix/directory/readonly
-        prefix/directory/subdirectory
-        prefix/directory/writable
-        prefix/empty_directory
-        prefix/file_symlink
-        prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2
-        prefix/old_file
-        prefix/repeat_name
-        prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#
 
     Creating GUFI Index search with 1 threads
     Total Dirs:          6
-    Total Files:         12
+    Total Non-Dirs:      14
 
-    GUFI Index:
-        prefix
-        prefix/.hidden
-        prefix/1KB
-        prefix/1MB
-        prefix/directory
-        prefix/directory/executable
-        prefix/directory/readonly
-        prefix/directory/subdirectory
-        prefix/directory/writable
-        prefix/empty_directory
-        prefix/file_symlink
-        prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2
-        prefix/old_file
-        prefix/repeat_name
-        prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#
+    Source Directory:                                        GUFI Tree:
+        prefix                                                   prefix
+        prefix/.hidden                                           prefix/.hidden
+        prefix/1KB                                               prefix/1KB
+        prefix/1MB                                               prefix/1MB
+        prefix/directory                                         prefix/directory
+        prefix/directory/executable                              prefix/directory/executable
+        prefix/directory/readonly                                prefix/directory/readonly
+        prefix/directory/subdirectory                            prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                prefix/directory/writable
+        prefix/empty_directory                                   prefix/empty_directory
+        prefix/file_symlink                                      prefix/file_symlink
+        prefix/leaf_directory                                    prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
+        prefix/old_file                                          prefix/old_file
+        prefix/repeat_name                                       prefix/repeat_name
+        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
 
 Index up to level 3:
-    Source Directory:
-        prefix
-        prefix/.hidden
-        prefix/1KB
-        prefix/1MB
-        prefix/directory
-        prefix/directory/executable
-        prefix/directory/readonly
-        prefix/directory/subdirectory
-        prefix/directory/subdirectory/directory_symlink
-        prefix/directory/subdirectory/repeat_name
-        prefix/directory/writable
-        prefix/empty_directory
-        prefix/file_symlink
-        prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2
-        prefix/old_file
-        prefix/repeat_name
-        prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#
 
     Creating GUFI Index search with 1 threads
     Total Dirs:          6
-    Total Files:         14
+    Total Non-Dirs:      14
 
-    GUFI Index:
-        prefix
-        prefix/.hidden
-        prefix/1KB
-        prefix/1MB
-        prefix/directory
-        prefix/directory/executable
-        prefix/directory/readonly
-        prefix/directory/subdirectory
-        prefix/directory/subdirectory/directory_symlink
-        prefix/directory/subdirectory/repeat_name
-        prefix/directory/writable
-        prefix/empty_directory
-        prefix/file_symlink
-        prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2
-        prefix/old_file
-        prefix/repeat_name
-        prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#
+    Source Directory:                                        GUFI Tree:
+        prefix                                                   prefix
+        prefix/.hidden                                           prefix/.hidden
+        prefix/1KB                                               prefix/1KB
+        prefix/1MB                                               prefix/1MB
+        prefix/directory                                         prefix/directory
+        prefix/directory/executable                              prefix/directory/executable
+        prefix/directory/readonly                                prefix/directory/readonly
+        prefix/directory/subdirectory                            prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                prefix/directory/writable
+        prefix/empty_directory                                   prefix/empty_directory
+        prefix/file_symlink                                      prefix/file_symlink
+        prefix/leaf_directory                                    prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
+        prefix/old_file                                          prefix/old_file
+        prefix/repeat_name                                       prefix/repeat_name
+        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
 
+# build index in pieces
+$ gufi_dir2index -y 2      -x prefix search
+Creating GUFI Index search with 1 threads
+Total Dirs:          1
+Total Non-Dirs:      2
+
+$ gufi_dir2index -y 1 -z 2 -x prefix search
+"search" Already exists!
+Creating GUFI Index search with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      8
+
+$ gufi_dir2index -y 0 -z 1 -x prefix search
+"search" Already exists!
+Creating GUFI Index search with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      12
+
+Expected Index:                                      Combined Index:
+    prefix                                               prefix
+    prefix/.hidden                                       prefix/.hidden
+    prefix/1KB                                           prefix/1KB
+    prefix/1MB                                           prefix/1MB
+    prefix/directory                                     prefix/directory
+    prefix/directory/executable                          prefix/directory/executable
+    prefix/directory/readonly                            prefix/directory/readonly
+    prefix/directory/subdirectory                        prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink      prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name            prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable                            prefix/directory/writable
+    prefix/empty_directory                               prefix/empty_directory
+    prefix/file_symlink                                  prefix/file_symlink
+    prefix/leaf_directory                                prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1                     prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2                     prefix/leaf_directory/leaf_file2
+    prefix/old_file                                      prefix/old_file
+    prefix/repeat_name                                   prefix/repeat_name
+    prefix/unusual#? directory ,                         prefix/unusual#? directory ,
+    prefix/unusual#? directory ,/unusual, name?#         prefix/unusual#? directory ,/unusual, name?#
 
 # target is file
 $ gufi_dir2index -n 2 "prefix" "prefix/1KB"
@@ -215,21 +262,21 @@ $ gufi_dir2index -n 2 "prefix/1KB" "search"
 Source path is not a directory "prefix/1KB"
 Creating GUFI Index search with 2 threads
 Total Dirs:          0
-Total Files:         0
+Total Non-Dirs:      0
 
 # empty source path
 $ gufi_dir2index -n 2 "" "trace"
 Could not resolve path "": No such file or directory (2)
 Creating GUFI Index trace with 2 threads
 Total Dirs:          0
-Total Files:         0
+Total Non-Dirs:      0
 
 # skip file
 $ gufi_dir2index -n 2 -k "skip" "prefix" "search"
 "search" Already exists!
 Creating GUFI Index search with 2 threads
 Total Dirs:          4
-Total Files:         9
+Total Non-Dirs:      9
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
 prefix

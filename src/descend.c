@@ -102,7 +102,11 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
     struct descend_counters ctrs;
     memset(&ctrs, 0, sizeof(ctrs));
 
-    if (work->level < in->max_level) {
+    /*
+     * check current level because files/links are
+     * in the same level as the directory
+     */
+    if (work->level <= in->max_level) {
         /* calculate once */
         const size_t next_level = work->level + 1;
         const size_t recursion_level = work->recursion_level + 1;
@@ -159,35 +163,44 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
 
             /* push subdirectories onto the queue */
             if (S_ISDIR(child_ed.statuso.st_mode)) {
-                child_ed.type = 'd';
+                /*
+                 * check the next level because the subdirectory is
+                 * NOT in the same level as the parent directory
+                 */
+                if (next_level <= in->max_level) {
+                    child_ed.type = 'd';
 
-                if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
-                    struct work *copy = compress_struct(in->compress, child, struct_work_size(child));
-                    QPTPool_enqueue_swappable(ctx, id, processdir, copy,
-                                              work_serialize_and_free, QPTPool_generic_alloc_and_deserialize);
+                    if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
+                        struct work *copy = compress_struct(in->compress, child, struct_work_size(child));
+                        QPTPool_enqueue_swappable(ctx, id, processdir, copy,
+                                                  work_serialize_and_free, QPTPool_generic_alloc_and_deserialize);
+                    }
+                    else {
+                        /*
+                         * If this directory has too many subdirectories,
+                         * process the current subdirectory here instead
+                         * of enqueuing it. This only allows for one
+                         * subdirectory work item to be allocated at a
+                         * time instead of all of them, reducing overall
+                         * memory usage. This branch is only applied at
+                         * this level, so small subdirectories will still
+                         * enqueue work, and large subdirectories will
+                         * still enqueue some work and process the
+                         * remaining in-situ.
+                         *
+                         * Return value should probably be used.
+                         */
+                        child->recursion_level = recursion_level;
+                        processdir(ctx, id, child, args);
+                        ctrs.dirs_insitu++;
+                    }
+
+                    ctrs.dirs++;
                 }
                 else {
-                    /*
-                     * If this directory has too many subdirectories,
-                     * process the current subdirectory here instead
-                     * of enqueuing it. This only allows for one
-                     * subdirectory work item to be allocated at a
-                     * time instead of all of them, reducing overall
-                     * memory usage. This branch is only applied at
-                     * this level, so small subdirectories will still
-                     * enqueue work, and large subdirectories will
-                     * still enqueue some work and process the
-                     * remaining in-situ.
-                     *
-                     * Return value should probably be used.
-                     */
-                    child->recursion_level = recursion_level;
-                    processdir(ctx, id, child, args);
-                    ctrs.dirs_insitu++;
+                    /* skip enqueuing and just free */
+                    free(child);
                 }
-
-                ctrs.dirs++;
-
                 continue;
             }
             /* non directories */
@@ -208,18 +221,21 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
 
             ctrs.nondirs++;
 
-            if (processnondir) {
-                if (in->process_xattrs) {
-                    xattrs_setup(&child_ed.xattrs);
-                    xattrs_get(child->name, &child_ed.xattrs);
-                }
+            /* if this directory was processed, process the files/links */
+            if (in->min_level <= work->level) {
+                if (processnondir) {
+                    if (in->process_xattrs) {
+                        xattrs_setup(&child_ed.xattrs);
+                        xattrs_get(child->name, &child_ed.xattrs);
+                    }
 
-                child_ed.parent_fd = d_fd;
-                processnondir(child, &child_ed, nondir_args);
-                ctrs.nondirs_processed++;
+                    child_ed.parent_fd = d_fd;
+                    processnondir(child, &child_ed, nondir_args);
+                    ctrs.nondirs_processed++;
 
-                if (in->process_xattrs) {
-                    xattrs_cleanup(&child_ed.xattrs);
+                    if (in->process_xattrs) {
+                        xattrs_cleanup(&child_ed.xattrs);
+                    }
                 }
             }
 

@@ -1,7 +1,7 @@
 $ "gufi_dir2index"   -x -e "prefix" "search.d2i"
 Creating GUFI Index search.d2i with 1 threads
 Total Dirs:          6
-Total Files:         14
+Total Non-Dirs:      14
 
 $ "gufi_dir2trace"   -x -e "prefix" "trace"
 Creating GUFI Traces trace with 1 threads

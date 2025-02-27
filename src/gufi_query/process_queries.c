@@ -93,9 +93,8 @@ static size_t descend2(QPTPool_t *ctx,
 
     size_t pushed = 0;
     const size_t next_level = gqw->work.level + 1;
-    const int level_check = (next_level < max_level);
 
-    if (level_check) {
+    if (next_level <= max_level) {
         /* Send subdirs to queue */
         /* loop over dirents */
         /* skip db.db and any filename listed in the trie struct */

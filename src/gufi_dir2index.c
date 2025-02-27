@@ -88,7 +88,8 @@ struct PoolArgs {
     struct template_db db;
     struct template_db xattr;
 
-    uint64_t *total_files;
+    uint64_t *total_dirs;
+    uint64_t *total_nondirs;
 };
 
 struct NonDirArgs {
@@ -192,6 +193,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     decompress_work(&nda.work, data);
 
+    const int process_dbdb = ((pa->in.min_level <= nda.work->level) &&
+                              (nda.work->level <= pa->in.max_level));
+
     if (lstat(nda.work->name, &nda.ed.statuso) != 0) {
         const int err = errno;
         fprintf(stderr, "Error: Could not stat directory \"%s\": %s (%d)\n", nda.work->name, strerror(err), err);
@@ -234,71 +238,77 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
     }
 
-    /* restore "/db.db" */
-    nda.topath[nda.topath_len] = '/';
+    if (process_dbdb) {
+        /* restore "/db.db" */
+        nda.topath[nda.topath_len] = '/';
 
-    nda.db = template_to_db(nda.temp_db, nda.topath, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
+        nda.db = template_to_db(nda.temp_db, nda.topath, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
 
-    /* remove "/db.db" */
-    nda.topath[nda.topath_len] = '\0';
+        /* remove "/db.db" */
+        nda.topath[nda.topath_len] = '\0';
 
-    if (!nda.db) {
-        rc = 1;
-        goto cleanup;
-    }
+        if (!nda.db) {
+            rc = 1;
+            goto cleanup;
+        }
 
-    /* prepare to insert into the database */
-    zeroit(&nda.summary);
+        /* prepare to insert into the database */
+        zeroit(&nda.summary);
 
-    /* prepared statements within db.db */
-    nda.entries_res = insertdbprep(nda.db, ENTRIES_INSERT);
-    nda.xattrs_res = NULL;
-    nda.xattr_files_res = NULL;
+        /* prepared statements within db.db */
+        nda.entries_res = insertdbprep(nda.db, ENTRIES_INSERT);
+        nda.xattrs_res = NULL;
+        nda.xattr_files_res = NULL;
 
-    if (nda.in->process_xattrs) {
-        nda.xattrs_res = insertdbprep(nda.db, XATTRS_PWD_INSERT);
-        nda.xattr_files_res = insertdbprep(nda.db, EXTERNAL_DBS_PWD_INSERT);
+        if (nda.in->process_xattrs) {
+            nda.xattrs_res = insertdbprep(nda.db, XATTRS_PWD_INSERT);
+            nda.xattr_files_res = insertdbprep(nda.db, EXTERNAL_DBS_PWD_INSERT);
 
-        /* external per-user and per-group dbs */
-        sll_init(&nda.xattr_db_list);
+            /* external per-user and per-group dbs */
+            sll_init(&nda.xattr_db_list);
+        }
+
+        startdb(nda.db);
     }
 
     struct descend_counters ctrs;
-    startdb(nda.db);
     descend(ctx, id, pa, nda.in, nda.work, nda.ed.statuso.st_ino, dir, 0,
             processdir, process_nondir, &nda,
             &ctrs);
-    stopdb(nda.db);
 
-    /* entries and xattrs have been inserted */
+    if (process_dbdb) {
+        stopdb(nda.db);
 
-    if (nda.in->process_xattrs) {
-        /* write out per-user and per-group xattrs */
-        sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
+        /* entries and xattrs have been inserted */
 
-        /* keep track of per-user and per-group xattr dbs */
-        insertdbfin(nda.xattr_files_res);
+        if (nda.in->process_xattrs) {
+            /* write out per-user and per-group xattrs */
+            sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
 
-        /* pull this directory's xattrs because they were not pulled by the parent */
-        xattrs_setup(&nda.ed.xattrs);
-        xattrs_get(nda.work->name, &nda.ed.xattrs);
+            /* keep track of per-user and per-group xattr dbs */
+            insertdbfin(nda.xattr_files_res);
 
-        /* directory xattrs go into the same table as entries xattrs */
-        insertdbgo_xattrs_avail(&nda.ed, nda.xattrs_res);
-        insertdbfin(nda.xattrs_res);
+            /* pull this directory's xattrs because they were not pulled by the parent */
+            xattrs_setup(&nda.ed.xattrs);
+            xattrs_get(nda.work->name, &nda.ed.xattrs);
+
+            /* directory xattrs go into the same table as entries xattrs */
+            insertdbgo_xattrs_avail(&nda.ed, nda.xattrs_res);
+            insertdbfin(nda.xattrs_res);
+        }
+        insertdbfin(nda.entries_res);
+
+        /* insert this directory's summary data */
+        /* the xattrs go into the xattrs_avail table in db.db */
+        insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len,
+                    nda.work, &nda.ed, &nda.summary);
+        if (nda.in->process_xattrs) {
+            xattrs_cleanup(&nda.ed.xattrs);
+        }
+
+        closedb(nda.db);
+        nda.db = NULL;
     }
-    insertdbfin(nda.entries_res);
-
-    /* insert this directory's summary data */
-    /* the xattrs go into the xattrs_avail table in db.db */
-    insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len,
-                nda.work, &nda.ed, &nda.summary);
-    if (nda.in->process_xattrs) {
-        xattrs_cleanup(&nda.ed.xattrs);
-    }
-
-    closedb(nda.db);
-    nda.db = NULL;
 
     /* ignore errors */
     chmod(nda.topath, nda.ed.statuso.st_mode);
@@ -307,10 +317,13 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   cleanup:
     closedir(dir);
 
+    if (process_dbdb) {
+        pa->total_dirs[id]++;
+        pa->total_nondirs[id] += ctrs.nondirs_processed;
+    }
+
     free(nda.topath);
     free(nda.work);
-
-    pa->total_files[id] += ctrs.nondirs_processed;
 
     return rc;
 }
@@ -367,6 +380,7 @@ static int validate_source(struct input *in, const char *path, struct work **wor
 
     new_work->root_parent.data = path;
     new_work->root_parent.len = dirname_len(path, new_work->name_len);
+    new_work->level = 0;
 
     char expathin[MAXPATH];
     char expathout[MAXPATH];
@@ -393,7 +407,7 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:xz:k:M:s:C:" COMPRESS_OPT "q", 2, "input_dir... output_dir", &pa.in);
+    process_args_and_maybe_exit("hHvn:xy:z:k:M:s:C:" COMPRESS_OPT "q", 2, "input_dir... output_dir", &pa.in);
 
     /* parse positional args, following the options */
     /* does not have to be canonicalized */
@@ -441,7 +455,8 @@ int main(int argc, char *argv[]) {
 
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
 
-    pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
+    pa.total_dirs    = calloc(pa.in.maxthreads, sizeof(uint64_t));
+    pa.total_nondirs = calloc(pa.in.maxthreads, sizeof(uint64_t));
 
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
@@ -474,15 +489,12 @@ int main(int argc, char *argv[]) {
         QPTPool_enqueue(pool, 0, processdir, copy);
         i++;
     }
-
     QPTPool_stop(pool);
 
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     const long double processtime = sec(nsec(&after_init));
 
     /* don't count as part of processtime */
-
-    const uint64_t thread_count = QPTPool_threads_completed(pool);
 
     QPTPool_destroy(pool);
 
@@ -491,18 +503,21 @@ int main(int argc, char *argv[]) {
     }
     free(roots);
 
-    uint64_t total_files = 0;
+    uint64_t total_dirs = 0;
+    uint64_t total_nondirs = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
-        total_files += pa.total_files[i];
+        total_dirs    += pa.total_dirs[i];
+        total_nondirs += pa.total_nondirs[i];
     }
 
-    free(pa.total_files);
+    free(pa.total_dirs);
+    free(pa.total_nondirs);
 
-    fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", thread_count);
-    fprintf(stdout, "Total Files:         %" PRIu64 "\n", total_files);
+    fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", total_dirs);
+    fprintf(stdout, "Total Non-Dirs:      %" PRIu64 "\n", total_nondirs);
     fprintf(stdout, "Time Spent Indexing: %.2Lfs\n",      processtime);
-    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
-    fprintf(stdout, "Files/Sec:           %.2Lf\n",       total_files / processtime);
+    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       total_dirs / processtime);
+    fprintf(stdout, "Non-Dirs/Sec:        %.2Lf\n",       total_nondirs / processtime);
 
   free_xattr:
     close_template_db(&pa.xattr);

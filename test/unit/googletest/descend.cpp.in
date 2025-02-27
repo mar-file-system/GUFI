@@ -107,8 +107,10 @@ TEST(descend, builddir) {
                       0, nullptr, nullptr, nullptr,
                       nullptr), 1);
 
-    // work->level == in->max_level - not descending
+    // work->level > in->max_level - not descending
     {
+        in.max_level = 0;
+        work->level = 1;
         EXPECT_EQ(descend(nullptr, 0, nullptr, &in, work, 0, dir,
                           0, nullptr,
                           nullptr, nullptr,
@@ -124,6 +126,7 @@ TEST(descend, builddir) {
     {
         rewinddir(dir);
         in.max_level = 1;
+        work->level = 0;
         EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir, 0,
                           [](QPTPool_t *, const size_t, void *data, void *) -> int {
                               free(data);

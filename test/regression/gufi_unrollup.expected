@@ -13,7 +13,7 @@ GUFI_index        GUFI index to unroll up
 $ gufi_dir2index -x "prefix" "search"
 Creating GUFI Index search with 1 threads
 Total Dirs:          69
-Total Files:         96
+Total Non-Dirs:      96
 
 $ gufi_rollup "prefix"
 Roots:
