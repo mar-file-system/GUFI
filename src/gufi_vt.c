@@ -107,6 +107,7 @@ typedef struct gufi_query_sql {
     refstr_t K;
     refstr_t J;
     refstr_t G;
+    refstr_t F;
 } gq_sql_t;
 
 typedef struct gufi_vtab {
@@ -136,9 +137,10 @@ typedef struct gufi_vtab_cursor {
  */
 static int gufi_query(const char *indexroot, const char *threads, const gq_sql_t *sql,
                       FILE **output, char **errmsg) {
-    const char *argv[20] = {
+    const char *argv[23] = {
         "gufi_query",
         "-u",
+        "-x",
     };
 
     #define set_argv(argc, argv, flag, value) if (value) { argv[argc++] = flag; argv[argc++] = value; }
@@ -152,6 +154,7 @@ static int gufi_query(const char *indexroot, const char *threads, const gq_sql_t
     set_argv(argc, argv, "-K", sql->K.data);
     set_argv(argc, argv, "-J", sql->J.data);
     set_argv(argc, argv, "-G", sql->G.data);
+    set_argv(argc, argv, "-F", sql->F.data);
 
     argv[argc++] = indexroot;
     argv[argc]   = NULL;
@@ -170,7 +173,7 @@ static int gufi_query(const char *indexroot, const char *threads, const gq_sql_t
     }
 
     /* pass command to popen */
-    FILE *out = popen(cmd, "re");
+    FILE *out = popen(cmd, "r");
 
     free(cmd);
 
@@ -444,6 +447,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     K
  *     J
  *     G
+ *     F
  *     index
  *
  * Notes:
@@ -591,6 +595,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                     break;
                 case 'G':
                     set_sql(&sql.G, value);
+                    break;
+                case 'F':
+                    set_sql(&sql.F, value);
                     break;
                 default:
                     break;
