@@ -145,7 +145,7 @@ static int gufi_query(const char *indexroot, const char *threads, const gq_sql_t
 
     #define set_argv(argc, argv, flag, value) if (value) { argv[argc++] = flag; argv[argc++] = value; }
 
-    int argc = 2;
+    int argc = 3;
     set_argv(argc, argv, "-n", threads);
     set_argv(argc, argv, "-I", sql->I.data);
     set_argv(argc, argv, "-T", sql->T.data);
@@ -636,7 +636,16 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     /* make sure all setup tables are placed into a different db */
     /* this should never fail */
     sqlite3 *tempdb = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-                0, 0, create_dbdb_tables, NULL);
+                             0, 0, create_dbdb_tables, NULL);
+
+    create_xattr_tables(SQLITE_MEMORY, tempdb, NULL);
+
+    struct input in;
+    in.process_xattrs = 1;
+    struct work work; /* unused */
+    memset(&work, 0, sizeof(work));
+    size_t count = 0; /* unused */
+    setup_xattrs_views(&in, tempdb, &work, &count);
 
     int cols = 0;
     int *types = NULL;
@@ -644,7 +653,6 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     size_t *lens = NULL;
 
     /* this should never fail */
-    struct work work;
     addqueryfuncs_with_context(tempdb, &work);
 
     if (sql.T.len) {
@@ -718,10 +726,12 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                           schema, threads, &sql, indexroot);
   error:
     free(lens);
-    for(int c = 0; c < cols; c++) {
-        free(names[c]);
+    if (names) {
+        for(int c = 0; c < cols; c++) {
+            free(names[c]);
+        }
+        free(names);
     }
-    free(names);
     free(types);
 
     closedb(tempdb);

@@ -120,6 +120,9 @@ PATH="@CMAKE_BINARY_DIR@/src:${PATH}" run_no_sort "echo \"SELECT size, path || '
 echo "# gufi_vt"
 PATH="@CMAKE_BINARY_DIR@/src:${PATH}" run_no_sort "echo -n \"CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='SELECT path() || '/' || name AS fullpath, size FROM pentries;'); SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;\" | ${GUFI_SQLITE3} -d \"|\""
 
+echo "# gufi_vt xattrs"
+PATH="@CMAKE_BINARY_DIR@/src:${PATH}" run_no_sort "echo -n \"CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='SELECT path() || '/' || name AS fullpath, xattr_name, xattr_value FROM xpentries;'); SELECT fullpath, xattr_name, xattr_value FROM gufi ORDER BY fullpath ASC, xattr_name ASC;\" | ${GUFI_SQLITE3} -d \"|\""
+
 echo "# bad SQL"
 run_no_sort "(echo \"CREATE TABLE;\") |" \
             "${GUFI_SQLITE3}"

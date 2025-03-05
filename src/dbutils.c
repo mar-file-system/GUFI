@@ -1216,11 +1216,9 @@ static trie_t *sqlite3_types(void) {
 }
 
 int get_col_types(sqlite3 *db, const refstr_t *sql, int **types, int *cols) {
-    int rc = SQLITE_OK;
-
     /* parse sql */
     sqlite3_stmt *stmt = NULL;
-    rc = sqlite3_prepare_v2(db, sql->data, sql->len, &stmt, NULL);
+    const int rc = sqlite3_prepare_v2(db, sql->data, sql->len, &stmt, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Could not prepare '%s' for getting column types: %s (%d)\n",
                 sql->data, sqlite3_errstr(rc), rc);
@@ -1281,7 +1279,7 @@ int get_col_names(sqlite3 *db, const refstr_t *sql, char ***names, size_t **lens
     sqlite3_stmt *stmt = NULL;
     rc = sqlite3_prepare_v2(db, sql->data, sql->len, &stmt, NULL);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Could not prepare '%s' for getting column types: %s (%d)\n",
+        fprintf(stderr, "Error: Could not prepare '%s' for getting column names: %s (%d)\n",
                 sql->data, sqlite3_errstr(rc), rc);
         return -1;
     }

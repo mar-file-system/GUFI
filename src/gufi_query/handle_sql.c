@@ -167,6 +167,11 @@ int handle_sql(struct input *in) {
             }
         }
 
+        if (in->process_xattrs) {
+            size_t count = 0; /* unused */
+            setup_xattrs_views(in, db, &work, &count);
+        }
+
         /* if not aggregating, get types for T, S, and E */
         if (!in->sql.init_agg.len) {
             if (in->sql.tsum.len) {

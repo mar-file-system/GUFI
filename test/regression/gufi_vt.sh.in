@@ -140,6 +140,13 @@ query_vt() {
     )
     query_vt "${query}"
 
+    echo "# xattr view"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT path() || '/' || name AS fullpath, xattr_name, xattr_value FROM xpentries;\");"
+        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC, xattr_name ASC;"
+    )
+    query_vt "${query}"
+
     echo "# ######################################"
     echo "# errors"
 
