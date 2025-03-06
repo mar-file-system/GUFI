@@ -1004,6 +1004,7 @@ TEST(copyfd, bad) {
     char srcname[] = "XXXXXX";
     int src = mkstemp(srcname);
     ASSERT_GT(src, -1);
+    ASSERT_EQ(pwrite(src, "bad", 3, 0), 3);
 
     char dstname[] = "XXXXXX";
     int dst = mkstemp(dstname);

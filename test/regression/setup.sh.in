@@ -73,6 +73,8 @@ fi
 
 GENERATE_INDEX="$1"
 
+source @CMAKE_CURRENT_BINARY_DIR@/os_specific.sh
+
 SRCDIR="prefix"
 BASENAME="$(basename ${SRCDIR})"
 THREADS=2
@@ -158,6 +160,7 @@ GUFI_TREESUMMARY="@CMAKE_BINARY_DIR@/src/gufi_treesummary"
 GUFI_TREESUMMARY_ALL="@CMAKE_BINARY_DIR@/src/gufi_treesummary_all"
 GUFI_UNROLLUP="@CMAKE_BINARY_DIR@/src/gufi_unrollup"
 GUFI_VT="@CMAKE_BINARY_DIR@/src/gufi_vt"
+HEXLIFY="@CMAKE_CURRENT_BINARY_DIR@/hexlify.py"
 LONGITUDINAL_SNAPSHOT="@CMAKE_BINARY_DIR@/contrib/longitudinal_snapshot.py"
 OLDBIGFILES="@CMAKE_BINARY_DIR@/examples/oldbigfiles"
 PARALLEL_CPR="@CMAKE_BINARY_DIR@/src/parallel_cpr"
@@ -176,6 +179,8 @@ AWK="@AWK@"
 COLUMN="@COLUMN@"
 DIFF="@DIFF@"
 GREP="@GREP@"
+SED="@SED@"
+STAT="@STAT@"
 
 PWD="$(pwd)"
 
@@ -194,7 +199,7 @@ chmod 666 "${CONFIG}"
 
 # common strings that need replacing
 replace() {
-    sed "
+    @SED@ "
     s/${SQLITE3//\//\\/}/sqlite3/g;
     s/${DELUIDGIDSUMMARYRECS//\//\\/}/deluidgidsummaryrecs/g;
     s/${GENERATEGIDSUMMARY//\//\\/}/generategidsummary/g;
@@ -213,7 +218,7 @@ replace() {
     s/${GUFI_QUERY//\//\\/}/gufi_query/g;
     s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
     s/${GUFI_SQLITE3//\//\\/}/gufi_sqlite3/g
-    s/${GUFI_STAT//\//\\/}/gufi_stat/g
+    s/${GUFI_STAT//\//\\/}/gufi_stat/g;
     s/${GUFI_STATS//\//\\/}/gufi_stats/g;
     s/${GUFI_STAT_BIN//\//\\/}/gufi_stat_bin/g
     s/${GUFI_TRACE2DIR//\//\\/}/gufi_trace2dir/g;
@@ -221,7 +226,8 @@ replace() {
     s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
     s/${GUFI_TREESUMMARY_ALL//\//\\/}/gufi_treesummary_all/g;
     s/${GUFI_UNROLLUP//\//\\/}/gufi_unrollup/g;
-    s/${GUFI_VT//\//\\/}/gufi_vt/g
+    s/${GUFI_VT//\//\\/}/gufi_vt/g;
+    s/${HEXLIFY//\//\\/}/hexlify.py/g;
     s/${LONGITUDINAL_SNAPSHOT//\//\\/}/longitudinal_snapshot.py/g;
     s/${OLDBIGFILES//\//\\/}/oldbigfiles/g;
     s/${PARALLEL_CPR//\//\\/}/parallel_cpr/g;
@@ -249,6 +255,10 @@ replace() {
     s/${COLUMN//\//\\/}/column/g;
     s/${DIFF//\//\\/}/diff/g;
     s/${GREP//\//\\/}/grep/g;
+    s/${SED//\//\\/}/sed/g;
+    s/${STAT//\//\\/}/stat/g;
+
+    s/wc -l | awk '{ print \$1 }'/wc -l/g;
 
     /VmHWM:/d;
 
@@ -256,22 +266,17 @@ replace() {
     "
 }
 
-# argparse help output changes slightly between versions
-replace_argparse() {
-    sed 's/optional arguments/options/g; s/\[paths \[paths ...\]\]/\[paths ...\]/g;'
-}
-
 run_sort() {
-    echo "$" "$@"                             |& replace
+    echo "$" "$@"                             2>&1 | replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | sort
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  2>&1 | replace | sort
     echo
 }
 
 run_no_sort() {
-    echo "$" "$@"                             |& replace
+    echo "$" "$@"                             2>&1 | replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  2>&1 | replace
     echo
 }
 
@@ -308,7 +313,7 @@ pull_ug_summary_columns() {
         DST="${TEST_GROUP_ID}"
     fi
 
-    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | sed "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | @SED@ "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
 }
 
 # set some columns to make test easier
@@ -327,7 +332,7 @@ clean_index() {
         -E "DELETE FROM xattrs_pwd; INSERT INTO xattrs_pwd SELECT * FROM temp_xattrs; DELETE from temp_xattrs;" \
         "${INDEX}"
 
-    # update sumamry and entries columns
+    # update summary and entries columns
     "${GUFI_QUERY}" \
         -a \
         -w \
@@ -335,8 +340,13 @@ clean_index() {
         -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \
         "${INDEX}"
 
+    # set symlink permissions to 777 since they don't matter but are different depending on system
     "${GUFI_QUERY}" \
-        -a \
+        -w \
+        -E "UPDATE entries SET mode = mode | 511 WHERE type == 'l';" \
+        "${INDEX}"
+
+    "${GUFI_QUERY}" \
         -w \
         -S "UPDATE summary SET minatime = (SELECT MIN(mtime) FROM entries), maxatime = (SELECT MAX(mtime) FROM entries);" \
         "${INDEX}"
@@ -352,8 +362,8 @@ clean_index() {
     if [[ "${ACTUAL}" == "1" ]]
     then
         # directory/subdirectory and directory/subdirectory/repeat_name need their actual inodes
-        DIR="$(stat -c '%i' ${SRCDIR}/directory/subdirectory)"
-        FILE="$(stat -c '%i' ${SRCDIR}/directory/subdirectory/repeat_name)"
+        DIR="$(@STAT@ ${STAT_FMT} '%i' ${SRCDIR}/directory/subdirectory)"
+        FILE="$(@STAT@ ${STAT_FMT} '%i' ${SRCDIR}/directory/subdirectory/repeat_name)"
         "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE summary SET inode = '${DIR}' WHERE name == 'subdirectory';"
         "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE entries SET inode = '${FILE}' WHERE name == 'repeat_name';"
         "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE xattrs_pwd SET inode = '${DIR}' WHERE inode == '6';"

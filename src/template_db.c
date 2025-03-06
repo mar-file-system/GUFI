@@ -163,24 +163,38 @@ int create_dbdb_template(struct template_db *tdb) {
 int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid) {
     /* Not checking arguments */
 
-    int err = 0;
     const int src_db = tdb->fd;
-    err = err?err:errno;
-    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-    err = err?err:errno;
-    const ssize_t sf = copyfd(src_db, 0, dst_db, 0, tdb->size);
-    err = err?err:errno;
-    fchown(dst_db, uid, gid);
-    err = err?err:errno;
-    close(dst_db);
-    err = err?err:errno;
 
-    if (sf == -1) {
-        fprintf(stderr, "Could not copy template file (%d) to %s (%d): %s (%d)\n",
-                src_db, dst, dst_db, strerror(err), err);
-        remove(dst);
+    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+    if (dst_db < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: copy_template dst db: %s (%d)\n", strerror(err), err);
         return -1;
     }
+
+    const ssize_t sf = copyfd(src_db, 0, dst_db, 0, tdb->size);
+    if (sf < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: copy_template copyfd error: %s (%d)\n", strerror(err), err);
+        close(dst_db);
+        return -1;
+    }
+    else if (sf != tdb->size) {
+        const int err = errno;
+        fprintf(stderr, "Error: copy_template copyfd expected to copy %jd. Actually copied %zd: %s (%d)\n",
+                (intmax_t) tdb->size, sf, strerror(err), err);
+        close(dst_db);
+        return -1;
+    }
+
+    if (fchown(dst_db, uid, gid) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: copy_template fchown: %s (%d)\n", strerror(err), err);
+        close(dst_db);
+        return -1;
+    }
+
+    close(dst_db);
 
     return 0;
 }
@@ -190,7 +204,7 @@ sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid
         return NULL;
     }
 
-    return opendb(dst, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0, NULL, NULL);
+    return opendb(dst, SQLITE_OPEN_READWRITE, 1, 0, NULL, NULL);
 }
 
 /* create db.db with empty tables at the given directory (and leave it on the filesystem) */

@@ -17,7 +17,7 @@ Creating GUFI Traces trace with 1 threads
 Total Dirs:          6
 Total Files:         14
 
-# not enough argumnets 
+# not enough arguments
 $ verifytrace
 Syntax: verifytrace delim [trace ...]
 

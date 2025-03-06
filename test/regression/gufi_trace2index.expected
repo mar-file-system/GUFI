@@ -14,13 +14,16 @@ trace_file...     parse one or more trace files to produce the GUFI index
 output_dir        build GUFI index here
 
 
+# generate the tree
 $ generatetree prefix
 
+# generate the trace
 $ gufi_dir2trace -d "|" -n 4 -x "prefix" "trace"
 Creating GUFI Traces trace with 4 threads
 Total Dirs:          6
 Total Files:         14
 
+# generate the index
 $ gufi_trace2index -d "|" -n 4 "trace" "search"
 Creating GUFI Index search with 4 threads
 Dirs:                6 (1 empty)
@@ -30,6 +33,64 @@ Total:               20
 Total Dirs:          6
 Total Files:         14
 
+# every database should have the same schema
+search/db.db
+entries              summary              vsummarygroup      
+external_dbs         summarylong          vsummaryuser       
+external_dbs_pwd     vrpentries           xattrs_avail       
+external_dbs_rollup  vrsummary            xattrs_pwd         
+pentries             vrsummarylong        xattrs_rollup      
+pentries_rollup      vsummarydir        
+
+search/prefix/db.db
+entries              summary              vsummarygroup      
+external_dbs         summarylong          vsummaryuser       
+external_dbs_pwd     vrpentries           xattrs_avail       
+external_dbs_rollup  vrsummary            xattrs_pwd         
+pentries             vrsummarylong        xattrs_rollup      
+pentries_rollup      vsummarydir        
+
+search/prefix/directory/db.db
+entries              summary              vsummarygroup      
+external_dbs         summarylong          vsummaryuser       
+external_dbs_pwd     vrpentries           xattrs_avail       
+external_dbs_rollup  vrsummary            xattrs_pwd         
+pentries             vrsummarylong        xattrs_rollup      
+pentries_rollup      vsummarydir        
+
+search/prefix/directory/subdirectory/db.db
+entries              summary              vsummarygroup      
+external_dbs         summarylong          vsummaryuser       
+external_dbs_pwd     vrpentries           xattrs_avail       
+external_dbs_rollup  vrsummary            xattrs_pwd         
+pentries             vrsummarylong        xattrs_rollup      
+pentries_rollup      vsummarydir        
+
+search/prefix/empty_directory/db.db
+entries              summary              vsummarygroup      
+external_dbs         summarylong          vsummaryuser       
+external_dbs_pwd     vrpentries           xattrs_avail       
+external_dbs_rollup  vrsummary            xattrs_pwd         
+pentries             vrsummarylong        xattrs_rollup      
+pentries_rollup      vsummarydir        
+
+search/prefix/leaf_directory/db.db
+entries              summary              vsummarygroup      
+external_dbs         summarylong          vsummaryuser       
+external_dbs_pwd     vrpentries           xattrs_avail       
+external_dbs_rollup  vrsummary            xattrs_pwd         
+pentries             vrsummarylong        xattrs_rollup      
+pentries_rollup      vsummarydir        
+
+search/prefix/unusual#? directory ,/db.db
+entries              summary              vsummarygroup      
+external_dbs         summarylong          vsummaryuser       
+external_dbs_pwd     vrpentries           xattrs_avail       
+external_dbs_rollup  vrsummary            xattrs_pwd         
+pentries             vrsummarylong        xattrs_rollup      
+pentries_rollup      vsummarydir        
+
+# compare contents
 Source Directory:
     prefix
     prefix/.hidden

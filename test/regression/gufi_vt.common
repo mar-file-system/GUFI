@@ -66,7 +66,7 @@ run_tests() {
     func="$1"
 
     echo "# Generate treesummary tables in all directories"
-    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | sed '/^Started .*$/d'
+    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | @SED@ '/^Started .*$/d'
 
     echo "# Query treesummary"
     "${func}" "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('${INDEXROOT}', ${THREADS}) ORDER BY minsize ASC, maxsize ASC;"

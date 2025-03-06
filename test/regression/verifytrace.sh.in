@@ -97,15 +97,16 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 1 \"${SRCDIR}\" \"${TRACE}\""
 order_tracefile "${TRACE}.0" > "${TRACE}"
 
 # replace the numeric fields in the trace with 0s
-sed -i 's/[[:digit:]]\+/0/g' "${TRACE}"
+# need the negative on macOS
+@SED@ -i 's/-\?[0-9]\+/0/g' "${TRACE}"
 
 # replace some rows with fixed data
-sed -i "s/^${DELIM}d${DELIM}.*\$/${DELIM}d${DELIM}1${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}/g" "${TRACE}"
-sed -i "s/^leaf_directory${DELIM}d${DELIM}.*\$/leaf_directory${DELIM}d${DELIM}4${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
-sed -i "s/^directory${DELIM}d${DELIM}.*\$/directory${DELIM}d${DELIM}2${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
-sed -i "s/^directory\\/subdirectory${DELIM}d${DELIM}.*\$/directory\\/subdirectory${DELIM}d${DELIM}3${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}2${DELIM}/g" "${TRACE}"
+@SED@ -i "s/^${DELIM}d${DELIM}.*\$/${DELIM}d${DELIM}1${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}/g" "${TRACE}"
+@SED@ -i "s/^leaf_directory${DELIM}d${DELIM}.*\$/leaf_directory${DELIM}d${DELIM}4${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
+@SED@ -i "s/^directory${DELIM}d${DELIM}.*\$/directory${DELIM}d${DELIM}2${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
+@SED@ -i "s/^directory\\/subdirectory${DELIM}d${DELIM}.*\$/directory\\/subdirectory${DELIM}d${DELIM}3${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}2${DELIM}/g" "${TRACE}"
 
-echo "# not enough argumnets "
+echo "# not enough arguments"
 run_no_sort "${VERIFYTRACE}"
 
 echo "# valid trace"
@@ -135,8 +136,8 @@ run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
 echo "# directory too many columns"
 (
-    head -n 1 "${TRACE}" | head -c -1
-    echo "${DELIM}"
+    line=$(head -n 1 "${TRACE}")
+    echo "${line}${DELIM}"
 ) > "${COPY}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${COPY}\""
 
@@ -146,8 +147,9 @@ run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
 echo "# directory extra slashes after name"
 (
+    line=$(head -n 1 "${TRACE}")
     # shellcheck disable=SC2016
-    head -n 1 "${TRACE}" | head -c -1 | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ printf $1 }'
+    echo -n "${line::${#line}-1}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ printf $1 }'
     echo -n "////"
     # shellcheck disable=SC2016
     head -n 1 "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" }; 1'
@@ -185,16 +187,16 @@ run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 echo "# non-directory too few columns"
 (
     head -n 1 "${TRACE}"
-    head -n 2 "${TRACE}" | tail -n 1 | head -c -2
-    echo
+    line=$(head -n 2 "${TRACE}" | tail -n 1)
+    echo "${line::${#line}-1}"
 ) > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
 echo "# non-directory too many columns"
 (
     head -n 1 "${TRACE}"
-    head -n 2 "${TRACE}" | tail -n 1 | head -c -1
-    echo "${DELIM}"
+    line=$(head -n 2 "${TRACE}" | tail -n 1)
+    echo "${line}${DELIM}"
 ) > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
@@ -216,7 +218,7 @@ run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
 echo "# missing parent"
 (
-    first=$(head -n 1 "${TRACE}" | head -c -1)
+    first=$(head -n 1 "${TRACE}")
     echo "${first}"
     # shellcheck disable=SC2016
     echo -n "${first}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ printf $1 }'
@@ -236,7 +238,7 @@ echo "# bad parent pinode"
 
 cat "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
-) |& remove_indexing_time | tee "${OUTPUT}"
+) 2>&1 | remove_indexing_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytrace.expected "${OUTPUT}"
 rm "${OUTPUT}"

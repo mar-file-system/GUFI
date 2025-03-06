@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,21 +61,28 @@
 
 
 
-# source this file instead of using it as a command to only check OS once
-# shellcheck disable=SC2194
-case "@CMAKE_SYSTEM_NAME@" in
-    "Linux" | "CYGWIN")
-        os_setfattr() {
-            # shellcheck disable=SC2215
-            @SETFATTR@ -n "$1" -v "$2" "$3"
-        }
-        ;;
-    "APPLE" | "Darwin")
-        os_setfattr() {
-            # shellcheck disable=SC2215
-            @XATTR@ -w "$1" "$2" "$3"
-        }
-        ;;
-esac
+import binascii
+import math
+import sys
 
-export -f os_setfattr
+# imitate little endian hexdump output
+def formatted_hex(src, width=16, group=2, len_digits=8):
+    src_len = len(src)
+    line_count = int(src_len / width) + bool(src_len % width)
+    min_len_digits = math.ceil(math.log(src_len, 16))
+    actual_len_digits = max(min_len_digits, len_digits)
+
+    for i in range(line_count):
+        out = (('0' * actual_len_digits) + hex(i)[2:])[-actual_len_digits:]
+        out += ' '
+
+        line = src[width * i: width * (i + 1)]
+        for j in range(0, min(width, len(line)), group):
+            out += binascii.hexlify(line[j: j + group].encode()).decode()
+            out += ' '
+        print(out)
+
+    print((('0' * actual_len_digits) + hex(src_len)[2:])[-actual_len_digits:])
+
+if __name__ == '__main__':
+    formatted_hex(sys.stdin.read())

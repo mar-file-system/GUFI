@@ -68,8 +68,9 @@ OUTPUT="gufi_ls.out"
 
 BACKUP="backup~"
 
+run_no_sort "${GUFI_LS} --help"
+
 (
-run_no_sort "${GUFI_LS} --help" | replace_argparse
 run_no_sort "${GUFI_LS}"
 run_no_sort "${GUFI_LS} --verbose"
 run_no_sort "${GUFI_LS} -R" # Issue #49
@@ -140,7 +141,7 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     # human readable sizes without -l (should only show name)
     run_no_sort "${GUFI_LS} -h ${BASENAME}/1KB"
     run_no_sort "${GUFI_LS} -h ${BASENAME}/1MB"
-) | sed "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g; s/${USER_NAME}/${TEST_USER_NAME}/g;"
+) | @SED@ "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g; s/${USER_NAME}/${TEST_USER_NAME}/g;"
 
 (
     # bad blocksizes
@@ -148,14 +149,14 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     run_no_sort "${GUFI_LS} --block-size=-"
     run_no_sort "${GUFI_LS} --block-size=-1GB"
     run_no_sort "${GUFI_LS} --block-size=0GB"
-) | replace_argparse
+) | @SED@ 's/\[paths \[paths ...\]\]/\[paths ...\]/g;'
 
 # skip
 run_sort "${GUFI_LS} --skip \"${SKIP}\" ${BASENAME}"
 
 # bad skip
 run_no_sort "${GUFI_LS} --skip \"${SKIP}.bad\" ${BASENAME}"
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${OUTPUT}"
 rm "${OUTPUT}"

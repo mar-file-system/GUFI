@@ -608,38 +608,7 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
     return read;
 }
 
-#if defined(__APPLE__)
-
-#include <copyfile.h>
-
-ssize_t copyfd(int src_fd, off_t src_off,
-               int dst_fd, off_t dst_off,
-               size_t size) {
-    (void) size;
-
-    if (lseek(src_fd, src_off, SEEK_SET) != src_off) {
-        return -1;
-    }
-
-    const off_t start = lseek(dst_fd, dst_off, SEEK_SET);
-    if (start != dst_off) {
-        return -1;
-    }
-
-    const int rc = fcopyfile(src_fd, dst_fd, 0, COPYFILE_DATA);
-    if (rc < 0) {
-        return rc;
-    }
-
-    const off_t end = lseek(dst_fd, 0, SEEK_CUR);
-    if (end == (off_t) -1) {
-        return -1;
-    }
-
-    return end - start;
-}
-
-#elif defined(__linux__)
+#if defined(__linux__)
 
 #include <sys/sendfile.h>
 

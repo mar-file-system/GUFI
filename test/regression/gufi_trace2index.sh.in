@@ -94,10 +94,10 @@ cleanup
 echo "# ${GUFI_TRACE2INDEX} help" | replace
 run_no_sort "${GUFI_TRACE2INDEX}"
 
-# generate the tree
+echo "# generate the tree"
 run_no_sort "${GENERATETREE} ${SRCDIR}"
 
-# generate the trace
+echo "# generate the trace"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
 # add an external db (does not exist on filesystem, so won't show up during comparison)
@@ -107,10 +107,18 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"
     echo "external_db${DELIM}e${DELIM}"
 ) > "${TRACE}"
 
-# generate the index
+echo "# generate the index"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\""
 
-# compare contents
+echo "# every database should have the same schema"
+find "${SEARCH}" -type f -print0 | sort -z | while IFS= read -r -d '' path
+do
+    echo "${path}"
+    "${SQLITE3}" "${path}" ".tables" \;
+    echo
+done
+
+echo "# compare contents"
 src_contents=$(find "${SRCDIR}" | sort)
 index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | replace | sort)
 
@@ -126,9 +134,10 @@ echo
 # ###########################################################
 # big directory (see gufi_trace2index.c)
 (
-    row=$(grep "^${SRCDIR}/old_file${DELIM}f${DELIM}" "${TRACE}" | awk -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
+    # shellcheck disable=SC2016
+    row=$(@GREP@ "^${SRCDIR}/old_file${DELIM}f${DELIM}" "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
 
-    grep "^${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
+    @GREP@ "^${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
     for (( i = 0; i <= 100000; i++ )) # 100K + 1
     do
         echo -n "${SRCDIR}/${i}"
@@ -143,7 +152,7 @@ run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT COUNT(*) FROM entries;\" \"${BIG
 
 (
     cat "${TRACE}"
-    @GREP@ "^.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | sed 's/empty_directory/empty_directory2/g;'
+    @GREP@ "^.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | @SED@ 's/empty_directory/empty_directory2/g;'
 ) > "${EMPTY_LAST_DIR_TRACE}"
 echo "# create index from a trace file whose last item is an empty directory"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${EMPTY_LAST_DIR_TRACE}\" \"${SEARCH}\""
@@ -166,18 +175,18 @@ run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \
 echo
 
 echo "# cannot find delimiter of first line"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\"" | sed '/Error: Line at offset /d'
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\"" | @SED@ '/Error: Line at offset /d'
 echo
 
 echo "# first line does not start with a directory"
-grep "^.*${DELIM}f${DELIM}" "${TRACE}" | tail -n -1 > "${BADTRACE}"
+@GREP@ "^.*${DELIM}f${DELIM}" "${TRACE}" | tail -n -1 > "${BADTRACE}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
 echo
 
 # generate trace with good directory line and bad file line
 # only need the first delimiter to trigger error
 (
-    grep "^${SRCDIR}${DELIM}d${DELIM}.*" "${TRACE}" | sed 's/[0-9]\+/0/g'
+    @GREP@ "^${SRCDIR}${DELIM}d${DELIM}.*" "${TRACE}" | @SED@ 's/[0-9]\+/0/g'
     echo "${SRCDIR}/1KB${BADDELIM}f${BADDELIM}"
 ) > "${BADTRACE}"
 

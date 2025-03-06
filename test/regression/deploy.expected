@@ -53,8 +53,7 @@ prefix/unusual#? directory ,/unusual, name?#
 
 # Current set of indexes are placed under common directory "search"
 # Expose "search" to users via a symlink
-$ ln -sv "search" "user_path"
-'user_path' -> 'search'
+$ ln -s "search" "user_path"
 
 # Allow users to query via consistent "user_path" in the config file
 $ cat "/etc/GUFI/config"
@@ -66,8 +65,7 @@ OutputBuffer=4096
 IndexRoot=user_path
 
 # Create symlink in "prefix" to "directory"
-$ ln -sv "directory" "prefix/subsym"
-'prefix/subsym' -> 'directory'
+$ ln -s "directory" "prefix/subsym"
 
 $ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "prefix/subsym"
 prefix/subsym
@@ -128,14 +126,13 @@ user_path/prefix/leaf_directory
 user_path/prefix/unusual#? directory ,
 
 # Create a "new" index at "search2"
-$ cp -r "search" "search2"
+$ cp -R "search" "search2"
 
 # Change "search2" to distinguish it from "search"
 $ rm -r "search2/prefix/directory" "search2/prefix/leaf_directory"
 
 # Pivot to new set of indexes without changing the path that users see
-$ ln -snfv "search2" "user_path"
-'user_path' -> 'search2'
+$ ln -snf "search2" "user_path"
 
 $ gufi_find
 user_path/prefix

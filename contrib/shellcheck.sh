@@ -65,7 +65,7 @@ set -e
 
 BUILD="$(realpath $1)"
 
-for file in $(find "${BUILD}" \( -name "*.sh" -o -name "*.sh.in" \) -not -path "*/contrib/debug/*"; @GREP@ -rl "#!/usr/bin/env bash" "${BUILD}/examples" "${BUILD}/scripts" | sort -u)
+for file in $(find "${BUILD}" \( -name "*.sh" -o -name "*.sh.in" \) -not -path "*/contrib/debug/*"; grep -rl "#!/usr/bin/env bash" "${BUILD}/examples" "${BUILD}/scripts" | sort -u)
 do
     echo "${file}"
     shellcheck -s bash -e SC1090,SC1091,SC2086 "${file}"

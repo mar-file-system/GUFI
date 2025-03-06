@@ -67,19 +67,20 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_stats.out"
 
 run() {
-    run_sort "$@" | sed "s/${USER_NAME}/${TEST_USER_ID}/g;"
+    run_sort "$@" | @SED@ "s/${USER_NAME}/${TEST_USER_ID}/g;"
 }
 
 run_uidgid_size() {
-    echo "$" "$@"                             |& replace
+    echo "$" "$@"                             2>&1 | replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | @AWK@ "{ \$1 = ${TEST_USER_ID} ; print }"
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  2>&1 | replace | @AWK@ "{ \$1 = ${TEST_USER_ID} ; print }"
     echo
 }
 
+run_no_sort "${GUFI_STATS} --help"
+run_no_sort "${GUFI_STATS} -r -c"
+
 (
-run_no_sort "${GUFI_STATS} --help" | replace_argparse | sed '/^$/d;'
-run_no_sort "${GUFI_STATS} -r -c"  | replace_argparse | sed '/^$/d;'
 
 run "${GUFI_STATS}    depth \"${BASENAME}\""
 run "${GUFI_STATS} -r depth \"${BASENAME}\""
@@ -162,44 +163,47 @@ run_sort "${GUFI_STATS} --skip \"${SKIP}\" -r depth \"${BASENAME}\""
 # bad skip
 run_no_sort "${GUFI_STATS} --skip \"${SKIP}.bad\" -r depth \"${BASENAME}\""
 
-# shellcheck disable=SC2050
-if [[ "@CMAKE_SYSTEM_NAME@" != "APPLE"  ]] && \
-   [[ "@CMAKE_SYSTEM_NAME@" != "Darwin" ]] && \
-   [[ "@CMAKE_SYSTEM_NAME@" != "CYGWIN" ]]
-then
-    run "${GUFI_STATS}    leaf-dirs \"${BASENAME}\""
-    run "${GUFI_STATS} -r leaf-dirs \"${BASENAME}\""
+# shellcheck disable=SC2194
+case "@CMAKE_SYSTEM_NAME@" in
+    "APPLE" | "Darwin" | "CYGWIN")
+        ;;
+    *)
+        run "${GUFI_STATS}    leaf-dirs \"${BASENAME}\""
+        run "${GUFI_STATS} -r leaf-dirs \"${BASENAME}\""
 
-    run "${GUFI_STATS}    leaf-depth \"${BASENAME}\""
-    run "${GUFI_STATS} -r leaf-depth \"${BASENAME}\""
+        run "${GUFI_STATS}    leaf-depth \"${BASENAME}\""
+        run "${GUFI_STATS} -r leaf-depth \"${BASENAME}\""
 
-    run "${GUFI_STATS}    leaf-files \"${BASENAME}\""
-    run "${GUFI_STATS} -r leaf-files \"${BASENAME}\""
+        run "${GUFI_STATS}    leaf-files \"${BASENAME}\""
+        run "${GUFI_STATS} -r leaf-files \"${BASENAME}\""
 
-    run "${GUFI_STATS}    total-leaf-files \"${BASENAME}\""
-    run "${GUFI_STATS} -c total-leaf-files \"${BASENAME}\""
+        run "${GUFI_STATS}    total-leaf-files \"${BASENAME}\""
+        run "${GUFI_STATS} -c total-leaf-files \"${BASENAME}\""
 
-    run "${GUFI_STATS}    average-leaf-files \"${BASENAME}\""
-    run "${GUFI_STATS}    average-leaf-links \"${BASENAME}\""
-    run "${GUFI_STATS}    average-leaf-size \"${BASENAME}\""
+        run "${GUFI_STATS}    average-leaf-files \"${BASENAME}\""
+        run "${GUFI_STATS}    average-leaf-links \"${BASENAME}\""
+        run "${GUFI_STATS}    average-leaf-size \"${BASENAME}\""
 
-    run "${GUFI_STATS}    median-leaf-files \"${BASENAME}\""
-    run "${GUFI_STATS}    median-leaf-links \"${BASENAME}\""
-    run "${GUFI_STATS}    median-leaf-size \"${BASENAME}\""
-fi
-) |& tee "${OUTPUT}"
+        run "${GUFI_STATS}    median-leaf-files \"${BASENAME}\""
+        run "${GUFI_STATS}    median-leaf-links \"${BASENAME}\""
+        run "${GUFI_STATS}    median-leaf-size \"${BASENAME}\""
+        ;;
+esac
+) 2>&1 | tee "${OUTPUT}"
 
 EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
 ACTUAL="${EXPECTED}.actual"
 
-# shellcheck disable=SC2050
-if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE" ]] || [[ "@CMAKE_SYSTEM_NAME@" == "CYGWIN" ]]
-then
-    # shellcheck disable=SC2016
-    sed '/^\$ gufi_stats    leaf-dirs/Q' "${EXPECTED}" > "${ACTUAL}"
-else
-    cp "${EXPECTED}" "${ACTUAL}"
-fi
+# shellcheck disable=SC2194
+case "@CMAKE_SYSTEM_NAME@" in
+    "APPLE" | "Darwin" | "CYGWIN")
+        # shellcheck disable=SC2016
+        @SED@ '/^\$ gufi_stats    leaf-dirs/Q' "${EXPECTED}" > "${ACTUAL}"
+        ;;
+    *)
+        cp "${EXPECTED}" "${ACTUAL}"
+        ;;
+esac
 
 @DIFF@ "${ACTUAL}" "${OUTPUT}"
 rm "${ACTUAL}" "${OUTPUT}"

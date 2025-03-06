@@ -91,16 +91,17 @@ run_sort "${GUFI_LS} -aR"
 
 echo "# Current set of indexes are placed under common directory \"${SEARCH}\""
 echo "# Expose \"${SEARCH}\" to users via a symlink"
-run_no_sort "ln -sv \"${SEARCH}\" \"${USER_PATH}\""
+run_no_sort "ln -s \"${SEARCH}\" \"${USER_PATH}\""
 
 echo "# Allow users to query via consistent \"${USER_PATH}\" in the config file"
-sed -i "/^IndexRoot=.*$/d" "${CONFIG}"
+@SED@ -i "/^IndexRoot=.*$/d" "${CONFIG}"
 echo "IndexRoot=${USER_PATH}" >> "${CONFIG}"
 run_no_sort "cat \"${CONFIG}\""
 
 echo "# Create symlink in \"${INDEXROOT}\" to \"directory\""
 SUBSYM="${INDEXROOT}/subsym"
-run_no_sort "ln -sv \"directory\" \"${SUBSYM}\""
+run_no_sort "ln -s \"directory\" \"${SUBSYM}\""
+
 run_sort "${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${SUBSYM}\""
 echo "# \"${SUBSYM}\" does not show up in results querying from above \"${SUBSYM}\""
 echo
@@ -110,13 +111,13 @@ run_sort "${GUFI_LS} -aR"
 run_sort "${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${USER_PATH}\""
 
 echo "# Create a \"new\" index at \"${SEARCH2}\""
-run_no_sort "cp -r \"${SEARCH}\" \"${SEARCH2}\""
+run_no_sort "cp -R \"${SEARCH}\" \"${SEARCH2}\""
 
 echo "# Change \"${SEARCH2}\" to distinguish it from \"${SEARCH}\""
 run_no_sort "rm -r \"${SEARCH2}/${BASENAME}/directory\" \"${SEARCH2}/${BASENAME}/leaf_directory\""
 
 echo "# Pivot to new set of indexes without changing the path that users see"
-run_no_sort "ln -snfv \"${SEARCH2}\" \"${USER_PATH}\""
+run_no_sort "ln -snf \"${SEARCH2}\" \"${USER_PATH}\""
 
 run_sort "${GUFI_FIND}"
 run_sort "${GUFI_LS} -aR"

@@ -61,53 +61,68 @@
 
 
 
-set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+# source this file instead of using it as a command to only check OS once
+# shellcheck disable=SC2034,SC2194,SC2215
+case "@CMAKE_SYSTEM_NAME@" in
+    "APPLE" | "Darwin")
+        STAT_FMT="-f"
 
-OUTDB="outdb"
-TABLE="out"
-THREADS="2"
+        os_setfattr() {
+            @XATTR@ -w "$1" "$2" "$3"
+        }
 
-cleanup() {
-    rm -f ${OUTDB} ${OUTDB}.*
-}
+        os_getfattr() {
+            xattrs=$(@XATTR@ "$1")
+            if [[ -n "${xattrs}" ]]
+            then
+                echo "# file: $1"
+                echo "${xattrs}" | sort | while read -r name
+                do
+                    @XATTR@ -pl "${name}" "$1"
+                done | @SED@ 's/: /="/g; s/$/"/g'
+                echo
+            fi
+        }
 
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
+        cpr_xattr() {
+            # copy files without xattrs
+            cp -R "$1" "$2"
 
-trap cleanup_exit EXIT
+            find "$1" -print0 | while read -r -d '' path
+            do
+                # figure out where copy went
+                # shellcheck disable=SC2001
+                dst=$(echo "${path}" | @SED@ "s/^${1//\//\\/}/${2//\//\\/}/g;")
 
-cleanup
+                # list all xattrs of original file and copy one at a time
+                # shellcheck disable=SC2215
+                @XATTR@ "$1" | while read -r name
+                do
+                    # shellcheck disable=SC2215
+                    value=$(@XATTR@ -p "${name}" "$1")
+                    @XATTR@ -w "${name}" "${value}" "${dst}"
+                done
+            done
+        }
 
-OUTPUT="querydbs.out"
+        ;;
+    "Linux" | "CYGWIN")
+        STAT_FMT="-c"
 
-echo "# ${QUERYDBS} help" | replace
-run_no_sort "${QUERYDBS} --help"
+        os_setfattr() {
+            @SETFATTR@ -n "$1" -v "$2" "$3"
+        }
 
-(
-echo "# Use ${GUFI_QUERY} to generate per-thread result database files" | replace
-run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type=='f');\" \"${INDEXROOT}\""
+        os_getfattr() {
+            @GETFATTR@ --dump -- "$1"
+        }
 
-echo "# Query all per-thread result databse files at once"
-run_no_sort "${QUERYDBS} -d '|' --verbose \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${OUTDB}.*"
+        cpr_xattr() {
+            cp -p -R "$1" "$2"
+        }
 
-echo "# Bad Query"
-run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"Bad Query\" ${OUTDB}.*"
+        ;;
+esac
 
-many=""
-for (( i = 0; i < 254 / THREADS; i++))
-do
-    many+="${OUTDB}.* "
-done
-
-echo "# Attach maximum number of database files"
-run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many}| wc -l | @AWK@ '{ print \$1 }'"
-
-echo "# Attach too many database files"
-run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many} ${OUTDB}.*"
-) | @SED@ "s/${SRCDIR//\//\\/}\\///g;" | tee "${OUTPUT}"
-
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"
-rm "${OUTPUT}"
+export -f os_setfattr
+export -f os_getfattr

@@ -1,23 +1,3 @@
-# querydbs help
-$ querydbs --help
-usage: querydbs [-h] [-d DELIM] [--attach-prefix name] [--verbose]
-                table_name SQL db [db ...]
-
-Query GUFI result dbs
-
-positional arguments:
-  table_name            name of table in database file to attach; also used
-                        for view name: 'v<table_name>'
-  SQL                   arbitrary SQL executed on view
-  db                    path of source database file(s) to add to view
-
-options:
-  -h, --help            show this help message and exit
-  -d DELIM              delimiter
-  --attach-prefix name  name when attaching dbs
-  --verbose, -V         Show the equivalent shell command passing raw SQL into
-                        gufi_sqlite3
-
 # Use gufi_query to generate per-thread result database files
 $ gufi_query -n 2 -O "outdb" -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type=='f');" "prefix"
 

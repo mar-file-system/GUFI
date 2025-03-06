@@ -262,7 +262,7 @@ do_tests() {
 }
 
 rollup() {
-    run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" | sed '/Started/d; /Took /d;'
+    run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" | @SED@ '/Started/d; /Took /d;'
 
     run_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"SELECT * FROM external_dbs;\""
     run_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"SELECT * FROM external_dbs_pwd;\""
@@ -276,7 +276,7 @@ rollup() {
     do_tests
     rollup
     do_tests
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/external_databases.expected "${OUTPUT}"
 rm "${OUTPUT}"
@@ -288,7 +288,7 @@ rm "${OUTPUT}"
     do_tests
     rollup
     do_tests
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/external_databases.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -122,10 +122,10 @@ echo "# Get all directory and non-directory names and their xattrs"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, xattr_name, xattr_value FROM vrxpentries;\" -x \"${INDEXROOT}\""
 
 echo "# Output TLV columns (no aggregation)"
-run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | od -t x1"
+run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | ${HEXLIFY}"
 
 echo "# Output TLV columns (with aggregation)"
-run_no_sort "${GUFI_QUERY} -u -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | od -t x1"
+run_no_sort "${GUFI_QUERY} -u -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | ${HEXLIFY}"
 
 echo "# run_vt with %s"
 (
@@ -234,23 +234,41 @@ echo "# Set timestamps of one db.db file to epoch, query the index with -m flag,
 run_no_sort "touch -amt 197001010000.00 \"${INDEXROOT}/db.db\""
 
 echo "Expect:"
-stat -c "    atime: %X" "${INDEXROOT}/db.db"
-stat -c "    mtime: %Y" "${INDEXROOT}/db.db"
+# shellcheck disable=SC2194
+case "@CMAKE_SYSTEM_NAME@" in
+    "APPLE" | "Darwin")
+        @STAT@ -f "    atime: %a" -t "%X" "${INDEXROOT}/db.db"
+        @STAT@ -f "    mtime: %m" -t "%Y" "${INDEXROOT}/db.db"
+        ;;
+    "Linux" | "CYGWIN")
+        @STAT@ -c "    atime: %X" "${INDEXROOT}/db.db"
+        @STAT@ -c "    mtime: %Y" "${INDEXROOT}/db.db"
+        ;;
+esac
 echo
 run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
 echo "Got:"
-stat -c "    atime: %X" "${INDEXROOT}/db.db"
-stat -c "    mtime: %Y" "${INDEXROOT}/db.db"
+# shellcheck disable=SC2194
+case "@CMAKE_SYSTEM_NAME@" in
+    "APPLE" | "Darwin")
+        @STAT@ -f "    atime: %a" -t "%X" "${INDEXROOT}/db.db"
+        @STAT@ -f "    mtime: %m" -t "%Y" "${INDEXROOT}/db.db"
+        ;;
+    "Linux" | "CYGWIN")
+        @STAT@ -c "    atime: %X" "${INDEXROOT}/db.db"
+        @STAT@ -c "    mtime: %Y" "${INDEXROOT}/db.db"
+        ;;
+esac
 echo
 
 echo "# Symlink at Level 1"
-run_no_sort "ln -svn \"directory/subdirectory\" \"${INDEXROOT}/symlink\""
+run_no_sort "ln -sn \"directory/subdirectory\" \"${INDEXROOT}/symlink\""
 echo "# directory_symlink shows up 2 times and repeat_name shows up 3 times"
 run_sort "${GUFI_QUERY} -d \" \" -m -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 rm -f "${INDEXROOT}/symlink"
 
 echo "# Symlink at Level 2"
-run_no_sort "ln -svn \"subdirectory\" \"${INDEXROOT}/directory/symlink\""
+run_no_sort "ln -sn \"subdirectory\" \"${INDEXROOT}/directory/symlink\""
 echo "# Symlink at Level 2 is ignored"
 run_sort "${GUFI_QUERY} -d \" \" -m -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 rm -f "${INDEXROOT}/directory/symlink"
@@ -258,7 +276,7 @@ rm -f "${INDEXROOT}/directory/symlink"
 echo "# Missing database file"
 rm "${INDEXROOT}/db.db"
 run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 echo "# Print terse debug timestamps (not part of expected results)"
 run_sort "${GUFI_QUERY} -d \" \" -j -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""

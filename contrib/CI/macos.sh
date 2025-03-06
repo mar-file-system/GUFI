@@ -68,9 +68,8 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 
 # Install GNU grep
 brew install grep
-brew --prefix grep
 # shellcheck disable=SC2016
-echo "$(brew --prefix)/opt/grep/libexec/gnubin" >> "${GITHUB_PATH}"
+echo "$(brew --prefix grep)/libexec/gnubin" >> "${GITHUB_PATH}"
 
 # install required packages
-brew install autoconf cmake pcre2 python
+brew install autoconf cmake diffutils gnu-sed pcre2 python

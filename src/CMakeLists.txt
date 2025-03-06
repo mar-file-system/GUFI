@@ -199,8 +199,12 @@ add_library(gufi_vt MODULE
   xattrs.c
 )
 set_target_properties(gufi_vt PROPERTIES PREFIX "")
+set_target_properties(gufi_vt PROPERTIES BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3-pcre;${DEP_INSTALL_PREFIX}/sqlite3/lib"
+                                         INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre;${DEP_INSTALL_PREFIX}/sqlite3/lib")
 if (APPLE OR DARWIN)
   set(EXT "dylib")
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
+  set_target_properties(gufi_vt PROPERTIES SUFFIX ".${EXT}")
 elseif (CYGWIN)
   set(EXT "dll.a")
 else ()

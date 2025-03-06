@@ -98,8 +98,6 @@ fi
 
 DIR="$1"
 
-source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
-
 rm -rf "${DIR}"
 mkdir -p "${DIR}"
 
@@ -110,10 +108,12 @@ DIR="$(realpath ${DIR})"
 cd "${DIR}"
 
 truncate -s 1024 1KB
+chmod 664 1KB
 touch -amt 197001010017.04 1KB
 
 truncate -s 1048576 1MB
 os_setfattr "user.size" "1MB" 1MB
+chmod 664 1MB
 touch -amt 197001130316.16 1MB
 
 mkdir directory
@@ -140,6 +140,7 @@ mkdir directory
         touch -hamt 197001010000.04 directory_symlink
 
         truncate -s 5 repeat_name
+        chmod 664 repeat_name
         touch -amt 197001010000.05 repeat_name
     )
     touch -amt 197001010000.06 subdirectory
@@ -153,6 +154,7 @@ ln -f -s "$(realpath 1KB)" file_symlink
 touch -hamt 197001010000.09 file_symlink
 
 truncate -s 10 .hidden
+chmod 664 .hidden
 touch -amt 197001010000.10 .hidden
 
 mkdir leaf_directory
@@ -162,12 +164,14 @@ os_setfattr "user.name" "leaf" leaf_directory
     cd leaf_directory
 
     truncate -s 11 leaf_file1
+    chmod 664 leaf_file1
     os_setfattr "user.name1" "value1" leaf_file1
     os_setfattr "user.name2" "value2" leaf_file1
     os_setfattr "user.name3" "value3" leaf_file1
     touch -amt 197001010000.11 leaf_file1
 
     truncate -s 12 leaf_file2
+    chmod 664 leaf_file2
     os_setfattr "user.name4" "value4" leaf_file2
     os_setfattr "user.name5" "value5" leaf_file2
     os_setfattr "user.name6" "value6" leaf_file2
@@ -176,17 +180,22 @@ os_setfattr "user.name" "leaf" leaf_directory
 touch -amt 197001010000.13 leaf_directory
 
 truncate -s 0 old_file
+chmod 664 old_file
 touch -amt 197001010000 old_file
 
 truncate -s 14 repeat_name
+chmod 664 repeat_name
 touch -amt 197001010000.14 repeat_name
 
 mkdir "unusual#? directory ,"
 (
     cd "unusual#? directory ,"
     truncate -s 15 "unusual, name?#"
+    chmod 664 "unusual, name?#"
     touch -amt 197001010000.15 "unusual, name?#"
 )
 touch -amt 197001010000.16 "unusual#? directory ,"
 
+# shellcheck disable=SC2103
+cd ..
 touch -amt 197001010000.17 "${DIR}"
