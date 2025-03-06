@@ -126,7 +126,7 @@ PATH="@CMAKE_BINARY_DIR@/src:${PATH}" run_no_sort "echo -n \"CREATE VIRTUAL TABL
 echo "# bad SQL"
 run_no_sort "(echo \"CREATE TABLE;\") |" \
             "${GUFI_SQLITE3}"
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_sqlite3.expected "${OUTPUT}"
 rm "${OUTPUT}"

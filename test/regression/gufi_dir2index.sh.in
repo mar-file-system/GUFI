@@ -175,7 +175,7 @@ paste \
     <( echo "Combined Index:"
       # shellcheck disable=SC2016
       echo "${index}" | @AWK@ '{ printf "    " $0 "\n" }'
-     ) | @COLUMN@ -t -s$'\t' | sed '1s/       Combined/Combined/g' # first line is indented otoo far for some reason
+     ) | @COLUMN@ -t -s$'\t' | @SED@ '1s/       Combined/Combined/g' # first line is indented otoo far for some reason
 echo
 
 
@@ -187,7 +187,7 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SRCDIR}/1KB\""
 echo "# source path is file"
 # shellcheck disable=SC2046,SC2086
 PARENT="$(dirname $(realpath ${SRCDIR}))"
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}/1KB\" \"${SEARCH}\"" | sed "s/${PARENT//\//\\/}\\///g;"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}/1KB\" \"${SEARCH}\"" | @SED@ "s/${PARENT//\//\\/}\\///g;"
 
 echo "# empty source path"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"\" \"${TRACE}\""

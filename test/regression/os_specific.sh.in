@@ -62,20 +62,42 @@
 
 
 # source this file instead of using it as a command to only check OS once
-# shellcheck disable=SC2194
+# shellcheck disable=SC2194,SC2215
 case "@CMAKE_SYSTEM_NAME@" in
     "Linux" | "CYGWIN")
+        STAT_FMT="-c"
+        STAT_TIME="-c"
+
         os_setfattr() {
-            # shellcheck disable=SC2215
             @SETFATTR@ -n "$1" -v "$2" "$3"
+        }
+
+        os_getfattr() {
+            @GETFATTR@ --dump -- "$1"
         }
         ;;
     "APPLE" | "Darwin")
+        STAT_FMT="-f"
+        STAT_TIME="-t"
+
         os_setfattr() {
-            # shellcheck disable=SC2215
             @XATTR@ -w "$1" "$2" "$3"
+        }
+
+        os_getfattr() {
+            xattrs=$(@XATTR@ "$1")
+            if [[ -n "${xattrs}" ]]
+            then
+                echo "# file: $1"
+                echo "${xattrs}" | sort | while read -r name
+                do
+                    @XATTR@ -pl "${name}" "$1"
+                done | @SED@ 's/: /="/g; s/$/"/g'
+                echo
+            fi
         }
         ;;
 esac
 
 export -f os_setfattr
+export -f os_getfattr

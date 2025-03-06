@@ -1,21 +1,3 @@
-$ gufi_stat --help
-usage: gufi_stat [-c FORMAT] [-t] [--help] [--version] [--verbose]
-                 FILE [FILE ...]
-
-GUFI version of stat
-
-positional arguments:
-  FILE
-
-options:
-  -c FORMAT, --format FORMAT
-                        use the specified FORMAT instead of the default;
-                        output a newline after each use of FORMAT
-  -t, --terse           print the information in terse form
-  --help                display this help and exit
-  --version             show program's version number and exit
-  --verbose, -V         Show the gufi_query being executed
-
 # first line of default print
   File: 'prefix/.hidden'
   File: 'prefix/1KB'

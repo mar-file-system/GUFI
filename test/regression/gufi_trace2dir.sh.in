@@ -93,10 +93,29 @@ run_no_sort "cat ${TRACES[@]} > \"${TRACE}\""
 run_no_sort "${GUFI_TRACE2DIR} -n ${THREADS} -d \"${DELIM}\" -x \"${TRACE}\" \"${DST}\""
 
 echo "# Diff Trees"
-run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+run_no_sort "@DIFF@ <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | @SED@ \"s/${DST//\//\\/}\\///g\" | sort)"
 
 echo "# Diff xattrs"
-run_no_sort "diff <(find \"${SRCDIR}\" -exec getfattr -m \".*\" -d {} \; | sort) <(find ${DST}/* -exec getfattr -m \".*\" -d {} \; | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+src=$(find "${SRCDIR}" -print0 | while IFS= read -r -d '' path
+      do
+          os_getfattr "${path}"
+      done | sort)
+dst=$(find "${DST}" -mindepth 1 -print0 | while IFS= read -r -d '' path
+      do
+          os_getfattr "${path}" | @SED@ "s/${DST//\//\\/}\\///g"
+      done | sort)
+if [[ "${#src}" -eq 0 ]]
+then
+    echo "Did not find any xattrs in ${SRCDIR}"
+    exit 1
+fi
+if [[ "${#dst}" -eq 0 ]]
+then
+    echo "Did not find any xattrs in ${DST}"
+    exit 1
+fi
+@DIFF@ <(echo "${src}") <(echo "${dst}")
+echo
 
 (
 cat "${TRACES[@]}"
@@ -108,7 +127,7 @@ run_no_sort "rm -rf \"${DST}\""
 echo "# reconstruct tree with an external database record"
 run_no_sort "${GUFI_TRACE2DIR} -n ${THREADS} -d \"${DELIM}\" -x ${TRACE} \"${DST}\""
 
-run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+run_no_sort "@DIFF@ <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | @SED@ \"s/${DST//\//\\/}\\///g\" | sort)"
 
 # bad inputs
 
@@ -120,7 +139,7 @@ run_no_sort "${GUFI_TRACE2DIR} ${TRACES[@]} \"${SRCDIR}/old_file\""
 # bad dupdir
 run_no_sort "rm -rf \"${DST}/${SRCDIR}/directory/readonly\""
 # shellcheck disable=SC2094
-head -n 1 "${TRACE}" | sed "s/^.*${DELIM}d${DELIM}/${SRCDIR//\//\\/}\\/old_file\\/dir${DELIM}d${DELIM}/g" >> "${TRACE}"
+head -n 1 "${TRACE}" | @SED@ "s/^.*${DELIM}d${DELIM}/${SRCDIR//\//\\/}\\/old_file\\/dir${DELIM}d${DELIM}/g" >> "${TRACE}"
 run_no_sort "${GUFI_TRACE2DIR} -d \"${DELIM}\" ${TRACE} \"${DST}\""
 
 # shellcheck disable=SC2145

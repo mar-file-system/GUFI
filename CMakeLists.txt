@@ -240,11 +240,27 @@ find_exec_dependency(DIFF   colordiff diff)
 find_exec_dependency(FIND   find)
 find_exec_dependency(GREP   grep)
 find_exec_dependency(PATCH  patch)
-find_exec_dependency(SED    sed)
 if (APPLE OR DARWIN)
+  find_exec_dependency(SED   gsed sed)
+  find_exec_dependency(STAT  gstat stat) # stat is from coreutils, but macOS/brew installs the GNU version elsewhere
   find_exec_dependency(XATTR xattr)
 else()
+  find_exec_dependency(SED      sed)
+  find_exec_dependency(STAT     stat)
   find_exec_dependency(SETFATTR setfattr)
+  find_exec_dependency(GETFATTR getfattr)
+endif()
+
+# find compopt for bash_completions and test
+# the default bash that comes with macOS does not always have it
+# whereas the brew version will, but requires sudo (?) to install
+execute_process(COMMAND bash -c "type compopt"
+  RESULT_VARIABLE COMPOPT
+  OUTPUT_QUIET ERROR_QUIET)
+if (COMPOPT EQUAL 0)
+  message(STATUS "Found compopt. Bash completions available")
+else()
+  message(STATUS "compopt not found")
 endif()
 
 # Need the PkgConfig module for pkg_search_module

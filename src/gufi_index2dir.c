@@ -144,7 +144,7 @@ static void get_xattrs(struct DirCallbackArgs *dcba,
 
     char xattrs_sql[MAXSQL];
     SNPRINTF(xattrs_sql, sizeof(xattrs_sql),
-             "SELECT xattr_name, xattr_value FROM %s WHERE inode == %s;", view, inode);
+             "SELECT xattr_name, xattr_value FROM %s WHERE inode == '%s';", view, inode);
 
     char *err = NULL;
     if (sqlite3_exec(dcba->db, xattrs_sql, get_xattr, xattrs, &err) != SQLITE_OK) {

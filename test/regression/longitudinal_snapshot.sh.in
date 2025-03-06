@@ -92,7 +92,7 @@ show_schema() {
     (
         echo "# bad flat db path"
         run_no_sort "ln -s \"${INDEXROOT}\" \"${FLATDB}\""
-        run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" |& tail -n 2 | head -n 1"
+        run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" 2>&1 | tail -n 2 | head -n 1"
         run_no_sort "rm \"${FLATDB}\""
 
         echo "# generate good flat db and snapshot db"
@@ -103,7 +103,7 @@ show_schema() {
 
         echo "# running with snapshot db replacement will overwrite the previous data"
         run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --replace-outdb"
-    ) | sed 's/time, [0-9]*)/time, now)/g'
+    ) | @SED@ 's/time, [0-9]*)/time, now)/g'
 
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
 
@@ -151,14 +151,12 @@ get_view() {
 do_test() {
     cleanup
 
-    run_no_sort "${LONGITUDINAL_SNAPSHOT} --help" | replace_argparse
-
     show_schema "level"
 
     get_view "graph"
     get_view "level"
-    get_view "pinode"                      # parent
-    get_view "inode" | sed "s/${DIR}/6/g"  # directory
+    get_view "pinode"                        # parent
+    get_view "inode" | @SED@ "s/${DIR}/6/g"  # directory
 
     echo "# ${FLATDB}:"
     echo
@@ -168,6 +166,8 @@ do_test() {
     run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM summary;\""
     run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM treesummary;\""
 }
+
+run_no_sort "${LONGITUDINAL_SNAPSHOT} --help"
 
 (
 "${GUFI_TREESUMMARY_ALL}" "${INDEXROOT}" >/dev/null 2>&1

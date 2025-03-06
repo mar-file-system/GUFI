@@ -87,10 +87,29 @@ run_no_sort "${GUFI_INDEX2DIR}"
 run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} -x \"${INDEXROOT}\" \"${DST}\""
 
 echo "# Diff Trees"
-run_no_sort "diff <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+run_no_sort "@DIFF@ <(find \"${SRCDIR}\" | sort) <(find ${DST}/* | @SED@ \"s/${DST//\//\\/}\\///g\" | sort)"
 
 echo "# Diff xattrs"
-run_no_sort "diff <(find \"${SRCDIR}\" -exec getfattr -m \".*\" -d {} \; | sort) <(find ${DST}/* -exec getfattr -m \".*\" -d {} \; | sed \"s/${DST//\//\\/}\\///g\" | sort)"
+src=$(find "${SRCDIR}" -print0 | while IFS= read -r -d '' path
+      do
+          os_getfattr "${path}"
+      done | sort)
+dst=$(find "${DST}" -mindepth 1 -print0 | while IFS= read -r -d '' path
+      do
+          os_getfattr "${path}" | @SED@ "s/${DST//\//\\/}\\///g"
+      done | sort)
+if [[ "${#src}" -eq 0 ]]
+then
+    echo "Did not find any xattrs in ${SRCDIR}"
+    exit 1
+fi
+if [[ "${#dst}" -eq 0 ]]
+then
+    echo "Did not find any xattrs in ${DST}"
+    exit 1
+fi
+@DIFF@ <(echo "${src}") <(echo "${dst}")
+echo
 
 # bad inputs
 

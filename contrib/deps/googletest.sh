@@ -84,7 +84,7 @@ if [[ ! -d "${googletest_prefix}" ]]; then
     mkdir -p build
     cd build
     if [[ ! -f Makefile ]]; then
-        $CMAKE .. -DCMAKE_INSTALL_PREFIX="${googletest_prefix}" -DBUILD_GMOCK=OFF
+        "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${googletest_prefix}" -DBUILD_GMOCK=OFF -DCMAKE_INSTALL_LIBDIR=lib
     fi
     make -j "${THREADS}"
     make install

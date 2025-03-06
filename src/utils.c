@@ -618,21 +618,29 @@ ssize_t copyfd(int src_fd, off_t src_off,
     (void) size;
 
     if (lseek(src_fd, src_off, SEEK_SET) != src_off) {
+        const int err = errno;
+        fprintf(stderr, "Error: copyfd lseek src: %s (%d)\n", strerror(err), err);
         return -1;
     }
 
     const off_t start = lseek(dst_fd, dst_off, SEEK_SET);
     if (start != dst_off) {
+        const int err = errno;
+        fprintf(stderr, "Error: copyfd lseek dst: %s (%d)\n", strerror(err), err);
         return -1;
     }
 
-    const int rc = fcopyfile(src_fd, dst_fd, 0, COPYFILE_DATA);
+    const int rc = fcopyfile(src_fd, dst_fd, NULL, COPYFILE_DATA);
     if (rc < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: copyfd fcopyfile: %s (%d)\n", strerror(err), err);
         return rc;
     }
 
-    const off_t end = lseek(dst_fd, 0, SEEK_CUR);
+    const off_t end = lseek(dst_fd, 0, SEEK_END);
     if (end == (off_t) -1) {
+        const int err = errno;
+        fprintf(stderr, "Error: copyfd dst curr: %s (%d)\n", strerror(err), err);
         return -1;
     }
 

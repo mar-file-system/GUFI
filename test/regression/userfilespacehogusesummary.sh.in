@@ -68,7 +68,7 @@ OUTPUT="userfilespacehogusesummary.out"
 
 (
     run_no_sort "${USERFILESPACEHOGUSESUMMARY} \"${INDEXROOT}\" ${THREADS}"
-) | sed "s/${USER_NAME}/${TEST_USER_NAME}/g" | tee "${OUTPUT}"
+) | @SED@ "s/${USER_NAME}/${TEST_USER_NAME}/g" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/userfilespacehogusesummary.expected "${OUTPUT}"
 rm "${OUTPUT}"

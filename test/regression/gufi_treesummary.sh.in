@@ -67,7 +67,7 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_treesummary.out"
 
 remove_extra() {
-    run_no_sort "$@" | sed '/.*int.*/d; /min.*/d; /max.*/d; /^$/d;'
+    run_no_sort "$@" | @SED@ '/.*int.*/d; /min.*/d; /max.*/d; /^$/d;'
 }
 
 keep_paths() {
@@ -75,12 +75,12 @@ keep_paths() {
     (
         echo "$" "$@"
         # shellcheck disable=SC2016,SC2294
-        eval "$@" | sed '/^$/d; /tot.*/d; /min.*/d;' | @AWK@ -F "|" '{ print $1 "|" $2 }' | sort
-    ) |& replace
+        eval "$@" | @SED@ '/^$/d; /tot.*/d; /min.*/d;' | @AWK@ -F "|" '{ print $1 "|" $2 }' | sort
+    ) 2>&1 | replace
 }
 
 query() {
-    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');\" -E \"SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;\" \"${INDEXROOT}\"" | sed '/^$/d'
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');\" -E \"SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
 }
 
 (
@@ -147,15 +147,15 @@ query
 echo
 
 echo "# Find file sizes in range"
-run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);\" -E \"SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;\" ${INDEXROOT}" | sed '/^$/d;'
+run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);\" -E \"SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;\" ${INDEXROOT}" | @SED@ '/^$/d;'
 echo
 
 echo "# Find directories that have xattrs"
-run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr >  0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary WHERE totxattr > 0;\" ${INDEXROOT}" | sed '/^$/d;'
+run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr >  0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary WHERE totxattr > 0;\" ${INDEXROOT}" | @SED@ '/^$/d;'
 echo
 
 echo "# Walk this tree if it has xattrs"
-run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr != 0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary;\" ${INDEXROOT}" | sed '/^$/d;'
+run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr != 0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary;\" ${INDEXROOT}" | @SED@ '/^$/d;'
 echo
 
 echo "# Bad path"
@@ -165,7 +165,7 @@ echo
 echo "# Bad thread count"
 remove_extra "${GUFI_TREESUMMARY} -n 18446744073709551615 \"${INDEXROOT}\""
 echo
-) |& replace | tee "${OUTPUT}"
+) 2>&1 | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary.expected "${OUTPUT}"
 rm "${OUTPUT}"

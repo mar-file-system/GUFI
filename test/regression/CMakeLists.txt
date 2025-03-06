@@ -63,7 +63,8 @@
 # regression test specific files
 set(CORE
   generatetree.sh
-  os_setfattr.sh
+  hexlify.py
+  os_specific.sh
   setup.sh
 )
 
@@ -108,7 +109,6 @@ set(EXAMPLES
 )
 
 set(OTHERS
-  bash_completion
   deploy
   external_databases
   longitudinal_snapshot
@@ -116,6 +116,12 @@ set(OTHERS
   parallel_rmr
   treediff
 )
+
+if (COMPOPT EQUAL 0)
+  list(APPEND OTHERS
+    bash_completion
+  )
+endif()
 
 if (ZLIB_FOUND)
   list(APPEND OTHERS

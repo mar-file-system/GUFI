@@ -83,10 +83,10 @@ cleanup
 
 OUTPUT="querydbs.out"
 
-(
 echo "# ${QUERYDBS} help" | replace
-run_no_sort "${QUERYDBS} --help" | replace_argparse
+run_no_sort "${QUERYDBS} --help"
 
+(
 echo "# Use ${GUFI_QUERY} to generate per-thread result database files" | replace
 run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type=='f');\" \"${INDEXROOT}\""
 
@@ -103,11 +103,11 @@ do
 done
 
 echo "# Attach maximum number of database files"
-run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many}| wc -l"
+run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many}| wc -l | @AWK@ '{ print \$1 }'"
 
 echo "# Attach too many database files"
 run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many} ${OUTDB}.*"
-) | sed "s/${SRCDIR//\//\\/}\\///g;" | tee "${OUTPUT}"
+) | @SED@ "s/${SRCDIR//\//\\/}\\///g;" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"
 rm "${OUTPUT}"

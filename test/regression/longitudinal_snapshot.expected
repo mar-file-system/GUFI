@@ -1,45 +1,7 @@
-$ longitudinal_snapshot.py --help
-usage: longitudinal_snapshot.py [-h] [--verbose] [--reftime seconds]
-                                [--max_size pos_int] [--max_name_len pos_int]
-                                [--notes text] [--replace-flatdb]
-                                [--replace-outdb] [--gufi_query path]
-                                [--threads count] [--min-level level]
-                                [--max-level level]
-                                {directory,graph,inode,level,pinode,siblings}
-                                index flatdb outdb
-
-GUFI Longitudinal Snapshot Generator
-
-positional arguments:
-  {directory,graph,inode,level,pinode,siblings}
-                        column to group stats on
-  index                 index to snapshot
-  flatdb                flattend index data db filename
-  outdb                 output db filename
-
-options:
-  -h, --help            show this help message and exit
-  --verbose, -V         Show the gufi_query being executed
-  --reftime seconds     reference point for age (since UNIX epoch)
-  --max_size pos_int    the maximum expected size
-  --max_name_len pos_int
-                        the maximum expected length of a name/linkname
-  --notes text          freeform text of any extra information to add to the
-                        snapshot
-  --replace-flatdb      replace data in index data db file
-  --replace-outdb       replace existing tables
-  --gufi_query path     path to gufi_query executable
-  --threads count, -n count
-                        thread count
-  --min-level level, -y level
-                        level to start querying (min_level <= current_level)
-  --max-level level, -z level
-                        level to stop querying (current_level < max_level)
-
 # bad flat db path
 $ ln -s "prefix" "flattened_index.db"
 
-$ longitudinal_snapshot.py level "prefix" "flattened_index.db" "longitudinal_snapshot.db" --gufi_query="gufi_query" |& tail -n 2 | head -n 1
+$ longitudinal_snapshot.py level "prefix" "flattened_index.db" "longitudinal_snapshot.db" --gufi_query="gufi_query" 2>&1 | tail -n 2 | head -n 1
 TypeError: "flattened_index.db" is not a regular file
 
 $ rm "flattened_index.db"
