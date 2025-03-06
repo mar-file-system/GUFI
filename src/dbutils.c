@@ -513,7 +513,9 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     sqlite3_free(ztype);
     sqlite3_free(zname);
     sqlite3_reset(res);
-    sqlite3_clear_bindings(res); /* NULL will cause invalid read here */
+    if (error == SQLITE_DONE) {
+        sqlite3_clear_bindings(res); /* NULL will cause invalid read here */
+    }
 
     return rc;
 }

@@ -137,17 +137,17 @@ tail -n +2 "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory add trailing slashes (Pass)"
-sed "s/^${SRCDIR}${DELIM}/${SRCDIR}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
+@SED@ "s/^${SRCDIR}${DELIM}/${SRCDIR}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory does not exist (Fail)"
-sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
+@SED@ "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# path exists, but is not directory (Fail)"
 (
     # remove the first line and convert the second line into a directory
-    head -n 2 "${TRACE}" | tail -n 1 | sed "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
+    head -n 2 "${TRACE}" | tail -n 1 | @SED@ "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
     tail -n +3 "${TRACE}"
 ) > "${BADTRACE}"
 # shellcheck disable=SC2016
@@ -177,7 +177,7 @@ run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${SEARCH}\""
 mv "${INDEXROOT}/db.db.bak" "${INDEXROOT}/db.db"
 
 echo "# non-directory name mismatch (Fail)"
-sed "s/old_file/an_old_file/g" "${TRACE}" > "${BADTRACE}"
+@SED@ "s/old_file/an_old_file/g" "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# non-directory permissions mismatch (Fail)"
@@ -202,7 +202,7 @@ echo "# empty line (Pass)"
     echo
 ) > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${SEARCH}\""
-) |& remove_indexing_time | sed '/qptpool.*/d' | tee "${OUTPUT}"
+) 2>&1 | remove_indexing_time | @SED@ '/qptpool.*/d' | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${OUTPUT}"
 rm "${OUTPUT}"

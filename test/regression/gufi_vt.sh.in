@@ -159,7 +159,7 @@ query_vt() {
 
     echo "# Bad indexroot"
     rm -rf "${BADDIR}"
-    query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | sed "s/${BADDIR//\//\\/}/baddir/g"
+    query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | @SED@ "s/${BADDIR//\//\\/}/baddir/g"
 
     echo "# Empty string thread count (error)"
     query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;"

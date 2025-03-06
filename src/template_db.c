@@ -165,13 +165,28 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
 
     int err = 0;
     const int src_db = dup(tdb->fd);
-    err = err?err:errno;
+    if (src_db < 0) {
+        const int e = errno;
+        err = err?err:errno;
+        fprintf(stderr, "Error: src db: %s (%d)\n", strerror(e), e);
+    }
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-    err = err?err:errno;
+    if (dst_db < 0) {
+        const int e = errno;
+        err = err?err:errno;
+        fprintf(stderr, "Error: dst db: %s (%d)\n", strerror(e), e);
+    }
     const ssize_t sf = copyfd(src_db, 0, dst_db, 0, tdb->size);
-    err = err?err:errno;
-    fchown(dst_db, uid, gid);
-    err = err?err:errno;
+    if (sf != tdb->size) {
+        err = err?err:(errno?errno:EIO);
+        fprintf(stderr, "Error: copyfd expected to copy %lld. Actually copied %zd\n", tdb->size, sf);
+    }
+    const int rc = fchown(dst_db, uid, gid);
+    if (rc < 0) {
+        const int e = errno;
+        err = err?err:errno;
+        fprintf(stderr, "Error: fchown: %s (%d)\n", strerror(e), e);
+    }
     close(src_db);
     err = err?err:errno;
     close(dst_db);
@@ -192,7 +207,7 @@ sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid
         return NULL;
     }
 
-    return opendb(dst, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0, NULL, NULL);
+    return opendb(dst, SQLITE_OPEN_READWRITE, 1, 0, NULL, NULL);
 }
 
 /* create db.db with empty tables at the given directory (and leave it on the filesystem) */

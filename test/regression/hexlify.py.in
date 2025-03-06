@@ -1,3 +1,4 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,52 +61,28 @@
 
 
 
-name: CodeQL
+import binascii
+import math
+import sys
 
-on: [push, pull_request]
+# imitate little endian hexdump output
+def formatted_hex(src, width=16, group=2, len_digits=8):
+    src_len = len(src)
+    line_count = int(src_len / width) + bool(src_len % width)
+    min_len_digits = math.ceil(math.log(src_len, 16))
+    actual_len_digits = max(min_len_digits, len_digits)
 
-env:
-  CC: clang
-  CXX: clang++
-  DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -pedantic" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -pedantic" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On
-  PIP_BREAK_SYSTEM_PACKAGES: 1
+    for i in range(line_count):
+        out = (('0' * actual_len_digits) + hex(i)[2:])[-actual_len_digits:]
+        out += ' '
 
-jobs:
-  SecurityCheck:
-    runs-on: ubuntu-latest
+        line = src[width * i: width * (i + 1)]
+        for j in range(0, min(width, len(line)), group):
+            out += binascii.hexlify(line[j: j + group].encode()).decode()
+            out += ' '
+        print(out)
 
-    permissions:
-      security-events: write
+    print((('0' * actual_len_digits) + hex(src_len)[2:])[-actual_len_digits:])
 
-    steps:
-    - uses: actions/checkout@v4
-
-    - uses: actions/cache@v4
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-CodeCoverage
-
-    - uses: github/codeql-action/init@v3
-      with:
-        queries: security-and-quality
-
-    - name: Ubuntu Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
-
-    - name: Install Python Packages
-      run:  python3 -m pip install -r contrib/CI/requirements.txt
-
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
-
-    - name: Build
-      run:  cmake --build ${{ github.workspace }}/build -j
-
-    - name: Remove Duplicate/Unnecessary Files
-      run: |
-           rm -r ${{ github.workspace }}/build/{builds,scripts,test}
-           find ${{ github.workspace }}/build -type f -name "*.py" -delete
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+if __name__ == '__main__':
+    formatted_hex(sys.stdin.read())

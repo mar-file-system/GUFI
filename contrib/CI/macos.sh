@@ -68,13 +68,8 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 
 # Install GNU grep
 brew install grep
-brew --prefix grep
 # shellcheck disable=SC2016
-echo "$(brew --prefix)/opt/grep/libexec/gnubin" >> "${GITHUB_PATH}"
+echo "$(brew --prefix grep)/libexec/gnubin" >> "${GITHUB_PATH}"
 
 # install required packages
-brew install autoconf coreutils cmake pcre2 python
-
-# get osxfuse from homebrew/cask
-brew tap homebrew/cask
-brew install --cask osxfuse || true # brew 4.0.0 switches to macfuse, but pkg-config can't find it
+brew install autoconf colordiff coreutils cmake diffutils gnu-sed pcre2 python

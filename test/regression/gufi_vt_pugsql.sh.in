@@ -140,7 +140,7 @@ query_vt() {
 
 (
     echo "# Generate treesummary tables in all directories"
-    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | sed '/^Started .*$/d'
+    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | @SED@ '/^Started .*$/d'
 
     generate_queries_sql
 
@@ -152,7 +152,7 @@ query_vt() {
         cat  "${path}"
         echo
 
-        name=$(basename "${path}" | sed 's/\.sql//g')
+        name=$(basename "${path}" | @SED@ 's/\.sql//g')
         run_no_sort "${PUGSQL} \"${QUERIES}\" \"${name}\""
     done < <(find "${QUERIES}" -name "*.sql" | sort)
     echo "------------------------------------------------"

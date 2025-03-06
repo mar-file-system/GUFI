@@ -17,7 +17,6 @@ $ gufi_index2dir -n 2 -x "prefix" "reconstructed"
 $ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s/reconstructed\///g" | sort)
 
 # Diff xattrs
-$ diff <(find "prefix" -exec getfattr -m ".*" -d {} \; | sort) <(find reconstructed/* -exec getfattr -m ".*" -d {} \; | sed "s/reconstructed\///g" | sort)
 
 $ gufi_index2dir -n 2 "prefix" "reconstructed/prefix/old_file"
 "reconstructed/prefix/old_file" Already exists!

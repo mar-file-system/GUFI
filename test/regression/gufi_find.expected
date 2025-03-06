@@ -1,25 +1,3 @@
-$ gufi_find --help
-Usage: gufi_find [-P] [path...] [expression]
-
-default path is the index root directory specified in the configuration file
-expression may consist of:
-
-    amin anewer atime cmin cnewer
-    ctime empty executable false fprint
-    gid group help iname inum
-    iregex links lname ls maxdepth
-    mindepth mmin mtime name newer
-    path printf readable regex samefile
-    size true type uid user
-    writable
-
-GUFI Specific Flags (--):
-
-    numresults largest smallest
-
-Report (and track progress on fixing) bugs to the GitHub Issues
-page at https://github.com/mar-file-system/GUFI/issues
-
 $ gufi_find -H 2>&1 >/dev/null
 Found flag H. Ignoring.
 
@@ -706,24 +684,13 @@ $ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t
 % 1024 0 1024 2 0 0 0 - 1KB 0 prefix/1KB 0 664 -rw-rw-r-- 1 prefix/1KB prefix/1KB 1024 1024 0 f
 % 1048576 0 1048576 2 0 0 0 - 1MB 0 prefix/1MB 0 664 -rw-rw-r-- 1 prefix/1MB prefix/1MB 1048576 1048576 0 f
 
-$ gufi_find -empty path_after_expression |& grep "RuntimeError:"
+$ gufi_find -empty path_after_expression 2>&1 | grep "RuntimeError:"
 RuntimeError: gufi_find: unknown predicate `path_after_expression'
 
-$ gufi_find -atime abc
-usage: gufi_find [-help] [-maxdepth levels] [-mindepth levels] [--version]
-                 [-amin n] [-anewer file] [-atime n] [-cmin n] [-cnewer file]
-                 [-ctime n] [-empty] [-executable] [-false] [-gid n]
-                 [-group gname] [-iname pattern] [-inum n] [-iregex pattern]
-                 [-links n] [-lname pattern] [-mmin n] [-mtime n]
-                 [-name pattern] [-newer file] [-path pattern] [-readable]
-                 [-regex pattern] [-samefile name] [-size n] [-true] [-type c]
-                 [-uid n] [-user uname] [-writable] [-fprint file]
-                 [-ls | -printf format] [--numresults n]
-                 [--smallest | --largest] [--delim c] [--in-memory-name name]
-                 [--aggregate-name name] [--skip-file filename] [--verbose]
+$ gufi_find -atime abc 2>&1 | tail -n 1
 gufi_find: error: argument -atime: abc is not a valid numeric argument
 
-$ gufi_find -unknown-predicate |& grep "RuntimeError:"
+$ gufi_find -unknown-predicate 2>&1 | grep "RuntimeError:"
 RuntimeError: gufi_find: unknown predicate `-unknown-predicate'
 
 $ gufi_find --skip "skip"

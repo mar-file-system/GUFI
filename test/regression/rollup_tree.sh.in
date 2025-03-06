@@ -66,6 +66,37 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 TMP="tmp"
 
+# shellcheck disable=SC2194
+case "@CMAKE_SYSTEM_NAME@" in
+    "Linux" | "CYGWIN")
+        cpr_xattr() {
+            cp --preserve=xattr -R "$1" "$2"
+        }
+        ;;
+    "APPLE" | "Darwin")
+        cpr_xattr() {
+            # copy files without xattrs
+            cp -R "$1" "$2"
+
+            find "$1" -print0 | while read -r -d '' path
+            do
+                # figure out where copy went
+                # shellcheck disable=SC2001
+                dst=$(echo "${path}" | @SED@ "s/^${1//\//\\/}/${2//\//\\/}/g;")
+
+                # list all xattrs of original file and copy one at a time
+                # shellcheck disable=SC2215
+                @XATTR@ "$1" | while read -r name
+                do
+                    # shellcheck disable=SC2215
+                    value=$(@XATTR@ -p "${name}" "$1")
+                    @XATTR@ -w "${name}" "${value}" "${dst}"
+                done
+            done
+        }
+        ;;
+esac
+
 rollup_tree_cleanup() {
     rm -rf "${TMP}"
 }
@@ -139,16 +170,16 @@ level3 "${TMP}/u" 500 3                           # Level 3 500 - 3 files
 
 mkdir -m 777 "${SRCDIR}"                          # Level 0
 
-cp --preserve=xattr -R "${TMP}" "${SRCDIR}/o+rx"  # Level 1
+cpr_xattr "${TMP}" "${SRCDIR}/o+rx"               # Level 1
 chmod 007 "${SRCDIR}/o+rx"
 
-cp --preserve=xattr -R "${TMP}" "${SRCDIR}/ugo"   # Level 1
+cpr_xattr "${TMP}" "${SRCDIR}/ugo"                # Level 1
 chmod 777 "${SRCDIR}/ugo"
 
-cp --preserve=xattr -R "${TMP}" "${SRCDIR}/ug"    # Level 1
+cpr_xattr "${TMP}" "${SRCDIR}/ug"                 # Level 1
 chmod 770 "${SRCDIR}/ug"
 
-cp --preserve=xattr -R "${TMP}" "${SRCDIR}/u"     # Level 1
+cpr_xattr "${TMP}" "${SRCDIR}/u"                  # Level 1
 chmod 700 "${SRCDIR}/u"
 
 rm -r "${TMP}"

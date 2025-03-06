@@ -109,6 +109,7 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"
 
 # generate the index
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\""
+find "${SEARCH}" -type f -exec echo {} \; -exec "${SQLITE3}" {} ".tables" \; -exec echo \;
 
 # compare contents
 src_contents=$(find "${SRCDIR}" | sort)
@@ -126,9 +127,10 @@ echo
 # ###########################################################
 # big directory (see gufi_trace2index.c)
 (
-    row=$(grep "^${SRCDIR}/old_file${DELIM}f${DELIM}" "${TRACE}" | awk -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
+    # shellcheck disable=SC2016
+    row=$(@GREP@ "^${SRCDIR}/old_file${DELIM}f${DELIM}" "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
 
-    grep "^${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
+    @GREP@ "^${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
     for (( i = 0; i <= 100000; i++ )) # 100K + 1
     do
         echo -n "${SRCDIR}/${i}"
@@ -143,7 +145,7 @@ run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT COUNT(*) FROM entries;\" \"${BIG
 
 (
     cat "${TRACE}"
-    @GREP@ "^.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | sed 's/empty_directory/empty_directory2/g;'
+    @GREP@ "^.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | @SED@ 's/empty_directory/empty_directory2/g;'
 ) > "${EMPTY_LAST_DIR_TRACE}"
 echo "# create index from a trace file whose last item is an empty directory"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${EMPTY_LAST_DIR_TRACE}\" \"${SEARCH}\""
@@ -166,18 +168,18 @@ run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \
 echo
 
 echo "# cannot find delimiter of first line"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\"" | sed '/Error: Line at offset /d'
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\"" | @SED@ '/Error: Line at offset /d'
 echo
 
 echo "# first line does not start with a directory"
-grep "^.*${DELIM}f${DELIM}" "${TRACE}" | tail -n -1 > "${BADTRACE}"
+@GREP@ "^.*${DELIM}f${DELIM}" "${TRACE}" | tail -n -1 > "${BADTRACE}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
 echo
 
 # generate trace with good directory line and bad file line
 # only need the first delimiter to trigger error
 (
-    grep "^${SRCDIR}${DELIM}d${DELIM}.*" "${TRACE}" | sed 's/[0-9]\+/0/g'
+    @GREP@ "^${SRCDIR}${DELIM}d${DELIM}.*" "${TRACE}" | @SED@ 's/[0-9]\+/0/g'
     echo "${SRCDIR}/1KB${BADDELIM}f${BADDELIM}"
 ) > "${BADTRACE}"
 

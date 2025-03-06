@@ -221,18 +221,18 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # Output TLV columns (no aggregation)
-$ gufi_query -u -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix" | od -x --endian=big
-0000000 2700 0000 0000 0000 0200 0000 0307 0000
-0000020 0000 0000 002e 6869 6464 656e 0102 0000
-0000040 0000 0000 0031 3000
-0000047
+$ gufi_query -u -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix" | hexlify.py
+00000000 2700 0000 0000 0000 0200 0000 0307 0000
+00000001 0000 0000 002e 6869 6464 656e 0102 0000
+00000002 0000 0000 0031 30
+00000027
 
 # Output TLV columns (with aggregation)
-$ gufi_query -u -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix" | od -x --endian=big
-0000000 2d00 0000 0000 0000 0200 0000 030d 0000
-0000020 0000 0000 0073 6561 7263 682f 7072 6566
-0000040 6978 0102 0000 0000 0000 0031 3700
-0000055
+$ gufi_query -u -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix" | hexlify.py
+00000000 2d00 0000 0000 0000 0200 0000 030d 0000
+00000001 0000 0000 0073 6561 7263 682f 7072 6566
+00000002 6978 0102 0000 0000 0000 0031 37
+0000002d
 
 #####################################
 # Invalid Inputs                    #
@@ -383,19 +383,12 @@ prefix/unusual#? directory ,/unusual, name?# 0
 # Set timestamps of one db.db file to epoch, query the index with -m flag, and expect no changes
 $ touch -amt 197001010000.00 "prefix/db.db"
 
-Expect:
-    atime: 0
-    mtime: 0
-
+Expect: atime: 0, mtime: 0
 $ gufi_query -d " " -m -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix" > /dev/null
 
-Got:
-    atime: 0
-    mtime: 0
-
+Got:    atime: 0, mtime: 0
 # Symlink at Level 1
-$ ln -svn "directory/subdirectory" "prefix/symlink"
-'prefix/symlink' -> 'directory/subdirectory'
+$ ln -sn "directory/subdirectory" "prefix/symlink"
 
 # directory_symlink shows up 2 times and repeat_name shows up 3 times
 $ gufi_query -d " " -m -E "SELECT name FROM vrpentries;" "prefix"
@@ -417,8 +410,7 @@ unusual, name?#
 writable
 
 # Symlink at Level 2
-$ ln -svn "subdirectory" "prefix/directory/symlink"
-'prefix/directory/symlink' -> 'subdirectory'
+$ ln -sn "subdirectory" "prefix/directory/symlink"
 
 # Symlink at Level 2 is ignored
 $ gufi_query -d " " -m -E "SELECT name FROM vrpentries;" "prefix"

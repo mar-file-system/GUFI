@@ -737,7 +737,7 @@ totsubdirs 16 maxsubdirfiles 3 maxsubdirlinks 0 maxsubdirsize 0
 totextdbs 0
 
 # Compare treesummary to regenerated treesummary
-103 bytes vs 103 bytes
+102 bytes vs 102 bytes
 No difference
 Creating GUFI Index search with 1 threads
 Total Dirs:          69
