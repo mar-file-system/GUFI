@@ -109,6 +109,13 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             fprintf(stderr, "Warning: Could not add functions to sqlite\n");
         }
 
+        const int runvt_rc = sqlite3_runvt_init(ta->outdb, NULL, NULL);
+        if (runvt_rc != SQLITE_OK) {
+            fprintf(stderr, "Error: Could not initialize runvt: %s (%d)\n",
+                    sqlite3_errstr(runvt_rc), runvt_rc);
+            break;
+        }
+
         /* create empty xattr tables to UNION to */
         char *err = NULL;
         if (sqlite3_exec(ta->outdb, XATTRS_TEMPLATE_CREATE,

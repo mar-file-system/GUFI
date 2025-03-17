@@ -79,6 +79,7 @@ set(GUFI_SOURCES
   gufi_vt.c
   histogram.c
   print.c
+  run_vt.c
   swap.c
   template_db.c
   trace.c
@@ -211,6 +212,12 @@ target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcr
 target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
 add_dependencies(gufi_vt install_dependencies)
 install(TARGETS gufi_vt DESTINATION ${LIB} COMPONENT Server)
+
+add_library(run_vt MODULE
+  run_vt.c
+)
+set_target_properties(run_vt PROPERTIES PREFIX "")
+add_dependencies(run_vt install_dependencies)
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)

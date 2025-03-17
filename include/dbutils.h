@@ -273,6 +273,21 @@ int get_col_types(sqlite3 *db, const refstr_t *sql, int **types, int *cols);
 /* caller frees names, names[i], and lens*/
 int get_col_names(sqlite3 *db, const refstr_t *sql, char ***names, size_t **lens, int *cols);
 
+/* ******************************************************************* */
+/* virtual table signatures (since they don't have associated headers) */
+
+int sqlite3_gufivt_init(
+    sqlite3 *db,
+    char **pzErrMsg,
+    const sqlite3_api_routines *pApi);
+
+int sqlite3_runvt_init(
+    sqlite3 *db,
+    char **pzErrMsg,
+    const sqlite3_api_routines *pApi);
+
+/* ******************************************************************* */
+
 #ifdef __cplusplus
 }
 #endif

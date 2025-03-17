@@ -69,11 +69,6 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "print.h"
 
-int sqlite3_gufivt_init(
-    sqlite3 *db,
-    char **pzErrMsg,
-    const sqlite3_api_routines *pApi);
-
 static void sub_help(void) {
     printf("db                       db file path\n");
     printf("SQL                      SQL statements to run\n");
@@ -100,6 +95,8 @@ int main(int argc, char *argv[]) {
 
     /* this calls addqueryfuncs */
     sqlite3_gufivt_init(db, NULL, NULL);
+
+    sqlite3_runvt_init(db, NULL, NULL);
 
     /* no buffering */
     struct OutputBuffer ob;
