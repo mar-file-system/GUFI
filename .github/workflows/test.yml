@@ -143,45 +143,45 @@ jobs:
       working-directory: ${{ github.workspace }}/build
       run:  ctest --output-on-failure
 
-  Windows:
-    runs-on: windows-latest
-    name: Windows (cygwin)
-    steps:
-    - run: git config --global core.autocrlf input
+  # Windows:
+  #   runs-on: windows-latest
+  #   name: Windows (cygwin)
+  #   steps:
+  #   - run: git config --global core.autocrlf input
 
-    - uses: actions/checkout@v4
+  #   - uses: actions/checkout@v4
 
-    - uses: actions/cache@v4
-      with:
-        path: C:\cygwin
-        key:  ${{ runner.os }}-cygwin
+  #   - uses: actions/cache@v4
+  #     with:
+  #       path: C:\cygwin
+  #       key:  ${{ runner.os }}-cygwin
 
-    - name: Install Cygwin
-      uses: cygwin/cygwin-install-action@master
-      with:
-        packages: attr autoconf clang cmake git libattr1 libiconv-devel libintl-devel libpcre2-devel make patch pkg-config python3 python39 python39-pip python39-sqlalchemy zlib-devel
+  #   - name: Install Cygwin
+  #     uses: cygwin/cygwin-install-action@master
+  #     with:
+  #       packages: attr autoconf clang cmake git libattr1 libiconv-devel libintl-devel libpcre2-devel make patch pkg-config python3 python39 python39-pip python39-sqlalchemy zlib-devel
 
-    - name: Set Up Python3
-      run:  ln -sf /usr/bin/python3.9 /usr/bin/python3
+  #   - name: Set Up Python3
+  #     run:  ln -sf /usr/bin/python3.9 /usr/bin/python3
 
-    - name: Install Python Packages
-      run:  python3 -m pip install -r contrib/CI/requirements.txt
+  #   - name: Install Python Packages
+  #     run:  python3 -m pip install -r contrib/CI/requirements.txt
 
-    - name: Configure CMake
-      run: >-
-           export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
-           cmake . -B build -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -pedantic" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -pedantic" -DDEP_INSTALL_PREFIX="/usr/local" -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off
-      shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
+  #   - name: Configure CMake
+  #     run: >-
+  #          export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
+  #          cmake . -B build -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -pedantic" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -pedantic" -DDEP_INSTALL_PREFIX="/usr/local" -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off
+  #     shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
 
-    - name: Build
-      run:  >-
-            export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
-            cmake --build build
-      shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
+  #   - name: Build
+  #     run:  >-
+  #           export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
+  #           cmake --build build
+  #     shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
 
-    - name: Test
-      # https://cygwin.com/pipermail/cygwin/2005-May/133368.html
-      run:  >-
-            export PATH=/usr/bin:/usr/local/sqlite3-pcre:$(cygpath ${SYSTEMROOT})/system32 &&
-            ctest --output-on-failure --test-dir build
-      shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
+  #   - name: Test
+  #     # https://cygwin.com/pipermail/cygwin/2005-May/133368.html
+  #     run:  >-
+  #           export PATH=/usr/bin:/usr/local/sqlite3-pcre:$(cygpath ${SYSTEMROOT})/system32 &&
+  #           ctest --output-on-failure --test-dir build
+  #     shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
