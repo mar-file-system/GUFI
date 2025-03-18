@@ -87,13 +87,13 @@ void sll_push(sll_t *sll, void *data);                                /* back */
 void  *sll_pop(sll_t *sll);                                           /* front */
 void sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n); /* move first n from src to dst, appending to dst */
 void sll_move_append(sll_t *dst, sll_t *src);                         /* move all from src to dst, appending to dst */
-uint64_t sll_get_size(sll_t *sll);
+uint64_t sll_get_size(const sll_t *sll);
 
 /* functions for looping over a sll */
-sll_node_t *sll_head_node(sll_t *sll);
-sll_node_t *sll_next_node(sll_node_t *node);
-sll_node_t *sll_tail_node(sll_t *sll);
-void *sll_node_data(sll_node_t *node);
+sll_node_t *sll_head_node(const sll_t *sll);
+sll_node_t *sll_next_node(const sll_node_t *node);
+sll_node_t *sll_tail_node(const sll_t *sll);
+void *sll_node_data(const sll_node_t *node);
 
 /* convenience macro */
 #define sll_loop(sll, name)                         \

@@ -176,23 +176,23 @@ void sll_move_append(sll_t *dst, sll_t *src) {
     sll_move_append_first(dst, src, src->size);
 }
 
-uint64_t sll_get_size(sll_t *sll) {
+uint64_t sll_get_size(const sll_t *sll) {
     return sll?sll->size:0;
 }
 
-sll_node_t *sll_head_node(sll_t *sll) {
+sll_node_t *sll_head_node(const sll_t *sll) {
     return sll?sll->head:NULL;
 }
 
-sll_node_t *sll_next_node(sll_node_t *node) {
+sll_node_t *sll_next_node(const sll_node_t *node) {
     return node?node->next:NULL;
 }
 
-sll_node_t *sll_tail_node(sll_t *sll) {
+sll_node_t *sll_tail_node(const sll_t *sll) {
     return sll?sll->tail:NULL;
 }
 
-void *sll_node_data(sll_node_t *node) {
+void *sll_node_data(const sll_node_t *node) {
     return node?node->data:NULL;
 }
 
