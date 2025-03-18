@@ -64,7 +64,23 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
+SRC_CSV="${SRCDIR}/data.csv"
+IDX_CSV="${INDEXROOT}/data.csv"
+
 OUTPUT="gufi_query.out"
+
+cleanup() {
+    rm -rf "${SRC_CSV}" "${IDX_CSV}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
 
 (
 touch "${INDEXROOT}/file" # ignored when walking index
@@ -110,6 +126,19 @@ run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentri
 
 echo "# Output TLV columns (with aggregation)"
 run_no_sort "${GUFI_QUERY} -u -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | od -x --endian=big"
+
+echo "# run_vt with %s"
+(
+    echo "0,1,2,3"
+    echo "4,5,6,7"
+) > "${SRC_CSV}"
+
+(
+    echo "8,9,a,b"
+    echo "c,d,e,f"
+) > "${IDX_CSV}"
+
+run_no_sort "${GUFI_QUERY} -d \" \" -p \"${SRCDIR}\" -S \"CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \\\"%s\\\" \\\"%i\\\" -maxdepth 1 -name \\\"*.csv\\\" -exec cat \\\"{}\\\" \\\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;\" \"${INDEXROOT}\""
 
 echo "#####################################"
 echo "# Invalid Inputs                    #"

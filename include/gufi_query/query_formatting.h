@@ -62,17 +62,33 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_QUERY_H
-#define GUFI_QUERY_QUERY_H
+#ifndef GUFI_QUERY_FORMATTING_H
+#define GUFI_QUERY_FORMATTING_H
 
 #include "SinglyLinkedList.h"
 #include "bf.h"
-#include "gufi_query/PoolArgs.h"
 
-void querydb(struct work *work,
-             const char *dbname, const size_t dbname_len, sqlite3 *db,
-             const refstr_t *query, const sll_t *fmts, const refstr_t *source_prefix, const int *types,
-             PoolArgs_t *pa, int id,
-             int (*callback)(void *, int, char **, char**), int *rc);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+static const char FMT_CHARS[] = {
+    'n',    /* directory name */
+    'i',    /* directory path */
+    's',    /* source path    */
+};
+
+size_t find_formatting(const refstr_t *sql, sll_t *fmts);
+
+/* if no replacements, buf points to sql->data and should not be freed */
+int replace_formatting(const refstr_t *sql, const sll_t *fmts, const refstr_t *source_prefix,
+                       struct work *work,
+                       char **buf, size_t *size);
+
+void cleanup_formatting(sll_t *fmts);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

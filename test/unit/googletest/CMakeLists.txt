@@ -79,6 +79,7 @@ if (CMAKE_CXX_COMPILER)
     handle_sql.cpp
     histogram.cpp
     print.cpp
+    query_formatting.cpp
     swap.cpp
     template_db.cpp
     trace.cpp

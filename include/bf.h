@@ -179,6 +179,15 @@ struct input {
    } sql;
 
    /*
+    * if the S SQL has any formatting in it,
+    * store the format character positions here
+    */
+   struct {
+       refstr_t source_prefix; /* for %s since the source directory is not stored in the index */
+       sll_t sum;
+   } sql_format;
+
+   /*
     * if outputting to STDOUT or OUTFILE, get list of
     * types of final output to prefix columns with
     *

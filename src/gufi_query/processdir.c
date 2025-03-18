@@ -209,17 +209,29 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             /* if this is OR, as well as no-sql-to-run, skip this query */
             if (in->andor == AND) {
                 /* make sure the treesummary table exists */
+                static const refstr_t TSUM_CHECK_QUERY = {
+                    .data = "SELECT name FROM " ATTACH_NAME ".sqlite_master "
+                            "WHERE (type == 'table') AND (name == '" TREESUMMARY "');" ,
+                    .len = 0,
+                };
+                static const sll_t TSUM_FORMAT = { 0 };
+                static const refstr_t TSUM_SOURCE_PREFIX = {
+                    .data = NULL,
+                    .len = 0,
+                };
                 static const int TSUM_CHECK_TYPES[] = { SQLITE_TEXT };
-                querydb(&gqw->work, dbname, dbname_len, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
-                        "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
+
+                querydb(&gqw->work, dbname, dbname_len, db,
+                        &TSUM_CHECK_QUERY, &TSUM_FORMAT, &TSUM_SOURCE_PREFIX,
                         in->types.prefix?TSUM_CHECK_TYPES:NULL, pa, id, count_rows, &recs);
                 if (recs < 1) {
                     recs = -1;
                 }
                 else {
                     /* run in->sql.tsum */
-                    querydb(&gqw->work, dbname, dbname_len, db, in->sql.tsum.data,
-                            in->types.tsum, pa, id, print_parallel, &recs);
+                    querydb(&gqw->work, dbname, dbname_len, db,
+                            &in->sql.tsum, &TSUM_FORMAT, &TSUM_SOURCE_PREFIX, in->types.tsum,
+                            pa, id, print_parallel, &recs);
                 }
             }
             /* this is an OR or we got a record back. go on to summary/entries */

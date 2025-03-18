@@ -29,6 +29,7 @@ options:
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
   -s <path>              File name prefix for swap files
+  -p <path>              Source path prefix for %s in SQL
   -e                     compress work items
   -Q <basename>
      <table>
@@ -233,6 +234,13 @@ $ gufi_query -u -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K 
 0000020 0000 0000 0073 6561 7263 682f 7072 6566
 0000040 6978 0102 0000 0000 0000 0031 3700
 0000055
+
+# run_vt with %s
+$ gufi_query -d " " -p "prefix" -S "CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \"%s\" \"%i\" -maxdepth 1 -name \"*.csv\" -exec cat \"{}\" \\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;" "prefix"
+0 1 2 3
+4 5 6 7
+8 9 a b
+c d e f
 
 #####################################
 # Invalid Inputs                    #

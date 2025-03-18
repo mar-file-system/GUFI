@@ -227,8 +227,9 @@ int process_queries(PoolArgs_t *pa,
         if (in->sql.sum.len) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
             /* put in the path relative to the user's input */
-            querydb(&gqw->work, dbname, dbname_len, db, in->sql.sum.data,
-                    in->types.sum, pa, id, print_parallel, &recs);
+            querydb(&gqw->work, dbname, dbname_len, db,
+                    &in->sql.sum, &in->sql_format.sum, &in->sql_format.source_prefix, in->types.sum,
+                    pa, id, print_parallel, &recs);
         } else {
             recs = 1;
         }
@@ -238,8 +239,16 @@ int process_queries(PoolArgs_t *pa,
         /* if we have recs (or are running an OR) query the entries table */
         if (recs > 0) {
             if (in->sql.ent.len) {
-                querydb(&gqw->work, dbname, dbname_len, db, in->sql.ent.data,
-                        in->types.ent, pa, id, print_parallel, &recs); /* recs is not used */
+                static const sll_t ENT_FORMAT = { 0 };
+                static const refstr_t ENT_SOURCE_PREFIX = {
+                    .data = NULL,
+                    .len = 0,
+                };
+
+                /* replace original SQL string if there is formatting */
+                querydb(&gqw->work, dbname, dbname_len, db,
+                        &in->sql.ent, &ENT_FORMAT, &ENT_SOURCE_PREFIX, in->types.ent,
+                        pa, id, print_parallel, &recs); /* recs is not used */
             }
         }
     }

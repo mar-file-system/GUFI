@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "gufi_query/handle_sql.h"
+#include "gufi_query/query_formatting.h"
 #include "template_db.h"
 
 static int validate(struct input *in) {
@@ -219,12 +220,21 @@ static int gen_types(struct input *in) {
     return -1;
 }
 
+static int replace_sql(struct input *in) {
+    find_formatting(&in->sql.sum,  &in->sql_format.sum);
+    return 0;
+}
+
 int handle_sql(struct input *in) {
     if (validate(in) != 0) {
         return -1;
     }
 
     if (gen_types(in) != 0) {
+        return -1;
+    }
+
+    if (replace_sql(in) != 0) {
         return -1;
     }
 

@@ -104,6 +104,7 @@ struct input *input_init(struct input *in) {
             in->nobody.uid          = passwd->pw_uid;
             in->nobody.gid          = passwd->pw_gid;
         }
+        sll_init(&in->sql_format.sum);
         in->output                  = STDOUT;
         in->output_buffer_size      = 4096;
         in->open_flags              = SQLITE_OPEN_READONLY;   // default to read-only opens
@@ -124,6 +125,7 @@ struct input *input_init(struct input *in) {
 
 void input_fini(struct input *in) {
     if (in) {
+        sll_destroy(&in->sql_format.sum, NULL);
         free(in->types.agg);
         free(in->types.ent);
         free(in->types.sum);
@@ -193,6 +195,7 @@ void print_help(const char* prog_name,
                        "     <template>.<table>\n"
                        "     <view>              External database file basename, per-attach table name, template + table name, and the resultant view"); break;
       case 's': printf("  -s <path>              File name prefix for swap files"); break;
+      case 'p': printf("  -p <path>              Source path prefix for %%s in SQL"); break;
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -252,6 +255,7 @@ void show_input(struct input* in, int retval) {
    }
    printf("\n");
    printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
+   printf("in.source_prefix            = '%s'\n",          in->sql_format.source_prefix.data);
    printf("retval                      = %d\n",            retval);
    printf("\n");
 }
@@ -508,6 +512,10 @@ int parse_cmd_line(int         argc,
           INSTALL_STR(&in->swap_prefix, optarg);
           break;
 
+      case 'p':
+          INSTALL_STR(&in->sql_format.source_prefix, optarg);
+          break;
+
       case '?':
          // getopt returns '?' when there is a problem.  In this case it
          // also prints, e.g. "getopt_test: illegal option -- z"
@@ -613,8 +621,7 @@ struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
                                  basename, basename_len);
     }
 
-    // TODO: should this initialize basename length?
-    // check how many callers use / need that...
+    w->basename_len = basename_len;
 
     return w;
 }
