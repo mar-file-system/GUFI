@@ -69,7 +69,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/handle_sql.h"
 #include "template_db.h"
 
-int handle_sql(struct input *in) {
+static int validate(struct input *in) {
     /*
      * - Leaves are final outputs
      * - OUTFILE/OUTDB + aggregation will create per thread and final aggregation files
@@ -143,9 +143,13 @@ int handle_sql(struct input *in) {
         }
     }
 
+    return 0;
+}
+
+static int gen_types(struct input *in) {
     sqlite3 *db = NULL;
 
-    /* now that the SQL has been validated, generate types if necessary */
+    /* generate types if necessary */
     if ((in->types.prefix == 1) && ((in->output == STDOUT) || (in->output == OUTFILE))) {
         /* have to create temporary db since there is no guarantee of a db yet */
         db = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
@@ -213,4 +217,16 @@ int handle_sql(struct input *in) {
   error:
     closedb(db);
     return -1;
+}
+
+int handle_sql(struct input *in) {
+    if (validate(in) != 0) {
+        return -1;
+    }
+
+    if (gen_types(in) != 0) {
+        return -1;
+    }
+
+    return 0;
 }
