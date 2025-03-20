@@ -203,13 +203,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto cleanup;
     }
 
-    dir = opendir(nda.work->name);
-    if (!dir) {
+    struct dir_rc *dir_rc = open_dir_rc(-1, nda.work->name);
+    if (!dir_rc) {
         const int err = errno;
         fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n", nda.work->name, strerror(err), err);
         rc = 1;
         goto cleanup;
     }
+    dir = dir_rc->dir;
 
     /* offset by work->root_len to remove prefix */
     nda.topath_len = nda.in->nameto.len + 1 + nda.work->name_len - nda.work->root_parent.len;
@@ -272,7 +273,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     struct descend_counters ctrs;
-    descend(ctx, id, pa, nda.in, nda.work, nda.ed.statuso.st_ino, dir, 0,
+    descend(ctx, id, pa, nda.in, nda.work, nda.ed.statuso.st_ino, dir_rc, 0,
             processdir, process_nondir, &nda,
             &ctrs);
 
@@ -315,7 +316,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     chown(nda.topath, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
 
   cleanup:
-    closedir(dir);
+    dir_dec(dir_rc);
 
     if (process_dbdb) {
         pa->total_dirs[id]++;

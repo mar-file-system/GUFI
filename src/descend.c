@@ -90,12 +90,14 @@ static int work_serialize_and_free(const int fd, QPTPool_f func, void *work, siz
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
-            DIR *dir, const int skip_db,
+            struct dir_rc *d_rc, const int skip_db,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters) {
     if (!work) {
         return 1;
     }
+
+    DIR *dir = d_rc->dir;
 
     trie_t *skip_names = in->skip;
 
