@@ -347,6 +347,7 @@ struct dir_rc {
 struct dir_rc *open_dir_rc(int optional_fd, char *path);
 int get_dir_fd(struct dir_rc *dir);
 void dir_inc(struct dir_rc *dir);
+struct dir_rc *dir_clone(struct dir_rc *dir);
 void dir_dec(struct dir_rc *dir);
 
 /*

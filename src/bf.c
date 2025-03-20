@@ -637,6 +637,15 @@ void dir_inc(struct dir_rc *dir) {
 }
 
 /*
+ * Clone a `dir_rc`.
+ * This increments the refcount and returns a pointer to the dir_rc to the caller.
+ */
+struct dir_rc *dir_clone(struct dir_rc *dir) {
+    dir_inc(dir);
+    return dir;
+}
+
+/*
  * Decrement the reference count for a dir_rc, and free it if that was the last reference.
  */
 void dir_dec(struct dir_rc *dir) {
