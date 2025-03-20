@@ -127,6 +127,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             }
 
             struct work *child = new_work_with_name(work->name, work->name_len, dir_child->d_name, len);
+            child->parent_dir = dir_clone(d_rc);
 
             struct entry_data child_ed;
             memset(&child_ed, 0, sizeof(child_ed));
