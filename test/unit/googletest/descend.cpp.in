@@ -93,7 +93,7 @@ TEST(descend, builddir) {
     const char root[] = "@CMAKE_BINARY_DIR@";
     struct work *work = new_work_with_name(nullptr, 0, root, strlen(root));
 
-    struct dir_rc *dir_rc = open_dir_rc(-1, work->name);
+    struct dir_rc *dir_rc = open_dir_rc(work);
     ASSERT_NE(dir_rc, nullptr);
     DIR *dir = dir_rc->dir;
 
@@ -249,7 +249,7 @@ TEST(descend, swap) {
     // descend to swap
     struct work *work = new_work_with_name(nullptr, 0, root, strlen(root));
 
-    struct dir_rc *dir_rc = open_dir_rc(-1, work->name);
+    struct dir_rc *dir_rc = open_dir_rc(work);
     ASSERT_NE(dir_rc, nullptr);
     DIR *dir = dir_rc->dir;
 

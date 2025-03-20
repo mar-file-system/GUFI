@@ -136,7 +136,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     decompress_work(&work, data);
 
-    struct dir_rc *dir_rc = open_dir_rc(-1, work->name);
+    struct dir_rc *dir_rc = open_dir_rc(work);
     if (!dir_rc) {
         rc = 1;
         goto cleanup;
