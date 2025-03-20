@@ -199,7 +199,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 }
                 else {
                     /* skip enqueuing and just free */
-                    free(child);
+                    free_work(child);
                 }
                 continue;
             }
@@ -215,7 +215,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             }
             else {
                 /* other types are not stored */
-                free(child);
+                free_work(child);
                 continue;
             }
 
@@ -239,7 +239,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 }
             }
 
-            free(child);
+            free_work(child);
         }
     }
 

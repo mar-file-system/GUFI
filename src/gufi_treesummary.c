@@ -211,7 +211,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     closedir(dir);
 
   out_free:
-    free(passmywork);
+    free_work(passmywork);
 
     return 0;
 }

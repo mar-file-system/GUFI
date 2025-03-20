@@ -178,7 +178,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   cleanup:
     closedir(dir);
 
-    free(work);
+    free_work(work);
 
     pa->total_files[id] += ctrs.nondirs_processed;
 
