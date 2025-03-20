@@ -299,6 +299,73 @@ void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv) {
     sqlite3_result_text(context, bn, bn_len, SQLITE_STATIC);
 }
 
+/* prefix should end with an opening single quote */
+static void return_error(sqlite3_context *context,
+                         const char *prefix, const size_t prefix_len,
+                         const char *str) {
+    const size_t str_len = strlen(str);
+    size_t err_len = prefix_len - 1 + str_len + 1; /* closing quote */
+    char *err = malloc(err_len + 1);
+    SNFORMAT_S(err, err_len + 1, 3,
+               prefix, prefix_len,
+               str, str_len,
+               "'", (size_t) 1);
+    sqlite3_result_error(context, err, err_len);
+    free(err);
+}
+
+/* run a command and get one int from stdout */
+static void intop(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    const char *cmd = (const char *) sqlite3_value_text(argv[0]);
+
+    FILE *p = popen(cmd, "r");
+    if (p == NULL) {
+        static const char ERR_PREFIX[] = "intop: popen failed to run '";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        return;
+    }
+
+    char *line = NULL;
+    size_t alloc = 0;
+
+    ssize_t len = getline(&line, &alloc, p);
+    pclose(p);
+
+    if (len < 0) {
+        static const char ERR_PREFIX[] = "intop: failed to read result of '%s'";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        free(line);
+        return;
+    }
+
+    /* only newline, so no value */
+    if (len == 1) {
+        static const char ERR_PREFIX[] = "intop: did not get result from '";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        free(line);
+        return;
+    }
+
+    /* remove newline */
+    line[--len] = '\0';
+
+    int retval = 0;
+    if (sscanf(line, "%d", &retval) != 1) {
+        static const char ERR_PREFIX[] = "intop: could not parse result from '";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, line);
+        free(line);
+        return;
+    }
+
+    free(line);
+
+    sqlite3_result_int64(context, retval);
+
+    return;
+}
+
 /*
  * One pass standard deviation (sample)
  * https://mathcentral.uregina.ca/QQ/database/QQ.09.06/h/murtaza1.html
@@ -536,6 +603,8 @@ int addqueryfuncs(sqlite3 *db) {
                                  NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
                                  NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "intop",                    1,   SQLITE_UTF8,
+                                 NULL, &intop,                     NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
                                  NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&
         (sqlite3_create_function(db,   "stdevp",              1,   SQLITE_UTF8,
