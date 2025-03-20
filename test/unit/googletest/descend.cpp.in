@@ -100,6 +100,7 @@ TEST(descend, builddir) {
     QPTPool_t *pool = QPTPool_init(1, nullptr);
     ASSERT_NE(pool, nullptr);
     EXPECT_EQ(QPTPool_start(pool), 0);
+    QPTPool_set_destructor(pool, (void (*)(void *)) free_work);
 
     struct descend_counters ctrs;
 
@@ -130,7 +131,7 @@ TEST(descend, builddir) {
         work->level = 0;
         EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir_rc, 0,
                           [](QPTPool_t *, const size_t, void *data, void *) -> int {
-                              free(data);
+                              free_work(data);
                               return 0;
                           },
                           nullptr, nullptr,
@@ -148,7 +149,7 @@ TEST(descend, builddir) {
         rewinddir(dir);
         EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir_rc, 1,
                           [](QPTPool_t *, const size_t, void *data, void *) -> int {
-                              free(data);
+                              free_work(data);
                               return 0;
                           },
                           nullptr, nullptr,
@@ -166,7 +167,7 @@ TEST(descend, builddir) {
         in.subdir_limit = 1;
         EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir_rc, 0,
                           [](QPTPool_t *, const size_t, void *data, void *) -> int {
-                              free(data);
+                              free_work(data);
                               return 0;
                           },
                           nullptr, nullptr,
@@ -181,9 +182,9 @@ TEST(descend, builddir) {
     QPTPool_stop(pool);
     QPTPool_destroy(pool);
 
-    EXPECT_EQ(closedir(dir),    0);
     free_work(work);
     dir_dec(dir_rc);
+
     EXPECT_EQ(unlink(pipename), 0);
     EXPECT_EQ(unlink(linkname), 0);
 }
@@ -210,6 +211,7 @@ TEST(descend, swap) {
     ASSERT_NE(pool, nullptr);
     EXPECT_EQ(QPTPool_set_queue_limit(pool, 1), 0); // if the WAIT queue already has 1 item, swap out the new item
     EXPECT_EQ(QPTPool_start(pool), 0);
+    QPTPool_set_destructor(pool, (void (*)(void *)) free_work);
 
     // enqueue stuck thread
     pthread_mutex_lock(&args.mutex);
@@ -252,13 +254,12 @@ TEST(descend, swap) {
 
     struct dir_rc *dir_rc = open_dir_rc(work);
     ASSERT_NE(dir_rc, nullptr);
-    DIR *dir = dir_rc->dir;
 
     struct descend_counters ctrs;
 
     EXPECT_EQ(descend(pool, 0, nullptr, &in, work, 0, dir_rc, 0,
                       [](QPTPool_t *, const size_t, void *data, void *) -> int {
-                          free(data);
+                          free_work(data);
                           return 0;
                       },
                       nullptr, nullptr,
@@ -273,7 +274,6 @@ TEST(descend, swap) {
     QPTPool_stop(pool);
     QPTPool_destroy(pool);
 
-    EXPECT_EQ(closedir(dir), 0);
     free_work(work);
     dir_dec(dir_rc);
 

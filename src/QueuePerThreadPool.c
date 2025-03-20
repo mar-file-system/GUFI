@@ -119,6 +119,12 @@ struct QPTPool {
     uint64_t swapped;
 
     QPTPoolThreadData_t *data;
+
+    /*
+     * An optional pointer to a destructor for the work items in this QPTPool.
+     * If it is not specified, then the destructor is just free().
+     */
+    void (*destructor)(void *);
 };
 
 /* struct to pass into pthread_create */
@@ -551,6 +557,10 @@ int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom) {
     return 0;
 }
 
+void QPTPool_set_destructor(QPTPool_t *pool, void (*destructor)(void *)) {
+    pool->destructor = destructor;
+}
+
 QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
                                    QPTPoolNextFunc_t next_func, void *next_args,
                                    const uint64_t queue_limit, const char *swap_prefix,
@@ -573,6 +583,8 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
     ctx->state = INITIALIZED;
     ctx->incomplete = 0;
     ctx->swapped = 0;
+
+    ctx->destructor = NULL;
 
     /* this can fail since nthreads is user input */
     ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
@@ -1057,6 +1069,13 @@ void QPTPool_destroy(QPTPool_t *ctx) {
         return;
     }
 
+    void (*destructor)(void *);
+    if (ctx->destructor) {
+        destructor = ctx->destructor;
+    } else {
+        destructor = free;
+    }
+
     for(size_t i = 0; i < ctx->nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];
         data->threads_successful = 0;
@@ -1073,9 +1092,9 @@ void QPTPool_destroy(QPTPool_t *ctx) {
          * enqueuing work without starting the worker threads is allowed,
          * so free() is called to clear out any unprocessed work items
          */
-        sll_destroy(&data->waiting, free);
+        sll_destroy(&data->waiting, destructor);
         pthread_mutex_destroy(&data->claimed_mutex);
-        sll_destroy(&data->claimed, free);
+        sll_destroy(&data->claimed, destructor);
     }
 
     pthread_cond_destroy(&ctx->cv);
