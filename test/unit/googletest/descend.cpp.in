@@ -182,7 +182,8 @@ TEST(descend, builddir) {
     QPTPool_destroy(pool);
 
     EXPECT_EQ(closedir(dir),    0);
-    free(work);
+    free_work(work);
+    dir_dec(dir_rc);
     EXPECT_EQ(unlink(pipename), 0);
     EXPECT_EQ(unlink(linkname), 0);
 }
@@ -273,7 +274,8 @@ TEST(descend, swap) {
     QPTPool_destroy(pool);
 
     EXPECT_EQ(closedir(dir), 0);
-    free(work);
+    free_work(work);
+    dir_dec(dir_rc);
 
     EXPECT_EQ(remove(root), 0);
 }

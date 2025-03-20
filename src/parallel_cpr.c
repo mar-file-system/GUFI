@@ -235,7 +235,6 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (!dir_rc) {
         print_error_and_goto("Could not open_directory", work->name, cleanup);
     }
-    DIR *dir = dir_rc->dir;
 
     struct stat st;
     if (lstat(work->name, &st) != 0) {

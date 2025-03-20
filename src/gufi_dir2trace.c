@@ -141,7 +141,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         rc = 1;
         goto cleanup;
     }
-    DIR *dir = dir_rc->dir;
 
     memset(&ed, 0, sizeof(ed));
     if (lstat(work->name, &ed.statuso) != 0) {

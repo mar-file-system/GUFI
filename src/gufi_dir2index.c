@@ -189,8 +189,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.topath     = NULL;
     nda.ed.type    = 'd';
 
-    DIR *dir = NULL;
-
     decompress_work(&nda.work, data);
 
     const int process_dbdb = ((pa->in.min_level <= nda.work->level) &&
@@ -210,7 +208,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         rc = 1;
         goto cleanup;
     }
-    dir = dir_rc->dir;
 
     /* offset by work->root_len to remove prefix */
     nda.topath_len = nda.in->nameto.len + 1 + nda.work->name_len - nda.work->root_parent.len;
@@ -235,7 +232,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath, err, strerror(err));
             rc = 1;
-            goto cleanup;
+            goto cleanup_dir;
         }
     }
 
@@ -250,7 +247,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         if (!nda.db) {
             rc = 1;
-            goto cleanup;
+            goto cleanup_dir;
         }
 
         /* prepare to insert into the database */
@@ -315,9 +312,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     chmod(nda.topath, nda.ed.statuso.st_mode);
     chown(nda.topath, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
 
-  cleanup:
+  cleanup_dir:
     dir_dec(dir_rc);
 
+  cleanup:
     if (process_dbdb) {
         pa->total_dirs[id]++;
         pa->total_nondirs[id] += ctrs.nondirs_processed;

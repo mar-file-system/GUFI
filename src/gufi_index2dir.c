@@ -271,7 +271,6 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
         rc = 1;
         goto cleanup;
     }
-    DIR *dir = dir_rc->dir;
 
     // get source directory info
     struct stat dir_st;

@@ -138,7 +138,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (!dir_rc) {
         goto out_free;
     }
-    DIR *dir = dir_rc->dir;
 
     if (pa->in.printdir) {
         ed.type = 'd';
