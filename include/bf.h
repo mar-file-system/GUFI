@@ -384,6 +384,7 @@ struct work {
 size_t struct_work_size(struct work *w);
 struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
                                 const char *basename, const size_t basename_len);
+void free_work(struct work *w);
 
 /* extra data used by entries that does not depend on data from other directories */
 struct entry_data {

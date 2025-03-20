@@ -357,7 +357,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
 
     closedir(dir);
 
-    free(work);
+    free_work(work);
 
     return rc;
 }

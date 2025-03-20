@@ -394,7 +394,7 @@ int main(int argc, char * argv[]) {
                 cpr_link(work, &ed, &in);
             }
 
-            free(work);
+            free_work(work);
         }
         else if (S_ISREG(st.st_mode)) {
             struct work_data *wd = calloc(1, sizeof(*wd) + work->name_len + 1);
@@ -410,7 +410,7 @@ int main(int argc, char * argv[]) {
 
             QPTPool_enqueue(pool, 0, cpr_file, wd);
 
-            free(work);
+            free_work(work);
         }
         else {
             free(work);

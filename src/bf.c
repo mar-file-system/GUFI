@@ -640,9 +640,11 @@ void dir_inc(struct dir_rc *dir) {
  * Decrement the reference count for a dir_rc, and free it if that was the last reference.
  */
 void dir_dec(struct dir_rc *dir) {
-    if (__atomic_sub_fetch(&dir->rc, 1, __ATOMIC_ACQ_REL) == 0) {
-        closedir(dir->dir);
-        free(dir);
+    if (dir) {
+        if (__atomic_sub_fetch(&dir->rc, 1, __ATOMIC_ACQ_REL) == 0) {
+            closedir(dir->dir);
+            free(dir);
+        }
     }
 }
 
@@ -683,4 +685,9 @@ struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
     w->basename_len = basename_len;
 
     return w;
+}
+
+void free_work(struct work *w) {
+    dir_dec(w->parent_dir);
+    free(w);
 }

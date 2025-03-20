@@ -323,7 +323,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     free(nda.topath);
-    free(nda.work);
+    free_work(nda.work);
 
     return rc;
 }
