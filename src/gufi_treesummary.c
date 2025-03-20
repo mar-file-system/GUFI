@@ -134,10 +134,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto out_free;
     }
 
-    DIR *dir = opendir(passmywork->name);
-    if (!dir) {
+    struct dir_rc *dir_rc = open_dir_rc(-1, passmywork->name);
+    if (!dir_rc) {
         goto out_free;
     }
+    DIR *dir = dir_rc->dir;
 
     if (pa->in.printdir) {
         ed.type = 'd';
@@ -192,7 +193,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                  */
                 descend(ctx, id, pa,
                         &pa->in, passmywork, ed.statuso.st_ino,
-                        dir, 0,
+                        dir_rc, 0,
                         processdir, NULL, NULL,
                         NULL);
 
@@ -208,7 +209,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     closedb(db);
-    closedir(dir);
+    dir_dec(dir_rc);
 
   out_free:
     free_work(passmywork);

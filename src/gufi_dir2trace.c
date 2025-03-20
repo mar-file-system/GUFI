@@ -136,11 +136,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     decompress_work(&work, data);
 
-    DIR *dir = opendir(work->name);
-    if (!dir) {
+    struct dir_rc *dir_rc = open_dir_rc(-1, work->name);
+    if (!dir_rc) {
         rc = 1;
         goto cleanup;
     }
+    DIR *dir = dir_rc->dir;
 
     memset(&ed, 0, sizeof(ed));
     if (lstat(work->name, &ed.statuso) != 0) {
@@ -171,12 +172,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct descend_counters ctrs;
     descend(ctx, id, pa,
-            in, work, ed.statuso.st_ino, dir, 0,
+            in, work, ed.statuso.st_ino, dir_rc, 0,
             processdir, process_nondir, &nda,
             &ctrs);
 
   cleanup:
-    closedir(dir);
+    dir_dec(dir_rc);
 
     free_work(work);
 
