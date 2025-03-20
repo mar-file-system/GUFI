@@ -134,7 +134,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto out_free;
     }
 
-    struct dir_rc *dir_rc = open_dir_rc(-1, passmywork->name);
+    struct dir_rc *dir_rc = open_dir_rc(passmywork);
     if (!dir_rc) {
         goto out_free;
     }

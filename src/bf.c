@@ -591,24 +591,28 @@ INSTALL_NUMBER(SIZE, size_t, "%zu")
 INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64)
 
 /*
- * Create a new reference-counted DIR object. If optional_fd is a valid FD, then
- * openat() the new DIR relative to that FD. Otherwise, just opendir() the path.
+ * Create a new reference-counted DIR object for the given `struct work`.
+ *
+ * If work->parent_dir is a non-NULL dir_rc, then openat() the new DIR relative to it.
+ *     This assumes that w->basename_len is correctly initialized!
+ *
+ * Otherwise, just opendir() the path.
  *
  * Increments the refcount on the new object.
  */
-struct dir_rc *open_dir_rc(int optional_fd, char *path) {
+struct dir_rc *open_dir_rc(struct work *w) {
     DIR *dir;
 
-    if (optional_fd < 0) {
-        dir = opendir(path);
-    } else {
-        // XXX: assuming path is relative to optional_fd here... is this the right way to go????
-        // or do I need to do something like basename(path) first?
-        int fd = openat(optional_fd, path, O_RDONLY|O_DIRECTORY);
+    if (w->parent_dir) {
+        int d_fd = get_dir_fd(w->parent_dir);
+        char *basename = w->name + w->name_len - w->basename_len;
+        int fd = openat(d_fd, basename, O_RDONLY|O_DIRECTORY);
         if (fd < 0) {
             return NULL;
         }
         dir = fdopendir(fd);
+    } else {
+        dir = opendir(w->name);
     }
 
     if (!dir) {
@@ -616,13 +620,14 @@ struct dir_rc *open_dir_rc(int optional_fd, char *path) {
     }
 
     struct dir_rc *new = calloc(1, sizeof(*new));
+    // printf("creating dir at %p\n", new);
     new->dir = dir;
     dir_inc(new);
     return new;
 }
 
 /*
- * Get a DIR * out of a dir_rc.
+ * Get a directory FD out of a dir_rc.
  */
 int get_dir_fd(struct dir_rc *dir) {
     return gufi_dirfd(dir->dir);
@@ -632,6 +637,7 @@ int get_dir_fd(struct dir_rc *dir) {
  * Increment the reference count for a dir_rc.
  */
 void dir_inc(struct dir_rc *dir) {
+    // printf("incrementing dir at %p\n", dir);
     // XXX: is relaxed OK here?
     __atomic_fetch_add(&dir->rc, 1, __ATOMIC_ACQ_REL);
 }
@@ -650,7 +656,9 @@ struct dir_rc *dir_clone(struct dir_rc *dir) {
  */
 void dir_dec(struct dir_rc *dir) {
     if (dir) {
+        // printf("decrementing dir at %p\n", dir);
         if (__atomic_sub_fetch(&dir->rc, 1, __ATOMIC_ACQ_REL) == 0) {
+            // printf("freeing dir at %p\n", dir);
             closedir(dir->dir);
             free(dir);
         }

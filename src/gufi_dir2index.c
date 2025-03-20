@@ -203,7 +203,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto cleanup;
     }
 
-    struct dir_rc *dir_rc = open_dir_rc(-1, nda.work->name);
+    struct dir_rc *dir_rc = open_dir_rc(nda.work);
     if (!dir_rc) {
         const int err = errno;
         fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n", nda.work->name, strerror(err), err);

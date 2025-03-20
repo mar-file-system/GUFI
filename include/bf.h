@@ -337,20 +337,6 @@ typedef enum {
 } CleanUpTasks;
 
 /*
- * A reference-counted directory handle.
- */
-struct dir_rc {
-   DIR *dir;
-   uint64_t rc;
-};
-
-struct dir_rc *open_dir_rc(int optional_fd, char *path);
-int get_dir_fd(struct dir_rc *dir);
-void dir_inc(struct dir_rc *dir);
-struct dir_rc *dir_clone(struct dir_rc *dir);
-void dir_dec(struct dir_rc *dir);
-
-/*
  * Minimum data needs to be passed around between threads.
  *
  * struct work generally should not be allocated directly - the helper
@@ -386,6 +372,20 @@ size_t struct_work_size(struct work *w);
 struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
                                 const char *basename, const size_t basename_len);
 void free_work(struct work *w);
+
+/*
+ * A reference-counted directory handle.
+ */
+struct dir_rc {
+   DIR *dir;
+   uint64_t rc;
+};
+
+struct dir_rc *open_dir_rc(struct work *w);
+int get_dir_fd(struct dir_rc *dir);
+void dir_inc(struct dir_rc *dir);
+struct dir_rc *dir_clone(struct dir_rc *dir);
+void dir_dec(struct dir_rc *dir);
 
 /* extra data used by entries that does not depend on data from other directories */
 struct entry_data {
