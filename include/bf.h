@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #ifndef BF_H
 #define BF_H
 
+#include <dirent.h>
 #include <inttypes.h>
 #include <sys/stat.h>
 
@@ -336,6 +337,19 @@ typedef enum {
 } CleanUpTasks;
 
 /*
+ * A reference-counted directory handle.
+ */
+struct dir_rc {
+   DIR *dir;
+   uint64_t rc;
+};
+
+struct dir_rc *open_dir_rc(int optional_fd, char *path);
+int get_dir_fd(struct dir_rc *dir);
+void dir_inc(struct dir_rc *dir);
+void dir_dec(struct dir_rc *dir);
+
+/*
  * Minimum data needs to be passed around between threads.
  *
  * struct work generally should not be allocated directly - the helper
@@ -356,6 +370,9 @@ struct work {
    size_t        basename_len;           /* can usually get through readdir */
    long long int pinode;
    size_t        recursion_level;
+
+   /* an optional reference to the parent dir -- to keep it alive */
+   struct dir_rc	*parent_dir;
 
    /* probably shouldn't be here */
    char *        fullpath;

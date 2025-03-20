@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <fcntl.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -588,6 +589,62 @@ int INSTALL_STR(refstr_t *VAR, const char *SOURCE) {
 INSTALL_NUMBER(INT, int, "%d")
 INSTALL_NUMBER(SIZE, size_t, "%zu")
 INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64)
+
+/*
+ * Create a new reference-counted DIR object. If optional_fd is a valid FD, then
+ * openat() the new DIR relative to that FD. Otherwise, just opendir() the path.
+ *
+ * Increments the refcount on the new object.
+ */
+struct dir_rc *open_dir_rc(int optional_fd, char *path) {
+    DIR *dir;
+
+    if (optional_fd < 0) {
+        dir = opendir(path);
+    } else {
+        // XXX: assuming path is relative to optional_fd here... is this the right way to go????
+        // or do I need to do something like basename(path) first?
+        int fd = openat(optional_fd, path, O_RDONLY|O_DIRECTORY);
+        if (fd < 0) {
+            return NULL;
+        }
+        dir = fdopendir(fd);
+    }
+
+    if (!dir) {
+        return NULL;
+    }
+
+    struct dir_rc *new = calloc(1, sizeof(*new));
+    new->dir = dir;
+    dir_inc(new);
+    return new;
+}
+
+/*
+ * Get a DIR * out of a dir_rc.
+ */
+int get_dir_fd(struct dir_rc *dir) {
+    return gufi_dirfd(dir->dir);
+}
+
+/*
+ * Increment the reference count for a dir_rc.
+ */
+void dir_inc(struct dir_rc *dir) {
+    // XXX: is relaxed OK here?
+    __atomic_fetch_add(&dir->rc, 1, __ATOMIC_ACQ_REL);
+}
+
+/*
+ * Decrement the reference count for a dir_rc, and free it if that was the last reference.
+ */
+void dir_dec(struct dir_rc *dir) {
+    if (__atomic_sub_fetch(&dir->rc, 1, __ATOMIC_ACQ_REL) == 0) {
+        closedir(dir->dir);
+        free(dir);
+    }
+}
 
 /*
  * Returns size of a dynamically sized struct work_packed.
