@@ -704,7 +704,8 @@ struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
     return w;
 }
 
-void free_work(struct work *w) {
+void free_work(void *p) {
+    struct work *w = (struct work *) p;
     dir_dec(w->parent_dir);
     free(w);
 }
