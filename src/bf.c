@@ -62,12 +62,15 @@ OF SUCH DAMAGE.
 
 
 
+#include <errno.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/resource.h>
 
 #include "bf.h"
 #include "dbutils.h"
@@ -587,6 +590,127 @@ INSTALL_NUMBER(INT, int, "%d")
 INSTALL_NUMBER(SIZE, size_t, "%zu")
 INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64)
 
+rlim_t MAX_OPEN_FILES;   /* Maximum number of files that may be held open by dir_rc objects */
+uint64_t CUR_OPEN_FILES; /* Current number of open files held by dir_rc objects */
+
+/*
+ * For understanding performance, track how many directories were opened
+ * with relative vs. absolute paths.
+ */
+static uint64_t n_openats = 0;
+static uint64_t n_opens = 0;
+
+#if defined(DEBUG) && 0
+__attribute__((destructor)) static void print_openat_stats(void) {
+    uint64_t tot = n_openats + n_opens;
+    if (tot > 0) {
+        printf("%" PRIu64 "/%" PRIu64 " (%" PRIu64 "%%) of directories used openat() over open()\n",
+                n_openats, tot, n_openats * 100 / tot);
+    }
+}
+#endif
+
+/*
+ * Increment the reference count for a dir_rc.
+ */
+static void dir_inc(struct dir_rc *dir) {
+    // XXX: is relaxed OK here?
+    __atomic_fetch_add(&dir->rc, 1, __ATOMIC_ACQ_REL);
+}
+
+/*
+ * Create a new reference-counted DIR object for the given `struct work`.
+ *
+ * If work->parent_dir is a non-NULL dir_rc, then openat() the new DIR relative to it.
+ *     This assumes that w->basename_len is correctly initialized!
+ *
+ * Otherwise, just opendir() the path.
+ *
+ * Increments the refcount on the new object.
+ *
+ * If we are hitting the limit on the maximum number of open files available,
+ * then designate the new dir_rc as "non-clonable" so that it is closed as soon as
+ * processing the current directory is complete.
+ */
+struct dir_rc *open_dir_rc(struct work *w) {
+    DIR *dir;
+
+    if (w->parent_dir) {
+        __atomic_add_fetch(&n_openats, 1, __ATOMIC_RELAXED);
+        int d_fd = get_dir_fd(w->parent_dir);
+        char *basename = w->name + w->name_len - w->basename_len;
+        int fd = openat(d_fd, basename, O_RDONLY|O_DIRECTORY);
+        if (fd < 0) {
+            goto err;
+        }
+        dir = fdopendir(fd);
+    } else {
+        __atomic_add_fetch(&n_opens, 1, __ATOMIC_RELAXED);
+        dir = opendir(w->name);
+    }
+
+    if (!dir) {
+        goto err;
+    }
+
+    struct dir_rc *new = calloc(1, sizeof(*new));
+    new->dir = dir;
+    dir_inc(new);
+
+    uint64_t cur_open_files = __atomic_add_fetch(&CUR_OPEN_FILES, 1, __ATOMIC_ACQ_REL);
+    if (cur_open_files >= MAX_OPEN_FILES) {
+        new->dont_clone = 1;
+    }
+
+    return new;
+
+  err:
+    if (errno == EMFILE) {
+        fprintf(stderr, "Warning: too many open files, index may not be complete!\n");
+    }
+
+    return NULL;
+}
+
+/*
+ * Get a directory FD out of a dir_rc.
+ */
+int get_dir_fd(struct dir_rc *dir) {
+    return gufi_dirfd(dir->dir);
+}
+
+/*
+ * Attempt to clone a `dir_rc`.
+ *
+ * If succesful, this increments the refcount and returns a pointer to the
+ * dir_rc to the caller.
+ *
+ * If unsuccesful, returns NULL.
+ *
+ * The caller MUST be prepared for cloning to fail!
+ */
+struct dir_rc *dir_clone(struct dir_rc *dir) {
+    if (dir->dont_clone) {
+        return NULL;
+    }
+
+    dir_inc(dir);
+    return dir;
+}
+
+/*
+ * Decrement the reference count for a dir_rc, and free it if that was the last reference.
+ */
+void dir_dec(struct dir_rc *dir) {
+    if (dir) {
+        if (__atomic_sub_fetch(&dir->rc, 1, __ATOMIC_ACQ_REL) == 0) {
+            closedir(dir->dir);
+            __atomic_sub_fetch(&CUR_OPEN_FILES, 1, __ATOMIC_ACQ_REL);
+            free(dir);
+        }
+    }
+}
+
 /*
  * Returns size of a dynamically sized struct work_packed.
  *
@@ -624,4 +748,10 @@ struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
     w->basename_len = basename_len;
 
     return w;
+}
+
+void free_work(void *p) {
+    struct work *w = (struct work *) p;
+    dir_dec(w->parent_dir);
+    free(w);
 }
