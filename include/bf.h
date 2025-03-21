@@ -379,11 +379,11 @@ void free_work(void *p);
 struct dir_rc {
    DIR *dir;
    uint64_t rc;
+   int dont_clone;
 };
 
 struct dir_rc *open_dir_rc(struct work *w);
 int get_dir_fd(struct dir_rc *dir);
-void dir_inc(struct dir_rc *dir);
 struct dir_rc *dir_clone(struct dir_rc *dir);
 void dir_dec(struct dir_rc *dir);
 
