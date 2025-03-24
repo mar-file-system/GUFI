@@ -580,6 +580,34 @@ TEST(addqueryfuncs, basename) {
     sqlite3_close(db);
 }
 
+TEST(addqueryfuncs, strop) {
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db), 0);
+
+    char buf[MAXPATH] = {};
+    char *output = buf;
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT strop('echo abc def');", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(output, "abc def");
+
+    char *err = nullptr;
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT strop('')", copy_columns_callback, &output, &err), SQLITE_ERROR);
+    EXPECT_NE(err, nullptr);
+    sqlite3_free(err);
+    err = nullptr;
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT strop('echo')", copy_columns_callback, &output, &err), SQLITE_ERROR);
+    EXPECT_NE(err, nullptr);
+    sqlite3_free(err);
+    err = nullptr;
+
+    sqlite3_close(db);
+}
+
 TEST(addqueryfuncs, intop) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);

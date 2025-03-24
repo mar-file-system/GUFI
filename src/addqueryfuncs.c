@@ -314,42 +314,72 @@ static void return_error(sqlite3_context *context,
     free(err);
 }
 
+/*
+ * run a command and get one line from stdout
+ *
+ * caller should free line
+ */
+static int runop(sqlite3_context *context, const char *cmd, char **line, size_t *line_len) {
+    FILE *p = popen(cmd, "r");
+    if (p == NULL) {
+        static const char ERR_PREFIX[] = "runop: popen failed to run '";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        return -1;
+    }
+
+    size_t alloc = 0;
+    ssize_t len = getline(line, &alloc, p);
+    pclose(p);
+
+    if (len < 0) {
+        static const char ERR_PREFIX[] = "runop: failed to read result of '%s'";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        free(*line);
+        return -1;
+    }
+
+    /* only newline, so no value */
+    if (len == 1) {
+        static const char ERR_PREFIX[] = "runop: did not get result from '";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        free(*line);
+        return -1;
+    }
+
+    /* remove newline */
+    (*line)[--len] = '\0';
+    *line_len = len;
+
+    return 0;
+}
+
+/* run a command and get one line from stdout */
+static void strop(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    const char *cmd = (const char *) sqlite3_value_text(argv[0]);
+    char *line = NULL;
+    size_t len = 0;
+
+    if (runop(context, cmd, &line, &len) != 0) {
+        return;
+    }
+
+    sqlite3_result_text(context, line, len, SQLITE_TRANSIENT);
+    free(line);
+}
+
 /* run a command and get one int from stdout */
 static void intop(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
     const char *cmd = (const char *) sqlite3_value_text(argv[0]);
-
-    FILE *p = popen(cmd, "r");
-    if (p == NULL) {
-        static const char ERR_PREFIX[] = "intop: popen failed to run '";
-        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
-        return;
-    }
-
     char *line = NULL;
-    size_t alloc = 0;
+    size_t len = 0;
 
-    ssize_t len = getline(&line, &alloc, p);
-    pclose(p);
-
-    if (len < 0) {
-        static const char ERR_PREFIX[] = "intop: failed to read result of '%s'";
-        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
-        free(line);
+    if (runop(context, cmd, &line, &len) != 0) {
         return;
     }
-
-    /* only newline, so no value */
-    if (len == 1) {
-        static const char ERR_PREFIX[] = "intop: did not get result from '";
-        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
-        free(line);
-        return;
-    }
-
-    /* remove newline */
-    line[--len] = '\0';
 
     int retval = 0;
     if (sscanf(line, "%d", &retval) != 1) {
@@ -362,8 +392,6 @@ static void intop(sqlite3_context *context, int argc, sqlite3_value **argv) {
     free(line);
 
     sqlite3_result_int64(context, retval);
-
-    return;
 }
 
 /*
@@ -603,6 +631,8 @@ int addqueryfuncs(sqlite3 *db) {
                                  NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
                                  NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "strop",                    1,   SQLITE_UTF8,
+                                 NULL, &strop,                     NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "intop",                    1,   SQLITE_UTF8,
                                  NULL, &intop,                     NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
