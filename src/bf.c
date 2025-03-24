@@ -125,7 +125,9 @@ struct input *input_init(struct input *in) {
 
 void input_fini(struct input *in) {
     if (in) {
-        sll_destroy(&in->sql_format.sum, NULL);
+        sll_destroy(&in->sql_format.ent,  NULL);
+        sll_destroy(&in->sql_format.sum,  NULL);
+        sll_destroy(&in->sql_format.tsum, NULL);
         free(in->types.agg);
         free(in->types.ent);
         free(in->types.sum);

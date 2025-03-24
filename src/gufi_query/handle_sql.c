@@ -221,7 +221,17 @@ static int gen_types(struct input *in) {
 }
 
 static int replace_sql(struct input *in) {
-    find_formatting(&in->sql.sum,  &in->sql_format.sum);
+    /*
+     * this check is a workaround for wrapper scripts that might
+     * generate format strings but do not pass in -p
+     */
+    if (in->sql_format.source_prefix.data &&
+        in->sql_format.source_prefix.len) {
+        find_formatting(&in->sql.tsum, &in->sql_format.tsum);
+        find_formatting(&in->sql.sum,  &in->sql_format.sum);
+        find_formatting(&in->sql.ent,  &in->sql_format.ent);
+    }
+
     return 0;
 }
 

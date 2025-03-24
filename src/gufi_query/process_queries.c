@@ -239,15 +239,9 @@ int process_queries(PoolArgs_t *pa,
         /* if we have recs (or are running an OR) query the entries table */
         if (recs > 0) {
             if (in->sql.ent.len) {
-                static const sll_t ENT_FORMAT = { 0 };
-                static const refstr_t ENT_SOURCE_PREFIX = {
-                    .data = NULL,
-                    .len = 0,
-                };
-
                 /* replace original SQL string if there is formatting */
                 querydb(&gqw->work, dbname, dbname_len, db,
-                        &in->sql.ent, &ENT_FORMAT, &ENT_SOURCE_PREFIX, in->types.ent,
+                        &in->sql.ent, &in->sql_format.ent, &in->sql_format.source_prefix, in->types.ent,
                         pa, id, print_parallel, &recs); /* recs is not used */
             }
         }

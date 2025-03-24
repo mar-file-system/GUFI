@@ -184,7 +184,9 @@ struct input {
     */
    struct {
        refstr_t source_prefix; /* for %s since the source directory is not stored in the index */
+       sll_t tsum;
        sll_t sum;
+       sll_t ent;
    } sql_format;
 
    /*

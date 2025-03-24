@@ -230,7 +230,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 else {
                     /* run in->sql.tsum */
                     querydb(&gqw->work, dbname, dbname_len, db,
-                            &in->sql.tsum, &TSUM_FORMAT, &TSUM_SOURCE_PREFIX, in->types.tsum,
+                            &in->sql.tsum, &in->sql_format.tsum, &in->sql_format.source_prefix, in->types.tsum,
                             pa, id, print_parallel, &recs);
                 }
             }
