@@ -13,6 +13,7 @@ options:
   -M <bytes>             target memory footprint
   -s <path>              File name prefix for swap files
   -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
+  -U <library_name>      plugin library for modifying db entries
   -e                     compress work items
   -q                     check that external databases are valid before tracking during indexing
   -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y

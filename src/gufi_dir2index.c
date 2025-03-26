@@ -117,6 +117,12 @@ struct NonDirArgs {
 
     /* list of xattr dbs */
     sll_t xattr_db_list;
+
+    /*
+     * an optional opaque pointer to user data for a plugin. if the plugin's db_init() function
+     * creates and returns a pointer, then the later plugin functions can use it to store state.
+     */
+    void *plugin_user_data;
 };
 
 static int process_external(struct input *in, void *args,
@@ -155,6 +161,10 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     /* add entry + xattr names into bulk insert */
     insertdbgo(entry, ed, nda->entries_res);
 
+    if (in->plugin_ops->process_file) {
+        in->plugin_ops->process_file(entry->name, nda->db, nda->plugin_user_data);
+    }
+
 out:
     return rc;
 }
@@ -174,6 +184,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     memset(&nda.ed, 0, sizeof(nda.ed));
     nda.topath     = NULL;
     nda.ed.type    = 'd';
+    nda.plugin_user_data = NULL;
 
     DIR *dir = NULL;
 
@@ -253,6 +264,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
 
         startdb(nda.db);
+
+        if (pa->in.plugin_ops->db_init) {
+            nda.plugin_user_data = pa->in.plugin_ops->db_init(nda.db);
+        }
+    }
+
+    if (pa->in.plugin_ops->process_dir) {
+        pa->in.plugin_ops->process_dir(nda.work->name, nda.db, nda.plugin_user_data);
     }
 
     struct descend_counters ctrs;
@@ -261,6 +280,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             &ctrs);
 
     if (process_dir) {
+        if (pa->in.plugin_ops->db_exit) {
+            pa->in.plugin_ops->db_exit(nda.db, nda.plugin_user_data);
+        }
+
         stopdb(nda.db);
 
         /* entries and xattrs have been inserted */
@@ -477,7 +500,7 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:xy:z:k:M:s:C:" COMPRESS_OPT "qD:", 2, "input_dir... output_dir", &pa.in);
+    process_args_and_maybe_exit("hHvn:xy:z:k:M:s:C:U:" COMPRESS_OPT "qD:", 2, "input_dir... output_dir", &pa.in);
 
     /* parse positional args, following the options */
     /* does not have to be canonicalized */
