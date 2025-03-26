@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <dlfcn.h>
 #include <errno.h>
 #include <pwd.h>
 #include <stdint.h>
@@ -73,6 +74,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "external.h"
+#include "plugin.h"
 #include "utils.h"
 
 #define XSTR(x) #x
@@ -90,6 +92,13 @@ extern int optind, opterr, optopt;
 const char fielddelim = '\x1E';     /* ASCII Record Separator */
 
 static const char DEFAULT_SWAP_PREFIX[] = "";
+
+static const struct plugin_operations null_plugin_ops = {
+    .db_init = NULL,
+    .process_file = NULL,
+    .process_dir = NULL,
+    .db_exit = NULL,
+};
 
 struct input *input_init(struct input *in) {
     if (in) {
@@ -121,6 +130,9 @@ struct input *input_init(struct input *in) {
 
         in->swap_prefix.data = DEFAULT_SWAP_PREFIX;
         in->swap_prefix.len  = 0;
+
+        in->plugin_ops = &null_plugin_ops;
+        in->plugin_handle = NULL;
     }
 
     return in;
@@ -137,7 +149,36 @@ void input_fini(struct input *in) {
         free(in->types.tsum);
         sll_destroy(&in->external_attach, free);
         trie_free(in->skip);
+        if (in->plugin_handle) {
+            dlclose(in->plugin_handle);
+        }
     }
+}
+
+/*
+ * If a plugin library path is given in in->plugin_name,
+ * then load that library and add its plugin functions to in->plugin_ops.
+ *
+ * Returns 0 on success or 1 on failure.
+ */
+static int load_plugin_library(struct input *in, char *plugin_name) {
+    void *lib = dlopen(plugin_name, RTLD_NOW);
+    if (!lib) {
+        fprintf(stderr, "Could not open plugin library: %s\n", dlerror());
+        return 1;
+    }
+
+    in->plugin_handle = lib;
+
+    struct plugin_operations *user_plugin_ops = (struct plugin_operations *) dlsym(lib, GUFI_PLUGIN_SYMBOL_STR);
+    if (!user_plugin_ops) {
+        fprintf(stderr, "Could not find exported operations in the plugin library: %s\n", dlerror());
+        return 1;
+    }
+
+    in->plugin_ops = user_plugin_ops;
+
+    return 0;
 }
 
 void print_help(const char* prog_name,
@@ -205,6 +246,7 @@ void print_help(const char* prog_name,
       case 'p': printf("  -p <path>              Source path prefix for %%s in SQL"); break;
       case 'D': printf("  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y"); break;
       case 'l': printf("  -l                     if a directory was previously processed, skip descending the subtree"); break;
+      case 'U': printf("  -U <library_name>      plugin library for modifying db entries"); break;
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -537,6 +579,12 @@ int parse_cmd_line(int         argc,
 
       case 'l':
           in->check_already_processed = 1;
+          break;
+
+      case 'U':
+          if (load_plugin_library(in, optarg)) {
+              retval = -1;
+          }
           break;
 
       case '?':

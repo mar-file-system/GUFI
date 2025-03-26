@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 
 #include "SinglyLinkedList.h"
 #include "compress.h"
+#include "plugin.h"
 #include "str.h"
 #include "trie.h"
 #include "xattrs.h"
@@ -286,6 +287,15 @@ struct input {
     * used by BottomUp programs
     */
    int check_already_processed;
+
+    /*
+    * Holds pointers to plugin functions for running custom user code to manipulate the databases.
+    * These will be NULL if no plugin was specified.
+    */
+   const struct plugin_operations *plugin_ops;
+
+   /* A handle to a plugin shared library, or NULL if no plugin is being used. */
+   void *plugin_handle;
 };
 
 struct input *input_init(struct input *in);
