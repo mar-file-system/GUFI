@@ -164,15 +164,13 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
     /* Not checking arguments */
 
     int err = 0;
-    const int src_db = dup(tdb->fd);
+    const int src_db = tdb->fd;
     err = err?err:errno;
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     err = err?err:errno;
     const ssize_t sf = copyfd(src_db, 0, dst_db, 0, tdb->size);
     err = err?err:errno;
     fchown(dst_db, uid, gid);
-    err = err?err:errno;
-    close(src_db);
     err = err?err:errno;
     close(dst_db);
     err = err?err:errno;

@@ -673,7 +673,7 @@ ssize_t copyfd(int src_fd, off_t src_off,
 ssize_t copyfd(int src_fd, off_t src_off,
                int dst_fd, off_t dst_off,
                size_t size) {
-    #define buf_size 40960 /* size of empty db.db */
+    #define buf_size 49152 /* size of empty db.db */
     char buf[buf_size];
 
     ssize_t copied = 0;
