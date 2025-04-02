@@ -134,8 +134,8 @@ jobs:
     - name: Uninstall CMake from package manager
       run:  yum -y autoremove cmake3
 
-    - name: Install CMake 3.5.0
-      run:  contrib/CI/cmake-download.sh 3.5.0 linux-x86_64 | tail -n 1 | sed 's/linux/Linux/g' >> "${GITHUB_PATH}"
+    - name: Install CMake 3.16.0
+      run:  contrib/CI/cmake-download.sh 3.16.0 linux-x86_64 | tail -n 1 | sed 's/linux/Linux/g' >> "${GITHUB_PATH}"
 
     - name: Check CMake Version
       run:  cmake --version
