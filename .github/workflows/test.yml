@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        img: [ "centos:8", "rockylinux:8", "rockylinux:9", "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
+        img: [ "centos:8", "rockylinux:8", "rockylinux:9", "ubuntu:22.04", "ubuntu:24.04", "alpine:edge" ]
       fail-fast: true
     container:
       image: ${{ matrix.img }}
@@ -87,6 +87,10 @@ jobs:
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-${{ matrix.img }}
+
+    - name: Alpine Edge Prerequisites
+      if:   matrix.img == 'alpine:edge'
+      run:  contrib/CI/alpine.sh
 
     - name: CentOS 8 Prerequisites
       if:   matrix.img == 'centos:8'
