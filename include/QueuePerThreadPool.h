@@ -115,6 +115,7 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
                                    const uint64_t queue_limit, const char *swap_prefix,
                                    const uint64_t steal_num, const uint64_t steal_denom);
 
+void QPTPool_set_destructor(QPTPool_t *pool, void (*destructor)(void *));
 /*
  * QPTPool_init only allocates memory - call this to start threads
  *

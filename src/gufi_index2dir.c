@@ -265,8 +265,8 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     sqlite3 *db = NULL;
     int rc = 0;
 
-    DIR *dir = opendir(work->name);
-    if (!dir) {
+    struct dir_rc *dir_rc = open_dir_rc(work);
+    if (!dir_rc) {
         fprintf(stderr, "Could not open directory \"%s\"\n", work->name);
         rc = 1;
         goto cleanup;
@@ -297,7 +297,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     }
 
     descend(ctx, id, args, &pa->in, work, dir_st.st_ino,
-            dir, 1,
+            dir_rc, 1,
             processdir, NULL, NULL,
             NULL);
 
@@ -355,9 +355,9 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     closedb(db);
     db = NULL;
 
-    closedir(dir);
+    dir_dec(dir_rc);
 
-    free(work);
+    free_work(work);
 
     return rc;
 }
