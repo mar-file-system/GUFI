@@ -303,7 +303,28 @@ if (DEP_PATCH_SQLITE3_OPEN)
   set(DEP_OPTIONS ${DEP_OPTIONS} --patch-sqlite3-open)
 endif()
 if (DEP_USE_JEMALLOC)
-  set(DEP_OPTIONS ${DEP_OPTIONS} --jemalloc)
+  # search for installed jemalloc
+  pkg_search_module(JEMALLOC jemalloc)
+  if (JEMALLOC_FOUND)
+    # check if pkg-config --static returned a path
+    # either way, store a string to the variable JEMALLOC
+    if (EXISTS "${JEMALLOC_STATIC_LINK_LIBRARIES}") # no direct way to check if it is a file?
+      set(JEMALLOC "${JEMALLOC_STATIC_LINK_LIBRARIES}")
+    else()
+      get_filename_component(JEMALLOC_SHARED_EXTENSION "${JEMALLOC_LINK_LIBRARIES}" EXT)
+      string(REPLACE "${JEMALLOC_SHARED_EXTENSION}" ".a" JEMALLOC "${JEMALLOC_LINK_LIBRARIES}")
+    endif()
+  endif()
+
+  # if static jemalloc was found, use it
+  # else build/install/link bundled version
+  if (EXISTS "${JEMALLOC}") # no direct way to check if it is a file?
+    message(STATUS "jemalloc static library located at ${JEMALLOC}")
+  else()
+    message(STATUS "jemalloc static library not found. Using bundled version.")
+    set(DEP_OPTIONS ${DEP_OPTIONS} --jemalloc)
+    set(JEMALLOC "${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a")
+  endif()
 endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}" "${CMAKE_VERSION}" "${CMAKE_SYSTEM_NAME}")
 
@@ -410,7 +431,7 @@ endif()
 
 if (DEP_USE_JEMALLOC)
   list(APPEND COMMON_LIBRARIES
-    ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
+    "${JEMALLOC}"
   )
 endif()
 
