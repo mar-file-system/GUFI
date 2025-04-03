@@ -301,6 +301,7 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
+    fflush(stdout);
 
     /* parse the trace files and enqueue work */
     struct ScoutTraceStats stats;

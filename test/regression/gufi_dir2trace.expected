@@ -85,15 +85,15 @@ $ rm -r "prefix.0"
 $ gufi_dir2trace -d "|" -n 2 "prefix/1KB" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
-Source path is not a directory "prefix/1KB"
 Creating GUFI Traces trace with 2 threads
+Source path is not a directory "prefix/1KB"
 Total Dirs:          0
 Total Files:         0
 
 # empty source path
 $ gufi_dir2trace -d "|" -n 2 "" "trace"
-Could not resolve path "": No such file or directory (2)
 Creating GUFI Traces trace with 2 threads
+Could not resolve path "": No such file or directory (2)
 Total Dirs:          0
 Total Files:         0
 

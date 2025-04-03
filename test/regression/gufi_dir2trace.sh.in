@@ -130,8 +130,7 @@ run_no_sort "rm -r \"${SRCDIR}.0\""
 
 echo "# source path is file"
 # shellcheck disable=SC2046,SC2086
-FULLTRACEPATH="$(dirname $(realpath ${TRACE}))"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}/1KB\" \"${TRACE}\"" | sed "s/${FULLTRACEPATH//\//\\/}\\///g;"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}/1KB\" \"${TRACE}\""
 
 echo "# empty source path"
 rm "${TRACES[@]}"

@@ -286,6 +286,7 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stdout, "Creating GUFI Traces %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
+    fflush(stdout);
 
     pa.total_files = calloc(pa.in.maxthreads, sizeof(size_t));
 

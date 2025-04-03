@@ -259,15 +259,15 @@ Destination path is not a directory "prefix/1KB"
 
 # source path is file
 $ gufi_dir2index -n 2 "prefix/1KB" "search"
-Source path is not a directory "prefix/1KB"
 Creating GUFI Index search with 2 threads
+Source path is not a directory "prefix/1KB"
 Total Dirs:          0
 Total Non-Dirs:      0
 
 # empty source path
 $ gufi_dir2index -n 2 "" "trace"
-Could not resolve path "": No such file or directory (2)
 Creating GUFI Index trace with 2 threads
+Could not resolve path "": No such file or directory (2)
 Total Dirs:          0
 Total Non-Dirs:      0
 

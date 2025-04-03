@@ -96,12 +96,15 @@ then
     return 1
 fi
 
-DIR="$(realpath $1)"
+DIR="$1"
 
 source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
 
 rm -rf "${DIR}"
 mkdir -p "${DIR}"
+
+# now that DIR exists, realpath should always work
+DIR="$(realpath ${DIR})"
 
 # generate tree
 cd "${DIR}"

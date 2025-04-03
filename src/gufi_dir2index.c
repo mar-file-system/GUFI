@@ -454,6 +454,7 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
+    fflush(stdout);
 
     pa.total_dirs    = calloc(pa.in.maxthreads, sizeof(uint64_t));
     pa.total_nondirs = calloc(pa.in.maxthreads, sizeof(uint64_t));
