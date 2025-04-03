@@ -199,7 +199,7 @@ add_library(gufi_vt MODULE
   xattrs.c
 )
 set_target_properties(gufi_vt PROPERTIES PREFIX "")
-if(APPLE)
+if (APPLE OR DARWIN)
   set(EXT "dylib")
 elseif (CYGWIN)
   set(EXT "dll.a")

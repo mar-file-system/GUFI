@@ -202,7 +202,7 @@ endforeach()
 
 find_program(SUDO sudo)
 if (SUDO)
-  if (APPLE)
+  if (APPLE OR DARWIN)
     set(SUDO sudo)
   endif()
 

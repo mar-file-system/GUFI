@@ -68,7 +68,7 @@ if (NOT IS_ABSOLUTE "${CONFIG_FILE}")
   message(FATAL_ERROR "CONFIG_FILE must be set to absolute path")
 endif()
 if (EXISTS "${CONFIG_FILE}")
-  if (APPLE)
+  if (APPLE OR DARWIN)
     execute_process(COMMAND stat -L -f "%HT" "${CONFIG_FILE}"
       OUTPUT_VARIABLE CONFIG_FILE_TYPE
       OUTPUT_STRIP_TRAILING_WHITESPACE
