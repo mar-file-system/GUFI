@@ -68,12 +68,22 @@ if (NOT IS_ABSOLUTE "${CONFIG_FILE}")
   message(FATAL_ERROR "CONFIG_FILE must be set to absolute path")
 endif()
 if (EXISTS "${CONFIG_FILE}")
-  execute_process(COMMAND stat --dereference --format "%F" "${CONFIG_FILE}"
-    OUTPUT_VARIABLE CONFIG_FILE_TYPE
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
-    message(FATAL_ERROR "CONFIG_FILE must point to a file. Got ${CONFIG_FILE_TYPE}")
+  if (APPLE)
+    execute_process(COMMAND stat -L -f "%HT" "${CONFIG_FILE}"
+      OUTPUT_VARIABLE CONFIG_FILE_TYPE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (NOT CONFIG_FILE_TYPE STREQUAL "Regular File")
+      message(FATAL_ERROR "CONFIG_FILE must point to a file. Got ${CONFIG_FILE_TYPE}")
+    endif()
+  else()
+    execute_process(COMMAND stat --dereference --format "%F" "${CONFIG_FILE}"
+      OUTPUT_VARIABLE CONFIG_FILE_TYPE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
+      message(FATAL_ERROR "CONFIG_FILE must point to a file. Got ${CONFIG_FILE_TYPE}")
+    endif()
   endif()
 endif()
 if (NOT CONFIG_FILE STREQUAL "/etc/GUFI/config")
