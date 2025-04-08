@@ -143,11 +143,14 @@ mkdir directory
         chmod 664 repeat_name
         touch -amt 197001010000.05 repeat_name
     )
+    chmod 775 subdirectory
     touch -amt 197001010000.06 subdirectory
 )
+chmod 775 directory
 touch -amt 197001010000.07 directory
 
 mkdir empty_directory
+chmod 775 empty_directory
 touch -amt 197001010000.08 empty_directory
 
 ln -f -s "$(realpath 1KB)" file_symlink
@@ -177,6 +180,7 @@ os_setfattr "user.name" "leaf" leaf_directory
     os_setfattr "user.name6" "value6" leaf_file2
     touch -amt 197001010000.12 leaf_file2
 )
+chmod 775 leaf_directory
 touch -amt 197001010000.13 leaf_directory
 
 truncate -s 0 old_file
@@ -194,8 +198,10 @@ mkdir "unusual#? directory ,"
     chmod 664 "unusual, name?#"
     touch -amt 197001010000.15 "unusual, name?#"
 )
+chmod 775 "unusual#? directory ,"
 touch -amt 197001010000.16 "unusual#? directory ,"
 
 # shellcheck disable=SC2103
 cd ..
+chmod 775 "${DIR}"
 touch -amt 197001010000.17 "${DIR}"
