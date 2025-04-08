@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #if HAVE_AI
+#include "sqlite-lembed.h"
 #include "sqlite-vec.h"
 #endif
 
@@ -105,6 +106,9 @@ int main(int argc, char *argv[]) {
     #if HAVE_AI
     /* load the sqlite-vec extension */
     sqlite3_vec_init(db, NULL, NULL);
+
+    /* load the sqlite-lembed extension */
+    sqlite3_lembed_init(db, NULL, NULL);
     #endif
 
     /* no buffering */

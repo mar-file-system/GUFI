@@ -132,6 +132,8 @@ jobs:
       matrix:
         os: [ "macos-14", "macos-15" ]
     runs-on: ${{ matrix.os }}
+    env:
+      LDFLAGS: "-framework Foundation -framework Metal -framework MetalKit"
     steps:
     - uses: actions/checkout@v4
 

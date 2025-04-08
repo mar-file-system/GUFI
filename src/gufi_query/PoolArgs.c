@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #if HAVE_AI
+#include "sqlite-lembed.h"
 #include "sqlite-vec.h"
 #endif
 
@@ -124,6 +125,12 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         /* load the sqlite-vec extension */
         if (sqlite3_vec_init(ta->outdb, &err, NULL) != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr, "Error: Could not initialize sqlite3-vec: %s\n", err);
+            break;
+        }
+
+        /* load the sqlite-lembed extension */
+        if (sqlite3_lembed_init(ta->outdb, &err, NULL) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr, "Error: Could not initialize sqlite3-lembed: %s\n", err);
             break;
         }
         #endif

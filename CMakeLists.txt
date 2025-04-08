@@ -132,8 +132,8 @@ if ((GIT_FOUND) AND (EXISTS "${CMAKE_SOURCE_DIR}/.git"))
 endif()
 message(STATUS "GUFI ${VERSION_STRING}")
 
-# Require C99
-set(CMAKE_C_STANDARD 99)
+# Require C11
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Need _XOPEN_SRC
@@ -161,10 +161,10 @@ else()
   set(DEP_AI ON CACHE BOOL "Whether or not to build and link with SQLite AI modules")
 endif()
 
-# Only enable C++ if support is found
+# Only enable C++ if support is found or if llama.cpp is rquired
 include(CheckLanguage)
 check_language(CXX)
-if (CMAKE_CXX_COMPILER)
+if (CMAKE_CXX_COMPILER OR DEP_AI)
   enable_language(CXX)
 
   # GCC prior to 4.9.3 doesn't have full standard support
@@ -353,6 +353,16 @@ if (DEP_AI)
 endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}" "${CMAKE_VERSION}" "${CMAKE_SYSTEM_NAME}")
 
+# llama.cpp uses OpenMP (not required, but left enabled)
+if (DEP_AI)
+  if (UNIX AND NOT APPLE)
+    find_package(OpenMP REQUIRED COMPONENTS C)
+    message(STATUS "OpenMP CFLAGS: ${OpenMP_C_FLAGS}")
+  else()
+    set(OpenMP_C_FLAGS)
+  endif()
+endif()
+
 # Find zlib
 pkg_search_module(ZLIB zlib)
 if (ZLIB_FOUND)
@@ -446,12 +456,33 @@ set(COMMON_LIBRARIES
 )
 
 if (DEP_AI)
+  if (APPLE)
+    find_library(METAL Metal)           # REQUIRED was not added until CMake 3.18
+    if (NOT METAL)
+      message(FATAL_ERROR "Could not find Metal Framework")
+    endif()
+    find_library(ACCELERATE Accelerate) # REQUIRED was not added until CMake 3.18
+    if (NOT ACCELERATE)
+      message(FATAL_ERROR "Could not find Accelerate Framework")
+    endif()
+
+    list(APPEND COMMON_LIBRARIES
+      ${ACCELERATE}
+      ${METAL}
+    )
+  endif()
+
   list(APPEND COMMON_INCLUDES
     "${DEP_INSTALL_PREFIX}/sqlite-vec/include"
+    "${DEP_INSTALL_PREFIX}/sqlite-lembed/include"
+    "${DEP_INSTALL_PREFIX}/llama.cpp/include"
   )
 
   list(APPEND COMMON_LIBRARIES
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libsqlite_vec0.a"
+    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/libsqlite_lembed0.a"
+    -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama -lstdc++ ${OpenMP_C_FLAGS}
+    -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
   )
 endif()
 

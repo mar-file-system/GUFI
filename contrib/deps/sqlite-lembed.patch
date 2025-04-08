@@ -1,0 +1,22 @@
+diff --git a/Makefile b/Makefile
+index b11db35..a6ef2d8 100644
+--- a/Makefile
++++ b/Makefile
+@@ -79,12 +79,17 @@ endif
+ else
+ BUILT_LOADABLE_PATH=$(BUILD_DIR)/lembed0.$(LOADABLE_EXTENSION)
+ endif
++BUILT_STATIC_PATH=$(BUILD_DIR)/libsqlite_lembed0.a
+ 
+ $(TARGET_LOADABLE): sqlite-lembed.c sqlite-lembed.h $(BUILD_DIR) $(prefix)
+ 	cmake --build $(BUILD_DIR) -t sqlite_lembed $(EXTRA_CMAKE_BUILD)
+ 	ls $(BUILD_DIR)
+ 	cp $(BUILT_LOADABLE_PATH) $@
+ 
++$(TARGET_STATIC): sqlite-lembed.c sqlite-lembed.h $(BUILD_DIR) $(prefix)
++	cmake --build $(BUILD_DIR) -t sqlite_lembed_static $(EXTRA_CMAKE_BUILD)
++	ls $(BUILD_DIR)
++	cp $(BUILT_STATIC_PATH) $@
+ 
+ sqlite-lembed.h: sqlite-lembed.h.tmpl VERSION
+ 	VERSION=$(shell cat VERSION) \

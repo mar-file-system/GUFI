@@ -71,6 +71,7 @@ apk add \
     fuse3-dev \
     jemalloc-dev \
     jemalloc-static \
+    openmp-dev \
     pcre2-dev \
     zlib-dev
 
@@ -86,7 +87,6 @@ apk add \
     gettext-envsubst \
     git \
     make \
-    openmp \
     patch \
     pkgconf \
     py3-pip \

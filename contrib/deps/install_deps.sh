@@ -158,6 +158,9 @@ source "${SCRIPT_PATH}/sqlite3-pcre.sh"
 if [[ "${AI}" == "true" ]]; then
     echo "Installing SQLite3 vec"
     source "${SCRIPT_PATH}/sqlite-vec.sh"
+
+    echo "Installing SQLite3 lembed"
+    source "${SCRIPT_PATH}/sqlite-lembed.sh"
 fi
 
 if [[ "${JEMALLOC}" == "true" ]]; then
