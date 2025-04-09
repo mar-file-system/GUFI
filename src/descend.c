@@ -90,12 +90,14 @@ static int work_serialize_and_free(const int fd, QPTPool_f func, void *work, siz
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
-            DIR *dir, const int skip_db,
+            struct dir_rc *d_rc, const int skip_db,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters) {
     if (!work) {
         return 1;
     }
+
+    DIR *dir = d_rc->dir;
 
     trie_t *skip_names = in->skip;
 
@@ -125,6 +127,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             }
 
             struct work *child = new_work_with_name(work->name, work->name_len, dir_child->d_name, len);
+            child->parent_dir = dir_clone(d_rc);
 
             struct entry_data child_ed;
             memset(&child_ed, 0, sizeof(child_ed));
@@ -199,7 +202,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 }
                 else {
                     /* skip enqueuing and just free */
-                    free(child);
+                    free_work(child);
                 }
                 continue;
             }
@@ -215,7 +218,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             }
             else {
                 /* other types are not stored */
-                free(child);
+                free_work(child);
                 continue;
             }
 
@@ -239,7 +242,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 }
             }
 
-            free(child);
+            free_work(child);
         }
     }
 

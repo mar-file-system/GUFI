@@ -189,8 +189,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.topath     = NULL;
     nda.ed.type    = 'd';
 
-    DIR *dir = NULL;
-
     decompress_work(&nda.work, data);
 
     const int process_dbdb = ((pa->in.min_level <= nda.work->level) &&
@@ -203,8 +201,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto cleanup;
     }
 
-    dir = opendir(nda.work->name);
-    if (!dir) {
+    struct dir_rc *dir_rc = open_dir_rc(nda.work);
+    if (!dir_rc) {
         const int err = errno;
         fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n", nda.work->name, strerror(err), err);
         rc = 1;
@@ -234,7 +232,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath, err, strerror(err));
             rc = 1;
-            goto cleanup;
+            goto cleanup_dir;
         }
     }
 
@@ -249,7 +247,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         if (!nda.db) {
             rc = 1;
-            goto cleanup;
+            goto cleanup_dir;
         }
 
         /* prepare to insert into the database */
@@ -272,7 +270,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     struct descend_counters ctrs;
-    descend(ctx, id, pa, nda.in, nda.work, nda.ed.statuso.st_ino, dir, 0,
+    descend(ctx, id, pa, nda.in, nda.work, nda.ed.statuso.st_ino, dir_rc, 0,
             processdir, process_nondir, &nda,
             &ctrs);
 
@@ -314,16 +312,17 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     chmod(nda.topath, nda.ed.statuso.st_mode);
     chown(nda.topath, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
 
-  cleanup:
-    closedir(dir);
+  cleanup_dir:
+    dir_dec(dir_rc);
 
+  cleanup:
     if (process_dbdb) {
         pa->total_dirs[id]++;
         pa->total_nondirs[id] += ctrs.nondirs_processed;
     }
 
     free(nda.topath);
-    free(nda.work);
+    free_work(nda.work);
 
     return rc;
 }
