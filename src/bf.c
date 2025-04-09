@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <dlfcn.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -72,6 +73,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "external.h"
+#include "plugin.h"
 #include "utils.h"
 
 #define XSTR(x) #x
@@ -89,6 +91,13 @@ extern int optind, opterr, optopt;
 const char fielddelim = '\x1E';     /* ASCII Record Separator */
 
 static const char DEFAULT_SWAP_PREFIX[] = "";
+
+static const struct plugin_operations null_plugin_ops = {
+    .db_init = NULL,
+    .process_file = NULL,
+    .process_dir = NULL,
+    .db_exit = NULL,
+};
 
 struct input *input_init(struct input *in) {
     if (in) {
@@ -118,6 +127,8 @@ struct input *input_init(struct input *in) {
 
         in->swap_prefix.data = DEFAULT_SWAP_PREFIX;
         in->swap_prefix.len  = 0;
+
+        in->plugin_ops = &null_plugin_ops;
     }
 
     return in;
@@ -135,6 +146,30 @@ void input_fini(struct input *in) {
         sll_destroy(&in->external_attach, free);
         trie_free(in->skip);
     }
+}
+
+/*
+ * If a plugin library path is given in in->plugin_name,
+ * then load that library and add its plugin functions to in->plugin_ops.
+ *
+ * Returns 0 on success or 1 on failure.
+ */
+int load_plugin_library(struct input *in, char *plugin_name) {
+    void *lib = dlopen(plugin_name, RTLD_NOW);
+    if (!lib) {
+        fprintf(stderr, "Could not open plugin library: %s\n", dlerror());
+        return 1;
+    }
+
+    struct plugin_operations *user_plugin_ops = (struct plugin_operations *) dlsym(lib, "exported_operations");
+    if (!user_plugin_ops) {
+        fprintf(stderr, "Could not find exported operations in the plugin library: %s\n", dlerror());
+        return 1;
+    }
+
+    in->plugin_ops = user_plugin_ops;
+
+    return 0;
 }
 
 void print_help(const char* prog_name,
@@ -198,6 +233,7 @@ void print_help(const char* prog_name,
                        "     <view>              External database file basename, per-attach table name, template + table name, and the resultant view"); break;
       case 's': printf("  -s <path>              File name prefix for swap files"); break;
       case 'p': printf("  -p <path>              Source path prefix for %%s in SQL"); break;
+      case 'U': printf("  -U <library_name>      plugin library for modifying db entries"); break;
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -516,6 +552,12 @@ int parse_cmd_line(int         argc,
 
       case 'p':
           INSTALL_STR(&in->sql_format.source_prefix, optarg);
+          break;
+
+      case 'U':
+          if (load_plugin_library(in, optarg)) {
+              retval = -1;
+          }
           break;
 
       case '?':
