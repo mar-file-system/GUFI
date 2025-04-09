@@ -116,7 +116,7 @@ void trie_insert(trie_t *head, const char *str, const size_t len,
 
 // Iterative function to search a string in Trie. It returns 1
 // if the string is found in the Trie, else it returns 0
-int trie_search(trie_t *head, const char *str, const size_t len,
+int trie_search(const trie_t *head, const char *str, const size_t len,
                 void **user_data)
 {
     // return 0 if Trie is empty
@@ -127,7 +127,7 @@ int trie_search(trie_t *head, const char *str, const size_t len,
         return 0;
     }
 
-    trie_t *curr = head;
+    const trie_t *curr = head;
     for(size_t i = 0; i < len; i++) {
         const uint8_t c = str[i];
 

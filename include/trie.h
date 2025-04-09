@@ -74,7 +74,7 @@ typedef struct trie trie_t;
 trie_t *trie_alloc(void);
 void trie_insert(trie_t *head, const char* str, const size_t len,
                  void *user_data, void (*free_user)(void *));
-int trie_search(trie_t *head, const char* str, const size_t len,
+int trie_search(const trie_t *head, const char* str, const size_t len,
                 void **user_data);
 int trie_delete(trie_t *head, const char* str, const size_t len);
 void trie_free(trie_t *head);
