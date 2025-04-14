@@ -143,6 +143,21 @@ typedef enum OutputMethod {
     OUTDB,     /* -O */
 } OutputMethod_t;
 
+
+/* data should be freed */
+typedef struct {
+    char *data;
+    size_t len;
+} str_t;
+
+/* str_t allocation (not data) not user controlled */
+str_t *str_alloc(const size_t len);
+void str_free(str_t *str);
+
+/* str_t allocation (not data) user controlled */
+str_t *str_alloc_existing(str_t *str, const size_t len);
+void str_free_existing(str_t *str);
+
 typedef struct refstring {
     const char *data;
     size_t len;
@@ -188,6 +203,13 @@ struct input {
        sll_t sum;
        sll_t ent;
    } sql_format;
+
+   /* user defined strings whose keys are wrapped in {} */
+   struct {
+       sll_t tsum;
+       sll_t sum;
+       sll_t ent;
+   } sql_user_str;
 
    /*
     * if outputting to STDOUT or OUTFILE, get list of

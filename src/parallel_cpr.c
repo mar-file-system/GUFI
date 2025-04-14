@@ -73,16 +73,9 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "utils.h"
 
-typedef struct str {
-    char *data;
-    size_t len;
-} str_t;
-
 static str_t create_dst_name(struct input *in, struct work *work) {
     str_t dst;
-
-    dst.len = in->nameto.len + 1 + work->name_len - work->root_parent.len;
-    dst.data = malloc(dst.len + 1);
+    str_alloc_existing(&dst, in->nameto.len + 1 + work->name_len - work->root_parent.len);
 
     SNFORMAT_S(dst.data, dst.len + 1, 3,
                in->nameto.data, in->nameto.len,

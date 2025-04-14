@@ -86,23 +86,9 @@ struct PoolArgs {
     struct OutputBuffers obufs;
 };
 
-/*
- * treated as POD and simply copy instead of
- * doing 2 dynamic allocations per instance
- */
-typedef struct str {
-    char *data;
-    size_t len;
-} str_t;
-
 static inline void str_copy_construct(str_t *dst, const char *str, const size_t len) {
-    dst->len = len;
-    dst->data = malloc(len + 1);
+    str_alloc_existing(dst, len);
     SNFORMAT_S(dst->data, dst->len + 1, 1, str, len);
-}
-
-static inline void str_destruct(str_t *str) {
-    free(str->data);
 }
 
 static int str_cmp(const void *l, const void *r) {
@@ -285,7 +271,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             buf[0] = cp->lhs.data;
             buf[1] = lsubdir[lidx]->data;
             print_parallel(&print, 2, buf, NULL);
-            str_destruct(lsubdir[lidx]);
+            str_free_existing(lsubdir[lidx]);
             lidx++;
         }
         else if (diff == 0) {
@@ -308,8 +294,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             QPTPool_enqueue(ctx, id, processdir, match);
 
-            str_destruct(rsubdir[ridx]);
-            str_destruct(lsubdir[lidx]);
+            str_free_existing(rsubdir[ridx]);
+            str_free_existing(lsubdir[lidx]);
 
             lidx++;
             ridx++;
@@ -318,7 +304,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             buf[0] = cp->rhs.data;
             buf[1] = rsubdir[ridx]->data;
             print_parallel(&print, 2, buf, NULL);
-            str_destruct(rsubdir[ridx]);
+            str_free_existing(rsubdir[ridx]);
             ridx++;
         }
     }
@@ -327,14 +313,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         buf[0] = cp->lhs.data;
         buf[1] = lsubdir[l]->data;
         print_parallel(&print, 2, buf, NULL);
-        str_destruct(lsubdir[l]);
+        str_free_existing(lsubdir[l]);
     }
 
     for(size_t r = ridx; r < rcount; r++) {
         buf[0] = cp->rhs.data;
         buf[1] = rsubdir[r]->data;
         print_parallel(&print, 2, buf, NULL);
-        str_destruct(rsubdir[r]);
+        str_free_existing(rsubdir[r]);
     }
     /* ********************************************** */
 
@@ -349,8 +335,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     closedir(ldir);
 
   cleanup:
-    str_destruct(&cp->rhs);
-    str_destruct(&cp->lhs);
+    str_free_existing(&cp->rhs);
+    str_free_existing(&cp->lhs);
     free(cp);
 
     return rc;

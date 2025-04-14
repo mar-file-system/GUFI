@@ -104,7 +104,9 @@ struct input *input_init(struct input *in) {
             in->nobody.uid          = passwd->pw_uid;
             in->nobody.gid          = passwd->pw_gid;
         }
+        sll_init(&in->sql_format.tsum);
         sll_init(&in->sql_format.sum);
+        sll_init(&in->sql_format.ent);
         in->output                  = STDOUT;
         in->output_buffer_size      = 4096;
         in->open_flags              = SQLITE_OPEN_READONLY;   // default to read-only opens
@@ -125,9 +127,9 @@ struct input *input_init(struct input *in) {
 
 void input_fini(struct input *in) {
     if (in) {
-        sll_destroy(&in->sql_format.ent,  NULL);
-        sll_destroy(&in->sql_format.sum,  NULL);
-        sll_destroy(&in->sql_format.tsum, NULL);
+        sll_destroy(&in->sql_format.ent,    NULL);
+        sll_destroy(&in->sql_format.sum,    NULL);
+        sll_destroy(&in->sql_format.tsum,   NULL);
         free(in->types.agg);
         free(in->types.ent);
         free(in->types.sum);
@@ -588,6 +590,32 @@ int INSTALL_STR(refstr_t *VAR, const char *SOURCE) {
 INSTALL_NUMBER(INT, int, "%d")
 INSTALL_NUMBER(SIZE, size_t, "%zu")
 INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64)
+
+/* only null terminates */
+str_t *str_alloc(const size_t len) {
+    str_t *str = malloc(sizeof(str_t));
+    str->data = malloc(len + 1);
+    str->data[len] = '\0';
+    str->len = len;
+    return str;
+}
+
+void str_free(str_t *str) {
+    free(str->data);
+    free(str);
+}
+
+str_t *str_alloc_existing(str_t *str, size_t len) {
+    str->data = malloc(len + 1);
+    str->len = len;
+    return str;
+}
+
+void str_free_existing(str_t *str) {
+    free(str->data);
+    str->data = NULL;
+    str->len = 0;
+}
 
 /*
  * Returns size of a dynamically sized struct work_packed.
