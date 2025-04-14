@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #ifndef BF_H
 #define BF_H
 
+#include <dirent.h>
 #include <inttypes.h>
 #include <sys/stat.h>
 
@@ -357,6 +358,9 @@ struct work {
    long long int pinode;
    size_t        recursion_level;
 
+   /* an optional reference to the parent dir -- to keep it alive */
+   struct dir_rc	*parent_dir;
+
    /* probably shouldn't be here */
    char *        fullpath;
    size_t        fullpath_len;
@@ -367,6 +371,21 @@ struct work {
 size_t struct_work_size(struct work *w);
 struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
                                 const char *basename, const size_t basename_len);
+void free_work(void *p);
+
+/*
+ * A reference-counted directory handle.
+ */
+struct dir_rc {
+   DIR *dir;
+   uint64_t rc;
+   int dont_clone;
+};
+
+struct dir_rc *open_dir_rc(struct work *w);
+int get_dir_fd(struct dir_rc *dir);
+struct dir_rc *dir_clone(struct dir_rc *dir);
+void dir_dec(struct dir_rc *dir);
 
 /* extra data used by entries that does not depend on data from other directories */
 struct entry_data {

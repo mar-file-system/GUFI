@@ -231,8 +231,8 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     int rc = 0;
 
-    DIR *dir = opendir(work->name);
-    if (!dir) {
+    struct dir_rc *dir_rc = open_dir_rc(work);
+    if (!dir_rc) {
         print_error_and_goto("Could not open_directory", work->name, cleanup);
     }
 
@@ -262,7 +262,7 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* process children */
     descend(ctx, id, args, in,
-            work, st.st_ino, dir, 0,
+            work, st.st_ino, dir_rc, 0,
             cpr_dir,
             enqueue_nondir, &qptp_vals,
             NULL);
@@ -279,8 +279,8 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     free(dst.data);
 
   cleanup:
-    closedir(dir);
-    free(work);
+    dir_dec(dir_rc);
+    free_work(work);
 
     return rc;
 }
@@ -394,7 +394,7 @@ int main(int argc, char * argv[]) {
                 cpr_link(work, &ed, &in);
             }
 
-            free(work);
+            free_work(work);
         }
         else if (S_ISREG(st.st_mode)) {
             struct work_data *wd = calloc(1, sizeof(*wd) + work->name_len + 1);
@@ -410,7 +410,7 @@ int main(int argc, char * argv[]) {
 
             QPTPool_enqueue(pool, 0, cpr_file, wd);
 
-            free(work);
+            free_work(work);
         }
         else {
             free(work);

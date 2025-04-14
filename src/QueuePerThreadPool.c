@@ -62,14 +62,51 @@ OF SUCH DAMAGE.
 
 
 
+#include <assert.h>
+#include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
+#include <sys/resource.h>
 
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
 #include "swap.h"
 #include "utils.h"
+
+extern rlim_t MAX_OPEN_FILES;
+/*
+ * Determine how many file descriptors to allocate to potentially long-lived
+ * directory handles. Since the number of directory handles alive at once could
+ * be unbounded, it would risk file descriptor exhaustion if a limit is not
+ * imposed.
+ */
+void init_open_file_limit(size_t nthreads) {
+    struct rlimit rl;
+    int res = getrlimit(RLIMIT_NOFILE, &rl);
+    if (res) {
+        fprintf(stderr, "Warning: could not get open file limit: %s\n", strerror(errno));
+        MAX_OPEN_FILES = 0;
+        return;
+    }
+
+    /*
+     * Reserve 3 file descriptors per thread so that they always can always open
+     * the files they are currently working on. (This factor was determined
+     * experimentally.)
+     */
+    size_t reserve_fds = nthreads * 3;
+
+    if (rl.rlim_cur <= reserve_fds) {
+        // fprintf(stderr, "Warning: system may not allow enough open files for the number of requested threads.\n");
+        // fprintf(stderr, "Max number of open files: %llu; Number of threads requested: %llu\n", rl.rlim_cur, nthreads);
+        MAX_OPEN_FILES = 0;
+        return;
+    };
+
+    MAX_OPEN_FILES = rl.rlim_cur - reserve_fds;
+}
 
 typedef enum {
     INITIALIZED,
@@ -119,6 +156,12 @@ struct QPTPool {
     uint64_t swapped;
 
     QPTPoolThreadData_t *data;
+
+    /*
+     * An optional pointer to a destructor for the work items in this QPTPool.
+     * If it is not specified, then the destructor is just free().
+     */
+    void (*destructor)(void *);
 };
 
 /* struct to pass into pthread_create */
@@ -551,6 +594,11 @@ int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom) {
     return 0;
 }
 
+void QPTPool_set_destructor(QPTPool_t *ctx, void (*destructor)(void *)) {
+    assert(destructor != NULL);
+    ctx->destructor = destructor;
+}
+
 QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
                                    QPTPoolNextFunc_t next_func, void *next_args,
                                    const uint64_t queue_limit, const char *swap_prefix,
@@ -558,6 +606,8 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
     if (!nthreads) {
         return NULL;
     }
+
+    init_open_file_limit(nthreads);
 
     QPTPool_t *ctx = malloc(sizeof(QPTPool_t));
     ctx->nthreads = nthreads;
@@ -573,6 +623,8 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
     ctx->state = INITIALIZED;
     ctx->incomplete = 0;
     ctx->swapped = 0;
+
+    ctx->destructor = free;
 
     /* this can fail since nthreads is user input */
     ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
@@ -1071,11 +1123,12 @@ void QPTPool_destroy(QPTPool_t *ctx) {
          *
          * If QPTPool_start was not called, queues might not be empty since
          * enqueuing work without starting the worker threads is allowed,
-         * so free() is called to clear out any unprocessed work items
+         * so free(), or a user-defined destructor, is called to clear out
+         * any unprocessed work items
          */
-        sll_destroy(&data->waiting, free);
+        sll_destroy(&data->waiting, ctx->destructor);
         pthread_mutex_destroy(&data->claimed_mutex);
-        sll_destroy(&data->claimed, free);
+        sll_destroy(&data->claimed, ctx->destructor);
     }
 
     pthread_cond_destroy(&ctx->cv);
