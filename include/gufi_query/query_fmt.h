@@ -62,8 +62,8 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_FORMATTING_H
-#define GUFI_QUERY_FORMATTING_H
+#ifndef GUFI_QUERY_FMT_H
+#define GUFI_QUERY_FMT_H
 
 #include "SinglyLinkedList.h"
 #include "bf.h"
@@ -72,20 +72,25 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+/* single character format specifiers */
+#define FMT_START '%'
+
 static const char FMT_CHARS[] = {
-    'n',    /* directory name */
-    'i',    /* directory path */
-    's',    /* source path    */
+    'n',    /* directory name         */
+    'i',    /* directory path         */
+    's',    /* source path (need -p)  */
 };
 
-size_t find_formatting(const refstr_t *sql, sll_t *fmts);
+void save_fmt(sll_t *idx, const refstr_t *sql, const size_t *i);
 
 /* if no replacements, buf points to sql->data and should not be freed */
-int replace_formatting(const refstr_t *sql, const sll_t *fmts, const refstr_t *source_prefix,
-                       struct work *work,
-                       char **buf, size_t *size);
-
-void cleanup_formatting(sll_t *fmts);
+int replace_fmt(const refstr_t *sql,
+                size_t *src_start,
+                void *pos,
+                str_t *replaced,
+                size_t *allocd,
+                const refstr_t *source_prefix,
+                struct work *work);
 
 #ifdef __cplusplus
 }

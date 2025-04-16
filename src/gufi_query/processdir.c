@@ -78,7 +78,9 @@ OF SUCH DAMAGE.
 #include "gufi_query/process_queries.h"
 #include "gufi_query/processdir.h"
 #include "gufi_query/query.h"
+#include "gufi_query/query_replacement.h"
 #include "print.h"
+#include "trie.h"
 #include "utils.h"
 
 static inline int save_matime(gqw_t *gqw,
@@ -145,12 +147,41 @@ static int collect_dir_inodes(void *args, int count, char **data, char **columns
     return 0;
 }
 
+/*
+ * udf that allows for user to name SQL values that can be used for string replacement
+ *
+ * SELECT setstr(1, (SELECT col ...)); SELECT '{1}';
+ *
+ * will print 'string'
+ */
+static void setstr(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    trie_t *user_strs = (trie_t *) sqlite3_user_data(context);
+
+    /* args are cast to strings */
+
+    const size_t key_len = sqlite3_value_bytes(argv[0]);
+    const char *key = (const char *) sqlite3_value_text(argv[0]);
+
+    const size_t val_len = sqlite3_value_bytes(argv[1]);
+    const char *val = (const char *) sqlite3_value_text(argv[1]);
+
+    /* copy value since its lifetime is not guaranteed */
+    str_t *copy = str_alloc(val_len);
+    memcpy(copy->data, val, val_len);
+    copy->data[copy->len] = '\0';
+
+    trie_insert(user_strs, key, key_len, copy, free);
+}
+
 int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* Not checking arguments */
 
     DIR *dir = NULL;
     sqlite3 *db = NULL;
     struct utimbuf dbtime;
+    trie_t *user_strs = NULL; /* map of user keys to user values */
 
     PoolArgs_t *pa = (PoolArgs_t *) args;
     struct input *in = pa->in;
@@ -182,6 +213,13 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto close_dir;
     }
 
+    user_strs = trie_alloc();
+
+    if (sqlite3_create_function(ta->outdb, "setstr", 2, SQLITE_UTF8,
+                                user_strs, &setstr, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Error: Failed to add setstr function\n");
+    }
+
     if (gqw->work.level >= in->min_level) {
         db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
 
@@ -209,29 +247,33 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             /* if this is OR, as well as no-sql-to-run, skip this query */
             if (in->andor == AND) {
                 /* make sure the treesummary table exists */
-                static const refstr_t TSUM_CHECK_QUERY = {
-                    .data = "SELECT name FROM " ATTACH_NAME ".sqlite_master "
-                            "WHERE (type == 'table') AND (name == '" TREESUMMARY "');" ,
-                    .len = 0,
-                };
-                static const sll_t TSUM_FORMAT = { 0 };
-                static const refstr_t TSUM_SOURCE_PREFIX = {
-                    .data = NULL,
-                    .len = 0,
-                };
+                static const char TSUM_CHECK_QUERY[] =
+                    "SELECT name FROM " ATTACH_NAME ".sqlite_master "
+                    "WHERE (type == 'table') AND (name == '" TREESUMMARY "');";
                 static const int TSUM_CHECK_TYPES[] = { SQLITE_TEXT };
 
                 querydb(&gqw->work, dbname, dbname_len, db,
-                        &TSUM_CHECK_QUERY, &TSUM_FORMAT, &TSUM_SOURCE_PREFIX,
-                        in->types.prefix?TSUM_CHECK_TYPES:NULL, pa, id, count_rows, &recs);
+                        TSUM_CHECK_QUERY, in->types.prefix?TSUM_CHECK_TYPES:NULL,
+                        pa, id, count_rows, &recs);
                 if (recs < 1) {
                     recs = -1;
                 }
                 else {
+                    char *tsum = NULL;
+                    if (replace_sql(&in->sql.tsum, &in->sql_format.tsum,
+                                    &in->sql_format.source_prefix, &gqw->work,
+                                    user_strs,
+                                    &tsum) != 0) {
+                        fprintf(stderr, "Error: Failed to do string replacements for -T\n");
+                        goto detach;
+                    }
+
                     /* run in->sql.tsum */
                     querydb(&gqw->work, dbname, dbname_len, db,
-                            &in->sql.tsum, &in->sql_format.tsum, &in->sql_format.source_prefix, in->types.tsum,
+                            in->sql.tsum.data, in->types.tsum,
                             pa, id, print_parallel, &recs);
+
+                    free_sql(tsum, in->sql.tsum.data);
                 }
             }
             /* this is an OR or we got a record back. go on to summary/entries */
@@ -280,7 +322,10 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                     create_extdb_views_noiter(db);
 
                     /* run queries */
-                    process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count);
+                    process_queries(pa, ctx, id,
+                                    dir, gqw, db, user_strs,
+                                    dbname, dbname_len,
+                                    1, &subdirs_walked_count);
 
                     /* drop views for attaching GUFI tables to */
                     drop_extdb_views(db);
@@ -312,7 +357,10 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                         create_extdb_views_iter(db, dir_inode);
 
                         /* run queries */
-                        process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, desc, &subdirs_walked_count);
+                        process_queries(pa, ctx, id,
+                                        dir, gqw, db, user_strs,
+                                        dbname, dbname_len,
+                                        desc, &subdirs_walked_count);
 
                         /* drop views for attaching GUFI tables to */
                         drop_extdb_views(db);
@@ -331,7 +379,10 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 /* external databases views were created in PoolArgs_init */
 
                 /* run queries */
-                process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count);
+                process_queries(pa, ctx, id,
+                                dir, gqw, db, user_strs,
+                                dbname, dbname_len,
+                                1, &subdirs_walked_count);
             }
 
             if (xattr_db_count != extdb_count) {
@@ -351,9 +402,13 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
     else {
         /* if the database was not opened or not deep enough, still have to descend */
-        process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count);
+        process_queries(pa, ctx, id,
+                        dir, gqw, db, user_strs,
+                        dbname, dbname_len,
+                        1, &subdirs_walked_count);
     }
 
+  detach:
     if (db) {
         detachdb_cached(dbname, db, pa->detach, 1);
     }
@@ -364,6 +419,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             restore_matime(dbpath, &dbtime);
         }
     }
+
+    trie_free(user_strs);
 
   close_dir:
     closedir(dir);

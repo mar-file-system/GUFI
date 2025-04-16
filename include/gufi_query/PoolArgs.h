@@ -72,7 +72,6 @@ OF SUCH DAMAGE.
 #include "OutputBuffers.h"
 #include "bf.h"
 #include "dbutils.h"
-#include "trie.h"
 
 typedef struct ThreadArgs {
     char dbname[MAXPATH];

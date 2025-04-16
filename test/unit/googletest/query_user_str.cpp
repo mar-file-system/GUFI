@@ -70,135 +70,131 @@ OF SUCH DAMAGE.
 #include <gtest/gtest.h>
 
 #include "SinglyLinkedList.h"
-#include "gufi_query/query_formatting.h"
+#include "gufi_query/query_replacement.h"
+#include "gufi_query/query_user_strs.h"
+#include "trie.h"
 
-static const char   FORMAT[]        = "A%nB%iC%sD";
-static const size_t FORMAT_POS[]    = {2, 5, 8};
-static const char   SEARCH[]        = "search";
-static const char   BASENAME[]      = "prefix";
-static const char   SOURCE_PREFIX[] = "prefix";    // replaces SEARCH/BASENAME when using %s
+static const char   FORMAT[]        = "A{A}B{BC}C{DEF}D";
+static const size_t FORMAT_START[]  = {1, 5, 10};
+static const size_t FORMAT_END[]    = {3, 8, 14};
 
-TEST(query_formatting, no_replace) {
+TEST(query_user_str, no_replace) {
     refstr_t sql;
     sql.data = "SQL"; /* nothing to replace */
     sql.len = strlen(sql.data);
 
     sll_t fmts;
+    EXPECT_EQ(save_replacements(&sql, &fmts, nullptr), (std::size_t) 0);
 
-    refstr_t source_prefix;
-    source_prefix.data = nullptr;
-    source_prefix.len = 0;
-
-    EXPECT_EQ(find_formatting(&sql, &fmts), (std::size_t) 0);
-
-    struct work *work = new_work_with_name(SEARCH, sizeof(SEARCH) - 1, BASENAME, sizeof(BASENAME) - 1);
-    work->root_parent.len = sizeof(SEARCH) - 1;
-    work->root_basename_len = sizeof(BASENAME) - 1;
+    trie_t *user_strs = trie_alloc();
 
     char *buf = nullptr;
-    std::size_t len = 0;
-    EXPECT_EQ(replace_formatting(&sql, &fmts, &source_prefix, work, &buf, &len), 0);
+    ASSERT_EQ(replace_sql(&sql, &fmts, nullptr, nullptr, user_strs, &buf), 0);
     EXPECT_EQ(buf, sql.data);
-    EXPECT_EQ(len, sql.len);
+    EXPECT_EQ(strlen(buf), sql.len);
 
-    free(work);
-
-    cleanup_formatting(&fmts);
+    trie_free(user_strs);
+    cleanup_replacements(&fmts);
 }
 
-TEST(query_formatting, even) {
+TEST(query_user_str, even) {
     refstr_t sql;
     sql.data = FORMAT;
-    sql.len = sizeof(FORMAT) - 2; // ends on format
+    sql.len = sizeof(FORMAT) - 2; // ends on user string
 
     sll_t fmts;
-
-    refstr_t source_prefix;
-    source_prefix.data = SOURCE_PREFIX;
-    source_prefix.len = sizeof(SOURCE_PREFIX) - 1;
-
-    EXPECT_EQ(find_formatting(&sql, &fmts), (std::size_t) 3);
+    EXPECT_EQ(save_replacements(&sql, &fmts, nullptr), (std::size_t) 3);
 
     std::size_t i = 0;
     sll_loop(&fmts, node) {
-        const std::size_t pos = (std::size_t) (uintptr_t) sll_node_data(node);
-        EXPECT_EQ(pos, FORMAT_POS[i++]);
+        const usk_t *usk = (usk_t *) sll_node_data(node);
+        EXPECT_EQ(usk->start, FORMAT_START[i]);
+        EXPECT_EQ(usk->end,   FORMAT_END[i]);
+        i++;
     }
 
-    struct work *work = new_work_with_name(SEARCH, sizeof(SEARCH) - 1, BASENAME, sizeof(BASENAME) - 1);
-    work->root_parent.len = sizeof(SEARCH) - 1 + 1; // +1 to count trailing slash
-    work->root_basename_len = sizeof(BASENAME) - 1;
+    /* insert some user strings */
+    trie_t *user_strs = trie_alloc();
+    str_t A = {
+        (char *) "a",
+        1,
+    };
+    trie_insert(user_strs, "A", 1, &A, nullptr);
+    str_t BC = {
+        (char *) "bc",
+        2,
+    };
+    trie_insert(user_strs, "BC", 2, &BC, nullptr);
+    str_t DEF = {
+        (char *) "def",
+        3,
+    };
+    trie_insert(user_strs, "DEF", 3, &DEF, nullptr);
 
-    const size_t expected_len = 1 +
-        (sizeof(BASENAME) - 1) +
-        1 +
-        (sizeof(SEARCH) - 1) + 1 + (sizeof(BASENAME) - 1) +
-        1 +
-        (sizeof(SOURCE_PREFIX) - 1);
-    char *expected = (char *) malloc(expected_len + 1);
-    snprintf(expected, expected_len + 1, "A%sB%s/%sC%s",
-             BASENAME,
-             SEARCH, BASENAME,
-             SOURCE_PREFIX);
+    ASSERT_EQ(trie_search(user_strs, "A",   1, nullptr), 1);
+    ASSERT_EQ(trie_search(user_strs, "BC",  2, nullptr), 1);
+    ASSERT_EQ(trie_search(user_strs, "DEF", 3, nullptr), 1);
+
+    const char EXPECTED[] = "AaBbcCdef";
 
     char *buf = nullptr;
-    size_t len = 0;
-    EXPECT_EQ(replace_formatting(&sql, &fmts, &source_prefix, work, &buf, &len), 0);
-    EXPECT_STREQ(buf, expected);
-    EXPECT_EQ(len, expected_len);
+    ASSERT_EQ(replace_sql(&sql, &fmts, nullptr, nullptr, user_strs, &buf), 0);
+    EXPECT_STREQ(buf, EXPECTED);
+    EXPECT_EQ(strlen(buf), sizeof(EXPECTED) - 1);
 
     free(buf);
-    free(work);
-    free(expected);
 
-    cleanup_formatting(&fmts);
+    trie_free(user_strs);
+    cleanup_replacements(&fmts);
 }
 
-TEST(query_formatting, odd) {
+TEST(query_user_str, odd) {
     refstr_t sql;
     sql.data = FORMAT;
     sql.len = sizeof(FORMAT) - 1; // ends on non-format
 
     sll_t fmts;
-
-    refstr_t source_prefix;
-    source_prefix.data = SOURCE_PREFIX;
-    source_prefix.len = sizeof(SOURCE_PREFIX) - 1;
-
-    EXPECT_EQ(find_formatting(&sql, &fmts), (std::size_t) 3);
+    EXPECT_EQ(save_replacements(&sql, &fmts, nullptr), (std::size_t) 3);
 
     std::size_t i = 0;
     sll_loop(&fmts, node) {
-        const std::size_t pos = (std::size_t) (uintptr_t) sll_node_data(node);
-        EXPECT_EQ(pos, FORMAT_POS[i++]);
+        const usk_t *usk = (usk_t *) sll_node_data(node);
+        EXPECT_EQ(usk->start, FORMAT_START[i]);
+        EXPECT_EQ(usk->end,   FORMAT_END[i]);
+        i++;
     }
 
-    struct work *work = new_work_with_name(SEARCH, sizeof(SEARCH) - 1, BASENAME, sizeof(BASENAME) - 1);
-    work->root_parent.len = sizeof(SEARCH) - 1 + 1; // +1 to count trailing slash
-    work->root_basename_len = sizeof(BASENAME) - 1;
+    /* insert some user strings */
+    trie_t *user_strs = trie_alloc();
+    str_t A = {
+        (char *) "a",
+        1,
+    };
+    trie_insert(user_strs, "A", 1, &A, nullptr);
+    str_t BC = {
+        (char *) "bc",
+        2,
+    };
+    trie_insert(user_strs, "BC", 2, &BC, nullptr);
+    str_t DEF = {
+        (char *) "def",
+        3,
+    };
+    trie_insert(user_strs, "DEF", 3, &DEF, nullptr);
 
-    const size_t expected_len = 1 +
-        (sizeof(BASENAME) - 1) +
-        1 +
-        (sizeof(SEARCH) - 1) + 1 + (sizeof(BASENAME) - 1) +
-        1 +
-        (sizeof(SOURCE_PREFIX) - 1) +
-        1;
-    char *expected = (char *) malloc(expected_len + 1);
-    snprintf(expected, expected_len + 1, "A%sB%s/%sC%sD",
-             BASENAME,
-             SEARCH, BASENAME,
-             SOURCE_PREFIX);
+    ASSERT_EQ(trie_search(user_strs, "A",   1, nullptr), 1);
+    ASSERT_EQ(trie_search(user_strs, "BC",  2, nullptr), 1);
+    ASSERT_EQ(trie_search(user_strs, "DEF", 3, nullptr), 1);
+
+    const char EXPECTED[] = "AaBbcCdefD";
 
     char *buf = nullptr;
-    size_t len = 0;
-    EXPECT_EQ(replace_formatting(&sql, &fmts, &source_prefix, work, &buf, &len), 0);
-    EXPECT_STREQ(buf, expected);
-    EXPECT_EQ(len, expected_len);
+    ASSERT_EQ(replace_sql(&sql, &fmts, nullptr, nullptr, user_strs, &buf), 0);
+    EXPECT_STREQ(buf, EXPECTED);
+    EXPECT_EQ(strlen(buf), sizeof(EXPECTED) - 1);
 
     free(buf);
-    free(work);
-    free(expected);
 
-    cleanup_formatting(&fmts);
+    trie_free(user_strs);
+    cleanup_replacements(&fmts);
 }

@@ -65,32 +65,13 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 
 #include "gufi_query/query.h"
-#include "gufi_query/query_formatting.h"
 #include "print.h"
 #include "utils.h"
-
-static int replace_sql(const refstr_t *sql, const sll_t *fmts, const refstr_t *source_prefix,
-                       struct work *work,
-                       char **used) {
-    *used = (char *) sql->data;
-    if (sll_get_size(fmts) == 0) {
-        return 0;
-    }
-
-    size_t len = 0; /* discarded */
-    if (replace_formatting(sql, fmts, source_prefix, work, used, &len) != 0) {
-        fprintf(stderr, "Warning: Could not replace string formatting in '%s'\n",
-                sql->data);
-        return -1;
-    }
-
-    return 0;
-}
 
 /* wrapper wround sqlite3_exec to pass arguments and check for errors */
 void querydb(struct work *work,
              const char *dbname, const size_t dbname_len, sqlite3 *db,
-             const refstr_t *query, const sll_t *fmts, const refstr_t *source_prefix, const int *types,
+             const char *sql, const int *types,
              PoolArgs_t *pa, int id,
              int (*callback)(void *, int, char **, char**), int *rc) {
     ThreadArgs_t *ta = &pa->ta[id];
@@ -103,12 +84,6 @@ void querydb(struct work *work,
         .types = types,
     };
 
-    /* replace original SQL string if there is formatting */
-    char *sql = NULL;
-    if (replace_sql(query, fmts, source_prefix, work, &sql) != 0) {
-        return;
-    }
-
     char *err = NULL;
     if (sqlite3_exec(db, sql, callback, &args, &err) != SQLITE_OK) {
         char buf[MAXPATH];
@@ -116,10 +91,6 @@ void querydb(struct work *work,
                           &work->root_parent, work->root_basename_len, &work->orig_root,
                           buf, sizeof(buf));
         sqlite_print_err_and_free(err, stderr, "Error: %s: %s: \"%s\"\n", err, buf, sql);
-    }
-
-    if (sql != query->data) {
-        free(sql);
     }
 
     *rc = args.rows;

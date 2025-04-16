@@ -177,7 +177,9 @@ add_library(gufi_query_lib OBJECT
   gufi_query/process_queries.c
   gufi_query/processdir.c
   gufi_query/query.c
-  gufi_query/query_formatting.c
+  gufi_query/query_fmt.c
+  gufi_query/query_replacement.c
+  gufi_query/query_user_strs.c
 )
 
 if (DEP_AI)

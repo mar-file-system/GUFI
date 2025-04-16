@@ -62,20 +62,43 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_PROCESS_QUERIES_H
-#define GUFI_QUERY_PROCESS_QUERIES_H
+#ifndef GUFI_QUERY_USER_STRINGS_H
+#define GUFI_QUERY_USER_STRINGS_H
 
-#include <dirent.h>
+#include <stdlib.h>
 
-#include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
 #include "bf.h"
-#include "gufi_query/PoolArgs.h"
-#include "gufi_query/gqw.h"
 #include "trie.h"
 
-int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
-                    DIR *dir, gqw_t *gqw, sqlite3 *db, trie_t *user_strs,
-                    const char *dbname, const size_t dbname_len,
-                    const int descend, size_t *subdirs_walked_count);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*
+ * user key-value mapping
+ *
+ * since these can be anything, need start and stop characters
+ */
+#define USER_STR_START '{'
+#define USER_STR_END   '}'
+
+typedef struct user_str_key {
+    size_t start; /* index of { */
+    size_t end;   /* index of } */
+} usk_t;
+
+void save_user_str(sll_t *idx, const refstr_t *sql, const size_t *i);
+
+int replace_user_str(const refstr_t *sql,
+                     size_t *src_start,
+                     void *pos,
+                     str_t *replaced,
+                     size_t *allocd,
+                     const trie_t *user_strs);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

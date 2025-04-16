@@ -62,20 +62,76 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_PROCESS_QUERIES_H
-#define GUFI_QUERY_PROCESS_QUERIES_H
+#include <errno.h>
+#include <sqlite3.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <dirent.h>
+#include "gufi_query/query_user_strs.h"
+#include "utils.h"
 
-#include "QueuePerThreadPool.h"
-#include "bf.h"
-#include "gufi_query/PoolArgs.h"
-#include "gufi_query/gqw.h"
-#include "trie.h"
+/* insert position of user string into list of indexes */
+void save_user_str(sll_t *idx, const refstr_t *sql, const size_t *i) {
+    size_t j = *i + 1;
 
-int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
-                    DIR *dir, gqw_t *gqw, sqlite3 *db, trie_t *user_strs,
-                    const char *dbname, const size_t dbname_len,
-                    const int descend, size_t *subdirs_walked_count);
+    /* find stop character */
+    for(; (j < sql->len) && (sql->data[j] != USER_STR_END); j++);
 
-#endif
+    /* not found */
+    if ((*i + 1) == j) {
+        /* {} is not replaced */
+        return;
+    }
+    else if (j == sql->len) {
+        fprintf(stderr, "Warning: Could not find stop character for user string key starting at index %zu of \"%s\"\n",
+                *i, sql->data);
+        return;
+    }
+
+    /* indexes of text between start and stop characters */
+    usk_t *key = malloc(sizeof(*key));
+    key->start = *i;
+    key->end = j;
+    sll_push(idx, key);
+}
+
+int replace_user_str(const refstr_t *sql,
+                     size_t *src_start,
+                     void *pos,
+                     str_t *replaced,
+                     size_t *allocd,
+                     const trie_t *user_strs) {
+    const usk_t *usk = (usk_t *) pos;
+    const char *key = &sql->data[usk->start + 1];
+    const size_t len = (usk->end - 1) - (usk->start + 1) + 1;
+
+    /* find user string set for this key */
+    str_t *val = NULL;
+    if (trie_search(user_strs, key, len, (void **) &val) != 1) {
+        fprintf(stderr, "Error: replacement key not found: %.*s\n", (int) len, key);
+        return -1;
+    }
+
+    /* reallocate */
+    const size_t req_alloc = replaced->len + val->len + 1;
+    if (req_alloc >= *allocd) {
+        *allocd = req_alloc * 2;
+        char *new_buf = realloc(replaced->data, *allocd);
+        if (!new_buf) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not reallocate user string buffer: %s (%d)\n",
+                    strerror(err), err);
+            return -1;
+        }
+
+        replaced->data = new_buf;
+    }
+
+    /* copy in replacement string */
+    memcpy(replaced->data + replaced->len, val->data, val->len);
+    replaced->len += val->len;
+
+    *src_start = usk->end;    /* move to } */
+
+    return 0;
+}

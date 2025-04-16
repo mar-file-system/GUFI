@@ -242,6 +242,13 @@ $ gufi_query -d " " -p "prefix" -S "CREATE VIRTUAL TABLE temp.csv USING run_vt(c
 8 9 a b
 c d e f
 
+$ gufi_query -d " " -S "SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));" -E "SELECT level(), {abc}, {def};" "prefix"
+0 1049624 5
+1 0 0
+1 15 1
+1 23 2
+1 6 3
+2 5 1
 #####################################
 # Invalid Inputs                    #
 #####################################

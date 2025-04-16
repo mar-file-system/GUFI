@@ -61,21 +61,29 @@ OF SUCH DAMAGE.
 */
 
 
+#ifndef GUFI_QUERY_REPLACEMENT_H
+#define GUFI_QUERY_REPLACEMENT_H
 
-#ifndef GUFI_QUERY_PROCESS_QUERIES_H
-#define GUFI_QUERY_PROCESS_QUERIES_H
-
-#include <dirent.h>
-
-#include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
 #include "bf.h"
-#include "gufi_query/PoolArgs.h"
-#include "gufi_query/gqw.h"
-#include "trie.h"
 
-int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
-                    DIR *dir, gqw_t *gqw, sqlite3 *db, trie_t *user_strs,
-                    const char *dbname, const size_t dbname_len,
-                    const int descend, size_t *subdirs_walked_count);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+size_t save_replacements(const refstr_t *sql, sll_t *idx, const refstr_t *source_prefix);
+
+int replace_sql(const refstr_t *orig, const sll_t *idx,
+                const refstr_t *source_prefix, struct work *work,
+                const trie_t *user_strs,
+                char **used);
+
+void free_sql(char *used, const char *orig);
+
+void cleanup_replacements(sll_t *idx);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

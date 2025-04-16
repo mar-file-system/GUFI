@@ -631,9 +631,9 @@ int addqueryfuncs(sqlite3 *db) {
                                  NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
                                  NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "strop",                    1,   SQLITE_UTF8,
+        (sqlite3_create_function(db,   "strop",               1,   SQLITE_UTF8,
                                  NULL, &strop,                     NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "intop",                    1,   SQLITE_UTF8,
+        (sqlite3_create_function(db,   "intop",               1,   SQLITE_UTF8,
                                  NULL, &intop,                     NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
                                  NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&

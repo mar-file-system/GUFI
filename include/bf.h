@@ -194,8 +194,11 @@ struct input {
    } sql;
 
    /*
-    * if the S SQL has any formatting in it,
-    * store the format character positions here
+    * if the SQL has any formatting in it,
+    * store (at least) the positions of the
+    * first character being replaced
+    *
+    * each item should be malloc-ed
     */
    struct {
        refstr_t source_prefix; /* for %s since the source directory is not stored in the index */
@@ -203,13 +206,6 @@ struct input {
        sll_t sum;
        sll_t ent;
    } sql_format;
-
-   /* user defined strings whose keys are wrapped in {} */
-   struct {
-       sll_t tsum;
-       sll_t sum;
-       sll_t ent;
-   } sql_user_str;
 
    /*
     * if outputting to STDOUT or OUTFILE, get list of

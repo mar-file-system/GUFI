@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/process_queries.h"
 #include "gufi_query/processdir.h"
 #include "gufi_query/query.h"
+#include "gufi_query/query_replacement.h"
 #include "print.h"
 #include "utils.h"
 
@@ -175,10 +176,8 @@ static void subdirs(sqlite3_context *context, int argc, sqlite3_value **argv) {
  * OR  mode:
  *     whether or not -S returns anything, run -E
  */
-int process_queries(PoolArgs_t *pa,
-                    QPTPool_t *ctx, const int id,
-                    DIR *dir,
-                    gqw_t *gqw, sqlite3 *db,
+int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
+                    DIR *dir, gqw_t *gqw, sqlite3 *db, trie_t *user_strs,
                     const char *dbname, const size_t dbname_len,
                     const int descend, size_t *subdirs_walked_count) {
     struct input *in = pa->in;
@@ -226,10 +225,22 @@ int process_queries(PoolArgs_t *pa,
 
         if (in->sql.sum.len) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
+
+            char *sum = NULL;
+            if (replace_sql(&in->sql.sum, &in->sql_format.sum,
+                            &in->sql_format.source_prefix, &gqw->work,
+                            user_strs,
+                            &sum) != 0) {
+                fprintf(stderr, "Error: Failed to do string replacements for -S\n");
+                return 0;
+            }
+
             /* put in the path relative to the user's input */
             querydb(&gqw->work, dbname, dbname_len, db,
-                    &in->sql.sum, &in->sql_format.sum, &in->sql_format.source_prefix, in->types.sum,
+                    sum, in->types.sum,
                     pa, id, print_parallel, &recs);
+
+            free_sql(sum, in->sql.sum.data);
         } else {
             recs = 1;
         }
@@ -239,10 +250,21 @@ int process_queries(PoolArgs_t *pa,
         /* if we have recs (or are running an OR) query the entries table */
         if (recs > 0) {
             if (in->sql.ent.len) {
+                char *ent = NULL;
+                if (replace_sql(&in->sql.ent, &in->sql_format.ent,
+                                &in->sql_format.source_prefix, &gqw->work,
+                                user_strs,
+                                &ent) != 0) {
+                    fprintf(stderr, "Error: Failed to do string replacements for -E\n");
+                    return 0;
+                }
+
                 /* replace original SQL string if there is formatting */
                 querydb(&gqw->work, dbname, dbname_len, db,
-                        &in->sql.ent, &in->sql_format.ent, &in->sql_format.source_prefix, in->types.ent,
+                        ent, in->types.ent,
                         pa, id, print_parallel, &recs); /* recs is not used */
+
+                free_sql(ent, in->sql.ent.data);
             }
         }
     }
