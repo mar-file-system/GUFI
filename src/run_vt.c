@@ -187,18 +187,19 @@ static void cleanup_arg(refstr_t *value) {
         value->len--;
     }
 
-    while (value->data[0] == ' ') {
+    while (value->len && (value->data[0] == ' ')) {
         value->data++;
         value->len--;
     }
 
-    if ((value->data[value->len - 1] == '\'') ||
-        (value->data[value->len - 1] == '"')) {
+    if (value->len &&
+        ((value->data[value->len - 1] == '\'') ||
+         (value->data[value->len - 1] == '"'))) {
         value->len--;
         ((char *) (value->data))[value->len] = '\0';
     }
 
-    while (value->data[value->len - 1] == ' ') {
+    while (value->len && (value->data[value->len - 1] == ' ')) {
         value->len--;
         ((char *) (value->data))[value->len] = '\0';
     }
@@ -225,17 +226,19 @@ static int run_vtConnect(sqlite3 *db,
         char *key   = strtok_r((char *) argv[i], "=", &saveptr);
         char *value = strtok_r(NULL, "=", &saveptr);
 
-        /* assume this is an index path */
         if (!value) {
             *pzErr = sqlite3_mprintf("Input arg missing '=': %s", argv[i]);
             return SQLITE_CONSTRAINT;
         }
+
+        int found = 0;
 
         const size_t len = strlen(key);
 
         if (len == 1) {
             if ((*key == 'd') || (*key == 'D')) {
                 args.delim = value;
+                found = 1;
             }
         }
         else if (len == 3) {
@@ -244,6 +247,7 @@ static int run_vtConnect(sqlite3 *db,
                 args.cmd.len = strlen(value);
 
                 cleanup_arg(&args.cmd);
+                found = 1;
             }
         }
         else if (len == 4) {
@@ -252,9 +256,11 @@ static int run_vtConnect(sqlite3 *db,
                 cols.len = strlen(value);
 
                 cleanup_arg(&cols);
+                found = 1;
             }
         }
-        else {
+
+        if (!found) {
             *pzErr = sqlite3_mprintf("Unknown input arg: %s", argv[i]);
             return SQLITE_CONSTRAINT;
         }

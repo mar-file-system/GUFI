@@ -1,0 +1,110 @@
+# Basic Usage
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo "col0 col1"', cols='col0, col1');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+col0|col1
+
+# d=','
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo "col0, col1"', cols='col0, col1', d=',');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+col0| col1
+
+# D=','
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo "col0, col1"', cols='col0, col1', D=',');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+col0| col1
+
+# Leading/Trailing Spaces
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo "col0 col1"', cols='  col0, col1  ');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+col0|col1
+
+# Row ID
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo "col0 col1"', cols='col0, col1');"
+    echo "SELECT rowid, col0, col1 FROM output;"
+) | sqlite3
+0|col0|col1
+
+# Bad Command
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='/etc/GUFI/config', cols='col0, col1');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+/etc/GUFI/config: Permission denied
+# Missing Argument Name
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd);"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Runtime error near line 2: Input arg missing '=': cmd (19)
+Parse error near line 3: no such table: output
+
+# Empty Command
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='', cols='col0, col1');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Runtime error near line 2: Missing command to run (19)
+Parse error near line 3: no such table: output
+
+# Empty cols
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo', cols='');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Runtime error near line 2: Missing output columns (19)
+Parse error near line 3: no such table: output
+
+# Bad Argument Name
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo "col0 col1"', cols='col0, col1', b='');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Runtime error near line 2: Unknown input arg: b (19)
+Parse error near line 3: no such table: output
+
+# Bad Argument Name
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo "col0 col1"', cols='col0, col1', bad='');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Runtime error near line 2: Unknown input arg: bad (19)
+Parse error near line 3: no such table: output
+
+# Bad Argument Name
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo "col0 col1"', cols='col0, col1', bada='');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Runtime error near line 2: Unknown input arg: bada (19)
+Parse error near line 3: no such table: output
+
+# Bad Argument Name
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo "col0 col1"', cols='col0, col1', badarg='');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Runtime error near line 2: Unknown input arg: badarg (19)
+Parse error near line 3: no such table: output
+

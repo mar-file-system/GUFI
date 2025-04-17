@@ -84,7 +84,9 @@ set(BINARIES
   gufi_query
   gufi_stat_bin
   querydbs
+
   gufi_vt
+  run_vt
 )
 
 set(PYTHON

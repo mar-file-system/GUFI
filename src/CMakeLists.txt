@@ -194,6 +194,15 @@ build_and_install_one(${BIN} TRUE gufi_query
   $<TARGET_OBJECTS:gufi_query_lib>
 )
 
+# dynamically loaded module extension
+if (APPLE OR DARWIN)
+  set(EXT "dylib")
+elseif (CYGWIN)
+  set(EXT "dll.a")
+else ()
+  set(EXT "so")
+endif()
+
 # build custom SQLite virtual tables
 add_library(gufi_vt MODULE
   gufi_vt.c
@@ -213,14 +222,10 @@ set_target_properties(gufi_vt PROPERTIES PREFIX "")
 set_target_properties(gufi_vt PROPERTIES BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3-pcre;${DEP_INSTALL_PREFIX}/sqlite3/lib"
                                          INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre;${DEP_INSTALL_PREFIX}/sqlite3/lib")
 if (APPLE OR DARWIN)
-  set(EXT "dylib")
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_target_properties(gufi_vt PROPERTIES SUFFIX ".${EXT}")
-elseif (CYGWIN)
-  set(EXT "dll.a")
-else ()
-  set(EXT "so")
 endif()
+
 # libsqlite3-pcre needs to be installed manually (since it does not
 # have a package) in order for gufi_vt to be usable if using rpm
 # installed files
@@ -234,6 +239,10 @@ add_library(run_vt MODULE
 )
 set_target_properties(run_vt PROPERTIES PREFIX "")
 add_dependencies(run_vt install_dependencies)
+if (APPLE OR DARWIN)
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
+  set_target_properties(run_vt PROPERTIES SUFFIX ".${EXT}")
+endif()
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)

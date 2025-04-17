@@ -167,6 +167,7 @@ PARALLEL_CPR="@CMAKE_BINARY_DIR@/src/parallel_cpr"
 PARALLEL_RMR="@CMAKE_BINARY_DIR@/src/parallel_rmr"
 PUGSQL="${GUFI_TOOL} pugsql"
 QUERYDBS="${GUFI_TOOL} querydbs"
+RUN_VT="@CMAKE_BINARY_DIR@/src/run_vt"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
 SQLALCHEMY="${GUFI_TOOL} sqlalchemy"
 TREEDIFF="@CMAKE_BINARY_DIR@/contrib/treediff"
@@ -234,6 +235,7 @@ replace() {
     s/${PARALLEL_RMR//\//\\/}/parallel_rmr/g;
     s/${PUGSQL//\//\\/}/pugsql/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
+    s/${RUN_VT//\//\\/}/run_vt/g;
     s/${SPLIT_TRACE//\//\\/}/split_trace/g;
     s/${SQLALCHEMY//\//\\/}/gufi_vt_sqlalchemy/g;
     s/${TREEDIFF//\//\\/}/treediff/g;
