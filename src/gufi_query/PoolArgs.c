@@ -73,6 +73,35 @@ OF SUCH DAMAGE.
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/external.h"
 
+/*
+ * udf that allows for user to name SQL values that can be used for string replacement
+ *
+ * -S "SELECT setstr('1', (SELECT col ...));"
+ * -E "SELECT '{1}';"
+ *
+ * will print the value of col
+ */
+static void setstr(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    trie_t *user_strs = (trie_t *) sqlite3_user_data(context);
+
+    /* args are cast to strings */
+
+    const size_t key_len = sqlite3_value_bytes(argv[0]);
+    const char *key = (const char *) sqlite3_value_text(argv[0]);
+
+    const size_t val_len = sqlite3_value_bytes(argv[1]);
+    const char *val = (const char *) sqlite3_value_text(argv[1]);
+
+    /* copy value since its lifetime is not guaranteed */
+    str_t *copy = str_alloc(val_len);
+    memcpy(copy->data, val, val_len);
+    copy->data[copy->len] = '\0';
+
+    trie_insert(user_strs, key, key_len, copy, free);
+}
+
 int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex) {
     /* Not checking arguments */
 
@@ -111,7 +140,16 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         }
 
         if (addqueryfuncs(ta->outdb) != 0) {
-            fprintf(stderr, "Warning: Could not add functions to sqlite\n");
+            fprintf(stderr, "Error: Could not add functions to sqlite\n");
+            break;
+        }
+
+        /* user string storage */
+        ta->user_strs = trie_alloc();
+        if (sqlite3_create_function(ta->outdb, "setstr", 2, SQLITE_UTF8,
+                                    ta->user_strs, &setstr, NULL, NULL) != SQLITE_OK) {
+            fprintf(stderr, "Error: Could not add setstr to sqlite\n");
+            break;
         }
 
         char *err = NULL;
@@ -213,6 +251,8 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
         ThreadArgs_t *ta = &pa->ta[i];
 
         closedb(ta->outdb);
+
+        trie_free(ta->user_strs);
 
         if (ta->outfile) {
             OutputBuffer_flush(&ta->output_buffer, ta->outfile);

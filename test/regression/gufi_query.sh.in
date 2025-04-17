@@ -140,7 +140,7 @@ echo "# run_vt with %s"
 
 run_no_sort "${GUFI_QUERY} -d \" \" -p \"${SRCDIR}\" -S \"CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \\\"%s\\\" \\\"%i\\\" -maxdepth 1 -name \\\"*.csv\\\" -exec cat \\\"{}\\\" \\\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;\" \"${INDEXROOT}\""
 
-run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));\" -E \"SELECT level(), {abc}, {def};\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
+run_sort "${GUFI_QUERY} -d \" \" -I \"SELECT setstr('-I', 'init');\" -S \"SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));\" -E \"SELECT level(), '{-I}', {abc}, {def};\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
 
 echo "#####################################"
 echo "# Invalid Inputs                    #"

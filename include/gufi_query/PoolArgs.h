@@ -72,11 +72,13 @@ OF SUCH DAMAGE.
 #include "OutputBuffers.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "trie.h"
 
 typedef struct ThreadArgs {
     char dbname[MAXPATH];
     sqlite3 *outdb;                    /* either user named or in-memory */
     FILE *outfile;                     /* always points to STDOUT or a user defined file */
+    trie_t *user_strs;                 /* per-thread user strings */
     struct OutputBuffer output_buffer; /* only used when outputting to STDOUT or OUTFILE */
 } ThreadArgs_t;
 

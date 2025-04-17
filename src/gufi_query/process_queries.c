@@ -226,6 +226,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
         if (in->sql.sum.len) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
 
+            /* replace % and {} */
             char *sum = NULL;
             if (replace_sql(&in->sql.sum, &in->sql_format.sum,
                             &in->sql_format.source_prefix, &gqw->work,
@@ -250,6 +251,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
         /* if we have recs (or are running an OR) query the entries table */
         if (recs > 0) {
             if (in->sql.ent.len) {
+                /* replace % and {} */
                 char *ent = NULL;
                 if (replace_sql(&in->sql.ent, &in->sql_format.ent,
                                 &in->sql_format.source_prefix, &gqw->work,

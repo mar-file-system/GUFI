@@ -80,7 +80,6 @@ OF SUCH DAMAGE.
 #include "gufi_query/query.h"
 #include "gufi_query/query_replacement.h"
 #include "print.h"
-#include "trie.h"
 #include "utils.h"
 
 static inline int save_matime(gqw_t *gqw,
@@ -147,33 +146,6 @@ static int collect_dir_inodes(void *args, int count, char **data, char **columns
     return 0;
 }
 
-/*
- * udf that allows for user to name SQL values that can be used for string replacement
- *
- * SELECT setstr(1, (SELECT col ...)); SELECT '{1}';
- *
- * will print 'string'
- */
-static void setstr(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc;
-
-    trie_t *user_strs = (trie_t *) sqlite3_user_data(context);
-
-    /* args are cast to strings */
-
-    const size_t key_len = sqlite3_value_bytes(argv[0]);
-    const char *key = (const char *) sqlite3_value_text(argv[0]);
-
-    const size_t val_len = sqlite3_value_bytes(argv[1]);
-    const char *val = (const char *) sqlite3_value_text(argv[1]);
-
-    /* copy value since its lifetime is not guaranteed */
-    str_t *copy = str_alloc(val_len);
-    memcpy(copy->data, val, val_len);
-    copy->data[copy->len] = '\0';
-
-    trie_insert(user_strs, key, key_len, copy, free);
-}
 
 int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* Not checking arguments */
@@ -181,7 +153,6 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     DIR *dir = NULL;
     sqlite3 *db = NULL;
     struct utimbuf dbtime;
-    trie_t *user_strs = NULL; /* map of user keys to user values */
 
     PoolArgs_t *pa = (PoolArgs_t *) args;
     struct input *in = pa->in;
@@ -211,13 +182,6 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (rc != 0) {
         goto close_dir;
-    }
-
-    user_strs = trie_alloc();
-
-    if (sqlite3_create_function(ta->outdb, "setstr", 2, SQLITE_UTF8,
-                                user_strs, &setstr, NULL, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Error: Failed to add setstr function\n");
     }
 
     if (gqw->work.level >= in->min_level) {
@@ -259,10 +223,11 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                     recs = -1;
                 }
                 else {
+                    /* replace % and {} */
                     char *tsum = NULL;
                     if (replace_sql(&in->sql.tsum, &in->sql_format.tsum,
                                     &in->sql_format.source_prefix, &gqw->work,
-                                    user_strs,
+                                    ta->user_strs,
                                     &tsum) != 0) {
                         fprintf(stderr, "Error: Failed to do string replacements for -T\n");
                         goto detach;
@@ -323,7 +288,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
                     /* run queries */
                     process_queries(pa, ctx, id,
-                                    dir, gqw, db, user_strs,
+                                    dir, gqw, db, ta->user_strs,
                                     dbname, dbname_len,
                                     1, &subdirs_walked_count);
 
@@ -358,7 +323,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
                         /* run queries */
                         process_queries(pa, ctx, id,
-                                        dir, gqw, db, user_strs,
+                                        dir, gqw, db, ta->user_strs,
                                         dbname, dbname_len,
                                         desc, &subdirs_walked_count);
 
@@ -380,7 +345,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
                 /* run queries */
                 process_queries(pa, ctx, id,
-                                dir, gqw, db, user_strs,
+                                dir, gqw, db, ta->user_strs,
                                 dbname, dbname_len,
                                 1, &subdirs_walked_count);
             }
@@ -403,7 +368,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     else {
         /* if the database was not opened or not deep enough, still have to descend */
         process_queries(pa, ctx, id,
-                        dir, gqw, db, user_strs,
+                        dir, gqw, db, ta->user_strs,
                         dbname, dbname_len,
                         1, &subdirs_walked_count);
     }
@@ -419,8 +384,6 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             restore_matime(dbpath, &dbtime);
         }
     }
-
-    trie_free(user_strs);
 
   close_dir:
     closedir(dir);
