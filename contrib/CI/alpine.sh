@@ -94,5 +94,5 @@ apk add \
     sudo \
     util-linux-misc
 
-ln -s /usr/bin/clang-20   /usr/bin/clang
-ln -s /usr/bin/clang++-20 /usr/bin/clang++
+ln -sf /usr/bin/clang-20   /usr/bin/clang
+ln -sf /usr/bin/clang++-20 /usr/bin/clang++
