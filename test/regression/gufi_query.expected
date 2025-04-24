@@ -315,6 +315,11 @@ $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT r
 $ gufi_query -n 18446744073709551615 "prefix"
 Error: Could not allocate 18446744073709551615 thread structures
 
+# Bad user data key
+$ gufi_query -d " " -z 0 -E "SELECT {abc}, {def;" "prefix"
+Error: Failed to do string replacements for -E
+Error: replacement key not found: abc
+Warning: Could not find stop character for user string key starting at index 14 of "SELECT {abc}, {def;"
 #####################################
 # Extra Inputs                      #
 #####################################

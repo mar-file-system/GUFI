@@ -194,6 +194,9 @@ run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;
 echo "# Bad thread count"
 run_no_sort "${GUFI_QUERY} -n 18446744073709551615 \"${INDEXROOT}\""
 
+echo "# Bad user data key"
+run_sort "${GUFI_QUERY} -d \" \" -z 0 -E \"SELECT {abc}, {def;\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
+
 echo "#####################################"
 echo "# Extra Inputs                      #"
 echo "#####################################"
