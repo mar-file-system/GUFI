@@ -174,8 +174,8 @@ void drop_extdb_views(sqlite3 *db) {
 }
 
 void detach_extdbs(struct input *in, sqlite3 *db,
-                                 const char *dir_inode, const size_t dir_inode_len,
-                                 size_t *extdb_count) {
+                   const char *dir_inode, const size_t dir_inode_len,
+                   size_t *extdb_count) {
     /* detach each external db */
     sll_loop(&in->external_attach, node) {
         eus_t *user = (eus_t *) sll_node_data(node);

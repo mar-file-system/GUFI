@@ -67,8 +67,17 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
+#include "SinglyLinkedList.h"
 #include "dbutils.h"
 #include "external.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "gufi_query/external.h"
+#ifdef __cplusplus
+}
+#endif
 
 static size_t bad_filename(char **dst, const size_t dst_size,
                            const char *, const size_t,
@@ -304,4 +313,25 @@ TEST(external, concatenate) {
                                  nullptr,
                                  nullptr,
                                  nullptr, nullptr);
+}
+
+TEST(gufi_query_external, NULL_db) {
+    EXPECT_NO_THROW(create_extdb_views_noiter(nullptr)); // err is NULL when db is NULL
+    EXPECT_NO_THROW(create_extdb_views_iter(nullptr, "0"));
+    EXPECT_NO_THROW(drop_extdb_views(nullptr));
+
+    eus_t eus;
+    memset(&eus, 0, sizeof(eus));
+    eus.view.data = "testview";
+    eus.view.len = strlen(eus.view.data);
+
+    struct input in;
+    sll_init(&in.external_attach);
+    sll_push(&in.external_attach, &eus);
+
+    std::size_t extdb_count = 0;
+    detach_extdbs(&in, nullptr, nullptr, 0, &extdb_count);
+    EXPECT_EQ(extdb_count, (std::size_t) 0);
+
+    sll_destroy(&in.external_attach, nullptr);
 }
