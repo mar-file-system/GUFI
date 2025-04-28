@@ -142,6 +142,8 @@ run_no_sort "${GUFI_QUERY} -d \" \" -p \"${SRCDIR}\" -S \"CREATE VIRTUAL TABLE t
 
 run_sort "${GUFI_QUERY} -d \" \" -I \"SELECT setstr('-I', 'init');\" -S \"SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));\" -E \"SELECT level(), '{-I}', {abc}, {def};\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
 
+run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT thread_id();\" \"${INDEXROOT}\""
+
 echo "#####################################"
 echo "# Invalid Inputs                    #"
 echo "#####################################"

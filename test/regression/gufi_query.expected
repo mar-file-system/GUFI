@@ -249,6 +249,14 @@ $ gufi_query -d " " -I "SELECT setstr('-I', 'init');" -S "SELECT setstr('abc', (
 1 init 23 2
 1 init 6 3
 2 init 5 1
+$ gufi_query -d " " -E "SELECT thread_id();" "prefix"
+0
+0
+0
+0
+0
+0
+
 #####################################
 # Invalid Inputs                    #
 #####################################

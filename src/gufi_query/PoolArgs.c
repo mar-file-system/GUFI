@@ -102,6 +102,13 @@ static void setstr(sqlite3_context *context, int argc, sqlite3_value **argv) {
     trie_insert(user_strs, key, key_len, copy, free);
 }
 
+void thread_id(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc; (void) argv;
+
+    const size_t tid = (size_t) (uintptr_t) sqlite3_user_data(context);
+    sqlite3_result_int(context, tid);
+}
+
 int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex) {
     /* Not checking arguments */
 
@@ -149,6 +156,12 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         if (sqlite3_create_function(ta->outdb, "setstr", 2, SQLITE_UTF8,
                                     ta->user_strs, &setstr, NULL, NULL) != SQLITE_OK) {
             fprintf(stderr, "Error: Could not add setstr to sqlite\n");
+            break;
+        }
+
+        if (sqlite3_create_function(ta->outdb, "thread_id", 0, SQLITE_UTF8,
+                                    (void *) (uintptr_t) i, &thread_id, NULL, NULL) != SQLITE_OK) {
+            fprintf(stderr, "Error: Could not add thread_id to sqlite\n");
             break;
         }
 
