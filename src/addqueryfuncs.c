@@ -394,6 +394,55 @@ static void intop(sqlite3_context *context, int argc, sqlite3_value **argv) {
     sqlite3_result_int64(context, retval);
 }
 
+/* run a command and get all data from stdout */
+static void blobop(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    const char *cmd = (const char *) sqlite3_value_text(argv[0]);
+    printf("[%s]\n", cmd);
+    FILE *p = popen(cmd, "r");
+    if (p == NULL) {
+        static const char ERR_PREFIX[] = "blobop: popen failed to run '";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        return;
+    }
+
+    size_t alloc = 1;
+    char *data = malloc(alloc);
+    size_t len = 0;
+    size_t got = 0;
+
+    while ((got = fread(data + len, sizeof(char), alloc - len, p)) == (alloc - len)) {
+        len += got;
+
+        if (len == alloc) {
+            alloc *= 2;
+            char *new_buf = realloc(data, alloc);
+            if (!new_buf) {
+                sqlite3_result_error_nomem(context);
+                free(data);
+                pclose(p);
+                return;
+            }
+
+            data = new_buf;
+        }
+    }
+
+    pclose(p);
+
+    if ((char) got == EOF) {
+        sqlite3_result_error_code(context, SQLITE_ERROR);
+        free(data);
+        return;
+    }
+
+    len += got;
+
+    sqlite3_result_blob(context, data, len, SQLITE_TRANSIENT);
+    free(data);
+}
+
 /*
  * One pass standard deviation (sample)
  * https://mathcentral.uregina.ca/QQ/database/QQ.09.06/h/murtaza1.html
@@ -635,6 +684,8 @@ int addqueryfuncs(sqlite3 *db) {
                                  NULL, &strop,                     NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "intop",               1,   SQLITE_UTF8,
                                  NULL, &intop,                     NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "blobop",              1,   SQLITE_UTF8,
+                                 NULL, &blobop,                    NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
                                  NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&
         (sqlite3_create_function(db,   "stdevp",              1,   SQLITE_UTF8,
