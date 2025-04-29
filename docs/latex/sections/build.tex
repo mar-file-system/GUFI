@@ -62,7 +62,7 @@
 
 \section{Build}
 
-GUFI uses CMake to generate Makefiles. CMake 3.1 or higher is
+GUFI uses CMake to generate Makefiles. CMake 3.16 or higher is
 required. From the root directory of the GUFI source, run:
 \begin{verbatim}
 mkdir build
@@ -74,14 +74,44 @@ make
 The recommended options for deployment are
 \texttt{-DCMAKE\_BUILD\_TYPE=Release -DCLIENT=On}.
 \\\\
-GUFI is known to build on Ubuntu~16.04~(Xenial),
-Ubuntu~18.04~(Bionic), Ubuntu~20.04~(Focal), Ubuntu~22.04~(Jammy),
-Ubuntu~24.04~(Noble), CentOS~7, CentOS~8, Rocky~Linux~8,
-Rocky~Linux~9, OSX~10.13~(High~Sierra), OSX~11~(Big~Sur),
-OSX~12~(Monterey), OSX~13~(Ventura), and OSX~14~(Sonoma). Building on
-Windows with cygwin, GCC (not MinGW), and with jemalloc turned off
-also works. OpenSUSE~12.3 was supported in the past, and may still
-work.
+GUFI is known to work on many OSes. The list below shows the OSes
+where GUFI is known to have built, run, and passed tests at some
+point. The OSes labeled with a plus (+) are currently being used on
+Github Actions. The OSes labeled with minus (-) are no longer used on
+GitHub Actions and might no longer work.
+\begin{itemize}
+\item Linux
+  \begin{itemize}
+  \item[+] Alpine~Linux~Edge
+  \item[-] CentOS~7
+  \item[+] CentOS~8
+  \item[-] OpenSUSE~12.3
+  \item[-] Ubuntu~16.04~(Xenial)
+  \item[-] Ubuntu~18.04~(Bionic)
+  \item[-] Ubuntu~20.04~(Focal)
+  \item[+] Ubuntu~22.04~(Jammy)
+  \item[+] Ubuntu~24.04~(Noble)
+  \item[+] Rocky~Linux~8
+  \item[+] Rocky~Linux~9
+  \end{itemize}
+\item macOS
+  \begin{itemize}
+  \item[-] 10.13~(High~Sierra)
+  \item[-] 11~(Big~Sur)
+  \item[-] 12~(Monterey)
+  \item[-] 13~(Ventura)
+  \item[+] 14~(Sonoma)
+  \item[+] 15~(Sequoia)
+  \end{itemize}
+\item Windows
+  \begin{itemize}
+  \item[+] cygwin
+    \begin{itemize}
+    \item GCC (not MinGW)
+    \item jemalloc turned off
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
 
 \subsection{Environment Variables}
 \begin{table}[h!]
@@ -119,6 +149,9 @@ work.
 \begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
   \texttt{-D<VAR>=<VALUE>} & Description \\
+  \hline
+  \texttt{DEP\_AI=<On|Off>}
+  & Whether or not to build with SQLite AI modules \\
   \hline
   \texttt{DEP\_DOWNLOAD\_PREFIX=<PATH>}
   & Location of downloaded dependencies. If the expected files are

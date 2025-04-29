@@ -71,7 +71,7 @@ required a more performant thread pool. The solution to this was
 lock) maintained for each thread in the thread pool. Now, there are
 multiple work queues maintained for each thread: work is pushed to the
 waiting work queue and the claimed work queue contains the work that
-the thread plans to process.
+the thread claimed for processing.
 
 \subsubsection{Adding Work}
 By default, work is added to threads in a round robin fashion in order
@@ -101,7 +101,7 @@ all threads, the thread will attempt to take work from the claimed
 work queue. This is done so that long running jobs do not prevent
 claimed work from being processed. This also makes \qptp behave more
 like thread pools that pull one work item off at a time and thus
-always process work when work is available.
+always processes work when work is available.
 
 If the queue size limit was set before the thread pool was started and
 a thread's work item count is greater than or equal to the queue size

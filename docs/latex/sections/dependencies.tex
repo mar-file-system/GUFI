@@ -66,6 +66,7 @@ build GUFI. There are also many optional dependencies that can enable
 optional features.
 
 \subsection{System Tools}
+\begin{center}
 \begin{tabularx}{\textwidth}{| l | c | X | }
   \hline
   Package/Executable & Required? & Comments \\
@@ -87,7 +88,7 @@ optional features.
   \hline
   pip & No & Used for installing and client dependencies \\
   \hline
-  git & No & \\
+  git & No & Only needed if configuring with \texttt{DEP\_AI=On} \\
   \hline
   ImageMagick & No & Only needed if building \LaTeX \hfill \\
   & & Documentation \hfill \\
@@ -111,8 +112,10 @@ optional features.
   uname & No & Only needed if building RPMs \\
   \hline
 \end{tabularx}
+\end{center}
 
 \subsection{Libraries}
+\begin{center}
 \begin{tabularx}{\textwidth}{| l | c | X |}
   \hline
   Name & Required? & Comments \\
@@ -131,10 +134,14 @@ optional features.
   zlib & No & \\
   \hline
 \end{tabularx}
+\end{center}
 
 \subsection{Packages provided by GUFI}
-Several packages are provided/downloaded, built, and installed
-automatically:
+Several packages are provided, built, and installed automatically. If
+the provided tarballs are not found, the dependency installer scripts
+will reach out to the internet.
+
+\begin{center}
 \begin{tabularx}{\textwidth}{| l | X |}
   \hline
   Name & Comments \\
@@ -150,3 +157,22 @@ automatically:
   \\
   \hline
 \end{tabularx}
+\end{center}
+
+\subsection{AI Packages}
+These packages will be installed if the CMake variable
+\texttt{DEP\_AI} is set to \texttt{On}.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{| l | X |}
+  \hline
+  Name & Comments \\
+  \hline
+  sqlite-lembed & \url{https://github.com/asg017/sqlite-lembed} \\
+  & Downloaded with git in order to get submodules \\
+  \hline
+  sqlite-vec & \url{https://github.com/asg017/sqlite-vec} \\
+  & Provided by GUFI as a tarball\\
+  \hline
+\end{tabularx}
+\end{center}
