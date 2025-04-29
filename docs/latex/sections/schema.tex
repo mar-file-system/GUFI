@@ -68,7 +68,7 @@ metadata.
 
 \subsection{\entries}
 The \entries table contains file and link metadata extracted from the
-source filesystem using \stat, \readlink, and \listxattr. There are
+source filesystem using \lstat, \readlink, and \listxattr. There are
 also a few OS specific columns (\texttt{oss*}) that are unused in base
 GUFI. Note that the inode column is a string and not an integer as one
 might expect. As a general rule, do not query this table directly.
@@ -80,8 +80,7 @@ directory. Additionally, it contains columns that summarizes the
 maximum file sizes, uids, and gids. These summary columns can be used
 to determine whether or not the \entries table needs to be queried at
 all. Note that the inode and pinode colums are strings and not
-integers as one might expect. As a general rule, do not query this
-table directly.
+integers as one might expect.
 
 \begin{figure} [h!]
 \centering

@@ -71,29 +71,17 @@ done was by intentionally skipping \texttt{NULL} pointer checks that
 are repeated or always expected to be valid.
 
 \subsubsection{Allocations}
-Dynamic allocations are more costly to make than static
-allocations. To reduce the amount of dynamic allocations, C-string are
-usually declared as fixed size arrays instead of pointers.
-
-During descent, each work item is initially allocated on the stack since
-there is no way to tell beforehand whether or not the path pointed to
-by a directory entry is a directory. If the path is a directory to be
-enqueued, the work item is copied into dynamically allocated memory
-first. If not, the work item allocated on the stack is used.
-
-Additionally, allocations are not performed by the standard
-malloc. Instead, \texttt{jemalloc(3)} is used to override
-\texttt{malloc(3)}. See \href{https://jemalloc.net/}{jemalloc's
-  website} for details.
+Allocations are not performed by the standard malloc. Instead,
+\texttt{jemalloc(3)} is used to override \texttt{malloc(3)}. See
+\href{https://jemalloc.net/}{jemalloc's website} for details.
 
 \subsubsection{Not Calling \lstat During Tree Walk}
 \texttt{struct~dirent}s are returned when reading a directory with
 \readdir. glibc's implementation of \texttt{struct~dirent} provides
 extra fields not required by POSIX.1. GUFI takes advantage of the
 nonstandard \texttt{d\_type} field to not call \lstat when determining
-whether or not the entry is a directory. This also prevents memory
-allocations of work items that end up not being enqueued for
-processing.
+whether or not the entry is a directory. Only when \texttt{d\_type} is
+not set will \lstat be called.
 
 \subsubsection{Enqueuing Work Before Processing}
 In order to reduce the amount of time the thread pool spends waiting
@@ -140,31 +128,41 @@ dynamically allocated subdirectory work or recurse further down with
 subdirectory work allocated on the stack.
 
 \subsubsection{Smaller Enqueued Work Items}
-The main data structure that is enqueued is \texttt{struct~work}. This
-struct was approximately 14KiB in size prior to
-\href{https://github.com/mar-file-system/GUFI/commit/2227d00665eb6d507ac2052e80616c077a5da853}{2227d00}. After
-moving the parts of this structure that were not necssary for
-directory tree traversal to \texttt{struct~entry\_data},
-\texttt{struct work} was reduced to slightly over 8KiB.
+The main data structure that is enqueued is \work. This
+struct started at approximately 14KiB in size.
 
-This was used to fix
-\href{https://github.com/mar-file-system/GUFI/issues/121}{Issue 121}.
+\href{https://github.com/mar-file-system/GUFI/commit/2227d00665eb6d507ac2052e80616c077a5da853}{2227d00}
+moved the parts of this structure that were not necssary for directory
+tree traversal to \texttt{struct~entry\_data}, reducing
+\work to slightly over 8KiB. This was used to fix
+\href{https://github.com/mar-file-system/GUFI/issues/121}{Issue~121}.
+
+\href{https://github.com/mar-file-system/GUFI/commit/e260d26aab0713835defbe2a5b6e1187610dcf3d}{e260d26}
+changed \work so that the name field was a flexible
+array stored after the other struct members, reducing
+\work down to $\sim$200~bytes (depends on the length of the
+path). However, C++ does not support flexible arrays, so
+\href{https://github.com/mar-file-system/GUFI/commit/d1265f9ee9a5aa4451400f5abb455eb3ad64957c}{d1265f9}
+was pushed, returning the \texttt{name} member back to its original
+position, but making it a pointer that points to a location after the
+struct.
 
 \subsubsection{Compression with zlib}
-When zlib is detected during CMake configuration, \texttt{struct~work}
-can be compressed to further reduce the size of each work item that is
+When zlib is detected during CMake configuration, \work can be
+compressed to further reduce the size of each work item that is
 sitting in memory waiting to be processed. The compressed buffer,
-originally allocated with \texttt{sizeof(struct~work))} bytes, is then
-reallocated to the compressed size. The bulk of \texttt{struct~work}
-is made up of text strings followed by \texttt{NULL} characters, both
-of which are highly compressible, meaning that compressed work items
-can be expected to be much smaller than uncompressed work items.
+originally allocated with
+\texttt{sizeof(struct~work)~+~name\_len~+~1)} bytes, is then
+reallocated to the compressed size. The bulk of \work is made up of
+text strings followed by \texttt{NULL} characters, both of which are
+highly compressible, meaning that compressed work items can be
+expected to be much smaller than uncompressed work items.
 
-Note that \texttt{struct~work} is its own compressed buffer. Whether
+Note that \work is its own compressed buffer. Whether
 or not the work item is compressed and the compressed length are now
-the first two fields of \texttt{struct~work}. When a work item is
+the first two fields of \work. When a work item is
 compressed, a pointer pointing to it will have less space allocated to
-it than \texttt{sizeof(struct~work))}.
+it than \texttt{sizeof(struct~work)~+~name\_len~+~1)}.
 
 This was used to fix
 \href{https://github.com/mar-file-system/GUFI/issues/121}{Issue 121}.
@@ -209,7 +207,7 @@ filesystem level was also disabled. Instead of opening SQLite database
 files with the default VFS, GUFI uses the \texttt{unix-none} VFS,
 which causes all file locking to become no-ops. See
 \href{https://www.sqlite.org/vfs.html}{The SQLite OS Interface or
-  ``VFS''} for details.
+ ``VFS''} for details.
 
 \paragraph{Memory Tracking}
 Memory tracking was disabled with \\
@@ -229,8 +227,8 @@ thread) at the beginning of a run and saving the compiled queries for
 repeated use during the index traversal.
 
 An attempt at caching queries was made with
-\href{https://github.com/mar-file-system/GUFI/pull/95}{Pull Request
-  \#95}. Unfortunately, caching queries at best seemed to perform on
-par with the latest GUFI and at worst, slightly slower than the latest
+\href{https://github.com/mar-file-system/GUFI/pull/95}{Pull~Request~\#95}.
+Unfortunately, caching queries at best seemed to perform on par with
+the latest GUFI and at worst, slightly slower than the latest
 GUFI. This was true for both simple queries and complex queries with
 \texttt{JOIN}s.

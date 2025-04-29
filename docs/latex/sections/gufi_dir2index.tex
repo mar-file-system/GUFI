@@ -73,15 +73,21 @@ contents of a provided directory.
     \hline
     -H & Show assigned input values \\
     \hline
+    -v & version \\
+    \hline
     -n \textless num\_threads\textgreater & define number of threads to use \\
     \hline
-    -x & pull xattrs from source file-sys into GUFI \\
+    -x & index/query xattrs \\
     \hline
-    -z \textless max\_level\textgreater & maximum level to go down to \\
+    -y \textless min level\textgreater & minimum level to go down \\
+    \hline
+    -z \textless max level\textgreater & maximum level to go down \\
     \hline
     -k \textless filename\textgreater & file containing directory names to skip \\
     \hline
     -M \textless bytes\textgreater & target memory footprint \\
+    \hline
+    -s \textless path\textgreater & File name prefix for swap files \\
     \hline
     -C \textless count\textgreater & Number of subdirectories allowed to be \\
                                    & enqueued for parallel processing. Any \\

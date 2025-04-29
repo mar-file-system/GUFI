@@ -429,7 +429,7 @@ void sub_help(void) {
 
 int main(int argc, char * argv[]) {
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHn:x", 2, "input_dir output_dir", &pa.in);
+    process_args_and_maybe_exit("hHvn:x", 2, "input_dir output_dir", &pa.in);
 
     INSTALL_STR(&pa.in.name,   argv[idx++]);
     INSTALL_STR(&pa.in.nameto, argv[idx++]);

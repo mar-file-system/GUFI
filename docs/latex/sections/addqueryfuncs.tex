@@ -61,66 +61,72 @@
 
 \clearpage
 \subsection{SQLite Functions}
-Several convenience functions are added into each database instance
+Convenience functions have been added into each database instance
 opened for querying.
 
-\begin{table}[htb]
-  \centering
-  \caption{SQLite functions that are available in \gufiquery and \querydbs.}
-  \begin{tabular}{| l | l |}
-    \hline
-    Function & Purpose \\
-    \hline
-    \texttt{uidtouser(uid)} & Converts a UID to a user name \\
-    \hline
-    \texttt{gidtogroup(gid)} & Converts a GID to a group name \\
-    \hline
-    \texttt{modetotxt(mode)} & Converts numerical permission bits to text \\
-    \hline
-    \texttt{strftime(format, timestamp)} & Replaces \href{https://www.sqlite.org/lang_datefunc.html}{SQLite's custom \texttt{strftime}} with \texttt{strftime(3)} \\
-    \hline
-    \texttt{blocksize(bytes, unit)} & Converts a size to a the number of blocks of size \texttt{unit} \\
-                                    & needed to store the first argument. \texttt{unit} is the \\
-                                    & combination of at least one integer and/or a prefix and \\
-                                    & a suffix: \\
-                                    & \\
-                                    & Prefix: \texttt{K}, \texttt{M}, \texttt{G}, \texttt{T}, \texttt{P}, \texttt{E}\\
-                                    & Suffix (multiplier): \textit{no suffix} (1024), \texttt{B} (1000), \texttt{iB} (1024) \\
-                                    & \\
-                                    & Return value is a string. \\
-                                    & \\
-                                    & Note that this function was implemented to replicate \\
-                                    & \texttt{ls} output and is meant for use with \gufils only, \\
-                                    & so use with caution. \\
-                                    & \\
-                                    & Examples: \\
-                                    & \begin{tabular}{| l | l |}
-                                        \hline
-                                        Call                    & Output \\
-                                        \hline
-                                        blocksize(1024, `1000') & 2 \\
-                                        \hline
-                                        blocksize(1024, `1024') & 1 \\
-                                        \hline
-                                        blocksize(1024, `K')    & 1K \\
-                                        \hline
-                                        blocksize(1024, `1K')   & 1 \\
-                                        \hline
-                                        blocksize(1024, `KB')   & 2KB \\
-                                        \hline
-                                        blocksize(1024, `1KB')  & 2 \\
-                                        \hline
-                                        blocksize(1024, `KiB')  & 1KiB \\
-                                        \hline
-                                        blocksize(1024, `1KiB') & 1 \\
-                                        \hline
+\begin{longtable}{| l | l |}
+  \caption{SQLite functions that are available in \gufiquery and \querydbs.} \\
+  \hline
+  Function & Purpose \\
+  \hline
+  \texttt{uidtouser(uid)} & Converts a UID to a user name \\
+  \hline
+  \texttt{gidtogroup(gid)} & Converts a GID to a group name \\
+  \hline
+  \texttt{modetotxt(mode)} & Converts numerical permission bits to text \\
+  \hline
+  \texttt{strftime(format, timestamp)} & Replaces \href{https://www.sqlite.org/lang_datefunc.html}{SQLite's custom \texttt{strftime}} with \texttt{strftime(3)} \\
+  \hline
+  \texttt{blocksize(bytes, unit)} & Converts a size to a the number of blocks of size \texttt{unit} \\
+                                  & needed to store the first argument. \texttt{unit} is the \\
+                                  & combination of at least one integer and/or a prefix and \\
+                                  & a suffix: \\
+                                  & \\
+                                  & Prefix: \texttt{K}, \texttt{M}, \texttt{G}, \texttt{T}, \texttt{P}, \texttt{E}\\
+                                  & Suffix (multiplier): \textit{no suffix} (1024), \texttt{B} (1000), \texttt{iB} (1024) \\
+                                  & \\
+                                  & Return value is a string. \\
+                                  & \\
+                                  & Note that this function was implemented to replicate \\
+                                  & \texttt{ls} output and is meant for use with \gufils only, \\
+                                  & so use with caution. \\
+                                  & \\
+                                  & Examples: \\
+                                  & \begin{tabular}{| l | l |}
+                                      \hline
+                                      Call                    & Output \\
+                                      \hline
+                                      blocksize(1024, `1000') & 2 \\
+                                      \hline
+                                      blocksize(1024, `1024') & 1 \\
+                                      \hline
+                                      blocksize(1024, `K')    & 1K \\
+                                      \hline
+                                      blocksize(1024, `1K')   & 1 \\
+                                      \hline
+                                      blocksize(1024, `KB')   & 2KB \\
+                                      \hline
+                                      blocksize(1024, `1KB')  & 2 \\
+                                      \hline
+                                      blocksize(1024, `KiB')  & 1KiB \\
+                                      \hline
+                                      blocksize(1024, `1KiB') & 1 \\
+                                      \hline
                                     \end{tabular} \\
-                                    & \\
-    \hline
-    \texttt{human\_readable\_size(bytes)} & Converts a size to a human readable string \\
-    \hline
-  \end{tabular}
-\end{table}
+                                  & \\
+  \hline
+  \texttt{human\_readable\_size(bytes)} & Converts a size to a human readable string \\
+  \hline
+  \texttt{strop(cmd)} & Run a command with \texttt{popen(3)}        \\
+                      & Return the first line as a string           \\
+  \hline
+  \texttt{intop(cmd)} & Run a command with \texttt{popen(3)}        \\
+                      & The only output should be an integer        \\
+  \hline
+  \texttt{blobop(cmd)} & Run a command with \texttt{popen(3)}       \\
+                       & Return all of \texttt{stdout} as one value \\
+  \hline
+\end{longtable}
 
 \begin{table}[htb]
   \centering
@@ -134,6 +140,20 @@ opened for querying.
     \texttt{stdevp(numeric column)} & Population standard deviation \\
     \hline
     \texttt{median(numeric column)} & Median of values \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{table}[htb]
+  \centering
+  \caption{SQLite functions that only make sense in the context of \gufiquery but do not require the directory's information.}
+  \begin{tabular}{| l | l |}
+    \hline
+    Function & Purpose \\
+    \hline
+    \texttt{setstr(key, value)} & Define a user variable to do SQL string replacement on in a later query \\
+    \hline
+    \texttt{thread\_id()} & Thread ID of the thread processing the current directory \\
     \hline
   \end{tabular}
 \end{table}
@@ -177,4 +197,5 @@ opened for querying.
     \hline
   \end{tabular}
 \end{table}
+
 \clearpage

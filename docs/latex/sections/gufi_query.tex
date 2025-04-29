@@ -73,69 +73,78 @@ may call \gufiquery, but might not be able to use it properly.
 
 \subsubsection{Flags}
 
-\begin{table}[H]
-  \centering
-  \begin{tabular*}{\linewidth}{l|p{0.5\linewidth}}
-    Flag & Functionality \\
-    \hline
-    -h & help \\
-    \hline
-    -H & show assigned input values (debugging) \\
-    \hline
-    -E \textless SQL ent\textgreater & SQL for entries table \\
-    \hline
-    -S \textless SQL sum\textgreater & SQL for summary table \\
-    \hline
-    -T \textless SQL tsum\textgreater & SQL for tree-summary table \\
-    \hline
-    -a & AND/OR (SQL query combination) \\
-    \hline
-    -n \textless threads\textgreater & number of threads (default: 1) \\
-    \hline
-    -j & print the information in terse form \\
-    \hline
-    -o \textless out\_fname\textgreater & output file (one-per thread, with thread-id suffix) \\
-    \hline
-    -d \textless delim\textgreater & one char delimiter (default: \texttt{\textbackslash x1E}) \\
-    \hline
-    -O \textless out\_DB\textgreater & output DB \\
-    \hline
-    -I \textless SQL\_init\textgreater & SQL init \\
-    \hline
-    -F \textless SQL\_fin\textgreater & SQL cleanup \\
-    \hline
-    -y \textless min-level\textgreater & minimum level to descend to \\
-    \hline
-    -z \textless max-level\textgreater & maximum level to descend to \\
-    \hline
-    -J \textless SQL\_interm\textgreater & SQL for intermediate
+\begin{longtable}{|l|p{0.5\linewidth}|}
+  \hline
+  Flag & Functionality \\
+  \hline
+  -h & help \\
+  \hline
+  -H & show assigned input values (debugging) \\
+  \hline
+  -T \textless SQL tsum\textgreater & SQL for tree-summary table \\
+  \hline
+  -S \textless SQL sum\textgreater & SQL for summary table \\
+  \hline
+  -E \textless SQL ent\textgreater & SQL for entries table \\
+  \hline
+  -a & AND/OR (SQL query combination) \\
+  \hline
+  -n \textless threads\textgreater & number of threads (default: 1) \\
+  \hline
+  -j & print the information in terse form \\
+  \hline
+  -o \textless out\_fname\textgreater & output file (one-per thread, with thread-id suffix) \\
+  \hline
+  -d \textless delim\textgreater & one char delimiter (default: \texttt{\textbackslash x1E}) \\
+  \hline
+  -O \textless out\_DB\textgreater & output DB \\
+  \hline
+  -u & prefix row with 1 int column count and each column with 1 octet type and 1 size\_t length \\
+  \hline
+  -I \textless SQL\_init\textgreater & SQL init \\
+  \hline
+  -F \textless SQL\_fin\textgreater & SQL cleanup \\
+  \hline
+  -y \textless min-level\textgreater & minimum level to descend to \\
+  \hline
+  -z \textless max-level\textgreater & maximum level to descend to \\
+  \hline
+  -J \textless SQL\_interm\textgreater & SQL for intermediate
     results (no default. ex.: \texttt{INSERT INTO \textless
-      aggregate table name\textgreater \ SELECT * FROM \textless
-      intermediate table name\textgreater}) \\
-    \hline
-    -K \textless create aggregate\textgreater & SQL to create the final aggregation table \\
-    \hline
-    -G \textless SQL\_aggregate\textgreater & SQL for aggregated
+    aggregate table name\textgreater \ SELECT * FROM \textless
+    intermediate table name\textgreater}) \\
+  \hline
+  -K \textless create aggregate\textgreater & SQL to create the final aggregation table \\
+  \hline
+  -G \textless SQL\_aggregate\textgreater & SQL for aggregated
     results (no default. ex.: \texttt{SELECT * FROM
-      \textless aggregate table name\textgreater}) \\
-    \hline
-    -m & Keep mtime and atime same on the database files \\
-    \hline
-    -B \textless buffer size\textgreater & size of each thread's output buffer in bytes \\
-    \hline
-    -w & open the database files in read-write mode instead of read only mode \\
-    \hline
-    -x & enable xattr processing \\
-    \hline
-    -k & file containing directory names to skip \\
-    \hline
-    -M \textless bytes\textgreater & target memory footprint \\
-    \hline
-    -e & compress work items \\
-    \hline
-  \end{tabular*}
-  \caption{\label{tab:widgets} \gufiquery Flags and Arguments}
-\end{table}
+    \textless aggregate table name\textgreater}) \\
+  \hline
+  -m & Keep mtime and atime same on the database files \\
+  \hline
+  -B \textless buffer size\textgreater & size of each thread's output buffer in bytes \\
+  \hline
+  -w & open the database files in read-write mode instead of read only mode \\
+  \hline
+  -x & enable xattr processing \\
+  \hline
+  -k & file containing directory names to skip \\
+  \hline
+  -M \textless bytes\textgreater & target memory footprint \\
+  \hline
+  -s \textless path\textgreater & File name prefix for swap files \\
+  \hline
+  -p \textless path\textgreater & Source path prefix for \%s in SQL \\
+  \hline
+  -e & compress work items \\
+  \hline
+  -Q \textless basename\textgreater & External database file basename, \\
+  \ \ \ \textless table\textgreater & per-attach table name, \\
+  \ \ \ \textless template\textgreater.\textless table\textgreater & template + table name, \\
+  \ \ \ \textless view\textgreater & and the resultant view \\
+  \hline
+  \caption{\label{tab:widgets} \gufiquery Flags and Arguments}\\
+\end{longtable}
 
 \subsubsection{Flag/Table Associations}
 A \gufiquery call should use at least one of the \texttt{-T},
@@ -202,6 +211,62 @@ query to get rows, since no rows will match in any case.
 
 To turn off short circuiting and always run all queries for each
 directory, pass the \texttt{-a} flag to \gufiquery.
+
+\subsubsection{Query Replacement}
+\label{sec:query_replacement}
+Queries may have string replacements done to them before being
+run on a particular directory. There are currently two formats that
+are discovered and replaced:
+
+\paragraph{\% Formatting} ~\\\\
+\texttt{\%<character>} passed into \gufiquery will be replaced. Widths
+are not supported.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    Character & Explanation \\
+    \hline
+    \texttt{n} & Replace with the current directory's name \\
+    \hline
+    \texttt{i} & Replace with the current directory's path \\
+    \hline
+    \texttt{s} & Replace with the source path of this directory \\
+               & (Requires \texttt{-p}) \\
+    \hline
+  \end{tabular}
+  \caption{Supported \% Format Characters}
+\end{table}
+
+\paragraph{User Strings} ~\\\\
+After calling \texttt{setstr(`key', value)} in one SQL input argument,
+\texttt{\{key\}} can be used in a later SQL input argument to do
+string replacements. The key can be any string with at least 1
+character. Duplicate keys will replace previously defined values. \\
+
+\noindent Example Usage:
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ll}
+    \gufiquery & \texttt{-S "SELECT setstr(`key', (SELECT 123));"} \\
+               & \texttt{-E "SELECT \{key\};"} \\
+               & \texttt{index\_root} \\
+  \end{tabular}
+\end{table}
+
+SQL statements combining setting and using values into one input
+argument will not work because the entire string will have been parsed
+by SQLite before replacements can happen. \\
+
+\noindent Bad Usage:
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ll}
+    \gufiquery & \texttt{-S "SELECT setstr(`key', (SELECT 123)); SELECT \{key\};"} \\
+               & \texttt{index\_root} \\
+  \end{tabular}
+\end{table}
 
 \subsubsection{Extended Attributes}
 \label{sec:query_xattrs}

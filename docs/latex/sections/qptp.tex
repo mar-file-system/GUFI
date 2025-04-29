@@ -71,7 +71,7 @@ required a more performant thread pool. The solution to this was
 lock) maintained for each thread in the thread pool. Now, there are
 multiple work queues maintained for each thread: work is pushed to the
 waiting work queue and the claimed work queue contains the work that
-the thread is actively processing.
+the thread plans to process.
 
 \subsubsection{Adding Work}
 By default, work is added to threads in a round robin fashion in order
@@ -101,15 +101,15 @@ all threads, the thread will attempt to take work from the claimed
 work queue. This is done so that long running jobs do not prevent
 claimed work from being processed. This also makes \qptp behave more
 like thread pools that pull one work item off at a time and thus
-always process work when work is available. This should be considered
-a last-ditch attempt to acquire work, and should not occur too often.
+always process work when work is available.
 
 If the queue size limit was set before the thread pool was started and
 a thread's work item count is greater than or equal to the queue size
 limit, new work items are swapped to a filesystem instead of cached in
 memory. These work items are not counted as in-memory outstanding
 work, and are instead processed after all in-memory work items have
-been processed, in \texttt{QPTPool\_stop}.
+been processed, in \texttt{QPTPool\_wait}. This should be considered a
+last-ditch attempt to prevent OOM-ing, and should not occur too often.
 
 \subsubsection{Usage}
 \begin{enumerate}
@@ -178,7 +178,7 @@ been processed, in \texttt{QPTPool\_stop}.
 
     Work enqueued with \texttt{QPTPool\_enqueue} will not be swapped.
 
-    \item \texttt{QPTPool\_enqueue\_swappable(pool, id, queue, func, work, size, free\_work);}
+    \item \texttt{QPTPool\_enqueue\_swappable(pool, id, func, work, serialize, deserialize);}
 
     Work passed into \texttt{QPTPool\_enqueue\_swappable} may end up
     in the wait queue or be swapped to a filesystem.
@@ -188,17 +188,15 @@ been processed, in \texttt{QPTPool\_stop}.
     \texttt{threads[id]->next\_queue} will be where the new work item
     is enqueued.
 
-    The additional arguments \texttt{size} and \texttt{free\_work} are
-    required in order for swapping to work: \texttt{size} allows for
-    arbitrary work items to be written out. \texttt{free\_work}
-    removes the work item to be removed from memory, reducing memory
-    pressure.
+    \item \texttt{QPTPool\_enqueue\_here(pool, id, queue, func, work, serialize, deserialize);}
 
-    \item \texttt{QPTPool\_enqueue\_here(pool, id, queue, func, work, size, free\_work);}
+    If the queue argument is set to \texttt{QPTPool\_enqueue\_WAIT},
+    the work will be explicitly placed into the selected queue at
+    thread \texttt{id} instead of using the next thread selection
+    function. The queue limit is ignored.
 
-    This function allows for work to be explicitly placed into the
-    selected queue at thread \texttt{id} instead of using the next
-    thread selection function.
+    If the queue argument is set to \texttt{QPTPool\_enqueue\_SWAP},
+    the work will be written to the selected thread's swap space.
   \end{itemize}
 
 \item Wait for work to be completed (optional):
