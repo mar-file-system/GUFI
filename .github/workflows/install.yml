@@ -60,7 +60,7 @@
 
 
 
-name: RPMs
+name: Install
 
 on: [push, pull_request]
 
@@ -114,3 +114,46 @@ jobs:
       if:   startsWith(github.ref, 'refs/tags/')
       with:
         files: ${{ github.workspace }}/build/*.rpm
+
+  Install:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        type: [ 'CMake', 'Make' ]
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/cache@v4
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-${{ matrix.type }}-Install
+
+    - name: Ubuntu Prerequisites
+      run:  sudo contrib/CI/ubuntu.sh
+
+    - name: Install Python Packages
+      run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Configure CMake
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: CMake Install
+      if:   matrix.type == 'CMake'
+      run:  sudo cmake --install .
+      working-directory: ${{ github.workspace }}/build
+
+    - name: Make Install
+      if:   matrix.type == 'Make'
+      run:  sudo make install
+      working-directory: ${{ github.workspace }}/build
+
+    - name: Find Executables
+      run:  |
+        while IFS= read -r -d $'\0' name
+        do
+            which "${name}"
+        done < <(find src scripts -maxdepth 1 \( -name "gufi_*" -a -not -name "*.*" \) -type f -executable -printf "%P\0" | sort -z)
+      working-directory: ${{ github.workspace }}/build
