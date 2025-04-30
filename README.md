@@ -3,7 +3,7 @@
 [![Core Tests](https://github.com/mar-file-system/GUFI/actions/workflows/test.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/test.yml)
 [![Auxiliary Checks](https://github.com/mar-file-system/GUFI/actions/workflows/check.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/check.yml)
 [![Documentation](https://github.com/mar-file-system/GUFI/actions/workflows/docs.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/docs.yml)
-[![RPMs](https://github.com/mar-file-system/GUFI/actions/workflows/rpm.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/rpm.yml)
+[![Install](https://github.com/mar-file-system/GUFI/actions/workflows/install.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/install.yml)
 [![codecov](https://codecov.io/github/mar-file-system/GUFI/branch/main/graph/badge.svg?token=VIOCZC7KIO)](https://app.codecov.io/github/mar-file-system/GUFI/tree/main)
 
 [![Latest Release](https://img.shields.io/github/release/mar-file-system/GUFI.svg?style=popout)](https://github.com/mar-file-system/GUFI/releases/latest)
