@@ -92,9 +92,10 @@ set(gufi_developer_inputs
     sections/external_databases.tex
     sections/querying.tex
     sections/gufi_query.tex
-    sections/querydbs.tex
     sections/gufi_sqlite3.tex
+    sections/querydbs.tex
     sections/addqueryfuncs.tex
+    sections/virtual_tables.tex
     sections/gufi_stat_bin.tex
     sections/utility.tex
     sections/reconstruct.tex
@@ -124,9 +125,10 @@ set(gufi_administrator_inputs
     sections/external_databases.tex
     sections/querying.tex
     sections/gufi_query.tex
-    sections/querydbs.tex
     sections/gufi_sqlite3.tex
+    sections/querydbs.tex
     sections/addqueryfuncs.tex
+    sections/virtual_tables.tex
     sections/gufi_stat_bin.tex
     sections/utility.tex
     sections/reconstruct.tex
@@ -140,6 +142,7 @@ set(gufi_user_inputs
     sections/gufi_ls.tex
     sections/gufi_stats.tex
     sections/gufi_stat.tex
+    sections/querydbs.tex
 )
 
 ADD_LATEX_DOCUMENT(

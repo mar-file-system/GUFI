@@ -97,7 +97,7 @@ int addhistfuncs(sqlite3 *db);
  * value. Strings and blobs are converted to lengths. Integers and
  * floats are not converted.
  *
- * The histogram contains buckets of rhe range [0, count). Each bucket
+ * The histogram contains buckets of the range [0, count). Each bucket
  * holds counts for values from [2^i, 2^(i+1)). There are also
  * underflow and overflow values for handling 0 values and values that
  * are larger than the expected range.

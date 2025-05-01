@@ -59,112 +59,144 @@
 % OF SUCH DAMAGE.
 
 
+
 \clearpage
-\subsection{SQLite Functions}
-Convenience functions have been added into each database instance
-opened for querying.
+\subsection{User Defined Functions}
+Convenience \href{https://www.sqlite.org/appfunc.html}{user defined functions} are added into \sqlite by GUFI.
 
-\begin{longtable}{| l | l |}
-  \caption{SQLite functions that are available in \gufiquery and \querydbs.} \\
-  \hline
-  Function & Purpose \\
-  \hline
-  \texttt{uidtouser(uid)} & Converts a UID to a user name \\
-  \hline
-  \texttt{gidtogroup(gid)} & Converts a GID to a group name \\
-  \hline
-  \texttt{modetotxt(mode)} & Converts numerical permission bits to text \\
-  \hline
-  \texttt{strftime(format, timestamp)} & Replaces \href{https://www.sqlite.org/lang_datefunc.html}{SQLite's custom \texttt{strftime}} with \texttt{strftime(3)} \\
-  \hline
-  \texttt{blocksize(bytes, unit)} & Converts a size to a the number of blocks of size \texttt{unit} \\
-                                  & needed to store the first argument. \texttt{unit} is the \\
-                                  & combination of at least one integer and/or a prefix and \\
-                                  & a suffix: \\
-                                  & \\
-                                  & Prefix: \texttt{K}, \texttt{M}, \texttt{G}, \texttt{T}, \texttt{P}, \texttt{E}\\
-                                  & Suffix (multiplier): \textit{no suffix} (1024), \texttt{B} (1000), \texttt{iB} (1024) \\
-                                  & \\
-                                  & Return value is a string. \\
-                                  & \\
-                                  & Note that this function was implemented to replicate \\
-                                  & \texttt{ls} output and is meant for use with \gufils only, \\
-                                  & so use with caution. \\
-                                  & \\
-                                  & Examples: \\
-                                  & \begin{tabular}{| l | l |}
-                                      \hline
-                                      Call                    & Output \\
-                                      \hline
-                                      blocksize(1024, `1000') & 2 \\
-                                      \hline
-                                      blocksize(1024, `1024') & 1 \\
-                                      \hline
-                                      blocksize(1024, `K')    & 1K \\
-                                      \hline
-                                      blocksize(1024, `1K')   & 1 \\
-                                      \hline
-                                      blocksize(1024, `KB')   & 2KB \\
-                                      \hline
-                                      blocksize(1024, `1KB')  & 2 \\
-                                      \hline
-                                      blocksize(1024, `KiB')  & 1KiB \\
-                                      \hline
-                                      blocksize(1024, `1KiB') & 1 \\
-                                      \hline
-                                    \end{tabular} \\
-                                  & \\
-  \hline
-  \texttt{human\_readable\_size(bytes)} & Converts a size to a human readable string \\
-  \hline
-  \texttt{strop(cmd)} & Run a command with \texttt{popen(3)}        \\
-                      & Return the first line as a string           \\
-  \hline
-  \texttt{intop(cmd)} & Run a command with \texttt{popen(3)}        \\
-                      & The only output should be an integer        \\
-  \hline
-  \texttt{blobop(cmd)} & Run a command with \texttt{popen(3)}       \\
-                       & Return all of \texttt{stdout} as one value \\
-  \hline
-\end{longtable}
+\subsubsection{Functions available in \gufiquery and \gufisqlite}
 
-\begin{table}[htb]
+\begin{table}[H]
   \centering
-  \caption{\label{tab:sqlmath}Several math functions have been added to complement the set of built-in math functions provided by SQLite. They return NULL when there are not enough values.}
-  \begin{tabular}{| l | l |}
+  \caption{General Utility Functions}
+  \begin{tabularx}{\textwidth}{| l | X |}
     \hline
-    Function & Purpose \\
+    Function & Description \\
     \hline
-    \texttt{stdevs(numeric column)} & Sample standard deviation \\
+    \texttt{uidtouser(uid)} & Converts a UID to a user name \\
     \hline
-    \texttt{stdevp(numeric column)} & Population standard deviation \\
+    \texttt{gidtogroup(gid)} & Converts a GID to a group name \\
+    \hline
+    \texttt{modetotxt(mode)} & Converts numerical permission bits to text \\
+    \hline
+    \texttt{strftime(format, timestamp)} & Replaces \href{https://www.sqlite.org/lang_datefunc.html}{SQLite~3's custom \texttt{strftime}} with \texttt{strftime(3)} \\
+    \hline
+    \texttt{blocksize(bytes, unit)} & Converts a size to a the number of blocks of size \texttt{unit} needed to store the first argument. \texttt{unit} is the combination of at least one integer and/or a prefix and a suffix: \\
+                                    & \\
+                                    & Prefix: \texttt{K}, \texttt{M}, \texttt{G}, \texttt{T}, \texttt{P}, \texttt{E}\\
+                                    & Suffix (multiplier): \textit{no suffix} (1024), \texttt{B} (1000), \texttt{iB} (1024) \\
+                                    & \\
+                                    & Return value is a string. \\
+                                    & \\
+                                    & Note that this function was implemented to replicate \texttt{ls} output and is meant for use with \gufils only, so use with caution. \\
+                                    & \\
+                                    & Examples: \\
+                                    & \begin{tabular}{| l | l |}
+                                        \hline
+                                        Call                    & Output \\
+                                        \hline
+                                        blocksize(1024, `1000') & 2 \\
+                                        \hline
+                                        blocksize(1024, `1024') & 1 \\
+                                        \hline
+                                        blocksize(1024, `K')    & 1K \\
+                                        \hline
+                                        blocksize(1024, `1K')   & 1 \\
+                                        \hline
+                                        blocksize(1024, `KB')   & 2KB \\
+                                        \hline
+                                        blocksize(1024, `1KB')  & 2 \\
+                                        \hline
+                                        blocksize(1024, `KiB')  & 1KiB \\
+                                        \hline
+                                        blocksize(1024, `1KiB') & 1 \\
+                                        \hline
+                                      \end{tabular} \\
+                                    & \\
+    \hline
+    \texttt{human\_readable\_size(bytes)} & Converts a size to a human readable string \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Get results from running commands with \texttt{popen(3)}}
+  \begin{tabularx}{\textwidth}{| l | X |}
+    \hline
+    Function & Description \\
+    \hline
+    \texttt{strop(cmd)}  & Return the first line as a string          \\
+    \hline
+    \texttt{intop(cmd)}  & The only output should be an integer       \\
+    \hline
+    \texttt{blobop(cmd)} & Return all of \texttt{stdout} as one value \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{\label{tab:sqlmath} Math functions added to complement the built-in math functions.}
+  \begin{tabularx}{\textwidth}{| l | X |}
+    \hline
+    Function & Description \\
     \hline
     \texttt{median(numeric column)} & Median of values \\
     \hline
-  \end{tabular}
+    \texttt{mode\_count\_hist(value)} & See Table~\ref{tab:sqlhist} \\
+    \hline
+    \texttt{stdevp(numeric column)} & Population standard deviation \\
+    \hline
+    \texttt{stdevs(numeric column)} & Sample standard deviation \\
+    \hline
+  \end{tabularx}
 \end{table}
 
-\begin{table}[htb]
+\begin{table}[H]
   \centering
-  \caption{SQLite functions that only make sense in the context of \gufiquery but do not require the directory's information.}
-  \begin{tabular}{| l | l |}
+  \caption{\label{tab:sqlhist}Construct histograms within SQLite~3. These functions return formatted strings for parsing outside of SQLite~3. See \texttt{include/histogram.h} for details.}
+  \begin{tabularx}{\textwidth}{| l | X | }
     \hline
-    Function & Purpose \\
+    Function & Description \\
     \hline
-    \texttt{setstr(key, value)} & Define a user variable to do SQL string replacement on in a later query \\
+    \texttt{log2\_hist(input, bucket\_count)} & Count \texttt{input} in the [2\textsuperscript{i},~2\textsuperscript{i + 1}) bucket, where $i = \lfloor \log_2 (input) \rfloor$ \\
+    \hline
+    \texttt{mode\_hist(permission bits)} & Count permission bit occurances. Buckets are 000~-~777 (octal). Input should be integers, not octal or human readable strings. \\
+    \hline
+    \texttt{time\_hist(timestamp, ref)} & Bucket \texttt{(ref - timestamp)} in human understandable durations \\
+    \hline
+    \texttt{category\_hist(value, keep\_1)} & Each unique value is its own bucket. \texttt{keep\_1} determines whether or not to keep categories with a count of 1 when returning the formatted string. \\
+    \hline
+    \texttt{category\_hist\_combine(string)} & Combine multiple category histograms into one \\
+    \hline
+    \texttt{mode\_count\_hist(value)} & Get the value with the highest occurance. If multiple values have the same highest occurance, return \texttt{NULL}. \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\subsubsection{Functions available only in \gufiquery}
+
+\begin{table}[H]
+  \centering
+  \caption{These functions involve the thread state of \gufiquery}
+  \begin{tabularx}{\textwidth}{| l | X |}
+    \hline
+    Function & Description \\
+    \hline
+    \texttt{setstr(key, value)} & Define a user variable to do SQL string replacement on in a later query. See \ref{sec:user_strings} for details. \\
     \hline
     \texttt{thread\_id()} & Thread ID of the thread processing the current directory \\
     \hline
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
-\begin{table}[htb]
+\begin{table}[H]
   \centering
-  \caption{\label{tab:sqlwcontext}SQLite functions that require the context of an index and thus are only
-    available in \gufiquery.}
-  \begin{tabular}{| l | l |}
+  \caption{\label{tab:sqlwcontext}Functions that require the context of an index}
+  \begin{tabularx}{\textwidth}{| l | X |}
     \hline
-    Function & Purpose \\
+    Function & Description \\
     \hline
     \texttt{path()} & Current directory relative to path passed into executable \\
     \hline
@@ -172,11 +204,11 @@ opened for querying.
     \hline
     \texttt{fpath()} & Full path of current directory \\
     \hline
-    \rpath(sname, sroll) & Current directory relative to path passed into executable \\
-                         & taking into account the rolled up name in summary table \\
-                         & and rollup score. Should only be used with the \texttt{sname} \\
-                         & and \texttt{sroll} columns of the \vrpentries, \vrsummary, \\
-                         & \vrxpentries, and \vrxsummary views. \\
+    \rpath(sname, sroll) & Current directory relative to path passed into executable
+                           taking into account the rolled up name in summary table
+                           and rollup score. Should only be used with the \texttt{sname}
+                           and \texttt{sroll} columns of the \vrpentries, \vrsummary,
+                           \vrxpentries, and \vrxsummary views. \\
                          & \\
                          & Usage: \\
                          & \ \ \ \ \texttt{SELECT rpath(sname, sroll)} \\
@@ -189,13 +221,13 @@ opened for querying.
     \hline
     \texttt{starting\_point()} & Path of the starting directory \\
     \hline
-    \texttt{subdirs(srollsubdirs, sroll)} & Number of subdirectories under a directory. Only \\
-                                          & available for use with \vrsummary. When the index \\
-                                          & is not rolled up, the value is retrieved from C. \\
-                                          & When the index is rolled up, the value is retrieved \\
-                                          & from \vrsummary. \\
+    \texttt{subdirs(srollsubdirs, sroll)} & Number of subdirectories under a directory. Only
+                                            available for use with \vrsummary. When the index
+                                            is not rolled up, the value is retrieved from C.
+                                            When the index is rolled up, the value is retrieved
+                                            from \vrsummary. \\
     \hline
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
 \clearpage

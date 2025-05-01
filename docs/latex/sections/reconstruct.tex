@@ -64,7 +64,7 @@
 
 Occasionally, it may be useful to reconstruct the original source tree
 structure. Two utility tools have been created to do so: \gufitracedir
-and \gufiindexdir. As their names imply, they convert traces and index
+and \gufiindexdir. As their names imply, they take in traces and index
 and convert them back into source directories, with files and
 symlinks. Note that currently, files are created and left with the
 size at 0. They are not set to their real sizes because users likely
@@ -72,8 +72,13 @@ do not have the storage space available to them. Files with hole are
 not created with \texttt{fallocate(2)} in order to not use
 non-portable functions. This may change in the future.
 
-Note that \texttt{gufi\_index2trace} is currently not available, but
-may be in the future.
+\texttt{gufi\_index2trace} is not available because the functionality
+can be achieved by calling \texttt{gufi\_query -o <trace name> -S
+  ``SELECT * FROM summary;'' -E ``SELECT * FROM entries;''
+  /path/to/index} and optionally combining the resultant trace
+files. Note that if more than 1 thread is used, writing to per-thread
+traces files is required in order to guarantee that each
+directory and its contents are written out as a single stanza.
 
 \begin{figure}[H]
 \centering

@@ -62,14 +62,9 @@
 
 \subsection{\gufisqlite}
 \gufisqlite is a simple program that imitates most of the
-\texttt{sqlite3} cli while providing GUFI specific functions.  The
+\texttt{sqlite3} cli while providing GUFI specific functions. The
 main difference from the \texttt{sqlite3} cli is that ''dot commands''
 are not supported.
-
-The difference between \gufisqlite and \querydbs is that \querydbs is
-intended for parsing \gufiquery \texttt{-O} output, and has built-in
-operations for automatically doing so, whereas \gufisqlite simply
-forwards commands to \texttt{sqlite3}.
 
 \subsubsection{Flags}
 \begin{table} [H]
@@ -89,3 +84,10 @@ forwards commands to \texttt{sqlite3}.
 \gufisqlite \texttt{[options] [db [SQL]...]}
 
 If no SQL statements are passed in, SQL statements will be read in from stdin
+
+\subsection{\querydbs}
+\input{sections/querydbs}
+
+\querydbs was once its own C program, but has been converted to a
+wrapper around \gufisqlite. Features available in \gufisqlite imply
+their availablility in \querydbs.

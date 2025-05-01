@@ -173,19 +173,19 @@ called db.db, containing the \lstat data from the source
 filesystem. When creating indexes, a database file is created with
 the same schema as db.db and is left unfilled. When each directory in
 the index is processed, the database file created earlier is copied
-into the directory as a bytestream instead of having SQlite open new
+into the directory as a bytestream instead of having \sqlite open new
 database files for each directory. This avoids the multitudes of
-checks done by SQLite when setting up databases and tables. The same
+checks done by \sqlite when setting up databases and tables. The same
 is done for external xattr database files.
 
-\subsubsection{SQLite}
-As SQLite is a major component in GUFI, attempts were made to optimize
-its usage. Some optimizations were made at compile time. See the
-\href{https://www.sqlite.org/compile.html}{SQLite Compile-time
+\subsubsection{\sqlite}
+As \sqlite is a major component in GUFI, attempts were made to
+optimize its usage. Some optimizations were made at compile time. See
+the \href{https://www.sqlite.org/compile.html}{\sqlite Compile-time
   Options} page for details.
 
 \paragraph{Locking}
-In order to prevent multiple threads from corrupting data, SQLite
+In order to prevent multiple threads from corrupting data, \sqlite
 implements locking. In GUFI, each database is only ever accessed by
 one thread:
 
@@ -202,12 +202,12 @@ and was removed by setting \texttt{-DSQLITE\_THREADSAFE=0} in the
 compile flags.
 
 \paragraph{VFS}
-In addition to not locking SQLite in-memory operations, locking at the
-filesystem level was also disabled. Instead of opening SQLite database
-files with the default VFS, GUFI uses the \texttt{unix-none} VFS,
-which causes all file locking to become no-ops. See
+In addition to not locking in-memory operations, locking at the
+filesystem level was also disabled. Instead of opening database files
+with the default VFS, GUFI uses the \texttt{unix-none} VFS, which
+causes all file locking to become no-ops. See
 \href{https://www.sqlite.org/vfs.html}{The SQLite OS Interface or
- ``VFS''} for details.
+``VFS''} for details.
 
 \paragraph{Memory Tracking}
 Memory tracking was disabled with \\
@@ -219,12 +219,12 @@ temporary files to be stored in memory with \\
 \texttt{-DSQLITE\_TEMP\_STORE=3}.
 
 \subsubsection{Caching Queries (Not Merged)}
-When queries are performed on indexes, they are processed from
-scratch by each thread for each directory. An obvious optimization
-would be to reduce the amount of string parsing and query planning by
-compiling each query once (or a small number of times such as once per
-thread) at the beginning of a run and saving the compiled queries for
-repeated use during the index traversal.
+When queries are performed on indexes, they are processed from scratch
+by each thread for each directory. An obvious optimization would be to
+reduce the amount of string parsing and query planning by compiling
+each query once (or a small number of times such as once per thread)
+at the beginning of a run and saving the compiled queries for repeated
+use during the index traversal.
 
 An attempt at caching queries was made with
 \href{https://github.com/mar-file-system/GUFI/pull/95}{Pull~Request~\#95}.

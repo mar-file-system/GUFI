@@ -60,19 +60,62 @@
 
 
 
-% section is defined elsewhere
-\querydbs attaches all database files it is given into a single view
-for querying. All tables in the provided database files should have
-the same name and schema. For tables called \texttt{table}, the view
-combining all tables will be named \texttt{vtable}. This was intended
-to allow for easy post-processing of \gufiquery~\texttt{-O} output
-database files.
+\subsection{Virtual Tables}
+A series of
+\href{https://www.sqlite.org/vtab.html}{\sqlite~Virtual~Tables} have
+been developed for GUFI.
 
-\querydbs does not have a \texttt{gufi\_} prefix because it will work
-for any set of input databases with the same schema. For example,
-\querydbs can also be used directly on individual database files
-from an index.
+\subsubsection{\gufivtstar and \gufivt}
+\gufivttreesummary, \gufivtsummary, \gufivtentries, \gufivtpentries,
+\gufivtvrsummary, and \gufivtvrpentries, collectively known as
+\gufivtstar, and \gufivt wrap \gufiquery to present indexes as a
+single \sqlite table. This allows for indexes to be used by \sqlite
+wrappers such as SQLAlchemy.
 
-Note that there is a hard limit of 125 databases that can be queried
-by querydbs that is set by \sqlite. This has been patched to 254,
-making it less likely that directories run out of attaches.
+These virtual tables are available in \gufisqlite, and as a runtime
+loadable extension (same file).
+\\\\
+\indent \gufivtstar virtual tables have fixed schemas and are directly usable
+as
+\href{https://www.sqlite.org/vtab.html#tabfunc2}{table-valued~functions}. They
+take in only the index path and number of threads.
+\\\\
+Example Usage:
+\begin{verbatim}
+(
+    echo "SELECT * FROM gufi_vt_pentries(`/path/to/index', 2);"
+) | gufi_sqlite3
+\end{verbatim}
+
+\indent \gufivt allows for arbitrary queries to be run on an index and have
+the results presented as a single table. However, because the table
+schema is not known beforehand, the virtual table must be set up
+before being used.
+\\\\
+Example Usage:
+\begin{verbatim}
+(
+    echo "CREATE VIRTUAL TABLE temp.output" \
+         "USING gufi_vt(index=/path/to/index, threads=2," \
+         "E=`SELECT name, size FROM pentries');"
+    echo "SELECT * FROM output;"
+) | gufi_sqlite3
+\end{verbatim}
+
+\subsubsection{\runvt}
+\runvt is the generic virtual table that runs input commands with
+\texttt{popen(3)} and converts each line of the output into a row of a
+\sqlite table.
+
+\runvt is available in \gufiquery, \gufisqlite, and as a runtime
+loadable extensions.
+\\\\
+Example Usage:
+\begin{verbatim}
+(
+    echo "CREATE VIRTUAL TABLE temp.output " \
+         "USING run_vt(cmd=`cat file.csv', " \
+         "d=`,', cols=`name, size');"
+    echo "SELECT * FROM output;"
+) | gufi_sqlite3
+\end{verbatim} 

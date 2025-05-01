@@ -73,7 +73,9 @@ optional features.
   \hline
   autotools & Yes & Some bundled packages use autotools \\
   \hline
-  C Compiler & Yes & C99 support \\
+  C Compiler & Yes & C11 support (actually only need C99 but AI
+  packages require C11, so all of GUFI now requires C11 whether or not
+  AI packages are built) \\
   \hline
   C++ Compiler & No & C++11 support - g++ 4.9.3, clang++-3.9, or newer
   \hfill \\
@@ -82,19 +84,28 @@ optional features.
   \hline
   column & Yes & \\
   \hline
-  Make & Yes & \\
+  diff & Yes & \\
   \hline
-  Python & Yes & Python 2.7 or Python 3 \\
+  find & Yes & \\
   \hline
-  pip & No & Used for installing and client dependencies \\
+  getfattr & Yes & attr package \\
+  & & \texttt{xattr -w} on OSX \\
   \hline
   git & No & Only needed if configuring with \texttt{DEP\_AI=On} \\
+  \hline
+  grep & Yes & \\
   \hline
   ImageMagick & No & Only needed if building \LaTeX \hfill \\
   & & Documentation \hfill \\
   \hline
   \LaTeX & No & Only needed if building \LaTeX \hfill \\
   & & Documentation \hfill \\
+  \hline
+  Make & Yes & \\
+  \hline
+  Python & Yes & Python 2.7 or Python 3 \\
+  \hline
+  pip & No & Used for installing and client dependencies \\
   \hline
   patch & Yes & \\
   \hline
@@ -103,6 +114,8 @@ optional features.
   realpath & Yes & \\
   \hline
   rpmbuild & No & Only needed if building RPMs \\
+  \hline
+  sed & Yes & \\
   \hline
   setfattr & Yes & attr package \\
   & & \texttt{xattr -w} on OSX \\
@@ -153,7 +166,7 @@ will reach out to the internet.
   sqlite3 & \url{https://www.sqlite.org/index.html} \\
   & patched sqlite-autoconf-3430100.tar.gz \\
   \hline
-  sqlite3-pcre & \url{https://github.com/mar-file-system/sqlite3-pcre/tree/pcre2}
+  sqlite3-pcre & \url{https://github.com/mar-file-system/sqlite3-pcre}
   \\
   \hline
 \end{tabularx}

@@ -74,11 +74,11 @@ make
 The recommended options for deployment are
 \texttt{-DCMAKE\_BUILD\_TYPE=Release -DCLIENT=On}.
 \\\\
-GUFI is known to work on many OSes. The list below shows the OSes
-where GUFI is known to have built, run, and passed tests at some
-point. The OSes labeled with a plus (+) are currently being used on
-Github Actions. The OSes labeled with minus (-) are no longer used on
-GitHub Actions and might no longer work.
+The list below shows the environments where GUFI is known to have
+built, run, and passed tests at some point. The environments labeled
+with a plus (+) are currently being used on Github Actions. The
+environments labeled with minus (-) are no longer used on GitHub
+Actions and might no longer work.
 \begin{itemize}
 \item Linux
   \begin{itemize}
@@ -151,7 +151,7 @@ GitHub Actions and might no longer work.
   \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
   \texttt{DEP\_AI=<On|Off>}
-  & Whether or not to build with SQLite AI modules \\
+  & Whether or not to build with \sqlite AI modules \\
   \hline
   \texttt{DEP\_DOWNLOAD\_PREFIX=<PATH>}
   & Location of downloaded dependencies. If the expected files are
@@ -170,7 +170,7 @@ GitHub Actions and might no longer work.
   is deleted. \\
   \hline
   \texttt{DEP\_PATCH\_SQLITE3\_OPEN=<On|Off>}
-  & Whether or not to patch SQLite3 open \\
+  & Whether or not to patch \sqlite open \\
   \hline
   \texttt{DEP\_USE\_JEMALLOC=<On|Off>}
   & Whether or not to build and link with jemalloc \\

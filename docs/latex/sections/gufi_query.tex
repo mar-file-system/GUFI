@@ -162,7 +162,7 @@ statements\footnote{Not passing in any SQL statements results in
 \end{itemize}
 
 Note that user provided SQL statements are passed directly into
-SQLite\footnote{Anything that can be done with SQL can also be done on
+\sqlite\footnote{Anything that can be done with SQL can also be done on
   the databases in an index. To prevent accidental modifications,
   databases default to opening in read-only mode.} and thus
 associations between flags and tables are not
@@ -240,31 +240,36 @@ are not supported.
 \end{table}
 
 \paragraph{User Strings} ~\\\\
+\label{sec:user_strings}
 After calling \texttt{setstr(`key', value)} in one SQL input argument,
 \texttt{\{key\}} can be used in a later SQL input argument to do
 string replacements. The key can be any string with at least 1
-character. Duplicate keys will replace previously defined values. \\
+character. Duplicate keys will replace previously defined values.
 
+Note that the key and value will only be available to the thread where
+it was processed. Each thread should set their own instances of the
+key.
+\\\\
 \noindent Example Usage:
 \begin{table}[H]
   \centering
   \begin{tabular}{ll}
     \gufiquery & \texttt{-S "SELECT setstr(`key', (SELECT 123));"} \\
                & \texttt{-E "SELECT \{key\};"} \\
-               & \texttt{index\_root} \\
+               & \indexroot \\
   \end{tabular}
 \end{table}
 
 SQL statements combining setting and using values into one input
 argument will not work because the entire string will have been parsed
-by SQLite before replacements can happen. \\
+by \sqlite before replacements can happen. \\
 
 \noindent Bad Usage:
 \begin{table}[H]
   \centering
   \begin{tabular}{ll}
     \gufiquery & \texttt{-S "SELECT setstr(`key', (SELECT 123)); SELECT \{key\};"} \\
-               & \texttt{index\_root} \\
+               & \indexroot \\
   \end{tabular}
 \end{table}
 
@@ -337,7 +342,7 @@ Example Usage:
                & \texttt{-E "SELECT * FROM evrpentries} \\
                & \texttt{\ \ \ \ LEFT JOIN ext ON (evrpentries.name == ext.name)} \\
                & \texttt{\ \ \ \ AND (evrpentries.type == ext.type);"} \\
-               & \texttt{index\_root} \\
+               & \indexroot \\
   \end{tabular}
 \end{table}
 
@@ -359,7 +364,7 @@ Multiple External Databases Example:
                & \texttt{\ \ \ \ AND (evrpentries.type == ext1.type)} \\
                & \texttt{\ \ \ \ LEFT JOIN ext2 ON (evrpentries.name == ext2.name)} \\
                & \texttt{\ \ \ \ AND (evrpentries.type == ext2.type);"} \\
-               & \texttt{index\_root} \\
+               & \indexroot \\
   \end{tabular}
 \end{table}
 
@@ -407,7 +412,7 @@ further processing.
   \caption{Parallel Results}
   \begin{tabular}{|l|l|}
     \hline
-    Output     & \gufiquery \texttt{/path/to/index} \\
+    Output     & \gufiquery \indexroot \\
     \hline
     \stdout    & \texttt{-S "SELECT * FROM \vrsummary;"} \\
     \hline
@@ -427,7 +432,7 @@ further processing.
   \caption{Aggregate Results}
   \begin{tabular}{|l|l|}
     \hline
-    Output   & \gufiquery \texttt{/path/to/index} \\
+    Output   & \gufiquery \indexroot \\
     \hline
     \stdout  & \texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);"} \\
              & \texttt{-S "INSERT INTO intermediate SELECT name, size FROM \vrsummary;"} \\
