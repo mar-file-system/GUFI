@@ -96,18 +96,11 @@ static size_t descend2(QPTPool_t *ctx,
     const size_t next_level = gqw->work.level + 1;
 
     if (next_level <= max_level) {
-        /* Send subdirs to queue */
-        /* loop over dirents */
-        /* skip db.db and any filename listed in the trie struct */
-        /* fill qwork struct for each dirent */
-        while (1) {
-            struct dirent *entry = readdir(dir);
+        struct dirent *entry = NULL;
+        while ((entry = readdir(dir))) {
+            const size_t len = strlen(entry->d_name);
 
-            if (!entry) {
-                break;
-            }
-
-            size_t len = strlen(entry->d_name);
+            /* if this entry's name is found, skip this entry */
             const int skip = (trie_search(skip_names, entry->d_name, len, NULL) ||
                              (strncmp(entry->d_name + len - 3, ".db", 3) == 0));
 
