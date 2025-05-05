@@ -79,15 +79,15 @@ typedef enum {
 
 /* The context for a single thread in QPTPool */
 typedef struct QPTPoolThreadData {
-    sll_t claimed;          /* work items that have already been claimed by this thread */
+    sll_t claimed;           /* work items that have already been claimed by this thread */
     pthread_mutex_t claimed_mutex;
 
-    sll_t waiting;         /* generally push into this queue */
-    struct Swap swap;      /* swap for this thread */
+    sll_t waiting;           /* generally push into this queue */
+    struct Swap swap;        /* swap for this thread */
     pthread_mutex_t mutex;
     pthread_cond_t cv;
-    size_t next_queue;     /* push to this thread when enqueuing */
-    size_t steal_from;     /* start search at this thread */
+    size_t next_queue;       /* push to this thread when enqueuing */
+    size_t steal_from;       /* start search at this thread */
     pthread_t thread;
     uint64_t threads_started;
     uint64_t threads_successful;
@@ -119,6 +119,15 @@ struct QPTPool {
     uint64_t swapped;
 
     QPTPoolThreadData_t *data;
+
+    /*
+     * arrays for threads to reference into
+     * a bit of a layer violation, but makes work stealing more convenient
+     */
+    sll_t **claimed;
+    pthread_mutex_t **claimed_mutex;
+    sll_t **waiting;
+    pthread_mutex_t **thread_mutex; /* &data[i].mutex */
 };
 
 /* struct to pass into pthread_create */
@@ -137,37 +146,46 @@ struct queue_item {
  * Loop through neighbors, looking for work items.
  * If there are work items, take at least one.
  */
-#define steal(ctx, id, start, mutex_name, queue_name, rc)                          \
-    QPTPoolThreadData_t *tw = &ctx->data[id];                                      \
-                                                                                   \
-    for(size_t i = 0; i < ctx->nthreads; i++) {                                    \
-        const size_t curr = (start + i) % ctx->nthreads;                           \
-        if (curr == id) {                                                          \
-            continue;                                                              \
-        }                                                                          \
-                                                                                   \
-        QPTPoolThreadData_t *target = &ctx->data[curr];                            \
-                                                                                   \
-        if (pthread_mutex_trylock(&target->mutex_name) == 0) {                     \
-            if (target->queue_name.size) {                                         \
-                /* always take at least 1 */                                       \
-                const uint64_t take = max(                                         \
-                    target->queue_name.size * ctx->steal.num / ctx->steal.denom,   \
-                    1);                                                            \
-                sll_move_append_first(&tw->waiting, &target->queue_name, take);    \
-                pthread_mutex_unlock(&target->mutex_name);                         \
-                rc = tw->waiting.size;                                             \
-                break;                                                             \
-            }                                                                      \
-                                                                                   \
-            pthread_mutex_unlock(&target->mutex_name);                             \
-        }                                                                          \
+static inline uint64_t steal(QPTPool_t *ctx, const size_t id, const size_t start,
+                             sll_t **queue, pthread_mutex_t **mutexes) {
+    size_t rc = 0;
+    QPTPoolThreadData_t *tw = &ctx->data[id];
+
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        const size_t curr = (start + i) % ctx->nthreads;
+        if (curr == id) {
+            continue;
+        }
+
+        /*
+         * instead of accessing each ctx->data[curr], which requires
+         * variable name pasting, index into the work queue and mutex
+         * arrays
+         */
+        pthread_mutex_t *mutex = mutexes[curr];
+        sll_t *neighbor_work = queue[curr];
+
+        if (pthread_mutex_trylock(mutex) == 0) {
+            if (neighbor_work->size) {
+                /* always take at least 1 */
+                const uint64_t take = max(
+                    neighbor_work->size * ctx->steal.num / ctx->steal.denom,
+                    1);
+                sll_move_append_first(&tw->waiting, neighbor_work, take);
+                pthread_mutex_unlock(mutex);
+                rc = tw->waiting.size;
+                break;
+            }
+
+            pthread_mutex_unlock(mutex);
+        }
     }
 
-static inline uint64_t steal_waiting(QPTPool_t *ctx, const size_t id, const size_t start) {
-    uint64_t rc = 0;
-    steal(ctx, id, start, mutex, waiting, rc);
     return rc;
+}
+
+static inline uint64_t steal_waiting(QPTPool_t *ctx, const size_t id, const size_t start) {
+    return steal(ctx, id, start, ctx->waiting, ctx->thread_mutex);
 }
 
 /*
@@ -185,9 +203,7 @@ static inline uint64_t steal_waiting(QPTPool_t *ctx, const size_t id, const size
  * should not be called frequently.
  */
 static inline uint64_t steal_claimed(QPTPool_t *ctx, const size_t id, const size_t start) {
-    uint64_t rc = 0;
-    steal(ctx, id, start, claimed_mutex, claimed, rc);
-    return rc;
+    return steal(ctx, id, start, ctx->claimed, ctx->claimed_mutex);
 }
 
 /*
@@ -210,7 +226,7 @@ static inline void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, siz
      * use short circuiting to stop searching
      */
     (void) (
-        (steal_waiting( ctx, id, tw->steal_from) == 0) &&
+        (steal_waiting(ctx, id, tw->steal_from) == 0) &&
         /* not stealing swapped work */
 
         /*
@@ -220,7 +236,7 @@ static inline void maybe_steal_work(QPTPool_t *ctx, QPTPoolThreadData_t *tw, siz
          * is taking so long that the rest of the threads have run
          * out of work, so this should not happen too often
          */
-        (steal_claimed( ctx, id, tw->steal_from) == 0)
+        (steal_claimed(ctx, id, tw->steal_from) == 0)
     );
 
     /* always start searching from different locations */
@@ -575,8 +591,18 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
     ctx->swapped = 0;
 
     /* this can fail since nthreads is user input */
-    ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
-    if (!ctx->data) {
+    ctx->data          = calloc(nthreads, sizeof(QPTPoolThreadData_t));
+    ctx->claimed       = calloc(nthreads, sizeof(sll_t));
+    ctx->claimed_mutex = calloc(nthreads, sizeof(pthread_mutex_t));
+    ctx->waiting       = calloc(nthreads, sizeof(sll_t));
+    ctx->thread_mutex  = calloc(nthreads, sizeof(pthread_mutex_t));
+    if (!ctx->data || !ctx->claimed || !ctx->claimed_mutex ||
+        !ctx->waiting || !ctx->thread_mutex) {
+        free(ctx->thread_mutex);
+        free(ctx->waiting);
+        free(ctx->claimed_mutex);
+        free(ctx->claimed);
+        free(ctx->data);
         free(ctx);
         return NULL;
     }
@@ -585,6 +611,13 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
     int bad = 0;
     for(size_t i = 0; i < nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];
+
+        /* set references to ctx first */
+        ctx->claimed[i]       = &data->claimed;
+        ctx->claimed_mutex[i] = &data->claimed_mutex;
+        ctx->waiting[i]       = &data->waiting;
+        ctx->thread_mutex[i]  = &data->mutex;
+
         sll_init(&data->claimed);
         pthread_mutex_init(&data->claimed_mutex, NULL);
         sll_init(&data->waiting);
@@ -1080,6 +1113,10 @@ void QPTPool_destroy(QPTPool_t *ctx) {
 
     pthread_cond_destroy(&ctx->cv);
     pthread_mutex_destroy(&ctx->mutex);
+    free(ctx->thread_mutex);
+    free(ctx->waiting);
+    free(ctx->claimed_mutex);
+    free(ctx->claimed);
     free(ctx->data);
     free(ctx);
 }
