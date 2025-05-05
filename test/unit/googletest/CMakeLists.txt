@@ -81,13 +81,18 @@ if (CMAKE_CXX_COMPILER)
     print.cpp
     query_fmt.cpp
     query_user_str.cpp
-    swap.cpp
     template_db.cpp
     trace.cpp
     trie.cpp
     utils.cpp
     xattrs.cpp
   )
+
+  if (QPTPOOL_SWAP)
+    list(APPEND TEST_SRC
+      swap.cpp
+    )
+  endif()
 
   # these test files use CMake variables
   set(NEED_PATH

@@ -186,6 +186,7 @@ TEST(descend, builddir) {
     EXPECT_EQ(unlink(linkname), 0);
 }
 
+#ifdef QPTPOOL_SWAP
 TEST(descend, swap) {
     struct input in = {};
     in.max_level = 1;
@@ -275,3 +276,4 @@ TEST(descend, swap) {
 
     EXPECT_EQ(remove(root), 0);
 }
+#endif

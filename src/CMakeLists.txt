@@ -80,16 +80,25 @@ set(GUFI_SOURCES
   histogram.c
   print.c
   run_vt.c
-  swap.c
   template_db.c
   trace.c
   trie.c
   utils.c
   xattrs.c
 )
+
+if (QPTPOOL_SWAP)
+  list(APPEND GUFI_SOURCES
+    swap.c
+  )
+endif()
+
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 target_compile_definitions(GUFI PUBLIC SQLITE_CORE)
+if (QPTPOOL_SWAP)
+  target_compile_definitions(GUFI PUBLIC QPTPOOL_SWAP)
+endif ()
 if (LOCALTIME_R)
   set_source_files_properties(addqueryfuncs.c PROPERTIES COMPILE_FLAGS -DLOCALTIME_R)
 endif()

@@ -506,6 +506,8 @@ list(APPEND COMMON_LIBRARIES
 
 include_directories(${COMMON_INCLUDES})
 
+option(QPTPOOL_SWAP "Whether or not to enable swapping in QueuePerThreadPool" On)
+
 # enable "make test"
 enable_testing()
 

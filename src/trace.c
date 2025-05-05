@@ -205,6 +205,7 @@ struct row *row_init(const int trace, const size_t first_delim, char *line,
     return row;
 }
 
+#ifdef QPTPOOL_SWAP
 static int row_serialize_and_free(const int fd, QPTPool_f func, void *work, size_t *size) {
     struct row *row = (struct row *) work;
     if ((write_size(fd, &func, sizeof(func)) != sizeof(func)) ||
@@ -238,6 +239,7 @@ static int row_alloc_and_deserialize(const int fd, QPTPool_f *func, void **work)
 
     return 0;
 }
+#endif
 
 void row_destroy(struct row **ref) {
     /* Not checking arguments */
@@ -356,9 +358,12 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             external = 0;
 
             /* put the previous work on the queue */
+            #ifdef QPTPOOL_SWAP
             QPTPool_enqueue_swappable(ctx, id, sta->processdir, work,
                                       row_serialize_and_free, row_alloc_and_deserialize);
-
+            #else
+            QPTPool_enqueue(ctx, id, sta->processdir, work);
+            #endif
             /* put the current line into a new work item */
             work = row_init(sta->tr.fd, first_delim - line, line, len, offset);
 
@@ -389,8 +394,12 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     empty += !work->entries;
     work->entries += external;
 
+    #ifdef QPTPOOL_SWAP
     QPTPool_enqueue_swappable(ctx, id, sta->processdir, work,
                               row_serialize_and_free, row_alloc_and_deserialize);
+    #else
+    QPTPool_enqueue(ctx, id, sta->processdir, work);
+    #endif
 
   done:
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);

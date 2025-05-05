@@ -97,16 +97,20 @@ typedef size_t (*QPTPoolNextFunc_t)(const size_t id, const size_t prev, const si
  * @return 0 if successful, non-zero if not
  */
 int QPTPool_set_next(QPTPool_t *ctx, QPTPoolNextFunc_t func, void *args);
+#ifdef QPTPOOL_SWAP
 int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit); /* count; same for all threads */
 int QPTPool_set_swap_prefix(QPTPool_t *ctx, const char *swap_prefix);
+#endif
 int QPTPool_set_steal(QPTPool_t *ctx, const uint64_t num, const uint64_t denom);
 
 /* Get QPTPool context properties */
 int QPTPool_get_nthreads(QPTPool_t *ctx, size_t *nthreads);
 int QPTPool_get_args(QPTPool_t *ctx, void **args);
 int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args);
+#ifdef QPTPOOL_SWAP
 int QPTPool_get_queue_limit(QPTPool_t *ctx, uint64_t *queue_limit);
 int QPTPool_get_swap_prefix(QPTPool_t *ctx, const char **swap_prefix);
+#endif
 int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom);
 
 /* calls QPTPool_init and QPTPool_set_* functions */
@@ -137,9 +141,12 @@ typedef int (*QPTPool_f)(QPTPool_t *ctx, const size_t id, void *data, void *args
 typedef enum QPTPool_enqueue_dst {
     QPTPool_enqueue_ERROR,
     QPTPool_enqueue_WAIT,
+    #ifdef QPTPOOL_SWAP
     QPTPool_enqueue_SWAP,
+    #endif
 } QPTPool_enqueue_dst_t;
 
+#ifdef QPTPOOL_SWAP
 /* function signatures for serializing and deserializing data to swap */
 typedef int (*QPTPool_serialize_and_free_f)(const int fd, QPTPool_f func, void *work, size_t *size);
 typedef int (*QPTPool_alloc_and_deserialize_f)(const int fd, QPTPool_f *func, void **work);
@@ -147,6 +154,7 @@ typedef int (*QPTPool_alloc_and_deserialize_f)(const int fd, QPTPool_f *func, vo
 int QPTPool_generic_serialize_and_free(const int fd, QPTPool_f func, void *work, const size_t len,
                                        size_t *size);
 int QPTPool_generic_alloc_and_deserialize(const int fd, QPTPool_f *func, void **work);
+#endif
 
 /*
  * Enqueue data and a function to process the data. Pushes to
@@ -163,6 +171,7 @@ int QPTPool_generic_alloc_and_deserialize(const int fd, QPTPool_f *func, void **
 QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id,
                                       QPTPool_f func, void *new_work);
 
+#ifdef QPTPOOL_SWAP
 /*
  * Enqueue data and a function to process the data. Pushes to
  * thread[id]->next_queue, rather than directly to thread[id]. If
@@ -184,6 +193,8 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id,
                                                 QPTPool_f func, void *new_work,
                                                 QPTPool_serialize_and_free_f serialize,
                                                 QPTPool_alloc_and_deserialize_f deserialze);
+#endif
+
 /*
  * Enqueue data and a function to process the data. Pushes directly to
  * thread[id] instead of thread[id]->next_queue. The queue_limit is
@@ -202,9 +213,12 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id,
  * @param deserialize function to allocate space and fill in new_work
  */
 QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTPool_enqueue_dst_t queue,
-                                           QPTPool_f func, void *new_work,
-                                           QPTPool_serialize_and_free_f serialize,
-                                           QPTPool_alloc_and_deserialize_f deserialize);
+                                           QPTPool_f func, void *new_work
+                                           #ifdef QPTPOOL_SWAP
+                                           , QPTPool_serialize_and_free_f serialize
+                                           , QPTPool_alloc_and_deserialize_f deserialize
+                                           #endif
+    );
 
 /* Wait for all in-memory work to be processed but do not clean up threads */
 uint64_t QPTPool_wait_mem(QPTPool_t *ctx);
@@ -236,11 +250,13 @@ uint64_t QPTPool_threads_started(QPTPool_t *ctx);
 /* get the number of started threads that completed successfully */
 uint64_t QPTPool_threads_completed(QPTPool_t *ctx);
 
+#ifdef QPTPOOL_SWAP
 /* number of work items that were swapped out */
 uint64_t QPTPool_work_swapped_count(QPTPool_t *ctx);
 
 /* total size of work items that were swapped out (function pointer + arg size + arg contents) */
 size_t QPTPool_work_swapped_size(QPTPool_t *ctx);
+#endif
 
 /* clean up QPTPool context data */
 void QPTPool_destroy(QPTPool_t *ctx);

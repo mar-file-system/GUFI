@@ -96,8 +96,10 @@ TEST(QueuePerThreadPool, zero_threads) {
     EXPECT_NO_THROW(QPTPool_stop(pool));
     EXPECT_EQ(QPTPool_threads_started(pool),    (uint64_t) 0);
     EXPECT_EQ(QPTPool_threads_completed(pool),  (uint64_t) 0);
+    #ifdef QPTPOOL_SWAP
     EXPECT_EQ(QPTPool_work_swapped_count(pool), (uint64_t) 0);
     EXPECT_EQ(QPTPool_work_swapped_size(pool),  (std::size_t) 0);
+    #endif
     EXPECT_NO_THROW(QPTPool_destroy(pool));
 }
 
@@ -288,6 +290,7 @@ TEST(QueuePerThreadPool, enqueue_internal) {
     QPTPool_destroy(pool);
 }
 
+#ifdef QPTPOOL_SWAP
 static int test_serialize_address(const int fd, QPTPool_f func, void *work, size_t *size) {
     if (write_size(fd, (void *) (uintptr_t) &func, sizeof(func)) != sizeof(func)) {
         return 1;
@@ -313,19 +316,33 @@ static int test_deserialize_address(const int fd, QPTPool_f *func, void **work) 
 
     return 0;
 }
+#endif
 
 TEST(QueuePerThreadPool, enqueue_here) {
     QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
     ASSERT_NE(pool, nullptr);
 
+    // not enqueued
+    #ifdef QPTPOOL_SWAP
     EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_ERROR, return_data, nullptr,
                                    test_serialize_address, test_deserialize_address),
               QPTPool_enqueue_ERROR);
+    #else
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_ERROR, return_data, nullptr),
+              QPTPool_enqueue_ERROR);
+    #endif
 
+    // 1 item
+    #ifdef QPTPOOL_SWAP
     EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,  return_data, nullptr,
                                    test_serialize_address, test_deserialize_address),
               QPTPool_enqueue_WAIT);
+    #else
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,  return_data, nullptr),
+              QPTPool_enqueue_WAIT);
+    #endif
 
+    #ifdef QPTPOOL_SWAP
     // need to set queue_limit first
     EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_SWAP,  return_data, nullptr,
                                    test_serialize_address, test_deserialize_address),
@@ -336,16 +353,23 @@ TEST(QueuePerThreadPool, enqueue_here) {
     EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_SWAP,  return_data, nullptr,
                                    test_serialize_address, test_deserialize_address),
               QPTPool_enqueue_SWAP);
+    #endif
 
     EXPECT_EQ(QPTPool_start(pool), 0);
     QPTPool_stop(pool);
 
-    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) THREADS + 2); // ran swapped cleanup once
-    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) THREADS + 2); // ran swapped cleanup once
+    uint64_t expected = 1;
+    #ifdef QPTPOOL_SWAP
+    expected += THREADS + 1; // ran swapped cleanup once
+    #endif
+
+    EXPECT_EQ(QPTPool_threads_started(pool),   expected);
+    EXPECT_EQ(QPTPool_threads_completed(pool), expected);
 
     QPTPool_destroy(pool);
 }
 
+#ifdef QPTPOOL_SWAP
 TEST(QueuePerThreadPool, enqueue_swappable) {
     QPTPool_t *pool = QPTPool_init(1, nullptr);
     ASSERT_NE(pool, nullptr);
@@ -373,6 +397,7 @@ TEST(QueuePerThreadPool, enqueue_swappable) {
 
     QPTPool_destroy(pool);
 }
+#endif
 
 TEST(QueuePerThreadPool, wait_mem) {
     // macOS doesn't seem to like std::mutex
@@ -434,6 +459,7 @@ TEST(QueuePerThreadPool, wait) {
         QPTPool_destroy(pool);
     }
 
+    #ifdef QPTPOOL_SWAP
     // wait on enqueued work
     {
         QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
@@ -447,6 +473,7 @@ TEST(QueuePerThreadPool, wait) {
         QPTPool_stop(pool);
         QPTPool_destroy(pool);
     }
+    #endif
 }
 
 TEST(QueuePerThreadPool, threads_started) {
@@ -578,12 +605,24 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find,
     // serially by the thread that is not blocked
     if (find) {
         // place a work item behind the first work item for stealing
-        EXPECT_EQ(QPTPool_enqueue_here(pool, w.tid, queue, increment_counter, &w.counter, nullptr, nullptr),
+        #ifdef QPTPOOL_SWAP
+        EXPECT_EQ(QPTPool_enqueue_here(pool, w.tid, queue, increment_counter, &w.counter,
+                                       nullptr, nullptr),
                   queue);
+        #else
+        EXPECT_EQ(QPTPool_enqueue_here(pool, w.tid, queue, increment_counter, &w.counter),
+                  queue);
+        #endif
 
         // place a work item on the other thread, which triggers stealing the previous work item
-        EXPECT_EQ(QPTPool_enqueue_here(pool, !w.tid, QPTPool_enqueue_WAIT, increment_counter, &w.counter, nullptr, nullptr),
+        #ifdef QPTPOOL_SWAP
+        EXPECT_EQ(QPTPool_enqueue_here(pool, !w.tid, QPTPool_enqueue_WAIT, increment_counter, &w.counter,
+                                       nullptr, nullptr),
                   QPTPool_enqueue_WAIT);
+        #else
+        EXPECT_EQ(QPTPool_enqueue_here(pool, !w.tid, QPTPool_enqueue_WAIT, increment_counter, &w.counter),
+                  QPTPool_enqueue_WAIT);
+        #endif
 
         expected += 2;
     }
@@ -639,6 +678,16 @@ TEST(QueuePerThreadPool, steal_claimed) {
     ASSERT_NE(pool, nullptr);
     ASSERT_EQ(QPTPool_set_steal(pool, 1, 2), 0);
 
+    QPTPool_f func = [](QPTPool_t *ctx, const std::size_t id, void *data, void *) -> int {
+        work_item *w = static_cast<work_item *>(data);
+        w->tid = id;
+        increment_counter(ctx, id, &w->counter, nullptr);
+
+        pthread_mutex_lock(&w->mutex);
+        pthread_mutex_unlock(&w->mutex);
+        return 0;
+    };
+
     for(std::size_t i = 0; i < 2; i++) {
         work_item &w = wi[i];
 
@@ -648,21 +697,25 @@ TEST(QueuePerThreadPool, steal_claimed) {
         // each work item should be run by the target thread because
         // both threads start having work and both will block, so
         // nothing should be stolen
-        EXPECT_EQ(QPTPool_enqueue_here(pool, i, QPTPool_enqueue_WAIT,
-                                       [](QPTPool_t *ctx, const std::size_t id, void *data, void *) -> int {
-                                           work_item *w = static_cast<work_item *>(data);
-                                           w->tid = id;
-                                           increment_counter(ctx, id, &w->counter, nullptr);
-
-                                           pthread_mutex_lock(&w->mutex);
-                                           pthread_mutex_unlock(&w->mutex);
-                                           return 0;
-                                       }, &w, nullptr, nullptr), QPTPool_enqueue_WAIT);
+        #ifdef QPTPOOL_SWAP
+        EXPECT_EQ(QPTPool_enqueue_here(pool, i, QPTPool_enqueue_WAIT, func, &w,
+                                       nullptr, nullptr),
+                  QPTPool_enqueue_WAIT);
+        #else
+        EXPECT_EQ(QPTPool_enqueue_here(pool, i, QPTPool_enqueue_WAIT, func, &w),
+                  QPTPool_enqueue_WAIT);
+        #endif
     }
 
     // trap this work item after the first work item
-    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT, increment_counter, &counter, nullptr, nullptr),
+    #ifdef QPTPOOL_SWAP
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT, increment_counter, &counter,
+                                   nullptr, nullptr),
               QPTPool_enqueue_WAIT);
+    #else
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT, increment_counter, &counter),
+              QPTPool_enqueue_WAIT);
+    #endif
 
     ASSERT_EQ(QPTPool_start(pool), 0);
 
@@ -697,6 +750,7 @@ TEST(QueuePerThreadPool, steal_claimed) {
     QPTPool_destroy(pool);
 }
 
+#ifdef QPTPOOL_SWAP
 const char SWAPPED[] = "swapped";
 
 /*
@@ -741,6 +795,7 @@ TEST(QueuePerThreadPool, swap) {
 
     QPTPool_destroy(pool);
 }
+#endif
 
 TEST(QueuePerThreadPool, prop_nthreads) {
     QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
@@ -807,6 +862,7 @@ TEST(QueuePerThreadPool, prop_next) {
     }
 }
 
+#ifdef QPTPOOL_SWAP
 TEST(QueuePerThreadPool, prop_queue_limit) {
     const uint64_t queue_limit = THREADS;
 
@@ -897,6 +953,7 @@ TEST(QueuePerThreadPool, prop_swap_prefix) {
         QPTPool_destroy(pool);
     }
 }
+#endif
 
 TEST(QueuePerThreadPool, prop_steal) {
     const uint64_t num = 1;

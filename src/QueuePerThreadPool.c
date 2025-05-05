@@ -68,7 +68,9 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
+#ifdef QPTPOOL_SWAP
 #include "swap.h"
+#endif
 #include "utils.h"
 
 typedef enum {
@@ -83,7 +85,9 @@ typedef struct QPTPoolThreadData {
     pthread_mutex_t claimed_mutex;
 
     sll_t waiting;           /* generally push into this queue */
+    #ifdef QPTPOOL_SWAP
     struct Swap swap;        /* swap for this thread */
+    #endif
     pthread_mutex_t mutex;
     pthread_cond_t cv;
     size_t next_queue;       /* push to this thread when enqueuing */
@@ -96,8 +100,10 @@ typedef struct QPTPoolThreadData {
 /* The Queue Per Thread Pool context */
 struct QPTPool {
     size_t nthreads;
+    #ifdef QPTPOOL_SWAP
     uint64_t queue_limit;    /* if the waiting queue reaches this size, write to swap instead */
     const char *swap_prefix; /* only used if queue_limit > 0 */
+    #endif
     struct {
         uint64_t num;        /* if there is work to steal from a queue, take */
         uint64_t denom;      /* (queue.size * num / denom) items from the front */
@@ -407,6 +413,7 @@ int QPTPool_set_next(QPTPool_t *ctx, QPTPoolNextFunc_t func, void *args) {
     return 0;
 }
 
+#ifdef QPTPOOL_SWAP
 int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit) {
     if (!ctx) {
         return 1;
@@ -469,6 +476,7 @@ int QPTPool_set_swap_prefix(QPTPool_t *ctx, const char *swap_prefix) {
     pthread_mutex_unlock(&ctx->mutex);
     return bad;
 }
+#endif
 
 int QPTPool_set_steal(QPTPool_t *ctx, const uint64_t num, const uint64_t denom) {
     if (!ctx) {
@@ -527,6 +535,7 @@ int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args) {
     return 0;
 }
 
+#ifdef QPTPOOL_SWAP
 int QPTPool_get_queue_limit(QPTPool_t *ctx, uint64_t *queue_limit) {
     if (!ctx) {
         return 1;
@@ -550,6 +559,7 @@ int QPTPool_get_swap_prefix(QPTPool_t *ctx, const char **swap_prefix) {
 
     return 0;
 }
+#endif
 
 int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom) {
     if (!ctx) {
@@ -571,14 +581,21 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
                                    QPTPoolNextFunc_t next_func, void *next_args,
                                    const uint64_t queue_limit, const char *swap_prefix,
                                    const uint64_t steal_num, const uint64_t steal_denom) {
+    #ifndef QPTPOOL_SWAP
+    (void) queue_limit;
+    (void) swap_prefix;
+    #endif
+
     if (!nthreads) {
         return NULL;
     }
 
     QPTPool_t *ctx = malloc(sizeof(QPTPool_t));
     ctx->nthreads = nthreads;
+    #ifdef QPTPOOL_SWAP
     ctx->queue_limit = queue_limit;
     ctx->swap_prefix = swap_prefix;
+    #endif
     ctx->steal.num = steal_num;
     ctx->steal.denom = steal_denom;
     ctx->args = args;
@@ -621,12 +638,14 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads, void *args,
         sll_init(&data->claimed);
         pthread_mutex_init(&data->claimed_mutex, NULL);
         sll_init(&data->waiting);
+        #ifdef QPTPOOL_SWAP
         swap_init(&data->swap);
         if (ctx->queue_limit) {
             if (swap_start(&data->swap, ctx->swap_prefix, i) != 0) {
                 bad = 1; /* allow all threads to complete even if there are errors */
             }
         }
+        #endif
         pthread_mutex_init(&data->mutex, NULL);
         pthread_cond_init(&data->cv, NULL);
         data->next_queue = i;
@@ -740,6 +759,7 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPool_f
     return ret;
 }
 
+#ifdef QPTPOOL_SWAP
 static int write_swap(struct Swap *swap,
                       QPTPool_serialize_and_free_f serialize,
                       QPTPool_alloc_and_deserialize_f deserialize,
@@ -830,15 +850,22 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id,
 
     return ret;
 }
+#endif
 
 QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTPool_enqueue_dst_t queue,
-                                           QPTPool_f func, void *new_work,
-                                           QPTPool_serialize_and_free_f serialize,
-                                           QPTPool_alloc_and_deserialize_f deserialize) {
+                                           QPTPool_f func, void *new_work
+                                           #ifdef QPTPOOL_SWAP
+                                           , QPTPool_serialize_and_free_f serialize
+                                           , QPTPool_alloc_and_deserialize_f deserialize
+                                           #endif
+    ) {
     /* Not checking other arguments */
 
-    if ((queue != QPTPool_enqueue_WAIT) &&
-        (queue != QPTPool_enqueue_SWAP)) {
+    if ((queue != QPTPool_enqueue_WAIT)
+        #ifdef QPTPOOL_SWAP
+        && (queue != QPTPool_enqueue_SWAP)
+        #endif
+        ) {
         return QPTPool_enqueue_ERROR;
     }
 
@@ -846,7 +873,9 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTP
 
     QPTPoolThreadData_t *data = &ctx->data[id];
     pthread_mutex_lock(&data->mutex);
+    #ifdef QPTPOOL_SWAP
     if (queue == QPTPool_enqueue_WAIT) {
+    #endif
         struct queue_item *qi = malloc(sizeof(struct queue_item));
         qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
         qi->work = new_work;
@@ -856,6 +885,7 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTP
         pthread_mutex_lock(&ctx->mutex);
         ctx->incomplete++;
         pthread_mutex_unlock(&ctx->mutex);
+    #ifdef QPTPOOL_SWAP
     }
     else if (queue == QPTPool_enqueue_SWAP) {
         if (write_swap(&data->swap, serialize, deserialize, func, new_work) == 0) {
@@ -867,6 +897,7 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTP
             ret = QPTPool_enqueue_ERROR;
         }
     }
+    #endif
 
     pthread_cond_broadcast(&data->cv);
     pthread_mutex_unlock(&data->mutex);
@@ -901,6 +932,7 @@ uint64_t QPTPool_wait_mem_lte(QPTPool_t *ctx, const uint64_t count) {
     return incomplete;
 }
 
+#ifdef QPTPOOL_SWAP
 /*
  * Read everything from a swap file back into memory. Simply running
  * this once for ecach thread is not enough because the previously
@@ -962,6 +994,7 @@ static int QPTPool_wait_swapped_once(QPTPool_t *ctx, const size_t id, void *data
 
     return 0;
 }
+#endif
 
 void QPTPool_wait(QPTPool_t *ctx) {
     if (!ctx) {
@@ -982,6 +1015,7 @@ void QPTPool_wait(QPTPool_t *ctx) {
      */
     QPTPool_wait_mem(ctx);
 
+    #ifdef QPTPOOL_SWAP
     pthread_mutex_lock(&ctx->mutex);
     while (ctx->swapped) {
         pthread_mutex_unlock(&ctx->mutex);
@@ -1002,6 +1036,7 @@ void QPTPool_wait(QPTPool_t *ctx) {
         pthread_mutex_lock(&ctx->mutex);
     }
     pthread_mutex_unlock(&ctx->mutex);
+    #endif
 }
 
 void QPTPool_stop(QPTPool_t *ctx) {
@@ -1061,6 +1096,7 @@ uint64_t QPTPool_threads_completed(QPTPool_t *ctx) {
     return sum;
 }
 
+#ifdef QPTPOOL_SWAP
 uint64_t QPTPool_work_swapped_count(QPTPool_t *ctx) {
     if (!ctx) {
         return 0;
@@ -1084,6 +1120,7 @@ size_t QPTPool_work_swapped_size(QPTPool_t *ctx) {
     }
     return sum;
 }
+#endif
 
 void QPTPool_destroy(QPTPool_t *ctx) {
     if (!ctx) {
@@ -1097,8 +1134,10 @@ void QPTPool_destroy(QPTPool_t *ctx) {
         data->thread = 0;
         pthread_cond_destroy(&data->cv);
         pthread_mutex_destroy(&data->mutex);
+        #ifdef QPTPOOL_SWAP
         swap_stop(&data->swap);
         swap_destroy(&data->swap);
+        #endif
         /*
          * If QPTPool_start was called, queues will be empty at this point
          *

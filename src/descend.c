@@ -71,12 +71,14 @@ OF SUCH DAMAGE.
 #include "descend.h"
 #include "utils.h"
 
+#ifdef QPTPOOL_SWAP
 static int work_serialize_and_free(const int fd, QPTPool_f func, void *work, size_t *size) {
     struct work *w = (struct work *) work;
     const size_t len = w->compressed.yes?w->compressed.len:sizeof(*w);
 
     return QPTPool_generic_serialize_and_free(fd, func, work, len, size);
 }
+#endif
 
 /*
  * Push the subdirectories in the current directory onto the queue
@@ -172,8 +174,12 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
 
                     if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
                         struct work *copy = compress_struct(in->compress, child, struct_work_size(child));
+                        #ifdef QPTPOOL_SWAP
                         QPTPool_enqueue_swappable(ctx, id, processdir, copy,
                                                   work_serialize_and_free, QPTPool_generic_alloc_and_deserialize);
+                        #else
+                        QPTPool_enqueue(ctx, id, processdir, copy);
+                        #endif
                     }
                     else {
                         /*

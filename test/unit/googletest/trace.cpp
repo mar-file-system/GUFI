@@ -321,7 +321,9 @@ TEST(scout_trace, no_cleanup) {
 
     QPTPool_t *pool = QPTPool_init(1, nullptr);
     ASSERT_NE(pool, nullptr);
+    #ifdef QPTPOOL_SWAP
     EXPECT_EQ(QPTPool_set_queue_limit(pool, 1), 0); // if the WAIT queue already has 1 item, swap out the new item
+    #endif
     ASSERT_EQ(QPTPool_start(pool), 0);
 
     struct Args {
@@ -353,8 +355,11 @@ TEST(scout_trace, no_cleanup) {
                              }
                              pthread_mutex_unlock(&args->mutex);
                              return 0;
-                         }, &args,
-                         nullptr, nullptr);
+                         }, &args
+                         #ifdef QPTPOOL_SWAP
+                         , nullptr, nullptr
+                         #endif
+        );
 
     // wait until the first thread starts
     while (!args.running) {
@@ -367,8 +372,11 @@ TEST(scout_trace, no_cleanup) {
                          [](QPTPool_t *, const size_t, void *, void *) -> int {
                              // no-op
                              return 0;
-                         }, nullptr,
-                         nullptr, nullptr);
+                         }, nullptr
+                         #ifdef QPTPOOL_SWAP
+                         , nullptr, nullptr
+                         #endif
+        );
 
     // not enqueuing scout_trace
     // struct (on stack) is not cleaned up, so should not throw
@@ -383,8 +391,13 @@ TEST(scout_trace, no_cleanup) {
     EXPECT_EQ(scout_trace(pool, 0, &sta, nullptr), 0);
 
     QPTPool_stop(pool);
+    #ifdef QPTPOOL_SWAP
     EXPECT_GT(QPTPool_threads_started(pool),   (uint64_t) 4);
     EXPECT_GT(QPTPool_threads_completed(pool), (uint64_t) 4);
+    #else
+    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 4);
+    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 4);
+    #endif
     QPTPool_destroy(pool);
 
     EXPECT_EQ(stats.remaining,  (size_t)   0);
