@@ -87,6 +87,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 5
+        fetch-tags: true
 
     - uses: actions/cache@v4
       with:
@@ -134,8 +137,8 @@ jobs:
     - name: Uninstall CMake from package manager
       run:  yum -y autoremove cmake3
 
-    - name: Install CMake 3.16.0
-      run:  contrib/CI/cmake-download.sh 3.16.0 linux-x86_64 | tail -n 1 | sed 's/linux/Linux/g' >> "${GITHUB_PATH}"
+    - name: Install CMake 3.19.0
+      run:  contrib/CI/cmake-download.sh 3.19.0 linux-x86_64 | tail -n 1 | sed 's/linux/Linux/g' >> "${GITHUB_PATH}"
 
     - name: Check CMake Version
       run:  cmake --version
@@ -192,6 +195,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 5
+        fetch-tags: true
 
     - uses: actions/cache@v4
       with:
@@ -221,6 +227,9 @@ jobs:
       image: ubuntu:24.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 5
+        fetch-tags: true
 
     - uses: actions/cache@v4
       with:
@@ -252,6 +261,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 5
+        fetch-tags: true
 
     - uses: actions/cache@v4
       with:

@@ -136,6 +136,9 @@ jobs:
       LDFLAGS: "-framework Foundation -framework Metal -framework MetalKit"
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 5
+        fetch-tags: true
 
     - uses: actions/cache@v4
       with:
@@ -165,6 +168,9 @@ jobs:
     - run: git config --global core.autocrlf input
 
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 5
+        fetch-tags: true
 
     - uses: actions/cache@v4
       with:
@@ -181,6 +187,12 @@ jobs:
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Set Up Git
+      run: >-
+           export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
+           git config --global --add safe.directory '*'
+      shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
 
     - name: Configure CMake
       run: >-

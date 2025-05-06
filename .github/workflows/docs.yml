@@ -69,6 +69,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 5
+        fetch-tags: true
 
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh

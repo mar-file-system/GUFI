@@ -62,7 +62,8 @@
 
 # allow for the test working directory to be moved
 set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
-execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}")
+execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}"
+    COMMAND_ERROR_IS_FATAL ANY)
 
 # add regression tests
 add_subdirectory(regression)
