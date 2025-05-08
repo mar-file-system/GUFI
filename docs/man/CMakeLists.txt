@@ -60,34 +60,46 @@
 
 
 
-set(MAN_PAGES
+set(SERVER_CLIENT_MAN_PAGES
+  gufi_find.1
+  gufi_ls.1
+  gufi_stat.1
+  gufi_stats.1
+)
+
+set(SERVER_MAN_PAGES
   bfwreaddirplus2db.1
   gufi_dir2index.1
   gufi_dir2trace.1
-  gufi_find.1
-  gufi_ls.1
   gufi_query.1
-  gufi_stat.1
-  gufi_stats.1
   gufi_trace2index.1
   gufi_treesummary.1
   querydbs.1
 )
 
-foreach(MAN_PAGE ${MAN_PAGES})
+# man pages for executables found in the server/local install
+foreach(MAN_PAGE ${SERVER_MAN_PAGES} ${SERVER_CLIENT_MAN_PAGES})
   set(MAN_PAGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${MAN_PAGE}.in")
   set(MAN_PAGE_DST "${CMAKE_CURRENT_BINARY_DIR}/${MAN_PAGE}")
   configure_file(${MAN_PAGE_SRC} ${MAN_PAGE_DST} @ONLY)
   string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
-  if (CLIENT)
-    install(FILES "${MAN_PAGE_DST}"
-      DESTINATION share/man/man${SECTION}
-      COMPONENT Client)
-  endif()
   install(FILES "${MAN_PAGE_DST}"
     DESTINATION share/man/man${SECTION}
     COMPONENT Server)
 endforeach()
+
+# man pages for executables found in the client
+if (CLIENT)
+  foreach(MAN_PAGE ${SERVER_CLIENT_MAN_PAGES})
+    set(MAN_PAGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${MAN_PAGE}.in")
+    set(MAN_PAGE_DST "${CMAKE_CURRENT_BINARY_DIR}/${MAN_PAGE}")
+    configure_file(${MAN_PAGE_SRC} ${MAN_PAGE_DST} @ONLY)
+    string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
+    install(FILES "${MAN_PAGE_DST}"
+      DESTINATION share/man/man${SECTION}
+      COMPONENT Client)
+  endforeach()
+endif()
 
 # CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
 # in order to not add /usr/share/man and /usr/share/man/man1 into the RPMs

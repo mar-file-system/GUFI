@@ -584,7 +584,6 @@ if (RPMBUILD)
     # python libraries are installed through pip, and won't be found by rpm
     set(CPACK_RPM_Client_PACKAGE_REQUIRES "${PYTHON_INTERPRETER}, openssh, ${PYTHON_INTERPRETER}-pip")
     set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
-    set(CPACK_RPM_Client_PRE_INSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/deps/client/pip_install.sh")
   endif()
 
   # Generate source RPM

@@ -63,43 +63,60 @@
 \section{Deployment}
 \label{sec:deploy}
 GUFI functionality as described so far has been local. However, users
-are not expected to log into the machine with the indexes with an
-interactive shell. Instead, they are expected to call wrapper scripts
-to forward commands to the server (installed with the client RPM).
+are not expected to log into the machine containing the indexes with
+an interactive shell. Instead, users are expected to call the
+scripts installed with the client RPM from a client node to forward
+commands to the server via ssh.
 
 \subsection{RPMs}
-When client building is enabled and the rpms built (\texttt{make
-  package}), two rpms will be created. The server rpm will contain
-GUFI as described so far. The client rpm will contain executables that
-should be installed on the client node. The user executables on the
-client side simply forward commands to the server. A jailed shell
-should be set up on the server to prevent arbitrary command execution
-- see Section~\ref{sec:gufi_jail} for details.
+When CMake is configured with \texttt{-DCLIENT=On}, \texttt{make
+package} will produce two RPMs instead of one. The server RPM will
+contain the actual GUFI implementation. The client RPM will contain
+renamed and modified \guficlient wrapper scripts.
+
+\subsubsection{Wrapper Scripts}
+\gufiquery provides the core GUFI functionality. However it is not
+expected to be used by users, as the syntax of \gufiquery is somewhat
+unwieldy, and users are not expected to understand how GUFI
+works. Wrapper scripts such as \gufifind and \gufils were created in
+order to provide users (and administrators) with predetermined queries
+that are used often and extract useful information (see the user guide
+for more details). The server has the actual implementation of the
+wrapper scripts while the client has multiple copies of \guficlient
+renamed to the cooresponding script's name.
 
 \subsection{SSH}
+\subsubsection{Authentication}
 Normal ssh, using passwords or user keys (\texttt{\textasciitilde
   /.ssh/id\_rsa}), should be disabled on the server. Instead, ssh
 should be done using host based authentication
 (\texttt{/etc/ssh/ssh\_host\_rsa\_key}).
 
-\subsection{Runtime Configuration}
-\gufiquery provides the core GUFI functionality. However it is not
-expected to be used by users, as the syntax of \gufiquery is somewhat
-unwieldy, and users are not expected to understand how GUFI
-works. Wrappers were created in order to provide users (and
-administrators) with predetermined queries that are used often and
-extract useful information (see the user guide for more details). The
-server has the actual implementation of the wrappers while the clients
-have command forwarders.
+\subsubsection{\gufijail}
+\label{sec:gufi_jail}
+A restricted shell should be set up on the server to prevent arbitrary
+command execution.
 
-These wrappers require a valid GUFI configuration file to function
-correctly. The path to the configuration file can be set at configure
-time with the \texttt{CONFIG\_FILE} CMake variable (defaults to
+\gufijail is a simple script that limits the commands users logging in
+with ssh are able to run to only a subset of GUFI
+commands. \texttt{/etc/ssh/sshd\_config} should be modified with the
+following lines:
+
+\begin{verbatim}
+    Match Group gufi
+        ForceCommand /path/to/gufi_jail
+\end{verbatim}
+
+\subsection{Runtime Configuration}
+The wrapper scripts on both the server and client require a valid GUFI
+configuration file to function correctly. The path to the
+configuration file can be set at configure time with the
+\texttt{CONFIG\_FILE} CMake variable (defaults to
 \guficonfigfile). The configuration file will be readable by all users
 but should only be writable by the administrators (664 permissions) in
 order to prevent non-admin users from changing how GUFI runs.
 
-Configuration files are simple text files containing lines of
+GUFI configuration files are simple text files containing lines of
 \texttt{<key>=<value>}. Duplicate configuration keys are overwritten
 by the bottom-most line. Empty lines and lines starting with \# are
 ignored. The server and client require different configuration
@@ -107,9 +124,6 @@ values. Example configuration files can be found in the
 \texttt{config} directory of the GUFI source, as well as in the build
 directory. The corresponding examples will also be installed with
 GUFI.
-
-If a server and client exist on the same node, the server and client
-configuration file may be combined into one file.
 
 \subsubsection{Server}
 \begin{tabular}{| l | l | l |}
@@ -133,14 +147,14 @@ configuration file may be combined into one file.
   & & used to buffer writes to stdout. \\
   & & Setting this too low will affect \\
   & & performance. Setting this too high \\
-  & & will use too much resources. \\
+  & & will use too much memory. \\
   \hline
 \end{tabular}
 
 \subsubsection{Client}
 \begin{tabular}{| l | l | l |}
   \hline
-  Key Value & Type & Purpose \\
+  Key & Type & Purpose \\
   \hline
   Server & URI & The URI of the server (IP address, URL, etc.) \\
   \hline
@@ -148,14 +162,23 @@ configuration file may be combined into one file.
   \hline
 \end{tabular}
 
-\subsection{\gufijail}
-\label{sec:gufi_jail}
-\gufijail is a simple script that limits the commands users logging in
-with ssh are able to run to only a subset of GUFI
-commands. \texttt{/etc/ssh/sshd\_config} should be modified with the
-following lines:
+\subsection{Colocating the Server and Client}
+Colocating the server and client can be done, with some points to keep
+in mind:
 
-\begin{verbatim}
-    Match Group gufi
-        ForceCommand /path/to/gufi_jail
-\end{verbatim}
+\begin{itemize}
+  \item Installing both the server and client with
+    \texttt{make~install} is currently not supported. There is an
+    issue with CMake's \texttt{install} command that prevents clean
+    \texttt{make~install} and RPM generation at the same
+    time. Instead, the client wrapper scripts should be run out of the
+    GUFI build directory. There, the client wrapper scripts will be
+    called \texttt{gufi\_client\_<name>}, e.g.,
+    \texttt{gufi\_client\_ls}. Because of the rename, it does not
+    really make sense to colocate the server and client for anything
+    other than testing even if the client wrapper scripts are
+    installed.
+  \item The server and client configurations should be placed into the
+    same file as both the server and client read from the same
+    configuration file path.
+\end{itemize}
