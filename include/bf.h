@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 
 #include "SinglyLinkedList.h"
 #include "compress.h"
+#include "plugin.h"
 #include "trie.h"
 #include "xattrs.h"
 
@@ -292,6 +293,12 @@ struct input {
 
    /* prefix of swap files */
    refstr_t swap_prefix;
+
+   /*
+    * Holds pointers to plugin functions for running custom user code to manipulate the databases.
+    * These will be NULL if no plugin was specified.
+    */
+   const struct plugin_operations *plugin_ops;
 };
 
 struct input *input_init(struct input *in);
