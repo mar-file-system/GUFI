@@ -151,7 +151,7 @@ Actions and might no longer work.
   \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
   \texttt{DEP\_AI=<On|Off>}
-  & Whether or not to build with \sqlite AI modules \\
+  & Whether or not to build with \sqlite AI modules (default: On) \\
   \hline
   \texttt{DEP\_DOWNLOAD\_PREFIX=<PATH>}
   & Location of downloaded dependencies. If the expected files are
@@ -170,10 +170,10 @@ Actions and might no longer work.
   is deleted. \\
   \hline
   \texttt{DEP\_PATCH\_SQLITE3\_OPEN=<On|Off>}
-  & Whether or not to patch \sqlite open \\
+  & Whether or not to patch \sqlite open (default: Off) \\
   \hline
   \texttt{DEP\_USE\_JEMALLOC=<On|Off>}
-  & Whether or not to build and link with jemalloc \\
+  & Whether or not to build and link with jemalloc (default: On) \\
   \hline
 \end{tabularx}
 \end{table}
@@ -189,10 +189,10 @@ have effect.
   \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
   \texttt{GPROF=<On|Off>}
-  & Compile with the \texttt{-pg} flag. \\
+  & Compile with the \texttt{-pg} flag (default: Off) \\
   \hline
   \texttt{GCOV=<On|Off>}
-  & Compile with the \texttt{--coverage} flag. \\
+  & Compile with the \texttt{--coverage} flag (default: Off) \\
   \hline
 \end{tabularx}
 \end{table}
@@ -214,13 +214,13 @@ Some files are installed into system paths that are not
                                    & with \texttt{make install}, point to a convenient location. \\
   \hline
   \texttt{BASH\_COMPLETION=<On|Off>} & Whether or not to install bash completion script to \\
-                                     & \texttt{/etc/bash\_completion.d}. \\
+                                     & \texttt{/etc/bash\_completion.d} (default: On). \\
                                      & Useful when running \texttt{make install} without root.\\
   \hline
 \end{tabularx}
 \end{table}
 
-\subsubsection{Client}
+\subsubsection{Features}
 \begin{table}[H]
 \centering
 \begin{tabularx}{1.2\textwidth}{| l | X |}
@@ -228,7 +228,13 @@ Some files are installed into system paths that are not
   \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
   \texttt{CLIENT=<On|Off>}
-  & Whether or not to install the gufi\_client when \texttt{make install} is called \\
+  & Whether or not to install \guficlient wrapper scripts when running
+  \texttt{make install} and build separate server and client RPMs
+  (default: Off) \\
+  \hline
+  \texttt{QPTPOOL\_SWAP=<On|Off>}
+  & Whether or not to build QueuePerThreadPool with work swapping
+  (default: On) \\
   \hline
 \end{tabularx}
 \end{table}
@@ -239,6 +245,11 @@ Some files are installed into system paths that are not
 \begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
   \texttt{-D<VAR>=<VALUE>} & Description \\
+  \hline
+  \texttt{ENABLE\_SUDO\_TESTS=<On|Off>}
+  & Run tests that require \texttt{sudo} (default: Off) \\
+  & Can also force enabling of tests in case CMake Policy
+  \texttt{CMP0109} comes up \\
   \hline
   \texttt{TEST\_WORKING\_DIRECTORY=<PATH>}
   & Directory to run tests in. Defaults to \\
@@ -255,7 +266,8 @@ Some files are installed into system paths that are not
   \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
   \texttt{LATEX\_BUILD=<On|Off>}
-  & Whether or not to build PDF documentation when \LaTeX is found \\
+  & Whether or not to build PDF documentation when \LaTeX is found
+  (default: Off) \\
   \hline
 \end{tabularx}
 \end{table}
