@@ -63,6 +63,7 @@
 set(SERVER_CLIENT_MAN_PAGES
   gufi_find.1
   gufi_ls.1
+  gufi_query.1
   gufi_stat.1
   gufi_stats.1
 )
@@ -71,7 +72,6 @@ set(SERVER_MAN_PAGES
   bfwreaddirplus2db.1
   gufi_dir2index.1
   gufi_dir2trace.1
-  gufi_query.1
   gufi_trace2index.1
   gufi_treesummary.1
   querydbs.1
