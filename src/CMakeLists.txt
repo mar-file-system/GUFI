@@ -252,6 +252,7 @@ if (APPLE OR DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_target_properties(run_vt PROPERTIES SUFFIX ".${EXT}")
 endif()
+install(TARGETS run_vt DESTINATION "${LIB}" COMPONENT Server)
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
