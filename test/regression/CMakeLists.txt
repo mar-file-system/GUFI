@@ -97,6 +97,12 @@ set(PYTHON
   gufi_stats
 )
 
+if (CLIENT)
+  list(APPEND PYTHON
+    gufi_query.py
+  )
+endif()
+
 set(EXAMPLES
   deluidgidsummaryrecs
   generategidsummary

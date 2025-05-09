@@ -149,6 +149,7 @@ GUFI_GETFATTR="${GUFI_TOOL} getfattr"
 GUFI_INDEX2DIR="@CMAKE_BINARY_DIR@/src/gufi_index2dir"
 GUFI_LS="${GUFI_TOOL} ls"
 GUFI_QUERY="@CMAKE_BINARY_DIR@/src/gufi_query"
+GUFI_QUERY_PY="${GUFI_TOOL} query.py"
 GUFI_ROLLUP="@CMAKE_BINARY_DIR@/src/gufi_rollup"
 GUFI_SQLITE3="@CMAKE_BINARY_DIR@/src/gufi_sqlite3"
 GUFI_STAT="${GUFI_TOOL} stat"
@@ -217,6 +218,7 @@ replace() {
     s/${GUFI_INDEX2DIR//\//\\/}/gufi_index2dir/g;
     s/${GUFI_LS//\//\\/}/gufi_ls/g;
     s/${GUFI_QUERY//\//\\/}/gufi_query/g;
+    s/${GUFI_QUERY_PY//\//\\/}/gufi_query.py/g;
     s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
     s/${GUFI_SQLITE3//\//\\/}/gufi_sqlite3/g
     s/${GUFI_STAT//\//\\/}/gufi_stat/g;

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,84 +61,28 @@
 
 
 
-# gufi_* scripts
-set(TOOLS
-  find
-  getfattr
-  ls
-  stat
-  stats
-)
+# This file should generally not be called directly. This script is
+# meant for advanced users running on clients to call gufi_query
+# without knowing the indexroot.
+import subprocess
+import sys
 
-# python libraries installed into bin for convenience
-set(LIBRARIES
-  gufi_config.py # also executable
-  gufi_common.py # library only
-)
+import gufi_config # pylint: disable=wrong-import-position
 
-foreach(TOOL ${TOOLS})
-  set(USER_TOOL "gufi_${TOOL}")
-  configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
+def run(args, config_path):
+    '''
+    Send all arguments to gufi_query
+    '''
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${BIN}" COMPONENT Server)
+    config = gufi_config.Server(config_path)
 
-  if (CLIENT)
-    # client files WILL NOT overwrite server files in build directory
-    set(CLIENT_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_${TOOL}")
-    configure_file("gufi_client" "${CLIENT_TOOL}" @ONLY)
+    cmd = [config.query] + args[1:] + [config.indexroot]
 
-    # client files WILL NOT overwrite server files when installing
-    install(PROGRAMS "${CLIENT_TOOL}"
-      RENAME "${USER_TOOL}"
-      DESTINATION "${BIN}"
-      COMPONENT Client) # this is always needed for make package
-  endif()
-endforeach()
+    # run the command
+    query = subprocess.Popen(cmd)       # pylint: disable=consider-using-with
+    query.communicate()                 # block until query finishes
 
-# allow for clients to call gufi_query via a script
-if (CLIENT)
-  set(TOOL "query.py")
-  set(USER_TOOL "gufi_${TOOL}")
-  configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${BIN}" COMPONENT Server)
+    return query.returncode
 
-  set(CLIENT_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_query")
-  configure_file("gufi_client" "${CLIENT_TOOL}" @ONLY)
-  install(PROGRAMS "${CLIENT_TOOL}"
-    RENAME "gufi_query"
-    DESTINATION "${BIN}"
-    COMPONENT Client) # this is always needed for make package
-endif()
-
-# gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
-configure_file(gufi_jail gufi_jail @ONLY)
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail" DESTINATION "${BIN}" COMPONENT Server)
-
-# not prefixed with gufi_ and no client tool
-configure_file(querydbs querydbs @ONLY)
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs" DESTINATION "${BIN}" COMPONENT Server)
-
-foreach(LIBRARY ${LIBRARIES})
-  configure_file("${LIBRARY}" "${LIBRARY}" @ONLY)
-
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}" DESTINATION "${BIN}" COMPONENT Server)
-
-  # when running make install, client files will not overwrite server files
-  if (CLIENT)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}" DESTINATION "${BIN}" COMPONENT Client)
-  endif()
-endforeach()
-
-# bash completions for the tools so paths can be tab completed
-if (COMPOPT EQUAL 0)
-  configure_file(bash_completion bash_completion @ONLY)
-  option(BASH_COMPLETION "Whether or not to install bash completion script" On)
-  if (BASH_COMPLETION)
-    install(FILES bash_completion DESTINATION "/etc/bash_completion.d" COMPONENT Server RENAME gufi)
-  endif()
-endif()
-
-# CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
-# in order to not add /etc/bash_completion.d into the RPMs
-list(APPEND CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc/bash_completion.d")
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}" PARENT_SCOPE)
+if __name__  == '__main__':
+    sys.exit(run(sys.argv, gufi_config.PATH))
