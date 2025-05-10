@@ -69,8 +69,14 @@ dnf install -y rpm-build
 # reconfigure CMake
 cmake @CMAKE_SOURCE_DIR@
 
-# make the rpm
+# make the RPM
 make package
+
+# list the files in the server RPM
+rpm -ql gufi-server*.rpm | sed '/.*\.build-id/d' | sort
+
+# list the files in the client RPM
+rpm -ql gufi-client*.rpm | sort
 
 # install the RPM
 dnf install -y gufi-server-*.rpm
