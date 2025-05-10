@@ -104,7 +104,7 @@ jobs:
       working-directory: build
       run:  contrib/CI/generic_rpm.sh
 
-    - name: Test Server amd Client RPMs
+    - name: Test Server and Client RPMs
       if:   matrix.client == 'On'
       working-directory: build
       run:  contrib/CI/rpms.sh
@@ -123,7 +123,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 5
+        fetch-depth: 0
         fetch-tags: true
 
     - uses: actions/cache@v4
