@@ -216,13 +216,7 @@ endif()
 
 # find a required executable dependency
 function(find_exec_dependency var)
-  # REQUIRED option was not added until 3.18
-  find_program(${var} NAMES ${ARGN})
-  if (${var})
-    message(STATUS "Found ${var}: ${${var}}")
-  else()
-    message(FATAL_ERROR "Required program ${var} not found.")
-  endif()
+  find_program(${var} NAMES ${ARGN} REQUIRED)
 endfunction()
 
 # from coreutils, so should always be available, and if
@@ -447,11 +441,8 @@ set(COMMON_LIBRARIES
 
 if (DEP_AI)
   if (APPLE)
-    find_library(METAL Metal)           # REQUIRED was not added until CMake 3.18
-    if (NOT METAL)
-      message(FATAL_ERROR "Could not find Metal Framework")
-    endif()
-    find_library(ACCELERATE Accelerate) # REQUIRED was not added until CMake 3.18
+    find_library(METAL Metal REQUIRED)
+    find_library(ACCELERATE Accelerate REQUIRED)
     if (NOT ACCELERATE)
       message(FATAL_ERROR "Could not find Accelerate Framework")
     endif()
