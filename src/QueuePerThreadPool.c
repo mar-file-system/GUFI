@@ -694,6 +694,7 @@ int QPTPool_start(QPTPool_t *ctx) {
     return 0;
 }
 
+#if QPTPOOL_SWAP
 int QPTPool_generic_serialize_and_free(const int fd, QPTPool_f func, void *work, const size_t len, size_t *size) {
     if ((write_size(fd, &func, sizeof(func)) != sizeof(func)) ||
         (write_size(fd, &len, sizeof(len)) != sizeof(len)) ||
@@ -725,6 +726,7 @@ int QPTPool_generic_alloc_and_deserialize(const int fd, QPTPool_f *func, void **
 
     return 0;
 }
+#endif
 
 /* id selects the next_queue variable to use, not where the work will be placed */
 QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPool_f func, void *new_work) {

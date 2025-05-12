@@ -319,10 +319,10 @@ static void return_error(sqlite3_context *context,
  *
  * caller should free line
  */
-static int runop(sqlite3_context *context, const char *cmd, char **line, size_t *line_len) {
+static int lineop(sqlite3_context *context, const char *cmd, char **line, size_t *line_len) {
     FILE *p = popen(cmd, "r");
     if (p == NULL) {
-        static const char ERR_PREFIX[] = "runop: popen failed to run '";
+        static const char ERR_PREFIX[] = "lineop: popen failed to run '";
         return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
         return -1;
     }
@@ -332,7 +332,7 @@ static int runop(sqlite3_context *context, const char *cmd, char **line, size_t 
     pclose(p);
 
     if (len < 0) {
-        static const char ERR_PREFIX[] = "runop: failed to read result of '%s'";
+        static const char ERR_PREFIX[] = "lineop: failed to read result of '%s'";
         return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
         free(*line);
         return -1;
@@ -340,7 +340,7 @@ static int runop(sqlite3_context *context, const char *cmd, char **line, size_t 
 
     /* only newline, so no value */
     if (len == 1) {
-        static const char ERR_PREFIX[] = "runop: did not get result from '";
+        static const char ERR_PREFIX[] = "lineop: did not get result from '";
         return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
         free(*line);
         return -1;
@@ -361,7 +361,7 @@ static void strop(sqlite3_context *context, int argc, sqlite3_value **argv) {
     char *line = NULL;
     size_t len = 0;
 
-    if (runop(context, cmd, &line, &len) != 0) {
+    if (lineop(context, cmd, &line, &len) != 0) {
         return;
     }
 
@@ -377,7 +377,7 @@ static void intop(sqlite3_context *context, int argc, sqlite3_value **argv) {
     char *line = NULL;
     size_t len = 0;
 
-    if (runop(context, cmd, &line, &len) != 0) {
+    if (lineop(context, cmd, &line, &len) != 0) {
         return;
     }
 
@@ -399,7 +399,6 @@ static void blobop(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
     const char *cmd = (const char *) sqlite3_value_text(argv[0]);
-    printf("[%s]\n", cmd);
     FILE *p = popen(cmd, "r");
     if (p == NULL) {
         static const char ERR_PREFIX[] = "blobop: popen failed to run '";
@@ -407,7 +406,7 @@ static void blobop(sqlite3_context *context, int argc, sqlite3_value **argv) {
         return;
     }
 
-    size_t alloc = 1;
+    size_t alloc = 256; /* magic number */
     char *data = malloc(alloc);
     size_t len = 0;
     size_t got = 0;

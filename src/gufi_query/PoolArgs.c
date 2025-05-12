@@ -73,6 +73,11 @@ OF SUCH DAMAGE.
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/external.h"
 
+/* don't introduce undefined behavior by casting function when passing into trie_insert */
+static void str_free_wrapper(void *str) {
+    str_free((str_t *) str);
+}
+
 /*
  * udf that allows for user to name SQL values that can be used for string replacement
  *
@@ -97,9 +102,8 @@ static void setstr(sqlite3_context *context, int argc, sqlite3_value **argv) {
     /* copy value since its lifetime is not guaranteed */
     str_t *copy = str_alloc(val_len);
     memcpy(copy->data, val, val_len);
-    copy->data[copy->len] = '\0';
 
-    trie_insert(user_strs, key, key_len, copy, free);
+    trie_insert(user_strs, key, key_len, copy, str_free_wrapper);
 }
 
 void thread_id(sqlite3_context *context, int argc, sqlite3_value **argv) {

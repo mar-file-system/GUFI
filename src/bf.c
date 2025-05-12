@@ -594,10 +594,7 @@ INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64)
 /* only null terminates */
 str_t *str_alloc(const size_t len) {
     str_t *str = malloc(sizeof(str_t));
-    str->data = malloc(len + 1);
-    str->data[len] = '\0';
-    str->len = len;
-    return str;
+    return str_alloc_existing(str, len);
 }
 
 void str_free(str_t *str) {
@@ -607,6 +604,7 @@ void str_free(str_t *str) {
 
 str_t *str_alloc_existing(str_t *str, size_t len) {
     str->data = malloc(len + 1);
+    str->data[len] = '\0';
     str->len = len;
     return str;
 }
