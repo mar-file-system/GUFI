@@ -88,7 +88,7 @@ dnf install -y gufi-server-*.rpm
 dnf autoremove -y GUFI-Server
 
 # upgrade pip to get the latest Python dependencies
-@PYTHON_INTERPRETER@ -m pip install --upgrade pip
+python3 -m pip install --upgrade pip
 
 # install the client RPM
 dnf install -y gufi-client-*.rpm

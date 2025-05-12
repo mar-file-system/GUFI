@@ -1,4 +1,4 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
+#!/usr/bin/env python3
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -86,25 +86,18 @@ TOOLS = {
 # import a tool by path (default: the scripts directory)
 # needed for duplicate filenames or files without the .py extension
 def import_tool(tool, filename):
-    if sys.version_info.major < 3: # pylint: disable=no-else-return
-        import imp                 # pylint: disable=deprecated-module,import-outside-toplevel
-
-        return imp.load_source(tool, filename)
     # https://csatlas.com/python-import-file-module/
-    elif sys.version_info.major >= 3:
-        # pylint: disable=import-outside-toplevel
-        import importlib.machinery
-        import importlib.util
-        from pathlib import Path
+    # pylint: disable=import-outside-toplevel
+    import importlib.machinery
+    import importlib.util
+    from pathlib import Path
 
-        # Import mymodule
-        loader = importlib.machinery.SourceFileLoader(tool, filename)
-        spec = importlib.util.spec_from_loader(tool, loader)
-        script = importlib.util.module_from_spec(spec)
-        loader.exec_module(script)
-        return script
-
-    return None
+    # Import mymodule
+    loader = importlib.machinery.SourceFileLoader(tool, filename)
+    spec = importlib.util.spec_from_loader(tool, loader)
+    script = importlib.util.module_from_spec(spec)
+    loader.exec_module(script)
+    return script
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GUFI Testing Tool Selector', add_help=False)

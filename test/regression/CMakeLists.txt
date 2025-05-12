@@ -145,7 +145,7 @@ configure_file(gufi_tool.py.in gufi_tool.py @ONLY)
 configure_file(gufi_vt.common gufi_vt.common @ONLY)
 
 # check for SQLAlchemy and add test if found
-execute_process(COMMAND "${PYTHON_INTERPRETER}" -c "import sqlalchemy"
+execute_process(COMMAND python3 -c "import sqlalchemy"
   RESULT_VARIABLE SQLALCHEMY_RC
   OUTPUT_QUIET ERROR_QUIET)
 if (SQLALCHEMY_RC EQUAL 0)
@@ -158,7 +158,7 @@ if (SQLALCHEMY_RC EQUAL 0)
   configure_file(gufi_vt_sqlalchemy.py.in gufi_vt_sqlalchemy.py @ONLY)
 
   # check for pugsql and add test if found
-  execute_process(COMMAND "${PYTHON_INTERPRETER}" -c "import pugsql"
+  execute_process(COMMAND python3 -c "import pugsql"
     RESULT_VARIABLE PUGSQL_RC
     OUTPUT_QUIET ERROR_QUIET)
   if (PUGSQL_RC EQUAL 0)

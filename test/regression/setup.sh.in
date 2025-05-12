@@ -187,7 +187,7 @@ PWD="$(pwd)"
 
 # generate a fake config file
 # shellcheck disable=SC2046
-CONFIG="$(@PYTHON_INTERPRETER@ -c 'import gufi_tool, os; print(os.path.realpath(gufi_tool.CONFIG_PATH))')"
+CONFIG="$(python3 -c 'import gufi_tool, os; print(os.path.realpath(gufi_tool.CONFIG_PATH))')"
 (
     echo "Threads=1"
     echo "Query=${GUFI_QUERY}"

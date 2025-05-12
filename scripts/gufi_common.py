@@ -1,4 +1,4 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
+#!/usr/bin/env python3
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -67,7 +67,7 @@ import pwd
 import re
 import sys
 
-if (sys.version_info.major < 3) or ((sys.version_info.major == 3) and sys.version_info.minor < 3):
+if (sys.version_info.major == 3) and (sys.version_info.minor < 3):
     from pipes import quote as sanitize # pylint: disable=deprecated-module
 else:
     from shlex import quote as sanitize # new in Python 3.3

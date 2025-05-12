@@ -157,39 +157,6 @@ jobs:
       working-directory: ${{ github.workspace }}/build
       run:  ctest --output-on-failure
 
-  Python2:
-    needs: [ShellCheck, Pylint]
-    runs-on: ubuntu-latest
-    container:
-      image: centos:8
-    steps:
-    - uses: actions/checkout@v4
-
-    - uses: actions/cache@v4
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-Python2
-
-    - name: CentOS 8 Prerequisites
-      run:  contrib/CI/centos8.sh
-
-    - name: Install Python 2
-      run:  yum -y install python2
-
-    - name: Configure CMake For Core Tests
-      run:  |
-            mkdir -p build
-            cd build
-            cmake .. ${{ env.COMMON_CONFIG }} -DPYTHON_INTERPRETER=python2
-
-    - name: Build
-      working-directory: ${{ github.workspace }}/build
-      run:  make -j
-
-    - name: Test
-      working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure
-
   TestDirectory:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest

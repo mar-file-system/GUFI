@@ -206,27 +206,8 @@ else()
   message(STATUS "Not compiling C++ sources")
 endif()
 
-# Python is required
-if (CMAKE_VERSION VERSION_GREATER "3.12.0")
-  find_package(Python REQUIRED COMPONENTS Interpreter)
-else()
-  find_program(Python NAMES python python3 python2) # REQUIRED option was not added until 3.18
-  if (NOT Python)
-    message(FATAL_ERROR "Python not found")
-  endif()
-  execute_process(COMMAND ${Python} --version
-    OUTPUT_VARIABLE Python_VERSION_STDOUT
-    ERROR_VARIABLE Python_VERSION_STDERR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_STRIP_TRAILING_WHITESPACE)
-  string(REGEX REPLACE "^Python " "" Python_VERSION "${Python_VERSION_STDOUT}${Python_VERSION_STDERR}")
-  string(REPLACE "." ";" Python_VERSION_LIST ${Python_VERSION})
-  list(GET Python_VERSION_LIST 0 Python_VERSION_MAJOR)
-  message(STATUS "Found Python: ${Python} (found version \"${Python_VERSION}\") found components: Interpreter")
-endif()
-
-set(PYTHON_INTERPRETER "python${Python_VERSION_MAJOR}" CACHE STRING "Python Interpreter")
-message(STATUS "Using Python Interpreter: ${PYTHON_INTERPRETER}")
+# Python3 is required
+find_package(Python3 REQUIRED COMPONENTS Interpreter REQUIRED)
 
 # require find_program to return executables with -r+x permissions
 if (POLICY CMP0109)
@@ -572,7 +553,7 @@ if (RPMBUILD)
   set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
   set(CPACK_RPM_PACKAGE_VENDOR "LANL")
   set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
-  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, ${PYTHON_INTERPRETER}, coreutils")
+  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python3-pip, coreutils")
   set(CPACK_RPM_PACKAGE_RELOCATABLE On)
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
   set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
@@ -582,7 +563,7 @@ if (RPMBUILD)
   if (CLIENT)
     set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
     # python libraries are installed through pip, and won't be found by rpm
-    set(CPACK_RPM_Client_PACKAGE_REQUIRES "${PYTHON_INTERPRETER}, openssh, ${PYTHON_INTERPRETER}-pip")
+    set(CPACK_RPM_Client_PACKAGE_REQUIRES "python3, python3-pip, openssh")
     set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
   endif()
 
