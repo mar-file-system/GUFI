@@ -173,4 +173,8 @@ TEST(BottomUp, bad) {
     EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
                                         zero, one, 0, THREAD_COUNT, nullptr), -1);
+
+    // bad pool into split API
+    EXPECT_EQ(parallel_bottomup_enqueue(nullptr, nullptr, 0, nullptr), -1);
+    EXPECT_EQ(parallel_bottomup_fini(nullptr), -1);
 }

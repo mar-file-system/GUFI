@@ -190,8 +190,6 @@ jobs:
   Memcheck:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
-    container:
-      image: ubuntu:24.04
     steps:
     - uses: actions/checkout@v4
       with:
@@ -204,10 +202,10 @@ jobs:
         key:  ${{ runner.os }}-memcheck
 
     - name: Ubuntu Prerequisites
-      run:  contrib/CI/ubuntu.sh
+      run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Valgrind
-      run:  apt -y install valgrind
+      run:  sudo apt -y install valgrind
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
@@ -219,9 +217,7 @@ jobs:
       run:  cmake --build ${{ github.workspace }}/build -j
 
     - name: Memcheck
-      run:  |
-            cd ${{ github.workspace }}/build
-            valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --show-error-list=yes --track-fds=yes --gen-suppressions=all --suppressions=test/unit/googletest/valgrind.suppressions --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
+      run:  valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --show-error-list=yes --track-fds=yes --gen-suppressions=all --suppressions=${{ github.workspace }}/build/test/unit/googletest/valgrind.suppressions --error-exitcode=1 ${{ github.workspace }}/build/test/unit/googletest/unit_tests --gtest_shuffle --gtest_color=yes
 
   WithoutJemalloc:
     needs: [ShellCheck, Pylint]

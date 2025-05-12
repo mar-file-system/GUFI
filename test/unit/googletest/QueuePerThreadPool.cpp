@@ -291,6 +291,61 @@ TEST(QueuePerThreadPool, enqueue_internal) {
 }
 
 #ifdef QPTPOOL_SWAP
+TEST(QueuePerThreadPool, generic_serialize_and_free_error) {
+    std::size_t size = 0;
+
+    // bad fd
+    EXPECT_EQ(QPTPool_generic_serialize_and_free(-1, nullptr, nullptr, 0, &size), 1);
+    EXPECT_EQ(size, (std::size_t) 0);
+
+    char temp[] = "XXXXXX";
+    const int fd = mkstemp(temp);
+    ASSERT_GE(fd, -1);
+
+    // bad work
+    EXPECT_EQ(QPTPool_generic_serialize_and_free(fd, nullptr, nullptr, 1, &size), 1);
+    EXPECT_EQ(size, (std::size_t) 0);
+
+    EXPECT_EQ(close(fd), 0);
+    EXPECT_EQ(remove(temp), 0);
+}
+
+TEST(QueuePerThreadPool, generic_alloc_and_deserialize_error) {
+    int *src = (int *) malloc(sizeof(int));
+    *src = 1234;
+
+    std::size_t size = 0;
+
+    char temp[] = "XXXXXX";
+    const int fd = mkstemp(temp);
+    ASSERT_GE(fd, -1);
+
+    // good serialize
+    ASSERT_EQ(QPTPool_generic_serialize_and_free(fd, nullptr, src, sizeof(*src), &size), 0);
+    ASSERT_EQ(size, sizeof(nullptr) + sizeof(sizeof(*src)) + sizeof(*src));
+
+    QPTPool_f func = nullptr;
+
+    // bad fd
+    EXPECT_EQ(QPTPool_generic_alloc_and_deserialize(-1, &func, nullptr), 1);
+    EXPECT_EQ(func, nullptr);
+
+    // corrupt swap data
+    ASSERT_EQ(lseek(fd, sizeof(func), SEEK_SET), (off_t) sizeof(func));
+    const std::size_t BAD_SIZE = -2; // can't use -1 because that's the error value
+    ASSERT_EQ(write(fd, &BAD_SIZE, sizeof(BAD_SIZE)), (ssize_t) sizeof(BAD_SIZE));
+
+    // reset to start of swap
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), (off_t) 0);
+
+    // bad alloc
+    EXPECT_EQ(QPTPool_generic_alloc_and_deserialize(fd, &func, nullptr), 1);
+    EXPECT_EQ(func, nullptr);
+
+    EXPECT_EQ(close(fd), 0);
+    EXPECT_EQ(remove(temp), 0);
+}
+
 static int test_serialize_address(const int fd, QPTPool_f func, void *work, size_t *size) {
     if (write_size(fd, (void *) (uintptr_t) &func, sizeof(func)) != sizeof(func)) {
         return 1;
