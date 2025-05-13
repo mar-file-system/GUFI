@@ -62,17 +62,58 @@
 
 \section{Deployment}
 \label{sec:deploy}
-GUFI functionality as described so far has been local. However, users
-are not expected to log into the machine containing the indexes with
-an interactive shell. Instead, users are expected to call the
-scripts installed with the client RPM from a client node to forward
-commands to the server via ssh.
+GUFI functionality as described so far has been local (source
+filesystem and index on the same node). However, this is not the
+expected way to deploy GUFI at scale. Users should not log into the
+machine containing both the filesystems and indexes with an
+interactive shell. Instead, indexes are to be placed on a dedicated
+GUFI server (which may or may not be able to see the source
+filesystems) and users will call client scripts from client nodes to
+forward commands to the server via ssh.
+
+There are multiple reasons why GUFI is being deployed this way. First,
+indexes should not be colocated with the source filesystems in order
+to not use the resources of the source filesystem nodes. Second,
+filesystems may not be visible to each other even if the indexes
+should be (the indexes can all be colocated with of one of the source
+filesystems, but then we are back at the first issue). Finally, the
+indexes are placed on a dedicated server instead of a front-end node
+because front-end nodes tend to be underpowered and are intended to be
+used as jumping-off points to more powerful nodes, but GUFI queries,
+which will be running in parallel and may be complex, will need a lot
+of processing power.
+
+\subsection{User and Index Setup}
+In order to prevent users from seeing data they should not see, first
+ensure that the uids and gids point to the same people across all
+filesystems being indexed. This should not be an issue for filesystems
+whose users have fixed uids and gids.
+
+The \texttt{/etc/passwd} from each filesystem's source system should
+be merged into into the existing one on the server in order to set up
+the users. The login shells of every user should be set to
+\texttt{/usr/sbin/nologin} so that users cannot log in directly (see
+\ref{sec:hostbasedauth} for letting users in). The \texttt{/etc/group}
+from each filesystem's source system should be similarly merged into
+the server's \texttt{/etc/group}.
+
+Individual indexes can then be moved onto the server, likely with
+\\\gufitraceindex. Multiple indexes can be combined by simply placing
+them under a common location. For example, when combining the indexes
+\texttt{projects} and \texttt{scratch}, they can be both placed under
+\texttt{search}, and the tools can be pointed to \texttt{search} to
+search both indexes at once, or \texttt{search/projects} or
+\texttt{search/scratch} to search them individually. Note that
+\texttt{search} should (but does not have to) have an empty
+\texttt{db.db} (the tables exist but are all empty) file in it.
 
 \subsection{RPMs}
-When CMake is configured with \texttt{-DCLIENT=On}, \texttt{make
-package} will produce two RPMs instead of one. The server RPM will
-contain the actual GUFI implementation. The client RPM will contain
-renamed and modified \guficlient wrapper scripts.
+The build should be (re)configured with \texttt{cmake -DCLIENT=On} if
+it is not already enabled. \texttt{make~package} will produce two RPMs
+instead of one. The server RPM will contain the actual GUFI
+implementation. The client RPM will contain renamed and modified
+\guficlient wrapper scripts. These RPMs should be installed on their
+respective nodes.
 
 \subsubsection{Wrapper Scripts}
 \gufiquery provides the core GUFI functionality. However it is not
@@ -84,28 +125,6 @@ that are used often and extract useful information (see the user guide
 for more details). The server has the actual implementation of the
 wrapper scripts while the client has multiple copies of \guficlient
 renamed to the cooresponding script's name.
-
-\subsection{SSH}
-\subsubsection{Authentication}
-Normal ssh, using passwords or user keys (\texttt{\textasciitilde
-  /.ssh/id\_rsa}), should be disabled on the server. Instead, ssh
-should be done using host based authentication
-(\texttt{/etc/ssh/ssh\_host\_rsa\_key}).
-
-\subsubsection{\gufijail}
-\label{sec:gufi_jail}
-A restricted shell should be set up on the server to prevent arbitrary
-command execution.
-
-\gufijail is a simple script that limits the commands users logging in
-with ssh are able to run to only a subset of GUFI
-commands. \texttt{/etc/ssh/sshd\_config} should be modified with the
-following lines:
-
-\begin{verbatim}
-    Match Group gufi
-        ForceCommand /path/to/gufi_jail
-\end{verbatim}
 
 \subsection{Runtime Configuration}
 The wrapper scripts on both the server and client require a valid GUFI
@@ -162,23 +181,43 @@ GUFI.
   \hline
 \end{tabular}
 
-\subsection{Colocating the Server and Client}
-Colocating the server and client can be done, with some points to keep
-in mind:
+\subsubsection{Colocating the Server and Client}
+Installing both the server and client on the same node with either the
+RPMs or \texttt{make~install} results in a bad setup where either the
+server wrapper scripts overwrite the client scripts or vice versa, and
+should not be done.
 
-\begin{itemize}
-  \item Installing both the server and client with
-    \texttt{make~install} is currently not supported. There is an
-    issue with CMake's \texttt{install} command that prevents clean
-    \texttt{make~install} and RPM generation at the same
-    time. Instead, the client wrapper scripts should be run out of the
-    GUFI build directory. There, the client wrapper scripts will be
-    called \texttt{gufi\_client\_<name>}, e.g.,
-    \texttt{gufi\_client\_ls}. Because of the rename, it does not
-    really make sense to colocate the server and client for anything
-    other than testing even if the client wrapper scripts are
-    installed.
-  \item The server and client configurations should be placed into the
-    same file as both the server and client read from the same
-    configuration file path.
-\end{itemize}
+The only time when it makes sense for both the server and client to be
+on the same node at the same time is during testing. When testing, the
+client wrapper scripts should be run out of the GUFI build
+directory. There, the client wrapper scripts will be called
+\texttt{gufi\_client\_<name>}, e.g.,
+\texttt{gufi\_client\_ls}. Additionally, the server and client
+configurations should be merged into the same file as both the server
+and client read from the same configuration file path.
+
+\subsection{SSH}
+Once the server and client are set up, users may be allowed in via the
+client scripts forwarding commands through ssh.
+
+\subsubsection{Authentication}
+\label{sec:hostbasedauth}
+Normal ssh, using passwords or user keys (\texttt{\textasciitilde
+  /.ssh/id\_rsa}), should be disabled on the server. Instead, ssh
+should be done using host based authentication
+(\texttt{/etc/ssh/ssh\_host\_rsa\_key}).
+
+\subsubsection{\gufijail}
+\label{sec:gufi_jail}
+A restricted shell should be set up on the server to prevent arbitrary
+command execution.
+
+\gufijail is a simple script that limits the commands users logging in
+with ssh are able to run to only a subset of GUFI
+commands. \texttt{/etc/ssh/sshd\_config} should be modified with the
+following lines:
+
+\begin{verbatim}
+    Match Group gufi
+        ForceCommand /path/to/gufi_jail
+\end{verbatim}
