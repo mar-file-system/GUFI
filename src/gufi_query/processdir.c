@@ -172,6 +172,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
+        const int err = errno;
+        fprintf(stderr, "Error: Skipping directory \"%s\": %s (%d)\n",
+                gqw->work.name, strerror(err), err);
         goto out_free;
     }
 
@@ -190,7 +193,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
         if (db) {
             if (addqueryfuncs_with_context(db, &gqw->work) != 0) {
-                fprintf(stderr, "Could not add functions to sqlite\n");
+                fprintf(stderr, "Warning: Could not add functions to sqlite\n");
             }
         }
     }
