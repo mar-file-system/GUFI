@@ -194,6 +194,9 @@ run_sort "${GUFI_FIND} --skip \"${SKIP}\""
 
 # bad skip
 run_no_sort "${GUFI_FIND} --skip \"${SKIP}.bad\""
+
+# bad path
+run_no_sort "${GUFI_FIND} .. ${BASENAME}/../.."
 ) | @SED@ 's+@CMAKE_BINARY_DIR@/++g; s/\,\ line\ [0-9]\+\,/, line n,/g;' | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"

@@ -711,3 +711,7 @@ prefix/unusual#? directory ,/unusual, name?#
 $ gufi_find --skip "skip.bad"
 Error: Cannot open skip file "skip.bad"
 
+$ gufi_find .. prefix/../..
+Warning: Ignoring path "..", which is not under index root "search"
+Warning: Ignoring path "prefix/../..", which is not under index root "search"
+

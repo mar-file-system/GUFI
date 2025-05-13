@@ -46,3 +46,7 @@ gufi_stat: cannot stat 'prefix/bad/directory': No such file or directory
 $ gufi_stat prefix/badfile
 gufi_stat: cannot stat 'prefix/badfile': No such file or directory
 
+$ gufi_stat .. prefix/../..
+Warning: Ignoring path "..", which is not under index root "search"
+Warning: Ignoring path "prefix/../..", which is not under index root "search"
+

@@ -762,39 +762,54 @@ def run(argv, config_path):
     # results are ignored
     real_handled = ['P']
     real_not_handled = ['H', 'L', 'D', 'O']
-    i = 1
-    while (i < len(argv)) and (argv[i][0] == '-'):
-        if argv[i][1:] not in (real_handled + real_not_handled):
+    arg_offset = 1 # offset this many arguments before passing into parser
+    while (arg_offset < len(argv)) and (argv[arg_offset][0] == '-'):
+        if argv[arg_offset][1:] not in (real_handled + real_not_handled):
             break
 
-        if argv[i][1:] in real_not_handled:
-            sys.stderr.write('Found flag {0}. Ignoring.\n'.format(argv[i][1:]))
+        if argv[arg_offset][1:] in real_not_handled:
+            sys.stderr.write('Found flag {0}. Ignoring.\n'.format(argv[arg_offset][1:]))
 
-        i += 1
+        arg_offset += 1
 
     # assume following arguments are paths until '-' is found
 
     # parse paths
     paths = []
-    while (i < len(argv)) and (argv[i][0] != '-'):
-        paths += [argv[i]]
-        i += 1
+    while (arg_offset < len(argv)) and (argv[arg_offset][0] != '-'):
+        paths += [argv[arg_offset]]
+        arg_offset += 1
     if len(paths) == 0:
         paths = ['']
 
     # all arguments afterwards are parsed as expressions
 
     # prepend the provided paths with the GUFI root path
-    paths = [os.path.normpath(os.path.sep.join([config.indexroot, path]))
-             for path in paths]
+    prefixed_paths = [os.path.sep.join([config.indexroot, path])
+                      for path in paths]
+
+    # keep only paths that are subdirectories of the index root
+    used_paths = []
+    for i, prefixed_path in enumerate(prefixed_paths):
+        norm_path = os.path.normpath(prefixed_path)
+
+        if not gufi_common.in_index(norm_path, config.indexroot, paths[i]):
+            continue
+
+        used_paths += [norm_path]
+
+    paths = used_paths
 
     # parse expressions without the 'real' and path arguments
     expression_parser = build_expression_parser()
-    args, unknown = expression_parser.parse_known_args(argv[i:])
+    args, unknown = expression_parser.parse_known_args(argv[arg_offset:])
 
     if args.help:
         help(expression_parser)
         return 0
+
+    if len(paths) == 0:
+        return 1
 
     if len(unknown) > 0:
         raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))

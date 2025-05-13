@@ -208,6 +208,11 @@ do_tests() {
 
     echo "# --only-values overwrites --dump, and is affected by --name and --match (bad match)"
     run_sort "${GUFI_GETFATTR} --only-values --dump --name user.size --match .*name.* ${BASENAME}/1MB"
+
+    # ##############################
+
+    echo "# bad path"
+    run_sort "${GUFI_GETFATTR} .. ${BASENAME}/../.."
 }
 
 run_no_sort "${GUFI_GETFATTR} --help"

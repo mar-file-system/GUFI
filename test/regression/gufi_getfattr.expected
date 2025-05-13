@@ -218,3 +218,8 @@ $ gufi_getfattr --only-values --dump --name user.name --match .*user.* prefix/1M
 $ gufi_getfattr --only-values --dump --name user.size --match .*name.* prefix/1MB
 1MB
 
+# bad path
+$ gufi_getfattr .. prefix/../..
+Warning: Ignoring path "..", which is not under index root "search"
+Warning: Ignoring path "prefix/../..", which is not under index root "search"
+

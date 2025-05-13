@@ -1175,7 +1175,10 @@ def run(argv, config_path):
         sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{0}" statistic\n'.format(args.stat))
 
     # prepend the provided paths with the GUFI root path
-    args.path = os.path.normpath(os.path.sep.join([config.indexroot, args.path]))
+    prefixed_path = os.path.sep.join([config.indexroot, args.path])
+
+    if not gufi_common.in_index(prefixed_path, config.indexroot, args.path, 'Error'):
+        return 1
 
     # create the query command
     query_cmd = [
@@ -1189,10 +1192,10 @@ def run(argv, config_path):
         query_cmd += ['-k', args.skip]
 
     if args.verbose:
-        gufi_common.print_query(query_cmd + [args.path])
+        gufi_common.print_query(query_cmd + [prefixed_path])
 
-    query = subprocess.Popen(query_cmd + [args.path]) # pylint: disable=consider-using-with
-    query.communicate()                               # block until query finishes
+    query = subprocess.Popen(query_cmd + [prefixed_path]) # pylint: disable=consider-using-with
+    query.communicate()                                   # block until query finishes
 
     return query.returncode
 

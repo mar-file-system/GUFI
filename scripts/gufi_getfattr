@@ -212,12 +212,21 @@ def run(argv, config_path):
 
     rc = 0
 
+    # make sure at least one path was processed
+    processed_paths = 0
+
     # process one input arg at a time
     # not sure if it makes sense/is possible to process all at once
     for path in args.path:
         dirname = config.indexroot
         if path != '.':
             dirname = os.path.join(config.indexroot, path.rstrip('/'))
+
+        # keep only paths that are subdirectories of the index root
+        if not gufi_common.in_index(dirname, config.indexroot, path):
+            continue
+
+        processed_paths += 1
 
         nondir = None
 
@@ -245,6 +254,9 @@ def run(argv, config_path):
 
         if query.returncode:
             rc = query.returncode
+
+    if processed_paths == 0:
+        return 1
 
     return rc
 

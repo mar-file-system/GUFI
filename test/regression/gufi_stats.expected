@@ -331,6 +331,12 @@ prefix/unusual#? directory , 2
 $ gufi_stats --skip "skip.bad" -r depth "prefix"
 Error: Cannot open skip file "skip.bad"
 
+$ gufi_stats -r depth ".."
+Error: Ignoring path "..", which is not under index root "search"
+
+$ gufi_stats -r depth "prefix/../.."
+Error: Ignoring path "prefix/../..", which is not under index root "search"
+
 $ gufi_stats    leaf-dirs "prefix"
 prefix/directory/subdirectory
 prefix/empty_directory

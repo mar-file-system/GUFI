@@ -63,6 +63,7 @@
 
 import argparse
 import grp
+import os
 import pwd
 import re
 import sys
@@ -344,3 +345,16 @@ def add_common_flags(parser):
     parser.add_argument('--verbose', '-V',
                         action='store_true',
                         help='Show the gufi_query being executed')
+
+# check if a path is at or underneath the index root
+def in_index(path, indexroot, orig, severity='Warning'):
+    norm_path = os.path.normpath(path)
+    term_path = os.path.join(norm_path, '')
+    term_indexroot = os.path.join(indexroot, '')
+
+    # make sure path 'abcd' does not match indexroot 'abc'
+    # by comparing 'abcd/' and 'abc/'
+    if term_path[:len(term_indexroot)] != term_indexroot:
+        sys.stderr.write('{0}: Ignoring path "{1}", which is not under index root "{2}"\n'.format(severity, orig, indexroot))
+        return False
+    return True

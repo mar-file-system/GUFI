@@ -356,3 +356,7 @@ unusual#? directory ,
 $ gufi_ls --skip "skip.bad" prefix
 Error: Cannot open skip file "skip.bad"
 
+$ gufi_ls .. prefix/../..
+Warning: Ignoring path "..", which is not under index root "search"
+Warning: Ignoring path "prefix/../..", which is not under index root "search"
+

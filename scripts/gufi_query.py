@@ -76,6 +76,7 @@ def run(args, config_path):
 
     config = gufi_config.Server(config_path)
 
+    # paths outside of config.indexroot can be passed into args
     cmd = [config.query] + args[1:] + [config.indexroot]
 
     # run the command

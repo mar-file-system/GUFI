@@ -135,8 +135,17 @@ def run(argv, config_path):
     if args.terse is True:
         stat_cmd += ['-j']
 
-    paths = [os.path.normpath(os.path.sep.join([config.indexroot, path]))
-             for path in args.paths]
+    paths = []
+    for path in args.paths:
+        prefixed_path = os.path.sep.join([config.indexroot, path])
+
+        if not gufi_common.in_index(prefixed_path, config.indexroot, path):
+            continue
+
+        paths += [prefixed_path]
+
+    if len(paths) == 0:
+        return 1
 
     if args.verbose:
         gufi_common.print_query(stat_cmd + paths)

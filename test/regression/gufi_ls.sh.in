@@ -156,6 +156,9 @@ run_sort "${GUFI_LS} --skip \"${SKIP}\" ${BASENAME}"
 
 # bad skip
 run_no_sort "${GUFI_LS} --skip \"${SKIP}.bad\" ${BASENAME}"
+
+# bad path
+run_no_sort "${GUFI_LS} .. ${BASENAME}/../.."
 ) 2>&1 | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${OUTPUT}"

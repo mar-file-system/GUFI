@@ -163,6 +163,10 @@ run_sort "${GUFI_STATS} --skip \"${SKIP}\" -r depth \"${BASENAME}\""
 # bad skip
 run_no_sort "${GUFI_STATS} --skip \"${SKIP}.bad\" -r depth \"${BASENAME}\""
 
+# bad path
+run_no_sort "${GUFI_STATS} -r depth \"..\""
+run_no_sort "${GUFI_STATS} -r depth \"${BASENAME}/../..\""
+
 # shellcheck disable=SC2194
 case "@CMAKE_SYSTEM_NAME@" in
     "APPLE" | "Darwin" | "CYGWIN")

@@ -108,6 +108,8 @@ run_no_sort "${GUFI_STAT} --terse \"${BASENAME}/${fixed_size[0]}\"" | @AWK@ "FNR
 
 run_no_sort "${GUFI_STAT} ${BASENAME}/bad/directory"
 run_no_sort "${GUFI_STAT} ${BASENAME}/badfile"
+run_no_sort "${GUFI_STAT} .. ${BASENAME}/../.."
+
 ) | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${OUTPUT}"

@@ -293,9 +293,18 @@ def run(argv, config_path):
     if len(args.paths[0]) == 0:
         args.paths = [['']]
 
+    # make sure at least one path was processed
+    processed_paths = 0
+
     for path in args.paths[0]:
         # prepend the provided paths with the GUFI index root
         fullpath = os.path.normpath(os.path.sep.join([config.indexroot, path]))
+
+        # keep only paths that are subdirectories of the index root
+        if not gufi_common.in_index(fullpath, config.indexroot, path):
+            continue
+
+        processed_paths += 1
 
         match_name = None
 
@@ -403,6 +412,9 @@ def run(argv, config_path):
 
         if query.returncode != 0:
             rc = 2
+
+    if processed_paths == 0:
+        return 2
 
     return rc
 
