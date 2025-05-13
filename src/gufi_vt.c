@@ -89,7 +89,7 @@ SQLITE_EXTENSION_INIT1
  * gufi_vt is a true virtual table as described by the SQLite Virtual
  * Table documentation (https://www.sqlite.org/vtab.html). It is
  * intended for power users that have some understanding of how
- * gufi_query works and the idiosyncracies of the gufi_vt module:
+ * gufi_query works and the idiosyncrasies of the gufi_vt module:
  *
  *     CREATE VIRTUAL TABLE temp.gufi
  *     USING gufi_vt(threads=2, E="SELECT * FROM pentries", index=path);
@@ -430,10 +430,10 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  * GUFI Generic Virtual Table
  *
  * This is intended for power users to be able to run arbitrary
- * queries and generate virtual tables with aribtrary result
+ * queries and generate virtual tables with arbitrary result
  * columns. In order to achieve this, users MUST run "CREATE VIRTUAL
  * TABLE" to create the virtual table before querying it. The virtual
- * table should preferrably to the temp namespace:
+ * table should preferably to the temp namespace:
  *
  *     CREATE VIRTUAL TABLE temp.gufi
  *     USING gufi_vt(threads=2, E="SELECT * FROM pentries", index=path);
@@ -486,7 +486,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *
  *     - Due to how the virtual table schema interacts with gufi_query
  *       output, there are behaviors that should be noted:
- *           - If T or S is used when E is used, and tne T
+ *           - If T or S is used when E is used, and the T
  *             or S returns has more columns than E, they will be dropped.
  *
  *                 CREATE VIRTUAL TABLE temp.gufi
