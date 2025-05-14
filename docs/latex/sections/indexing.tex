@@ -86,6 +86,29 @@ is highly parallelizable.
 \input{sections/tracefile}
 \input{sections/gufi_dir2trace}
 \input{sections/gufi_trace2index}
+
+\subsection{Index Placement}
+The output (final positional) argument to \gufidirindex and
+\gufitraceindex does not point to the directory where the index
+starts. Rather, it points to the parent directory of where the index
+starts\footnote{An empty db.db file is also placed here.}. This was
+done in order to allow for users to pick the name of their GUFI search
+space while leaving the index's top-most directory with the same name
+as the source tree's top-most directory.
+
+Placing multiple indexes under the same prefix is as simple as
+maintaining the same output argument with different inputs
+paths/traces.
+
+Placing an index into the source tree is possible by pointing
+\gufidirindex to the parent of the source tree.
+
+Pointing the output of \gufidirindex to a location under the source
+tree may result in the index creation never completing due to index
+directories being created below the current tree walk location as the
+source tree is being walked, causing the index directories to be
+indexed, creating more index directories to be walked ad infinitum.
+
 \input{sections/xattrs}
 \input{sections/external_databases}
 
