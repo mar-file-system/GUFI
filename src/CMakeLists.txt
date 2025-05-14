@@ -131,7 +131,7 @@ function(build_and_install_one PATH LINK_GUFI TARGET)
 
   # link GUFI libraries if needed
   if (LINK_GUFI)
-    target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
+    target_link_libraries(${TARGET} ${COMMON_LIBRARIES} -export-dynamic)
     add_dependencies(${TARGET} GUFI)
   endif()
 
