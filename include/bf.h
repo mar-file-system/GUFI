@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 
 #include "SinglyLinkedList.h"
 #include "compress.h"
+#include "str.h"
 #include "trie.h"
 #include "xattrs.h"
 
@@ -142,26 +143,6 @@ typedef enum OutputMethod {
     OUTFILE,   /* -o */
     OUTDB,     /* -O */
 } OutputMethod_t;
-
-
-/* data should be freed */
-typedef struct {
-    char *data;
-    size_t len;
-} str_t;
-
-/* str_t allocation (not data) not user controlled */
-str_t *str_alloc(const size_t len);
-void str_free(str_t *str);
-
-/* str_t allocation (not data) user controlled */
-str_t *str_alloc_existing(str_t *str, const size_t len);
-void str_free_existing(str_t *str);
-
-typedef struct refstring {
-    const char *data;
-    size_t len;
-} refstr_t;
 
 struct input {
    refstr_t  name;
@@ -292,6 +273,12 @@ struct input {
 
    /* prefix of swap files */
    refstr_t swap_prefix;
+
+   /* [start, stop) path names for partial indexing */
+   struct {
+       str_range_t range;
+       int set;
+   } index_match;
 };
 
 struct input *input_init(struct input *in);

@@ -91,12 +91,8 @@ static inline void str_copy_construct(str_t *dst, const char *str, const size_t 
     SNFORMAT_S(dst->data, dst->len + 1, 1, str, len);
 }
 
-static int str_cmp(const void *l, const void *r) {
-    str_t **lhs = (str_t **) l;
-    str_t **rhs = (str_t **) r;
-
-    const size_t len = ((*lhs)->len < (*rhs)->len)?(*lhs)->len:(*rhs)->len;
-    return strncmp((*lhs)->data, (*rhs)->data, len + 1);
+static int cmp(const void *l, const void *r) {
+    return str_cmp(* (str_t **) l, * (str_t **) r);
 }
 
 static int get_entries(DIR *dir, trie_t *skip_db,
@@ -140,7 +136,7 @@ static int get_entries(DIR *dir, trie_t *skip_db,
  *     Handle/Detect directory moves
  */
 static int compare_paths(str_t *lhs, str_t *rhs) {
-    return str_cmp(&lhs, &rhs);
+    return cmp(&lhs, &rhs);
 }
 
 struct ComparePaths {
@@ -234,8 +230,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* ********************************************** */
     /* sort the paths to be able to find matches in linear time */
-    qsort(lsubdir, lcount, sizeof(*lsubdir), str_cmp);
-    qsort(rsubdir, rcount, sizeof(*rsubdir), str_cmp);
+    qsort(lsubdir, lcount, sizeof(*lsubdir), cmp);
+    qsort(rsubdir, rcount, sizeof(*rsubdir), cmp);
     /* ********************************************** */
 
     /* ********************************************** */

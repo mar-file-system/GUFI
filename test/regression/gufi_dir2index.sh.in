@@ -178,6 +178,29 @@ paste \
      ) | @COLUMN@ -t -s$'\t' | @SED@ '1s/       Combined/Combined/g' # first line is indented otoo far for some reason
 echo
 
+echo "# ######################################"
+echo "# partial indexing [a, n)"
+run_no_sort "rm -r \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D \"a\" \"n\" -y 1 \"${SRCDIR}\" \"${SEARCH}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+echo "# ######################################"
+echo
+echo "# ######################################"
+echo "# partial indexing [n, {)"
+run_no_sort "rm -r \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D \"n\" \"{\" -y 1 \"${SRCDIR}\" \"${SEARCH}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+echo "# ######################################"
+echo
+echo "# ######################################"
+echo "# combine partial indexing"
+run_no_sort "rm -r \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D \"a\" \"n\" -y 1 \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D \"n\" \"{\" -y 1 \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -z 0 \"${SRCDIR}\" \"${SEARCH}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+echo "# ######################################"
+echo
 
 rm -r "${SEARCH}"
 

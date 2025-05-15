@@ -133,6 +133,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct work *work = NULL;
     struct entry_data ed;
     int rc = 0;
+    struct descend_counters ctrs = {0};
 
     decompress_work(&work, data);
 
@@ -147,6 +148,13 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         fprintf(stderr, "Could not stat directory \"%s\"\n", work->name);
         rc = 1;
         goto cleanup;
+    }
+
+    const int process_dir = ((pa->in.min_level <= work->level) &&
+                             (work->level <= pa->in.max_level));
+
+    if (!process_dir) {
+        goto descend_tree;
     }
 
     /* get source directory xattrs */
@@ -169,10 +177,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         .fp = pa->outfiles[id],
     };
 
-    struct descend_counters ctrs;
+  descend_tree:
     descend(ctx, id, pa,
             in, work, ed.statuso.st_ino, dir, 0,
-            processdir, process_nondir, &nda,
+            processdir, process_dir?process_nondir:NULL, &nda,
             &ctrs);
 
   cleanup:
@@ -264,7 +272,7 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:xd:k:M:s:C:" COMPRESS_OPT "q", 2, "input_dir... output_prefix", &pa.in);
+    process_args_and_maybe_exit("hHvn:xy:z:d:k:M:s:C:" COMPRESS_OPT "qD:", 2, "input_dir... output_prefix", &pa.in);
 
     /* parse positional args, following the options */
     INSTALL_STR(&pa.in.nameto, argv[argc - 1]);

@@ -79,7 +79,6 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "external.h"
 #include "template_db.h"
-#include "trie.h"
 #include "utils.h"
 
 struct PoolArgs {
@@ -193,8 +192,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     decompress_work(&nda.work, data);
 
-    const int process_dbdb = ((pa->in.min_level <= nda.work->level) &&
-                              (nda.work->level <= pa->in.max_level));
+    const int process_dir = ((pa->in.min_level <= nda.work->level) &&
+                             (nda.work->level <= pa->in.max_level));
 
     if (lstat(nda.work->name, &nda.ed.statuso) != 0) {
         const int err = errno;
@@ -238,7 +237,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
     }
 
-    if (process_dbdb) {
+    if (process_dir) {
         /* restore "/db.db" */
         nda.topath[nda.topath_len] = '/';
 
@@ -273,10 +272,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct descend_counters ctrs;
     descend(ctx, id, pa, nda.in, nda.work, nda.ed.statuso.st_ino, dir, 0,
-            processdir, process_nondir, &nda,
+            processdir, process_dir?process_nondir:NULL, &nda,
             &ctrs);
 
-    if (process_dbdb) {
+    if (process_dir) {
         stopdb(nda.db);
 
         /* entries and xattrs have been inserted */
@@ -317,7 +316,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   cleanup:
     closedir(dir);
 
-    if (process_dbdb) {
+    if (process_dir) {
         pa->total_dirs[id]++;
         pa->total_nondirs[id] += ctrs.nondirs_processed;
     }
@@ -407,7 +406,7 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:xy:z:k:M:s:C:" COMPRESS_OPT "q", 2, "input_dir... output_dir", &pa.in);
+    process_args_and_maybe_exit("hHvn:xy:z:k:M:s:C:" COMPRESS_OPT "qD:", 2, "input_dir... output_dir", &pa.in);
 
     /* parse positional args, following the options */
     /* does not have to be canonicalized */

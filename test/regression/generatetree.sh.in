@@ -82,7 +82,7 @@
 #       |---- leaf_file2           (user.name4=value4, user.name5=value5, user.name6=value6)
 # |---- old_file
 # |---- repeat_name
-# |---- unusual#? directory ,
+# |---- unusual#? directory ,/
 #       |---- unusual, name?#
 #
 # All file and link sizes and timestamps should match

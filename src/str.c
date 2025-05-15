@@ -1,0 +1,118 @@
+/*
+This file is part of GUFI, which is part of MarFS, which is released
+under the BSD license.
+
+
+Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+From Los Alamos National Security, LLC:
+LA-CC-15-039
+
+Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+Copyright 2017. Los Alamos National Security, LLC. This software was produced
+under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+the U.S. Department of Energy. The U.S. Government has rights to use,
+reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+modified to produce derivative works, such modified software should be
+clearly marked, so as not to confuse it with the version available from
+LANL.
+
+THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+*/
+
+
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "str.h"
+
+str_t *str_alloc(const size_t len) {
+    str_t *str = calloc(1, sizeof(str_t));
+    return str_alloc_existing(str, len);
+}
+
+void str_free(str_t *str) {
+    free(str->data);
+    free(str);
+}
+
+str_t *str_alloc_existing(str_t *str, const size_t len) {
+    str->data = malloc(len + 1);
+    str->data[len] = '\0'; /* no source data to copy - only null terminate */
+    str->len = len;
+    return str;
+}
+
+void str_free_existing(str_t *str) {
+    free(str->data);
+    str->data = NULL;
+    str->len = 0;
+}
+
+int str_cmp(const str_t *lhs, const str_t *rhs) {
+    const size_t len = ((lhs->len > rhs->len)?lhs:rhs)->len;
+    return strncmp(lhs->data, rhs->data, len + 1);
+}
+
+int refstr_cmp(const refstr_t *lhs, const refstr_t *rhs) {
+    const size_t len = ((lhs->len > rhs->len)?lhs:rhs)->len;
+    return strncmp(lhs->data, rhs->data, len + 1);
+}
+
+int str_range_cmp(const str_range_t *range, const refstr_t *str) {
+    /* less than lhs */
+    const int lhc = refstr_cmp(str, &range->lhs);
+    if (lhc < 0) {
+        return -1;
+    }
+
+    /* greater or equal to rhs */
+    const int rhc = refstr_cmp(str, &range->rhs);
+    if (-1 < rhc) {
+        return +1;
+    }
+
+    /* in range */
+    return 0;
+}

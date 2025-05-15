@@ -200,6 +200,7 @@ void print_help(const char* prog_name,
                        "     <view>              External database file basename, per-attach table name, template + table name, and the resultant view"); break;
       case 's': printf("  -s <path>              File name prefix for swap files"); break;
       case 'p': printf("  -p <path>              Source path prefix for %%s in SQL"); break;
+      case 'D': printf("  -D <start> <stop>      Start and stop path names for partial indexing"); break;
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -260,6 +261,7 @@ void show_input(struct input* in, int retval) {
    printf("\n");
    printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
    printf("in.source_prefix            = '%s'\n",          in->sql_format.source_prefix.data);
+   printf("in.index_match              = ['%s', '%s')\n",  in->index_match.range.lhs.data, in->index_match.range.rhs.data);
    printf("retval                      = %d\n",            retval);
    printf("\n");
 }
@@ -520,6 +522,24 @@ int parse_cmd_line(int         argc,
           INSTALL_STR(&in->sql_format.source_prefix, optarg);
           break;
 
+      case 'D':
+          INSTALL_STR(&in->index_match.range.lhs, optarg);
+          optarg = argv[optind];
+
+          INSTALL_STR(&in->index_match.range.rhs, optarg);
+          optarg = argv[++optind];
+
+          if (refstr_cmp(&in->index_match.range.lhs, &in->index_match.range.rhs) >= 0) {
+              fprintf(stderr, "Bad partial indexing range: [%s, %s)\n",
+                      in->index_match.range.lhs.data, in->index_match.range.rhs.data);
+              retval = -1;
+          }
+          else {
+              in->index_match.set = 1;
+          }
+
+          break;
+
       case '?':
          // getopt returns '?' when there is a problem.  In this case it
          // also prints, e.g. "getopt_test: illegal option -- z"
@@ -590,30 +610,6 @@ int INSTALL_STR(refstr_t *VAR, const char *SOURCE) {
 INSTALL_NUMBER(INT, int, "%d")
 INSTALL_NUMBER(SIZE, size_t, "%zu")
 INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64)
-
-/* only null terminates */
-str_t *str_alloc(const size_t len) {
-    str_t *str = malloc(sizeof(str_t));
-    return str_alloc_existing(str, len);
-}
-
-void str_free(str_t *str) {
-    free(str->data);
-    free(str);
-}
-
-str_t *str_alloc_existing(str_t *str, size_t len) {
-    str->data = malloc(len + 1);
-    str->data[len] = '\0';
-    str->len = len;
-    return str;
-}
-
-void str_free_existing(str_t *str) {
-    free(str->data);
-    str->data = NULL;
-    str->len = 0;
-}
 
 /*
  * Returns size of a dynamically sized struct work_packed.

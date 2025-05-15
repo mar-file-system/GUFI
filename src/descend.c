@@ -119,9 +119,13 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
         while ((dir_child = readdir(dir))) {
             const size_t len = strlen(dir_child->d_name);
 
-            /* skip . and .. and *.db */
-            const int skip = (trie_search(skip_names, dir_child->d_name, len, NULL) ||
-                              (skip_db && (len >= 3) && (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0)));
+            const int skip = (
+                /* skip ., .., and anything else in skip_names */
+                trie_search(skip_names, dir_child->d_name, len, NULL) ||
+                /* skip *.db */
+                (skip_db && (len >= 3) && (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0))
+            );
+
             if (skip) {
                 continue;
             }
@@ -171,6 +175,26 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                  */
                 if (next_level <= in->max_level) {
                     child_ed.type = 'd';
+
+                    /*
+                     * skip subdirectories not in specified range
+                     *
+                     * this only runs if a range is set because
+                     * next_level is never 0 and index_match.level
+                     * starts at 1
+                     */
+                    if (in->index_match.set &&
+                        (next_level == in->min_level)) {
+                        refstr_t child_name = {
+                            .data = dir_child->d_name,
+                            .len = len,
+                        };
+
+                         if (str_range_cmp(&in->index_match.range, &child_name) != 0) {
+                            free(child);
+                            continue;
+                        }
+                    }
 
                     if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
                         struct work *copy = compress_struct(in->compress, child, struct_work_size(child));

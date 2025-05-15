@@ -7,6 +7,8 @@ options:
   -v                     version
   -n <threads>           number of threads
   -x                     index/query xattrs
+  -y <min level>         minimum level to go down
+  -z <max level>         maximum level to go down
   -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
@@ -14,6 +16,7 @@ options:
   -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
   -e                     compress work items
   -q                     check that external databases are valid before tracking during indexing
+  -D <start> <stop>      Start and stop path names for partial indexing
 
 input_dir...         walk one or more trees to produce trace file
 output_prefix        prefix of output files (<prefix>.<tid>)
@@ -80,6 +83,89 @@ $ gufi_dir2trace -d "|" -n 2 "prefix" "prefix"
 Destination path is not a file "prefix.0"
 
 $ rm -r "prefix.0"
+
+# ######################################
+# partial indexing [a, n)
+$ gufi_dir2trace -d "|" -n 2 -D "a" "n" -y 1 "prefix" "trace"
+"trace.0" Already exists!
+"trace.1" Already exists!
+Creating GUFI Traces trace with 2 threads
+Total Dirs:          5
+Total Files:         7
+
+$ cat trace.0 trace.1 | awk -F '|' '{ print $1 }'
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+
+# ######################################
+
+# ######################################
+# partial indexing [n, {)
+$ gufi_dir2trace -d "|" -n 2 -D "n" "{" -y 1 "prefix" "trace"
+"trace.0" Already exists!
+"trace.1" Already exists!
+Creating GUFI Traces trace with 2 threads
+Total Dirs:          2
+Total Files:         1
+
+$ cat trace.0 trace.1 | awk -F '|' '{ print $1 }'
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+# ######################################
+
+# ######################################
+# combine partial indexing
+$ gufi_dir2trace -d "|" -n 2 -D "a" "n" -y 1 "prefix" "am"
+Creating GUFI Traces am with 2 threads
+Total Dirs:          5
+Total Files:         7
+
+$ gufi_dir2trace -d "|" -n 2 -D "n" "{" -y 1 "prefix" "nz"
+Creating GUFI Traces nz with 2 threads
+Total Dirs:          2
+Total Files:         1
+
+$ gufi_dir2trace -d "|" -n 2 -z 0 "prefix" "trace"
+"trace.0" Already exists!
+"trace.1" Already exists!
+Creating GUFI Traces trace with 2 threads
+Total Dirs:          1
+Total Files:         7
+
+$ cat trace.0 trace.1 am.* nz.* | awk -F '|' '{ print $1 }' | sort | tail -n +2
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/external.gufi
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+# ######################################
 
 # source path is file
 $ gufi_dir2trace -d "|" -n 2 "prefix/1KB" "trace"

@@ -80,6 +80,7 @@ if (CMAKE_CXX_COMPILER)
     histogram.cpp
     print.cpp
     query_user_str.cpp
+    str.cpp
     template_db.cpp
     trace.cpp
     trie.cpp

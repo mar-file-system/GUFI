@@ -80,6 +80,7 @@ set(GUFI_SOURCES
   histogram.c
   print.c
   run_vt.c
+  str.c
   template_db.c
   trace.c
   trie.c
