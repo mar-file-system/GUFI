@@ -235,12 +235,22 @@ $ gufi_query -u -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K 
 00000002 6978 0102 0000 0000 0000 0031 37
 0000002d
 
-# run_vt with %s
-$ gufi_query -d " " -p "prefix" -S "CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \"%s\" \"%i\" -maxdepth 1 -name \"*.csv\" -exec cat \"{}\" \\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;" "prefix"
+# run_vt with {s} (source directory) and {i} (index directory)
+$ gufi_query -d " " -p "prefix" -S "CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \"{s}\" \"{i}\" -maxdepth 1 -name \"*.csv\" -exec cat \"{}\" \\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;" "prefix"
 0 1 2 3
 4 5 6 7
 8 9 a b
 c d e f
+0 1 2 3
+4 5 6 7
+0 1 2 3
+4 5 6 7
+0 1 2 3
+4 5 6 7
+0 1 2 3
+4 5 6 7
+0 1 2 3
+4 5 6 7
 
 $ gufi_query -d " " -I "SELECT setstr('-I', 'init');" -S "SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));" -E "SELECT level(), '{-I}', {abc}, {def};" "prefix"
 0 init 1049624 5

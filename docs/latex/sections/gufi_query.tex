@@ -212,35 +212,11 @@ query to get rows, since no rows will match in any case.
 To turn off short circuiting and always run all queries for each
 directory, pass the \texttt{-a} flag to \gufiquery.
 
-\subsubsection{Query Replacement}
-\label{sec:query_replacement}
-Queries may have string replacements done to them before being
-run on a particular directory. There are currently two formats that
-are discovered and replaced:
-
-\paragraph{\% Formatting} ~\\\\
-\texttt{\%<character>} passed into \gufiquery will be replaced. Widths
-are not supported.
-
-\begin{table}[H]
-  \centering
-  \begin{tabular}{|l|l|}
-    \hline
-    Character & Explanation \\
-    \hline
-    \texttt{n} & Replace with the current directory's name \\
-    \hline
-    \texttt{i} & Replace with the current directory's path \\
-    \hline
-    \texttt{s} & Replace with the source path of this directory \\
-               & (Requires \texttt{-p}) \\
-    \hline
-  \end{tabular}
-  \caption{Supported \% Format Characters}
-\end{table}
-
-\paragraph{User Strings} ~\\\\
+\subsubsection{User String Replacement}
 \label{sec:user_strings}
+Queries may have string replacements done to them before being run on
+a particular directory.
+
 After calling \texttt{setstr(`key', value)} in one SQL input argument,
 \texttt{\{key\}} can be used in a later SQL input argument to do
 string replacements. The key can be any string with at least 1
@@ -272,6 +248,31 @@ by \sqlite before replacements can happen. \\
                & \indexroot \\
   \end{tabular}
 \end{table}
+
+Additionally, a few user strings are predefined for convenience. They
+were previously part of the deprecated \texttt{\% Formatting}, and
+have been moved here.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    User String & Explanation \\
+    \hline
+    \texttt{n} & Replace with the current index directory's name \\
+    \hline
+    \texttt{i} & Replace with the current index directory's path \\
+    \hline
+    \texttt{s} & Replace with the source path of this directory \\
+               & (Requires \texttt{-p}) \\
+    \hline
+  \end{tabular}
+  \caption{Predefined User Strings}
+\end{table}
+
+These strings may be redefined by the user. However, \texttt{n} and
+\texttt{i} will be reset at the beginning of the next directory's
+processing.
 
 \subsubsection{Extended Attributes}
 \label{sec:query_xattrs}

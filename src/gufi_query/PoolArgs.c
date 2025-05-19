@@ -157,6 +157,16 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
         /* user string storage */
         ta->user_strs = trie_alloc();
+
+        /*
+         * {s} defaults to the source tree path - can change, but generally do not
+         *
+         * maybe move this into processdir?
+         */
+        if (in->sql_format.source_prefix.data && in->sql_format.source_prefix.len) {
+            trie_insert(ta->user_strs, "s", 1, &in->sql_format.source_prefix, NULL);
+        }
+
         if (sqlite3_create_function(ta->outdb, "setstr", 2, SQLITE_UTF8,
                                     ta->user_strs, &setstr, NULL, NULL) != SQLITE_OK) {
             fprintf(stderr, "Error: Could not add setstr to sqlite\n");

@@ -67,29 +67,19 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-#include "gufi_query/query_fmt.h"
 #include "gufi_query/query_replacement.h"
 #include "gufi_query/query_user_strs.h"
 
-size_t save_replacements(const refstr_t *sql, sll_t *idx,
-                         const refstr_t *source_prefix) {
+size_t save_replacements(const refstr_t *sql, sll_t *idx) {
     /* idx should not already have nodes */
     sll_init(idx);
 
     for(size_t i = 0; i < sql->len; i++) {
         switch (sql->data[i]) {
-            case FMT_START:
-                /*
-                 * this check is a workaround for wrapper scripts that might
-                 * generate format strings but do not pass in -p
-                 */
-                if (source_prefix->data && source_prefix->len) {
-                    save_fmt(idx, sql, &i);
-                }
-                break;
             case USER_STR_START:
                 save_user_str(idx, sql, &i);
                 break;
+            /* extensible */
         }
     }
 
@@ -97,7 +87,6 @@ size_t save_replacements(const refstr_t *sql, sll_t *idx,
 }
 
 int replace_sql(const refstr_t *orig, const sll_t *idx,
-                const refstr_t *source_prefix, struct work *work,
                 const trie_t *user_strs,
                 char **used) {
     if (sll_get_size(idx) == 0) {
@@ -145,12 +134,10 @@ int replace_sql(const refstr_t *orig, const sll_t *idx,
         /* insert replacement */
         int rc = 0;
         switch (orig->data[start]) {
-            case FMT_START:
-                rc = replace_fmt(orig, &orig_start, pos, &replaced, &allocd, source_prefix, work);
-                break;
             case USER_STR_START:
                 rc = replace_user_str(orig, &orig_start, pos, &replaced, &allocd, user_strs);
                 break;
+            /* extensible */
         }
 
         if (rc != 0) {

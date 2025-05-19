@@ -127,7 +127,7 @@ run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentri
 echo "# Output TLV columns (with aggregation)"
 run_no_sort "${GUFI_QUERY} -u -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | ${HEXLIFY}"
 
-echo "# run_vt with %s"
+echo "# run_vt with {s} (source directory) and {i} (index directory)"
 (
     echo "0,1,2,3"
     echo "4,5,6,7"
@@ -138,7 +138,7 @@ echo "# run_vt with %s"
     echo "c,d,e,f"
 ) > "${IDX_CSV}"
 
-run_no_sort "${GUFI_QUERY} -d \" \" -p \"${SRCDIR}\" -S \"CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \\\"%s\\\" \\\"%i\\\" -maxdepth 1 -name \\\"*.csv\\\" -exec cat \\\"{}\\\" \\\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -p \"${SRCDIR}\" -S \"CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \\\"{s}\\\" \\\"{i}\\\" -maxdepth 1 -name \\\"*.csv\\\" -exec cat \\\"{}\\\" \\\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;\" \"${INDEXROOT}\""
 
 run_sort "${GUFI_QUERY} -d \" \" -I \"SELECT setstr('-I', 'init');\" -S \"SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));\" -E \"SELECT level(), '{-I}', {abc}, {def};\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
 

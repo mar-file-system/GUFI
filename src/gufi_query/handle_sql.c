@@ -221,12 +221,9 @@ static int gen_types(struct input *in) {
 }
 
 static int sql_formatting(struct input *in) {
-    save_replacements(&in->sql.tsum, &in->sql_format.tsum,
-                      &in->sql_format.source_prefix);
-    save_replacements(&in->sql.sum,  &in->sql_format.sum,
-                      &in->sql_format.source_prefix);
-    save_replacements(&in->sql.ent,  &in->sql_format.ent,
-                      &in->sql_format.source_prefix);
+    save_replacements(&in->sql.tsum, &in->sql_format.tsum);
+    save_replacements(&in->sql.sum,  &in->sql_format.sum);
+    save_replacements(&in->sql.ent,  &in->sql_format.ent);
     return 0;
 }
 

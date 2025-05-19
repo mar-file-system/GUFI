@@ -71,10 +71,9 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-size_t save_replacements(const refstr_t *sql, sll_t *idx, const refstr_t *source_prefix);
+size_t save_replacements(const refstr_t *sql, sll_t *idx);
 
 int replace_sql(const refstr_t *orig, const sll_t *idx,
-                const refstr_t *source_prefix, struct work *work,
                 const trie_t *user_strs,
                 char **used);
 

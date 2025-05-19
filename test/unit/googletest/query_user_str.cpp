@@ -84,12 +84,12 @@ TEST(query_user_str, no_replace) {
     sql.len = strlen(sql.data);
 
     sll_t fmts;
-    EXPECT_EQ(save_replacements(&sql, &fmts, nullptr), (std::size_t) 0);
+    EXPECT_EQ(save_replacements(&sql, &fmts), (std::size_t) 0);
 
     trie_t *user_strs = trie_alloc();
 
     char *buf = nullptr;
-    ASSERT_EQ(replace_sql(&sql, &fmts, nullptr, nullptr, user_strs, &buf), 0);
+    ASSERT_EQ(replace_sql(&sql, &fmts, user_strs, &buf), 0);
     EXPECT_EQ(buf, sql.data);
     EXPECT_EQ(strlen(buf), sql.len);
 
@@ -103,7 +103,7 @@ TEST(query_user_str, even) {
     sql.len = sizeof(FORMAT) - 2; // ends on user string
 
     sll_t fmts;
-    EXPECT_EQ(save_replacements(&sql, &fmts, nullptr), (std::size_t) 3);
+    EXPECT_EQ(save_replacements(&sql, &fmts), (std::size_t) 3);
 
     std::size_t i = 0;
     sll_loop(&fmts, node) {
@@ -138,7 +138,7 @@ TEST(query_user_str, even) {
     const char EXPECTED[] = "AaBbcCdef";
 
     char *buf = nullptr;
-    ASSERT_EQ(replace_sql(&sql, &fmts, nullptr, nullptr, user_strs, &buf), 0);
+    ASSERT_EQ(replace_sql(&sql, &fmts, user_strs, &buf), 0);
     EXPECT_STREQ(buf, EXPECTED);
     EXPECT_EQ(strlen(buf), sizeof(EXPECTED) - 1);
 
@@ -154,7 +154,7 @@ TEST(query_user_str, odd) {
     sql.len = sizeof(FORMAT) - 1; // ends on non-format
 
     sll_t fmts;
-    EXPECT_EQ(save_replacements(&sql, &fmts, nullptr), (std::size_t) 3);
+    EXPECT_EQ(save_replacements(&sql, &fmts), (std::size_t) 3);
 
     std::size_t i = 0;
     sll_loop(&fmts, node) {
@@ -189,7 +189,7 @@ TEST(query_user_str, odd) {
     const char EXPECTED[] = "AaBbcCdefD";
 
     char *buf = nullptr;
-    ASSERT_EQ(replace_sql(&sql, &fmts, nullptr, nullptr, user_strs, &buf), 0);
+    ASSERT_EQ(replace_sql(&sql, &fmts, user_strs, &buf), 0);
     EXPECT_STREQ(buf, EXPECTED);
     EXPECT_EQ(strlen(buf), sizeof(EXPECTED) - 1);
 

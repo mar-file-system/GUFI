@@ -189,19 +189,37 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (gqw->work.level >= in->min_level) {
         db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
-
-        /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
-        if (db) {
-            if (addqueryfuncs_with_context(db, &gqw->work) != 0) {
-                fprintf(stderr, "Warning: Could not add functions to sqlite\n");
-            }
-        }
     }
 
     /* get number of subdirs walked on first call to process_queries */
     size_t subdirs_walked_count = 0;
 
     if (db && (gqw->work.level >= in->min_level)) {
+        /* add some query functions like path() uidtouser() gidtogroup() */
+        if (addqueryfuncs_with_context(db, &gqw->work) != 0) {
+            fprintf(stderr, "Warning: Could not add functions to sqlite\n");
+        }
+
+        /* ********************************************** */
+        /* reset for each directory */
+        /* only valid for current directory */
+
+        /* {n} -> directory name */
+        const refstr_t n = {
+            .data = gqw->work.name + gqw->work.name_len - gqw->work.basename_len,
+            .len = gqw->work.basename_len,
+        };
+
+        /* {i} -> directory path */
+        const refstr_t i = {
+            .data = gqw->work.name,
+            .len = gqw->work.name_len,
+        };
+
+        trie_insert(ta->user_strs, "n", 1, (void *) &n, NULL);
+        trie_insert(ta->user_strs, "i", 1, (void *) &i, NULL);
+        /* ********************************************** */
+
         int recs = 1;
 
         /*
@@ -226,10 +244,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                     recs = -1;
                 }
                 else {
-                    /* replace % and {} */
+                    /* replace {} */
                     char *tsum = NULL;
                     if (replace_sql(&in->sql.tsum, &in->sql_format.tsum,
-                                    &in->sql_format.source_prefix, &gqw->work,
                                     ta->user_strs,
                                     &tsum) != 0) {
                         fprintf(stderr, "Error: Failed to do string replacements for -T\n");
