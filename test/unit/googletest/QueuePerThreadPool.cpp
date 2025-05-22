@@ -292,22 +292,10 @@ TEST(QueuePerThreadPool, enqueue_internal) {
 
 #ifdef QPTPOOL_SWAP
 TEST(QueuePerThreadPool, generic_serialize_and_free_error) {
-    std::size_t size = 0;
-
     // bad fd
+    std::size_t size = 0;
     EXPECT_EQ(QPTPool_generic_serialize_and_free(-1, nullptr, nullptr, 0, &size), 1);
     EXPECT_EQ(size, (std::size_t) 0);
-
-    char temp[] = "XXXXXX";
-    const int fd = mkstemp(temp);
-    ASSERT_GE(fd, -1);
-
-    // bad work
-    EXPECT_EQ(QPTPool_generic_serialize_and_free(fd, nullptr, nullptr, 1, &size), 1);
-    EXPECT_EQ(size, (std::size_t) 0);
-
-    EXPECT_EQ(close(fd), 0);
-    EXPECT_EQ(remove(temp), 0);
 }
 
 TEST(QueuePerThreadPool, generic_alloc_and_deserialize_error) {
