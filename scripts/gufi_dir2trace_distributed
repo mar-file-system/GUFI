@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+import gufi_common
+import gufi_distributed
+
+# run this file with sbatch on a single node
+
+# run gufi_dir2trace via sbatch
+def schedule_subtree(args, idx, start, end):
+    cmd = [
+        args.sbatch, '--nodes=1',
+        args.gufi_dir2trace,
+        '-d', args.delim,
+        '-n', str(args.threads),
+        '-y', str(args.level),
+        '-D', start, end,
+        args.input_dir,
+        '{}.{}'.format(args.output_prefix, idx),
+    ]
+
+    return gufi_distributed.run_slurm(cmd, args.dry_run)
+
+def schedule_top(args, jobids):
+    print("    Index upper directories up to and including level {}".format(args.level - 1))
+
+    cmd = [args.sbatch, '--nodes=1']
+    cmd += gufi_distributed.depend_on_slurm_jobids(jobids)
+    cmd += [
+        args.gufi_dir2trace,
+        '-d', args.delim,
+        '-n', str(args.threads),
+        '-z', str(args.level - 1),
+        args.input_dir,
+        args.output_prefix,
+    ]
+
+    return gufi_distributed.run_slurm(cmd, args.dry_run)
+
+def parse_args():
+    parser = gufi_distributed.parse_args('gufi_dir2trace_distributed',
+                                         'Script for distributing gufi_dir2trace across nodes')
+
+    parser.add_argument('--dry-run',        action='store_true')
+    parser.add_argument('--gufi_dir2trace', metavar='path',
+                        type=str,
+                        default='gufi_dir2trace')
+    parser.add_argument('--threads', '-n',  metavar='n',
+                        type=gufi_common.get_positive,
+                        default=1)
+    parser.add_argument('--delim',   '-d',  metavar='c',
+                        type=gufi_common.get_char,
+                        default=b'\x1e')
+    parser.add_argument('input_dir',
+                        type=gufi_distributed.dir_arg,
+                        help='Source Tree Root')
+    parser.add_argument('output_prefix',
+                        type=str,
+                        help='prefix of output files (<prefix>.<tid>)')
+
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+
+    gufi_distributed.distribute_work(args.input_dir, args.level, args.nodes,
+                                     lambda idx, start, end: schedule_subtree(args, idx, start, end),
+                                     lambda jobids: schedule_top(args, jobids))
+    print('Index can now be created from "{}.*"'.format(args.output_prefix))
+
+if __name__ == '__main__':
+    main()

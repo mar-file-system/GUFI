@@ -119,6 +119,7 @@ set(EXAMPLES
 set(OTHERS
   deploy
   external_databases
+  gufi_distributed
   longitudinal_snapshot
   parallel_cpr
   parallel_rmr
@@ -181,6 +182,9 @@ if (SQLALCHEMY_RC EQUAL 0)
 else()
   message(STATUS "SQLAlchemy not found.")
 endif()
+
+# for testing work distribution code
+configure_file(sbatch.fake sbatch.fake COPYONLY)
 
 # .sh and .expected
 set(SH_AND_EXPECTED

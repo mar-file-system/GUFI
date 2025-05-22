@@ -69,12 +69,6 @@ set(TOOLS
   stats
 )
 
-# python libraries installed into bin for convenience
-set(LIBRARIES
-  gufi_config.py # also executable
-  gufi_common.py # library only
-)
-
 foreach(TOOL ${TOOLS})
   set(USER_TOOL "gufi_${TOOL}")
   configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
@@ -116,6 +110,26 @@ install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail" DESTINATION "${BIN}" CO
 # not prefixed with gufi_ and no client tool
 configure_file(querydbs querydbs @ONLY)
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs" DESTINATION "${BIN}" COMPONENT Server)
+
+# python files for doing distributed operations (server only)
+set(DISTRIBUTED
+  gufi_dir2index_distributed    # executable only
+  gufi_dir2trace_distributed    # executable only
+  gufi_distributed.py           # also executable
+  gufi_query_distributed        # executable only
+)
+
+foreach(DIST ${DISTRIBUTED})
+  configure_file("${DIST}" "${DIST}" @ONLY)
+
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${DIST}" DESTINATION "${BIN}" COMPONENT Server)
+endforeach()
+
+# python libraries installed into bin for convenience (server and client)
+set(LIBRARIES
+  gufi_config.py                # also executable
+  gufi_common.py                # library only
+)
 
 foreach(LIBRARY ${LIBRARIES})
   configure_file("${LIBRARY}" "${LIBRARY}" @ONLY)

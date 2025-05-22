@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+
+# shellcheck disable=SC2153
+SEARCH2="${SEARCH}2"
+INDEXROOT2="${SEARCH2}/${BASENAME}"
+
+RESULTS="results"
+TRACES="traces"
+
+LEVEL=1
+RANKS=5
+
+QUERIES="-S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\""
+
+OUTPUT="gufi_distributed.out"
+
+files() {
+    prefix="$1"
+    list=()
+    for (( thread = 0; thread < THREADS; thread++ ))
+    do
+        for (( rank = 0; rank < RANKS; rank++ ))
+        do
+            name="${!prefix}.${rank}.${thread}"
+            if [[ -f "${name}" ]]
+            then
+                list+=("${name}")
+            fi
+        done
+
+        top="${!prefix}.${thread}"
+        if [[ -f "${top}" ]]
+        then
+            list+=("${top}")
+        fi
+    done
+
+    echo "${list[@]}"
+}
+
+result_files() {
+    files RESULTS
+}
+
+trace_files() {
+    files TRACES
+}
+
+cleanup() {
+    # shellcheck disable=SC2207
+    results=($(result_files))
+    # shellcheck disable=SC2207
+    traces=($(trace_files))
+    rm -rf "${SEARCH2}" "${results[@]}" "${traces[@]}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+run_no_sort "${GUFI_DISTRIBUTED} --help"
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --help"
+run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --help"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --help"
+
+(
+echo "# Index Source Tree"
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" ${LEVEL} ${RANKS} \"${SRCDIR}\" \"${SEARCH2}\""
+
+echo "# Query Index"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --output-prefix \"${RESULTS}\" ${LEVEL} ${RANKS} \"${INDEXROOT2}\" ${QUERIES}"
+
+echo "# Gather Results"
+results=("$(result_files)")
+# shellcheck disable=SC2145
+run_sort "cat ${results[@]}"
+
+echo "# Diff original index results against the combined results"
+# shellcheck disable=SC2153
+run_sort "@DIFF@ <(${GUFI_QUERY} ${QUERIES} \"${INDEXROOT}\" | sort) <(cat $(result_files) | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+
+echo "# Diff original index results against querying the new index from a single node"
+run_sort "@DIFF@ <(${GUFI_QUERY} ${QUERIES} \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} ${QUERIES} \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+
+cleanup
+
+echo "# Convert source tree to trace files"
+run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" ${LEVEL} ${RANKS} \"${SRCDIR}\" \"${TRACES}\""
+
+traces=("$(trace_files)")
+
+echo "# Print contents of traces files"
+# shellcheck disable=SC2145
+run_sort "cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }'"
+
+echo "# Diff original index results against the trace files"
+# shellcheck disable=SC2145,SC2153
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \" \" ${QUERIES} \"${INDEXROOT}\" | sort | @SED@ 's/${SEARCH//\//\\/}\\///g') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
+) 2>&1 | @SED@ "s/${INDEXROOT2//\//\\/}/prefix2/g" | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_distributed.expected "${OUTPUT}"
+rm "${OUTPUT}"

@@ -143,12 +143,16 @@ GENUIDSUMMARYAVOIDENTRIESSCAN="@CMAKE_BINARY_DIR@/examples/genuidsummaryavoident
 GROUPFILESPACEHOG="@CMAKE_BINARY_DIR@/examples/groupfilespacehog"
 GROUPFILESPACEHOGUSESUMMARY="@CMAKE_BINARY_DIR@/examples/groupfilespacehogusesummary"
 GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
+GUFI_DIR2INDEX_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_dir2index_distributed"
 GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
+GUFI_DIR2TRACE_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_dir2trace_distributed"
+GUFI_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_distributed.py"
 GUFI_FIND="${GUFI_TOOL} find"
 GUFI_GETFATTR="${GUFI_TOOL} getfattr"
 GUFI_INDEX2DIR="@CMAKE_BINARY_DIR@/src/gufi_index2dir"
 GUFI_LS="${GUFI_TOOL} ls"
 GUFI_QUERY="@CMAKE_BINARY_DIR@/src/gufi_query"
+GUFI_QUERY_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_query_distributed"
 GUFI_QUERY_PY="${GUFI_TOOL} query.py"
 GUFI_ROLLUP="@CMAKE_BINARY_DIR@/src/gufi_rollup"
 GUFI_SQLITE3="@CMAKE_BINARY_DIR@/src/gufi_sqlite3"
@@ -169,6 +173,7 @@ PARALLEL_RMR="@CMAKE_BINARY_DIR@/src/parallel_rmr"
 PUGSQL="${GUFI_TOOL} pugsql"
 QUERYDBS="${GUFI_TOOL} querydbs"
 RUN_VT="@CMAKE_BINARY_DIR@/src/run_vt"
+SBATCH_FAKE="@CMAKE_BINARY_DIR@/test/regression/sbatch.fake"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
 SQLALCHEMY="${GUFI_TOOL} sqlalchemy"
 TREEDIFF="@CMAKE_BINARY_DIR@/contrib/treediff"
@@ -212,12 +217,16 @@ replace() {
     s/${GROUPFILESPACEHOG//\//\\/}/groupfilespacehog/g;
     s/${GROUPFILESPACEHOGUSESUMMARY//\//\\/}/groupfilespacehogusesummary/g;
     s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g;
+    s/${GUFI_DIR2INDEX_DISTRIBUTED//\//\\/}/gufi_dir2index_distributed/g;
     s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g;
+    s/${GUFI_DIR2TRACE_DISTRIBUTED//\//\\/}/gufi_dir2trace_distributed/g;
+    s/${GUFI_DISTRIBUTED//\//\\/}/gufi_distributed.py/g;
     s/${GUFI_FIND//\//\\/}/gufi_find/g;
     s/${GUFI_GETFATTR//\//\\/}/gufi_getfattr/g;
     s/${GUFI_INDEX2DIR//\//\\/}/gufi_index2dir/g;
     s/${GUFI_LS//\//\\/}/gufi_ls/g;
     s/${GUFI_QUERY//\//\\/}/gufi_query/g;
+    s/${GUFI_QUERY_DISTRIBUTED//\//\\/}/gufi_query_distributed/g;
     s/${GUFI_QUERY_PY//\//\\/}/gufi_query.py/g;
     s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
     s/${GUFI_SQLITE3//\//\\/}/gufi_sqlite3/g
@@ -238,6 +247,7 @@ replace() {
     s/${PUGSQL//\//\\/}/pugsql/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
     s/${RUN_VT//\//\\/}/run_vt/g;
+    s/${SBATCH_FAKE//\//\\/}/sbatch/g;
     s/${SPLIT_TRACE//\//\\/}/split_trace/g;
     s/${SQLALCHEMY//\//\\/}/gufi_vt_sqlalchemy/g;
     s/${TREEDIFF//\//\\/}/treediff/g;
