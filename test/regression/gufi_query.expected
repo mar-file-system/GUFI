@@ -35,6 +35,7 @@ options:
      <table>
      <template>.<table>
      <view>              External database file basename, per-attach table name, template + table name, and the resultant view
+  -D <start> <stop>      Start and stop path names for partial indexing
 
 GUFI_index        find GUFI index here
 
@@ -220,6 +221,30 @@ prefix/old_file
 prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
+
+# limit tree traversal to directories at level 1 (missing prefix/ and prefix/directory/subdirectory/)
+$ gufi_query -d " " -n 2 -y 1 -z 1 -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/writable
+prefix/empty_directory
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+# limit tree traversal to all directories under [a.*, e.*] at level 1 (missing prefix/, prefix/leaf_directory/, and prefix/unusual#? directory ,/
+$ gufi_query -d " " -n 2 -y 1 -D a e -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
 
 # Output TLV columns (no aggregation)
 $ gufi_query -u -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix" | hexlify.py

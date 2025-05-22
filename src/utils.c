@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include <utime.h>
 
 #include "external.h"
+#include "str.h"
 #include "utils.h"
 
 uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads) {
@@ -826,4 +827,31 @@ int gufi_dirfd(DIR *d) {
     }
 
     return d_fd;
+}
+
+/*
+ * determine whether or not to process a subdirectory based on the user specified range
+ * (partially why the argument is struct input and not just the range)
+ *
+ * returns 1 for process this directory and
+ *         0 for do not process this directory
+ */
+int subdir_within_range(struct input *in, const size_t next_level, const char *str, const size_t len) {
+    /*
+     * note that next_level is never 0, so set
+     * min_level with a value greater than 0
+     */
+    if (in->index_match.set &&
+        (next_level == in->min_level)) {
+        refstr_t child_name = {
+            .data = str,
+            .len = len,
+        };
+
+        if (str_range_cmp(&in->index_match.range, &child_name) != 0) {
+            return 0;
+        }
+    }
+
+    return 1;
 }

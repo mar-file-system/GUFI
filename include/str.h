@@ -118,12 +118,15 @@ int refstr_cmp(const refstr_t *lhs, const refstr_t *rhs);
 /* ****************************************************** */
 
 /* ****************************************************** */
-/* [lhs, rhs) */
 typedef struct str_range {
     refstr_t lhs;
     refstr_t rhs;
 } str_range_t;
 
+/*
+ * [lhs.*, rhs.*]
+ * prefix match
+ */
 int str_range_cmp(const str_range_t *range, const refstr_t *str);
 /* ****************************************************** */
 

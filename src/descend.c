@@ -176,24 +176,9 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 if (next_level <= in->max_level) {
                     child_ed.type = 'd';
 
-                    /*
-                     * skip subdirectories not in specified range
-                     *
-                     * this only runs if a range is set because
-                     * next_level is never 0 and index_match.level
-                     * starts at 1
-                     */
-                    if (in->index_match.set &&
-                        (next_level == in->min_level)) {
-                        refstr_t child_name = {
-                            .data = dir_child->d_name,
-                            .len = len,
-                        };
-
-                         if (str_range_cmp(&in->index_match.range, &child_name) != 0) {
-                            free(child);
-                            continue;
-                        }
+                    if (subdir_within_range(in, next_level, dir_child->d_name, len) != 1) {
+                        free(child);
+                        continue;
                     }
 
                     if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {

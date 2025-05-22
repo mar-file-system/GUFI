@@ -529,7 +529,7 @@ int parse_cmd_line(int         argc,
           INSTALL_STR(&in->index_match.range.rhs, optarg);
           optarg = argv[++optind];
 
-          if (refstr_cmp(&in->index_match.range.lhs, &in->index_match.range.rhs) >= 0) {
+          if (refstr_cmp(&in->index_match.range.lhs, &in->index_match.range.rhs) > 0) {
               fprintf(stderr, "Bad partial indexing range: [%s, %s)\n",
                       in->index_match.range.lhs.data, in->index_match.range.rhs.data);
               retval = -1;

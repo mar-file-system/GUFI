@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/query.h"
 #include "gufi_query/query_replacement.h"
 #include "print.h"
+#include "str.h"
 #include "utils.h"
 
 #ifdef QPTPOOL_SWAP
@@ -86,18 +87,17 @@ static int gqw_serialize_and_free(const int fd, QPTPool_f func, void *work, size
 /* Push the subdirectories in the current directory onto the queue */
 static size_t descend2(QPTPool_t *ctx,
                        const size_t id,
+                       struct input *in,
                        gqw_t *gqw,
                        DIR *dir,
                        trie_t *skip_names,
-                       QPTPool_f func,
-                       const size_t max_level,
-                       const int comp) {
+                       QPTPool_f func) {
     /* Not checking arguments */
 
     size_t pushed = 0;
     const size_t next_level = gqw->work.level + 1;
 
-    if (next_level <= max_level) {
+    if (next_level <= in->max_level) {
         struct dirent *entry = NULL;
         while ((entry = readdir(dir))) {
             const size_t len = strlen(entry->d_name);
@@ -117,6 +117,11 @@ static size_t descend2(QPTPool_t *ctx,
                                              gqw->sqlite3_name, gqw->sqlite3_name_len);
 
             if (isdir) {
+                if (subdir_within_range(in, next_level, entry->d_name, len) != 1) {
+                    free(child);
+                    continue;
+                }
+
                 child->work.basename_len = len;
                 child->work.fullpath = NULL;
                 child->work.fullpath_len = 0;
@@ -126,7 +131,7 @@ static size_t descend2(QPTPool_t *ctx,
                 child->work.root_parent = gqw->work.root_parent;
                 child->work.root_basename_len = gqw->work.root_basename_len;
 
-                gqw_t *clone = compress_struct(comp, child, gqw_size(child));
+                gqw_t *clone = compress_struct(in->compress, child, gqw_size(child));
 
                 /* push the subdirectory into the queue for processing */
                 #ifdef QPTPOOL_SWAP
@@ -194,7 +199,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
         /* push subdirectories into the queue */
         if (rollupscore == 0) {
             *subdirs_walked_count =
-                descend2(ctx, id, gqw, dir, in->skip, processdir, in->max_level, in->compress);
+                descend2(ctx, id, in, gqw, dir, in->skip, processdir);
         }
     }
 

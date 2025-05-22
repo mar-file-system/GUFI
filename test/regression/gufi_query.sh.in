@@ -121,6 +121,12 @@ run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll) F
 echo "# Get all directory and non-directory names and their xattrs"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, xattr_name, xattr_value FROM vrxpentries;\" -x \"${INDEXROOT}\""
 
+echo "# limit tree traversal to directories at level 1 (missing prefix/ and prefix/directory/subdirectory/)"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -y 1 -z 1 -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+
+echo "# limit tree traversal to all directories under [a.*, e.*] at level 1 (missing prefix/, prefix/leaf_directory/, and prefix/unusual#? directory ,/"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -y 1 -D a e -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+
 echo "# Output TLV columns (no aggregation)"
 run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | ${HEXLIFY}"
 

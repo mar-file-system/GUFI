@@ -136,22 +136,22 @@ run_no_sort "rm -r \"${SRCDIR}.0\""
 
 echo "# ######################################"
 echo "# partial indexing [a, n)"
-run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D \"a\" \"n\" -y 1 \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D a m -y 1 \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
 run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print \$1 }'"
 echo "# ######################################"
 echo
 echo "# ######################################"
 echo "# partial indexing [n, {)"
-run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D \"n\" \"{\" -y 1 \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D n z -y 1 \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
 run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print \$1 }'"
 echo "# ######################################"
 echo
 echo "# ######################################"
 echo "# combine partial indexing"
-run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D \"a\" \"n\" -y 1 \"${SRCDIR}\" \"${AM}\""
-run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D \"n\" \"{\" -y 1 \"${SRCDIR}\" \"${NZ}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D a m -y 1 \"${SRCDIR}\" \"${AM}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D n z -y 1 \"${SRCDIR}\" \"${NZ}\""
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -z 0 \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
 run_no_sort "cat ${TRACES[@]} ${AM}.* ${NZ}.* | @AWK@ -F '|' '{ print \$1 }' | sort | tail -n +2"

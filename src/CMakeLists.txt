@@ -222,6 +222,7 @@ add_library(gufi_vt MODULE
   dbutils.c
   external
   histogram.c
+  str.c
   template_db.c
   trie.c
   utils.c

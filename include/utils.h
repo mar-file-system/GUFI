@@ -158,6 +158,9 @@ ssize_t read_size(const int fd, void *buf, const size_t size);
 /* Get a directory file descriptor from a given DIR *, infallibly */
 int gufi_dirfd(DIR *d);
 
+/* determine whether or not to skip subdirectories in the user specified range */
+int subdir_within_range(struct input *in, const size_t next_level, const char *str, const size_t len);
+
 #ifdef __cplusplus
 }
 #endif

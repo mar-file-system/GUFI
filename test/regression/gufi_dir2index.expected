@@ -257,7 +257,7 @@ Expected Index:                                      Combined Index:
 # partial indexing [a, n)
 $ rm -r "search"
 
-$ gufi_dir2index -n 2 -D "a" "n" -y 1 "prefix" "search"
+$ gufi_dir2index -n 2 -D a m -y 1 "prefix" "search"
 Creating GUFI Index search with 2 threads
 Total Dirs:          4
 Total Non-Dirs:      7
@@ -282,7 +282,7 @@ prefix/leaf_directory/leaf_file2
 # partial indexing [n, {)
 $ rm -r "search"
 
-$ gufi_dir2index -n 2 -D "n" "{" -y 1 "prefix" "search"
+$ gufi_dir2index -n 2 -D n z -y 1 "prefix" "search"
 Creating GUFI Index search with 2 threads
 Total Dirs:          1
 Total Non-Dirs:      1
@@ -298,12 +298,12 @@ prefix/unusual#? directory ,/unusual, name?#
 # combine partial indexing
 $ rm -r "search"
 
-$ gufi_dir2index -n 2 -D "a" "n" -y 1 "prefix" "search"
+$ gufi_dir2index -n 2 -D a m -y 1 "prefix" "search"
 Creating GUFI Index search with 2 threads
 Total Dirs:          4
 Total Non-Dirs:      7
 
-$ gufi_dir2index -n 2 -D "n" "{" -y 1 "prefix" "search"
+$ gufi_dir2index -n 2 -D n z -y 1 "prefix" "search"
 "search" Already exists!
 Creating GUFI Index search with 2 threads
 Total Dirs:          1

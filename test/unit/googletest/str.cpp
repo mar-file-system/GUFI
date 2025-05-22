@@ -109,42 +109,44 @@ TEST(str, cmp) {
 }
 
 TEST(str, range) {
-    refstr_t b;
-    b.data = "b";
-    b.len  = 1;
+    refstr_t a;
+    a.data = "a";
+    a.len  = 1;
 
-    refstr_t d;
-    d.data = "d";
-    d.len  = 1;
+    refstr_t ba;
+    ba.data = "ba";
+    ba.len  = 2;
 
-    // [b, d)
+    refstr_t bb;
+    bb.data = "bb";
+    bb.len  = 2;
+
+    refstr_t cc;
+    cc.data = "cc";
+    cc.len  = 2;
+
+    refstr_t dd;
+    dd.data = "dd";
+    dd.len  = 2;
+
+    refstr_t de;
+    de.data = "de";
+    de.len  = 2;
+
+    refstr_t e;
+    e.data = "e";
+    e.len  = 1;
+
+    // [bb.*, dd.*]
     str_range_t range;
-    range.lhs = b;
-    range.rhs = d;
+    range.lhs = bb;
+    range.rhs = dd;
 
-    refstr_t lt;
-    lt.data = "a";
-    lt.len  = 1;
-
-    refstr_t in;
-    in.data = "c";
-    in.len  = 1;
-
-    refstr_t eq;
-    eq.data = "d";
-    eq.len  = 1;
-
-    refstr_t gt1; // difference at index 1
-    gt1.data = "da";
-    gt1.len  = 1;
-
-    refstr_t gt0; // difference at index 0
-    gt0.data = "e";
-    gt0.len  = 1;
-
-    EXPECT_EQ(str_range_cmp(&range, &lt),  -1);
-    EXPECT_EQ(str_range_cmp(&range, &in),   0);
-    EXPECT_EQ(str_range_cmp(&range, &eq),   1);
-    EXPECT_EQ(str_range_cmp(&range, &gt1),  1);
-    EXPECT_EQ(str_range_cmp(&range, &gt0),  1);
+    EXPECT_EQ(str_range_cmp(&range, &a),  -1);
+    EXPECT_EQ(str_range_cmp(&range, &ba), -1);
+    EXPECT_EQ(str_range_cmp(&range, &bb),  0);
+    EXPECT_EQ(str_range_cmp(&range, &cc),  0);
+    EXPECT_EQ(str_range_cmp(&range, &dd),  0);
+    EXPECT_EQ(str_range_cmp(&range, &de),  1);
+    EXPECT_EQ(str_range_cmp(&range, &e),   1);
 }
