@@ -165,6 +165,10 @@ run_sort "cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }'"
 echo "# Diff original index results against the trace files"
 # shellcheck disable=SC2145,SC2153
 run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \" \" ${QUERIES} \"${INDEXROOT}\" | sort | @SED@ 's/${SEARCH//\//\\/}\\///g') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
+
+echo "# Non-directory input"
+run_no_sort "${GUFI_DISTRIBUTED} 1 1 ${GUFI_DISTRIBUTED}"
+
 ) 2>&1 | @SED@ "s/${INDEXROOT2//\//\\/}/prefix2/g" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_distributed.expected "${OUTPUT}"

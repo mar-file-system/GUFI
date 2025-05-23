@@ -120,6 +120,7 @@ jobs:
             ${{ github.workspace }}/build/test/unit/python/test_gufi_config.py
 
             export GUFI_PYTHON_TEST_COVERAGE="coverage run -a"
+            (${{ github.workspace }}/build/test/regression/gufi_distributed.sh         || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_find.sh                || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_getfattr.sh            || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_ls.sh                  || true) > /dev/null 2>&1
