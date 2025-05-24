@@ -87,6 +87,35 @@ is highly parallelizable.
 \input{sections/gufi_dir2trace}
 \input{sections/gufi_trace2index}
 
+\subsection{Distributed Indexing}
+If indexing on a single node is not sufficient, it is possible to
+distribute indexing across multiple nodes. The general process is:
+
+\begin{enumerate}
+\item Choose a level in the source tree to split up across nodes.
+\item Get the sorted list of all directory basenames at the selected
+  level.
+\item Select continuous ranges of directories for distribution amongst
+  the worker nodes (i.e. select directories names from \texttt{a}
+  through \texttt{c} and \texttt{d} through \texttt{f}, not one
+  directory starting with \texttt{a}, another directory starting with
+  \texttt{z}, and another directory starting with \texttt{p}).
+\item On each node, run \gufidirindex or \gufidirtrace with \texttt{-y
+  level} and \texttt{-D start stop}. All other flags and arguments
+  used should remain the same.
+\item Run \gufidirindex or \gufidirtrace with \texttt{-z (level - 1)}
+  to process the directories above the ones that were split across
+  nodes.
+\item Combine all of the output trees/traces together on the same
+  filesystem for easy access.
+\end{enumerate}
+
+\gufidirindexdistributed and \gufidirtracedistributed have been
+provided for convenience when running on clusters with Slurm. These
+scripts have the additional step of waiting for subtree processing to
+complete before scheduling the processing of the top level
+directories.
+
 \subsection{Index Placement}
 The output (final positional) argument to \gufidirindex and
 \gufitraceindex does not point to the directory where the index

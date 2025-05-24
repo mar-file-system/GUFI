@@ -500,3 +500,33 @@ The \querydb macro is used to execute SQL statements and handle errors.
   \includegraphics[width=\textwidth]{images/querydb_macro.png}
   \caption{\querydb macro workflow}
 \end{figure}
+
+\subsubsection{Distributed Querying}
+If querying from a single node is not sufficient, it is possible to
+distribute querying across multiple nodes. Similar to distributed
+indexing, the general process is:
+
+\begin{enumerate}
+\item Choose a level in the index to split up across nodes.
+\item Get the sorted list of all directory basenames at the selected
+  level.
+\item Select continuous ranges of directories for distribution amongst
+  the worker nodes (i.e. select directories names from \texttt{a}
+  through \texttt{c} and \texttt{d} through \texttt{f}, not one
+  directory starting with \texttt{a}, another directory starting with
+  \texttt{z}, and another directory starting with \texttt{p}).
+\item On each node, run \gufiquery with \texttt{-y level}, \texttt{-D
+  start stop}, and (\texttt{-o filename}). All other flags and
+  arguments used should remain the same.
+\item Run \gufiquery with \texttt{-z (level - 1)} to process the
+  directories above the ones that were split across nodes. Also
+  write the output to text files (\texttt{-o}).
+\item Combine all of the text files containing the partial results to
+  get the complete results.
+\end{enumerate}
+
+\gufiquerydistributed has been provided for convenience when running
+on clusters with Slurm. As with the distributed indexing scripts, this
+script has the additional step of waiting for subtree processing to
+complete before scheduling the processing of the top level
+directories.
