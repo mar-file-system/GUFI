@@ -488,19 +488,19 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         SNPRINTF(ed.osstext1, MAXXATTR, "osstext1 %zu", i);
         SNPRINTF(ed.osstext2, MAXXATTR, "osstext2 %zu", i);
 
-        ed.statuso.st_ino = rng(gen);
-        ed.statuso.st_mode = (arg->settings->permissions > 0777)?(rng(gen) & 0777):arg->settings->permissions;
-        ed.statuso.st_nlink = 1;
-        ed.statuso.st_uid = arg->uid;
-        ed.statuso.st_gid = arg->gid;
-        ed.statuso.st_size = static_cast <off_t> (size_rngs[bucket](gen));
-        ed.statuso.st_blksize = arg->settings->blocksize;
-        ed.statuso.st_blocks = ed.statuso.st_size / ed.statuso.st_blksize;
-        ed.statuso.st_ctime = time_rng(gen);
-        ed.statuso.st_atime = std::max(ed.statuso.st_ctime, (time_t) time_rng(gen));
-        ed.statuso.st_mtime = std::max(ed.statuso.st_ctime, (time_t) time_rng(gen));
+        work->statuso.st_ino = rng(gen);
+        work->statuso.st_mode = (arg->settings->permissions > 0777)?(rng(gen) & 0777):arg->settings->permissions;
+        work->statuso.st_nlink = 1;
+        work->statuso.st_uid = arg->uid;
+        work->statuso.st_gid = arg->gid;
+        work->statuso.st_size = static_cast <off_t> (size_rngs[bucket](gen));
+        work->statuso.st_blksize = arg->settings->blocksize;
+        work->statuso.st_blocks = work->statuso.st_size / work->statuso.st_blksize;
+        work->statuso.st_ctime = time_rng(gen);
+        work->statuso.st_atime = std::max(work->statuso.st_ctime, (time_t) time_rng(gen));
+        work->statuso.st_mtime = std::max(work->statuso.st_ctime, (time_t) time_rng(gen));
 
-        work->pinode   = rng(gen);
+        work->pinode  = rng(gen);
         ed.crtime     = rng(gen);
         ed.ossint1    = rng(gen);
         ed.ossint2    = rng(gen);
@@ -508,7 +508,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         ed.ossint4    = rng(gen);
 
         // add this data to the summary
-        sumit(&summary, &ed);
+        sumit(&summary, work, &ed);
 
         // insert the row
         insertdbgo(work, &ed, res);
@@ -517,8 +517,8 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         // to prevent lock contention and
         // because nothing is inserted until
         // the transaction ends
-        curr_size += ed.statuso.st_size;
-        curr_sizes.push_back(ed.statuso.st_size);
+        curr_size += work->statuso.st_size;
+        curr_sizes.push_back(work->statuso.st_size);
 
         free(work);
     }
@@ -566,17 +566,17 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     SNPRINTF(ed.osstext1, MAXXATTR, "osstext1");
     SNPRINTF(ed.osstext2, MAXXATTR, "osstext2");
 
-    ed.statuso.st_ino = rng(gen);
-    ed.statuso.st_mode = 0775;
-    ed.statuso.st_nlink = 1;
-    ed.statuso.st_uid = arg->uid;
-    ed.statuso.st_gid = arg->gid;
-    ed.statuso.st_size = curr_size;
-    ed.statuso.st_blksize = rng(gen);
-    ed.statuso.st_blocks = rng(gen);
-    ed.statuso.st_ctime = time_rng(gen);
-    ed.statuso.st_atime = ed.statuso.st_ctime + time_rng(gen);
-    ed.statuso.st_mtime = ed.statuso.st_ctime + time_rng(gen);
+    work->statuso.st_ino = rng(gen);
+    work->statuso.st_mode = 0775;
+    work->statuso.st_nlink = 1;
+    work->statuso.st_uid = arg->uid;
+    work->statuso.st_gid = arg->gid;
+    work->statuso.st_size = curr_size;
+    work->statuso.st_blksize = rng(gen);
+    work->statuso.st_blocks = rng(gen);
+    work->statuso.st_ctime = time_rng(gen);
+    work->statuso.st_atime = work->statuso.st_ctime + time_rng(gen);
+    work->statuso.st_mtime = work->statuso.st_ctime + time_rng(gen);
 
     ed.crtime  = rng(gen);
     ed.ossint1 = rng(gen);

@@ -131,10 +131,10 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     struct input *in = nda->in;
     int rc = 0;
 
-    if (!ed->lstat_called) {
+    if (!entry->lstat_called) {
         char *basename = entry->name + entry->name_len - entry->basename_len;
 
-        if (fstatat(ed->parent_fd, basename, &ed->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
+        if (fstatat(ed->parent_fd, basename, &entry->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
             const int err = errno;
             fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n", entry->name, strerror(err), err);
             rc = 1;
@@ -143,7 +143,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     }
 
     if (in->process_xattrs) {
-        insertdbgo_xattrs(in, &nda->ed.statuso, entry, ed,
+        insertdbgo_xattrs(in, &nda->work->statuso, entry, ed,
                           &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath, nda->topath_len,
                           nda->xattrs_res, nda->xattr_files_res);
@@ -163,7 +163,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     entry->name_len = SNFORMAT_S(entry->name, MAXPATH, 1, relpath, relpath_len);
 
     /* update summary table */
-    sumit(&nda->summary, ed);
+    sumit(&nda->summary, entry, ed);
 
     /* add entry + xattr names into bulk insert */
     insertdbgo(entry, ed, nda->entries_res);
@@ -195,7 +195,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     const int process_dir = ((pa->in.min_level <= nda.work->level) &&
                              (nda.work->level <= pa->in.max_level));
 
-    if (lstat(nda.work->name, &nda.ed.statuso) != 0) {
+    if (!nda.work->lstat_called && (lstat(nda.work->name, &nda.work->statuso) != 0)) {
         const int err = errno;
         fprintf(stderr, "Error: Could not stat directory \"%s\": %s (%d)\n", nda.work->name, strerror(err), err);
         rc = 1;
@@ -241,7 +241,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         /* restore "/db.db" */
         nda.topath[nda.topath_len] = '/';
 
-        nda.db = template_to_db(nda.temp_db, nda.topath, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
+        nda.db = template_to_db(nda.temp_db, nda.topath, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
 
         /* remove "/db.db" */
         nda.topath[nda.topath_len] = '\0';
@@ -271,7 +271,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     struct descend_counters ctrs;
-    descend(ctx, id, pa, nda.in, nda.work, nda.ed.statuso.st_ino, dir, 0,
+    descend(ctx, id, pa, nda.in, nda.work, nda.work->statuso.st_ino, dir, 0,
             processdir, process_dir?process_nondir:NULL, &nda,
             &ctrs);
 
@@ -292,7 +292,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             xattrs_get(nda.work->name, &nda.ed.xattrs);
 
             /* directory xattrs go into the same table as entries xattrs */
-            insertdbgo_xattrs_avail(&nda.ed, nda.xattrs_res);
+            insertdbgo_xattrs_avail(nda.work, &nda.ed, nda.xattrs_res);
             insertdbfin(nda.xattrs_res);
         }
         insertdbfin(nda.entries_res);
@@ -310,8 +310,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* ignore errors */
-    chmod(nda.topath, nda.ed.statuso.st_mode);
-    chown(nda.topath, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
+    chmod(nda.topath, nda.work->statuso.st_mode);
+    chown(nda.topath, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
 
   cleanup:
     closedir(dir);

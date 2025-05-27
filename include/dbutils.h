@@ -203,10 +203,10 @@ sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli);
 /* insert entries and xattr names */
 int insertdbgo(struct work *pwork, struct entry_data *data, sqlite3_stmt *res);
 /* insert directly into xattrs_avail in the associated db */
-int insertdbgo_xattrs_avail(struct entry_data *data, sqlite3_stmt *res);
+int insertdbgo_xattrs_avail(struct work *pwork, struct entry_data *data, sqlite3_stmt *res);
 /* figure out where the xattr should go and insert it there */
 int insertdbgo_xattrs(struct input *in, struct stat *dir,
-                      struct work *work, struct entry_data *data,
+                      struct work *pwork, struct entry_data *data,
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res);

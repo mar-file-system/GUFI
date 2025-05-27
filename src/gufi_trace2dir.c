@@ -95,14 +95,14 @@ static int process_entries(struct input *in,
     switch (ed->type) {
         case 'f':
             ;
-            int fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, ed->statuso.st_mode);
+            int fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, entry->statuso.st_mode);
             if (fd < 0) {
                 const int err = errno;
                 fprintf(stderr, "Error opening file %s: %d\n", path, err);
             }
             close(fd);
 
-            set_metadata(path, &ed->statuso, &ed->xattrs);
+            set_metadata(path, &entry->statuso, &ed->xattrs);
 
             break;
         case 'l':
@@ -150,7 +150,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                w->line, w->first_delim);
 
     /* have to dupdir here because directories can show up in any order */
-    if (dupdir(topath, &ed.statuso)) {
+    if (dupdir(topath, &dir->statuso)) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
@@ -184,10 +184,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         free(row);
     }
 
+    set_metadata(topath, &dir->statuso, &ed.xattrs);
+
     free(line); /* reuse line and only alloc+free once */
     free(dir);
-
-    set_metadata(topath, &ed.statuso, &ed.xattrs);
 
     xattrs_cleanup(&ed.xattrs);
     row_destroy(&w);

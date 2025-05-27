@@ -193,7 +193,7 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         xattrs_cleanup(&ed.xattrs);
 
         // make sure the permissions are correct
-        if (st.st_mode != ed.statuso.st_mode) {
+        if (st.st_mode != work->statuso.st_mode) {
             std::cerr << "Permission mismatch on directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
@@ -201,7 +201,7 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         }
 
         // make sure the uid is correct
-        if (st.st_uid != ed.statuso.st_uid) {
+        if (st.st_uid != work->statuso.st_uid) {
             std::cerr << "UID mismatch on directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
@@ -209,7 +209,7 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         }
 
         // make sure the gid is correct
-        if (st.st_gid != ed.statuso.st_gid) {
+        if (st.st_gid != work->statuso.st_gid) {
             std::cerr << "GID mismatch on directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
@@ -293,19 +293,19 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
             continue;
         }
 
-        if (ca.st.st_mode != ed.statuso.st_mode) {
+        if (ca.st.st_mode != work->statuso.st_mode) {
             std::cerr << "Permission mismatch on entry \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
             continue;
         }
 
-        if (ca.st.st_uid != ed.statuso.st_uid) {
+        if (ca.st.st_uid != work->statuso.st_uid) {
             std::cerr << "UID mismatch on entry \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
             continue;
         }
 
-        if (ca.st.st_gid != ed.statuso.st_gid) {
+        if (ca.st.st_gid != work->statuso.st_gid) {
             std::cerr << "GID mismatch on entry \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
             continue;

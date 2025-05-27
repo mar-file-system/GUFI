@@ -135,37 +135,37 @@ int zeroit(struct sum *summary)
   return 0;
 }
 
-int sumit(struct sum *summary, struct entry_data *ed) {
+int sumit(struct sum *summary, struct work *work, struct entry_data *ed) {
   if (ed->type == 'f') {
      summary->totfiles++;
-     if (ed->statuso.st_size < summary->minsize) summary->minsize=ed->statuso.st_size;
-     if (ed->statuso.st_size > summary->maxsize) summary->maxsize=ed->statuso.st_size;
-     if (ed->statuso.st_size == 0) summary->totzero++;
-     if (ed->statuso.st_size <= 1024) summary->totltk++;
-     if (ed->statuso.st_size > 1024) summary->totmtk++;
-     if (ed->statuso.st_size <= 1048576) summary->totltm++;
-     if (ed->statuso.st_size > 1048576) summary->totmtm++;
-     if (ed->statuso.st_size > 1073741824) summary->totmtg++;
-     if (ed->statuso.st_size > 1099511627776) summary->totmtt++;
-     summary->totsize=summary->totsize+ed->statuso.st_size;
+     if (work->statuso.st_size < summary->minsize) summary->minsize=work->statuso.st_size;
+     if (work->statuso.st_size > summary->maxsize) summary->maxsize=work->statuso.st_size;
+     if (work->statuso.st_size == 0) summary->totzero++;
+     if (work->statuso.st_size <= 1024) summary->totltk++;
+     if (work->statuso.st_size > 1024) summary->totmtk++;
+     if (work->statuso.st_size <= 1048576) summary->totltm++;
+     if (work->statuso.st_size > 1048576) summary->totmtm++;
+     if (work->statuso.st_size > 1073741824) summary->totmtg++;
+     if (work->statuso.st_size > 1099511627776) summary->totmtt++;
+     summary->totsize=summary->totsize+work->statuso.st_size;
 
-     if (ed->statuso.st_blocks < summary->minblocks) summary->minblocks=ed->statuso.st_blocks;
-     if (ed->statuso.st_blocks > summary->maxblocks) summary->maxblocks=ed->statuso.st_blocks;
+     if (work->statuso.st_blocks < summary->minblocks) summary->minblocks=work->statuso.st_blocks;
+     if (work->statuso.st_blocks > summary->maxblocks) summary->maxblocks=work->statuso.st_blocks;
   }
   if (ed->type == 'l') {
      summary->totlinks++;
   }
 
-  if (ed->statuso.st_uid < summary->minuid) summary->minuid=ed->statuso.st_uid;
-  if (ed->statuso.st_uid > summary->maxuid) summary->maxuid=ed->statuso.st_uid;
-  if (ed->statuso.st_gid < summary->mingid) summary->mingid=ed->statuso.st_gid;
-  if (ed->statuso.st_gid > summary->maxgid) summary->maxgid=ed->statuso.st_gid;
-  if (ed->statuso.st_ctime < summary->minctime) summary->minctime=ed->statuso.st_ctime;
-  if (ed->statuso.st_ctime > summary->maxctime) summary->maxctime=ed->statuso.st_ctime;
-  if (ed->statuso.st_mtime < summary->minmtime) summary->minmtime=ed->statuso.st_mtime;
-  if (ed->statuso.st_mtime > summary->maxmtime) summary->maxmtime=ed->statuso.st_mtime;
-  if (ed->statuso.st_atime < summary->minatime) summary->minatime=ed->statuso.st_atime;
-  if (ed->statuso.st_atime > summary->maxatime) summary->maxatime=ed->statuso.st_atime;
+  if (work->statuso.st_uid < summary->minuid) summary->minuid=work->statuso.st_uid;
+  if (work->statuso.st_uid > summary->maxuid) summary->maxuid=work->statuso.st_uid;
+  if (work->statuso.st_gid < summary->mingid) summary->mingid=work->statuso.st_gid;
+  if (work->statuso.st_gid > summary->maxgid) summary->maxgid=work->statuso.st_gid;
+  if (work->statuso.st_ctime < summary->minctime) summary->minctime=work->statuso.st_ctime;
+  if (work->statuso.st_ctime > summary->maxctime) summary->maxctime=work->statuso.st_ctime;
+  if (work->statuso.st_mtime < summary->minmtime) summary->minmtime=work->statuso.st_mtime;
+  if (work->statuso.st_mtime > summary->maxmtime) summary->maxmtime=work->statuso.st_mtime;
+  if (work->statuso.st_atime < summary->minatime) summary->minatime=work->statuso.st_atime;
+  if (work->statuso.st_atime > summary->maxatime) summary->maxatime=work->statuso.st_atime;
   if (ed->crtime < summary->mincrtime) summary->mincrtime=ed->crtime;
   if (ed->crtime > summary->maxcrtime) summary->maxcrtime=ed->crtime;
 

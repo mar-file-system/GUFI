@@ -136,7 +136,7 @@ static int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3_stmt *
     char *ztype = sqlite3_mprintf("%c", ed->type);
     sqlite3_bind_text (res, 1, zname, -1, SQLITE_TRANSIENT);
     sqlite3_bind_text (res, 2, ztype, -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int64(res, 3, ed->statuso.st_ino);
+    sqlite3_bind_int64(res, 3, pwork->statuso.st_ino);
     sqlite3_bind_int64(res, 4, pwork->pinode);
     sqlite3_bind_int64(res, 5, ed->suspect);
 
@@ -156,13 +156,12 @@ static int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3_stmt *
 
 static int reprocessdir(struct input *in, void *passv, DIR *dir) {
     struct work *passmywork = passv;
+    if (!passmywork->lstat_called && (lstat(passmywork->name, &passmywork->statuso) != 0)) {
+        return 1;
+    }
 
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
-
-    if (lstat(passmywork->name, &ed.statuso) != 0) {
-        return 1;
-    }
 
     /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
     if (in->process_xattrs) {
@@ -175,7 +174,7 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
     if (in->buildindex == 1) {
         SNPRINTF(dbpath, MAXPATH, "%s/%s", passmywork->name, DBNAME);
     } else {
-        SNPRINTF(dbpath, MAXPATH, "%s/%" STAT_ino, in->nameto.data, ed.statuso.st_ino);
+        SNPRINTF(dbpath, MAXPATH, "%s/%" STAT_ino, in->nameto.data, passmywork->statuso.st_ino);
     }
 
     /*
@@ -224,9 +223,9 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
 
         struct entry_data qwork_ed;
         memset(&qwork_ed, 0, sizeof(qwork_ed));
-        qwork->pinode = ed.statuso.st_ino;
+        qwork->pinode = passmywork->statuso.st_ino;
 
-        lstat(qwork->name, &qwork_ed.statuso);
+        lstat(qwork->name, &qwork->statuso);
         xattrs_setup(&qwork_ed.xattrs);
         if (in->process_xattrs) {
             xattrs_get(qwork->name, &qwork_ed.xattrs);
@@ -236,15 +235,15 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
          * there is no work to do for a directory here - we are
          * processing files and links of this dir into a gufi db
          */
-        if (!S_ISDIR(qwork_ed.statuso.st_mode)) {
-            if (S_ISLNK(qwork_ed.statuso.st_mode)) {
+        if (!S_ISDIR(qwork->statuso.st_mode)) {
+            if (S_ISLNK(qwork->statuso.st_mode)) {
                 qwork_ed.type = 'l';
                 readlink(qwork->name, qwork_ed.linkname, MAXPATH);
-            } else if (S_ISREG(qwork_ed.statuso.st_mode)) {
+            } else if (S_ISREG(qwork->statuso.st_mode)) {
                 qwork_ed.type = 'f';
             }
 
-            sumit(&summary, &qwork_ed);
+            sumit(&summary, qwork, &qwork_ed);
             insertdbgo(qwork, &qwork_ed, res);
         }
 
@@ -260,8 +259,8 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
     xattrs_cleanup(&ed.xattrs);
     closedb(db);
 
-    chown(dbpath, ed.statuso.st_uid, ed.statuso.st_gid);
-    chmod(dbpath, (ed.statuso.st_mode & ~(S_IXUSR | S_IXGRP | S_IXOTH)) | S_IRUSR);
+    chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
+    chmod(dbpath, (passmywork->statuso.st_mode & ~(S_IXUSR | S_IXGRP | S_IXOTH)) | S_IRUSR);
 
     return 0;
 }
@@ -288,7 +287,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
-    if (lstat(passmywork->name, &ed.statuso) != 0) {
+    if (lstat(passmywork->name, &passmywork->statuso) != 0) {
         const int err = errno;
         fprintf(stderr, "couldn't stat dir '%s': %s\n",
                 passmywork->name, strerror(err));
@@ -325,7 +324,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (in->output == OUTDB) {
         if (in->insertdir > 0) {
             if (in->suspectmethod == 0) {
-                const int todb = stripe_index(in, ed.statuso.st_ino, id);
+                const int todb = stripe_index(in, passmywork->statuso.st_ino, id);
                 struct ThreadArgs *ta = &pa->ta[todb];
 
                 if (in->stride > 0) {
@@ -341,18 +340,18 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 }
             }
             else if (in->suspectmethod == 1) {  /* look up inode in trie to see if this is a suspect dir */
-                ed.suspect = searchmyll(pa, ed.statuso.st_ino, DFL_DIR); /* set the directory suspect flag on so we will mark it in output */
+                ed.suspect = searchmyll(pa, passmywork->statuso.st_ino, DFL_DIR); /* set the directory suspect flag on so we will mark it in output */
             }
             else if (in->suspectmethod > 1) {
                 /* mark the dir suspect if mtime or ctime are >= provided last run time */
-                lstat(passmywork->name, &ed.statuso);
-                if (ed.statuso.st_ctime >= locsuspecttime) ed.suspect = 1;
-                if (ed.statuso.st_mtime >= locsuspecttime) ed.suspect = 1;
+                lstat(passmywork->name, &passmywork->statuso);
+                if (passmywork->statuso.st_ctime >= locsuspecttime) ed.suspect = 1;
+                if (passmywork->statuso.st_mtime >= locsuspecttime) ed.suspect = 1;
             }
         }
     }
     else if (in->output == OUTFILE) {
-        const int tooutfile = stripe_index(in, ed.statuso.st_ino, id);
+        const int tooutfile = stripe_index(in, passmywork->statuso.st_ino, id);
         struct ThreadArgs *ta = &pa->ta[tooutfile];
 
         if (in->stride > 0) {
@@ -361,11 +360,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         /* only directories are here so sortf is set to the directory full pathname */
         fprintf(ta->file, "%s%c%" STAT_ino "%c%lld%c%c%c%s%c\n",
-                passmywork->name,   in->delim,
-                ed.statuso.st_ino,  in->delim,
-                passmywork->pinode, in->delim,
-                ed.type,            in->delim,
-                passmywork->name,   in->delim);
+                passmywork->name,            in->delim,
+                passmywork->statuso.st_ino,  in->delim,
+                passmywork->pinode,          in->delim,
+                ed.type,                     in->delim,
+                passmywork->name,            in->delim);
 
         if (in->stride > 0) {
             pthread_mutex_unlock(&ta->mutex);
@@ -393,8 +392,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         struct entry_data qwork_ed;
         memset(&qwork_ed, 0, sizeof(qwork_ed));
 
-        qwork->pinode = ed.statuso.st_ino;
-        qwork_ed.statuso.st_ino = entry->d_ino;
+        qwork->pinode = passmywork->statuso.st_ino;
+        qwork->statuso.st_ino = entry->d_ino;
 
         if (entry->d_type == DT_DIR) {
             QPTPool_enqueue(ctx, id, processdir, qwork);
@@ -414,7 +413,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (in->suspectmethod) {
             if (in->output == OUTDB) {
                 if (in->insertfl > 0) {
-                    const int todb = stripe_index(in, ed.statuso.st_ino, id);
+                    const int todb = stripe_index(in, passmywork->statuso.st_ino, id);
                     struct ThreadArgs *ta = &pa->ta[todb];
 
                     if (in->stride > 0) {
@@ -434,7 +433,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             if (ed.suspect == 0) {                /* if suspect dir just skip looking any further */
                 if ((in->suspectmethod == 1) ||
                     (in->suspectmethod == 2)) {   /* if method 1 or 2 we look up the inode in trie and mark dir suspect or not */
-                    ed.suspect = searchmyll(pa, qwork_ed.statuso.st_ino, DFL_FL); /* set the directory suspect flag on so we will mark it in output */
+                    ed.suspect = searchmyll(pa, qwork->statuso.st_ino, DFL_FL); /* set the directory suspect flag on so we will mark it in output */
                 }
                 if (in->suspectmethod > 2) {
                     /* stat the file/link and if ctime or mtime is >= provided last run time mark dir suspect */
@@ -446,7 +445,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             }
 
             if (in->output == OUTFILE) {
-                const int tooutfile = stripe_index(in, ed.statuso.st_ino, id);
+                const int tooutfile = stripe_index(in, passmywork->statuso.st_ino, id);
                 struct ThreadArgs *ta = &pa->ta[tooutfile];
 
                 if (in->stride > 0) {
@@ -458,11 +457,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                  * the file or link without the name as the sortf
                  */
                 fprintf(ta->file, "%s%c%" STAT_ino "%c%lld%c%c%c%s%c\n",
-                        qwork->name,             in->delim,
-                        qwork_ed.statuso.st_ino, in->delim,
-                        qwork->pinode,           in->delim,
-                        qwork_ed.type,           in->delim,
-                        passmywork->name,        in->delim);
+                        qwork->name,           in->delim,
+                        qwork->statuso.st_ino, in->delim,
+                        qwork->pinode,         in->delim,
+                        qwork_ed.type,         in->delim,
+                        passmywork->name,      in->delim);
 
                 if (in->stride > 0) {
                     pthread_mutex_unlock(&ta->mutex);
@@ -480,7 +479,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (in->suspectmethod > 0) {
         if (in->output == OUTDB) {
             if (in->insertdir > 0) {
-                const int todb = stripe_index(in, ed.statuso.st_ino, id);
+                const int todb = stripe_index(in, passmywork->statuso.st_ino, id);
                 struct ThreadArgs *ta = &pa->ta[todb];
 
                 if (in->stride > 0) {

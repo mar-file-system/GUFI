@@ -78,19 +78,19 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 
 static int printits(struct input *in, struct work *pwork, struct entry_data *ed, FILE *out) {
-  fprintf(out, "%s%c",              pwork->name,            in->delim);
-  fprintf(out, "%c%c",              ed->type,               in->delim);
-  fprintf(out, "%" STAT_ino   "%c", ed->statuso.st_ino,     in->delim);
-  fprintf(out, "%" STAT_mode  "%c", ed->statuso.st_mode,    in->delim);
-  fprintf(out, "%" STAT_nlink "%c", ed->statuso.st_nlink,   in->delim);
-  fprintf(out, "%" STAT_uid   "%c", ed->statuso.st_uid,     in->delim);
-  fprintf(out, "%" STAT_gid   "%c", ed->statuso.st_gid,     in->delim);
-  fprintf(out, "%" STAT_size  "%c", ed->statuso.st_size,    in->delim);
-  fprintf(out, "%" STAT_bsize "%c", ed->statuso.st_blksize, in->delim);
-  fprintf(out, "%" STAT_blocks"%c", ed->statuso.st_blocks,  in->delim);
-  fprintf(out, "%ld%c",             ed->statuso.st_atime,   in->delim);
-  fprintf(out, "%ld%c",             ed->statuso.st_mtime,   in->delim);
-  fprintf(out, "%ld%c",             ed->statuso.st_ctime,   in->delim);
+  fprintf(out, "%s%c",              pwork->name,               in->delim);
+  fprintf(out, "%c%c",              ed->type,                  in->delim);
+  fprintf(out, "%" STAT_ino   "%c", pwork->statuso.st_ino,     in->delim);
+  fprintf(out, "%" STAT_mode  "%c", pwork->statuso.st_mode,    in->delim);
+  fprintf(out, "%" STAT_nlink "%c", pwork->statuso.st_nlink,   in->delim);
+  fprintf(out, "%" STAT_uid   "%c", pwork->statuso.st_uid,     in->delim);
+  fprintf(out, "%" STAT_gid   "%c", pwork->statuso.st_gid,     in->delim);
+  fprintf(out, "%" STAT_size  "%c", pwork->statuso.st_size,    in->delim);
+  fprintf(out, "%" STAT_bsize "%c", pwork->statuso.st_blksize, in->delim);
+  fprintf(out, "%" STAT_blocks"%c", pwork->statuso.st_blocks,  in->delim);
+  fprintf(out, "%ld%c",             pwork->statuso.st_atime,   in->delim);
+  fprintf(out, "%ld%c",             pwork->statuso.st_mtime,   in->delim);
+  fprintf(out, "%ld%c",             pwork->statuso.st_ctime,   in->delim);
 
 /* we need this field even if its not populated for gufi_trace2index */
 /*
@@ -130,7 +130,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
-    if (lstat(passmywork->name, &ed.statuso) != 0) {
+    if (!passmywork->lstat_called && (lstat(passmywork->name, &passmywork->statuso) != 0)) {
         goto out_free;
     }
 
@@ -191,7 +191,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                  * not used to generate the new treesummary table
                  */
                 descend(ctx, id, pa,
-                        &pa->in, passmywork, ed.statuso.st_ino,
+                        &pa->in, passmywork, passmywork->statuso.st_ino,
                         dir, 0,
                         processdir, NULL, NULL,
                         NULL);

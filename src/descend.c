@@ -143,13 +143,13 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
 
             switch (dir_child->d_type) {
                 case DT_DIR:
-                    child_ed.statuso.st_mode = S_IFDIR;
+                    child->statuso.st_mode = S_IFDIR;
                     break;
                 case DT_LNK:
-                    child_ed.statuso.st_mode = S_IFLNK;
+                    child->statuso.st_mode = S_IFLNK;
                     break;
                 case DT_REG:
-                    child_ed.statuso.st_mode = S_IFREG;
+                    child->statuso.st_mode = S_IFREG;
                     break;
                 case DT_FIFO:
                 case DT_SOCK:
@@ -159,16 +159,16 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 case DT_UNKNOWN:
                 default:
                     /* some filesystems don't support d_type - fall back to calling lstat */
-                    if (lstat(child->name, &child_ed.statuso) != 0) {
+                    if (lstat(child->name, &child->statuso) != 0) {
                         continue;
                     }
 
-                    child_ed.lstat_called = 1;
+                    child->lstat_called = 1;
                     break;
             }
 
             /* push subdirectories onto the queue */
-            if (S_ISDIR(child_ed.statuso.st_mode)) {
+            if (S_ISDIR(child->statuso.st_mode)) {
                 /*
                  * check the next level because the subdirectory is
                  * NOT in the same level as the parent directory
@@ -219,13 +219,13 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 continue;
             }
             /* non directories */
-            else if (S_ISLNK(child_ed.statuso.st_mode)) {
+            else if (S_ISLNK(child->statuso.st_mode)) {
                 child_ed.type = 'l';
                 const ssize_t link_len = readlink(child->name, child_ed.linkname, MAXPATH);
                 /* check for error? */
                 child_ed.linkname[link_len] = '\0';
             }
-            else if (S_ISREG(child_ed.statuso.st_mode)) {
+            else if (S_ISREG(child->statuso.st_mode)) {
                 child_ed.type = 'f';
             }
             else {

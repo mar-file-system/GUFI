@@ -462,7 +462,8 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
 
     char *zname     = sqlite3_mprintf("%q", pwork->name + pwork->name_len - pwork->basename_len);
     char *ztype     = sqlite3_mprintf("%c", ed->type);
-    char *zino      = sqlite3_mprintf("%" PRIu64, ed->statuso.st_ino);
+    char *zino      = sqlite3_mprintf("%" PRIu64, pwork->statuso.st_ino);
+
     char *zlinkname = sqlite3_mprintf("%q", ed->linkname);
     char *zosstext1 = sqlite3_mprintf("%q", ed->osstext1);
     char *zosstext2 = sqlite3_mprintf("%q", ed->osstext2);
@@ -470,16 +471,16 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     sqlite3_bind_text(res,  1,  zname, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,  2,  ztype, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,  3,  zino,  -1, SQLITE_STATIC);
-    sqlite3_bind_int64(res, 4,  ed->statuso.st_mode);
-    sqlite3_bind_int64(res, 5,  ed->statuso.st_nlink);
-    sqlite3_bind_int64(res, 6,  ed->statuso.st_uid);
-    sqlite3_bind_int64(res, 7,  ed->statuso.st_gid);
-    sqlite3_bind_int64(res, 8,  ed->statuso.st_size);
-    sqlite3_bind_int64(res, 9,  ed->statuso.st_blksize);
-    sqlite3_bind_int64(res, 10, ed->statuso.st_blocks);
-    sqlite3_bind_int64(res, 11, ed->statuso.st_atime);
-    sqlite3_bind_int64(res, 12, ed->statuso.st_mtime);
-    sqlite3_bind_int64(res, 13, ed->statuso.st_ctime);
+    sqlite3_bind_int64(res, 4,  pwork->statuso.st_mode);
+    sqlite3_bind_int64(res, 5,  pwork->statuso.st_nlink);
+    sqlite3_bind_int64(res, 6,  pwork->statuso.st_uid);
+    sqlite3_bind_int64(res, 7,  pwork->statuso.st_gid);
+    sqlite3_bind_int64(res, 8,  pwork->statuso.st_size);
+    sqlite3_bind_int64(res, 9,  pwork->statuso.st_blksize);
+    sqlite3_bind_int64(res, 10, pwork->statuso.st_blocks);
+    sqlite3_bind_int64(res, 11, pwork->statuso.st_atime);
+    sqlite3_bind_int64(res, 12, pwork->statuso.st_mtime);
+    sqlite3_bind_int64(res, 13, pwork->statuso.st_ctime);
     sqlite3_bind_text(res,  14, zlinkname, -1, SQLITE_STATIC);
 
     /* only insert xattr names */
@@ -520,7 +521,7 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     return rc;
 }
 
-int insertdbgo_xattrs_avail(struct entry_data *ed, sqlite3_stmt *res)
+int insertdbgo_xattrs_avail(struct work *pwork, struct entry_data *ed, sqlite3_stmt *res)
 {
     /* Not checking arguments */
 
@@ -528,7 +529,7 @@ int insertdbgo_xattrs_avail(struct entry_data *ed, sqlite3_stmt *res)
     for(size_t i = 0; (i < ed->xattrs.count) && (error == SQLITE_DONE); i++) {
         struct xattr *xattr = &ed->xattrs.pairs[i];
 
-        sqlite3_bind_int64(res, 1, ed->statuso.st_ino);
+        sqlite3_bind_int64(res, 1, pwork->statuso.st_ino);
         sqlite3_bind_blob(res,  2, xattr->name,  xattr->name_len,  SQLITE_STATIC);
         sqlite3_bind_blob(res,  3, xattr->value, xattr->value_len, SQLITE_STATIC);
 
@@ -540,7 +541,7 @@ int insertdbgo_xattrs_avail(struct entry_data *ed, sqlite3_stmt *res)
 }
 
 int insertdbgo_xattrs(struct input *in, struct stat *dir,
-                      struct work *work, struct entry_data *ed,
+                      struct work *pwork, struct entry_data *ed,
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res) {
@@ -556,11 +557,11 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
     }
 
     /* insert into the xattrs_avail table inside db.db */
-    const int rollin_score = xattr_can_rollin(dir, &ed->statuso);
+    const int rollin_score = xattr_can_rollin(dir, &pwork->statuso);
     if (rollin_score) {
-        insertdbgo_xattrs_avail(ed, xattrs_res);
+        insertdbgo_xattrs_avail(pwork, ed, xattrs_res);
     }
-    /* can't roll in, so need external dbs */
+    /* can't roll in, so nepwork external dbs */
     else {
         struct xattr_db *xattr_uid_db = NULL;
         struct xattr_db *xattr_gid_db = NULL;
@@ -568,7 +569,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
         /* linear search since there shouldn't be too many users/groups that have xattrs */
         sll_loop(xattr_db_list, node) {
             struct xattr_db *xattr_db = (struct xattr_db *) sll_node_data(node);
-            if (xattr_db->st.st_uid == ed->statuso.st_uid) {
+            if (xattr_db->st.st_uid == pwork->statuso.st_uid) {
                 xattr_uid_db = xattr_db;
 
                 if (xattr_gid_db) {
@@ -576,8 +577,8 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
                 }
             }
 
-            if ((xattr_db->st.st_gid == ed->statuso.st_gid) &&
-                ((xattr_db->st.st_mode & 0040) == (ed->statuso.st_mode & 0040))) {
+            if ((xattr_db->st.st_gid == pwork->statuso.st_gid) &&
+                ((xattr_db->st.st_mode & 0040) == (pwork->statuso.st_mode & 0040))) {
                 xattr_gid_db = xattr_db;
 
                 if (xattr_uid_db) {
@@ -591,10 +592,10 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
             xattr_uid_db = create_xattr_db(xattr_template,
                                            topath, topath_len,
                                            in,
-                                           work->pinode,
-                                           ed->statuso.st_uid,
+                                           pwork->pinode,
+                                           pwork->statuso.st_uid,
                                            in->nobody.gid,
-                                           ed->statuso.st_mode,
+                                           pwork->statuso.st_mode,
                                            xattr_files_res);
             if (!xattr_uid_db) {
                 return 1;
@@ -607,10 +608,10 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
             xattr_gid_db = create_xattr_db(xattr_template,
                                            topath, topath_len,
                                            in,
-                                           work->pinode,
+                                           pwork->pinode,
                                            in->nobody.uid,
-                                           ed->statuso.st_gid,
-                                           ed->statuso.st_mode,
+                                           pwork->statuso.st_gid,
+                                           pwork->statuso.st_mode,
                                            xattr_files_res);
             if (!xattr_gid_db) {
                 return 1;
@@ -619,8 +620,8 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
         }
 
         /* insert into per-user and per-group xattr dbs */
-        insertdbgo_xattrs_avail(ed, xattr_uid_db->res);
-        insertdbgo_xattrs_avail(ed, xattr_gid_db->res);
+        insertdbgo_xattrs_avail(pwork, ed, xattr_uid_db->res);
+        insertdbgo_xattrs_avail(pwork, ed, xattr_gid_db->res);
     }
 
     return 0;
@@ -635,7 +636,7 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
 
     char *zname     = sqlite3_mprintf("%q", path);
     char *ztype     = sqlite3_mprintf("%c", ed->type);
-    char *zino      = sqlite3_mprintf("%" PRIu64, ed->statuso.st_ino);
+    char *zino      = sqlite3_mprintf("%" PRIu64, pwork->statuso.st_ino);
     char *zlinkname = sqlite3_mprintf("%q", ed->linkname);
     char *zpino     = sqlite3_mprintf("%" PRIu64, pwork->pinode);
 
@@ -647,16 +648,16 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_bind_text(res,   1,  zname, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,   2,  ztype, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,   3,  zino,  -1, SQLITE_STATIC);
-    sqlite3_bind_int64(res,  4,  ed->statuso.st_mode);
-    sqlite3_bind_int64(res,  5,  ed->statuso.st_nlink);
-    sqlite3_bind_int64(res,  6,  ed->statuso.st_uid);
-    sqlite3_bind_int64(res,  7,  ed->statuso.st_gid);
-    sqlite3_bind_int64(res,  8,  ed->statuso.st_size);
-    sqlite3_bind_int64(res,  9,  ed->statuso.st_blksize);
-    sqlite3_bind_int64(res,  10, ed->statuso.st_blocks);
-    sqlite3_bind_int64(res,  11, ed->statuso.st_atime);
-    sqlite3_bind_int64(res,  12, ed->statuso.st_mtime);
-    sqlite3_bind_int64(res,  13, ed->statuso.st_ctime);
+    sqlite3_bind_int64(res,  4,  pwork->statuso.st_mode);
+    sqlite3_bind_int64(res,  5,  pwork->statuso.st_nlink);
+    sqlite3_bind_int64(res,  6,  pwork->statuso.st_uid);
+    sqlite3_bind_int64(res,  7,  pwork->statuso.st_gid);
+    sqlite3_bind_int64(res,  8,  pwork->statuso.st_size);
+    sqlite3_bind_int64(res,  9,  pwork->statuso.st_blksize);
+    sqlite3_bind_int64(res,  10, pwork->statuso.st_blocks);
+    sqlite3_bind_int64(res,  11, pwork->statuso.st_atime);
+    sqlite3_bind_int64(res,  12, pwork->statuso.st_mtime);
+    sqlite3_bind_int64(res,  13, pwork->statuso.st_ctime);
     sqlite3_bind_text(res,   14, zlinkname, -1, SQLITE_STATIC);
     sqlite3_bind_blob64(res, 15, zxattrnames, strlen(zxattrnames), SQLITE_STATIC);
     sqlite3_bind_int64(res,  16, su->totfiles);

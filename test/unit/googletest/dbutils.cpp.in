@@ -148,13 +148,16 @@ TEST(insertdbprep, nullptr) {
 TEST(insertdbgo_xattrs_avail, nullptr) {
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
-    EXPECT_NE(insertdbgo_xattrs_avail(&ed, nullptr), SQLITE_OK);
+    EXPECT_NE(insertdbgo_xattrs_avail(nullptr, &ed, nullptr), SQLITE_OK);
 
     ed.xattrs.count = 1;
     struct xattr xattr;
     ed.xattrs.pairs = &xattr;
 
-    EXPECT_NE(insertdbgo_xattrs_avail(&ed, nullptr), SQLITE_OK);
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    EXPECT_NE(insertdbgo_xattrs_avail(&work, &ed, nullptr), SQLITE_OK);
 }
 
 TEST(insertsumdb, nullptr) {
@@ -217,7 +220,7 @@ TEST(addqueryfuncs, epath) {
 }
 
 TEST(addqueryfuncs, fpath) {
-    struct work *work = new_work_with_name(NULL, 0, NULL, 0);
+    struct work *work = new_work_with_name(nullptr, 0, nullptr, 0);
     work->name_len = SNPRINTF(work->name, MAXPATH, "/");
     work->fullpath = nullptr;
 
@@ -499,7 +502,7 @@ TEST(addqueryfuncs, human_readable_size) {
 }
 
 TEST(addqueryfuncs, level) {
-    struct work *work = new_work_with_name(NULL, 0, NULL, 0);
+    struct work *work = new_work_with_name(nullptr, 0, nullptr, 0);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
@@ -523,7 +526,7 @@ TEST(addqueryfuncs, level) {
 }
 
 TEST(addqueryfuncs, starting_point) {
-    struct work *work = new_work_with_name(NULL, 0, NULL, 0);
+    struct work *work = new_work_with_name(nullptr, 0, nullptr, 0);
     work->orig_root.data = "/index_root";
     work->orig_root.len = strlen(work->orig_root.data);
 

@@ -125,9 +125,9 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     int rc = 0;
 
-    struct stat *st = &ed->statuso;
+    struct stat *st = &work->statuso;
     struct stat st_stack;
-    if (!ed->lstat_called) {
+    if (!work->lstat_called) {
         if (lstat(work->name, &st_stack) != 0) {
             print_error_and_goto("Could not lstat file", work->name, cleanup);
         }
@@ -193,7 +193,7 @@ struct QPTPool_vals {
 static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir_args) {
     struct QPTPool_vals *args = (struct QPTPool_vals *) nondir_args;
 
-    if (S_ISREG(ed->statuso.st_mode)) {
+    if (S_ISREG(work->statuso.st_mode)) {
         struct work_data *wd = calloc(1, sizeof(*wd) + work->name_len + 1);
         memcpy(&wd->work, work, sizeof(wd->work));
         wd->work.name = (char *) &wd[1];
@@ -209,7 +209,7 @@ static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir
 
         QPTPool_enqueue(args->ctx, args->id, cpr_file, wd);
     }
-    else if (S_ISLNK(ed->statuso.st_mode)) {
+    else if (S_ISLNK(work->statuso.st_mode)) {
         /* copy right here since symlinks should not take much time to copy */
         cpr_link(work, ed, args->in);
     }

@@ -120,7 +120,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     /* have to dupdir here because directories can show up in any order */
-    if (dupdir(topath, &ed.statuso)) {
+    if (dupdir(topath, &dir->statuso)) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
@@ -132,7 +132,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* restore "/db.db" (no need to remove afterwards) */
     topath[topath_len] = '/';
 
-    sqlite3 *db = template_to_db(&pa->db, topath, ed.statuso.st_uid, ed.statuso.st_gid);
+    sqlite3 *db = template_to_db(&pa->db, topath, dir->statuso.st_uid, dir->statuso.st_gid);
 
     if (db) {
         struct sum summary;
@@ -164,18 +164,18 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             if (row_ed.type == 'e') {
                 /* insert right here (instead of bulk inserting) since this is likely to be very rare */
-                external_insert(db, EXTERNAL_TYPE_USER_DB_NAME, ed.statuso.st_ino, row->name);
+                external_insert(db, EXTERNAL_TYPE_USER_DB_NAME, row->statuso.st_ino, row->name);
             }
             else {
                 /* update summary table */
-                sumit(&summary, &row_ed);
+                sumit(&summary, row, &row_ed);
 
                 /* don't record pinode */
                 row->pinode = 0;
 
                 /* add row to bulk insert */
                 insertdbgo(row, &row_ed, entries_res);
-                insertdbgo_xattrs(in, &ed.statuso, row, &row_ed,
+                insertdbgo_xattrs(in, &row->statuso, row, &row_ed,
                                   &xattr_db_list, &pa->xattr,
                                   topath, topath_len,
                                   xattrs_res, xattr_files_res);
@@ -201,7 +201,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         sll_destroy(&xattr_db_list, destroy_xattr_db);
 
         /* write out the current directory's xattrs */
-        insertdbgo_xattrs_avail(&ed, xattrs_res);
+        insertdbgo_xattrs_avail(dir, &ed, xattrs_res);
 
         /* write out data going into db.db */
         insertdbfin(xattr_files_res); /* per-user and per-group xattr db file names */

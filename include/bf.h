@@ -359,6 +359,8 @@ struct work {
    char          *name;                  /* points to memory located after struct work */
    size_t        name_len;               /* == strlen(name) - meaning excludes NUL! */
    size_t        basename_len;           /* can usually get through readdir */
+   struct stat   statuso;
+   uint8_t       lstat_called;
    long long int pinode;
    size_t        recursion_level;
 
@@ -378,8 +380,6 @@ struct entry_data {
    int           parent_fd;    /* holds an FD that can be used for fstatat(2), etc. */
    char          type;
    char          linkname[MAXPATH];
-   uint8_t       lstat_called;
-   struct stat   statuso;
    long long int offset;
    struct xattrs xattrs;
    int           crtime;
