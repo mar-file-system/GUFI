@@ -245,12 +245,28 @@ int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
                     pa, id, print_parallel, &recs);
 
             free_sql(sum, in->sql.sum.data);
+
+            /*
+             * if rows were returned, stop
+             * if no rows were returned, keep going
+             */
+            if (in->process_sql == STOP_ON_ROW) {
+                if (recs > 0) {
+                    return recs;
+                }
+                else {
+                    recs = 1;
+                }
+            }
+
         } else {
             recs = 1;
         }
-        if (in->andor == OR) {
+
+        if (in->process_sql == RUN_ALL) {
             recs = 1;
         }
+
         /* if we have recs (or are running an OR) query the entries table */
         if (recs > 0) {
             if (in->sql.ent.len) {

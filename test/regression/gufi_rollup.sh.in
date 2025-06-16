@@ -131,7 +131,7 @@ do_tests() {
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
 "${GUFI_QUERY}" \
-    -a \
+    -a 0 \
     -w \
     -S "UPDATE summary SET uid = 0, gid = 0, minuid = 0, maxuid = 0, mingid = 0, maxgid = 0;" \
     -E "UPDATE entries SET uid = 0, gid = 0;" \
@@ -153,7 +153,7 @@ rm -r "${SEARCH}"
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
 "${GUFI_QUERY}" \
-    -a \
+    -a 0 \
     -w \
     -S "UPDATE summary SET uid = 0, gid = 0, minuid = 0, maxuid = 0, mingid = 0, maxgid = 0;" \
     -E "UPDATE entries SET uid = 0, gid = 0;" \

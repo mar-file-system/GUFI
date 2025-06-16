@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    process_args_and_maybe_exit("hHvT:S:E:an:jo:d:O:uI:F:y:z:J:K:G:mB:wxk:M:s:p:" COMPRESS_OPT "Q:D:", 1, "GUFI_index ...", &in);
+    process_args_and_maybe_exit("hHvT:S:E:a:n:jo:d:O:uI:F:y:z:J:K:G:mB:wxk:M:s:p:" COMPRESS_OPT "Q:D:", 1, "GUFI_index ...", &in);
 
     if (handle_sql(&in) != 0) {
         input_fini(&in);

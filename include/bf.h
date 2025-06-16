@@ -133,10 +133,11 @@ struct sum {
   long long int totextdbs; /* only tracked in treesummary, not summary */
 };
 
-typedef enum AndOr {
-    AND,
-    OR,
-} AndOr_t;
+typedef enum AFlag {
+    RUN_ALL     = 0,   /* run all SQL whether or not a row was returned (old -a) */
+    RUN_ON_ROW  = 1,   /* if returned row, run next SQL, else stop (continue descent) (default) */
+    STOP_ON_ROW = 2,   /* if returned row, stop SQL processing (continue descent), else run next SQL */
+} AFlag_t;
 
 typedef enum OutputMethod {
     STDOUT,    /* default */
@@ -212,7 +213,7 @@ struct input {
    char delim;
    int  buildindex;
    size_t maxthreads;
-   AndOr_t andor;
+   AFlag_t process_sql;       /* what to do if an SQL statement returns/doesn't return 1 row */
    int  insertdir;                // added for bfwreaddirplus2db
    int  insertfl;                 // added for bfwreaddirplus2db
    int  suspectd;                 // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect

@@ -338,7 +338,7 @@ clean_index() {
     # update xattrs to point to updated inodes
     # do this before updating summary/entries to be able to use actual inodes
     "${GUFI_QUERY}" \
-        -a \
+        -a 0 \
         -x \
         -w \
         -I "CREATE TABLE temp_xattrs (inode TEXT, name TEXT, value TEXT);" \
@@ -348,7 +348,7 @@ clean_index() {
 
     # update summary and entries columns
     "${GUFI_QUERY}" \
-        -a \
+        -a 0 \
         -w \
         -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \
         -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \
