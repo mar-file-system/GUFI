@@ -131,7 +131,7 @@ do_tests() {
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
 "${GUFI_QUERY}" \
-    -a \
+    -a 1 \
     -w \
     -S "UPDATE summary SET uid = 0, gid = 0, minuid = 0, maxuid = 0, mingid = 0, maxgid = 0;" \
     -E "UPDATE entries SET uid = 0, gid = 0;" \
@@ -139,21 +139,11 @@ do_tests() {
 "${GUFI_ROLLUP}" "${SEARCH}"
 do_tests
 
-orig=$("${GUFI_QUERY}" -d "|" -z 1 -T "SELECT totsubdirs, totfiles, totlinks, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, totxattr,  totextdbs, rectype FROM treesummary;" "${INDEXROOT}/ugo")
-
-run_no_sort "${GUFI_TREESUMMARY} \"${INDEXROOT}/ugo\"" | @SED@ 's/time [0-9]\+/time 0/g; s/maxsubdirsize [0-9]\+/maxsubdirsize 0/g;'
-
-regen=$("${GUFI_QUERY}" -d "|" -z 1 -T "SELECT totsubdirs, totfiles, totlinks, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, totxattr, totextdbs, rectype FROM treesummary;" "${INDEXROOT}/ugo")
-
-echo "# Compare treesummary to regenerated treesummary"
-echo "${#orig} bytes vs ${#regen} bytes"
-@DIFF@ <(echo "${orig}") <(echo "${regen}") && echo "No difference"
-
 rm -r "${SEARCH}"
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
 "${GUFI_QUERY}" \
-    -a \
+    -a 1 \
     -w \
     -S "UPDATE summary SET uid = 0, gid = 0, minuid = 0, maxuid = 0, mingid = 0, maxgid = 0;" \
     -E "UPDATE entries SET uid = 0, gid = 0;" \

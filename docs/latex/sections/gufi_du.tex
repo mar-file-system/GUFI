@@ -60,48 +60,46 @@
 
 
 
-\documentclass{article}
+\section{\gufidu}
+\gufidu replicates a subset of the functionality provided by the POSIX
+command du.
 
-% Useful packages
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{tabularx}
-\usepackage{textcomp}
-\usepackage{verbatim}
-\usepackage{GUFIText}
+\subsection{Notes}
+\begin{itemize}
+\item \gufidu requires the index to have treesummary data in at least
+  the directory that is passed in. If only some directories have
+  treesummary data, \gufidu without arguments will only report sizes
+  from those directories.
+  \begin{itemize}
+  \item Run \gufitreesummary, \gufitreesummaryall, or \gufirollup
+    before calling \gufidu.
+  \end{itemize}
+\item \gufidu output does not include the block count or size of
+  directories.
+\end{itemize}
 
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=blue
-}
-
-\setcounter{tocdepth}{4}
-\setcounter{secnumdepth}{4}
-
-\title{GUFI User's Guide}
-\author{GUFI Developers}
-
-\begin{document}
-
-\maketitle
-
-\tableofcontents
-\include{sections/license}
-\include{sections/introduction}
-\include{sections/user_env}
-\include{sections/gufi_du}
-\include{sections/gufi_find}
-\include{sections/gufi_ls}
-\include{sections/gufi_stat}
-\include{sections/gufi_stats}
-
-\section{\gufiquery}
-\gufiquery is available on the client side. However, as it is intended
-for use by advanced users, it will not be described here. Please see
-the administrator or developer documentation for details about
-\gufiquery.
-
-\end{document}
+\subsection{Flags}
+\begin{table} [h!]
+  \centering
+  \begin{tabularx}{\textwidth}{| l | X |}
+    \hline
+    Flags & Functionality \\
+    \hline
+    -{}-help & displays help menu \\
+    \hline
+    -v, -{}-version & show program's version number and exit \\
+    \hline
+    -{}-apparent-size & print apparent sizes, rather than disk usage;
+    although the apparent size is usually smaller, it may be larger
+    due to holes in ('sparse') files, internal fragmentation, indirect
+    blocks, and the like \\
+    \hline
+    -B, -{}-block-size & scale sizes by SIZE before printing them \\
+    \hline
+    -c, -{}-total & produce a grand total \\
+    \hline
+    -s, -{}-summarize & display only a total for each argument \\
+    \hline
+  \end{tabularx}
+  \caption{\label{fig:gufi_du flags}{gufi\_du Flags and Functionality}}
+\end{table}

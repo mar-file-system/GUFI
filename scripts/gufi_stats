@@ -913,7 +913,7 @@ def duplicate_names(_config, args, where):
 
     ]
 
-    queries += ['-a']
+    queries += ['-a', '1']
 
     return queries
 

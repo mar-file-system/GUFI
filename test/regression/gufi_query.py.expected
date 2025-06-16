@@ -8,7 +8,9 @@ options:
   -T <SQL_tsum>          SQL for tree-summary table
   -S <SQL_sum>           SQL for summary table
   -E <SQL_ent>           SQL for entries table
-  -a                     AND/OR (SQL query combination)
+  -a <0|1|2>             0 - if returned row, run next SQL, else stop (continue descent) (default)
+                         1 - skip T, run S and E whether or not a row was returned (old -a)
+                         2 - run T, S, and E whether or not a row was returned
   -n <threads>           number of threads
   -j                     print the information in terse form
   -o <out_fname>         output file (one-per-thread, with thread-id suffix)

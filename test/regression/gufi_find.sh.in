@@ -174,7 +174,7 @@ run_sort "${GUFI_FIND} -gid   \"${GROUP_ID}\""  | @SED@ "s/\"${GROUP_ID}\"/${TES
 run_sort "${GUFI_FIND} -group \"${GROUP_NAME}\""| @SED@ "s/\"${GROUP_NAME}\"/${TEST_GROUP_NAME}/g;"
 
 # zero some columns to make test easier
-run_no_sort "${GUFI_QUERY} -a -w -E \"UPDATE entries SET inode = 0, uid = 0, gid = 0;\" \"${SEARCH}\""
+run_no_sort "${GUFI_QUERY} -a 1 -w -E \"UPDATE entries SET inode = 0, uid = 0, gid = 0;\" \"${SEARCH}\""
 
 # %H and %l still need fixing
 # shellcheck disable=SC2016

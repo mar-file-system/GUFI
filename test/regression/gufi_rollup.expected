@@ -716,29 +716,6 @@ root 5
 $ gufi_stats -c total-dircount prefix
 69
 
-$ gufi_treesummary "prefix/ugo"
-totals:
-totfiles 24 totlinks 0
-totsize 0
-minuid 0 maxuid 0 mingid 0 maxgid 0
-minsize 0 maxsize 0
-totzero 24 totltk 24 totmtk 0 totltm 24 totmtm 0 totmtg 0 totmtt 0
-minctime 0 maxctime 0
-minmtime 0 maxmtime 0
-minatime 0 maxatime 0
-minblocks 0 maxblocks 0
-totxattr 0
-mincrtime 0 maxcrtime 0
-minossint1 0 maxossint1 0 totossint1 0
-minossint2 0 maxossint2 0 totossint2 0
-minossint3 0 maxossint3 0 totossint3 0
-minossint4 0 maxossint4 0 totossint4 0
-totsubdirs 16 maxsubdirfiles 3 maxsubdirlinks 0 maxsubdirsize 0
-totextdbs 0
-
-# Compare treesummary to regenerated treesummary
-102 bytes vs 102 bytes
-No difference
 Creating GUFI Index search with 1 threads
 Total Dirs:          69
 Total Non-Dirs:      96

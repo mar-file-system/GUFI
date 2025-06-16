@@ -112,7 +112,10 @@ def getfattr(args, dirname, nondirname):
         S_where += ['xattr_name REGEXP \'{0}\''.format(args.pattern)]
         E_where += ['xattr_name REGEXP \'{0}\''.format(args.pattern)]
 
-    query_args = ['-x', '-a']
+    query_args = [
+        '-x',
+        '-a', '1',
+    ]
 
     if args.recursive:
         # if input directory is not a directory, filter xattrs to those in the current directory

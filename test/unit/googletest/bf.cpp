@@ -78,7 +78,7 @@ static const std::string v = "-v";
 static const std::string x = "-x";
 static const std::string P = "-P";
 static const std::string b = "-b";
-static const std::string a = "-a";
+static const std::string a = "-a"; static const std::string a_arg = "2";
 static const std::string n = "-n"; static const std::string n_arg = "1";
 static const std::string d = "-d"; static const std::string d_arg = "|";
 static const std::string o = "-o"; static const std::string o_arg = "o arg";
@@ -142,7 +142,7 @@ TEST(input, nullptr) {
 }
 
 static void check_input(struct input *in, const bool helped, const bool version,
-                        const bool flags, const bool options) {
+                        const bool flags, const bool options, AFlag_t process_sql) {
     EXPECT_EQ(in->helped,                             static_cast<int>(helped));
 
     EXPECT_EQ(in->printed_version,                    version);
@@ -150,7 +150,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->process_xattrs,                     flags);
     EXPECT_EQ(in->printdir,                           flags);
     EXPECT_EQ(in->buildindex,                         flags);
-    EXPECT_EQ(in->andor,                              flags);
     EXPECT_EQ(in->types.prefix,                       flags);
     EXPECT_EQ(in->insertfl,                           flags);
     EXPECT_EQ(in->insertdir,                          flags);
@@ -167,6 +166,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
 
     if (options) {
         EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);
+        EXPECT_EQ(in->process_sql,                    process_sql);
         EXPECT_EQ(in->delim,                          '|');
         // not checking -o and -O here
         EXPECT_EQ(in->sql.init,                       I_arg);
@@ -269,7 +269,7 @@ TEST(parse_cmd_line, help) {
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
 
-    check_input(&in, true, false, false, false);
+    check_input(&in, true, false, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
@@ -294,13 +294,13 @@ TEST(parse_cmd_line, version) {
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
 
-    check_input(&in, false, true, false, false);
+    check_input(&in, false, true, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
 
 TEST(parse_cmd_line, debug) {
-    const char opts[] = "HxPban:d:i:t:o:O:uI:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:s:D:";
+    const char opts[] = "HxPba:n:d:i:t:o:O:uI:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:s:D:";
 
     const char *argv[] = {
         exec.c_str(),
@@ -308,7 +308,7 @@ TEST(parse_cmd_line, debug) {
         x.c_str(),
         P.c_str(),
         b.c_str(),
-        a.c_str(),
+        a.c_str(), a_arg.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
         u.c_str(),
@@ -361,20 +361,19 @@ TEST(parse_cmd_line, debug) {
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
 
-    check_input(&in, true, false, true, true);
+    check_input(&in, true, false, true, true, RUN_TSE);
 
     input_fini(&in);
 }
 
 TEST(parse_cmd_line, flags) {
-    const char opts[] = "xPbaurRYZmwjX" COMPRESS_OPT "q";
+    const char opts[] = "xPburRYZmwjX" COMPRESS_OPT "q";
 
     const char *argv[] = {
         exec.c_str(),
         x.c_str(),
         P.c_str(),
         b.c_str(),
-        a.c_str(),
         u.c_str(),
         r.c_str(),
         R.c_str(),
@@ -394,16 +393,17 @@ TEST(parse_cmd_line, flags) {
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-    check_input(&in, false, false, true, false);
+    check_input(&in, false, false, true, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
 
 TEST(parse_cmd_line, options) {
-    const char opts[] = "n:d:i:t:I:T:S:E:F:W:A:g:c:y:z:J:K:G:B:f:L:k:M:C:Q:s:D:";
+    const char opts[] = "a:n:d:i:t:I:T:S:E:F:W:A:g:c:y:z:J:K:G:B:f:L:k:M:C:Q:s:D:";
 
     const char *argv[] = {
         exec.c_str(),
+        a.c_str(), a_arg.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
         I.c_str(), I_arg.c_str(),
@@ -435,7 +435,7 @@ TEST(parse_cmd_line, options) {
 
     struct input in;
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-    check_input(&in, false, false, false, true);
+    check_input(&in, false, false, false, true, RUN_TSE);
 
     input_fini(&in);
 }
@@ -601,7 +601,7 @@ TEST(parse_cmd_line, positional) {
     // 1, since no options were read
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, "", 0, "", &in), 1);
 
-    check_input(&in, false, false, false, false);
+    check_input(&in, false, false, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
@@ -621,7 +621,7 @@ TEST(parse_cmd_line, unused) {
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
 
-    check_input(&in, true, false, false, false);
+    check_input(&in, true, false, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
@@ -641,7 +641,7 @@ TEST(parse_cmd_line, invalid) {
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
 
-    check_input(&in, true, false, false, false);
+    check_input(&in, true, false, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }

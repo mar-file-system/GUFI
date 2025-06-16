@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,51 +61,76 @@
 
 
 
-import argparse
-import os
-import sys
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-RTESTS = '@CMAKE_CURRENT_BINARY_DIR@'
+OUTPUT="gufi_du.out"
 
-# test config file name
-CONFIG_PATH = os.path.join(RTESTS, 'config.test')
+# shellcheck disable=SC2145
+do_tests() {
+    paths=("$@")
 
-SCRIPTS = os.path.join('@CMAKE_BINARY_DIR@', 'scripts')
-
-TOOLS = {
-    'du'         : os.path.join(SCRIPTS, 'gufi_du'),
-    'find'       : os.path.join(SCRIPTS, 'gufi_find'),
-    'getfattr'   : os.path.join(SCRIPTS, 'gufi_getfattr'),
-    'ls'         : os.path.join(SCRIPTS, 'gufi_ls'),
-    'pugsql'     : os.path.join(RTESTS,  'gufi_vt_pugsql.py'),
-    'query.py'   : os.path.join(SCRIPTS, 'gufi_query.py'),
-    'querydbs'   : os.path.join(SCRIPTS, 'querydbs'),
-    'stat'       : os.path.join(SCRIPTS, 'gufi_stat'),
-    'stats'      : os.path.join(SCRIPTS, 'gufi_stats'),
-    'sqlalchemy' : os.path.join(RTESTS,  'gufi_vt_sqlalchemy.py'),
+    echo "# du blocks on sparse files"
+    run_no_sort "${GUFI_DU} ${paths[@]} | sort -k 2,2"
+    run_no_sort "${GUFI_DU} --block-size 1 ${paths[@]} | sort -k 2"
+    run_no_sort "${GUFI_DU} --block-size 1 --total ${paths[@]} | sort -k 2"
+    run_no_sort "${GUFI_DU} --block-size 1 --summarize ${paths[@]}"
+    run_no_sort "${GUFI_DU} --block-size 1 --total --summarize ${paths[@]}"
+    run_no_sort "${GUFI_DU} --block-size 1 --total --summarize --verbose ${paths[@]}"
+    echo "# du sizes"
+    run_no_sort "${GUFI_DU} --apparent-size ${paths[@]} | sort -k 2"
+    run_no_sort "${GUFI_DU} --apparent-size --block-size 1 ${paths[@]} | sort -k 2"
+    run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --total ${paths[@]} | sort -k 2"
+    run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --summarize ${paths[@]}"
+    run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --total --summarize ${paths[@]}"
+    run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --total --summarize --verbose ${paths[@]}"
 }
 
-# import a tool by path (default: the scripts directory)
-# needed for duplicate filenames or files without the .py extension
-def import_tool(tool, filename):
-    # https://csatlas.com/python-import-file-module/
-    # pylint: disable=import-outside-toplevel
-    import importlib.machinery
-    import importlib.util
-    from pathlib import Path
+run_no_sort "${GUFI_DU} --help"
 
-    # Import mymodule
-    loader = importlib.machinery.SourceFileLoader(tool, filename)
-    spec = importlib.util.spec_from_loader(tool, loader)
-    script = importlib.util.module_from_spec(spec)
-    loader.exec_module(script)
-    return script
+(
+set -e
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='GUFI Testing Tool Selector', add_help=False)
-    parser.add_argument('tool', choices=TOOLS.keys())
+echo "#####################################"
+echo "# Run gufi_du without treesummary data"
+echo
+do_tests "${SRCDIR}"
+echo "#####################################"
+echo
+echo "#####################################"
+echo "# Generate treesummary in only one directory"
+echo
+run_no_sort "${GUFI_TREESUMMARY} ${INDEXROOT}/directory" | @SED@ '/.*uid.*/d; /.*ctime.*/d;'
+echo "# Run gufi_du on that the single directory that has treesummary data (success)"
+run_no_sort "${GUFI_DU} --apparent-size --block-size 1 ${SRCDIR}/directory"
+echo "# Run gufi_du on the parent directory (only prints size of path with treesummary data)"
+run_no_sort "${GUFI_DU} --apparent-size --block-size 1 ${SRCDIR}"
+echo "# Summarize the subtree starting at the parent (fails)"
+run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --summarize ${SRCDIR}"
+echo "#####################################"
+echo
+echo "#####################################"
+echo "# Generate treesummary in all directories"
+echo
+run_no_sort "${GUFI_TREESUMMARY_ALL} ${SEARCH}"
+treesummary=$(do_tests "${SRCDIR}")
+echo "${treesummary}"
+echo "#####################################"
+echo
+echo "#####################################"
+echo "# Run gufi_du from rolled up tree"
+echo
+run_no_sort "${GUFI_ROLLUP} \"${SEARCH}\" > /dev/null 2>&1"
+rollup=$(do_tests "${SRCDIR}")
+echo "${rollup}"
+echo "#####################################"
+echo
+echo "# Compare treesummary and rollup results"
+@DIFF@ <(echo "${treesummary}") <(echo "${rollup}")
+echo
+echo "# Run gufi_du on a file path"
+do_tests "${SRCDIR}/1MB" "${SRCDIR}/1KB"
+) | tee "${OUTPUT}"
 
-    args, tool_args = parser.parse_known_args()
-
-    gufi_tool = import_tool(args.tool, TOOLS[args.tool])
-    sys.exit(gufi_tool.run([args.tool] + tool_args, CONFIG_PATH))
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_du.expected "${OUTPUT}"
+rm "${OUTPUT}"

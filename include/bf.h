@@ -111,6 +111,7 @@ struct sum {
   long long int maxatime;
   long long int minblocks;
   long long int maxblocks;
+  long long int totblocks; /* files only - does not include directory/self */
   long long int totxattr;
   long long int totsubdirs;
   long long int maxsubdirfiles;
@@ -133,10 +134,11 @@ struct sum {
   long long int totextdbs; /* only tracked in treesummary, not summary */
 };
 
-typedef enum AndOr {
-    AND,
-    OR,
-} AndOr_t;
+typedef enum AFlag {
+    RUN_ON_ROW = 0,   /* if returned row, run next SQL, else stop (continue descent) (default) */
+    RUN_SE     = 1,   /* skip T, run S and E whether or not a row was returned (old -a) */
+    RUN_TSE    = 2,   /* run T, S, and E whether or not a row was returned */
+} AFlag_t;
 
 typedef enum OutputMethod {
     STDOUT,    /* default */
@@ -212,7 +214,7 @@ struct input {
    char delim;
    int  buildindex;
    size_t maxthreads;
-   AndOr_t andor;
+   AFlag_t process_sql;       /* what to do if an SQL statement returns/doesn't return 1 row */
    int  insertdir;                // added for bfwreaddirplus2db
    int  insertfl;                 // added for bfwreaddirplus2db
    int  suspectd;                 // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect

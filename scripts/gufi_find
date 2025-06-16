@@ -819,8 +819,8 @@ def run(argv, config_path):
         config.query,
         '-n', str(config.threads),
         '-B', str(config.outputbuffer),
-        '-a',
-        '-d', ' '
+        '-a', '1',
+        '-d', ' ',
     ]
 
     # constants only used here

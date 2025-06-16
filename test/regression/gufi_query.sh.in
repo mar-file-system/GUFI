@@ -100,20 +100,23 @@ run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -E \"SELECT name FROM vrpentries;
 echo "# Get all directory and non-directory names"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 
+echo "# Get only non-directory names despite -S not returning anything"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 2 -S \"SELECT name FROM vrsummary WHERE name == '';\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
+
 echo "# Get number of subdirectories"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories ascending names"
-run_no_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories descending names"
-run_no_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path DESC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path DESC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories ascending sizes (files only)"
-run_no_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size ASC, path ASC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size ASC, path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories descending sizes (files only)"
-run_no_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get all directory and non-directory names not in directory"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -k \"${SKIP}\" \"${INDEXROOT}\""
@@ -131,7 +134,7 @@ echo "# Output TLV columns (no aggregation)"
 run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | ${HEXLIFY}"
 
 echo "# Output TLV columns (with aggregation)"
-run_no_sort "${GUFI_QUERY} -u -d \" \" -n ${THREADS} -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | ${HEXLIFY}"
+run_no_sort "${GUFI_QUERY} -u -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | ${HEXLIFY}"
 
 echo "# run_vt with {s} (source directory) and {i} (index directory)"
 (
@@ -232,16 +235,16 @@ echo "# Modify Index                      #"
 echo "#####################################"
 
 echo "# Attempt to modify databases in read-only mode"
-run_sort "${GUFI_QUERY} -a -S \"UPDATE summary SET inode = 0;\" -E \"UPDATE entries SET inode = 0;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -a 1 -S \"UPDATE summary SET inode = 0;\" -E \"UPDATE entries SET inode = 0;\" \"${INDEXROOT}\""
 
 echo "# Use write mode to modify databases"
-run_sort "${GUFI_QUERY} -a -w -S \"UPDATE summary SET inode = 0;\" -E \"UPDATE entries SET inode = 0;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -a 1 -w -S \"UPDATE summary SET inode = 0;\" -E \"UPDATE entries SET inode = 0;\" \"${INDEXROOT}\""
 
 echo "# Negative check to see if changes have been applied"
-run_sort "${GUFI_QUERY} -a -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode != 0;\" -E \"SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode != 0;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -a 1 -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode != 0;\" -E \"SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode != 0;\" \"${INDEXROOT}\""
 
 echo "# Positive check to see if changes have been applied"
-run_sort "${GUFI_QUERY} -a -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode == 0;\" -E \"SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode == 0;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -a 1 -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode == 0;\" -E \"SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode == 0;\" \"${INDEXROOT}\""
 
 echo "# Set timestamps of one db.db file to epoch, query the index with -m flag, and expect no changes"
 run_no_sort "touch -amt 197001010000.00 \"${INDEXROOT}/db.db\""

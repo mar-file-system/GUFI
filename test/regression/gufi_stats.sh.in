@@ -135,7 +135,7 @@ run_uidgid_size "${GUFI_STATS} --order DESC gid-size \"${BASENAME}\""
 run_uidgid_size "${GUFI_STATS} --num-results 6 --order DESC gid-size \"${BASENAME}\""
 
 # replace all inodes for size bins with recursion
-"${GUFI_QUERY}" -a -w -S "UPDATE summary SET inode = mtime, size = mtime, atime = mtime, ctime = mtime, pinode = 16;" -E "UPDATE entries SET inode = mtime, size = mtime, atime = mtime, ctime = mtime" "${INDEXROOT}"
+"${GUFI_QUERY}" -a 1 -w -S "UPDATE summary SET inode = mtime, size = mtime, atime = mtime, ctime = mtime, pinode = 16;" -E "UPDATE entries SET inode = mtime, size = mtime, atime = mtime, ctime = mtime" "${INDEXROOT}"
 
 run_no_sort "${GUFI_STATS}    filesize-log2-bins \"${BASENAME}\""
 run_no_sort "${GUFI_STATS} -r filesize-log2-bins \"${BASENAME}\""

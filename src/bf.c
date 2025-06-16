@@ -95,7 +95,7 @@ struct input *input_init(struct input *in) {
         memset(in, 0, sizeof(*in));
         in->maxthreads              = 1;                      // don't default to zero threads
         in->delim                   = fielddelim;
-        in->andor                   = AND;
+        in->process_sql             = RUN_ON_ROW;
         in->max_level               = -1;                     // default to all the way down
         in->nobody.uid              = 65534;
         in->nobody.gid              = 65534;
@@ -158,7 +158,9 @@ void print_help(const char* prog_name,
       case 'x': printf("  -x                     index/query xattrs"); break;
       case 'P': printf("  -P                     print directories as they are encountered"); break;
       case 'b': printf("  -b                     build GUFI index tree"); break;
-      case 'a': printf("  -a                     AND/OR (SQL query combination)"); break;
+      case 'a': printf("  -a <0|1|2>             0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
+                       "                         1 - skip T, run S and E whether or not a row was returned (old -a)\n"
+                       "                         2 - run T, S, and E whether or not a row was returned"); break;
       case 'n': printf("  -n <threads>           number of threads"); break;
       case 'd': printf("  -d <delim>             delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
       case 'o': printf("  -o <out_fname>         output file (one-per-thread, with thread-id suffix)"); break;
@@ -215,7 +217,7 @@ void show_input(struct input* in, int retval) {
    printf("in.buildindex               = %d\n",            in->buildindex);
    printf("in.maxthreads               = %zu\n",           in->maxthreads);
    printf("in.delim                    = '%c'\n",          in->delim);
-   printf("in.andor                    = %d\n",            (int) in->andor);
+   printf("in.process_sql              = %d\n",            (int) in->process_sql);
    printf("in.types.prefix             = %d\n",            in->types.prefix);
    printf("in.process_xattrs           = %d\n",            in->process_xattrs);
    printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
@@ -255,7 +257,7 @@ void show_input(struct input* in, int retval) {
    size_t i = 0;
    sll_loop(&in->external_attach, node) {
        eus_t *eus = (eus_t *) sll_node_data(node);
-       printf("in.external_attach[%zu]     = ('%s', '%s', '%s', '%s')\n",
+       printf("in.external_attach[%zu] = ('%s', '%s', '%s', '%s')\n",
               i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
    }
    printf("\n");
@@ -325,8 +327,12 @@ int parse_cmd_line(int         argc,
          in->buildindex = 1;
          break;
 
-      case 'a':               // and/or
-         in->andor = OR;
+      case 'a':
+         {
+             int a = -1;
+             INSTALL_INT(&a, optarg, 0, 2, "-a", &retval);
+             in->process_sql = a;
+         }
          break;
 
       case 'n':

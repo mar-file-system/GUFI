@@ -8,7 +8,9 @@ options:
   -T <SQL_tsum>          SQL for tree-summary table
   -S <SQL_sum>           SQL for summary table
   -E <SQL_ent>           SQL for entries table
-  -a                     AND/OR (SQL query combination)
+  -a <0|1|2>             0 - if returned row, run next SQL, else stop (continue descent) (default)
+                         1 - skip T, run S and E whether or not a row was returned (old -a)
+                         2 - run T, S, and E whether or not a row was returned
   -n <threads>           number of threads
   -j                     print the information in terse form
   -o <out_fname>         output file (one-per-thread, with thread-id suffix)
@@ -92,6 +94,23 @@ unusual#? directory ,
 unusual, name?#
 writable
 
+# Get only non-directory names despite -S not returning anything
+$ gufi_query -d " " -n 2 -a 2 -S "SELECT name FROM vrsummary WHERE name == '';" -E "SELECT name FROM vrpentries;" "prefix"
+.hidden
+1KB
+1MB
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
 # Get number of subdirectories
 $ gufi_query -d " " -n 2 -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "prefix"
 prefix 4
@@ -102,7 +121,7 @@ prefix/leaf_directory 0
 prefix/unusual#? directory , 0
 
 # Get relative paths of all directories and non-directories ascending names
-$ gufi_query -d " " -n 2 -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix"
+$ gufi_query -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix"
 prefix
 prefix/.hidden
 prefix/1KB
@@ -125,7 +144,7 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # Get relative paths of all directories and non-directories descending names
-$ gufi_query -d " " -n 2 -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
+$ gufi_query -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
 prefix/unusual#? directory ,/unusual, name?#
 prefix/unusual#? directory ,
 prefix/repeat_name
@@ -148,7 +167,7 @@ prefix/.hidden
 prefix
 
 # Get relative paths of all directories and non-directories ascending sizes (files only)
-$ gufi_query -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
+$ gufi_query -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
 prefix/old_file
 prefix/directory/executable
 prefix/directory/readonly
@@ -163,7 +182,7 @@ prefix/1KB
 prefix/1MB
 
 # Get relative paths of all directories and non-directories descending sizes (files only)
-$ gufi_query -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
+$ gufi_query -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
 prefix/1MB
 prefix/1KB
 prefix/unusual#? directory ,/unusual, name?#
@@ -254,7 +273,7 @@ $ gufi_query -u -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidde
 00000027
 
 # Output TLV columns (with aggregation)
-$ gufi_query -u -d " " -n 2 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix" | hexlify.py
+$ gufi_query -u -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix" | hexlify.py
 00000000 2d00 0000 0000 0000 0200 0000 030d 0000
 00000001 0000 0000 0073 6561 7263 682f 7072 6566
 00000002 6978 0102 0000 0000 0000 0031 37
@@ -400,7 +419,7 @@ Error: Could not run SQL Init "create" on outdb.0: incomplete input
 # Modify Index                      #
 #####################################
 # Attempt to modify databases in read-only mode
-$ gufi_query -a -S "UPDATE summary SET inode = 0;" -E "UPDATE entries SET inode = 0;" "prefix"
+$ gufi_query -a 1 -S "UPDATE summary SET inode = 0;" -E "UPDATE entries SET inode = 0;" "prefix"
 Error: attempt to write a readonly database: prefix/db.db: "UPDATE entries SET inode = 0;"
 Error: attempt to write a readonly database: prefix/db.db: "UPDATE summary SET inode = 0;"
 Error: attempt to write a readonly database: prefix/directory/db.db: "UPDATE entries SET inode = 0;"
@@ -415,13 +434,13 @@ Error: attempt to write a readonly database: prefix/unusual%23%3f directory ,/db
 Error: attempt to write a readonly database: prefix/unusual%23%3f directory ,/db.db: "UPDATE summary SET inode = 0;"
 
 # Use write mode to modify databases
-$ gufi_query -a -w -S "UPDATE summary SET inode = 0;" -E "UPDATE entries SET inode = 0;" "prefix"
+$ gufi_query -a 1 -w -S "UPDATE summary SET inode = 0;" -E "UPDATE entries SET inode = 0;" "prefix"
 
 # Negative check to see if changes have been applied
-$ gufi_query -a -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode != 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode != 0;" "prefix"
+$ gufi_query -a 1 -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode != 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode != 0;" "prefix"
 
 # Positive check to see if changes have been applied
-$ gufi_query -a -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode == 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode == 0;" "prefix"
+$ gufi_query -a 1 -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode == 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode == 0;" "prefix"
 prefix 0
 prefix/.hidden 0
 prefix/1KB 0

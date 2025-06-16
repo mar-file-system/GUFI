@@ -545,7 +545,7 @@ GUFI query is
    gufi_query \
     -n 1 \
     -B 4096 \
-    -a \
+    -a 1 \
     -d ' ' \
     -I 'CREATE TABLE out (name TEXT, size INT64, type TEXT)' \
     -S 'INSERT INTO out SELECT rpath(sname, sroll), size, type FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
@@ -667,7 +667,7 @@ prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
-$ gufi_query -a -w -E "UPDATE entries SET inode = 0, uid = 0, gid = 0;" "search"
+$ gufi_query -a 1 -w -E "UPDATE entries SET inode = 0, uid = 0, gid = 0;" "search"
 
 
 $ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y" -type f

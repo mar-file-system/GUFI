@@ -147,6 +147,7 @@ GUFI_DIR2INDEX_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_dir2index_distribute
 GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
 GUFI_DIR2TRACE_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_dir2trace_distributed"
 GUFI_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_distributed.py"
+GUFI_DU="${GUFI_TOOL} du"
 GUFI_FIND="${GUFI_TOOL} find"
 GUFI_GETFATTR="${GUFI_TOOL} getfattr"
 GUFI_INDEX2DIR="@CMAKE_BINARY_DIR@/src/gufi_index2dir"
@@ -221,6 +222,7 @@ replace() {
     s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g;
     s/${GUFI_DIR2TRACE_DISTRIBUTED//\//\\/}/gufi_dir2trace_distributed/g;
     s/${GUFI_DISTRIBUTED//\//\\/}/gufi_distributed.py/g;
+    s/${GUFI_DU//\//\\/}/gufi_du/g;
     s/${GUFI_FIND//\//\\/}/gufi_find/g;
     s/${GUFI_GETFATTR//\//\\/}/gufi_getfattr/g;
     s/${GUFI_INDEX2DIR//\//\\/}/gufi_index2dir/g;
@@ -338,7 +340,7 @@ clean_index() {
     # update xattrs to point to updated inodes
     # do this before updating summary/entries to be able to use actual inodes
     "${GUFI_QUERY}" \
-        -a \
+        -a 1 \
         -x \
         -w \
         -I "CREATE TABLE temp_xattrs (inode TEXT, name TEXT, value TEXT);" \
@@ -348,7 +350,7 @@ clean_index() {
 
     # update summary and entries columns
     "${GUFI_QUERY}" \
-        -a \
+        -a 1 \
         -w \
         -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \
         -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \

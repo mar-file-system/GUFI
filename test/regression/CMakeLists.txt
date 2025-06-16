@@ -89,7 +89,16 @@ set(BINARIES
   run_vt
 )
 
-set(PYTHON
+set(PYTHON)
+
+# gufi_du results are only valid on linux
+if (UNIX AND NOT APPLE AND NOT DARWIN AND NOT CYGWIN)
+  list(APPEND PYTHON
+    gufi_du
+  )
+endif()
+
+list(APPEND PYTHON
   gufi_find
   gufi_getfattr
   gufi_ls

@@ -112,6 +112,7 @@ int zeroit(struct sum *summary)
   summary->maxatime=LLONG_MIN;
   summary->minblocks=LLONG_MAX;
   summary->maxblocks=LLONG_MIN;
+  summary->totblocks=0;
   summary->totxattr=0;
   summary->totsubdirs=0;
   summary->maxsubdirfiles=LLONG_MIN;
@@ -151,6 +152,7 @@ int sumit(struct sum *summary, struct work *work, struct entry_data *ed) {
 
      if (work->statuso.st_blocks < summary->minblocks) summary->minblocks=work->statuso.st_blocks;
      if (work->statuso.st_blocks > summary->maxblocks) summary->maxblocks=work->statuso.st_blocks;
+     summary->totblocks+=work->statuso.st_blocks;
   }
   if (ed->type == 'l') {
      summary->totlinks++;
@@ -239,6 +241,7 @@ int tsumit(struct sum *sumin, struct sum *smout) {
     if (sumin->maxossint4 > smout->maxossint4) smout->maxossint4=sumin->maxossint4;
   }
 
+  smout->totblocks  += sumin->totblocks;
   smout->totzero    += sumin->totzero;
   smout->totltk     += sumin->totltk;
   smout->totmtk     += sumin->totmtk;

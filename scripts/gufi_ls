@@ -63,25 +63,11 @@
 
 import argparse
 import os
-import re
 import subprocess
 import sys
 
 import gufi_common
 import gufi_config
-
-SIZES = [
-#   1024  1000  1024
-    'K',  'KB', 'KiB',
-    'M',  'MB', 'MiB',
-    'G',  'GB', 'GiB',
-    'T',  'TB', 'TiB',
-    'P',  'PB', 'PiB',
-    'E',  'EB', 'EiB',
-    # uint64_t can't go this high
-    # 'Z',  'ZB', 'ZiB',
-    # 'Y',  'YB', 'YiB',
-]
 
 def select_size(args, name):
     # --full-time implies long listing
@@ -99,15 +85,6 @@ def select_size(args, name):
 
     return [column.format(name)]
 
-FULL_TIME = 'full-iso'
-LOCALE = 'locale'
-TIME_STYLES = {
-    FULL_TIME  : '%F %T %z',
-    'long-iso' : '%F %T',
-    'iso'      : '%m-%d %R',
-    LOCALE     : '%b  %e %H:%M',
-}
-
 def select_time(args, name):
     # --full-time implies long listing
     if not args.long_listing and not args.full_time:
@@ -115,11 +92,11 @@ def select_time(args, name):
 
     # --full-time takes precedence
     if args.full_time:
-        style = FULL_TIME
+        style = gufi_common.FULL_TIME
     else:
-        style = args.time_style if args.time_style else 'locale'
+        style = args.time_style if args.time_style else gufi_common.LOCALE
 
-    return ['strftime(\'{0}\', {1})'.format(TIME_STYLES[style], name)]
+    return ['strftime(\'{0}\', {1})'.format(gufi_common.TIME_STYLES[style], name)]
 
 def build_select(args):
     '''Build the SELECT portion of the query on the initial scan of entries'''
@@ -203,14 +180,6 @@ def build_order_by(args):
 
     return order_by
 
-def get_blocksize(value):
-    '''Make sure the input is some combination of an optional integer and/or a valid optional unit.'''
-    blocksize = re.match(r'^(\+?[0-9]*)({0})?$'.format('|'.join(SIZES)), value)
-    if (blocksize is None) or ((blocksize.group(1) != '') and (int(blocksize.group(1)) == 0)):
-        raise argparse.ArgumentTypeError('Invalid --block-size argument: \'{0}\''.format(value))
-
-    return value
-
 # argv[0] should be the command name
 def run(argv, config_path):
     # pylint: disable=too-many-statements,too-many-locals,invalid-name
@@ -234,7 +203,7 @@ def run(argv, config_path):
                         action='store_true',
                         help='do not list implied . and ..')
     parser.add_argument('--block-size',
-                        type=get_blocksize,
+                        type=gufi_common.get_blocksize,
                         help='with -l, scale sizes by SIZE when printing them')
     parser.add_argument('-B', '--ignore-backups',
                         action='store_true',
@@ -269,7 +238,7 @@ def run(argv, config_path):
                         action='store_true',
                         help='sort by file size, largest first')
     parser.add_argument('--time-style',
-                        choices=sorted(TIME_STYLES.keys()),
+                        choices=sorted(gufi_common.TIME_STYLES.keys()),
                         help='time/date format with -l')
     parser.add_argument('-t',
                         dest='mtime',
@@ -394,7 +363,7 @@ def run(argv, config_path):
             '-K', K,
             '-J', J,
             '-G', G,
-            '-a',
+            '-a', '1',
             '-B', str(config.outputbuffer)
         ]
 
