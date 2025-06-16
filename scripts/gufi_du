@@ -1,0 +1,315 @@
+#!/usr/bin/env python3
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+import argparse
+import os
+import subprocess
+import sys
+
+import gufi_common
+import gufi_config
+
+# convert 2K to 2048
+def get_blocksize(value):
+    str_val = gufi_common.get_blocksize(value)
+
+    units = 0 # number of chars to remove
+    multiplier = 1024
+    if str_val[-2:] == 'iB':
+        units -= 2
+        multiplier = 1024
+    elif str_val[-1:] == 'B':
+        units -= 1
+        multiplier = 1000
+
+    exponent = 0
+
+    prefix = str_val[units - 1]
+    if prefix in gufi_common.SIZE_EXPONENTS:
+        exponent = gufi_common.SIZE_EXPONENTS[prefix]
+        units -= 1 # remove unit prefix
+
+    return int(str_val[:units]) * (multiplier ** exponent)
+
+def blocks(octets, block_size):
+    return (octets // block_size) + ((octets % block_size) != 0)
+
+def build_expression_parser():
+    # parse the arguments
+    parser = argparse.ArgumentParser('gufi_du', description='GUFI version of du', add_help=False)
+
+    # override help to not use -h
+    parser.add_argument('--help',
+                        action='help',
+                        help='show this help message and exit')
+
+    parser.add_argument('--version', '-v',
+                        action='version',
+                        version=gufi_common.VERSION)
+
+    parser.add_argument('-B', '--block-size',
+                        metavar='SIZE',
+                        type=get_blocksize,
+                        # no default; need to check if this was set by caller
+                        help='scale sizes by SIZE before printing them')
+
+    parser.add_argument('-c', '--total',
+                        action='store_true',
+                        help='produce a grand total')
+
+    parser.add_argument('-s', '--summarize',
+                        action='store_true',
+                        help='display only a total for each argument')
+
+    parser.add_argument('paths',
+                        type=str,
+                        action='append',
+                        nargs='*')
+
+    # GUFI specific arguments
+    gufi_common.add_common_flags(parser)
+
+    return parser
+
+# no flags
+# print all directories
+#
+# for each input path
+#     capture stdout
+#     convert sizes to block count
+#     print block count and path
+def none():
+    return [
+        '-S', 'SELECT totsize, rpath(sname, sroll) FROM {0};'.format(gufi_common.VRSUMMARY),
+    ]
+
+# -s
+# print single size for each input path
+#
+# for each input path
+#     capture stdout
+#     sum current input path size
+#     print current input path size as block count
+def summarize():
+    return [
+        '-S', 'SELECT totsize FROM {0};'.format(gufi_common.VRSUMMARY),
+    ]
+
+# -c
+# print all directories
+# print final total at end of program (not end of current input path)
+#
+# for each input path
+#     capture stdout
+#     convert sizes to block count
+#     print block count and path
+#     add to global size
+# print global size
+def total():
+    # get individual sizes (of directories)
+    return [
+        '-a', '2', # if -T returns a value, stop; otherwise, run -S and go down
+        '-I', 'CREATE TABLE intermediate(totsize INT64, path TEXT);',
+        '-T', 'INSERT INTO  intermediate SELECT totsize, path() FROM {0}; SELECT \'\' FROM {0} LIMIT 1;'.format(gufi_common.TREESUMMARY),
+        '-S', 'INSERT INTO  intermediate SELECT totsize, rpath(sname, sroll) FROM {0}; SELECT \'\' FROM {0} LIMIT 1;'.format(gufi_common.VRSUMMARY),
+        '-K', 'CREATE TABLE aggregate(totsize INT64, path TEXT);',
+        '-J', 'INSERT INTO  aggregate SELECT totsize, path FROM intermediate;',
+        '-G', 'SELECT totsize, path FROM aggregate;',
+    ]
+
+# -s -c
+# print single size for each input path
+# print final total at end of program (not end of current input path)
+#
+# for each input path
+#     capture stdout
+#     sum current input path size
+#     print current input path size as block count
+# print global size
+#
+def summarize_total():
+    # sum all sizes (of directories)
+    return [
+        '-a', '2', # if -T returns a value, stop; otherwise, run -S and go down
+        '-I', 'CREATE TABLE intermediate(totsize INT64);',
+        '-T', 'INSERT INTO  intermediate SELECT totsize FROM {0}; SELECT \'\';'.format(gufi_common.TREESUMMARY),
+        '-S', 'INSERT INTO  intermediate SELECT totsize FROM {0}; SELECT \'\';'.format(gufi_common.VRSUMMARY),
+        '-K', 'CREATE TABLE aggregate(totsize INT64);',
+        '-J', 'INSERT INTO  aggregate SELECT totsize FROM intermediate;',
+        '-G', 'SELECT SUM(totsize) FROM aggregate;',
+    ]
+
+# index with (total << 1) | summarize
+FLAG_COMBOS = [
+    none,
+    summarize,
+    total,
+    summarize_total
+]
+
+# argv[0] should be the command name
+def run(argv, config_path):
+    # pylint: disable=too-many-locals,too-many-branches
+
+    # find and parse the configuration file first
+    config = gufi_config.Server(config_path)
+
+    parser = build_expression_parser()
+    args = parser.parse_args(argv[1:])
+
+    # return code
+    rc = 0
+
+    # at least 1 argument
+    if len(args.paths[0]) == 0:
+        args.paths = [['.']]
+
+    # make sure at least one path was processed
+    processed_paths = 0
+
+    # get block size from user input
+    block_size = args.block_size if args.block_size else 1024
+
+    # total blocks of all input paths for -c (including rounding up)
+    # if treesummary is found, will not include rounding up
+    total_blocks = 0
+
+    for path in args.paths[0]:
+        # prepend the provided paths with the GUFI index root
+        fullpath = os.path.normpath(os.path.sep.join([config.indexroot, path]))
+
+        # keep only paths that are subdirectories of the index root
+        if not gufi_common.in_index(fullpath, config.indexroot, path):
+            continue
+
+        processed_paths += 1
+
+        if not os.path.isdir(fullpath):
+            raise RuntimeError('"{0}" is not a path'.format(path))
+
+        # create the base command
+        query_cmd = [
+            config.query,
+            '-d', args.delim,
+            '-n', str(config.threads),
+        ] + FLAG_COMBOS[(args.total << 1) | args.summarize]()
+
+        if args.verbose:
+            gufi_common.print_query(query_cmd + [fullpath])
+
+        query = subprocess.Popen(query_cmd + [fullpath], # pylint: disable=consider-using-with
+                                 stdout=subprocess.PIPE)
+
+        # number of blocks used by the current input path (including rounding up)
+        # if treesummary is found, will not include rounding up
+        dir_blocks = 0
+
+        while True:
+            line = query.stdout.readline()
+            if not line:
+                break
+
+            line = line.strip().decode()
+
+            # handle empty lines where queries pulled data
+            if line == '':
+                continue
+
+            if args.summarize:
+                size = line
+            else:
+                size, name = line.split(args.delim)
+
+            # number of blocks used by this directory (including rounding up)
+            # if treesummary is found, will not include rounding up
+            dir_size = int(size)
+            block_count = blocks(dir_size, block_size)
+
+            # -s/--summarize removes individual prints
+            if not args.summarize:
+                # pylint: disable=possibly-used-before-assignment
+                print('{0}{1}{2}'.format(block_count, args.delim, name))
+
+            dir_blocks += block_count
+
+        # -s/--summarize prints a combined size at the end of the current input path
+        if args.summarize:
+            print('{0}{1}{2}'.format(dir_blocks, args.delim, path))
+
+        if args.total:
+            total_blocks += dir_blocks
+
+        if query.returncode != 0:
+            rc = 2
+
+    # print total size of all input directories
+    if args.total:
+        print('{0}{1}total'.format(total_blocks, args.delim))
+
+    if processed_paths == 0:
+        rc = 2
+
+    return rc
+
+if __name__ == '__main__':
+    sys.exit(run(sys.argv, gufi_config.PATH))

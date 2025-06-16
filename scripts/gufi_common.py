@@ -75,6 +75,40 @@ else:
 
 VERSION = '@VERSION_STRING@'
 
+# how many 1024s to multiply together
+SIZE_EXPONENTS = {
+    'K':   1,
+    'M':   2,
+    'G':   3,
+    'T':   4,
+    'P':   5,
+    'E':   6,
+    # 'Z':   7,
+    # 'Y':   8,
+}
+
+SIZES = [
+#   1024  1000  1024
+    'K',  'KB', 'KiB',
+    'M',  'MB', 'MiB',
+    'G',  'GB', 'GiB',
+    'T',  'TB', 'TiB',
+    'P',  'PB', 'PiB',
+    'E',  'EB', 'EiB',
+    # uint64_t can't go this high
+    # 'Z',  'ZB', 'ZiB',
+    # 'Y',  'YB', 'YiB',
+]
+
+FULL_TIME = 'full-iso'
+LOCALE = 'locale'
+TIME_STYLES = {
+    FULL_TIME  : '%F %T %z',
+    'long-iso' : '%F %T',
+    'iso'      : '%m-%d %R',
+    LOCALE     : '%b  %e %H:%M',
+}
+
 # sqlite3 types (not defined in standard sqlite3.py)
 # https://www.sqlite.org/datatype3.html
 # 2. Storage Classes and Datatypes
@@ -158,6 +192,14 @@ def get_size(value):
     '''Make sure the value matches [+/-]n[bcwkMG].'''
     if not re.match('^[+-]?[0-9]+[bcwkMG]?$', value):
         raise argparse.ArgumentTypeError("{0} is not a valid size".format(value))
+    return value
+
+def get_blocksize(value):
+    '''Make sure the input is some combination of an optional integer and/or a valid optional unit.'''
+    blocksize = re.match(r'^(\+?[0-9]*)({0})?$'.format('|'.join(SIZES)), value)
+    if (blocksize is None) or ((blocksize.group(1) != '') and (int(blocksize.group(1)) == 0)):
+        raise argparse.ArgumentTypeError('Invalid --block-size argument: \'{0}\''.format(value))
+
     return value
 
 def get_port(port):

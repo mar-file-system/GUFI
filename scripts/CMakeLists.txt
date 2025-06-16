@@ -62,6 +62,7 @@
 
 # gufi_* scripts
 set(TOOLS
+  du
   find
   getfattr
   ls
