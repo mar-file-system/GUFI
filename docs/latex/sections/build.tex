@@ -207,11 +207,20 @@ Some files are installed into system paths that are not
   \hline
   \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
-  \texttt{CONFIG\_FILE=<FILEPATH>} & Path of configuration file used by scripts. \\
-                                   & Defaults to \guficonfigfile. \\
-                                   & Note that many paths will conflict with the paths of other \\
-                                   & packages if installing GUFI via package. If installing GUFI \\
-                                   & with \texttt{make install}, point to a convenient location. \\
+  \texttt{CONFIG\_CLIENT=<FILEPATH>} & Path of configuration file used by scripts. \\
+  \texttt{CONFIG\_SERVER=<FILEPATH>} & \\
+                                     & Two different paths are available in case the server and client\\
+                                     & deployments place their configuration files at different \\
+                                     & locations. \\
+                                     & \\
+                                     & Both default to \guficonfigfile. \\
+                                     & \\
+                                     & When \texttt{CLIENT=Off}, \texttt{CONFIG\_SERVER} is used as the location of \\
+                                     & the configuration file. \\
+                                     & \\
+                                     & Note that many paths will conflict with the paths of other \\
+                                     & packages if installing GUFI via package. If installing GUFI \\
+                                     & with \texttt{make install}, point to a convenient location. \\
   \hline
   \texttt{BASH\_COMPLETION=<On|Off>} & Whether or not to install bash completion script to \\
                                      & \texttt{/etc/bash\_completion.d} (default: On). \\

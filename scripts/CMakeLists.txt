@@ -136,13 +136,17 @@ set(LIBRARIES
 )
 
 foreach(LIBRARY ${LIBRARIES})
+  set(CONFIG_FILE "${CONFIG_SERVER}")
   configure_file("${LIBRARY}" "${LIBRARY}" @ONLY)
 
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}" DESTINATION "${LIB}" COMPONENT Server)
 
   # when running make install, client files will not overwrite server files
   if (CLIENT)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}" DESTINATION "${LIB}" COMPONENT Client)
+    set(CONFIG_FILE "${CONFIG_CLIENT}")
+    configure_file("${LIBRARY}" "client_${LIBRARY}" @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/client_${LIBRARY}" DESTINATION "${LIB}" COMPONENT Client
+      RENAME "${LIBRARY}")
   endif()
 endforeach()
 

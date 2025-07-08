@@ -79,7 +79,8 @@ Total number of leaf directories under the provided path
 .Sh FILES
 .Bl -tag -width -compact
 .It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_stats
-.It Pa @CONFIG_FILE@
+.It Pa @CONFIG_SERVER@
+.It Pa @CONFIG_CLIENT@
 .El
 
 .\" .Sh BUGS
