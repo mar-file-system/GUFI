@@ -63,46 +63,57 @@
 include(ProcessorCount)
 ProcessorCount(CORES)
 
-set(CONFIG_FILE "/etc/GUFI/config" CACHE FILEPATH "Where high level GUFI tools will look for configuration")
-if (NOT IS_ABSOLUTE "${CONFIG_FILE}")
-  message(FATAL_ERROR "CONFIG_FILE must be set to absolute path")
-endif()
-if (EXISTS "${CONFIG_FILE}")
-  if (APPLE OR DARWIN)
-    execute_process(COMMAND stat -L -f "%HT" "${CONFIG_FILE}"
-      OUTPUT_VARIABLE CONFIG_FILE_TYPE
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    if (NOT CONFIG_FILE_TYPE STREQUAL "Regular File")
-      message(FATAL_ERROR "CONFIG_FILE must point to a file. Got ${CONFIG_FILE_TYPE}")
-    endif()
-  else()
-    execute_process(COMMAND stat --dereference --format "%F" "${CONFIG_FILE}"
-      OUTPUT_VARIABLE CONFIG_FILE_TYPE
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
-      message(FATAL_ERROR "CONFIG_FILE must point to a file. Got ${CONFIG_FILE_TYPE}")
+set(CONFIG_DEFAULT "/etc/GUFI/config")
+
+function(config_file var_name type)
+  set("${var_name}" "${CONFIG_DEFAULT}" CACHE FILEPATH "Where high level GUFI tools will look for the ${type} configuration")
+  if (NOT IS_ABSOLUTE "${${var_name}}")
+    message(FATAL_ERROR "${var_name} must be set to absolute path")
+  endif()
+  if (EXISTS "${${var_name}}")
+    if (APPLE OR DARWIN)
+      execute_process(COMMAND stat -L -f "%HT" "${${var_name}}"
+        OUTPUT_VARIABLE CONFIG_FILE_TYPE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      if (NOT CONFIG_FILE_TYPE STREQUAL "Regular File")
+        message(FATAL_ERROR "${var_name} must point to a file. Got ${CONFIG_FILE_TYPE}")
+      endif()
+    else()
+      execute_process(COMMAND stat --dereference --format "%F" "${${var_name}}"
+        OUTPUT_VARIABLE CONFIG_FILE_TYPE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
+        message(FATAL_ERROR "${var_name} must point to a file. Got ${CONFIG_FILE_TYPE}")
+      endif()
     endif()
   endif()
-endif()
-if (NOT CONFIG_FILE STREQUAL "/etc/GUFI/config")
-  message(WARNING "CONFIG_FILE ${CONFIG_FILE} may conflict with filesystem package when installing GUFI RPMs")
-endif()
+  if (NOT "${${var_name}}" STREQUAL "${CONFIG_DEFAULT}")
+    message(WARNING "${var_name} ${${var_name}} may conflict with filesystem package when installing GUFI RPMs")
+  endif()
+endfunction()
 
-get_filename_component(CONFIG_FILE_PARENT "${CONFIG_FILE}" DIRECTORY)
+config_file(CONFIG_SERVER "server")
+if (CLIENT)
+  config_file(CONFIG_CLIENT "client")
+endif()
 
 if (CLIENT)
+  get_filename_component(CONFIG_CLIENT_PARENT "${CONFIG_CLIENT}" DIRECTORY)
+
   # client config
   # copy the hard coded client example file
   configure_file(client.example.in "${CMAKE_BINARY_DIR}/client.example" @ONLY)
 
   # make install and rpm
   install(FILES "${CMAKE_BINARY_DIR}/client.example"
-          DESTINATION "${CONFIG_FILE_PARENT}"
+          DESTINATION "${CONFIG_CLIENT_PARENT}"
           PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
           COMPONENT Client)
 endif()
+
+get_filename_component(CONFIG_SERVER_PARENT "${CONFIG_SERVER}" DIRECTORY)
 
 # server config
 # copy the hard coded server example file
@@ -110,6 +121,6 @@ configure_file(server.example.in "${CMAKE_BINARY_DIR}/server.example" @ONLY)
 
 # make install and rpm
 install(FILES "${CMAKE_BINARY_DIR}/server.example"
-        DESTINATION "${CONFIG_FILE_PARENT}"
+        DESTINATION "${CONFIG_SERVER_PARENT}"
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
         COMPONENT Server)

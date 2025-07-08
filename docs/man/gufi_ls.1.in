@@ -69,7 +69,8 @@ Size of each thread's output buffer
 .Sh FILES
 .Bl -tag -width -compact
 .It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_ls
-.It Pa @CONFIG_FILE@
+.It Pa @CONFIG_SERVER@
+.It Pa @CONFIG_CLIENT@
 .El
 
 .\" .Sh BUGS
