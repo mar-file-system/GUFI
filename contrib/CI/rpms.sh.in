@@ -82,7 +82,7 @@ rpm -ql gufi-client*.rpm | sort
 dnf install -y gufi-server-*.rpm
 
 # compare the configuration files
-@DIFF@ server.example "$(dirname @CONFIG_FILE@)/server.example"
+@DIFF@ server.example "$(dirname @CONFIG_SERVER@)/server.example"
 
 # uninstall GUFI-Server
 dnf autoremove -y GUFI-Server
@@ -94,4 +94,4 @@ python3 -m pip install --upgrade pip
 dnf install -y gufi-client-*.rpm
 
 # compare the configuration files
-@DIFF@ client.example "$(dirname @CONFIG_FILE@)/client.example"
+@DIFF@ client.example "$(dirname @CONFIG_CLIENT@)/client.example"
