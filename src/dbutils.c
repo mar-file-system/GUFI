@@ -742,8 +742,58 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     char *pinode = ip[1];
 
     char sqlstmt[MAXSQL];
-    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES ('%s', '%s', %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
-             inode, pinode, su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize, su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totzero, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks, su->totblocks, su->totxattr, depth, su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4, su->maxossint4, su->totossint4, su->totextdbs, rectype, uid, gid);
+    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES ("
+             "'%s', '%s', "       /* inode, pinode, */
+             "%lld, "             /* su->totsubdirs, */
+             "%lld, %lld, %lld, " /* su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize, */
+             "%lld, %lld, "       /* su->totfiles, su->totlinks, */
+             "%lld, %lld, "       /* su->minuid, su->maxuid, */
+             "%lld, %lld, "       /* su->mingid, su->maxgid, */
+             "%lld, %lld, "       /* su->minsize, su->maxsize, */
+             "%lld, "             /* su->totzero, */
+             "%lld, %lld, "       /* su->totltk, su->totmtk, */
+             "%lld, %lld, "       /* su->totltm, su->totmtm, */
+             "%lld, %lld, "       /* su->totmtg, su->totmtt, */
+             "%lld, "             /* su->totsize, */
+             "%lld, %lld, "       /* su->minctime, su->maxctime, */
+             "%lld, %lld, "       /* su->minmtime, su->maxmtime, */
+             "%lld, %lld, "       /* su->minatime, su->maxatime, */
+             "%lld, %lld, %lld, " /* su->minblocks, su->maxblocks, su->totblocks, */
+             "%lld, "             /* su->totxattr, */
+             "%d, "               /* depth, */
+             "%lld, %lld, "       /* su->mincrtime, su->maxcrtime, */
+             "%lld, %lld, %lld, " /* su->minossint1, su->maxossint1, su->totossint1, */
+             "%lld, %lld, %lld, " /* su->minossint2, su->maxossint2, su->totossint2, */
+             "%lld, %lld, %lld, " /* su->minossint3, su->maxossint3, su->totossint3, */
+             "%lld, %lld, %lld, " /* su->minossint4, su->maxossint4, su->totossint4, */
+             "%lld, "             /* su->totextdbs, */
+             "%d, %d, %d"         /* rectype, uid, gid, */
+             ");",
+             inode, pinode,
+             su->totsubdirs,
+             su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize,
+             su->totfiles, su->totlinks,
+             su->minuid, su->maxuid,
+             su->mingid, su->maxgid,
+             su->minsize, su->maxsize,
+             su->totzero,
+             su->totltk, su->totmtk,
+             su->totltm, su->totmtm,
+             su->totmtg, su->totmtt,
+             su->totsize,
+             su->minctime, su->maxctime,
+             su->minmtime, su->maxmtime,
+             su->minatime, su->maxatime,
+             su->minblocks, su->maxblocks, su->totblocks,
+             su->totxattr,
+             depth,
+             su->mincrtime, su->maxcrtime,
+             su->minossint1, su->maxossint1, su->totossint1,
+             su->minossint2, su->maxossint2, su->totossint2,
+             su->minossint3, su->maxossint3, su->totossint3,
+             su->minossint4, su->maxossint4, su->totossint4,
+             su->totextdbs,
+             rectype, uid, gid);
 
     free(pinode);
     free(inode);
