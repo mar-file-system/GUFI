@@ -1,7 +1,7 @@
 #####################################
 # Run gufi_du without treesummary data
 
-# du blocks on sparse files
+# blocks (sparse files)
 $ gufi_du prefix | sort -k 2,2
 Warning: Did not get any results from gufi_query.
 Does "prefix" have treesummary data?
@@ -26,26 +26,20 @@ Does "prefix" have treesummary data?
 0 prefix
 0 total
 
-$ gufi_du --block-size 1 --total --summarize --verbose prefix
-GUFI query is
-   gufi_query \
-    -d ' ' \
-    -n 1 \
-    -y 0 \
-    -z 0 \
-    -T 'SELECT level(), isroot, treesummary.totblocks, rpath(sname, sroll) FROM treesummary LEFT JOIN vrsummary ON treesummary.inode == vrsummary.inode WHERE vrsummary.isroot == 1;' \
-    prefix
-Warning: Did not get any results from gufi_query.
-Does "prefix" have treesummary data?
-0 prefix
-0 total
-
-# du sizes
+# apparent sizes
 $ gufi_du --apparent-size prefix | sort -k 2
 Warning: Did not get any results from gufi_query.
 Does "prefix" have treesummary data?
 
 $ gufi_du --apparent-size --block-size 1 prefix | sort -k 2
+Warning: Did not get any results from gufi_query.
+Does "prefix" have treesummary data?
+
+$ gufi_du --apparent-size --block-size 2KB prefix | sort -k 2
+Warning: Did not get any results from gufi_query.
+Does "prefix" have treesummary data?
+
+$ gufi_du --apparent-size --block-size 4KiB prefix | sort -k 2
 Warning: Did not get any results from gufi_query.
 Does "prefix" have treesummary data?
 
@@ -65,15 +59,63 @@ Does "prefix" have treesummary data?
 0 prefix
 0 total
 
-$ gufi_du --apparent-size --block-size 1 --total --summarize --verbose prefix
-GUFI query is
-   gufi_query \
-    -d ' ' \
-    -n 1 \
-    -y 0 \
-    -z 0 \
-    -T 'SELECT level(), isroot, treesummary.totsize, rpath(sname, sroll) FROM treesummary LEFT JOIN vrsummary ON treesummary.inode == vrsummary.inode WHERE vrsummary.isroot == 1;' \
-    prefix
+# separate dirs
+$ gufi_du --separate-dirs prefix | sort -k 2
+0 prefix
+0 prefix/directory
+0 prefix/directory/subdirectory
+0 prefix/empty_directory
+8 prefix/leaf_directory
+0 prefix/unusual#? directory ,
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 prefix | sort -k 2
+1049624 prefix
+6 prefix/directory
+5 prefix/directory/subdirectory
+0 prefix/empty_directory
+23 prefix/leaf_directory
+15 prefix/unusual#? directory ,
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --total prefix | sort -k 2
+1049624 prefix
+6 prefix/directory
+5 prefix/directory/subdirectory
+0 prefix/empty_directory
+23 prefix/leaf_directory
+15 prefix/unusual#? directory ,
+1049673 total
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --summarize prefix
+1049624 prefix
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --total --summarize prefix
+1049624 prefix
+1049624 total
+
+$ gufi_du --separate-dirs --inodes prefix | sort -k 2
+6 prefix
+3 prefix/directory
+2 prefix/directory/subdirectory
+0 prefix/empty_directory
+2 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+
+# inodes
+$ gufi_du --inodes prefix | sort -k 2
+Warning: Did not get any results from gufi_query.
+Does "prefix" have treesummary data?
+
+$ gufi_du --inodes --total prefix | sort -k 2
+Warning: Did not get any results from gufi_query.
+Does "prefix" have treesummary data?
+0 total
+
+$ gufi_du --inodes --summarize prefix
+Warning: Did not get any results from gufi_query.
+Does "prefix" have treesummary data?
+0 prefix
+
+$ gufi_du --inodes --total --summarize prefix
 Warning: Did not get any results from gufi_query.
 Does "prefix" have treesummary data?
 0 prefix
@@ -123,7 +165,7 @@ Does "prefix" have treesummary data?
 
 $ gufi_treesummary_all search
 
-# du blocks on sparse files
+# blocks (sparse files)
 $ gufi_du prefix | sort -k 2,2
 8 prefix
 0 prefix/directory
@@ -156,19 +198,7 @@ $ gufi_du --block-size 1 --total --summarize prefix
 8192 prefix
 8192 total
 
-$ gufi_du --block-size 1 --total --summarize --verbose prefix
-GUFI query is
-   gufi_query \
-    -d ' ' \
-    -n 1 \
-    -y 0 \
-    -z 0 \
-    -T 'SELECT level(), isroot, treesummary.totblocks, rpath(sname, sroll) FROM treesummary LEFT JOIN vrsummary ON treesummary.inode == vrsummary.inode WHERE vrsummary.isroot == 1;' \
-    prefix
-8192 prefix
-8192 total
-
-# du sizes
+# apparent sizes
 $ gufi_du --apparent-size prefix | sort -k 2
 1026 prefix
 1 prefix/directory
@@ -184,6 +214,22 @@ $ gufi_du --apparent-size --block-size 1 prefix | sort -k 2
 0 prefix/empty_directory
 23 prefix/leaf_directory
 15 prefix/unusual#? directory ,
+
+$ gufi_du --apparent-size --block-size 2KB prefix | sort -k 2
+525 prefix
+1 prefix/directory
+1 prefix/directory/subdirectory
+0 prefix/empty_directory
+1 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+
+$ gufi_du --apparent-size --block-size 4KiB prefix | sort -k 2
+257 prefix
+1 prefix/directory
+1 prefix/directory/subdirectory
+0 prefix/empty_directory
+1 prefix/leaf_directory
+1 prefix/unusual#? directory ,
 
 $ gufi_du --apparent-size --block-size 1 --total prefix | sort -k 2
 1049673 prefix
@@ -201,17 +247,71 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 prefix
 1049673 total
 
-$ gufi_du --apparent-size --block-size 1 --total --summarize --verbose prefix
-GUFI query is
-   gufi_query \
-    -d ' ' \
-    -n 1 \
-    -y 0 \
-    -z 0 \
-    -T 'SELECT level(), isroot, treesummary.totsize, rpath(sname, sroll) FROM treesummary LEFT JOIN vrsummary ON treesummary.inode == vrsummary.inode WHERE vrsummary.isroot == 1;' \
-    prefix
-1049673 prefix
+# separate dirs
+$ gufi_du --separate-dirs prefix | sort -k 2
+0 prefix
+0 prefix/directory
+0 prefix/directory/subdirectory
+0 prefix/empty_directory
+8 prefix/leaf_directory
+0 prefix/unusual#? directory ,
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 prefix | sort -k 2
+1049624 prefix
+6 prefix/directory
+5 prefix/directory/subdirectory
+0 prefix/empty_directory
+23 prefix/leaf_directory
+15 prefix/unusual#? directory ,
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --total prefix | sort -k 2
+1049624 prefix
+6 prefix/directory
+5 prefix/directory/subdirectory
+0 prefix/empty_directory
+23 prefix/leaf_directory
+15 prefix/unusual#? directory ,
 1049673 total
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --summarize prefix
+1049624 prefix
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --total --summarize prefix
+1049624 prefix
+1049624 total
+
+$ gufi_du --separate-dirs --inodes prefix | sort -k 2
+6 prefix
+3 prefix/directory
+2 prefix/directory/subdirectory
+0 prefix/empty_directory
+2 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+
+# inodes
+$ gufi_du --inodes prefix | sort -k 2
+14 prefix
+5 prefix/directory
+2 prefix/directory/subdirectory
+0 prefix/empty_directory
+2 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+
+$ gufi_du --inodes --total prefix | sort -k 2
+14 prefix
+5 prefix/directory
+2 prefix/directory/subdirectory
+0 prefix/empty_directory
+2 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+14 total
+
+$ gufi_du --inodes --summarize prefix
+14 prefix
+
+$ gufi_du --inodes --total --summarize prefix
+14 prefix
+14 total
 #####################################
 
 #####################################
@@ -219,7 +319,7 @@ GUFI query is
 
 $ gufi_rollup "search" > /dev/null 2>&1
 
-# du blocks on sparse files
+# blocks (sparse files)
 $ gufi_du prefix | sort -k 2,2
 8 prefix
 0 prefix/directory
@@ -252,19 +352,7 @@ $ gufi_du --block-size 1 --total --summarize prefix
 8192 prefix
 8192 total
 
-$ gufi_du --block-size 1 --total --summarize --verbose prefix
-GUFI query is
-   gufi_query \
-    -d ' ' \
-    -n 1 \
-    -y 0 \
-    -z 0 \
-    -T 'SELECT level(), isroot, treesummary.totblocks, rpath(sname, sroll) FROM treesummary LEFT JOIN vrsummary ON treesummary.inode == vrsummary.inode WHERE vrsummary.isroot == 1;' \
-    prefix
-8192 prefix
-8192 total
-
-# du sizes
+# apparent sizes
 $ gufi_du --apparent-size prefix | sort -k 2
 1026 prefix
 1 prefix/directory
@@ -280,6 +368,22 @@ $ gufi_du --apparent-size --block-size 1 prefix | sort -k 2
 0 prefix/empty_directory
 23 prefix/leaf_directory
 15 prefix/unusual#? directory ,
+
+$ gufi_du --apparent-size --block-size 2KB prefix | sort -k 2
+525 prefix
+1 prefix/directory
+1 prefix/directory/subdirectory
+0 prefix/empty_directory
+1 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+
+$ gufi_du --apparent-size --block-size 4KiB prefix | sort -k 2
+257 prefix
+1 prefix/directory
+1 prefix/directory/subdirectory
+0 prefix/empty_directory
+1 prefix/leaf_directory
+1 prefix/unusual#? directory ,
 
 $ gufi_du --apparent-size --block-size 1 --total prefix | sort -k 2
 1049673 prefix
@@ -297,23 +401,94 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 prefix
 1049673 total
 
-$ gufi_du --apparent-size --block-size 1 --total --summarize --verbose prefix
-GUFI query is
-   gufi_query \
-    -d ' ' \
-    -n 1 \
-    -y 0 \
-    -z 0 \
-    -T 'SELECT level(), isroot, treesummary.totsize, rpath(sname, sroll) FROM treesummary LEFT JOIN vrsummary ON treesummary.inode == vrsummary.inode WHERE vrsummary.isroot == 1;' \
-    prefix
-1049673 prefix
+# separate dirs
+$ gufi_du --separate-dirs prefix | sort -k 2
+0 prefix
+0 prefix/directory
+0 prefix/directory/subdirectory
+0 prefix/empty_directory
+8 prefix/leaf_directory
+0 prefix/unusual#? directory ,
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 prefix | sort -k 2
+1049624 prefix
+6 prefix/directory
+5 prefix/directory/subdirectory
+0 prefix/empty_directory
+23 prefix/leaf_directory
+15 prefix/unusual#? directory ,
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --total prefix | sort -k 2
+1049624 prefix
+6 prefix/directory
+5 prefix/directory/subdirectory
+0 prefix/empty_directory
+23 prefix/leaf_directory
+15 prefix/unusual#? directory ,
 1049673 total
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --summarize prefix
+1049624 prefix
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --total --summarize prefix
+1049624 prefix
+1049624 total
+
+$ gufi_du --separate-dirs --inodes prefix | sort -k 2
+6 prefix
+3 prefix/directory
+2 prefix/directory/subdirectory
+0 prefix/empty_directory
+2 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+
+# inodes
+$ gufi_du --inodes prefix | sort -k 2
+14 prefix
+5 prefix/directory
+2 prefix/directory/subdirectory
+0 prefix/empty_directory
+2 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+
+$ gufi_du --inodes --total prefix | sort -k 2
+14 prefix
+5 prefix/directory
+2 prefix/directory/subdirectory
+0 prefix/empty_directory
+2 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+14 total
+
+$ gufi_du --inodes --summarize prefix
+14 prefix
+
+$ gufi_du --inodes --total --summarize prefix
+14 prefix
+14 total
 #####################################
 
+#####################################
 # Compare treesummary and rollup results
 
+#####################################
+
+#####################################
+# Run gufi_du without arguments (index parent search/ shows up without a name)
+$ gufi_du | sort -k 2
+8
+8 prefix
+0 prefix/directory
+0 prefix/directory/subdirectory
+0 prefix/empty_directory
+8 prefix/leaf_directory
+0 prefix/unusual#? directory ,
+
+#####################################
+
+#####################################
 # Run gufi_du on a file path
-# du blocks on sparse files
+# blocks (sparse files)
 $ gufi_du prefix/1MB prefix/1KB | sort -k 2,2
 0 prefix/1KB
 0 prefix/1MB
@@ -336,28 +511,7 @@ $ gufi_du --block-size 1 --total --summarize prefix/1MB prefix/1KB
 0 prefix/1KB
 0 total
 
-$ gufi_du --block-size 1 --total --summarize --verbose prefix/1MB prefix/1KB
-GUFI query is
-   gufi_query \
-    -d ' ' \
-    -n 1 \
-    -y 0 \
-    -z 0 \
-    -E 'SELECT level(), 1, blocks, rpath(sname, sroll) || '"'"'/'"'"' || name FROM vrpentries WHERE name == '"'"'1MB'"'"';' \
-    prefix
-0 prefix/1MB
-GUFI query is
-   gufi_query \
-    -d ' ' \
-    -n 1 \
-    -y 0 \
-    -z 0 \
-    -E 'SELECT level(), 1, blocks, rpath(sname, sroll) || '"'"'/'"'"' || name FROM vrpentries WHERE name == '"'"'1KB'"'"';' \
-    prefix
-0 prefix/1KB
-0 total
-
-# du sizes
+# apparent sizes
 $ gufi_du --apparent-size prefix/1MB prefix/1KB | sort -k 2
 1 prefix/1KB
 1024 prefix/1MB
@@ -365,6 +519,14 @@ $ gufi_du --apparent-size prefix/1MB prefix/1KB | sort -k 2
 $ gufi_du --apparent-size --block-size 1 prefix/1MB prefix/1KB | sort -k 2
 1024 prefix/1KB
 1048576 prefix/1MB
+
+$ gufi_du --apparent-size --block-size 2KB prefix/1MB prefix/1KB | sort -k 2
+1 prefix/1KB
+525 prefix/1MB
+
+$ gufi_du --apparent-size --block-size 4KiB prefix/1MB prefix/1KB | sort -k 2
+1 prefix/1KB
+256 prefix/1MB
 
 $ gufi_du --apparent-size --block-size 1 --total prefix/1MB prefix/1KB | sort -k 2
 1024 prefix/1KB
@@ -380,6 +542,89 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix/1MB prefix/1
 1024 prefix/1KB
 1049600 total
 
+# separate dirs
+$ gufi_du --separate-dirs prefix/1MB prefix/1KB | sort -k 2
+0 prefix/1KB
+0 prefix/1MB
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 prefix/1MB prefix/1KB | sort -k 2
+1024 prefix/1KB
+1048576 prefix/1MB
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --total prefix/1MB prefix/1KB | sort -k 2
+1024 prefix/1KB
+1048576 prefix/1MB
+1049600 total
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --summarize prefix/1MB prefix/1KB
+1048576 prefix/1MB
+1024 prefix/1KB
+
+$ gufi_du --separate-dirs --apparent-size --block-size 1 --total --summarize prefix/1MB prefix/1KB
+1048576 prefix/1MB
+1024 prefix/1KB
+1049600 total
+
+$ gufi_du --separate-dirs --inodes prefix/1MB prefix/1KB | sort -k 2
+1 prefix/1KB
+1 prefix/1MB
+
+# inodes
+$ gufi_du --inodes prefix/1MB prefix/1KB | sort -k 2
+1 prefix/1KB
+1 prefix/1MB
+
+$ gufi_du --inodes --total prefix/1MB prefix/1KB | sort -k 2
+1 prefix/1KB
+1 prefix/1MB
+2 total
+
+$ gufi_du --inodes --summarize prefix/1MB prefix/1KB
+1 prefix/1MB
+1 prefix/1KB
+
+$ gufi_du --inodes --total --summarize prefix/1MB prefix/1KB
+1 prefix/1MB
+1 prefix/1KB
+2 total
+
+#####################################
+
+#####################################
+# Warnings/Errors
+
+# Non-existent path is treated as possible file name
+$ gufi_du "search"
+Warning: Did not get any results from gufi_query.
+Does "search" have treesummary data?
+
+# Non-existent path is discovered
+$ gufi_du "non/existent/path"
+"non/existent/path" is not a path
+
+# Outside of index
+$ gufi_du ".."
+Warning: Ignoring path "..", which is not under index root "search"
+
+$ gufi_du --inodes --apparent-size "prefix" | sort -k 2
+warning: options --apparent-size and -b are ineffective with --inodes
+14 prefix
+5 prefix/directory
+2 prefix/directory/subdirectory
+0 prefix/empty_directory
+2 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+
+$ gufi_du --inodes --block-size 1  "prefix" | sort -k 2
+warning: options --apparent-size and -b are ineffective with --inodes
+14 prefix
+5 prefix/directory
+2 prefix/directory/subdirectory
+0 prefix/empty_directory
+2 prefix/leaf_directory
+1 prefix/unusual#? directory ,
+
+# Verbose Output
 $ gufi_du --apparent-size --block-size 1 --total --summarize --verbose prefix/1MB prefix/1KB
 GUFI query is
    gufi_query \
@@ -401,3 +646,4 @@ GUFI query is
 1024 prefix/1KB
 1049600 total
 
+#####################################

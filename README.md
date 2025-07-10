@@ -56,7 +56,7 @@ gufi_query
 # create /etc/GUFI/config from /etc/GUFI/server.example
 
 # use wrapper scripts
-gufi_find/gufi_ls/gufi_getfattr/gufi_stat/gufi_stats
+gufi_du/gufi_find/gufi_ls/gufi_getfattr/gufi_stat/gufi_stats
 ```
 
 For the dependency list, detailed build and install instructions, and details about GUFI, please see the [documentation](docs/README.md).
