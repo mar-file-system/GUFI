@@ -339,12 +339,8 @@ add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/d
 
 # llama.cpp uses OpenMP (not required, but left enabled)
 if (DEP_AI)
-  if (UNIX AND NOT APPLE)
-    find_package(OpenMP REQUIRED COMPONENTS C)
-    message(STATUS "OpenMP CFLAGS: ${OpenMP_C_FLAGS}")
-  else()
-    set(OpenMP_C_FLAGS)
-  endif()
+  find_package(OpenMP REQUIRED COMPONENTS C)
+  message(STATUS "OpenMP libraries located in ${OpenMP_C_LIBRARIES}")
 endif()
 
 # Find zlib
@@ -440,12 +436,8 @@ set(COMMON_LIBRARIES
 )
 
 if (DEP_AI)
-  if (APPLE)
-    find_library(METAL Metal REQUIRED)
+  if (APPLE OR DARWIN)
     find_library(ACCELERATE Accelerate REQUIRED)
-    if (NOT ACCELERATE)
-      message(FATAL_ERROR "Could not find Accelerate Framework")
-    endif()
 
     list(APPEND COMMON_LIBRARIES
       ${ACCELERATE}
@@ -544,7 +536,18 @@ if (RPMBUILD)
   set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
   set(CPACK_RPM_PACKAGE_VENDOR "LANL")
   set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
-  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python3-pip, coreutils")
+
+  if (DEP_AI)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      set(EXTRA_DEPS ", libgomp")
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      set(EXTRA_DEPS ", libomp")
+    else()
+      message(WARNING "Please ensure OpenMP is available")
+    endif()
+  endif()
+
+  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python3-pip, coreutils ${EXTRA_DEPS}")
   set(CPACK_RPM_PACKAGE_RELOCATABLE On)
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
   set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")

@@ -87,7 +87,7 @@ if [[ ! -d "${lembed_prefix}" ]]; then
         cd "${lembed_build}/vendor/llama.cpp"
         mkdir -p build
         cd build
-        CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_install}" -DCMAKE_INSTALL_LIBDIR=lib -DLLAMA_METAL=OFF -DLLAMA_OPENMP=OFF
+        CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_install}" -DCMAKE_INSTALL_LIBDIR=lib -DLLAMA_METAL=OFF
         make -j "${THREADS}"
         make -j "${THREADS}" install
     fi

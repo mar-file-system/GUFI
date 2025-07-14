@@ -175,6 +175,7 @@ build_and_install_one("${BIN}" TRUE gufi_stat_bin gufi_stat.c)
 # gufi_sqlite3 loads AI extensions
 if (DEP_AI)
   target_compile_definitions(gufi_sqlite3 PUBLIC -DHAVE_AI=1)
+  target_compile_options(gufi_sqlite3 PUBLIC "${OpenMP_C_FLAGS}")
 endif()
 
 # gufi_query is split up into multiple files
@@ -202,6 +203,10 @@ build_and_install_one(${BIN} TRUE gufi_query
   gufi_query/main.c
   $<TARGET_OBJECTS:gufi_query_lib>
 )
+
+if (DEP_AI)
+  target_compile_options(gufi_query PUBLIC "${OpenMP_C_FLAGS}")
+endif()
 
 # dynamically loaded module extension
 if (APPLE OR DARWIN)
@@ -249,6 +254,7 @@ add_library(run_vt MODULE
 )
 set_target_properties(run_vt PROPERTIES PREFIX "")
 add_dependencies(run_vt install_dependencies)
+target_link_libraries(run_vt "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
 if (APPLE OR DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_target_properties(run_vt PROPERTIES SUFFIX ".${EXT}")
