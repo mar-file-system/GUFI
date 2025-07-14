@@ -104,7 +104,7 @@ def parse_args():
     parser.add_argument('--dry-run',        action='store_true')
     parser.add_argument('--gufi_dir2trace', metavar='path',
                         type=str,
-                        default='gufi_dir2trace')
+                        default='gufi_dir2trace.sbatch')
     parser.add_argument('--threads', '-n',  metavar='n',
                         type=gufi_common.get_positive,
                         default=1)

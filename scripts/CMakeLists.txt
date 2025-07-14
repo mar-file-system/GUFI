@@ -114,7 +114,9 @@ install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs" DESTINATION "${BIN}" COM
 
 # python files for doing distributed operations (server only)
 set(DISTRIBUTED
+  gufi_dir2index.sbatch         # sbatch wrapper for gufi_dir2index_distributed
   gufi_dir2index_distributed    # executable only
+  gufi_dir2trace.sbatch         # sbatch wrapper for gufi_dir2trace_distributed
   gufi_dir2trace_distributed    # executable only
   gufi_distributed.py           # also executable
   gufi_query_distributed        # executable only

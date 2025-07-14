@@ -148,13 +148,33 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
 
 /* create the initial xattrs database file to copy from */
 int create_xattrs_template(struct template_db *tdb) {
-    static const char name[] = "xattrs_tmp.db";
+    char name[] = "XXXXXX";
+
+    const int fd = mkstemp(name); /* duplicate open */
+    if (fd < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not create temporary xattrs db: %s (%d)\n",
+                strerror(err), err);
+        return 1;
+    }
+    close(fd);
+
     return create_template(tdb, create_xattr_tables, name);
 }
 
 /* create the initial main database file to copy from */
 int create_dbdb_template(struct template_db *tdb) {
-    static const char name[] = "tmp.db";
+    char name[] = "XXXXXX";
+
+    const int fd = mkstemp(name); /* duplicate open */
+    if (fd < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not create temporary db.db: %s (%d)\n",
+                strerror(err), err);
+        return 1;
+    }
+    close(fd);
+
     return create_template(tdb, create_dbdb_tables, name);
 }
 

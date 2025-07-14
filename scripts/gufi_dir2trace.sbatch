@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,66 +61,6 @@
 
 
 
-import gufi_common
-import gufi_distributed
+set -e
 
-# run this file with sbatch on a single node
-
-# run gufi_dir2index via sbatch
-def schedule_subtree(args, _idx, start, end):
-    cmd = [
-        args.sbatch, '--nodes=1',
-        args.gufi_dir2index,
-        '-n', str(args.threads),
-        '-y', str(args.level),
-        '-D', start, end,
-        args.input_dir,
-        args.output_dir,
-    ]
-
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
-
-def schedule_top(args, jobids):
-    print("    Index upper directories up to and including level {}".format(args.level - 1))
-
-    cmd = [args.sbatch, '--nodes=1']
-    cmd += gufi_distributed.depend_on_slurm_jobids(jobids)
-    cmd += [
-        args.gufi_dir2index,
-        '-n', str(args.threads),
-        '-z', str(args.level - 1),
-        args.input_dir,
-        args.output_dir,
-    ]
-
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
-
-def parse_args():
-    parser = gufi_distributed.parse_args('gufi_dir2index_distributed',
-                                         'Script for distributing gufi_dir2index across nodes')
-
-    parser.add_argument('--dry-run',        action='store_true')
-    parser.add_argument('--gufi_dir2index', metavar='path',
-                        type=str,
-                        default='gufi_dir2index.sbatch')
-    parser.add_argument('--threads', '-n',  metavar='n',
-                        type=gufi_common.get_positive,
-                        default=1)
-    parser.add_argument('input_dir',
-                        type=gufi_distributed.dir_arg,
-                        help='Source Tree Root')
-    parser.add_argument('output_dir',
-                        type=str,
-                        help='Index Root')
-
-    return parser.parse_args()
-
-def main():
-    args = parse_args()
-
-    gufi_distributed.distribute_work(args.input_dir, args.level, args.nodes,
-                                     lambda idx, start, end: schedule_subtree(args, idx, start, end),
-                                     lambda jobids: schedule_top(args, jobids))
-
-if __name__ == '__main__':
-    main()
+gufi_dir2trace "$@"

@@ -76,7 +76,7 @@ def run_slurm(cmd, dry_run):
 
     query = subprocess.Popen(cmd,  # pylint: disable=consider-using-with
                              stdout=subprocess.PIPE)
-    out, _ = query.communicate() # block until cmd finishes
+    out, _ = query.communicate()   # block until cmd finishes
 
     if query.returncode:
         sys.exit(query.returncode)
