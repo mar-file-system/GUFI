@@ -104,12 +104,18 @@ def group_dirs(dirs, splits):
     ordered = sorted(dirs, key=os.path.basename)
     return group_size, [ordered[i: i + group_size] for i in range(0, count, group_size)]
 
+def dir_plural(count):
+    return 'directories' if count > 1 else 'directory'
+
 # step 3
 # get only the first and last paths in each group
 # print debug messages
 # run function to schedule jobs if it exists
 def schedule_subtrees(dir_count, splits, group_size, groups, schedule_subtree):
-    print('Splitting {} directories into {} chunks of max size {}'.format(dir_count, splits, group_size))
+    print('Splitting {} {} into {} chunks of max size {}'.format(dir_count,
+                                                                 dir_plural(dir_count),
+                                                                 splits,
+                                                                 group_size))
 
     jobids = []
     for i, group in enumerate(groups):
@@ -118,7 +124,7 @@ def schedule_subtrees(dir_count, splits, group_size, groups, schedule_subtree):
         if count == 0:
             break
 
-        print('    Range {}: {} {}'.format(i, count, 'directories' if count > 1 else 'directory'))
+        print('    Range {}: {} {}'.format(i, count, dir_plural(count)))
         print('        {} {}'.format(group[0], group[-1]))
 
         if schedule_subtree is not None:
@@ -130,7 +136,7 @@ def schedule_subtrees(dir_count, splits, group_size, groups, schedule_subtree):
 
 # call this inside step 4's function
 def depend_on_slurm_jobids(jobids):
-    return ['-d', 'afterok:' + ':'.join(jobids)]
+    return ['--dependency', 'afterok:' + ':'.join(jobids)]
 
 # step 4
 # schdule job to process top-level directories that were skipped
