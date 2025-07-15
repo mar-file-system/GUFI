@@ -62,10 +62,13 @@ OF SUCH DAMAGE.
 
 
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "descend.h"
 #include "dbutils.h"
 #include "gufi_query/gqw.h"
 #include "utils.h"
@@ -86,7 +89,7 @@ size_t gqw_size(gqw_t *gqw) {
  */
 gqw_t *new_gqw_with_name(const char *prefix, const size_t prefix_len,
                          const char *basename, const size_t basename_len,
-                         int *isdir, const int next_level,
+                         const unsigned char d_type, const int next_level,
                          const char *sqlite3_prefix, const size_t sqlite3_prefix_len) {
     /* +1 for path separator */
     const size_t name_len = prefix_len + 1 + basename_len;
@@ -102,18 +105,26 @@ gqw_t *new_gqw_with_name(const char *prefix, const size_t prefix_len,
                                     "/", (size_t) 1,
                                     basename, basename_len);
 
-    if (!*isdir) {
-        /* allow for paths immediately under the input paths to be symlinks */
-        if (next_level < 2) {
-            struct stat st;
-            if (stat(gqw->work.name, &st) == 0) {
-                *isdir = S_ISDIR(st.st_mode);
-            }
-            /* errors are ignored */
+    /* allow for paths immediately under the input paths to be symlinks */
+    if (next_level < 2) {
+        if (stat(gqw->work.name, &gqw->work.statuso) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not stat \"%s\": %s (%d)\n",
+                    gqw->work.name, strerror(err), err);
+            free(gqw);
+            return NULL;
+        }
+
+        gqw->work.lstat_called = 1;
+    }
+    else {
+        if (!try_skip_lstat(d_type, &gqw->work)) {
+            free(gqw);
+            return NULL;
         }
     }
 
-    if (*isdir) {
+    if (S_ISDIR(gqw->work.statuso.st_mode)) {
         gqw->sqlite3_name = gqw->work.name + name_len + 1;
 
         /* append converted entry name to converted directory */

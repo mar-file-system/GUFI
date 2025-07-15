@@ -84,6 +84,8 @@ struct descend_counters {
     size_t external_dbs;
 };
 
+struct work *try_skip_lstat(const unsigned char d_type, struct work *work);
+
 /*
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function

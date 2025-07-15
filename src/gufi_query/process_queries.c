@@ -110,13 +110,15 @@ static size_t descend2(QPTPool_t *ctx,
                 continue;
             }
 
-            int isdir = (entry->d_type == DT_DIR);
             gqw_t *child = new_gqw_with_name(gqw->work.name, gqw->work.name_len,
                                              entry->d_name, len,
-                                             &isdir, next_level,
+                                             entry->d_type, next_level,
                                              gqw->sqlite3_name, gqw->sqlite3_name_len);
+            if (!child) {
+                continue;
+            }
 
-            if (isdir) {
+            if (S_ISDIR(child->work.statuso.st_mode)) {
                 if (subdir_within_range(in, next_level, entry->d_name, len) != 1) {
                     free(child);
                     continue;

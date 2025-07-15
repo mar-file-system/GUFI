@@ -80,6 +80,39 @@ static int work_serialize_and_free(const int fd, QPTPool_f func, void *work, siz
 }
 #endif
 
+struct work *try_skip_lstat(const unsigned char d_type, struct work *work) {
+    switch (d_type) {
+        case DT_DIR:
+            work->statuso.st_mode = S_IFDIR;
+            break;
+        case DT_LNK:
+            work->statuso.st_mode = S_IFLNK;
+            break;
+        case DT_REG:
+            work->statuso.st_mode = S_IFREG;
+            break;
+        case DT_FIFO:
+        case DT_SOCK:
+        case DT_CHR:
+        case DT_BLK:
+            break;
+        case DT_UNKNOWN:
+        default:
+            /* some filesystems don't support d_type - fall back to calling lstat */
+            if (lstat(work->name, &work->statuso) != 0) {
+                const int err = errno;
+                fprintf(stderr, "Error: Could not stat \"%s\": %s (%d)\n",
+                        work->name, strerror(err), err);
+                return NULL;
+            }
+
+            work->lstat_called = 1;
+            break;
+    }
+
+    return work;
+}
+
 /*
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function.
@@ -141,30 +174,9 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             child->root_parent = work->root_parent;
             child->pinode = inode;
 
-            switch (dir_child->d_type) {
-                case DT_DIR:
-                    child->statuso.st_mode = S_IFDIR;
-                    break;
-                case DT_LNK:
-                    child->statuso.st_mode = S_IFLNK;
-                    break;
-                case DT_REG:
-                    child->statuso.st_mode = S_IFREG;
-                    break;
-                case DT_FIFO:
-                case DT_SOCK:
-                case DT_CHR:
-                case DT_BLK:
-                    break;
-                case DT_UNKNOWN:
-                default:
-                    /* some filesystems don't support d_type - fall back to calling lstat */
-                    if (lstat(child->name, &child->statuso) != 0) {
-                        continue;
-                    }
-
-                    child->lstat_called = 1;
-                    break;
+            if (!try_skip_lstat(dir_child->d_type, child)) {
+                free(child);
+                continue;
             }
 
             /* push subdirectories onto the queue */
