@@ -10,7 +10,7 @@ GUFI query is
     -d ' ' \
     -x \
     -a 1 \
-    -S 'SELECT rpath(sname, sroll), xattr_name FROM vrxsummary WHERE ((name REGEXP '"'"'^search$'"'"')) AND (isroot == 1) AND (xattr_name REGEXP '"'"'^user\.'"'"')' \
+    -S 'SELECT substr(rpath(sname, sroll), 8), xattr_name FROM vrxsummary WHERE ((name REGEXP '"'"'^search$'"'"')) AND (isroot == 1) AND (xattr_name REGEXP '"'"'^user\.'"'"')' \
     search
 
 # 0 xattrs

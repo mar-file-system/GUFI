@@ -74,48 +74,48 @@ prefix/subsym/subdirectory
 # "prefix/subsym" does not show up in results querying from above "prefix/subsym"
 
 $ gufi_find
-user_path/prefix
-user_path/prefix/.hidden
-user_path/prefix/1KB
-user_path/prefix/1MB
-user_path/prefix/directory
-user_path/prefix/directory/executable
-user_path/prefix/directory/readonly
-user_path/prefix/directory/subdirectory
-user_path/prefix/directory/subdirectory/directory_symlink
-user_path/prefix/directory/subdirectory/repeat_name
-user_path/prefix/directory/writable
-user_path/prefix/empty_directory
-user_path/prefix/file_symlink
-user_path/prefix/leaf_directory
-user_path/prefix/leaf_directory/leaf_file1
-user_path/prefix/leaf_directory/leaf_file2
-user_path/prefix/old_file
-user_path/prefix/repeat_name
-user_path/prefix/unusual#? directory ,
-user_path/prefix/unusual#? directory ,/unusual, name?#
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
 
 $ gufi_ls -aR
-user_path/prefix
-user_path/prefix/.hidden
-user_path/prefix/1KB
-user_path/prefix/1MB
-user_path/prefix/directory
-user_path/prefix/directory/executable
-user_path/prefix/directory/readonly
-user_path/prefix/directory/subdirectory
-user_path/prefix/directory/subdirectory/directory_symlink
-user_path/prefix/directory/subdirectory/repeat_name
-user_path/prefix/directory/writable
-user_path/prefix/empty_directory
-user_path/prefix/file_symlink
-user_path/prefix/leaf_directory
-user_path/prefix/leaf_directory/leaf_file1
-user_path/prefix/leaf_directory/leaf_file2
-user_path/prefix/old_file
-user_path/prefix/repeat_name
-user_path/prefix/unusual#? directory ,
-user_path/prefix/unusual#? directory ,/unusual, name?#
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
 
 $ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "user_path"
 user_path/prefix
@@ -135,28 +135,28 @@ $ rm -r "search2/prefix/directory" "search2/prefix/leaf_directory"
 $ ln -snf "search2" "user_path"
 
 $ gufi_find
-user_path/prefix
-user_path/prefix/.hidden
-user_path/prefix/1KB
-user_path/prefix/1MB
-user_path/prefix/empty_directory
-user_path/prefix/file_symlink
-user_path/prefix/old_file
-user_path/prefix/repeat_name
-user_path/prefix/unusual#? directory ,
-user_path/prefix/unusual#? directory ,/unusual, name?#
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/empty_directory
+prefix/file_symlink
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
 
 $ gufi_ls -aR
-user_path/prefix
-user_path/prefix/.hidden
-user_path/prefix/1KB
-user_path/prefix/1MB
-user_path/prefix/empty_directory
-user_path/prefix/file_symlink
-user_path/prefix/old_file
-user_path/prefix/repeat_name
-user_path/prefix/unusual#? directory ,
-user_path/prefix/unusual#? directory ,/unusual, name?#
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/empty_directory
+prefix/file_symlink
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
 
 $ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "user_path"
 user_path/prefix

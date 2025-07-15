@@ -548,8 +548,8 @@ GUFI query is
     -a 1 \
     -d ' ' \
     -I 'CREATE TABLE out (name TEXT, size INT64, type TEXT)' \
-    -S 'INSERT INTO out SELECT rpath(sname, sroll), size, type FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
-    -E 'INSERT INTO out SELECT rpath(sname, sroll) || '"'"'/'"'"' || name, size, type FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -S 'INSERT INTO out SELECT substr(rpath(sname, sroll), 8), size, type FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -E 'INSERT INTO out SELECT substr(rpath(sname, sroll) || '"'"'/'"'"' || name, 8), size, type FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
     -J 'INSERT INTO aggregate SELECT name, size, type FROM out WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
     -K 'CREATE TABLE aggregate (name TEXT, size INT64, type TEXT)' \
     -G 'SELECT name FROM aggregate WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
@@ -671,18 +671,18 @@ $ gufi_query -a 1 -w -E "UPDATE entries SET inode = 0, uid = 0, gid = 0;" "searc
 
 
 $ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y" -type f
-% 0 0 0 2 0 0 0 - old_file 0 prefix/old_file 0 664 -rw-rw-r-- 1 prefix/old_file prefix/old_file 0 0 0 f
-% 1 0 1 3 0 0 0 - executable 0 prefix/directory/executable 0 777 -rwxrwxrwx 1 prefix/directory/executable prefix/directory/executable 1 1 0 f
-% 2 0 2 3 0 0 0 - readonly 0 prefix/directory/readonly 0 444 -r--r--r-- 1 prefix/directory/readonly prefix/directory/readonly 2 2 0 f
-% 3 0 3 3 0 0 0 - writable 0 prefix/directory/writable 0 666 -rw-rw-rw- 1 prefix/directory/writable prefix/directory/writable 3 3 0 f
-% 5 0 5 4 0 0 0 - repeat_name 0 prefix/directory/subdirectory/repeat_name 0 664 -rw-rw-r-- 1 prefix/directory/subdirectory/repeat_name prefix/directory/subdirectory/repeat_name 5 5 0 f
-% 10 0 10 2 0 0 0 - .hidden 0 prefix/.hidden 0 664 -rw-rw-r-- 1 prefix/.hidden prefix/.hidden 10 10 0 f
-% 11 0 11 3 0 0 0 - leaf_file1 0 prefix/leaf_directory/leaf_file1 0 664 -rw-rw-r-- 1 prefix/leaf_directory/leaf_file1 prefix/leaf_directory/leaf_file1 11 11 0 f
-% 12 0 12 3 0 0 0 - leaf_file2 0 prefix/leaf_directory/leaf_file2 0 664 -rw-rw-r-- 1 prefix/leaf_directory/leaf_file2 prefix/leaf_directory/leaf_file2 12 12 0 f
-% 14 0 14 2 0 0 0 - repeat_name 0 prefix/repeat_name 0 664 -rw-rw-r-- 1 prefix/repeat_name prefix/repeat_name 14 14 0 f
-% 15 0 15 3 0 0 0 - unusual, name?# 0 prefix/unusual#? directory ,/unusual, name?# 0 664 -rw-rw-r-- 1 prefix/unusual#? directory ,/unusual, name?# prefix/unusual#? directory ,/unusual, name?# 15 15 0 f
-% 1024 0 1024 2 0 0 0 - 1KB 0 prefix/1KB 0 664 -rw-rw-r-- 1 prefix/1KB prefix/1KB 1024 1024 0 f
-% 1048576 0 1048576 2 0 0 0 - 1MB 0 prefix/1MB 0 664 -rw-rw-r-- 1 prefix/1MB prefix/1MB 1048576 1048576 0 f
+% 0 0 0 2 0 0 0 - old_file 0 prefix/old_file 0 664 -rw-rw-r-- 1 prefix/old_file old_file 0 0 0 f
+% 1 0 1 3 0 0 0 - executable 0 prefix/directory/executable 0 777 -rwxrwxrwx 1 prefix/directory/executable directory/executable 1 1 0 f
+% 2 0 2 3 0 0 0 - readonly 0 prefix/directory/readonly 0 444 -r--r--r-- 1 prefix/directory/readonly directory/readonly 2 2 0 f
+% 3 0 3 3 0 0 0 - writable 0 prefix/directory/writable 0 666 -rw-rw-rw- 1 prefix/directory/writable directory/writable 3 3 0 f
+% 5 0 5 4 0 0 0 - repeat_name 0 prefix/directory/subdirectory/repeat_name 0 664 -rw-rw-r-- 1 prefix/directory/subdirectory/repeat_name directory/subdirectory/repeat_name 5 5 0 f
+% 10 0 10 2 0 0 0 - .hidden 0 prefix/.hidden 0 664 -rw-rw-r-- 1 prefix/.hidden .hidden 10 10 0 f
+% 11 0 11 3 0 0 0 - leaf_file1 0 prefix/leaf_directory/leaf_file1 0 664 -rw-rw-r-- 1 prefix/leaf_directory/leaf_file1 leaf_directory/leaf_file1 11 11 0 f
+% 12 0 12 3 0 0 0 - leaf_file2 0 prefix/leaf_directory/leaf_file2 0 664 -rw-rw-r-- 1 prefix/leaf_directory/leaf_file2 leaf_directory/leaf_file2 12 12 0 f
+% 14 0 14 2 0 0 0 - repeat_name 0 prefix/repeat_name 0 664 -rw-rw-r-- 1 prefix/repeat_name repeat_name 14 14 0 f
+% 15 0 15 3 0 0 0 - unusual, name?# 0 prefix/unusual#? directory ,/unusual, name?# 0 664 -rw-rw-r-- 1 prefix/unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 15 15 0 f
+% 1024 0 1024 2 0 0 0 - 1KB 0 prefix/1KB 0 664 -rw-rw-r-- 1 prefix/1KB 1KB 1024 1024 0 f
+% 1048576 0 1048576 2 0 0 0 - 1MB 0 prefix/1MB 0 664 -rw-rw-r-- 1 prefix/1MB 1MB 1048576 1048576 0 f
 
 $ gufi_find -empty path_after_expression 2>&1 | grep "RuntimeError:"
 RuntimeError: gufi_find: unknown predicate `path_after_expression'

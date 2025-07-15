@@ -72,8 +72,10 @@ import gufi_config
 
 PATH = os.path.realpath(__file__)
 
-def getfattr(args, dirname, nondirname):
+def getfattr(args, indexroot, dirname, nondirname):
     # pylint: disable=invalid-name,too-many-branches
+
+    indexroot_len = len(indexroot) + 2
 
     S_cols = []
     E_cols = []
@@ -83,8 +85,10 @@ def getfattr(args, dirname, nondirname):
         E_cols = ['xattr_value']
     else:
         # default to getting path and xattr name
-        S_cols = ['rpath(sname, sroll)',                  'xattr_name']
-        E_cols = ['rpath(sname, sroll) || \'/\' || name', 'xattr_name']
+        S_cols = ['substr(rpath(sname, sroll), {0})'.format(indexroot_len),
+                  'xattr_name']
+        E_cols = ['substr(rpath(sname, sroll) || \'/\' || name, {0})'.format(indexroot_len),
+                  'xattr_name']
 
         # also get xattr value
         if args.dump:
@@ -247,7 +251,7 @@ def run(argv, config_path):
             '-n', str(config.threads),
             '-B', str(config.outputbuffer),
             '-d', args.delim
-        ] + getfattr(args, dirname, nondir)
+        ] + getfattr(args, config.indexroot, dirname, nondir)
 
         if args.verbose:
             gufi_common.print_query(query_cmd)

@@ -150,8 +150,16 @@ def run(argv, config_path):
     if args.verbose:
         gufi_common.print_query(stat_cmd + paths)
 
-    stat = subprocess.Popen(stat_cmd + paths)  # pylint: disable=consider-using-with
-    stat.communicate()                         # block until stat finishes
+    stat = subprocess.Popen(stat_cmd + paths,          # pylint: disable=consider-using-with
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    out, err = stat.communicate()                      # block until stat finishes
+
+    if err:
+        sys.stderr.write(err.decode().replace(os.path.join(config.indexroot, ''), ''))
+
+    if len(out):
+        sys.stdout.write(out.decode().replace(os.path.join(config.indexroot, ''), ''))
 
     return stat.returncode
 

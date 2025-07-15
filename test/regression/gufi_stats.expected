@@ -16,10 +16,10 @@ GUFI query is
     -B 4096 \
     -d ' ' \
     -I 'CREATE TABLE out(name TEXT)' \
-    -S 'INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary ' \
+    -S 'INSERT INTO out SELECT substr(rpath(sname, sroll), 8) FROM vrsummary ' \
     -J 'INSERT INTO aggregate SELECT * FROM out ' \
     -K 'CREATE TABLE aggregate(name TEXT)' \
-    -G 'SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '"'"'/'"'"', '"'"''"'"')) END FROM aggregate ORDER BY name ASC' \
+    -G 'SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '"'"'/'"'"', '"'"''"'"')) + 1 END FROM aggregate ORDER BY name ASC' \
     -y 0 \
     -z 0 \
     prefix

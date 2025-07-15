@@ -95,7 +95,7 @@ def build_where(args, root_uid=0, root_gid=0): # pylint: disable=unused-argument
 
     return where
 
-def depth(_config, args, where):
+def depth(config, args, where):
     '''
     get the depths of the provided directories relative to the root directory
 
@@ -106,7 +106,7 @@ def depth(_config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT']),
 
         '-S', 'INSERT INTO {0} {1} '.format(args.inmemory_name,
-                                            gufi_common.build_query(['rpath(sname, sroll)'],
+                                            gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2)],
                                                                     [gufi_common.VRSUMMARY],
                                                                     where,
                                                                     None,
@@ -126,7 +126,7 @@ def depth(_config, args, where):
         '-K', build_create(args.aggregate_name, ['name TEXT']),
 
         '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN \'.\' ELSE name END'] if args.recursive else []) +
-                                      ['CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, \'/\', \'\')) END'],
+                                      ['CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, \'/\', \'\')) + 1 END'],
                                       [args.aggregate_name],
                                       None,
                                       None,
@@ -141,7 +141,7 @@ def depth(_config, args, where):
 
     return queries
 
-def filesize(_config, args, where):
+def filesize(config, args, where):
     '''
     get the size the files in the immediate directory
 
@@ -153,7 +153,7 @@ def filesize(_config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT', 'size INT64']),
 
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(sname, sroll)',
+                                           gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2),
                                                                     'CAST(TOTAL(size) as INT64)'],
                                                                    [gufi_common.VRPENTRIES],
                                                                    where + ['type == \'f\''],
@@ -189,7 +189,7 @@ def filesize(_config, args, where):
 
     return queries
 
-def entries_count(_config, args, where, type): # pylint: disable=redefined-builtin
+def entries_count(config, args, where, type): # pylint: disable=redefined-builtin
     '''
     get the number of <type>s in the immediate directory
 
@@ -197,7 +197,7 @@ def entries_count(_config, args, where, type): # pylint: disable=redefined-built
     '''
 
     queries = [
-        '-E', gufi_common.build_query((['rpath({0}.name, {0}.rollupscore)'.format(gufi_common.SUMMARY)] if args.recursive else []) +
+        '-E', gufi_common.build_query((['substr(rpath({0}.name, {0}.rollupscore), {1})'.format(gufi_common.SUMMARY, len(config.indexroot) + 2)] if args.recursive else []) +
                                       ['COUNT({0}.inode)'.format(gufi_common.PENTRIES)],
                                       ['{0} LEFT JOIN {1} ON (({0}.inode == {1}.pinode) AND {1}.type == \'{2}\')'.format(gufi_common.SUMMARY, gufi_common.PENTRIES, type)],
                                       where,
@@ -403,7 +403,7 @@ def total_filecount(config, args, where):
 def total_linkcount(config, args, where):
     return total_entries_count(config, args, where, 'l')
 
-def dircount(_config, args, where):
+def dircount(config, args, where):
     '''
     get the number of subdirectories in the immediate directory
 
@@ -421,7 +421,7 @@ def dircount(_config, args, where):
                            ['path TEXT', 'inode INT64', 'pinode INT64', 'level INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(sname, sroll)', 'inode', 'pinode', 'level()'],
+                                           gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2), 'inode', 'pinode', 'level()'],
                                                                    [gufi_common.VRSUMMARY],
                                                                    ([] if args.recursive else ['isroot == 1']) + where,
                                                                    None,
@@ -505,7 +505,7 @@ def total_dircount(_config, args, where):
 
     return queries
 
-def leaf_dirs(_config, args, where):
+def leaf_dirs(config, args, where):
     '''
     get the leaf directories immediately under the current directory
 
@@ -517,7 +517,7 @@ def leaf_dirs(_config, args, where):
                            ['name TEXT']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(sname, sroll)'],
+                                           gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2)],
                                                                    [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
@@ -552,7 +552,7 @@ def leaf_dirs(_config, args, where):
 
     return queries
 
-def leaf_depth(_config, args, where):
+def leaf_depth(config, args, where):
     '''
     get the leaf directories immediately under the current directory
 
@@ -564,7 +564,7 @@ def leaf_depth(_config, args, where):
                            ['name TEXT', 'level INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(sname, sroll)', '0'],
+                                           gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2), '0'],
                                                                    [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
@@ -574,7 +574,7 @@ def leaf_depth(_config, args, where):
 
         '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
                                            gufi_common.build_query(['name',
-                                                                    '(length(name) - length(replace(name, \'/\', \'\')))'],
+                                                                    '(length(name) - length(replace(name, \'/\', \'\'))) + 1'],
                                                                    [args.inmemory_name],
                                                                    None,
                                                                    None,
@@ -600,7 +600,7 @@ def leaf_depth(_config, args, where):
 
     return queries
 
-def leaf(_config, args, where, type): # pylint: disable=redefined-builtin
+def leaf(config, args, where, type): # pylint: disable=redefined-builtin
     '''
     get number of <type>s in the leaf directories immediately under the current directory
 
@@ -612,7 +612,7 @@ def leaf(_config, args, where, type): # pylint: disable=redefined-builtin
                            ['name TEXT', 'count INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(sname, sroll)', '(SELECT COUNT(*) FROM entries WHERE type == \'{0}\')'.format(type)],
+                                           gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2), '(SELECT COUNT(*) FROM entries WHERE type == \'{0}\')'.format(type)],
                                                                    [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
@@ -867,7 +867,7 @@ def links_per_level(config, args, where):
 def dirs_per_level(config, args, where):
     return per_level(config, args, where, 'd')
 
-def duplicate_names(_config, args, where):
+def duplicate_names(config, args, where):
     columns = ['name', 'type', 'inode', 'mode', 'size']
 
     queries = [
@@ -876,7 +876,7 @@ def duplicate_names(_config, args, where):
                             'type TEXT', 'inode INT64', 'mode INT64', 'size INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['NULL', 'rpath(sname, sroll)'] +
+                                           gufi_common.build_query(['NULL', 'substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2)] +
                                                                    columns,
                                                                    [gufi_common.VRSUMMARY],
                                                                    where,
@@ -886,7 +886,7 @@ def duplicate_names(_config, args, where):
                                                                    None)),
 
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['NULL', 'rpath(sname, sroll)'] +
+                                           gufi_common.build_query(['NULL', 'substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2)] +
                                                                    columns,
                                                                    [gufi_common.VRPENTRIES],
                                                                    where,
@@ -917,7 +917,7 @@ def duplicate_names(_config, args, where):
 
     return queries
 
-def uidgid_size(args, uidgid, where):
+def uidgid_size(config, args, uidgid, where):
     '''
     Sort files by size, grouped by uid or gid.
 
@@ -951,7 +951,7 @@ def uidgid_size(args, uidgid, where):
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query([uidgid, 'size', 'fullpath'],
                                                                    ['({0})'.format(gufi_common.build_query([uidgid, 'size',
-                                                                                                            'rpath(sname, sroll) || \'/\' || name AS fullpath',
+                                                                                                            'substr(rpath(sname, sroll), {0}) || \'/\' || name AS fullpath'.format(len(config.indexroot) + 2),
                                                                                                             'row_number() OVER (PARTITION BY {0} ORDER BY size {1}) AS rownum'.format(uidgid, args.order)],
                                                                                                            [gufi_common.VRPENTRIES],
                                                                                                            ['type == \'f\''],
@@ -987,11 +987,11 @@ def uidgid_size(args, uidgid, where):
 
     return queries
 
-def uid_size(_config, args, where):
-    return uidgid_size(args, 'uid', where)
+def uid_size(config, args, where):
+    return uidgid_size(config, args, 'uid', where)
 
-def gid_size(_config, args, where):
-    return uidgid_size(args, 'gid', where)
+def gid_size(config, args, where):
+    return uidgid_size(config, args, 'gid', where)
 
 def size_bins(args, base, type): # pylint: disable=redefined-builtin
     '''

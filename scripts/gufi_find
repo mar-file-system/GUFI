@@ -824,8 +824,9 @@ def run(argv, config_path):
     ]
 
     # constants only used here
-    VRSUMMARY_NAME  = 'rpath(sname, sroll)'                  # pylint: disable=invalid-name
-    VRPENTRIES_NAME = 'rpath(sname, sroll) || \'/\' || name' # pylint: disable=invalid-name
+    INDEXROOT_LEN = len(config.indexroot) + 2                                                   # pylint: disable=invalid-name
+    VRSUMMARY_NAME  = 'substr(rpath(sname, sroll), {0})'.format(INDEXROOT_LEN)                  # pylint: disable=invalid-name
+    VRPENTRIES_NAME = 'substr(rpath(sname, sroll) || \'/\' || name, {0})'.format(INDEXROOT_LEN) # pylint: disable=invalid-name
 
     # pylint: disable=invalid-name
     if need_aggregation(args):
