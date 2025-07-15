@@ -101,7 +101,8 @@ def dirs_at_level(root, level):
 def group_dirs(dirs, splits):
     count = len(dirs)
     group_size = count // splits + int(bool(count % splits))
-    return group_size, [dirs[i: i + group_size] for i in range(0, count, group_size)]
+    ordered = sorted(dirs, key=os.path.basename)
+    return group_size, [ordered[i: i + group_size] for i in range(0, count, group_size)]
 
 # step 3
 # get only the first and last paths in each group
