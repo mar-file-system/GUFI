@@ -62,6 +62,15 @@
 
 
 # source this file instead of using it as a command to only check OS once
+
+# shellcheck disable=SC2194
+case "@CMAKE_SYSTEM_NAME@" in
+    "CYGWIN")
+        # https://cygwin.com/pipermail/cygwin/2005-May/133368.html
+        export PATH="@DEP_INSTALL_PREFIX@/sqlite3-pcre:${PATH}"
+        ;;
+esac
+
 # shellcheck disable=SC2034,SC2194,SC2215
 case "@CMAKE_SYSTEM_NAME@" in
     "APPLE" | "Darwin")

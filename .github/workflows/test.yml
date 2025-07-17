@@ -195,7 +195,7 @@ jobs:
     - name: Configure CMake
       run: >-
            export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
-           cmake . -B build -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -pedantic" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -pedantic" -DDEP_INSTALL_PREFIX="/usr/local" -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off
+           cmake . -B build -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -Wpedantic" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -Wpedantic" -DDEP_INSTALL_PREFIX="/usr/local" -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off
       shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
 
     - name: Build
@@ -205,8 +205,7 @@ jobs:
       shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
 
     - name: Test
-      # https://cygwin.com/pipermail/cygwin/2005-May/133368.html
       run:  >-
-            export PATH=/usr/bin:/usr/local/sqlite3-pcre:$(cygpath ${SYSTEMROOT})/system32 &&
+            export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
             ctest --output-on-failure --test-dir build
       shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
