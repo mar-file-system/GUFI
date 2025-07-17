@@ -112,10 +112,10 @@ def dir_plural(count):
 # print debug messages
 # run function to schedule jobs if it exists
 def schedule_subtrees(dir_count, splits, group_size, groups, schedule_subtree):
-    print('Splitting {} {} into {} chunks of max size {}'.format(dir_count,
-                                                                 dir_plural(dir_count),
-                                                                 splits,
-                                                                 group_size))
+    print('Splitting {0} {1} into {2} chunks of max size {3}'.format(dir_count,
+                                                                     dir_plural(dir_count),
+                                                                     splits,
+                                                                     group_size))
 
     jobids = []
     for i, group in enumerate(groups):
@@ -124,8 +124,8 @@ def schedule_subtrees(dir_count, splits, group_size, groups, schedule_subtree):
         if count == 0:
             break
 
-        print('    Range {}: {} {}'.format(i, count, dir_plural(count)))
-        print('        {} {}'.format(group[0], group[-1]))
+        print('    Range {0}: {1} {2}'.format(i, count, dir_plural(count)))
+        print('        {0} {1}'.format(group[0], group[-1]))
 
         if schedule_subtree is not None:
             jobid = schedule_subtree(i, os.path.basename(group[0]), os.path.basename(group[-1]))
@@ -151,7 +151,8 @@ def distribute_work(root, level, nodes, schedule_subtree_func, schedule_top_func
     dirs = dirs_at_level(root, level)
     group_size, groups = group_dirs(dirs, nodes)
     jobids = schedule_subtrees(len(dirs), nodes, group_size, groups, schedule_subtree_func)
-    schedule_top(schedule_top_func, jobids)
+    jobids += [schedule_top(schedule_top_func, jobids).decode()]
+    return jobids
 
 def dir_arg(path):
     if not os.path.isdir(path):
@@ -177,17 +178,3 @@ def parse_args(name, desc):
                         help='Number nodes to split work across')
 
     return parser # allow for others to use this parser
-
-def main():
-    parser = parse_args('gufi_distributed.py',
-                        'Library for distributing GUFI work across nodes')
-    parser.add_argument('tree',
-                        type=dir_arg,
-                        help='Tree to walk')
-    args = parser.parse_args()
-
-    distribute_work(args.tree, args.level, args.nodes, None,
-                    lambda _jobids: print("    Processing upper directories up to and including level {}".format(args.level - 1)))
-
-if __name__ == '__main__':
-    main()

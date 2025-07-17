@@ -63,28 +63,4 @@
 
 set -e
 
-# remove sbatch flags
-# https://stackoverflow.com/a/14203146
-# Bruno Bronosky
-while [[ $# -gt 0 ]]
-do
-key="$1"
-
-case $key in
-    --nodes=*)
-        ;;
-    -d|--dependency)
-        shift # past dependencies list
-        ;;
-    *)        # unknown option
-        break
-        ;;
-esac
-    shift # past flag
-done
-
-# "schedule work"
-(exec "$@") >/dev/null
-
-# return a "jobid"
-echo "${RANDOM}"
+gufi_query "$@"

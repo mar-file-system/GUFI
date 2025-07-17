@@ -146,7 +146,6 @@ GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
 GUFI_DIR2INDEX_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_dir2index_distributed"
 GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
 GUFI_DIR2TRACE_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_dir2trace_distributed"
-GUFI_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_distributed.py"
 GUFI_DU="${GUFI_TOOL} du"
 GUFI_FIND="${GUFI_TOOL} find"
 GUFI_GETFATTR="${GUFI_TOOL} getfattr"
@@ -174,7 +173,8 @@ PARALLEL_RMR="@CMAKE_BINARY_DIR@/src/parallel_rmr"
 PUGSQL="${GUFI_TOOL} pugsql"
 QUERYDBS="${GUFI_TOOL} querydbs"
 RUN_VT="@CMAKE_BINARY_DIR@/src/run_vt"
-SBATCH_FAKE="@CMAKE_BINARY_DIR@/test/regression/sbatch.fake"
+SBATCH_NO_OUTPUT="@CMAKE_BINARY_DIR@/test/regression/sbatch.no-output"
+SBATCH_OUTPUT="@CMAKE_BINARY_DIR@/test/regression/sbatch.output"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
 SQLALCHEMY="${GUFI_TOOL} sqlalchemy"
 TREEDIFF="@CMAKE_BINARY_DIR@/contrib/treediff"
@@ -221,7 +221,6 @@ replace() {
     s/${GUFI_DIR2INDEX_DISTRIBUTED//\//\\/}/gufi_dir2index_distributed/g;
     s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g;
     s/${GUFI_DIR2TRACE_DISTRIBUTED//\//\\/}/gufi_dir2trace_distributed/g;
-    s/${GUFI_DISTRIBUTED//\//\\/}/gufi_distributed.py/g;
     s/${GUFI_DU//\//\\/}/gufi_du/g;
     s/${GUFI_FIND//\//\\/}/gufi_find/g;
     s/${GUFI_GETFATTR//\//\\/}/gufi_getfattr/g;
@@ -249,7 +248,8 @@ replace() {
     s/${PUGSQL//\//\\/}/pugsql/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
     s/${RUN_VT//\//\\/}/run_vt/g;
-    s/${SBATCH_FAKE//\//\\/}/sbatch/g;
+    s/${SBATCH_NO_OUTPUT//\//\\/}/sbatch/g;
+    s/${SBATCH_OUTPUT//\//\\/}/sbatch/g;
     s/${SPLIT_TRACE//\//\\/}/split_trace/g;
     s/${SQLALCHEMY//\//\\/}/gufi_vt_sqlalchemy/g;
     s/${TREEDIFF//\//\\/}/treediff/g;

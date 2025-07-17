@@ -98,20 +98,19 @@ def add_args(args):
     return cmd
 
 # run gufi_query via sbatch
-def schedule_work(args, idx, start, end):
+def schedule_work(args, _idx, start, end):
     cmd = [
         args.sbatch, '--nodes=1',
         args.gufi_query,
         '-n', str(args.threads),
         '-y', str(args.level),
         '-D', start, end,
-        '-o', '{}.{}'.format(args.output_prefix, idx),
     ] + add_args(args)
 
     return gufi_distributed.run_slurm(cmd, args.dry_run)
 
 def schedule_top(args, jobids):
-    print("    Query upper directories up to and including level {}".format(args.level - 1))
+    print("    Query upper directories up to and including level {0}".format(args.level - 1))
 
     cmd = [args.sbatch, '--nodes=1']
     cmd += gufi_distributed.depend_on_slurm_jobids(jobids)
@@ -119,7 +118,6 @@ def schedule_top(args, jobids):
         args.gufi_query,
         '-n', str(args.threads),
         '-z', str(args.level - 1),
-        '-o', args.output_prefix,
     ] + add_args(args)
 
     return gufi_distributed.run_slurm(cmd, args.dry_run)
@@ -131,14 +129,10 @@ def parse_args():
     parser.add_argument('--dry-run',             action='store_true')
     parser.add_argument('--gufi_query',          metavar='path',
                         type=str,
-                        default='gufi_query')
+                        default='gufi_query.sbatch')
     parser.add_argument('--threads',       '-n', metavar='n',
                         type=gufi_common.get_positive,
                         default=1)
-    parser.add_argument('--output-prefix', '-o', metavar='prefix',
-                        type=str,
-                        default='output',
-                        help='Output prefix of each job\'s output')
 
     parser.add_argument('-I', metavar='SQL', type=str)
     parser.add_argument('-T', metavar='SQL', type=str)
@@ -157,10 +151,13 @@ def parse_args():
 def main():
     args = parse_args()
 
-    gufi_distributed.distribute_work(args.GUFI_index, args.level, args.nodes,
-                                     lambda idx, start, end: schedule_work(args, idx, start, end),
-                                     lambda jobids: schedule_top(args, jobids))
-    print('Run "cat {}.*" to get complete output'.format(args.output_prefix))
+    jobids = gufi_distributed.distribute_work(args.GUFI_index, args.level, args.nodes,
+                                              lambda idx, start, end: schedule_work(args, idx, start, end),
+                                              lambda jobids: schedule_top(args, jobids))
+
+    print('cat the following slurm job output files to get complete results:')
+    for jobid in jobids:
+        print('    {0}'.format(jobid))
 
 if __name__ == '__main__':
     main()

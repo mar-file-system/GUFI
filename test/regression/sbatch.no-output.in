@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,72 +61,29 @@
 
 
 
-import gufi_common
-import gufi_distributed
+set -e
 
-# run this file with sbatch on a single node
+# remove sbatch flags
 
-# run gufi_dir2trace via sbatch
-def schedule_subtree(args, idx, start, end):
-    cmd = [
-        args.sbatch, '--nodes=1',
-        args.gufi_dir2trace,
-        '-d', args.delim,
-        '-n', str(args.threads),
-        '-y', str(args.level),
-        '-D', start, end,
-        args.input_dir,
-        '{0}.{1}'.format(args.output_prefix, idx),
-    ]
+# https://stackoverflow.com/a/14203146
+# Bruno Bronosky
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
 
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
+case $key in
+    --nodes|--dependency)
+        shift # past count
+        ;;
+    --nodes=*)
+        ;;
+    *)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        ;;
+esac
+    shift # past flag
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
 
-def schedule_top(args, jobids):
-    print("    Index upper directories up to and including level {0}".format(args.level - 1))
-
-    cmd = [args.sbatch, '--nodes=1']
-    cmd += gufi_distributed.depend_on_slurm_jobids(jobids)
-    cmd += [
-        args.gufi_dir2trace,
-        '-d', args.delim,
-        '-n', str(args.threads),
-        '-z', str(args.level - 1),
-        args.input_dir,
-        args.output_prefix,
-    ]
-
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
-
-def parse_args():
-    parser = gufi_distributed.parse_args('gufi_dir2trace_distributed',
-                                         'Script for distributing gufi_dir2trace across nodes')
-
-    parser.add_argument('--dry-run',        action='store_true')
-    parser.add_argument('--gufi_dir2trace', metavar='path',
-                        type=str,
-                        default='gufi_dir2trace.sbatch')
-    parser.add_argument('--threads', '-n',  metavar='n',
-                        type=gufi_common.get_positive,
-                        default=1)
-    parser.add_argument('--delim',   '-d',  metavar='c',
-                        type=gufi_common.get_char,
-                        default=b'\x1e')
-    parser.add_argument('input_dir',
-                        type=gufi_distributed.dir_arg,
-                        help='Source Tree Root')
-    parser.add_argument('output_prefix',
-                        type=str,
-                        help='prefix of output files (<prefix>.<tid>)')
-
-    return parser.parse_args()
-
-def main():
-    args = parse_args()
-
-    gufi_distributed.distribute_work(args.input_dir, args.level, args.nodes,
-                                     lambda idx, start, end: schedule_subtree(args, idx, start, end),
-                                     lambda jobids: schedule_top(args, jobids))
-    print('Index can now be created from "{0}.*"'.format(args.output_prefix))
-
-if __name__ == '__main__':
-    main()
+"$@"

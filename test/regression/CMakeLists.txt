@@ -65,6 +65,8 @@ set(CORE
   generatetree.sh
   hexlify.py
   os_specific.sh
+  sbatch.no-output
+  sbatch.output
   setup.sh
 )
 
@@ -191,9 +193,6 @@ if (SQLALCHEMY_RC EQUAL 0)
 else()
   message(STATUS "SQLAlchemy not found.")
 endif()
-
-# for testing work distribution code
-configure_file(sbatch.fake sbatch.fake COPYONLY)
 
 # .sh and .expected
 set(SH_AND_EXPECTED
