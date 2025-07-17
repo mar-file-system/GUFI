@@ -61,6 +61,8 @@
 
 
 
+import sys
+
 import gufi_common
 import gufi_distributed
 
@@ -114,6 +116,8 @@ def schedule_top(args, jobids):
 
     cmd = [args.sbatch, '--nodes=1']
     cmd += gufi_distributed.depend_on_slurm_jobids(jobids)
+    if args.wait:
+        cmd += ['--wait']
     cmd += [
         args.gufi_query,
         '-n', str(args.threads),
@@ -127,6 +131,14 @@ def parse_args():
                                          'Script for distributing gufi_query across nodes')
 
     parser.add_argument('--dry-run',             action='store_true')
+    parser.add_argument('-W', '--wait',
+                        action='store_true',
+                        help='wait until all jobs complete and print results')
+    parser.add_argument('--chunk-size',
+                        type=gufi_common.get_positive,
+                        default=4096,
+                        help='Output file read chunk size. Only used with -W/--wait')
+
     parser.add_argument('--gufi_query',          metavar='path',
                         type=str,
                         default='gufi_query.sbatch')
@@ -155,9 +167,18 @@ def main():
                                               lambda idx, start, end: schedule_work(args, idx, start, end),
                                               lambda jobids: schedule_top(args, jobids))
 
-    print('cat the following slurm job output files to get complete results:')
-    for jobid in jobids:
-        print('    {0}'.format(jobid))
+    if args.wait:
+        for jobid in jobids:
+            with open('slurm-{0}.out'.format(jobid), 'r', encoding='utf-8') as f:
+                while True:
+                    chunk = f.read(args.chunk_size)
+                    if not chunk:
+                        break
+                    sys.stdout.write(chunk)
+    else:
+        print('cat the following slurm job output files to get complete results:')
+        for jobid in jobids:
+            print('    {0}'.format(jobid))
 
 if __name__ == '__main__':
     main()

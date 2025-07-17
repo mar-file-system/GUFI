@@ -76,7 +76,7 @@ case $key in
     --nodes|--dependency)
         shift # past count
         ;;
-    --nodes=*)
+    --nodes=*|--wait)
         ;;
     *)    # unknown option
         POSITIONAL+=("$1") # save it in an array for later
