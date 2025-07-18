@@ -257,7 +257,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
                     /* run in->sql.tsum */
                     querydb(&gqw->work, dbname, dbname_len, db,
-                            in->sql.tsum.data, in->types.tsum,
+                            tsum, in->types.tsum,
                             pa, id, print_parallel, &recs);
 
                     free_sql(tsum, in->sql.tsum.data);
