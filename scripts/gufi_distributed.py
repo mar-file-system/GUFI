@@ -97,25 +97,22 @@ def dirs_at_level(root, level):
     return sorted([path.decode() for path in dirs.split(b'\x00') if len(path) > 0])
 
 # step 2
-# split directories into groups for processing
+# split directories into groups of unique basenames for processing
 def group_dirs(dirs, splits):
-    count = len(dirs)
+    basenames = list(set(os.path.basename(path) for path in dirs))
+    count = len(basenames)
     group_size = count // splits + int(bool(count % splits))
-    ordered = sorted(dirs, key=os.path.basename)
-    return group_size, [ordered[i: i + group_size] for i in range(0, count, group_size)]
-
-def dir_plural(count):
-    return 'directories' if count > 1 else 'directory'
+    ordered = sorted(basenames)
+    return count, group_size, [ordered[i: i + group_size] for i in range(0, count, group_size)]
 
 # step 3
 # get only the first and last paths in each group
 # print debug messages
 # run function to schedule jobs if it exists
-def schedule_subtrees(dir_count, splits, group_size, groups, schedule_subtree):
-    print('Splitting {0} {1} into {2} chunks of max size {3}'.format(dir_count,
-                                                                     dir_plural(dir_count),
-                                                                     splits,
-                                                                     group_size))
+def schedule_subtrees(unique_basenames, splits, group_size, groups, schedule_subtree):
+    print('Splitting {0} unique basenames into {1} groups of max size {2}'.format(unique_basenames,
+                                                                                  splits,
+                                                                                  group_size))
 
     jobids = []
     for i, group in enumerate(groups):
@@ -124,7 +121,7 @@ def schedule_subtrees(dir_count, splits, group_size, groups, schedule_subtree):
         if count == 0:
             break
 
-        print('    Range {0}: {1} {2}'.format(i, count, dir_plural(count)))
+        print('    Range {0}: {1} basename{2}'.format(i, count, 's' if count != 1 else ''))
         print('        {0} {1}'.format(group[0], group[-1]))
 
         if schedule_subtree is not None:
@@ -149,8 +146,8 @@ def schedule_top(func, jobids):
 # call this combined function to distribute work
 def distribute_work(root, level, nodes, schedule_subtree_func, schedule_top_func):
     dirs = dirs_at_level(root, level)
-    group_size, groups = group_dirs(dirs, nodes)
-    jobids = schedule_subtrees(len(dirs), nodes, group_size, groups, schedule_subtree_func)
+    unique_basenames, group_size, groups = group_dirs(dirs, nodes)
+    jobids = schedule_subtrees(unique_basenames, nodes, group_size, groups, schedule_subtree_func)
     jobids += [schedule_top(schedule_top_func, jobids).decode()]
     return jobids
 

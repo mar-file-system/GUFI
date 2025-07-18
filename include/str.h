@@ -124,8 +124,8 @@ typedef struct str_range {
 } str_range_t;
 
 /*
- * [lhs.*, rhs.*]
- * prefix match
+ * [lhs.*, rhs]
+ * exact match
  */
 int str_range_cmp(const str_range_t *range, const refstr_t *str);
 /* ****************************************************** */

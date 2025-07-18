@@ -92,32 +92,23 @@ void str_free_existing(str_t *str) {
 
 int str_cmp(const str_t *lhs, const str_t *rhs) {
     const size_t len = ((lhs->len > rhs->len)?lhs:rhs)->len;
-    return strncmp(lhs->data, rhs->data, len);
+    return strncmp(lhs->data, rhs->data, len + 1);
 }
 
 int refstr_cmp(const refstr_t *lhs, const refstr_t *rhs) {
     const size_t len = ((lhs->len > rhs->len)?lhs:rhs)->len;
-    return strncmp(lhs->data, rhs->data, len);
-}
-
-/*
- * Compare string prefixes, so that
- * "hello" and "hello world" returns 0
- * but "hello world" and "hello" returns (int) ' '
- */
-static int refstr_cmp_prefix(const refstr_t *prefix, const refstr_t *str) {
-    return strncmp(prefix->data, str->data, prefix->len);
+    return strncmp(lhs->data, rhs->data, len + 1);
 }
 
 int str_range_cmp(const str_range_t *range, const refstr_t *str) {
     /* less than lhs */
-    const int lhc = refstr_cmp_prefix(&range->lhs, str);
+    const int lhc = refstr_cmp(&range->lhs, str);
     if (lhc > 0) {
         return -1;
     }
 
     /* greater than rhs */
-    const int rhc = refstr_cmp_prefix(&range->rhs, str);
+    const int rhc = refstr_cmp(&range->rhs, str);
     if (rhc < 0) {
         return +1;
     }

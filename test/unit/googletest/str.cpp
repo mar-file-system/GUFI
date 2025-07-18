@@ -109,35 +109,47 @@ TEST(str, cmp) {
 }
 
 TEST(str, range) {
+    // before lhs
     refstr_t a;
     a.data = "a";
     a.len  = 1;
 
+    // before lhs
     refstr_t ba;
     ba.data = "ba";
     ba.len  = 2;
 
+    // lhs == bb
     refstr_t bb;
     bb.data = "bb";
     bb.len  = 2;
 
+    // lhs < cc < rhs
     refstr_t cc;
     cc.data = "cc";
     cc.len  = 2;
 
+    // rhs == 'dd'
     refstr_t dd;
     dd.data = "dd";
     dd.len  = 2;
 
+    // after rhs
+    refstr_t ddd;
+    ddd.data = "ddd";
+    ddd.len  = 3;
+
+    // after rhs
     refstr_t de;
     de.data = "de";
     de.len  = 2;
 
+    // after rhs
     refstr_t e;
     e.data = "e";
     e.len  = 1;
 
-    // [bb.*, dd.*]
+    // [bb, dd]
     str_range_t range;
     range.lhs = bb;
     range.rhs = dd;
@@ -147,6 +159,7 @@ TEST(str, range) {
     EXPECT_EQ(str_range_cmp(&range, &bb),  0);
     EXPECT_EQ(str_range_cmp(&range, &cc),  0);
     EXPECT_EQ(str_range_cmp(&range, &dd),  0);
+    EXPECT_EQ(str_range_cmp(&range, &ddd), 1);
     EXPECT_EQ(str_range_cmp(&range, &de),  1);
     EXPECT_EQ(str_range_cmp(&range, &e),   1);
 }
