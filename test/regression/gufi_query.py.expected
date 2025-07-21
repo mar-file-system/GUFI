@@ -37,7 +37,7 @@ options:
      <table>
      <template>.<table>
      <view>              External database file basename, per-attach table name, template + table name, and the resultant view
-  -D <start> <stop>      Start and stop path names for partial indexing
+  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
 
 GUFI_index        find GUFI index here
 

@@ -276,11 +276,12 @@ struct input {
    /* prefix of swap files */
    refstr_t swap_prefix;
 
-   /* [start, stop) path names for partial indexing */
+   /* directory paths to process at -y level > 0 */
    struct {
-       str_range_t range;
        int set;
-   } index_match;
+       size_t count;
+       trie_t *paths;
+   } process;
 };
 
 struct input *input_init(struct input *in);

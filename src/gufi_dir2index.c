@@ -484,6 +484,7 @@ int main(int argc, char *argv[]) {
          * there is no source for the basenames
          */
         root->basename_len = root->name_len - root->root_parent.len;
+        root->root_basename_len = root->basename_len;
 
         struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
         QPTPool_enqueue(pool, 0, processdir, copy);

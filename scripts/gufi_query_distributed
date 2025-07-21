@@ -68,45 +68,29 @@ import gufi_distributed
 
 # run this file with sbatch on a single node
 
+SQL_FLAGS = 'ITSEKJGF'
+
 def add_args(args):
     cmd = []
 
-    if args.I:
-        cmd += ['-I', args.I]
-
-    if args.T:
-        cmd += ['-T', args.T]
-
-    if args.S:
-        cmd += ['-S', args.S]
-
-    if args.E:
-        cmd += ['-E', args.E]
-
-    if args.K:
-        cmd += ['-K', args.K]
-
-    if args.J:
-        cmd += ['-J', args.J]
-
-    if args.G:
-        cmd += ['-G', args.G]
-
-    if args.F:
-        cmd += ['-F', args.F]
+    for flag in SQL_FLAGS:
+        if hasattr(args, flag):
+            value = getattr(args, flag)
+            if value:
+                cmd += ['-{0}'.format(flag), value]
 
     cmd += [args.GUFI_index]
 
     return cmd
 
 # run gufi_query via sbatch
-def schedule_work(args, _idx, start, end):
+def schedule_work(args, _idx, filename):
     cmd = [
         args.sbatch, '--nodes=1',
         args.gufi_query,
         '-n', str(args.threads),
         '-y', str(args.level),
-        '-D', start, end,
+        '-D', filename,
     ] + add_args(args)
 
     return gufi_distributed.run_slurm(cmd, args.dry_run)
@@ -131,9 +115,11 @@ def parse_args():
                                          'Script for distributing gufi_query across nodes')
 
     parser.add_argument('--dry-run',             action='store_true')
+
     parser.add_argument('-W', '--wait',
                         action='store_true',
                         help='wait until all jobs complete and print results')
+
     parser.add_argument('--chunk-size',
                         type=gufi_common.get_positive,
                         default=4096,
@@ -146,14 +132,8 @@ def parse_args():
                         type=gufi_common.get_positive,
                         default=1)
 
-    parser.add_argument('-I', metavar='SQL', type=str)
-    parser.add_argument('-T', metavar='SQL', type=str)
-    parser.add_argument('-S', metavar='SQL', type=str)
-    parser.add_argument('-E', metavar='SQL', type=str)
-    parser.add_argument('-K', metavar='SQL', type=str)
-    parser.add_argument('-J', metavar='SQL', type=str)
-    parser.add_argument('-G', metavar='SQL', type=str)
-    parser.add_argument('-F', metavar='SQL', type=str)
+    for flag in SQL_FLAGS:
+        parser.add_argument('-{0}'.format(flag), metavar='SQL', type=str)
 
     parser.add_argument('GUFI_index',
                         type=gufi_distributed.dir_arg)
@@ -164,7 +144,8 @@ def main():
     args = parse_args()
 
     jobids = gufi_distributed.distribute_work(args.GUFI_index, args.level, args.nodes,
-                                              lambda idx, start, end: schedule_work(args, idx, start, end),
+                                              args.group_file_prefix, args.sort_by_basename,
+                                              lambda idx, filename: schedule_work(args, idx, filename),
                                               lambda jobids: schedule_top(args, jobids))
 
     if args.wait:

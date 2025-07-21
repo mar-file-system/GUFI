@@ -86,7 +86,8 @@ def run_slurm(cmd, dry_run):
 # step 1
 # run find and return sorted list of directories
 def dirs_at_level(root, level):
-    cmd = ['find', root, '-mindepth', str(level), '-maxdepth', str(level), '-type', 'd', '-print0']
+    # can't use %P to remove input path in macos and Alpine Linux
+    cmd = ['find', root, '-mindepth', str(level), '-maxdepth', str(level), '-type', 'd']
     query = subprocess.Popen(cmd,   # pylint: disable=consider-using-with
                              stdout=subprocess.PIPE)
     dirs, _ = query.communicate() # block until find finishes
@@ -94,25 +95,27 @@ def dirs_at_level(root, level):
     if query.returncode:
         sys.exit(query.returncode)
 
-    return sorted([path.decode() for path in dirs.split(b'\x00') if len(path) > 0])
+    return [path.decode()[len(root) + int(root[-1] != os.path.sep):]
+            for path in dirs.split(b'\n') if len(path) > 0]
 
 # step 2
 # split directories into groups of unique basenames for processing
-def group_dirs(dirs, splits):
-    basenames = list(set(os.path.basename(path) for path in dirs))
-    count = len(basenames)
+def group_dirs(dirs, splits, sort_by_basename):
+    count = len(dirs)
     group_size = count // splits + int(bool(count % splits))
-    ordered = sorted(basenames)
-    return count, group_size, [ordered[i: i + group_size] for i in range(0, count, group_size)]
+    ordered = sorted(dirs, key=os.path.basename) if sort_by_basename else sorted(dirs)
+    return group_size, [ordered[i: i + group_size] for i in range(0, count, group_size)]
 
 # step 3
 # get only the first and last paths in each group
 # print debug messages
 # run function to schedule jobs if it exists
-def schedule_subtrees(unique_basenames, splits, group_size, groups, schedule_subtree):
-    print('Splitting {0} unique basenames into {1} groups of max size {2}'.format(unique_basenames,
-                                                                                  splits,
-                                                                                  group_size))
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+def schedule_subtrees(dir_count, splits, group_size, groups,
+                      group_file_prefix, schedule_subtree):
+    print('Splitting {0} paths into {1} groups of max size {2}'.format(dir_count,
+                                                                       splits,
+                                                                       group_size))
 
     jobids = []
     for i, group in enumerate(groups):
@@ -121,11 +124,17 @@ def schedule_subtrees(unique_basenames, splits, group_size, groups, schedule_sub
         if count == 0:
             break
 
-        print('    Range {0}: {1} basename{2}'.format(i, count, 's' if count != 1 else ''))
+        print('    Range {0}: {1} path{2}'.format(i, count, 's' if count != 1 else ''))
         print('        {0} {1}'.format(group[0], group[-1]))
 
-        if schedule_subtree is not None:
-            jobid = schedule_subtree(i, os.path.basename(group[0]), os.path.basename(group[-1]))
+        if schedule_subtree:
+            filename = '{0}.{1}'.format(group_file_prefix, i)
+            with open(filename, 'w', encoding='utf-8') as f:
+                for path in group:
+                    f.write(path)
+                    f.write('\n')
+
+            jobid = schedule_subtree(i, filename)
             if jobid is not None:
                 jobids += [jobid.decode()]
 
@@ -144,10 +153,14 @@ def schedule_top(func, jobids):
     return func(jobids)
 
 # call this combined function to distribute work
-def distribute_work(root, level, nodes, schedule_subtree_func, schedule_top_func):
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+def distribute_work(root, level, nodes,
+                    group_file_prefix, sort_by_basename,
+                    schedule_subtree_func, schedule_top_func):
     dirs = dirs_at_level(root, level)
-    unique_basenames, group_size, groups = group_dirs(dirs, nodes)
-    jobids = schedule_subtrees(unique_basenames, nodes, group_size, groups, schedule_subtree_func)
+    group_size, groups = group_dirs(dirs, nodes, sort_by_basename)
+    jobids = schedule_subtrees(len(dirs), nodes, group_size, groups,
+                               group_file_prefix, schedule_subtree_func)
     jobids += [schedule_top(schedule_top_func, jobids).decode()]
     return jobids
 
@@ -167,9 +180,19 @@ def parse_args(name, desc):
                         type=str,
                         default='sbatch')
 
+    parser.add_argument('--group_file_prefix',
+                        type=str,
+                        default='path_list',
+                        help='prefix for file containing paths to be processed by one node')
+
+    parser.add_argument('--sort-by-basename',
+                        action='store_true',
+                        help='distribute paths by basename instead of parent name')
+
     parser.add_argument('level',
                         type=gufi_common.get_positive,
                         help='Level at which work is distributed across nodes')
+
     parser.add_argument('nodes',
                         type=gufi_common.get_positive,
                         help='Number nodes to split work across')

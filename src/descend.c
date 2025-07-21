@@ -172,6 +172,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             child->basename_len = len;
             child->level = next_level;
             child->root_parent = work->root_parent;
+            child->root_basename_len = work->root_basename_len;
             child->pinode = inode;
 
             if (!try_skip_lstat(dir_child->d_type, child)) {
@@ -188,7 +189,12 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 if (next_level <= in->max_level) {
                     child_ed.type = 'd';
 
-                    if (subdir_within_range(in, next_level, dir_child->d_name, len) != 1) {
+                    /* if -D is set, and at the split level but the current path is not found, don't process */
+                    if (in->process.set && (in->min_level == next_level) &&
+                        (trie_search(in->process.paths,
+                                     child->name + work->root_parent.len + work->root_basename_len + 1,
+                                     child->name_len - work->root_parent.len - work->root_basename_len - 1,
+                                     NULL) == 0)) {
                         free(child);
                         continue;
                     }

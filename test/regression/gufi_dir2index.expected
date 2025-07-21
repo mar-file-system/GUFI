@@ -15,7 +15,7 @@ options:
   -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
   -e                     compress work items
   -q                     check that external databases are valid before tracking during indexing
-  -D <start> <stop>      Start and stop path names for partial indexing
+  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
 
 input_dir...      walk one or more trees to produce GUFI index
 output_dir        build GUFI index here
@@ -254,13 +254,27 @@ Expected Index:                                      Combined Index:
     prefix/unusual#? directory ,/unusual, name?#         prefix/unusual#? directory ,/unusual, name?#
 
 # ######################################
-# partial indexing [a, n)
+# partial indexing setup
+$ find "prefix" -mindepth 1 -maxdepth 1 -type d | sed "s/prefix\///g;" | sort > distributed
+
+$ head -n 2 "distributed" > "distributed.0"
+
+$ tail -n +3 "distributed" > "distributed.1"
+
+# ######################################
+
+# ######################################
+# partial indexing (first half)
 $ rm -r "search"
 
-$ gufi_dir2index -n 2 -D a m -y 1 "prefix" "search"
+$ cat "distributed.0"
+directory
+empty_directory
+
+$ gufi_dir2index -n 2 -D "distributed.0" -y 1 "prefix" "search"
 Creating GUFI Index search with 2 threads
-Total Dirs:          4
-Total Non-Dirs:      7
+Total Dirs:          3
+Total Non-Dirs:      5
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
 Cannot attach database as "tree": unable to open database: file:prefix/db.db?mode=ro
@@ -272,23 +286,27 @@ prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/repeat_name
 prefix/directory/writable
 prefix/empty_directory
-prefix/leaf_directory
-prefix/leaf_directory/leaf_file1
-prefix/leaf_directory/leaf_file2
 
 # ######################################
 
 # ######################################
-# partial indexing [n, {)
+# partial indexing (second half)
 $ rm -r "search"
 
-$ gufi_dir2index -n 2 -D n z -y 1 "prefix" "search"
+$ cat "distributed.1"
+leaf_directory
+unusual#? directory ,
+
+$ gufi_dir2index -n 2 -D "distributed.1" -y 1 "prefix" "search"
 Creating GUFI Index search with 2 threads
-Total Dirs:          1
-Total Non-Dirs:      1
+Total Dirs:          2
+Total Non-Dirs:      3
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
 Cannot attach database as "tree": unable to open database: file:prefix/db.db?mode=ro
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
@@ -298,16 +316,16 @@ prefix/unusual#? directory ,/unusual, name?#
 # combine partial indexing
 $ rm -r "search"
 
-$ gufi_dir2index -n 2 -D a m -y 1 "prefix" "search"
+$ gufi_dir2index -n 2 -D "distributed.0" -y 1 "prefix" "search"
 Creating GUFI Index search with 2 threads
-Total Dirs:          4
-Total Non-Dirs:      7
+Total Dirs:          3
+Total Non-Dirs:      5
 
-$ gufi_dir2index -n 2 -D n z -y 1 "prefix" "search"
+$ gufi_dir2index -n 2 -D "distributed.1" -y 1 "prefix" "search"
 "search" Already exists!
 Creating GUFI Index search with 2 threads
-Total Dirs:          1
-Total Non-Dirs:      1
+Total Dirs:          2
+Total Non-Dirs:      3
 
 $ gufi_dir2index -n 2 -z 0 "prefix" "search"
 "search" Already exists!

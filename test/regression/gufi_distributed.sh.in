@@ -70,12 +70,13 @@ INDEXROOT2="${SEARCH2}/${BASENAME}"
 
 TRACES="traces"
 
-LEVEL=1
 RANKS=5
 files=()
+groups=()
 for jobid in {0..4}
 do
     files+=("slurm.fake-${jobid}.out")
+    groups+=("path_list.${jobid}")
 done
 
 OUTPUT="gufi_distributed.out"
@@ -107,7 +108,7 @@ trace_files() {
 cleanup() {
     # shellcheck disable=SC2207
     traces=($(trace_files))
-    rm -rf "${SEARCH2}" "${files[@]}" "${traces[@]}"
+    rm -rf "${SEARCH2}" "${files[@]}" "${groups[@]}" "${traces[@]}"
 }
 
 cleanup_exit() {
@@ -125,10 +126,10 @@ run_no_sort "${GUFI_QUERY_DISTRIBUTED} --help"
 
 (
 echo "# Index Source Tree"
-run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" ${LEVEL} ${RANKS} \"${SRCDIR}\" \"${SEARCH2}\""
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" ${DISTRIBUTED_LEVEL} ${RANKS} \"${SRCDIR}\" \"${SEARCH2}\""
 
 echo "# Query Index"
-run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_OUTPUT}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} ${LEVEL} ${RANKS} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\""
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_OUTPUT}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} ${DISTRIBUTED_LEVEL} ${RANKS} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\""
 
 echo "$ combine output files"
 # shellcheck disable=SC2145
@@ -143,7 +144,7 @@ echo "# Diff original index results against querying the new index from a single
 run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
 echo "# Convert source tree to trace files"
-run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" ${LEVEL} ${RANKS} \"${SRCDIR}\" \"${TRACES}\""
+run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" ${DISTRIBUTED_LEVEL} ${RANKS} \"${SRCDIR}\" \"${TRACES}\""
 
 traces=("$(trace_files)")
 

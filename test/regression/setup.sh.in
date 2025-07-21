@@ -113,9 +113,15 @@ TEST_GROUP_ID="${TEST_USER_ID}"
 # shellcheck disable=SC2034
 TEST_GROUP_NAME="group"
 
+# shellcheck disable=SC2034
+DISTRIBUTED_LEVEL=1
+DISTRIBUTED_PREFIX="distributed"
+DISTRIBUTED_0="${DISTRIBUTED_PREFIX}.0"
+DISTRIBUTED_1="${DISTRIBUTED_PREFIX}.1"
+
 # always clean up
 setup_cleanup() {
-    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${BADTRACE}" "${SEARCH}" "${SKIP}"
+    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${BADTRACE}" "${SEARCH}" "${SKIP}" "${DISTRIBUTED_PREFIX}" "${DISTRIBUTED_0}" "${DISTRIBUTED_1}"
 }
 
 trap setup_cleanup EXIT
@@ -312,6 +318,18 @@ order_tracefile() {
 
 remove_indexing_time() {
     @GREP@ -v "Scouts took \|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec"
+}
+
+partial_indexing_setup() {
+    echo "# ######################################"
+    echo "# partial indexing setup"
+    run_no_sort "find \"${SRCDIR}\" -mindepth ${DISTRIBUTED_LEVEL} -maxdepth ${DISTRIBUTED_LEVEL} -type d | @SED@ \"s/${SRCDIR//\//\\/}\///g;\" | sort > ${DISTRIBUTED_PREFIX}"
+    line_count=$(wc -l < "${DISTRIBUTED_PREFIX}")
+    half=$(( line_count / 2 ))
+    run_no_sort "head -n ${half} \"${DISTRIBUTED_PREFIX}\" > \"${DISTRIBUTED_0}\""
+    run_no_sort "tail -n +$(( half + 1 )) \"${DISTRIBUTED_PREFIX}\" > \"${DISTRIBUTED_1}\""
+    echo "# ######################################"
+    echo
 }
 
 pull_ug_summary_columns() {

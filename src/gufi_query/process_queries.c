@@ -119,7 +119,12 @@ static size_t descend2(QPTPool_t *ctx,
             }
 
             if (S_ISDIR(child->work.statuso.st_mode)) {
-                if (subdir_within_range(in, next_level, entry->d_name, len) != 1) {
+                /* if -D is set, and at the split level but the current path is not found, don't process */
+                if (in->process.set && (in->min_level == next_level) &&
+                    (trie_search(in->process.paths,
+                                 child->work.name + gqw->work.root_parent.len + gqw->work.root_basename_len + 1,
+                                 child->work.name_len - gqw->work.root_parent.len - gqw->work.root_basename_len - 1,
+                                 NULL) == 0)) {
                     free(child);
                     continue;
                 }

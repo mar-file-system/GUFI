@@ -67,13 +67,13 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 NEWDIR="$(mktemp -d 'XXXXXX')"
 
 # partial trace files
-AM="am"
-NZ="nz"
+FIRST="first"
+SECOND="second"
 
 OUTPUT="gufi_dir2trace.out"
 
 cleanup() {
-    rm -rf "${NEWDIR}" "${AM}".* "${NZ}".*
+    rm -rf "${NEWDIR}" "${FIRST}".* "${SECOND}".*
 }
 
 cleanup_exit() {
@@ -134,27 +134,31 @@ echo "# target is directory"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}\" \"${SRCDIR}\""
 run_no_sort "rm -r \"${SRCDIR}.0\""
 
+partial_indexing_setup
+
 echo "# ######################################"
-echo "# partial indexing [a, n)"
-run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D a m -y 1 \"${SRCDIR}\" \"${TRACE}\""
+echo "# partial indexing (first half)"
+run_no_sort "cat \"${DISTRIBUTED_0}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D \"${DISTRIBUTED_0}\" -y ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print \$1 }'"
+run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print \$1 }' | sort"
 echo "# ######################################"
 echo
 echo "# ######################################"
-echo "# partial indexing [n, {)"
-run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D n z -y 1 \"${SRCDIR}\" \"${TRACE}\""
+echo "# partial indexing (second half)"
+run_no_sort "cat \"${DISTRIBUTED_1}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D \"${DISTRIBUTED_1}\" -y ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print \$1 }'"
+run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print \$1 }' | sort"
 echo "# ######################################"
 echo
 echo "# ######################################"
 echo "# combine partial indexing"
-run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D a m -y 1 \"${SRCDIR}\" \"${AM}\""
-run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D n z -y 1 \"${SRCDIR}\" \"${NZ}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D \"${DISTRIBUTED_0}\" -y ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${FIRST}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -D \"${DISTRIBUTED_1}\" -y ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SECOND}\""
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} -z 0 \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
-run_no_sort "cat ${TRACES[@]} ${AM}.* ${NZ}.* | @AWK@ -F '|' '{ print \$1 }' | sort | tail -n +2"
+run_no_sort "cat ${TRACES[@]} ${FIRST}.* ${SECOND}.* | @AWK@ -F '|' '{ print \$1 }' | sort"
 echo "# ######################################"
 echo
 

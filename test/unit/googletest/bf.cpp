@@ -121,8 +121,7 @@ static const std::string Q = "-Q"; static const std::string Q_arg0 = "extdb";
                                    static const std::string Q_arg2 = "template.table";
                                    static const std::string Q_arg3 = "view";
 static const std::string s = "-s"; static const std::string s_arg  = "s_arg";
-static const std::string D = "-D"; static const std::string D_arg0 = "a";
-                                   static const std::string D_arg1 = "n";
+static const std::string D = "-D"; static const std::string D_arg  = "D arg";
 
 static bool operator==(const refstr_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -163,6 +162,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->compress,                           flags);
     #endif
     EXPECT_EQ(in->check_extdb_valid,                  flags);
+    EXPECT_EQ(in->process.set,                        0);
 
     if (options) {
         EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);
@@ -202,12 +202,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(eus->view.data,                     Q_arg3);
 
         EXPECT_EQ(in->swap_prefix.data,               s_arg);
-
-        EXPECT_STREQ(in->index_match.range.lhs.data,  "a");
-        EXPECT_EQ(in->index_match.range.lhs.len,      (std::size_t) 1);
-        EXPECT_STREQ(in->index_match.range.rhs.data,  "n");
-        EXPECT_EQ(in->index_match.range.rhs.len,      (std::size_t) 1);
-        EXPECT_EQ(in->index_match.set,                1);
     }
     else {
         const std::string empty = "";
@@ -241,11 +235,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->subdir_limit,                   (std::size_t) 0);
         EXPECT_EQ(sll_get_size(&in->external_attach), (std::size_t) 0);
         EXPECT_NE(in->swap_prefix.data,               nullptr); /* default exists */
-        EXPECT_EQ(in->index_match.range.lhs.data,     nullptr);
-        EXPECT_EQ(in->index_match.range.lhs.len,      (std::size_t) 0);
-        EXPECT_EQ(in->index_match.range.rhs.data,     nullptr);
-        EXPECT_EQ(in->index_match.range.rhs.len,      (std::size_t) 0);
-        EXPECT_EQ(in->index_match.set,                0);
     }
 }
 
@@ -346,7 +335,7 @@ TEST(parse_cmd_line, debug) {
         q.c_str(),
         Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
         s.c_str(), s_arg.c_str(),
-        D.c_str(), D_arg0.c_str(), D_arg1.c_str(),
+        D.c_str(), D_arg.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
@@ -428,7 +417,7 @@ TEST(parse_cmd_line, options) {
         C.c_str(), C_arg.c_str(),
         Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
         s.c_str(), s_arg.c_str(),
-        D.c_str(), D_arg0.c_str(), D_arg1.c_str(),
+        // D.c_str(), D_arg.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
@@ -569,12 +558,12 @@ TEST(parse_cmd_line, output_arguments) {
     }
 }
 
-TEST(parse_cmd_line, bad_partial_range) {
+TEST(parse_cmd_line, bad_D_arg) {
     const char opts[] = "D:";
 
     const char *argv[] = {
         exec.c_str(),
-        D.c_str(), D_arg1.c_str(), D_arg0.c_str(), // out of order
+        D.c_str(), D_arg.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);

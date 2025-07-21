@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <errno.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -120,6 +121,8 @@ struct input *input_init(struct input *in) {
 
         in->swap_prefix.data = DEFAULT_SWAP_PREFIX;
         in->swap_prefix.len  = 0;
+
+        in->process.paths = trie_alloc();
     }
 
     return in;
@@ -127,6 +130,7 @@ struct input *input_init(struct input *in) {
 
 void input_fini(struct input *in) {
     if (in) {
+        trie_free(in->process.paths);
         sll_destroy(&in->sql_format.ent,  free);
         sll_destroy(&in->sql_format.sum,  free);
         sll_destroy(&in->sql_format.tsum, free);
@@ -202,7 +206,7 @@ void print_help(const char* prog_name,
                        "     <view>              External database file basename, per-attach table name, template + table name, and the resultant view"); break;
       case 's': printf("  -s <path>              File name prefix for swap files"); break;
       case 'p': printf("  -p <path>              Source path prefix for %%s in SQL"); break;
-      case 'D': printf("  -D <start> <stop>      Start and stop path names for partial indexing"); break;
+      case 'D': printf("  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y"); break;
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -263,7 +267,7 @@ void show_input(struct input* in, int retval) {
    printf("\n");
    printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
    printf("in.source_prefix            = '%s'\n",          in->sql_format.source_prefix.data);
-   printf("in.index_match              = ['%s', '%s')\n",  in->index_match.range.lhs.data, in->index_match.range.rhs.data);
+   printf("in.process.count            = %zu\n",           in->process.count);
    printf("retval                      = %d\n",            retval);
    printf("\n");
 }
@@ -529,21 +533,37 @@ int parse_cmd_line(int         argc,
           break;
 
       case 'D':
-          INSTALL_STR(&in->index_match.range.lhs, optarg);
-          optarg = argv[optind];
+          {
+              /* read file contents into trie for searching while descending */
+              refstr_t filename = {
+                  .data = NULL,
+                  .len = 0,
+              };
+              INSTALL_STR(&filename, optarg);
 
-          INSTALL_STR(&in->index_match.range.rhs, optarg);
-          optarg = argv[++optind];
+              FILE *file = fopen(filename.data, "r");
+              if (!file) {
+                  const int err = errno;
+                  fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
+                          filename.data, strerror(err), err);
+                  retval = -1;
+                  break;
+              }
 
-          if (refstr_cmp(&in->index_match.range.lhs, &in->index_match.range.rhs) > 0) {
-              fprintf(stderr, "Bad partial indexing range: [%s, %s)\n",
-                      in->index_match.range.lhs.data, in->index_match.range.rhs.data);
-              retval = -1;
+              char *line = NULL;
+              size_t n = 0;
+              ssize_t got = 0;
+              while ((got = getline(&line, &n, file)) != -1) {
+                  /* -1 to remove trailing newline */
+                  trie_insert(in->process.paths, line, got - 1, NULL, NULL);
+                  in->process.count++;
+              }
+              free(line);
+
+              fclose(file);
+
+              in->process.set = 1;
           }
-          else {
-              in->index_match.set = 1;
-          }
-
           break;
 
       case '?':
@@ -563,6 +583,11 @@ int parse_cmd_line(int         argc,
    // make sure min_level <= max_level
    if (retval == 0) {
        retval = -(in->min_level > in->max_level);
+   }
+
+   if (in->process.set && (in->min_level == 0)) {
+       fprintf(stderr, "-D must be used with -y level > 0\n");
+       retval = -1;
    }
 
    if (in->printed_version) {

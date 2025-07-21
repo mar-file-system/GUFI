@@ -178,25 +178,29 @@ paste \
      ) | @COLUMN@ -t -s$'\t' | @SED@ '1s/       Combined/Combined/g' # first line is indented otoo far for some reason
 echo
 
+partial_indexing_setup
+
 echo "# ######################################"
-echo "# partial indexing [a, n)"
+echo "# partial indexing (first half)"
 run_no_sort "rm -r \"${SEARCH}\""
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D a m -y 1 \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "cat \"${DISTRIBUTED_0}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D \"${DISTRIBUTED_0}\" -y ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH}\""
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 echo "# ######################################"
 echo
 echo "# ######################################"
-echo "# partial indexing [n, {)"
+echo "# partial indexing (second half)"
 run_no_sort "rm -r \"${SEARCH}\""
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D n z -y 1 \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "cat \"${DISTRIBUTED_1}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D \"${DISTRIBUTED_1}\" -y ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH}\""
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 echo "# ######################################"
 echo
 echo "# ######################################"
 echo "# combine partial indexing"
 run_no_sort "rm -r \"${SEARCH}\""
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D a m -y 1 \"${SRCDIR}\" \"${SEARCH}\""
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D n z -y 1 \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D \"${DISTRIBUTED_0}\" -y ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -D \"${DISTRIBUTED_1}\" -y ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH}\""
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -z 0 \"${SRCDIR}\" \"${SEARCH}\""
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 echo "# ######################################"

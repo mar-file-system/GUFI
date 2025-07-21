@@ -4,27 +4,27 @@ $ gufi_dir2index_distributed --sbatch "sbatch" --gufi_dir2index "gufi_dir2index"
 "search2" Already exists!
 "search2" Already exists!
 "search2" Already exists!
-Splitting 4 unique basenames into 5 groups of max size 1
-    Range 0: 1 basename
+Splitting 4 paths into 5 groups of max size 1
+    Range 0: 1 path
         directory directory
-    Range 1: 1 basename
+    Range 1: 1 path
         empty_directory empty_directory
-    Range 2: 1 basename
+    Range 2: 1 path
         leaf_directory leaf_directory
-    Range 3: 1 basename
+    Range 3: 1 path
         unusual#? directory , unusual#? directory ,
     Index upper directories up to and including level 0
 
 # Query Index
 $ gufi_query_distributed --sbatch "sbatch" --gufi_query "gufi_query" --threads 2 1 5 "prefix2" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;"
-Splitting 4 unique basenames into 5 groups of max size 1
-    Range 0: 1 basename
+Splitting 4 paths into 5 groups of max size 1
+    Range 0: 1 path
         directory directory
-    Range 1: 1 basename
+    Range 1: 1 path
         empty_directory empty_directory
-    Range 2: 1 basename
+    Range 2: 1 path
         leaf_directory leaf_directory
-    Range 3: 1 basename
+    Range 3: 1 path
         unusual#? directory , unusual#? directory ,
     Query upper directories up to and including level 0
 cat the following slurm job output files to get complete results:
@@ -66,14 +66,14 @@ $ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT r
 
 # Convert source tree to trace files
 $ gufi_dir2trace_distributed --sbatch "sbatch" --gufi_dir2trace "gufi_dir2trace" -d "|" 1 5 "prefix" "traces"
-Splitting 4 unique basenames into 5 groups of max size 1
-    Range 0: 1 basename
+Splitting 4 paths into 5 groups of max size 1
+    Range 0: 1 path
         directory directory
-    Range 1: 1 basename
+    Range 1: 1 path
         empty_directory empty_directory
-    Range 2: 1 basename
+    Range 2: 1 path
         leaf_directory leaf_directory
-    Range 3: 1 basename
+    Range 3: 1 path
         unusual#? directory , unusual#? directory ,
     Index upper directories up to and including level 0
 Index can now be created from "traces.*"

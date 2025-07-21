@@ -127,8 +127,10 @@ run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll), 
 echo "# limit tree traversal to directories at level 1 (missing prefix/ and prefix/directory/subdirectory/)"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -y 1 -z 1 -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 
-echo "# limit tree traversal to all directories under [a, f] at level 1 (missing prefix/, prefix/leaf_directory/, and prefix/unusual#? directory ,/"
-run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -y 1 -D a f -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+partial_indexing_setup
+run_no_sort "cat \"${DISTRIBUTED_0}\""
+echo "# limit tree traversal to some directories under at level 1 (only prefix/directory and prefix/empty_directory)"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -y 1 -D \"${DISTRIBUTED_0}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 
 echo "# Output TLV columns (no aggregation)"
 run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | ${HEXLIFY}"
