@@ -63,14 +63,19 @@
 # regression test specific files
 set(CORE
   generatetree.sh
-  hexlify.py
   os_specific.sh
-  sbatch.no-output
-  sbatch.output
   setup.sh
 )
 
-foreach(NAME ${CORE})
+# support scripts
+set(AUX
+  hexlify.py
+  sbatch.no-output
+  sbatch.output
+  ssh.fake
+)
+
+foreach(NAME ${CORE} ${AUX})
   configure_file("${NAME}.in" "${NAME}" @ONLY)
 endforeach()
 

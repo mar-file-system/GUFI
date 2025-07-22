@@ -183,6 +183,7 @@ SBATCH_NO_OUTPUT="@CMAKE_BINARY_DIR@/test/regression/sbatch.no-output"
 SBATCH_OUTPUT="@CMAKE_BINARY_DIR@/test/regression/sbatch.output"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
 SQLALCHEMY="${GUFI_TOOL} sqlalchemy"
+SSH_FAKE="@CMAKE_BINARY_DIR@/test/regression/ssh.fake"
 TREEDIFF="@CMAKE_BINARY_DIR@/contrib/treediff"
 USERFILESPACEHOG="@CMAKE_BINARY_DIR@/examples/userfilespacehog"
 USERFILESPACEHOGUSESUMMARY="@CMAKE_BINARY_DIR@/examples/userfilespacehogusesummary"
@@ -258,6 +259,7 @@ replace() {
     s/${SBATCH_OUTPUT//\//\\/}/sbatch/g;
     s/${SPLIT_TRACE//\//\\/}/split_trace/g;
     s/${SQLALCHEMY//\//\\/}/gufi_vt_sqlalchemy/g;
+    s/${SSH_FAKE//\//\\/}/ssh/g;
     s/${TREEDIFF//\//\\/}/treediff/g;
     s/${USERFILESPACEHOG//\//\\/}/userfilespacehog/g;
     s/${USERFILESPACEHOGUSESUMMARY//\//\\/}/userfilespacehogusesummary/g;

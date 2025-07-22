@@ -64,12 +64,8 @@
 import gufi_common
 import gufi_distributed
 
-# run this file with sbatch on a single node
-
-# run gufi_dir2trace via sbatch
-def schedule_subtree(args, idx, filename):
-    cmd = [
-        args.sbatch, '--nodes=1',
+def subtree_cmd(args, filename, idx, _target):
+    return [
         args.gufi_dir2trace,
         '-d', args.delim,
         '-n', str(args.threads),
@@ -79,14 +75,8 @@ def schedule_subtree(args, idx, filename):
         '{0}.{1}'.format(args.output_prefix, idx),
     ]
 
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
-
-def schedule_top(args, jobids):
-    print("    Index upper directories up to and including level {0}".format(args.level - 1))
-
-    cmd = [args.sbatch, '--nodes=1']
-    cmd += gufi_distributed.depend_on_slurm_jobids(jobids)
-    cmd += [
+def top_cmd(args, _target):
+    return [
         args.gufi_dir2trace,
         '-d', args.delim,
         '-n', str(args.threads),
@@ -95,17 +85,13 @@ def schedule_top(args, jobids):
         args.output_prefix,
     ]
 
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
-
 def parse_args():
     parser = gufi_distributed.parse_args('gufi_dir2trace_distributed',
                                          'Script for distributing gufi_dir2trace across nodes')
 
-    parser.add_argument('--dry-run',        action='store_true')
-
     parser.add_argument('--gufi_dir2trace', metavar='path',
                         type=str,
-                        default='gufi_dir2trace.sbatch')
+                        default='gufi_dir2trace')
 
     parser.add_argument('--threads', '-n',  metavar='n',
                         type=gufi_common.get_positive,
@@ -128,10 +114,8 @@ def parse_args():
 def main():
     args = parse_args()
 
-    gufi_distributed.distribute_work(args.input_dir, args.level, args.nodes,
-                                     args.group_file_prefix, args.sort_by_basename,
-                                     lambda idx, filename: schedule_subtree(args, idx, filename),
-                                     lambda jobids: schedule_top(args, jobids))
+    gufi_distributed.distribute_work(args, args.input_dir, subtree_cmd, top_cmd)
+
     print('Index can now be created from "{0}.*"'.format(args.output_prefix))
 
 if __name__ == '__main__':

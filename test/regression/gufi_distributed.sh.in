@@ -68,15 +68,56 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 SEARCH2="${SEARCH}2"
 INDEXROOT2="${SEARCH2}/${BASENAME}"
 
-TRACES="traces"
+NODES=5 # for subtrees (4 actually used)
 
-RANKS=5
-files=()
+TRACES="traces"
+OUTPUT_PREFIX="output"
+
+LOCALHOST="localhost"
+HOME_IP="127.0.0.1"
+HOSTFILE="hostfile"
+
+generate_hostfile() {
+    (
+        # for distributing tree
+        echo "${LOCALHOST}"
+        echo "${HOME_IP}"
+        echo "${LOCALHOST}"
+        echo "${HOME_IP}"
+        echo "${LOCALHOST}" # not used
+        echo                # empty lines are ignored
+        # for processing top
+        echo "${HOME_IP}"
+    ) > "${HOSTFILE}"
+}
+
+# pre-create output file lists in parent scope to have them available for use
+
+# names of files containing paths for "nodes" to process
 groups=()
 for jobid in {0..4}
 do
-    files+=("slurm.fake-${jobid}.out")
     groups+=("path_list.${jobid}")
+done
+
+# names of "slurm" output files
+slurm_files=()
+for jobid in {0..4}
+do
+    slurm_files+=("slurm.fake-${jobid}.out")
+done
+
+# names of "ssh" output files
+ssh_files=()
+for (( thread = 0; thread < THREADS; thread++ ))
+do
+    ssh_files+=(
+        "${OUTPUT_PREFIX}.${LOCALHOST}.0.${thread}"
+        "${OUTPUT_PREFIX}.${HOME_IP}.1.${thread}"
+        "${OUTPUT_PREFIX}.${LOCALHOST}.2.${thread}"
+        "${OUTPUT_PREFIX}.${HOME_IP}.3.${thread}"
+        "${OUTPUT_PREFIX}.${HOME_IP}.top.${thread}"
+    )
 done
 
 OUTPUT="gufi_distributed.out"
@@ -86,7 +127,7 @@ trace_files() {
     list=()
     for (( thread = 0; thread < THREADS; thread++ ))
     do
-        for (( rank = 0; rank < RANKS; rank++ ))
+        for (( rank = 0; rank < NODES; rank++ ))
         do
             name="${!prefix}.${rank}.${thread}"
             if [[ -f "${name}" ]]
@@ -108,7 +149,7 @@ trace_files() {
 cleanup() {
     # shellcheck disable=SC2207
     traces=($(trace_files))
-    rm -rf "${SEARCH2}" "${files[@]}" "${groups[@]}" "${traces[@]}"
+    rm -rf "${SEARCH2}" "${HOSTFILE}" "${groups[@]}" "${slurm_files[@]}" "${ssh_files[@]}" "${traces[@]}"
 }
 
 cleanup_exit() {
@@ -125,26 +166,31 @@ run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --help"
 run_no_sort "${GUFI_QUERY_DISTRIBUTED} --help"
 
 (
+echo "#####################################"
+echo "# slurm jobs"
+echo
+
+generate_hostfile
+
 echo "# Index Source Tree"
-run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" ${DISTRIBUTED_LEVEL} ${RANKS} \"${SRCDIR}\" \"${SEARCH2}\""
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
 
 echo "# Query Index"
-run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_OUTPUT}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} ${DISTRIBUTED_LEVEL} ${RANKS} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\""
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_OUTPUT}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\""
 
-echo "$ combine output files"
+echo "# combine output files"
 # shellcheck disable=SC2145
-run_sort "cat ${files[@]}"
-echo
+run_sort "cat ${slurm_files[@]}" | @SED@ "s/${INDEXROOT2//\//\\/}/prefix2/g"
 
 echo "# Diff original index results against the combined results"
 # shellcheck disable=SC2145,SC2153
-run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')" | replace
+run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${slurm_files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
 echo "# Diff original index results against querying the new index from a single node"
 run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
 echo "# Convert source tree to trace files"
-run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" ${DISTRIBUTED_LEVEL} ${RANKS} \"${SRCDIR}\" \"${TRACES}\""
+run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACES}\""
 
 traces=("$(trace_files)")
 
@@ -155,7 +201,48 @@ run_sort "cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }'"
 echo "# Diff original index results against the trace files"
 # shellcheck disable=SC2145,SC2153
 run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's/${SEARCH//\//\\/}\\///g') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
-) 2>&1 | @SED@ "s/${INDEXROOT2//\//\\/}/prefix2/g" | tee "${OUTPUT}"
+
+# cleanup
+cleanup
+echo "#####################################"
+echo
+echo "#####################################"
+echo "# ssh jobs"
+echo
+
+generate_hostfile
+
+echo "# Index Source Tree"
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
+
+echo "# Query Index"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" --output_prefix \"output\""
+
+echo "# combine output files"
+# shellcheck disable=SC2145
+run_sort "cat ${ssh_files[@]}" | @SED@ "s/${INDEXROOT2//\//\\/}/prefix2/g"
+
+echo "# Diff original index results against the combined results"
+# shellcheck disable=SC2145,SC2153
+run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${ssh_files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+
+echo "# Diff original index results against querying the new index from a single node"
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+
+echo "# Convert source tree to trace files"
+run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACES}\""
+
+traces=("$(trace_files)")
+
+echo "# Print contents of traces files"
+# shellcheck disable=SC2145
+run_sort "cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }'"
+
+echo "# Diff original index results against the trace files"
+# shellcheck disable=SC2145,SC2153
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's/${SEARCH//\//\\/}\\///g') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
+echo "#####################################"
+) 2>&1 | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_distributed.expected "${OUTPUT}"
 rm "${OUTPUT}"

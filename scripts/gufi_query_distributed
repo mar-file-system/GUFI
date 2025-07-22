@@ -61,16 +61,12 @@
 
 
 
-import sys
-
 import gufi_common
 import gufi_distributed
 
-# run this file with sbatch on a single node
-
 SQL_FLAGS = 'ITSEKJGF'
 
-def add_args(args):
+def add_sql(args):
     cmd = []
 
     for flag in SQL_FLAGS:
@@ -79,46 +75,40 @@ def add_args(args):
             if value:
                 cmd += ['-{0}'.format(flag), value]
 
-    cmd += [args.GUFI_index]
-
     return cmd
 
-# run gufi_query via sbatch
-def schedule_work(args, _idx, filename):
+def subtree_cmd(args, filename, idx, target):
     cmd = [
-        args.sbatch, '--nodes=1',
         args.gufi_query,
         '-n', str(args.threads),
         '-y', str(args.level),
         '-D', filename,
-    ] + add_args(args)
+    ]
 
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
+    if args.distributor == 'ssh':
+        cmd += ['-o', '{0}.{1}.{2}'.format(args.output_prefix, target, idx)]
 
-def schedule_top(args, jobids):
-    print("    Query upper directories up to and including level {0}".format(args.level - 1))
+    cmd += add_sql(args) + [args.GUFI_tree]
 
-    cmd = [args.sbatch, '--nodes=1']
-    cmd += gufi_distributed.depend_on_slurm_jobids(jobids)
-    if args.wait:
-        cmd += ['--wait']
-    cmd += [
+    return cmd
+
+def top_cmd(args, target):
+    cmd = [
         args.gufi_query,
         '-n', str(args.threads),
         '-z', str(args.level - 1),
-    ] + add_args(args)
+    ]
 
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
+    if args.distributor == 'ssh':
+        cmd += ['-o', '{0}.{1}.top'.format(args.output_prefix, target)]
+
+    cmd += add_sql(args) + [args.GUFI_tree]
+
+    return cmd
 
 def parse_args():
     parser = gufi_distributed.parse_args('gufi_query_distributed',
                                          'Script for distributing gufi_query across nodes')
-
-    parser.add_argument('--dry-run',             action='store_true')
-
-    parser.add_argument('-W', '--wait',
-                        action='store_true',
-                        help='wait until all jobs complete and print results')
 
     parser.add_argument('--chunk-size',
                         type=gufi_common.get_positive,
@@ -126,8 +116,9 @@ def parse_args():
                         help='Output file read chunk size. Only used with -W/--wait')
 
     parser.add_argument('--gufi_query',          metavar='path',
-                        type=str,
-                        default='gufi_query.sbatch')
+                        type=gufi_distributed.is_exec_file,
+                        default='gufi_query')
+
     parser.add_argument('--threads',       '-n', metavar='n',
                         type=gufi_common.get_positive,
                         default=1)
@@ -135,7 +126,12 @@ def parse_args():
     for flag in SQL_FLAGS:
         parser.add_argument('-{0}'.format(flag), metavar='SQL', type=str)
 
-    parser.add_argument('GUFI_index',
+    # required when using ssh
+    parser.add_argument('--output_prefix', '-o',
+                        type=str,
+                        help='prefix of text files used to store output when using ssh')
+
+    parser.add_argument('GUFI_tree',
                         type=gufi_distributed.dir_arg)
 
     return parser.parse_args()
@@ -143,23 +139,17 @@ def parse_args():
 def main():
     args = parse_args()
 
-    jobids = gufi_distributed.distribute_work(args.GUFI_index, args.level, args.nodes,
-                                              args.group_file_prefix, args.sort_by_basename,
-                                              lambda idx, filename: schedule_work(args, idx, filename),
-                                              lambda jobids: schedule_top(args, jobids))
+    if (args.distributor == 'ssh') and not args.output_prefix:
+        raise RuntimeError('--output_prefix must be set')
 
-    if args.wait:
-        for jobid in jobids:
-            with open('slurm-{0}.out'.format(jobid), 'r', encoding='utf-8') as f:
-                while True:
-                    chunk = f.read(args.chunk_size)
-                    if not chunk:
-                        break
-                    sys.stdout.write(chunk)
-    else:
+    jobids = gufi_distributed.distribute_work(args, args.GUFI_tree, subtree_cmd, top_cmd)
+
+    if args.distributor == 'slurm':
         print('cat the following slurm job output files to get complete results:')
         for jobid in jobids:
             print('    {0}'.format(jobid))
+    elif args.distributor == 'ssh':
+        print('cat "{0}.*" to get complete results'.format(args.output_prefix))
 
 if __name__ == '__main__':
     main()

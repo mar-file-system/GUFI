@@ -63,27 +63,9 @@
 
 set -e
 
-# remove sbatch flags
+# remove ssh flags
 
-# https://stackoverflow.com/a/14203146
-# Bruno Bronosky
-POSITIONAL=()
-while [[ $# -gt 0 ]]
-do
-key="$1"
+shift # past target
 
-case $key in
-    --nodes=*|--nodelist=*|--wait)
-        ;;
-    --nodes|--nodelist|--dependency)
-        shift # past value
-        ;;
-    *)    # unknown option
-        POSITIONAL+=("$1") # save it in an array for later
-        ;;
-esac
-    shift # past flag
-done
-set -- "${POSITIONAL[@]}" # restore positional parameters
-
-"$@"
+# commands have cd prefixed so need shell
+echo "$@" | bash

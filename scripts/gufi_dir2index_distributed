@@ -64,12 +64,8 @@
 import gufi_common
 import gufi_distributed
 
-# run this file with sbatch on a single node
-
-# run gufi_dir2index via sbatch
-def schedule_subtree(args, _idx, filename):
-    cmd = [
-        args.sbatch, '--nodes=1',
+def subtree_cmd(args, filename, _idx, _target):
+    return [
         args.gufi_dir2index,
         '-n', str(args.threads),
         '-y', str(args.level),
@@ -78,14 +74,8 @@ def schedule_subtree(args, _idx, filename):
         args.output_dir,
     ]
 
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
-
-def schedule_top(args, jobids):
-    print("    Index upper directories up to and including level {}".format(args.level - 1))
-
-    cmd = [args.sbatch, '--nodes=1']
-    cmd += gufi_distributed.depend_on_slurm_jobids(jobids)
-    cmd += [
+def top_cmd(args, _target):
+    return [
         args.gufi_dir2index,
         '-n', str(args.threads),
         '-z', str(args.level - 1),
@@ -93,17 +83,13 @@ def schedule_top(args, jobids):
         args.output_dir,
     ]
 
-    return gufi_distributed.run_slurm(cmd, args.dry_run)
-
 def parse_args():
     parser = gufi_distributed.parse_args('gufi_dir2index_distributed',
                                          'Script for distributing gufi_dir2index across nodes')
 
-    parser.add_argument('--dry-run',        action='store_true')
-
     parser.add_argument('--gufi_dir2index', metavar='path',
-                        type=str,
-                        default='gufi_dir2index.sbatch')
+                        type=gufi_distributed.is_exec_file,
+                        default='gufi_dir2index')
 
     parser.add_argument('--threads', '-n',  metavar='n',
                         type=gufi_common.get_positive,
@@ -114,7 +100,7 @@ def parse_args():
                         help='Source Tree Root')
 
     parser.add_argument('output_dir',
-                        type=str,
+                        type=gufi_distributed.new_dir_arg,
                         help='Index Root')
 
     return parser.parse_args()
@@ -122,10 +108,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    gufi_distributed.distribute_work(args.input_dir, args.level, args.nodes,
-                                     args.group_file_prefix, args.sort_by_basename,
-                                     lambda idx, filename: schedule_subtree(args, idx, filename),
-                                     lambda jobids: schedule_top(args, jobids))
+    gufi_distributed.distribute_work(args, args.input_dir, subtree_cmd, top_cmd)
 
 if __name__ == '__main__':
     main()

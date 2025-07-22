@@ -63,111 +63,211 @@
 
 import argparse
 import os
+import shlex
 import subprocess
 import sys
 
 import gufi_common
 
-# this script assumes slurm is being used
+# how to sort paths found by find(1) at given level
+SORT_DIRS = {
+    'unsorted' : lambda dirs : dirs,
+    'path'     : lambda dirs : sorted(dirs), # pylint: disable=unnecessary-lambda
+    'basename' : lambda dirs : sorted(dirs, key = os.path.basename),
+}
 
-def run_slurm(cmd, dry_run):
-    if dry_run:
-        return None
+# wrapper to block on slurm job submission
+# pylint: disable=too-few-public-methods
+class SlurmJob:
+    def __init__(self, args, target, cmd):
+        # wait on sbatch, not the actual job
+        # pylint: disable=consider-using-with
+        proc = subprocess.Popen([args.sbatch, '--nodes=1', '--nodelist={0}'.format(target)] + cmd,
+                                stdout=subprocess.PIPE,
+                                cwd=os.getcwd())
+        out, _ = proc.communicate()
+        self.returncode = proc.returncode
+        self.jobid = out.split()[-1].decode()
 
-    query = subprocess.Popen(cmd,  # pylint: disable=consider-using-with
-                             stdout=subprocess.PIPE)
-    out, _ = query.communicate()   # block until cmd finishes
+def run_slurm(args, target, cmd):
+    return SlurmJob(args, target, cmd)
 
-    if query.returncode:
-        sys.exit(query.returncode)
+def handle_slurm_procs(procs):
+    jobids = []
+    for proc in procs:
+        if proc.returncode != 0:
+            continue
 
-    return out.split()[-1]         # keep slurm job id
+        # get slurm job id
+        jobids += [proc.jobid]
 
-# step 1
-# run find and return sorted list of directories
+    return jobids
+
+def run_ssh(args, target, cmd):
+    # can't return pid because that would result
+    # in waiting for the process to complete
+    # pylint: disable=consider-using-with
+    return subprocess.Popen([args.ssh, target, 'cd', os.getcwd(), '&&'] + [shlex.quote(argv) for argv in cmd],
+                            stdout=subprocess.DEVNULL, # Python 3.3
+                            cwd=os.getcwd())
+
+def handle_ssh_procs(procs):
+    jobids = []
+    for proc in procs:
+        # wait on the actual job
+        proc.wait()
+
+        if proc.returncode != 0:
+            sys.stderr.write('ssh returned {0}\n'.format(proc.returncode))
+            continue
+
+        # get slurm job id
+        jobids += [proc.pid]
+
+    return jobids
+
+DISTRIBUTORS = {
+    'slurm' : (run_slurm, handle_slurm_procs),
+    'ssh'   : (run_ssh,   handle_ssh_procs),
+}
+
+# Step 1
+# Run find(1) and return sorted list of directories
 def dirs_at_level(root, level):
     # can't use %P to remove input path in macos and Alpine Linux
     cmd = ['find', root, '-mindepth', str(level), '-maxdepth', str(level), '-type', 'd']
-    query = subprocess.Popen(cmd,   # pylint: disable=consider-using-with
-                             stdout=subprocess.PIPE)
-    dirs, _ = query.communicate() # block until find finishes
+    proc = subprocess.Popen(cmd, # pylint: disable=consider-using-with
+                             stdout=subprocess.PIPE,
+                             cwd=os.getcwd())
+    dirs, _ = proc.communicate() # block until find finishes
 
-    if query.returncode:
-        sys.exit(query.returncode)
+    if proc.returncode:
+        sys.exit(proc.returncode)
 
     return [path.decode()[len(root) + int(root[-1] != os.path.sep):]
             for path in dirs.split(b'\n') if len(path) > 0]
 
-# step 2
-# split directories into groups of unique basenames for processing
-def group_dirs(dirs, splits, sort_by_basename):
+# Step 2
+# Split directories into groups of paths for processing
+def group_dirs(dirs, splits, sort):
     count = len(dirs)
     group_size = count // splits + int(bool(count % splits))
-    ordered = sorted(dirs, key=os.path.basename) if sort_by_basename else sorted(dirs)
+    ordered = SORT_DIRS[sort](dirs)
     return group_size, [ordered[i: i + group_size] for i in range(0, count, group_size)]
 
-# step 3
-# get only the first and last paths in each group
-# print debug messages
-# run function to schedule jobs if it exists
-# pylint: disable=too-many-arguments,too-many-positional-arguments
-def schedule_subtrees(dir_count, splits, group_size, groups,
-                      group_file_prefix, schedule_subtree):
+# Step 3
+# Write the group to a per-node file and start jobs
+def schedule_subtrees(args, dir_count, group_size, groups, subtree_cmd):
+    targets = args.hosts[0]
     print('Splitting {0} paths into {1} groups of max size {2}'.format(dir_count,
-                                                                       splits,
+                                                                       len(targets),
                                                                        group_size))
 
-    jobids = []
-    for i, group in enumerate(groups):
+    procs = []
+    for i, (group, target) in enumerate(zip(groups, targets)):
         count = len(group)
 
         if count == 0:
             break
 
-        print('    Range {0}: {1} path{2}'.format(i, count, 's' if count != 1 else ''))
+        print('    Range {0}: {1} path{2} on {3}'.format(i, count, 's' if count != 1 else '', target))
         print('        {0} {1}'.format(group[0], group[-1]))
 
-        if schedule_subtree:
-            filename = '{0}.{1}'.format(group_file_prefix, i)
-            with open(filename, 'w', encoding='utf-8') as f:
-                for path in group:
-                    f.write(path)
-                    f.write('\n')
+        if args.dry_run:
+            continue
 
-            jobid = schedule_subtree(i, filename)
-            if jobid is not None:
-                jobids += [jobid.decode()]
+        # write group to per-node file
+        filename = os.path.realpath('{0}.{1}'.format(args.group_file_prefix, i))
+        with open(filename, 'w', encoding='utf-8') as f:
+            for path in group:
+                f.write(path)
+                f.write('\n')
 
-    return jobids
+        cmd = subtree_cmd(args, filename, i, target)
 
-# call this inside step 4's function
-def depend_on_slurm_jobids(jobids):
-    return ['--dependency', 'afterok:' + ':'.join(jobids)]
+        # run the command to process the subtree
+        procs += [DISTRIBUTORS[args.distributor][0](args, target, cmd)]
 
-# step 4
-# schdule job to process top-level directories that were skipped
-# after all subdirectories have been processed
-def schedule_top(func, jobids):
-    # func should be a wrapper around another function
-    # that binds additional arguments
-    return func(jobids)
+    return procs
+
+# Step 4
+# Schedule job to process top-level directories that were skipped,
+# after all subdirectories have been processed. Then wait on the
+# top-level job for completion. Waiting for the subtrees to be
+# processed is optional, but is done in order to match behaviors of
+# slurm and ssh.
+def schedule_top(args, jobids, func):
+    target = args.hosts[1]
+    cmd = func(args, target)
+
+    print("    Process upper directories up to and including level {0} on {1}".format(args.level - 1, target))
+
+    if args.dry_run:
+        return None
+
+    # pylint: disable=no-else-return
+    if args.distributor == 'slurm':
+        cmd = ['--dependency', 'afterok:' + ':'.join(jobids), '--wait'] + cmd
+        return run_slurm(args, target, cmd)
+    elif args.distributor == 'ssh':
+        return run_ssh(args, target, cmd)
+
+    # should never get here
+    return None
 
 # call this combined function to distribute work
-# pylint: disable=too-many-arguments,too-many-positional-arguments
-def distribute_work(root, level, nodes,
-                    group_file_prefix, sort_by_basename,
-                    schedule_subtree_func, schedule_top_func):
-    dirs = dirs_at_level(root, level)
-    group_size, groups = group_dirs(dirs, nodes, sort_by_basename)
-    jobids = schedule_subtrees(len(dirs), nodes, group_size, groups,
-                               group_file_prefix, schedule_subtree_func)
-    jobids += [schedule_top(schedule_top_func, jobids).decode()]
-    return jobids
+def distribute_work(args, root, schedule_subtree_func, schedule_top_func):
+    dirs = dirs_at_level(root, args.level)
+    group_size, groups = group_dirs(dirs, len(args.hosts[0]), args.sort)
 
+    # launch jobs in parallel
+    procs = schedule_subtrees(args, len(dirs), group_size, groups,
+                              schedule_subtree_func)
+
+    # slurm: wait for sbatch and return slurm job ids (schedule_top waits for the actual jobs)
+    # ssh:   wait for actual job and return pid
+    handle_procs = DISTRIBUTORS[args.distributor][1]
+    jobids = handle_procs(procs)
+
+    # process the top levels
+    top_proc = schedule_top(args, jobids, schedule_top_func)
+
+    return jobids + handle_procs([top_proc])
+
+# argparse type for existing directories (i.e. source tree)
 def dir_arg(path):
     if not os.path.isdir(path):
-        raise argparse.ArgumentTypeError("Bad directory: {0}".format(path))
+        raise argparse.ArgumentTypeError('Bad directory: {0}'.format(path))
+
     return path
+
+# argparse type for nonexistant directories (i.e. target directories)
+def new_dir_arg(path):
+    return os.path.realpath(path)
+
+# argparse type for executable file (symlinks are allowed)
+def is_exec_file(path):
+    if (os.path.isfile(path) or os.path.islink(path)) and os.access(path, os.X_OK):
+        return os.path.realpath(path)
+
+    raise argparse.ArgumentTypeError('Bad executable file: {0}'.format(path))
+
+# read hostfile and return tuple containing
+# nodes for processing tree distributed at given level
+# and top levels
+def read_hostfile(filename):
+    with open(filename, 'r', encoding='utf-8') as hostfile:
+        nodes = []
+        for node in hostfile:
+            node = node.strip()
+            if len(node):
+                nodes += [node]
+
+    if len(nodes) < 2:
+        raise RuntimeError('Need at least 2 nodes in node list')
+
+    # all but last nodes are used for processing subtrees
+    return nodes[:-1], nodes[-1]
 
 def parse_args(name, desc):
     parser = argparse.ArgumentParser(name, description=desc)
@@ -176,25 +276,37 @@ def parse_args(name, desc):
                         action='version',
                         version=gufi_common.VERSION)
 
-    parser.add_argument('--sbatch', metavar='exec',
-                        type=str,
-                        default='sbatch')
+    parser.add_argument('--dry-run',             action='store_true')
 
-    parser.add_argument('--group_file_prefix',
+    parser.add_argument('--group_file_prefix',   metavar='path',
                         type=str,
                         default='path_list',
                         help='prefix for file containing paths to be processed by one node')
 
-    parser.add_argument('--sort-by-basename',
-                        action='store_true',
-                        help='distribute paths by basename instead of parent name')
+    parser.add_argument('--sort',
+                        choices=SORT_DIRS.keys(),
+                        default='path',
+                        help='sort paths discovered by find at given level')
+
+    # not using subparser
+    parser.add_argument('distributor',
+                        choices=DISTRIBUTORS)
+
+    parser.add_argument('--sbatch',              metavar='exec',
+                        type=str,
+                        default='sbatch')
+
+    parser.add_argument('--ssh',                 metavar='exec',
+                        type=str,
+                        default='ssh')
+
+    parser.add_argument('hosts',                 metavar='hostfile',
+                        type=read_hostfile,
+                        help='file containing one path (without starting prefix) per line')
 
     parser.add_argument('level',
                         type=gufi_common.get_positive,
                         help='Level at which work is distributed across nodes')
 
-    parser.add_argument('nodes',
-                        type=gufi_common.get_positive,
-                        help='Number nodes to split work across')
 
     return parser # allow for others to use this parser

@@ -73,10 +73,10 @@ do
 key="$1"
 
 case $key in
-    --nodes|--dependency)
-        shift # past count
+    --nodes=*|--nodelist=*|--wait)
         ;;
-    --nodes=*|--wait)
+    --nodes|--nodelist|--dependency)
+        shift # past value
         ;;
     *)    # unknown option
         POSITIONAL+=("$1") # save it in an array for later
@@ -95,7 +95,7 @@ while (( jobid < 5 ))
 do
     if [[ ! -f "${prefix}${jobid}${suffix}" ]]
     then
-       break
+        break
     fi
 
     jobid=$(( jobid + 1 ))
