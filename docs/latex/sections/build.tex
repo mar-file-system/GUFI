@@ -100,7 +100,7 @@ Actions and might no longer work.
   \item[-] 11~(Big~Sur)
   \item[-] 12~(Monterey)
   \item[-] 13~(Ventura)
-  \item[+] 14~(Sonoma)
+  \item[-] 14~(Sonoma)
   \item[+] 15~(Sequoia)
   \end{itemize}
 \item Windows
@@ -166,7 +166,7 @@ Actions and might no longer work.
   & Location to install the dependencies. Defaults to
   \$\{CMAKE\_BINARY\_DIR\}/deps. If the dependencies are not
   installed in \$\{CMAKE\_BINARY\_DIR\}, they will not need to be
-  redownloaded, rebuilt, or reinstalled everytime \$\{CMAKE\_BINARY\_DIR\}
+  redownloaded, rebuilt, or reinstalled every time \$\{CMAKE\_BINARY\_DIR\}
   is deleted. \\
   \hline
   \texttt{DEP\_PATCH\_SQLITE3\_OPEN=<On|Off>}
@@ -207,8 +207,8 @@ Some files are installed into system paths that are not
   \hline
   \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
-  \texttt{CONFIG\_CLIENT=<FILEPATH>} & Path of configuration file used by scripts. \\
-  \texttt{CONFIG\_SERVER=<FILEPATH>} & \\
+  \texttt{CONFIG\_SERVER=<FILEPATH>} & Path of configuration file used by scripts. \\
+  \texttt{CONFIG\_CLIENT=<FILEPATH>} & \\
                                      & Two different paths are available in case the server and client\\
                                      & deployments place their configuration files at different \\
                                      & locations. \\

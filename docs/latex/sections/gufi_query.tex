@@ -508,25 +508,25 @@ indexing, the general process is:
 
 \begin{enumerate}
 \item Choose a level in the index to split up across nodes.
-\item Get the sorted list of all directory basenames at the selected
-  level.
-\item Select continuous ranges of directories for distribution amongst
-  the worker nodes (i.e. select directories names from \texttt{a}
-  through \texttt{c} and \texttt{d} through \texttt{f}, not one
-  directory starting with \texttt{a}, another directory starting with
-  \texttt{z}, and another directory starting with \texttt{p}).
+\item Write the directory paths (without the starting path) at the
+  selected level to a file using \texttt{find -mindepth <level>
+    -maxdepth <level> -type d -printf "\%P\textbackslash n"}.
+\item Select ranges of directories from the previous step and write
+  the ranges to separate files. These files represent the work a
+  single node will process.
 \item On each node, run \gufiquery with \texttt{-y level}, \texttt{-D
-  start stop}, and (\texttt{-o filename}). All other flags and
-  arguments used should remain the same.
+  <filename.of.range>}, and (\texttt{-o output}), making sure that output
+  from different nodes do not write to the same files. All other flags
+  and arguments used should remain the same.
 \item Run \gufiquery with \texttt{-z (level - 1)} to process the
-  directories above the ones that were split across nodes. Also
-  write the output to text files (\texttt{-o}).
-\item Combine all of the text files containing the partial results to
-  get the complete results.
+  directories above the ones that were split across nodes. Also write
+  the output to text files (\texttt{-o}).
+\item Combine all of the output files containing the partial results
+  to get the complete results.
 \end{enumerate}
 
 \gufiquerydistributed has been provided for convenience when running
-on clusters with Slurm. As with the distributed indexing scripts, this
-script has the additional step of waiting for subtree processing to
-complete before scheduling the processing of the top level
-directories.
+on clusters with Slurm or SSH. As with the distributed indexing
+scripts, this script has the additional step of waiting for subtree
+processing to complete before scheduling the processing of the top
+level directories.

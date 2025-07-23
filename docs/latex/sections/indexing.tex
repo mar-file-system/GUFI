@@ -93,16 +93,16 @@ distribute indexing across multiple nodes. The general process is:
 
 \begin{enumerate}
 \item Choose a level in the source tree to split up across nodes.
-\item Get the sorted list of all directory basenames at the selected
-  level.
-\item Select continuous ranges of directories for distribution amongst
-  the worker nodes (i.e. select directories names from \texttt{a}
-  through \texttt{c} and \texttt{d} through \texttt{f}, not one
-  directory starting with \texttt{a}, another directory starting with
-  \texttt{z}, and another directory starting with \texttt{p}).
+\item Write the directory paths (without the starting path) at the
+  selected level to a file using \texttt{find -mindepth <level>
+    -maxdepth <level> -type d -printf "\%P\textbackslash n"}.
+\item Select ranges of directories from the previous step and write
+  the ranges to separate files. These files represent the work a
+  single node will process.
 \item On each node, run \gufidirindex or \gufidirtrace with \texttt{-y
-  level} and \texttt{-D start stop}. All other flags and arguments
-  used should remain the same.
+  level} and \texttt{-D <filename.of.range>}, making sure that output
+  from different nodes do not write to the same files. All other flags
+  and arguments used should remain the same.
 \item Run \gufidirindex or \gufidirtrace with \texttt{-z (level - 1)}
   to process the directories above the ones that were split across
   nodes.
@@ -111,10 +111,10 @@ distribute indexing across multiple nodes. The general process is:
 \end{enumerate}
 
 \gufidirindexdistributed and \gufidirtracedistributed have been
-provided for convenience when running on clusters with Slurm. These
-scripts have the additional step of waiting for subtree processing to
-complete before scheduling the processing of the top level
-directories.
+provided for convenience when running on clusters with Slurm or
+SSH. These scripts have the additional step of waiting for subtree
+processing to complete before scheduling the processing of the top
+level directories.
 
 \subsection{Index Placement}
 The output (final positional) argument to \gufidirindex and
