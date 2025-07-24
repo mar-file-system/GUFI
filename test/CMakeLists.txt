@@ -116,3 +116,5 @@ set_tests_properties(gary PROPERTIES LABELS "manual")
 
 # add_test(NAME gufitest COMMAND gufitest.py all)
 # set_tests_properties(gufitest PROPERTIES LABELS manual)
+
+add_library(test_plugin SHARED test_plugin.c)
