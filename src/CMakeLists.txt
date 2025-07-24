@@ -234,8 +234,8 @@ add_library(gufi_vt MODULE
   xattrs.c
 )
 set_target_properties(gufi_vt PROPERTIES PREFIX "")
-set_target_properties(gufi_vt PROPERTIES BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3-pcre;${DEP_INSTALL_PREFIX}/sqlite3/lib"
-                                         INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre;${DEP_INSTALL_PREFIX}/sqlite3/lib")
+set_target_properties(gufi_vt PROPERTIES BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3-pcre"
+                                         INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre")
 if (APPLE OR DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_target_properties(gufi_vt PROPERTIES SUFFIX ".${EXT}")
@@ -245,7 +245,6 @@ endif()
 # have a package) in order for gufi_vt to be usable if using rpm
 # installed files
 target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}")
-target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
 add_dependencies(gufi_vt install_dependencies)
 install(TARGETS gufi_vt DESTINATION "${LIB}" COMPONENT Server)
 
@@ -254,7 +253,6 @@ add_library(run_vt MODULE
 )
 set_target_properties(run_vt PROPERTIES PREFIX "")
 add_dependencies(run_vt install_dependencies)
-target_link_libraries(run_vt "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
 if (APPLE OR DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_target_properties(run_vt PROPERTIES SUFFIX ".${EXT}")
