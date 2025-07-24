@@ -1,0 +1,21 @@
+$ gufi_dir2index -U gufi_test_plugin -x prefix search
+Creating GUFI Index search with 1 threads
+Total Dirs:          6
+Total Non-Dirs:      14
+
+
+# test plugin summary output:
+$ gufi_query -d " " -E "SELECT * FROM plugin_test_summary;" prefix
+directory 1
+directory 1
+directory 1
+directory 1
+directory 1
+directory 1
+file 0
+file 1
+file 2
+file 2
+file 3
+file 6
+
