@@ -76,33 +76,30 @@ SORT_DIRS = {
     'basename' : lambda dirs : sorted(dirs, key = os.path.basename),
 }
 
-# wrapper to block on slurm job submission
-# pylint: disable=too-few-public-methods
-class SlurmJob:
-    def __init__(self, args, target, cmd):
-        # wait on sbatch, not the actual job
-        # pylint: disable=consider-using-with
-        proc = subprocess.Popen([args.sbatch, '--nodes=1', '--nodelist={0}'.format(target)] + cmd,
-                                stdout=subprocess.PIPE,
-                                cwd=os.getcwd())
-        out, _ = proc.communicate()
-        self.returncode = proc.returncode
-        self.jobid = out.split()[-1].decode()
-
+# wait on sbatch, not the actual job
 def run_slurm(args, target, cmd):
-    return SlurmJob(args, target, cmd)
+    # pylint: disable=consider-using-with
+    proc = subprocess.Popen([args.sbatch, '--nodes=1', '--nodelist={0}'.format(target)] + cmd,
+                            stdout=subprocess.PIPE,
+                            cwd=os.getcwd())
+    out, _ = proc.communicate()
+    return out.split()[-1].decode()
 
-def handle_slurm_procs(procs):
-    jobids = []
-    for proc in procs:
-        if proc.returncode != 0:
-            continue
+# wait for all jobs (not sbatch) to complete
+def handle_slurm_procs(args, jobids):
+    # pylint: disable=consider-using-with
+    wait = subprocess.Popen([args.sbatch, '--nodes=1', '--nodelist={0}'.format(args.hosts[1]),
+                             '--dependency', 'after:' + ':'.join(jobids), '--wait', '/dev/stdin'],
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.DEVNULL, # Python 3.3
+                            shell=True)
 
-        # get slurm job id
-        jobids += [proc.jobid]
+    # split shebang so shellcheck script doesn't see this
+    wait.communicate(input=' '.join(['#!/usr/bin/env', 'bash']).encode('utf-8'))
 
     return jobids
 
+# start jobs, but don't wait on them
 def run_ssh(args, target, cmd):
     # can't return pid because that would result
     # in waiting for the process to complete
@@ -111,17 +108,15 @@ def run_ssh(args, target, cmd):
                             stdout=subprocess.DEVNULL, # Python 3.3
                             cwd=os.getcwd())
 
-def handle_ssh_procs(procs):
+# wait for all jobs to complete
+def handle_ssh_procs(_args, procs):
     jobids = []
     for proc in procs:
-        # wait on the actual job
         proc.wait()
 
         if proc.returncode != 0:
-            sys.stderr.write('ssh returned {0}\n'.format(proc.returncode))
             continue
 
-        # get slurm job id
         jobids += [proc.pid]
 
     return jobids
@@ -135,10 +130,10 @@ DISTRIBUTORS = {
 # Run find(1) and return sorted list of directories
 def dirs_at_level(root, level):
     # can't use %P to remove input path in macos and Alpine Linux
-    cmd = ['find', root, '-mindepth', str(level), '-maxdepth', str(level), '-type', 'd']
+    cmd = ['find', '-H', root, '-mindepth', str(level), '-maxdepth', str(level), '-type', 'd']
     proc = subprocess.Popen(cmd, # pylint: disable=consider-using-with
-                             stdout=subprocess.PIPE,
-                             cwd=os.getcwd())
+                            stdout=subprocess.PIPE,
+                            cwd=os.getcwd())
     dirs, _ = proc.communicate() # block until find finishes
 
     if proc.returncode:
@@ -196,7 +191,7 @@ def schedule_subtrees(args, dir_count, group_size, groups, subtree_cmd):
 # top-level job for completion. Waiting for the subtrees to be
 # processed is optional, but is done in order to match behaviors of
 # slurm and ssh.
-def schedule_top(args, jobids, func):
+def schedule_top(args, func):
     target = args.hosts[1]
     cmd = func(args, target)
 
@@ -205,15 +200,7 @@ def schedule_top(args, jobids, func):
     if args.dry_run:
         return None
 
-    # pylint: disable=no-else-return
-    if args.distributor == 'slurm':
-        cmd = ['--dependency', 'afterok:' + ':'.join(jobids), '--wait'] + cmd
-        return run_slurm(args, target, cmd)
-    elif args.distributor == 'ssh':
-        return run_ssh(args, target, cmd)
-
-    # should never get here
-    return None
+    return DISTRIBUTORS[args.distributor][0](args, target, cmd)
 
 # call this combined function to distribute work
 def distribute_work(args, root, schedule_subtree_func, schedule_top_func):
@@ -224,15 +211,13 @@ def distribute_work(args, root, schedule_subtree_func, schedule_top_func):
     procs = schedule_subtrees(args, len(dirs), group_size, groups,
                               schedule_subtree_func)
 
-    # slurm: wait for sbatch and return slurm job ids (schedule_top waits for the actual jobs)
-    # ssh:   wait for actual job and return pid
-    handle_procs = DISTRIBUTORS[args.distributor][1]
-    jobids = handle_procs(procs)
-
     # process the top levels
-    top_proc = schedule_top(args, jobids, schedule_top_func)
+    procs += [schedule_top(args, schedule_top_func)]
 
-    return jobids + handle_procs([top_proc])
+    print('Waiting for {0} jobs to complete'.format(args.distributor))
+
+    # wait for actual jobs to return
+    return DISTRIBUTORS[args.distributor][1](args, procs)
 
 # argparse type for existing directories (i.e. source tree)
 def dir_arg(path):

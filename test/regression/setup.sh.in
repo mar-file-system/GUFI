@@ -179,8 +179,7 @@ PARALLEL_RMR="@CMAKE_BINARY_DIR@/src/parallel_rmr"
 PUGSQL="${GUFI_TOOL} pugsql"
 QUERYDBS="${GUFI_TOOL} querydbs"
 RUN_VT="@CMAKE_BINARY_DIR@/src/run_vt"
-SBATCH_NO_OUTPUT="@CMAKE_BINARY_DIR@/test/regression/sbatch.no-output"
-SBATCH_OUTPUT="@CMAKE_BINARY_DIR@/test/regression/sbatch.output"
+SBATCH_FAKE="@CMAKE_BINARY_DIR@/test/regression/sbatch.fake"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
 SQLALCHEMY="${GUFI_TOOL} sqlalchemy"
 SSH_FAKE="@CMAKE_BINARY_DIR@/test/regression/ssh.fake"
@@ -255,8 +254,7 @@ replace() {
     s/${PUGSQL//\//\\/}/pugsql/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
     s/${RUN_VT//\//\\/}/run_vt/g;
-    s/${SBATCH_NO_OUTPUT//\//\\/}/sbatch/g;
-    s/${SBATCH_OUTPUT//\//\\/}/sbatch/g;
+    s/${SBATCH_FAKE//\//\\/}/sbatch/g;
     s/${SPLIT_TRACE//\//\\/}/split_trace/g;
     s/${SQLALCHEMY//\//\\/}/gufi_vt_sqlalchemy/g;
     s/${SSH_FAKE//\//\\/}/ssh/g;

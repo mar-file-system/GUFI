@@ -86,4 +86,28 @@ esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
-"$@"
+prefix="slurm.fake-"
+suffix=".out"
+
+# tests only expect up to 5 files
+jobid=0
+while (( jobid < 5 ))
+do
+    if [[ ! -f "${prefix}${jobid}${suffix}" ]]
+    then
+        break
+    fi
+
+    jobid=$(( jobid + 1 ))
+done
+
+out="${prefix}${jobid}${suffix}"
+
+if [[ "$1" == "/dev/stdin" ]]
+then
+    $(</dev/stdin)
+else
+    "$@"
+fi > "${out}"
+
+echo "${jobid}"

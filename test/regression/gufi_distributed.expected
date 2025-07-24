@@ -13,6 +13,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
     Process upper directories up to and including level 0 on 127.0.0.1
+Waiting for slurm jobs to complete
 
 # Query Index
 $ gufi_query_distributed --sbatch "sbatch" --gufi_query "gufi_query" --threads 2 slurm "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;"
@@ -26,6 +27,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
     Process upper directories up to and including level 0 on 127.0.0.1
+Waiting for slurm jobs to complete
 cat the following slurm job output files to get complete results:
     0
     1
@@ -74,6 +76,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
     Process upper directories up to and including level 0 on 127.0.0.1
+Waiting for slurm jobs to complete
 Index can now be created from "traces.*"
 
 # Print contents of traces files
@@ -119,6 +122,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
     Process upper directories up to and including level 0 on 127.0.0.1
+Waiting for ssh jobs to complete
 
 # Query Index
 $ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" --output_prefix "output"
@@ -132,6 +136,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
     Process upper directories up to and including level 0 on 127.0.0.1
+Waiting for ssh jobs to complete
 cat "output.*" to get complete results
 
 # combine output files
@@ -175,6 +180,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
     Process upper directories up to and including level 0 on 127.0.0.1
+Waiting for ssh jobs to complete
 Index can now be created from "traces.*"
 
 # Print contents of traces files

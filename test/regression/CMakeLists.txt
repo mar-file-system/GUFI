@@ -70,8 +70,7 @@ set(CORE
 # support scripts
 set(AUX
   hexlify.py
-  sbatch.no-output
-  sbatch.output
+  sbatch.fake
   ssh.fake
 )
 

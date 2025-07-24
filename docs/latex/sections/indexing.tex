@@ -112,9 +112,8 @@ distribute indexing across multiple nodes. The general process is:
 
 \gufidirindexdistributed and \gufidirtracedistributed have been
 provided for convenience when running on clusters with Slurm or
-SSH. These scripts have the additional step of waiting for subtree
-processing to complete before scheduling the processing of the top
-level directories.
+SSH. These scripts schedule both the processing of the subtrees and
+top level directories at the same time, and wait for their completion.
 
 \subsection{Index Placement}
 The output (final positional) argument to \gufidirindex and

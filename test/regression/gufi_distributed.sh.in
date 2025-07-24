@@ -173,10 +173,12 @@ echo
 generate_hostfile
 
 echo "# Index Source Tree"
-run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
+
+rm -rf "${slurm_files[@]}"
 
 echo "# Query Index"
-run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_OUTPUT}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\""
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\""
 
 echo "# combine output files"
 # shellcheck disable=SC2145
@@ -189,8 +191,10 @@ run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -S \"SELECT rpath(sname, sroll) FROM vrs
 echo "# Diff original index results against querying the new index from a single node"
 run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
+rm -rf "${slurm_files[@]}"
+
 echo "# Convert source tree to trace files"
-run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --sbatch \"${SBATCH_NO_OUTPUT}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACES}\""
+run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACES}\""
 
 traces=("$(trace_files)")
 
