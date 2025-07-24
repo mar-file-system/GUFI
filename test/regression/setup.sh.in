@@ -192,6 +192,17 @@ GUFI_QUERY_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_query"
 GUFI_ROLLUP_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_rollup"
 GUFI_TREESUMMARY_ALL_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_treesummary_all"
 
+# test plugin path depends on the environment:
+# shellcheck disable=SC2194
+case "@CMAKE_SYSTEM_NAME@" in
+    "APPLE" | "Darwin")
+        GUFI_TEST_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_plugin.dylib"
+        ;;
+    "Linux" | "CYGWIN")
+        GUFI_TEST_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_plugin.so"
+        ;;
+esac
+
 AWK="@AWK@"
 COLUMN="@COLUMN@"
 DIFF="@DIFF@"
@@ -240,6 +251,7 @@ replace() {
     s/${GUFI_STAT//\//\\/}/gufi_stat/g;
     s/${GUFI_STATS//\//\\/}/gufi_stats/g;
     s/${GUFI_STAT_BIN//\//\\/}/gufi_stat_bin/g
+    s/${GUFI_TEST_PLUGIN//\//\\/}/gufi_test_plugin/g;
     s/${GUFI_TRACE2DIR//\//\\/}/gufi_trace2dir/g;
     s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g;
     s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
