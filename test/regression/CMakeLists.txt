@@ -96,6 +96,12 @@ set(BINARIES
   run_vt
 )
 
+if (NOT CYGWIN)
+  list(APPEND BINARIES
+    gufi_plugin
+  )
+endif()
+
 set(PYTHON)
 
 # gufi_du results are only valid on linux
