@@ -84,13 +84,20 @@ def run_slurm(args, target, cmd):
                             stdout=subprocess.PIPE,
                             cwd=os.getcwd())
     out, _ = proc.communicate()
+
+    if proc.returncode != 0:
+        return None
+
     return out.split()[-1].decode()
 
 # wait for all jobs (not sbatch) to complete
 def handle_slurm_procs(args, jobids):
+    after = ':'.join(jobid for jobid in jobids if jobid)
+
     # pylint: disable=consider-using-with
-    wait = subprocess.Popen([args.sbatch, '--nodes=1', '--nodelist={0}'.format(args.hosts[1]),
-                             '--dependency', 'after:' + ':'.join(jobids), '--wait', '/dev/stdin'],
+    wait = subprocess.Popen([args.sbatch, '--nodes=1', '--nodelist={0}'.format(args.hosts[1])] +
+                            ['--dependency', 'after:' + after] if len(after) != 0 else [] +
+                            ['--wait', '/dev/stdin'],
                             stdin=subprocess.PIPE,
                             stdout=subprocess.DEVNULL, # Python 3.3
                             shell=True)
@@ -152,36 +159,58 @@ def group_dirs(dirs, splits, sort):
 
 # Step 3
 # Write the group to a per-node file and start jobs
+# pylint: disable=too-many-locals
 def schedule_subtrees(args, dir_count, group_size, groups, subtree_cmd):
     targets = args.hosts[0]
-    print('Splitting {0} paths into {1} groups of max size {2}'.format(dir_count,
-                                                                       len(targets),
-                                                                       group_size))
+
+    # pylint: disable=unnecessary-lambda-assignment
+    gen_filename = lambda idx : os.path.realpath('{0}.{1}'.format(args.group_file_prefix, idx))
 
     procs = []
-    for i, (group, target) in enumerate(zip(groups, targets)):
-        count = len(group)
+    if args.use_existing_group_files:
+        print('Using existing files')
+        for i, target in enumerate(targets):
+            filename = gen_filename(i) # files not mapped to targets are ignored
 
-        if count == 0:
-            break
+            # not checking for existance of file - if it doesn't exist, -D will fail
 
-        print('    Range {0}: {1} path{2} on {3}'.format(i, count, 's' if count != 1 else '', target))
-        print('        {0} {1}'.format(group[0], group[-1]))
+            print('    Range {0}: Contents of {1} on {2}'.format(i, filename, target))
 
-        if args.dry_run:
-            continue
+            if args.dry_run:
+                continue
 
-        # write group to per-node file
-        filename = os.path.realpath('{0}.{1}'.format(args.group_file_prefix, i))
-        with open(filename, 'w', encoding='utf-8') as f:
-            for path in group:
-                f.write(path)
-                f.write('\n')
+            cmd = subtree_cmd(args, filename, i, target)
 
-        cmd = subtree_cmd(args, filename, i, target)
+            # run the command to process the subtree
+            procs += [DISTRIBUTORS[args.distributor][0](args, target, cmd)]
+    else:
+        print('Splitting {0} paths into {1} groups of max size {2}'.format(dir_count,
+                                                                           len(targets),
+                                                                           group_size))
+        for i, (group, target) in enumerate(zip(groups, targets)):
 
-        # run the command to process the subtree
-        procs += [DISTRIBUTORS[args.distributor][0](args, target, cmd)]
+            count = len(group)
+
+            if count == 0:
+                break
+
+            print('    Range {0}: {1} path{2} on {3}'.format(i, count, 's' if count != 1 else '', target))
+            print('        {0} {1}'.format(group[0], group[-1]))
+
+            if args.dry_run:
+                continue
+
+            # write group to per-node file
+            filename = gen_filename(i)
+            with open(filename, 'w', encoding='utf-8') as f:
+                for path in group:
+                    f.write(path)
+                    f.write('\n')
+
+            cmd = subtree_cmd(args, filename, i, target)
+
+            # run the command to process the subtree
+            procs += [DISTRIBUTORS[args.distributor][0](args, target, cmd)]
 
     return procs
 
@@ -221,8 +250,13 @@ def clock_diff(start, end):
 def distribute_work(args, root, schedule_subtree_func, schedule_top_func):
     start = clock()
 
-    dirs = dirs_at_level(root, args.level)
-    group_size, groups = group_dirs(dirs, len(args.hosts[0]), args.sort)
+    if args.use_existing_group_files:
+        dirs = []
+        group_size = None
+        groups = None
+    else:
+        dirs = dirs_at_level(root, args.level)
+        group_size, groups = group_dirs(dirs, len(args.hosts[0]), args.sort)
 
     # launch jobs in parallel
     procs = schedule_subtrees(args, len(dirs), group_size, groups,
@@ -286,10 +320,14 @@ def parse_args(name, desc):
 
     parser.add_argument('--dry-run',             action='store_true')
 
-    parser.add_argument('--group_file_prefix',   metavar='path',
+    parser.add_argument('--group-file-prefix',   metavar='path',
                         type=str,
                         default='path_list',
                         help='prefix for file containing paths to be processed by one node')
+
+    parser.add_argument('--use-existing-group-files',
+                        action='store_true',
+                        help='use existing group files (up to the number of targets) instead of running find(1)')
 
     parser.add_argument('--sort',
                         choices=SORT_DIRS.keys(),
