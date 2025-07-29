@@ -161,6 +161,10 @@ trap cleanup_exit EXIT
 
 cleanup
 
+remove_distributed_output() {
+    remove_indexing_time | @GREP@ -v "Creating GUFI\|Total Dirs:\|Total Non-Dirs\|Total Files:\|Jobs completed in"
+}
+
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --help"
 run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --help"
 run_no_sort "${GUFI_QUERY_DISTRIBUTED} --help"
@@ -246,7 +250,7 @@ echo "# Diff original index results against the trace files"
 # shellcheck disable=SC2145,SC2153
 run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's/${SEARCH//\//\\/}\\///g') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
 echo "#####################################"
-) 2>&1 | tee "${OUTPUT}"
+) 2>&1 | remove_distributed_output | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_distributed.expected "${OUTPUT}"
 rm "${OUTPUT}"

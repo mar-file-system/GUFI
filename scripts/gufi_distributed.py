@@ -66,6 +66,7 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 
 import gufi_common
 
@@ -105,7 +106,6 @@ def run_ssh(args, target, cmd):
     # in waiting for the process to complete
     # pylint: disable=consider-using-with
     return subprocess.Popen([args.ssh, target, 'cd', os.getcwd(), '&&'] + [shlex.quote(argv) for argv in cmd],
-                            stdout=subprocess.DEVNULL, # Python 3.3
                             cwd=os.getcwd())
 
 # wait for all jobs to complete
@@ -202,8 +202,25 @@ def schedule_top(args, func):
 
     return DISTRIBUTORS[args.distributor][0](args, target, cmd)
 
+def clock():
+    # assume Python 3+
+    if sys.version_info.minor < 3:
+        return time.time()
+    if sys.version_info.minor < 7:
+        return time.monotonic() # Python 3.3
+    return time.monotonic_ns()  # Python 3.7
+
+def clock_diff(start, end):
+    # assume Python 3+
+    diff = end - start
+    if sys.version_info.minor >= 7:
+        diff /= 1e9
+    return diff
+
 # call this combined function to distribute work
 def distribute_work(args, root, schedule_subtree_func, schedule_top_func):
+    start = clock()
+
     dirs = dirs_at_level(root, args.level)
     group_size, groups = group_dirs(dirs, len(args.hosts[0]), args.sort)
 
@@ -217,7 +234,13 @@ def distribute_work(args, root, schedule_subtree_func, schedule_top_func):
     print('Waiting for {0} jobs to complete'.format(args.distributor))
 
     # wait for actual jobs to return
-    return DISTRIBUTORS[args.distributor][1](args, procs)
+    jobids = DISTRIBUTORS[args.distributor][1](args, procs)
+
+    end = clock()
+
+    print('Jobs completed in {0} seconds'.format(clock_diff(start, end)))
+
+    return jobids
 
 # argparse type for existing directories (i.e. source tree)
 def dir_arg(path):
