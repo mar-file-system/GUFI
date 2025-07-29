@@ -69,6 +69,9 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#if HAVE_STATX
+#include <sys/sysmacros.h>
+#endif
 #include <unistd.h>
 #include <utime.h>
 
@@ -830,4 +833,89 @@ int gufi_dirfd(DIR *d) {
     }
 
     return d_fd;
+}
+
+#if HAVE_STATX
+void statx_to_work(struct statx *stx, struct work *work) {
+    struct stat *st = &work->statuso;
+    st->st_dev      = (dev_t)     makedev(stx->stx_dev_major, stx->stx_dev_minor);
+    st->st_ino      = (ino_t)     stx->stx_ino;
+    st->st_mode     = (mode_t)    stx->stx_mode;
+    st->st_nlink    = (nlink_t)   stx->stx_nlink;
+    st->st_uid      = (uid_t)     stx->stx_uid;
+    st->st_gid      = (gid_t)     stx->stx_gid;
+    st->st_rdev     = (dev_t)     makedev(stx->stx_rdev_major, stx->stx_rdev_minor);
+    st->st_size     = (off_t)     stx->stx_size;
+    st->st_blksize  = (blksize_t) stx->stx_blksize;
+    st->st_blocks   = (blkcnt_t)  stx->stx_blocks;
+    st->st_atime    = (time_t)    stx->stx_atime.tv_sec;
+    st->st_mtime    = (time_t)    stx->stx_mtime.tv_sec;
+    st->st_ctime    = (time_t)    stx->stx_ctime.tv_sec;
+    work->crtime    = (time_t)    stx->stx_btime.tv_sec;
+}
+#endif
+
+/* try to call statx if available, otherwise, call lstat */
+int lstat_wrapper(struct work *work) {
+    #if HAVE_STATX
+    struct statx stx;
+    if (statx(AT_FDCWD, work->name,
+              AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
+              STATX_ALL, &stx) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
+                work->name, strerror(err), err);
+        return 1;
+    }
+
+    statx_to_work(&stx, work);
+    #else
+    if (lstat(work->name, &work->statuso) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not lstat \"%s\": %s (%d)\n",
+                work->name, strerror(err), err);
+        return 1;
+    }
+
+    work->crtime = 0;
+    #endif
+
+    work->lstat_called = 1;
+
+    return 0;
+}
+
+/* used by gufi_dir2index and gufi_dir2trace */
+int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
+    /* don't duplicate work */
+    if (entry->lstat_called) {
+        return 0;
+    }
+
+    const char *basename = entry->name + entry->name_len - entry->basename_len;
+
+    #if HAVE_STATX
+    struct statx stx;
+    if (statx(ed->parent_fd, basename,
+              AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
+              STATX_ALL, &stx) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
+                entry->name, strerror(err), err);
+        return 1;
+    }
+
+    statx_to_work(&stx, entry);
+    #else
+    if (fstatat(ed->parent_fd, basename, &entry->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n",
+                entry->name, strerror(err), err);
+        return 1;
+    }
+
+    entry->crtime = 0;
+    #endif
+
+    return 0;
 }

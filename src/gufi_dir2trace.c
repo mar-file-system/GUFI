@@ -105,12 +105,9 @@ static int process_external(struct input *in, void *args,
 
 static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NondirArgs *nda = (struct NondirArgs *) args;
-    if (!entry->lstat_called) {
-        char *basename = entry->name + entry->name_len - entry->basename_len;
 
-        if (fstatat(ed->parent_fd, basename, &entry->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
-            return 1;
-        }
+    if (fstatat_wrapper(entry, ed) != 0) {
+        return 1;
     }
 
     worktofile(nda->fp, nda->in->delim, entry->root_parent.len, entry, ed);
@@ -144,9 +141,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     memset(&ed, 0, sizeof(ed));
-    if (!work->lstat_called && (lstat(work->name, &work->statuso) != 0)) {
-        fprintf(stderr, "Could not stat directory \"%s\"\n", work->name);
-        rc = 1;
+    if (!work->lstat_called && (lstat_wrapper(work) != 0)) {
         goto cleanup;
     }
 

@@ -63,6 +63,28 @@
 include(CheckSymbolExists)
 check_symbol_exists(localtime_r "time.h" LOCALTIME_R)
 
+# use statx if it is available
+include(CheckCSourceCompiles) # check_symbol_exists can't seem to find sys/stat.h symbols
+check_c_source_compiles("
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#include <sys/stat.h>
+
+int main() {
+    (void) statx;
+    return 0;
+}
+" HAVE_STATX)
+
+if (HAVE_STATX)
+  add_definitions(-D_GNU_SOURCE -DHAVE_STATX=1)
+  message(STATUS "Using statx(2) for tree traversal")
+else()
+  message(STATUS "statx(2) not found. Falling back to lstat(2).")
+endif()
+
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES
   BottomUp.c

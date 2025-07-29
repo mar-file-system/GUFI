@@ -533,5 +533,5 @@ writable
 
 # Missing database file
 $ gufi_query -d " " -m -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix" > /dev/null
-Could not stat database file "prefix/db.db": No such file or directory (2)
+Could not database file's timestamps "prefix/db.db": No such file or directory (2)
 

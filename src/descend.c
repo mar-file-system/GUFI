@@ -99,14 +99,9 @@ struct work *try_skip_lstat(const unsigned char d_type, struct work *work) {
         case DT_UNKNOWN:
         default:
             /* some filesystems don't support d_type - fall back to calling lstat */
-            if (lstat(work->name, &work->statuso) != 0) {
-                const int err = errno;
-                fprintf(stderr, "Error: Could not stat \"%s\": %s (%d)\n",
-                        work->name, strerror(err), err);
+            if (lstat_wrapper(work) != 0) {
                 return NULL;
             }
-
-            work->lstat_called = 1;
             break;
     }
 

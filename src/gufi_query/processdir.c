@@ -64,8 +64,14 @@ OF SUCH DAMAGE.
 
 #include <dirent.h>
 #include <errno.h>
+#if HAVE_STATX
+#include <fcntl.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
+#if HAVE_STATX
+#include <sys/stat.h>
+#endif
 #include <utime.h>
 
 #include "bf.h"
@@ -88,8 +94,29 @@ static inline int save_matime(gqw_t *gqw,
     const size_t dbpath_len = SNFORMAT_S(dbpath, dbpath_size, 2,
                                          gqw->work.name, gqw->work.name_len,
                                          "/" DBNAME, DBNAME_LEN + 1);
+
     struct stat st;
+
+    int rc = 0;
+
+    #if HAVE_STATX
+    struct statx stx;
+    if (statx(AT_FDCWD, dbpath,
+              AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
+              STATX_ATIME | STATX_MTIME, &stx) == 0) {
+        st.st_atime = stx.stx_atime.tv_sec;
+        st.st_mtime = stx.stx_mtime.tv_sec;
+    }
+    else {
+        rc = 1;
+    }
+    #else
     if (lstat(dbpath, &st) != 0) {
+        rc = 1;
+    }
+    #endif
+
+    if (rc == 1) {
         const int err = errno;
 
         char buf[MAXPATH];
@@ -97,7 +124,7 @@ static inline int save_matime(gqw_t *gqw,
                           &gqw->work.root_parent, gqw->work.root_basename_len, &gqw->work.orig_root,
                           buf, sizeof(buf));
 
-        fprintf(stderr, "Could not stat database file \"%s\": %s (%d)\n",
+        fprintf(stderr, "Could not database file's timestamps \"%s\": %s (%d)\n",
                 buf, strerror(err), err);
 
         return 1;

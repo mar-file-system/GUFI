@@ -347,7 +347,8 @@ pull_ug_summary_columns() {
         DST="${TEST_GROUP_ID}"
     fi
 
-    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | @SED@ "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
+    # not getting mincrtime and maxcrtime
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, 0, 0, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | @SED@ "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
 }
 
 # set some columns to make test easier

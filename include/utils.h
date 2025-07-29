@@ -158,6 +158,17 @@ ssize_t read_size(const int fd, void *buf, const size_t size);
 /* Get a directory file descriptor from a given DIR *, infallibly */
 int gufi_dirfd(DIR *d);
 
+#if HAVE_STATX
+/* useful if calling statx without the wrapper function */
+void statx_to_work(struct statx *stx, struct work *work);
+#endif
+
+/* try to call statx if available, otherwise, call lstat */
+int lstat_wrapper(struct work *work);
+
+/* used by gufi_dir2index and gufi_dir2trace */
+int fstatat_wrapper(struct work *entry, struct entry_data *ed);
+
 #ifdef __cplusplus
 }
 #endif
