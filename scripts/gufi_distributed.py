@@ -63,6 +63,7 @@
 
 import argparse
 import os
+import random
 import shlex
 import subprocess
 import sys
@@ -72,9 +73,10 @@ import gufi_common
 
 # how to sort paths found by find(1) at given level
 SORT_DIRS = {
-    'unsorted' : lambda dirs : dirs,
+    'unsorted' : lambda dirs : dirs,         # whatever order find(1) printed in
     'path'     : lambda dirs : sorted(dirs), # pylint: disable=unnecessary-lambda
     'basename' : lambda dirs : sorted(dirs, key = os.path.basename),
+    'random'   : lambda dirs : random.sample(dirs, len(dirs)),
 }
 
 # wait on sbatch, not the actual job
@@ -86,6 +88,7 @@ def run_slurm(args, target, cmd):
     out, _ = proc.communicate()
 
     if proc.returncode != 0:
+        sys.stderr.write('slurm job to {0} failed with error code {1}\n', target, proc.returncode)
         return None
 
     return out.split()[-1].decode()
@@ -99,7 +102,7 @@ def handle_slurm_procs(args, jobids):
                             ['--dependency', 'after:' + after] if len(after) != 0 else [] +
                             ['--wait', '/dev/stdin'],
                             stdin=subprocess.PIPE,
-                            stdout=subprocess.DEVNULL, # Python 3.3
+                            stdout=subprocess.PIPE, # not used
                             shell=True)
 
     # split shebang so shellcheck script doesn't see this
@@ -122,6 +125,8 @@ def handle_ssh_procs(_args, procs):
         proc.wait()
 
         if proc.returncode != 0:
+            sys.stderr.write('ssh to {0} failed with error code {1}\n'.format(proc.args[1], # args[1] only works because there are no arguments between ssh and the target
+                                                                            proc.returncode))
             continue
 
         jobids += [proc.pid]
