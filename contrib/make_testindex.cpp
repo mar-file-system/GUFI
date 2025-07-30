@@ -501,7 +501,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         work->statuso.st_mtime = std::max(work->statuso.st_ctime, (time_t) time_rng(gen));
 
         work->pinode  = rng(gen);
-        ed.crtime     = rng(gen);
+        work->crtime  = rng(gen);
         ed.ossint1    = rng(gen);
         ed.ossint2    = rng(gen);
         ed.ossint3    = rng(gen);
@@ -578,11 +578,11 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     work->statuso.st_atime = work->statuso.st_ctime + time_rng(gen);
     work->statuso.st_mtime = work->statuso.st_ctime + time_rng(gen);
 
-    ed.crtime  = rng(gen);
-    ed.ossint1 = rng(gen);
-    ed.ossint2 = rng(gen);
-    ed.ossint3 = rng(gen);
-    ed.ossint4 = rng(gen);
+    work->crtime = rng(gen);
+    ed.ossint1   = rng(gen);
+    ed.ossint2   = rng(gen);
+    ed.ossint3   = rng(gen);
+    ed.ossint4   = rng(gen);
 
     insertsumdb(on_disk, work->name, work, &ed, &summary);
     free(work);

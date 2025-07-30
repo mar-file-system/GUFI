@@ -178,7 +178,7 @@ TEST(summary, sumit_file) {
     pwork->statuso.st_atime  = dist(gen);
     pwork->statuso.st_blocks = dist(gen);
     pwork->pinode            = dist(gen);
-    ed.crtime                = dist(gen);
+    pwork->crtime            = dist(gen);
     ed.ossint1               = dist(gen);
     ed.ossint2               = dist(gen);
     ed.ossint3               = dist(gen);
@@ -202,8 +202,8 @@ TEST(summary, sumit_file) {
     EXPECT_EQ(summary.maxmtime,   pwork->statuso.st_mtime);
     EXPECT_EQ(summary.minatime,   pwork->statuso.st_atime);
     EXPECT_EQ(summary.maxatime,   pwork->statuso.st_atime);
-    EXPECT_EQ(summary.mincrtime,  ed.crtime);
-    EXPECT_EQ(summary.maxcrtime,  ed.crtime);
+    EXPECT_EQ(summary.mincrtime,  pwork->crtime);
+    EXPECT_EQ(summary.maxcrtime,  pwork->crtime);
     EXPECT_EQ(summary.minossint1, ed.ossint1);
     EXPECT_EQ(summary.maxossint1, ed.ossint1);
     EXPECT_EQ(summary.minossint2, ed.ossint2);
@@ -238,7 +238,7 @@ TEST(summary, sumit_link) {
     pwork->statuso.st_atime  = dist(gen);
     pwork->statuso.st_blocks = dist(gen);
     pwork->pinode            = dist(gen);
-    ed.crtime                = dist(gen);
+    pwork->crtime            = dist(gen);
     ed.ossint1               = dist(gen);
     ed.ossint2               = dist(gen);
     ed.ossint3               = dist(gen);
@@ -262,8 +262,8 @@ TEST(summary, sumit_link) {
     EXPECT_EQ(summary.maxmtime,   pwork->statuso.st_mtime);
     EXPECT_EQ(summary.minatime,   pwork->statuso.st_atime);
     EXPECT_EQ(summary.maxatime,   pwork->statuso.st_atime);
-    EXPECT_EQ(summary.mincrtime,  ed.crtime);
-    EXPECT_EQ(summary.maxcrtime,  ed.crtime);
+    EXPECT_EQ(summary.mincrtime,  pwork->crtime);
+    EXPECT_EQ(summary.maxcrtime,  pwork->crtime);
     EXPECT_EQ(summary.minossint1, ed.ossint1);
     EXPECT_EQ(summary.maxossint1, ed.ossint1);
     EXPECT_EQ(summary.minossint2, ed.ossint2);

@@ -116,7 +116,7 @@ static struct work *get_work(struct entry_data *ed) {
     ed->xattrs.name_len          = 0;
     ed->xattrs.len               = 0;
     ed->xattrs.count             = 2;
-    ed->crtime                   = 0x9abc;
+    new_work->crtime             = 0x9abc;
     ed->ossint1                  = 1;
     ed->ossint2                  = 2;
     ed->ossint3                  = 3;
@@ -166,7 +166,7 @@ static int to_string(char *line, const size_t size, struct work *work, struct en
 
     const int part2 = snprintf(line, size,
                                "%c"
-                               "%d%c"
+                               "%ld%c"
                                "%d%c"
                                "%d%c"
                                "%d%c"
@@ -176,7 +176,7 @@ static int to_string(char *line, const size_t size, struct work *work, struct en
                                "%lld%c"
                                "\n",
                                              delim,
-                               ed->crtime,   delim,
+                               work->crtime, delim,
                                ed->ossint1,  delim,
                                ed->ossint2,  delim,
                                ed->ossint3,  delim,
@@ -237,7 +237,7 @@ TEST(trace, worktofile) {
     EXPECT_EQ(dst->statuso.st_mtime,     src->statuso.st_mtime);        \
     EXPECT_EQ(dst->statuso.st_ctime,     src->statuso.st_ctime);        \
     EXPECT_STREQ(dst_ed.linkname,        src_ed.linkname);              \
-    EXPECT_EQ(dst_ed.crtime,             src_ed.crtime);                \
+    EXPECT_EQ(dst->crtime,               src->crtime);                  \
     EXPECT_EQ(dst_ed.ossint1,            src_ed.ossint1);               \
     EXPECT_EQ(dst_ed.ossint2,            src_ed.ossint2);               \
     EXPECT_EQ(dst_ed.ossint3,            src_ed.ossint3);               \

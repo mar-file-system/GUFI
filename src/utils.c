@@ -168,8 +168,8 @@ int sumit(struct sum *summary, struct work *work, struct entry_data *ed) {
   if (work->statuso.st_mtime > summary->maxmtime) summary->maxmtime=work->statuso.st_mtime;
   if (work->statuso.st_atime < summary->minatime) summary->minatime=work->statuso.st_atime;
   if (work->statuso.st_atime > summary->maxatime) summary->maxatime=work->statuso.st_atime;
-  if (ed->crtime < summary->mincrtime) summary->mincrtime=ed->crtime;
-  if (ed->crtime > summary->maxcrtime) summary->maxcrtime=ed->crtime;
+  if (work->crtime < summary->mincrtime) summary->mincrtime=work->crtime;
+  if (work->crtime > summary->maxcrtime) summary->maxcrtime=work->crtime;
 
   if (ed->ossint1 < summary->minossint1) summary->minossint1=ed->ossint1;
   if (ed->ossint1 > summary->maxossint1) summary->maxossint1=ed->ossint1;

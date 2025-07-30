@@ -492,7 +492,7 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     }
     sqlite3_bind_blob64(res, 15, xattr_names, xattr_names_len, SQLITE_STATIC);
 
-    sqlite3_bind_int64(res, 16, ed->crtime);
+    sqlite3_bind_int64(res, 16, pwork->crtime);
     sqlite3_bind_int64(res, 17, ed->ossint1);
     sqlite3_bind_int64(res, 18, ed->ossint2);
     sqlite3_bind_int64(res, 19, ed->ossint3);

@@ -363,6 +363,7 @@ struct work {
    size_t        name_len;               /* == strlen(name) - meaning excludes NUL! */
    size_t        basename_len;           /* can usually get through readdir */
    struct stat   statuso;
+   time_t        crtime;
    uint8_t       lstat_called;
    long long int pinode;
    size_t        recursion_level;
@@ -385,7 +386,6 @@ struct entry_data {
    char          linkname[MAXPATH];
    long long int offset;
    struct xattrs xattrs;
-   int           crtime;
    int           ossint1;
    int           ossint2;
    int           ossint3;

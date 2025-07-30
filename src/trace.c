@@ -108,7 +108,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
     count += fprintf(file, "%s%c",               ed->linkname,             delim);
     count += xattrs_to_file(file, &ed->xattrs, XATTRDELIM);
     count += fprintf(file, "%c",                                           delim);
-    count += fprintf(file, "%d%c",               ed->crtime,               delim);
+    count += fprintf(file, "%ld%c",              work->crtime,             delim);
     count += fprintf(file, "%d%c",               ed->ossint1,              delim);
     count += fprintf(file, "%d%c",               ed->ossint2,              delim);
     count += fprintf(file, "%d%c",               ed->ossint3,              delim);
@@ -150,12 +150,12 @@ int linetowork(char *line, const size_t len, const char delim,
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_size, &new_work->statuso.st_size);
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_bsize, &new_work->statuso.st_blksize);
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_blocks, &new_work->statuso.st_blocks);
-    p = q; q = split(p, &delim, 1, end); new_work->statuso.st_atime = atol(p);
-    p = q; q = split(p, &delim, 1, end); new_work->statuso.st_mtime = atol(p);
-    p = q; q = split(p, &delim, 1, end); new_work->statuso.st_ctime = atol(p);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->statuso.st_atime);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->statuso.st_mtime);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->statuso.st_ctime);
     p = q; q = split(p, &delim, 1, end); SNPRINTF(ed->linkname,MAXPATH, "%s", p);
     p = q; q = split(p, &delim, 1, end); xattrs_from_line(p, q - 1, &ed->xattrs, XATTRDELIM);
-    p = q; q = split(p, &delim, 1, end); ed->crtime = atol(p);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->crtime);
     p = q; q = split(p, &delim, 1, end); ed->ossint1 = atol(p);
     p = q; q = split(p, &delim, 1, end); ed->ossint2 = atol(p);
     p = q; q = split(p, &delim, 1, end); ed->ossint3 = atol(p);
