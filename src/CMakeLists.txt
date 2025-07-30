@@ -116,6 +116,8 @@ if (QPTPOOL_SWAP)
   )
 endif()
 
+set(CMAKE_ENABLE_EXPORTS TRUE)
+
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 target_compile_definitions(GUFI PUBLIC SQLITE_CORE)

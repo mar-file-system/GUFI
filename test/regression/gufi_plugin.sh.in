@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,71 +61,26 @@
 
 
 
-# allow for the test working directory to be moved
-set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
-execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}"
-    COMMAND_ERROR_IS_FATAL ANY)
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-# add regression tests
-add_subdirectory(regression)
+OUTPUT="gufi_plugin.out"
 
-# make sure unit tests work first
-add_subdirectory(unit)
+(
+# remove preexisting indicies
+rm -rf "${SEARCH}"
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydbs
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-  )
-  # copy the script into the build directory for easy access
-  configure_file("${TEST}" "${TEST}" @ONLY)
-endforeach()
+# generate the index
+run_no_sort "${GUFI_DIR2INDEX} -U ${GUFI_TEST_PLUGIN} -x ${SRCDIR} ${SEARCH}"
 
-set(TESTTAR "${CMAKE_CURRENT_SOURCE_DIR}/testdir.tar")
-set(TESTDIR "${TEST_WORKING_DIRECTORY}/testdir")
-set(TESTDST "${TEST_WORKING_DIRECTORY}/gary")
+echo
+echo "# test plugin summary output:"
 
-add_test(
-  NAME gary
-  COMMAND "${CMAKE_COMMAND}" -E env "PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:$ENV{PATH}" "${CMAKE_CURRENT_BINARY_DIR}/runtests" "${TESTTAR}" "${TESTDIR}" "${TESTDST}"
-  WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-set_tests_properties(gary PROPERTIES LABELS "manual")
+# make sure the plugin_test_summary table has the expected values for file and directory count:
+# (`sort` needed to obtain predictable order of results)
+run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT * FROM plugin_test_summary;\" ${INDEXROOT}"
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+) | remove_indexing_time | replace | tee "${OUTPUT}"
 
-add_library(test_plugin SHARED test_plugin.c)
-
-if (APPLE OR DARWIN)
-  # Apple needs to be told to explicitly not try to resolve symbols at compile time when
-  # building the plugin. (They will be resolved dynamically when the plugin is dlopen()ed).
-  target_link_libraries(test_plugin -Wl,-undefined -Wl,dynamic_lookup)
-elseif(CYGWIN)
-  # Cygwin needs to use an "import library" (reference: https://cygwin.com/cygwin-ug-net/dll.html)
-  # to get the symbol definitions it uses from gufi_dir2index.
-  target_link_libraries(test_plugin "${CMAKE_BINARY_DIR}/src/libgufi_dir2index.dll.a")
-endif()
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_plugin.expected "${OUTPUT}"
+rm "${OUTPUT}"

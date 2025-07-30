@@ -90,6 +90,7 @@ set(BINARIES
   gufi_query
   gufi_stat_bin
   querydbs
+  gufi_plugin
 
   gufi_vt
   run_vt
