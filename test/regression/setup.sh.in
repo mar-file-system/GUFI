@@ -141,6 +141,7 @@ echo "directory" > "${SKIP}"
 SQLITE3="@DEP_INSTALL_PREFIX@/sqlite3/bin/sqlite3"
 GUFI_TOOL="@CMAKE_CURRENT_BINARY_DIR@/gufi_tool.py"
 DELUIDGIDSUMMARYRECS="@CMAKE_BINARY_DIR@/examples/deluidgidsummaryrecs"
+FIND_SH="@CMAKE_BINARY_DIR@/scripts/find.sh"
 GENERATEGIDSUMMARY="@CMAKE_BINARY_DIR@/examples/generategidsummary"
 GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
 GENERATEUIDSUMMARY="@CMAKE_BINARY_DIR@/examples/generateuidsummary"
@@ -216,6 +217,7 @@ replace() {
     @SED@ "
     s/${SQLITE3//\//\\/}/sqlite3/g;
     s/${DELUIDGIDSUMMARYRECS//\//\\/}/deluidgidsummaryrecs/g;
+    s/${FIND_SH//\//\\/}/find.sh/g;
     s/${GENERATEGIDSUMMARY//\//\\/}/generategidsummary/g;
     s/${GENERATETREE//\//\\/}/generatetree/g;
     s/${GENERATEUIDSUMMARY//\//\\/}/generateuidsummary/g;

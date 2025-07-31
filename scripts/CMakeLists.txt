@@ -112,7 +112,11 @@ install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail" DESTINATION "${BIN}" CO
 configure_file(querydbs querydbs @ONLY)
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs" DESTINATION "${BIN}" COMPONENT Server)
 
-# python files for doing distributed operations (server only)
+# files for doing distributed operations (server only)
+# default find and example wrapper script
+configure_file(find.sh.in find.sh @ONLY)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/find.sh" DESTINATION "${BIN}" COMPONENT Server)
+
 set(DISTRIBUTED
   gufi_dir2index.sbatch         # sbatch wrapper for gufi_dir2index_distributed
   gufi_dir2index_distributed    # executable
@@ -124,8 +128,7 @@ set(DISTRIBUTED
 )
 
 foreach(DIST ${DISTRIBUTED})
-  configure_file("${DIST}" "${DIST}" @ONLY)
-
+  configure_file("${DIST}" "${DIST}" COPYONLY)
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${DIST}" DESTINATION "${BIN}" COMPONENT Server)
 endforeach()
 

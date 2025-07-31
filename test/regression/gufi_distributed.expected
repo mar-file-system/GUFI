@@ -2,7 +2,7 @@
 # slurm jobs
 
 # Index Source Tree
-$ gufi_dir2index_distributed --sbatch "sbatch" --gufi_dir2index "gufi_dir2index" slurm "hostfile" 1 "prefix" "search2" 2>/dev/null
+$ gufi_dir2index_distributed --sbatch "sbatch" --gufi_dir2index "gufi_dir2index" "find.sh" slurm "hostfile" 1 "prefix" "search2" 2>/dev/null
 Splitting 4 paths into 5 groups of max size 1
     Range 0: 1 path on localhost
         directory directory
@@ -16,7 +16,7 @@ Splitting 4 paths into 5 groups of max size 1
 Waiting for slurm jobs to complete
 
 # Query Index
-$ gufi_query_distributed --sbatch "sbatch" --gufi_query "gufi_query" --threads 2 slurm "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;"
+$ gufi_query_distributed --sbatch "sbatch" --gufi_query "gufi_query" --threads 2 "find.sh" slurm "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;"
 Splitting 4 paths into 5 groups of max size 1
     Range 0: 1 path on localhost
         directory directory
@@ -65,7 +65,7 @@ $ diff <("gufi_query" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT
 $ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort) <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search2/prefix" | sort | sed 's/search2\/prefix/search\/prefix/g')
 
 # Convert source tree to trace files
-$ gufi_dir2trace_distributed --sbatch "sbatch" --gufi_dir2trace "gufi_dir2trace" -d "|" slurm "hostfile" 1 "prefix" "traces"
+$ gufi_dir2trace_distributed --sbatch "sbatch" --gufi_dir2trace "gufi_dir2trace" -d "|" "find.sh" slurm "hostfile" 1 "prefix" "traces"
 Splitting 4 paths into 5 groups of max size 1
     Range 0: 1 path on localhost
         directory directory
@@ -106,7 +106,7 @@ prefix/unusual#? directory ,/unusual, name?#
 $ diff <(gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort | sed 's/search\///g') <(cat traces.0.0 traces.1.0 traces.2.0 traces.3.0 traces.0 | awk -F'|' '{ print $1 }' | sort)
 
 # Use existing group files (path_list.4 does not exist)
-$ gufi_dir2index_distributed --sbatch "sbatch" --gufi_dir2index "gufi_dir2index" --use-existing-group-files slurm "hostfile" 1 "prefix" "search2" 2>/dev/null
+$ gufi_dir2index_distributed --sbatch "sbatch" --gufi_dir2index "gufi_dir2index" --use-existing-group-files "find.sh" slurm "hostfile" 1 "prefix" "search2" 2>/dev/null
 Using existing files
     Range 0: Contents of path_list.0 on localhost
     Range 1: Contents of path_list.1 on 127.0.0.1
@@ -122,7 +122,7 @@ Waiting for slurm jobs to complete
 # ssh jobs
 
 # Index Source Tree
-$ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" ssh "hostfile" 1 "prefix" "search2" 2>/dev/null
+$ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" "find.sh" ssh "hostfile" 1 "prefix" "search2" 2>/dev/null
 Splitting 4 paths into 5 groups of max size 1
     Range 0: 1 path on localhost
         directory directory
@@ -136,7 +136,7 @@ Splitting 4 paths into 5 groups of max size 1
 Waiting for ssh jobs to complete
 
 # Query Index
-$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" --output_prefix "output"
+$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" --output_prefix "output"
 Splitting 4 paths into 5 groups of max size 1
     Range 0: 1 path on localhost
         directory directory
@@ -180,7 +180,7 @@ $ diff <("gufi_query" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT
 $ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort) <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search2/prefix" | sort | sed 's/search2\/prefix/search\/prefix/g')
 
 # Convert source tree to trace files
-$ gufi_dir2trace_distributed --ssh "ssh" --gufi_dir2trace "gufi_dir2trace" -d "|" ssh "hostfile" 1 "prefix" "traces"
+$ gufi_dir2trace_distributed --ssh "ssh" --gufi_dir2trace "gufi_dir2trace" -d "|" "find.sh" ssh "hostfile" 1 "prefix" "traces"
 Splitting 4 paths into 5 groups of max size 1
     Range 0: 1 path on localhost
         directory directory
@@ -221,7 +221,7 @@ prefix/unusual#? directory ,/unusual, name?#
 $ diff <(gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort | sed 's/search\///g') <(cat traces.0.0 traces.1.0 traces.2.0 traces.3.0 traces.0 | awk -F'|' '{ print $1 }' | sort)
 
 # Use existing group files (path_list.4 does not exist)
-$ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" --use-existing-group-files ssh "hostfile" 1 "prefix" "search2" 2>/dev/null | tail -n 9
+$ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" --use-existing-group-files "find.sh" ssh "hostfile" 1 "prefix" "search2" 2>/dev/null | tail -n 9
 Using existing files
     Range 0: Contents of path_list.0 on localhost
     Range 1: Contents of path_list.1 on 127.0.0.1
