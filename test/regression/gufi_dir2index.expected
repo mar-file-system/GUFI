@@ -407,3 +407,7 @@ $ gufi_dir2index -n 18446744073709551615 "prefix" "search"
 "search" Already exists!
 Error: Failed to start thread pool
 
+# multiple input directories are not allowed for partial indexing
+$ gufi_dir2index -n 2 -D "distributed.1" -y 1 "prefix" "prefix" "search"
+Error: When -D is passed in, only one source directory may be specified
+

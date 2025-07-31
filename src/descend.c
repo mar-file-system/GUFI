@@ -184,16 +184,6 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 if (next_level <= in->max_level) {
                     child_ed.type = 'd';
 
-                    /* if -D is set, and at the split level but the current path is not found, don't process */
-                    if (in->process.set && (in->min_level == next_level) &&
-                        (trie_search(in->process.paths,
-                                     child->name + work->root_parent.len + work->root_basename_len + 1,
-                                     child->name_len - work->root_parent.len - work->root_basename_len - 1,
-                                     NULL) == 0)) {
-                        free(child);
-                        continue;
-                    }
-
                     if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
                         struct work *copy = compress_struct(in->compress, child, struct_work_size(child));
                         #ifdef QPTPOOL_SWAP

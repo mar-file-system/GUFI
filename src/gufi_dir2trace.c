@@ -272,6 +272,15 @@ int main(int argc, char *argv[]) {
     /* parse positional args, following the options */
     INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
 
+    const size_t root_count = argc - idx - 1;
+
+    if ((pa.in.min_level && pa.in.subtree_list.len) &&
+        (root_count > 1)) {
+        fprintf(stderr, "Error: When -D is passed in, only one source directory may be specified\n");
+        input_fini(&pa.in);
+        return EXIT_FAILURE;
+    }
+
     pa.outfiles = outfiles_init(pa.in.nameto.data, pa.in.maxthreads);
     if (!pa.outfiles) {
         input_fini(&pa.in);
@@ -296,7 +305,6 @@ int main(int argc, char *argv[]) {
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
 
-    const size_t root_count = argc - idx - 1;
     char **roots = calloc(root_count, sizeof(char *));
     for(size_t i = 0; idx < (argc - 1);) {
         /* force all input paths to be canonical */
@@ -321,8 +329,13 @@ int main(int argc, char *argv[]) {
         root->basename_len = root->name_len - root->root_parent.len;
         root->root_basename_len = root->basename_len;
 
-        struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
-        QPTPool_enqueue(pool, 0, processdir, copy);
+        if (doing_partial_walk(&pa.in, root_count)) {
+            process_subtree_list(&pa.in, root, pool, processdir);
+        }
+        else {
+            struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
+            QPTPool_enqueue(pool, 0, processdir, copy);
+        }
 
         i++;
     }

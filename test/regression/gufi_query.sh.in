@@ -125,12 +125,12 @@ echo "# Get all directory and non-directory names and their xattrs"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, xattr_name, xattr_value FROM vrxpentries;\" -x \"${INDEXROOT}\""
 
 echo "# limit tree traversal to directories at level 1 (missing prefix/ and prefix/directory/subdirectory/)"
-run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -y 1 -z 1 -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -y ${DISTRIBUTED_LEVEL} -z 1 -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 
 partial_indexing_setup
 run_no_sort "cat \"${DISTRIBUTED_0}\""
 echo "# limit tree traversal to some directories under at level 1 (only prefix/directory and prefix/empty_directory)"
-run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -y 1 -D \"${DISTRIBUTED_0}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -y ${DISTRIBUTED_LEVEL} -D \"${DISTRIBUTED_0}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 
 echo "# Output TLV columns (no aggregation)"
 run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | ${HEXLIFY}"
@@ -294,6 +294,9 @@ rm -f "${INDEXROOT}/directory/symlink"
 echo "# Missing database file"
 rm "${INDEXROOT}/db.db"
 run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
+
+echo "# multiple input directories are not allowed for partial querying"
+run_no_sort "${GUFI_QUERY} -n ${THREADS} -D \"${DISTRIBUTED_0}\" -y ${DISTRIBUTED_LEVEL} \"${SEARCH}\" \"${SEARCH}\""
 ) 2>&1 | tee "${OUTPUT}"
 
 echo "# Print terse debug timestamps (not part of expected results)"

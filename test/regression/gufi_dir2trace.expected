@@ -104,7 +104,7 @@ $ gufi_dir2trace -d "|" -n 2 -D "distributed.0" -y 1 "prefix" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
-Total Dirs:          4
+Total Dirs:          3
 Total Files:         5
 
 $ cat trace.0 trace.1 | awk -F '|' '{ print $1 }' | sort
@@ -129,7 +129,7 @@ $ gufi_dir2trace -d "|" -n 2 -D "distributed.1" -y 1 "prefix" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
-Total Dirs:          3
+Total Dirs:          2
 Total Files:         3
 
 $ cat trace.0 trace.1 | awk -F '|' '{ print $1 }' | sort
@@ -145,12 +145,12 @@ prefix/unusual#? directory ,/unusual, name?#
 # combine partial indexing
 $ gufi_dir2trace -d "|" -n 2 -D "distributed.0" -y 1 "prefix" "first"
 Creating GUFI Traces first with 2 threads
-Total Dirs:          4
+Total Dirs:          3
 Total Files:         5
 
 $ gufi_dir2trace -d "|" -n 2 -D "distributed.1" -y 1 "prefix" "second"
 Creating GUFI Traces second with 2 threads
-Total Dirs:          3
+Total Dirs:          2
 Total Files:         3
 
 $ gufi_dir2trace -d "|" -n 2 -z 0 "prefix" "trace"
@@ -237,4 +237,8 @@ Error: Cannot open skip file "skip.bad"
 # bad thread count
 $ gufi_dir2trace -n 18446744073709551615 "prefix" "trace"
 Could not allocate space for 18446744073709551615 files
+
+# multiple input directories are not allowed for partial indexing
+$ gufi_dir2trace -n 2 -D "distributed.1" -y 1 "prefix" "prefix" "trace"
+Error: When -D is passed in, only one source directory may be specified
 

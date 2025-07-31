@@ -919,3 +919,52 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
 
     return 0;
 }
+
+int doing_partial_walk(struct input *in, const size_t root_count) {
+    return ((root_count == 1) &&
+            (in->min_level && in->subtree_list.len));
+}
+
+/*
+ * attach directory paths directly to the root path and
+ * run starting at -y instead of walking to -y first
+ */
+int process_subtree_list(struct input *in, struct work *root,
+                         QPTPool_t *ctx, QPTPool_f func) {
+    FILE *file = fopen(in->subtree_list.data, "r");
+    if (!file) {
+        const int err = errno;
+        fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
+                in->subtree_list.data, strerror(err), err);
+        return 1;
+    }
+
+    char *line = NULL;
+    size_t n = 0;
+    ssize_t got = 0;
+    while ((got = getline(&line, &n, file)) != -1) {
+        /* remove trailing CRLF */
+        const size_t len = trailing_non_match_index(line, got, "\r\n", 2);
+
+        struct work *subtree_root = new_work_with_name(root->name, root->name_len, line, len);
+
+        subtree_root->orig_root = root->orig_root;
+
+        /* parent of the input path, not the subtree root */
+        subtree_root->root_parent = root->root_parent;
+
+        /* remove trailing slashes (+ 1 to keep at least 1 character) */
+        subtree_root->basename_len = subtree_root->name_len - (trailing_match_index(subtree_root->name + 1, subtree_root->name_len - 1, "/", 1) + 1);
+
+        /* go directly to -y */
+        subtree_root->level = in->min_level;
+
+        QPTPool_enqueue(ctx, 0, func, subtree_root);
+    }
+
+    free(line);
+    fclose(file);
+    free(root);
+
+    return 0;
+}

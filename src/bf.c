@@ -121,8 +121,6 @@ struct input *input_init(struct input *in) {
 
         in->swap_prefix.data = DEFAULT_SWAP_PREFIX;
         in->swap_prefix.len  = 0;
-
-        in->process.paths = trie_alloc();
     }
 
     return in;
@@ -130,7 +128,6 @@ struct input *input_init(struct input *in) {
 
 void input_fini(struct input *in) {
     if (in) {
-        trie_free(in->process.paths);
         sll_destroy(&in->sql_format.ent,  free);
         sll_destroy(&in->sql_format.sum,  free);
         sll_destroy(&in->sql_format.tsum, free);
@@ -267,7 +264,7 @@ void show_input(struct input* in, int retval) {
    printf("\n");
    printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
    printf("in.source_prefix            = '%s'\n",          in->sql_format.source_prefix.data);
-   printf("in.process.count            = %zu\n",           in->process.count);
+   printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
    printf("retval                      = %d\n",            retval);
    printf("\n");
 }
@@ -533,37 +530,7 @@ int parse_cmd_line(int         argc,
           break;
 
       case 'D':
-          {
-              /* read file contents into trie for searching while descending */
-              refstr_t filename = {
-                  .data = NULL,
-                  .len = 0,
-              };
-              INSTALL_STR(&filename, optarg);
-
-              FILE *file = fopen(filename.data, "r");
-              if (!file) {
-                  const int err = errno;
-                  fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
-                          filename.data, strerror(err), err);
-                  retval = -1;
-                  break;
-              }
-
-              char *line = NULL;
-              size_t n = 0;
-              ssize_t got = 0;
-              while ((got = getline(&line, &n, file)) != -1) {
-                  /* -1 to remove trailing newline */
-                  trie_insert(in->process.paths, line, got - 1, NULL, NULL);
-                  in->process.count++;
-              }
-              free(line);
-
-              fclose(file);
-
-              in->process.set = 1;
-          }
+          INSTALL_STR(&in->subtree_list, optarg);
           break;
 
       case '?':
@@ -585,7 +552,7 @@ int parse_cmd_line(int         argc,
        retval = -(in->min_level > in->max_level);
    }
 
-   if (in->process.set && (in->min_level == 0)) {
+   if (in->subtree_list.len && (in->min_level == 0)) {
        fprintf(stderr, "-D must be used with -y level > 0\n");
        retval = -1;
    }

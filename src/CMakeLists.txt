@@ -244,8 +244,10 @@ add_library(gufi_vt MODULE
   gufi_vt.c
 
   # have to recompile with -fPIC
+  QueuePerThreadPool.c
   SinglyLinkedList.c
   addqueryfuncs.c
+  bf.c
   dbutils.c
   external
   histogram.c

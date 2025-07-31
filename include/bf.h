@@ -277,11 +277,7 @@ struct input {
    refstr_t swap_prefix;
 
    /* directory paths to process at -y level > 0 */
-   struct {
-       int set;
-       size_t count;
-       trie_t *paths;
-   } process;
+   refstr_t subtree_list;
 };
 
 struct input *input_init(struct input *in);

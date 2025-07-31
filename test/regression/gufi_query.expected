@@ -535,3 +535,7 @@ writable
 $ gufi_query -d " " -m -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix" > /dev/null
 Could not database file's timestamps "prefix/db.db": No such file or directory (2)
 
+# multiple input directories are not allowed for partial querying
+$ gufi_query -n 2 -D "distributed.0" -y 1 "search" "search"
+Error: When -D is passed in, only one root directory may be specified
+

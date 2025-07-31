@@ -129,6 +129,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
     pa->ta = calloc(in->maxthreads, sizeof(ThreadArgs_t));
     if (!pa->ta) {
         fprintf(stderr, "Error: Could not allocate %zu thread structures\n", in->maxthreads);
+        input_fini(pa->in);
         return 1;
     }
 

@@ -319,6 +319,92 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return rc;
 }
 
+/* set up parent for a single subtree root in the index and enqueue subtree root as normal work */
+static int process_subtree_root(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+    struct work *subtree_root = (struct work *) data;
+    struct PoolArgs *pa = (struct PoolArgs *) args;
+
+    if (lstat(subtree_root->name, &subtree_root->statuso) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not stat subtree root \"%s\". Skipping: %s (%d)\n",
+                subtree_root->name, strerror(err), err);
+        free(subtree_root);
+        return 1;
+    }
+
+    /* check that the input path is a directory */
+    if (!S_ISDIR(subtree_root->statuso.st_mode)) {
+        fprintf(stderr, "Error: Subtree root is not a directory \"%s\"\n",
+                subtree_root->name);
+        free(subtree_root);
+        return 1;
+    }
+
+    /* offset by root_parent.len to remove prefix */
+    const size_t topath_len = pa->in.nameto.len + 1 + subtree_root->name_len - subtree_root->root_parent.len;
+
+    char *topath = malloc(topath_len + 1);
+    SNFORMAT_S(topath, topath_len + 1, 3,
+               pa->in.nameto.data, pa->in.nameto.len,
+               "/", (size_t) 1,
+               subtree_root->name + subtree_root->root_parent.len, subtree_root->name_len - subtree_root->root_parent.len);
+
+    /*
+     * create directories up to parent with corrrect permissions and owners
+     * so that processdir can maintain assumption that the parent directory
+     * already exists
+     *
+     * empty db.db files are not created
+     */
+    for (char *p = strchr(topath + 1, '/'); p; p = strchr(p + 1, '/')) {
+        *p = '\0';
+
+        struct stat st;
+        if (stat(topath, &st) != 0) { /* stat(2) not lstat(2) */
+            const int err = errno;
+            if (err != ENOENT) {
+                fprintf(stderr, "Error: Cannot stat subtree root parent \"%s\": %s (%d)\n",
+                        topath, strerror(err), err);
+                free(topath);
+                free(subtree_root);
+                return 1;
+            }
+        }
+
+        if (!S_ISDIR(st.st_mode)) {
+            fprintf(stderr, "Error: Subtree root parent is not a directory \"%s\"\n", topath);
+            free(topath);
+            free(subtree_root);
+            return 1;
+        }
+
+        if (mkdir(topath, st.st_mode) == -1) {
+            const int err = errno;
+            if (err != EEXIST) {
+                fprintf(stderr, "Error: Could not make subtree root parent \"%s\": %s (%d)\n",
+                        topath, strerror(err), err);
+                *p = '/';
+                free(topath);
+                free(subtree_root);
+                return 1;
+            }
+        }
+        else {
+            chmod(topath, st.st_mode);
+            chown(topath, st.st_uid, st.st_gid);
+        }
+
+        *p = '/';
+    }
+
+    free(topath);
+
+    struct work *copy = compress_struct(pa->in.compress, subtree_root, struct_work_size(subtree_root));
+    QPTPool_enqueue(ctx, id, processdir, copy);
+
+    return 0;
+}
+
 /*
  * create the target directory
  *
@@ -406,6 +492,15 @@ int main(int argc, char *argv[]) {
 
     int rc = EXIT_SUCCESS;
 
+    const size_t root_count = argc - idx - 1;
+
+    if ((pa.in.min_level && pa.in.subtree_list.len) &&
+        (root_count > 1)) {
+        fprintf(stderr, "Error: When -D is passed in, only one source directory may be specified\n");
+        rc = EXIT_FAILURE;
+        goto cleanup;
+    }
+
     if (setup_dst(pa.in.nameto.data) != 0) {
         rc = EXIT_FAILURE;
         goto cleanup;
@@ -453,7 +548,6 @@ int main(int argc, char *argv[]) {
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
 
-    const size_t root_count = argc - idx - 1;
     char **roots = calloc(root_count, sizeof(char *));
     for(size_t i = 0; idx < (argc - 1);) {
         /* force all input paths to be canonical */
@@ -478,8 +572,13 @@ int main(int argc, char *argv[]) {
         root->basename_len = root->name_len - root->root_parent.len;
         root->root_basename_len = root->basename_len;
 
-        struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
-        QPTPool_enqueue(pool, 0, processdir, copy);
+        if (doing_partial_walk(&pa.in, root_count)) {
+            process_subtree_list(&pa.in, root, pool, process_subtree_root);
+        }
+        else {
+            struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
+            QPTPool_enqueue(pool, 0, processdir, copy);
+        }
         i++;
     }
     QPTPool_stop(pool);

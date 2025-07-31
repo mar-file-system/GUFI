@@ -162,7 +162,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->compress,                           flags);
     #endif
     EXPECT_EQ(in->check_extdb_valid,                  flags);
-    EXPECT_EQ(in->process.set,                        0);
 
     if (options) {
         EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);
@@ -202,6 +201,9 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(eus->view.data,                     Q_arg3);
 
         EXPECT_EQ(in->swap_prefix.data,               s_arg);
+
+        EXPECT_NE(in->subtree_list.data,              nullptr);
+        EXPECT_EQ(in->subtree_list.len,               (std::size_t) 5);
     }
     else {
         const std::string empty = "";
@@ -235,6 +237,8 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->subdir_limit,                   (std::size_t) 0);
         EXPECT_EQ(sll_get_size(&in->external_attach), (std::size_t) 0);
         EXPECT_NE(in->swap_prefix.data,               nullptr); /* default exists */
+        EXPECT_EQ(in->subtree_list.data,              nullptr);
+        EXPECT_EQ(in->subtree_list.len,               (std::size_t) 0);
     }
 }
 
@@ -417,7 +421,7 @@ TEST(parse_cmd_line, options) {
         C.c_str(), C_arg.c_str(),
         Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
         s.c_str(), s_arg.c_str(),
-        // D.c_str(), D_arg.c_str(),
+        D.c_str(), D_arg.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
@@ -556,22 +560,6 @@ TEST(parse_cmd_line, output_arguments) {
 
         input_fini(&in);
     }
-}
-
-TEST(parse_cmd_line, bad_D_arg) {
-    const char opts[] = "D:";
-
-    const char *argv[] = {
-        exec.c_str(),
-        D.c_str(), D_arg.c_str(),
-    };
-
-    int argc = sizeof(argv) / sizeof(argv[0]);
-
-    struct input in;
-    ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
-
-    input_fini(&in);
 }
 
 TEST(parse_cmd_line, positional) {

@@ -81,6 +81,71 @@ OF SUCH DAMAGE.
 #include "gufi_query/handle_sql.h"
 #include "gufi_query/processdir.h"
 
+/*
+ * attach directory paths directly to the root path and
+ * run starting at -y instead of walking to -y first
+ */
+int gqw_process_subtree_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
+    FILE *file = fopen(in->subtree_list.data, "r");
+    if (!file) {
+        const int err = errno;
+        fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
+                in->subtree_list.data, strerror(err), err);
+        return 1;
+    }
+
+    char *line = NULL;
+    size_t n = 0;
+    ssize_t got = 0;
+    while ((got = getline(&line, &n, file)) != -1) {
+        /* remove trailing CRLF */
+        const size_t len = trailing_non_match_index(line, got, "\r\n", 2);
+        const size_t name_size = root->work.name_len + 1 + len + 1;
+        const size_t max_sqlite3_name_size = root->sqlite3_name_len + 1 + 3 * len + 1;
+
+        const size_t gqw_size = (sizeof(*root) +
+                                 name_size +
+                                 max_sqlite3_name_size);
+
+        /* oversized allocation */
+        gqw_t *subtree_root = calloc(1, gqw_size);
+
+        subtree_root->work.name = (char *) &subtree_root[1];
+        subtree_root->work.name_len = SNFORMAT_S(subtree_root->work.name, name_size, 3,
+                                                 root->work.name, root->work.name_len,
+                                                 "/", (size_t) 1,
+                                                 line, len);
+
+        /* set modified path name for SQLite3 */
+        size_t rp_len = subtree_root->work.name_len; /* discarded */
+        subtree_root->sqlite3_name = ((char *) subtree_root->work.name) + subtree_root->work.name_len + 1;
+        subtree_root->sqlite3_name_len = sqlite_uri_path(subtree_root->sqlite3_name, max_sqlite3_name_size,
+                                                         subtree_root->work.name, &rp_len);
+
+        /* keep original user input */
+        subtree_root->work.orig_root = root->work.orig_root;
+
+        /* parent of the input path, not the subtree root */
+        subtree_root->work.root_parent = root->work.root_parent;
+
+        /* remove trailing slashes (+ 1 to keep at least 1 character) */
+        subtree_root->work.basename_len = subtree_root->work.name_len - (trailing_match_index(subtree_root->work.name + 1, subtree_root->work.name_len - 1, "/", 1) + 1);
+
+        subtree_root->work.root_basename_len = root->work.basename_len;
+
+        /* go directly to -y */
+        subtree_root->work.level = in->min_level;
+
+        QPTPool_enqueue(ctx, 0, processdir, subtree_root);
+    }
+
+    free(line);
+    fclose(file);
+    free(root);
+
+    return 0;
+}
+
 static void sub_help(void) {
    printf("GUFI_index        find GUFI index here\n");
    printf("\n");
@@ -96,6 +161,15 @@ int main(int argc, char *argv[])
     process_args_and_maybe_exit("hHvT:S:E:a:n:jo:d:O:uI:F:y:z:J:K:G:mB:wxk:M:s:p:" COMPRESS_OPT "Q:D:", 1, "GUFI_index ...", &in);
 
     if (handle_sql(&in) != 0) {
+        input_fini(&in);
+        return EXIT_FAILURE;
+    }
+
+    const size_t root_count = argc - idx;
+
+    if ((in.min_level && in.subtree_list.len) &&
+        (root_count > 1)) {
+        fprintf(stderr, "Error: When -D is passed in, only one root directory may be specified\n");
         input_fini(&in);
         return EXIT_FAILURE;
     }
@@ -127,7 +201,7 @@ int main(int argc, char *argv[])
     }
 
     /* enqueue input paths */
-    char **realpaths = calloc(argc - idx, sizeof(char *));
+    char **realpaths = calloc(root_count, sizeof(char *));
     for(int i = idx; i < argc; i++) {
         size_t argvi_len = strlen(argv[i]);
         if (!argvi_len) {
@@ -166,24 +240,24 @@ int main(int argc, char *argv[])
          * get sqlite3 name (copied into root instead of written
          * directly into root because root doesn't exist yet)
          */
-        size_t rp_len = root_name_len;
+        size_t rp_len = root_name_len; /* discarded */
         char sqlite3_name[MAXPATH];
         const size_t sqlite3_name_len = sqlite_uri_path(sqlite3_name, sizeof(sqlite3_name),
                                                         root_name, &rp_len);
 
         gqw_t *root = calloc(1, sizeof(*root) + root_name_len + 1 + sqlite3_name_len + 1);
-        root->work.name = (char *) &root[1];;
+        root->work.name = (char *) &root[1];
         root->work.name_len = SNFORMAT_S(root->work.name, root_name_len + 1, 1,
                                          root_name, root_name_len);
-
-        /* keep original user input */
-        root->work.orig_root.data = argv[i];
-        root->work.orig_root.len = argvi_len;
 
         /* set modified path name for SQLite3 */
         root->sqlite3_name = ((char *) root->work.name) + root->work.name_len + 1;
         root->sqlite3_name_len = SNFORMAT_S(root->sqlite3_name, sqlite3_name_len + 1, 1,
                                             sqlite3_name, sqlite3_name_len);
+
+        /* keep original user input */
+        root->work.orig_root.data = argv[i];
+        root->work.orig_root.len = argvi_len;
 
         /* parent of input path */
         root->work.root_parent.data = realpaths[i - idx];
@@ -194,8 +268,13 @@ int main(int argc, char *argv[])
 
         root->work.root_basename_len = root->work.basename_len;
 
-        /* push the path onto the queue (no compression) */
-        QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
+        if (doing_partial_walk(&in, root_count)) {
+            gqw_process_subtree_list(&in, root, pool);
+        }
+        else {
+            /* push the path onto the queue (no compression) */
+            QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
+        }
     }
 
     QPTPool_stop(pool);
