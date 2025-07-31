@@ -79,6 +79,19 @@ SORT_DIRS = {
     'random'   : lambda dirs : random.sample(dirs, len(dirs)),
 }
 
+def clock():
+    if sys.version_info.minor < 3:
+        return time.time()
+    if sys.version_info.minor < 7:
+        return time.monotonic() # Python 3.3
+    return time.monotonic_ns()  # Python 3.7
+
+def clock_diff(start, end):
+    diff = end - start
+    if sys.version_info.minor >= 7:
+        diff /= 1e9
+    return diff
+
 # wait on sbatch, not the actual job
 def run_slurm(args, target, cmd):
     # pylint: disable=consider-using-with
@@ -141,6 +154,8 @@ DISTRIBUTORS = {
 # Step 1
 # Run find(1) and return sorted list of directories
 def dirs_at_level(root, level):
+    start = clock()
+
     # can't use %P to remove input path in macos and Alpine Linux
     cmd = ['find', '-H', root, '-mindepth', str(level), '-maxdepth', str(level), '-type', 'd']
     proc = subprocess.Popen(cmd, # pylint: disable=consider-using-with
@@ -148,7 +163,12 @@ def dirs_at_level(root, level):
                             cwd=os.getcwd())
     dirs, _ = proc.communicate() # block until find finishes
 
+    end = clock()
+
+    print('find(1) returned {0} directory paths in {1} seconds'.format(len(dirs), clock_diff(start, end)))
+
     if proc.returncode:
+        sys.stderr.write('find(1) failed with error code {0}'.format(proc.returncode))
         sys.exit(proc.returncode)
 
     return [path.decode()[len(root) + int(root[-1] != os.path.sep):]
@@ -235,21 +255,6 @@ def schedule_top(args, func):
         return None
 
     return DISTRIBUTORS[args.distributor][0](args, target, cmd)
-
-def clock():
-    # assume Python 3+
-    if sys.version_info.minor < 3:
-        return time.time()
-    if sys.version_info.minor < 7:
-        return time.monotonic() # Python 3.3
-    return time.monotonic_ns()  # Python 3.7
-
-def clock_diff(start, end):
-    # assume Python 3+
-    diff = end - start
-    if sys.version_info.minor >= 7:
-        diff /= 1e9
-    return diff
 
 # call this combined function to distribute work
 def distribute_work(args, root, schedule_subtree_func, schedule_top_func):

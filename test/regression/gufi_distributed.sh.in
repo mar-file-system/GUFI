@@ -162,7 +162,7 @@ trap cleanup_exit EXIT
 cleanup
 
 remove_distributed_output() {
-    remove_indexing_time | @GREP@ -v "Creating GUFI\|Total Dirs:\|Total Non-Dirs\|Total Files:\|Jobs completed in"
+    remove_indexing_time | @GREP@ -v "Creating GUFI\|Total Dirs:\|Total Non-Dirs\|Total Files:\|find(1) returned\|Jobs completed in"
 }
 
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --help"
