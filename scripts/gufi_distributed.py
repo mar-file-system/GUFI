@@ -257,7 +257,8 @@ def schedule_top(args, func):
     return DISTRIBUTORS[args.distributor][0](args, target, cmd)
 
 # call this combined function to distribute work
-def distribute_work(args, root, schedule_subtree_func, schedule_top_func):
+def distribute_work(args, root, schedule_subtree_func,
+                    schedule_top_func, wait_for_subtrees):
     start = clock()
 
     if args.use_existing_group_files:
@@ -272,13 +273,25 @@ def distribute_work(args, root, schedule_subtree_func, schedule_top_func):
     procs = schedule_subtrees(args, len(dirs), group_size, groups,
                               schedule_subtree_func)
 
-    # process the top levels
-    procs += [schedule_top(args, schedule_top_func)]
+    if wait_for_subtrees:
+        # wait for the subtrees to complete processing
+        jobids = DISTRIBUTORS[args.distributor][1](args, procs)
 
-    print('Waiting for {0} jobs to complete'.format(args.distributor))
+        print('Waiting for {0} jobs to complete'.format(args.distributor))
 
-    # wait for actual jobs to return
-    jobids = DISTRIBUTORS[args.distributor][1](args, procs)
+        # start processing the top levels
+        top_proc = schedule_top(args, schedule_top_func)
+
+        # wait for the the top level processing to complete
+        jobids += DISTRIBUTORS[args.distributor][1](args, [top_proc])
+    else:
+        # start processing the top levels
+        procs += [schedule_top(args, schedule_top_func)]
+
+        print('Waiting for {0} jobs to complete'.format(args.distributor))
+
+        # wait for subtrees and top level processing to return
+        jobids = DISTRIBUTORS[args.distributor][1](args, procs)
 
     end = clock()
 
@@ -363,6 +376,5 @@ def parse_args(name, desc):
     parser.add_argument('level',
                         type=gufi_common.get_positive,
                         help='Level at which work is distributed across nodes')
-
 
     return parser # allow for others to use this parser

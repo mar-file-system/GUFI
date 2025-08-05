@@ -148,7 +148,7 @@ def main():
     if (args.distributor == 'ssh') and not args.output_prefix:
         raise RuntimeError('--output_prefix must be set')
 
-    jobids = gufi_distributed.distribute_work(args, args.GUFI_tree, subtree_cmd, top_cmd)
+    jobids = gufi_distributed.distribute_work(args, args.GUFI_tree, subtree_cmd, top_cmd, False)
 
     if args.distributor == 'slurm':
         print('cat the following slurm job output files to get complete results:')

@@ -114,7 +114,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    gufi_distributed.distribute_work(args, args.input_dir, subtree_cmd, top_cmd)
+    gufi_distributed.distribute_work(args, args.input_dir, subtree_cmd, top_cmd, False)
 
     print('Index can now be created from "{0}.*"'.format(args.output_prefix))
 
