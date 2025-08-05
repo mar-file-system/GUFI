@@ -71,15 +71,19 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 
-static BU_f zero = [](void *args) -> int {
-    (void) args;
-
+static BU_descend_f zero_descend = [](void *, int *) -> int {
     return 0;
 };
 
-static BU_f one = [](void *args) -> int {
-    (void) args;
+static BU_ascend_f zero_ascend   = [](void *) -> int {
+    return 0;
+};
 
+static BU_descend_f one_descend  = [](void *, int *) -> int {
+    return 1;
+};
+
+static BU_ascend_f one_ascend    = [](void *) -> int {
     return 1;
 };
 
@@ -87,11 +91,13 @@ static BU_f one = [](void *args) -> int {
 static int parallel_bottomup_wrapper(char **root_names, const size_t root_count,
                                      const size_t thread_count,
                                      const size_t user_struct_size,
-                                     BU_f descend, BU_f ascend,
+                                     BU_descend_f descend, BU_ascend_f ascend,
                                      const int track_non_dirs,
                                      const int generate_alt_name,
                                      void *extra_args) {
     return parallel_bottomup(root_names, root_count,
+                             0, (std::size_t) -1,
+                             nullptr,
                              thread_count,
                              user_struct_size,
                              descend, ascend,
@@ -112,24 +118,24 @@ TEST(BottomUp, builddir) {
 
     EXPECT_EQ(parallel_bottomup_wrapper((char **) roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        zero, zero, THREAD_COUNT, 0, nullptr), 0);
+                                        zero_descend, zero_ascend, THREAD_COUNT, 0, nullptr), 0);
 }
 
 TEST(BottomUp, bad) {
     // bad user struct size
     EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, THREAD_COUNT,
                                         sizeof(struct BottomUp) - 1,
-                                        zero, zero, 0, 0, nullptr), -1);
+                                        zero_descend, zero_ascend, 0, 0, nullptr), -1);
 
     // bad thread count
     EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, 0,
                                         sizeof(struct BottomUp),
-                                        zero, zero, 0, 0, nullptr), -1);
+                                        zero_descend, zero_ascend, 0, 0, nullptr), -1);
 
     // no root dirs
     EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        zero, zero, 0, 0, nullptr), 0);
+                                        zero_descend, zero_ascend, 0, 0, nullptr), 0);
 
     char badfilename[] = "@CMAKE_BINARY_DIR@/XXXXXX";
     int fd = mkstemp(badfilename);
@@ -145,14 +151,14 @@ TEST(BottomUp, bad) {
     // root path is not directory
     EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        zero, zero, 0, 0, nullptr), -1);
+                                        zero_descend, zero_ascend, 0, 0, nullptr), -1);
 
     EXPECT_EQ(remove(badfilename), 0);
 
     // root path doesn't exist
     EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        zero, zero, 0, 0, nullptr), -1);
+                                        zero_descend, zero_ascend, 0, 0, nullptr), -1);
 
     // name is too long after conversion
     const std::size_t maxpath = sizeof(((struct BottomUp *) nullptr)->name);
@@ -161,18 +167,18 @@ TEST(BottomUp, bad) {
 
     EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        zero, zero, 0, THREAD_COUNT, nullptr), -1);
+                                        zero_descend, zero_ascend, 0, THREAD_COUNT, nullptr), -1);
 
     // path is good but user function returned error
     roots[0] = (char *) ROOT.c_str();
 
     EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        one, zero, 0, THREAD_COUNT, nullptr), -1);
+                                        one_descend, zero_ascend, 0, THREAD_COUNT, nullptr), -1);
 
     EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, THREAD_COUNT,
                                         sizeof(struct BottomUp),
-                                        zero, one, 0, THREAD_COUNT, nullptr), -1);
+                                        zero_descend, one_ascend, 0, THREAD_COUNT, nullptr), -1);
 
     // bad pool into split API
     EXPECT_EQ(parallel_bottomup_enqueue(nullptr, nullptr, 0, nullptr), -1);

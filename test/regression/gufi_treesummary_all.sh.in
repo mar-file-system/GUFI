@@ -64,7 +64,27 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
+PATH_LIST="path_list"
+
 OUTPUT="gufi_treesummary_all.out"
+
+cleanup() {
+    rm -rf "${PATH_LIST}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+(
+    echo "directory"
+    echo "leaf_directory"
+) > "${PATH_LIST}"
 
 (
 echo "# ${GUFI_TREESUMMARY_ALL} help" | replace
@@ -72,6 +92,20 @@ run_no_sort "${GUFI_TREESUMMARY_ALL}"
 
 echo "# Start with no treesummary tables"
     run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');\" -E \"SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
+echo
+
+echo "# Generate treesummary tables in some directories at level 1"
+run_no_sort "${GUFI_TREESUMMARY_ALL} -y 1 -D \"${PATH_LIST}\" \"${INDEXROOT}\"" | @SED@ '/^Started .*$/d'
+
+echo "# Query treesummary tables"
+run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
+echo
+
+echo "# Generate treesummary tables in all directories at level 1"
+run_no_sort "${GUFI_TREESUMMARY_ALL} -y 1 \"${INDEXROOT}\"" | @SED@ '/^Started .*$/d'
+
+echo "# Query treesummary tables"
+run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
 echo
 
 echo "# Generate treesummary tables in all directories"
@@ -85,6 +119,9 @@ rm -rf "${SEARCH}/db.db"
 
 echo "# Missing db.db"
 run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\"" | @SED@ '/^Started .*$/d'
+
+echo "# Multiple paths with -y and -D"
+run_no_sort "${GUFI_TREESUMMARY_ALL} -y 1 -D path_list \"${SEARCH}\" \"${SEARCH}\""
 ) 2>&1 | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary_all.expected "${OUTPUT}"

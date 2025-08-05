@@ -110,6 +110,8 @@ int main(int argc, char * argv[]) {
     process_args_and_maybe_exit("hHvn:", 1, "directory ...", &in);
 
     const int rc = parallel_bottomup(argv + idx, argc - idx,
+                                     0, (size_t) -1,
+                                     NULL,
                                      in.maxthreads,
                                      sizeof(struct BottomUp),
                                      NULL, rm_dir,

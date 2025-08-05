@@ -278,6 +278,14 @@ struct input {
 
    /* directory paths to process at -y level > 0 */
    refstr_t subtree_list;
+
+   /*
+    * if a directory has already been
+    * processed, do not descend further
+    *
+    * used by BottomUp programs
+    */
+   int check_already_processed;
 };
 
 struct input *input_init(struct input *in);

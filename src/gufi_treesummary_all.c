@@ -70,7 +70,44 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "utils.h"
 
-static int treesummary(void *args) {
+static int treesummary_found(void *args, int count, char **data, char **columns) {
+    (void) count;
+    (void) data;
+    (void) columns;
+
+    int *keep_going = (int *) args;
+    *keep_going = 0;
+    return 0;
+}
+
+static int treesummary_descend(void *args, int *keep_going) {
+    struct BottomUp *dir = (struct BottomUp *) args;
+
+    char dbname[MAXPATH];
+    SNFORMAT_S(dbname, sizeof(dbname), 2,
+               dir->name, dir->name_len,
+               "/" DBNAME, DBNAME_LEN + 1);
+
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
+
+    int rc = !db;
+    if (db) {
+        char *err = NULL;
+        /* check if treesummary table exists - if it does, don't descend */
+        if (sqlite3_exec(db, TREESUMMARY_EXISTS, treesummary_found, &keep_going, &err) != SQLITE_OK) {
+            fprintf(stderr, "Error: Could not check for existence of treesummary table at \"%s\": %s\n",
+                    dir->name, err);
+            sqlite3_free(err);
+            rc = 1;
+        }
+    }
+
+    closedb(db);
+
+    return rc;
+}
+
+static int treesummary_ascend(void *args) {
     struct BottomUp *dir = (struct BottomUp *) args;
 
     char dbname[MAXPATH];
@@ -80,8 +117,9 @@ static int treesummary(void *args) {
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, create_treesummary_tables, NULL);
 
-    int rc = !!db;
+    int rc = !db;
     if (db) {
+        /* the treesummary table was not found, so create it */
         rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ROLLUPSCORE_CHECK);
     }
 
@@ -91,7 +129,7 @@ static int treesummary(void *args) {
 }
 
 static void sub_help(void) {
-    printf("GUFI_index               path to GUFI index\n");
+    printf("GUFI_tree                path to GUFI tree\n");
     printf("\n");
 }
 
@@ -103,15 +141,19 @@ int main(int argc, char *argv[]) {
      * control which options are parsed for each program.
      */
     struct input in;
-    process_args_and_maybe_exit("hHvn:", 1, "GUFI_index", &in);
+    process_args_and_maybe_exit("hHvn:y:z:D:l", 1, "GUFI_index", &in);
+
+    BU_descend_f desc = in.check_already_processed?treesummary_descend:NULL;
 
     const int rc = parallel_bottomup(argv + idx, argc - idx,
-                             in.maxthreads,
-                             sizeof(struct BottomUp),
-                             NULL, treesummary,
-                             0,
-                             0,
-                             NULL);
+                                     in.min_level, in.max_level,
+                                     &in.subtree_list,
+                                     in.maxthreads,
+                                     sizeof(struct BottomUp),
+                                     desc, treesummary_ascend,
+                                     0,
+                                     0,
+                                     &in);
 
     input_fini(&in);
 

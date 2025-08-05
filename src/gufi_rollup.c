@@ -322,6 +322,49 @@ struct RollUp {
     int rolledup;
 };
 
+static int rollup_found(void *args, int count, char **data, char **columns) {
+    (void) count;
+    (void) data;
+    (void) columns;
+
+    int *rolledup = (int *) args;
+    *rolledup = data[0][0] - '0';
+    return 0;
+}
+
+static int rollup_descend(void *args, int *keep_going) {
+    struct RollUp *dir = (struct RollUp *) args;
+
+    char dbname[MAXPATH];
+    SNFORMAT_S(dbname, sizeof(dbname), 2,
+               dir->data.name, dir->data.name_len,
+               "/" DBNAME, DBNAME_LEN + 1);
+
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
+
+    int rc = !db;
+    if (db) {
+        char *err = NULL;
+        /* check if the current directory is rolled up - if it is, don't descend */
+        if (sqlite3_exec(db, "SELECT rollupscore FROM " SUMMARY " WHERE isroot == 1;",
+                         rollup_found, &dir->rolledup, &err) == SQLITE_OK) {
+            if (dir->rolledup) {
+                *keep_going = 0;
+            }
+        }
+        else {
+            fprintf(stderr, "Error: Could not check for existence of rollup status at \"%s\": %s\n",
+                    dir->data.name, err);
+            sqlite3_free(err);
+            rc = 1;
+        }
+    }
+
+    closedb(db);
+
+    return rc;
+}
+
 /* ************************************** */
 /* get permissions from directory entries */
 const char PERM_SQL[] = "SELECT mode, uid, gid, (SELECT COUNT(*) FROM pentries) "
@@ -484,6 +527,11 @@ static int can_rollup(struct input *in,
                       struct DirStats *ds,
                       sqlite3 *dst) {
     /* Not checking arguments */
+
+    /* not deep enough */
+    if (rollup->data.level < in->min_level) {
+        return 0;
+    }
 
     char *err = NULL;
 
@@ -743,9 +791,8 @@ end_rollup:
     return rc;
 }
 
-static int rollup(void *args) {
+static int rollup_ascend(void *args) {
     struct RollUp *dir = (struct RollUp *) args;
-    dir->rolledup = 0;
 
     const size_t id = dir->data.tid.up;
 
@@ -786,54 +833,57 @@ static int rollup(void *args) {
 
     /* can attempt to roll up */
     if (dst) {
-        /* check if rollup is allowed */
-        ds->score = can_rollup(in, dir, ds, dst);
+        /* if completing partial rollup and this directory is already rolled up, skip */
+        if (!in->check_already_processed || !dir->rolledup) {
+            /* check if rollup is allowed */
+            ds->score = can_rollup(in, dir, ds, dst);
 
-        /* if can roll up */
-        if (ds->score > 0) {
-            /* do the roll up */
-            if (in->dry_run) {
-                ds->success = 1;
-            }
-            else {
-                ds->success = (do_rollup(dir, ds, dst, &pa->xattr_template) == 0);
+            /* if can roll up */
+            if (ds->score > 0) {
+                /* do the roll up */
+                if (in->dry_run) {
+                    ds->success = 1;
+                }
+                else {
+                    ds->success = (do_rollup(dir, ds, dst, &pa->xattr_template) == 0);
 
-                /* index summary.inode to make rollup views faster to query */
-                if (ds->success) {
-                    char *err = NULL;
-                    if (sqlite3_exec(dst,
-                                     "CREATE INDEX " SUMMARY "_idx ON " SUMMARY "(inode);",
-                                     NULL, NULL, &err) != SQLITE_OK) {
-                        sqlite_print_err_and_free(err, stderr, "Warning: Could not create roll up index at \"%s\": %s\n", dir->data.name, err);
+                    /* index summary.inode to make rollup views faster to query */
+                    if (ds->success) {
+                        char *err = NULL;
+                        if (sqlite3_exec(dst,
+                                         "CREATE INDEX " SUMMARY "_idx ON " SUMMARY "(inode);",
+                                         NULL, NULL, &err) != SQLITE_OK) {
+                            sqlite_print_err_and_free(err, stderr, "Warning: Could not create roll up index at \"%s\": %s\n", dir->data.name, err);
+                        }
                     }
                 }
-            }
 
-            dir->rolledup = ds->success;
-            sll_push(&stats[id].rolled_up, ds);
+                dir->rolledup = ds->success;
+                sll_push(&stats[id].rolled_up, ds);
 
-            /* root directory will always remain */
-            if (!dir->data.parent) {
-                stats[id].remaining++;
-            }
-        }
-        else if (ds->score == 0) {
-            /* is not allowed to roll up */
-            sll_push(&stats[id].not_rolled_up, ds);
-
-            /* count this directory */
-            stats[id].remaining++;
-
-            /* count only children that were rolled up */
-            /* in order to not double count */
-            sll_loop(&dir->data.subdirs, node) {
-                struct RollUp *child = (struct RollUp *) sll_node_data(node);
-                if (child->rolledup) {
+                /* root directory will always remain */
+                if (!dir->data.parent) {
                     stats[id].remaining++;
                 }
             }
+            else if (ds->score == 0) {
+                /* is not allowed to roll up */
+                sll_push(&stats[id].not_rolled_up, ds);
 
-            bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ROLLUPSCORE_KNOWN_NO);
+                /* count this directory */
+                stats[id].remaining++;
+
+                /* count only children that were rolled up */
+                /* in order to not double count */
+                sll_loop(&dir->data.subdirs, node) {
+                    struct RollUp *child = (struct RollUp *) sll_node_data(node);
+                    if (child->rolledup) {
+                        stats[id].remaining++;
+                    }
+                }
+
+                bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ROLLUPSCORE_KNOWN_NO);
+            }
         }
     }
     else {
@@ -849,7 +899,7 @@ static int rollup(void *args) {
 }
 
 static void sub_help(void) {
-   printf("GUFI_index        GUFI index to roll up\n");
+   printf("GUFI_tree         GUFI tree to roll up\n");
    printf("\n");
 }
 
@@ -860,7 +910,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &runtime.start);
 
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:L:X", 1, "GUFI_index ...", &pa.in);
+    process_args_and_maybe_exit("hHvn:L:Xy:z:D:l", 1, "GUFI_index ...", &pa.in);
 
     init_template_db(&pa.xattr_template);
     if (create_xattrs_template(&pa.xattr_template) != 0) {
@@ -886,10 +936,14 @@ int main(int argc, char *argv[]) {
     argv += idx;
     argc -= idx;
 
+    BU_descend_f desc = pa.in.check_already_processed?rollup_descend:NULL;
+
     const int rc = parallel_bottomup(argv, argc,
+                                     pa.in.min_level, pa.in.max_level,
+                                     &pa.in.subtree_list,
                                      pa.in.maxthreads,
                                      sizeof(struct RollUp),
-                                     NULL, rollup,
+                                     desc, rollup_ascend,
                                      0,
                                      1,
                                      &pa);

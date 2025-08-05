@@ -8,8 +8,12 @@ options:
   -n <threads>           number of threads
   -L <count>             Highest number of files/links in a directory allowed to be rolled up
   -X                     Dry run
+  -y <min level>         minimum level to go down
+  -z <max level>         maximum level to go down
+  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
+  -l                     if a directory was previously processed, skip descending the subtree
 
-GUFI_index        GUFI index to roll up
+GUFI_tree         GUFI tree to roll up
 
 
 Creating GUFI Index search with 1 threads
@@ -1476,6 +1480,99 @@ root 5
 
 $ gufi_stats -c total-dircount prefix
 69
+
+Creating GUFI Index search with 1 threads
+Total Dirs:          6
+Total Non-Dirs:      14
+# Partial Rollup up to level 1
+$ gufi_rollup -y 1 -D "path_list" "prefix"
+Roots:
+    prefix
+
+Thread Pool Size:            1
+Files/Links Limit:           0
+
+Not Processed:               0
+Cannot Roll Up:              0
+Can Roll Up:                 3
+    Subdirectories:
+        min:                 0
+        max:                 1
+        median:           0.00
+        sum:                 1
+        average:          0.33
+    Files/Links:
+        min:                 2
+        max:                 3
+        median:           2.00
+        sum:                 7
+        average:          2.33
+    Level:
+        min:                 1
+        max:                 2
+        median:           1.00
+        sum:                 4
+        average:          1.33
+    Successful:              3
+    Failed:                  0
+Files/Links:    7
+Directories:    3 (0 empty)
+Total:          10
+Remaining Dirs: 2 (66.67%)
+
+# Check which directories have been rolled up
+$ gufi_query -d "|" -S "SELECT rpath(sname, sroll), rollupscore FROM vrsummary" "prefix"
+prefix/directory/subdirectory|1
+prefix/directory|1
+prefix/empty_directory|0
+prefix/leaf_directory|1
+prefix/unusual#? directory ,|0
+prefix|0
+
+# Full Rollup up to level 1
+$ gufi_rollup -y 1 "prefix"
+Roots:
+    prefix
+
+Thread Pool Size:            1
+Files/Links Limit:           0
+
+Not Processed:               0
+Cannot Roll Up:              0
+Can Roll Up:                 5
+    Subdirectories:
+        min:                 0
+        max:                 1
+        median:           0.00
+        sum:                 1
+        average:          0.20
+    Files/Links:
+        min:                 0
+        max:                 5
+        median:           2.00
+        sum:                10
+        average:          2.00
+    Level:
+        min:                 1
+        max:                 2
+        median:           1.00
+        sum:                 6
+        average:          1.20
+    Successful:              5
+    Failed:                  0
+Files/Links:    10
+Directories:    5 (1 empty)
+Total:          15
+Remaining Dirs: 0 (0.00%)
+
+# Check which directories have been rolled up
+$ gufi_query -d "|" -S "SELECT rpath(sname, sroll), rollupscore FROM vrsummary" "prefix"
+prefix/directory/subdirectory|1
+prefix/directory|1
+prefix/empty_directory|1
+prefix/leaf_directory|1
+prefix/unusual#? directory ,|1
+prefix|0
 
 # bad thread count
 $ gufi_rollup -n 18446744073709551615 "search"

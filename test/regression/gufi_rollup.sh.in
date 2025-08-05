@@ -64,10 +64,13 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
 
+PATH_LIST="path_list"
+
 OUTPUT="gufi_rollup.out"
 
 cleanup() {
     rollup_tree_cleanup
+    rm -f "${PATH_LIST}"
 }
 
 cleanup_exit() {
@@ -78,6 +81,11 @@ cleanup_exit() {
 trap cleanup_exit EXIT
 
 cleanup
+
+(
+    echo "directory"
+    echo "leaf_directory"
+) > "${PATH_LIST}"
 
 (
 echo "# ${GUFI_ROLLUP} help" | replace
@@ -150,6 +158,23 @@ rm -r "${SEARCH}"
     "${SEARCH}"
 "${GUFI_ROLLUP}" -L 3 "${SEARCH}"
 do_tests
+
+rm -rf "${SEARCH}"
+
+"${GENERATETREE}" "${SRCDIR}"
+"${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
+
+echo "# Partial Rollup up to level 1"
+run_no_sort "${GUFI_ROLLUP} -y 1 -D \"${PATH_LIST}\" \"${INDEXROOT}\""
+
+echo "# Check which directories have been rolled up"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""
+
+echo "# Full Rollup up to level 1"
+run_no_sort "${GUFI_ROLLUP} -y 1 \"${INDEXROOT}\""
+
+echo "# Check which directories have been rolled up"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""
 
 echo "# bad thread count"
 run_no_sort "${GUFI_ROLLUP} -n 18446744073709551615 \"${SEARCH}\""

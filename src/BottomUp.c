@@ -83,7 +83,13 @@ processed before processing the current one
 #include "utils.h"
 
 /* define so that descend and ascend always have valid functions to call */
-static int noop(void *user_struct) {
+static int noop_descend(void *user_struct, int *keep_going) {
+    (void) user_struct;
+    (void) keep_going;
+    return 0;
+}
+
+static int noop_ascend(void *user_struct) {
     (void) user_struct;
     return 0;
 }
@@ -99,8 +105,10 @@ void bottomup_destroy(void *p) {
 
 struct UserArgs {
     size_t user_struct_size;
-    BU_f descend;
-    BU_f ascend;
+    size_t min_level;
+    size_t max_level;
+    BU_descend_f descend;
+    BU_ascend_f ascend;
     int track_non_dirs;
     int generate_alt_name;
     trie_t *skip;
@@ -210,7 +218,10 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
     bu->tid.up = id;
 
     /* call user ascend function */
-    const int asc_rc = ua->ascend(bu);
+    int asc_rc = 0;
+    if ((ua->min_level <= bu->level) && (bu->level <= ua->max_level)) {
+        asc_rc = ua->ascend(bu);
+    }
 
     /* clean up 'struct BottomUp's here, when they are */
     /* children instead of when they are the parent */
@@ -348,12 +359,19 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
 
     /* this will probably be a bottleneck since subdirectories won't */
     /* be queued/processed while the descend function runs */
-    const int desc_rc = ua->descend(bu);
+    int desc_rc = 0;
+    int keep_descending = 1;
+    if ((ua->min_level <= bu->level) && (bu->level <= ua->max_level)) {
+        desc_rc = ua->descend(bu, &keep_descending);
+    }
 
-    bu->refs.remaining = bu->subdir_count;
+    /* if the descent function succeeded */
     if (desc_rc == 0) {
         /* if there are subdirectories, this directory cannot go back up just yet */
-        if (bu->subdir_count) {
+        if (keep_descending && (next_level <= ua->max_level) && bu->subdir_count) {
+            /* decrement each time child triggers parent for processing */
+            bu->refs.remaining = bu->subdir_count;
+
             /* have to lock to prevent subdirs from getting popped */
             /* off before all of them have been enqueued */
             pthread_mutex_lock(&bu->refs.mutex);
@@ -367,8 +385,10 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
             }
             pthread_mutex_unlock(&bu->refs.mutex);
         }
-        /* start working upwards */
         else {
+            bu->refs.remaining = 0;
+
+            /* start working upwards */
             QPTPool_enqueue(ctx, id, ascend_to_top, bu);
         }
     }
@@ -385,7 +405,8 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
 
 QPTPool_t *parallel_bottomup_init(const size_t thread_count,
                                   const size_t user_struct_size,
-                                  BU_f descend, BU_f ascend,
+                                  const size_t min_level, const size_t max_level,
+                                  BU_descend_f descend, BU_ascend_f ascend,
                                   const int track_non_dirs,
                                   const int generate_alt_name) {
     if (user_struct_size < sizeof(struct BottomUp)) {
@@ -395,8 +416,10 @@ QPTPool_t *parallel_bottomup_init(const size_t thread_count,
 
     struct UserArgs *ua = calloc(1, sizeof(*ua));
     ua->user_struct_size = user_struct_size;
-    ua->descend = descend?descend:noop;
-    ua->ascend = ascend?ascend:noop;
+    ua->min_level = min_level;
+    ua->max_level = max_level;
+    ua->descend = descend?descend:noop_descend;
+    ua->ascend = ascend?ascend:noop_ascend;
     ua->track_non_dirs = track_non_dirs;
     ua->generate_alt_name = generate_alt_name;
 
@@ -434,9 +457,7 @@ int parallel_bottomup_enqueue(QPTPool_t *pool,
     new_pathname(root, path, len, NULL, 0);
 
     if (ua->generate_alt_name) {
-        int ret = new_alt_pathname(root, root->name, root->name_len, NULL, 0);
-
-        if (ret) {
+        if (new_alt_pathname(root, root->name, root->name_len, NULL, 0)) {
             fprintf(stderr, "%s could not fit into ALT_NAME buffer\n", root->name);
             bottomup_destroy(root);
             return -1;
@@ -448,6 +469,52 @@ int parallel_bottomup_enqueue(QPTPool_t *pool,
     root->level = 0;
 
     QPTPool_enqueue(pool, 0, descend_to_bottom, root);
+    return 0;
+}
+
+static int parallel_bottomup_enqueue_subdirs(QPTPool_t *pool,
+                                             const char *path, const size_t len,
+                                             const size_t min_level, const refstr_t *subtree_list,
+                                             void *extra_args) {
+    struct UserArgs *ua = NULL;
+    QPTPool_get_args(pool, (void **) &ua);
+
+    FILE *file = fopen(subtree_list->data, "r");
+    if (!file) {
+        const int err = errno;
+        fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
+                subtree_list->data, strerror(err), err);
+        return -1;
+    }
+
+    char *line = NULL;
+    size_t n = 0;
+    ssize_t got = 0;
+    while ((got = getline(&line, &n, file)) != -1) {
+        /* remove trailing CRLF */
+        const size_t line_len = trailing_non_match_index(line, got, "\r\n", 2);
+
+        struct BottomUp *root = (struct BottomUp *) calloc(ua->user_struct_size, 1);
+        new_pathname(root, path, len, line, line_len);
+
+        if (ua->generate_alt_name) {
+            if (new_alt_pathname(root, root->name, root->name_len, NULL, 0)) {
+                fprintf(stderr, "%s could not fit into ALT_NAME buffer\n", root->name);
+                bottomup_destroy(root);
+                return -1;
+            }
+        }
+
+        root->parent = NULL;
+        root->extra_args = extra_args;
+        root->level = min_level;
+
+        QPTPool_enqueue(pool, 0, descend_to_bottom, root);
+    }
+
+    free(line);
+    fclose(file);
+
     return 0;
 }
 
@@ -481,13 +548,24 @@ int parallel_bottomup_fini(QPTPool_t *pool) {
 }
 
 int parallel_bottomup(char **root_names, const size_t root_count,
+                      const size_t min_level, const size_t max_level,
+                      const refstr_t *subtree_list,
                       const size_t thread_count,
                       const size_t user_struct_size,
-                      BU_f descend, BU_f ascend,
+                      BU_descend_f descend, BU_ascend_f ascend,
                       const int track_non_dirs,
                       const int generate_alt_name,
                       void *extra_args) {
-    QPTPool_t *pool = parallel_bottomup_init(thread_count, user_struct_size, descend, ascend,
+    if (min_level && subtree_list->data && subtree_list->len) {
+        if (root_count > 1) {
+            fprintf(stderr, "Error: Only one root may be provided when a -y and -D are both provided\n");
+            return -1;
+        }
+    }
+
+    QPTPool_t *pool = parallel_bottomup_init(thread_count, user_struct_size,
+                                             min_level, max_level,
+                                             descend, ascend,
                                              track_non_dirs, generate_alt_name);
     if (!pool) {
         return -1;
@@ -498,8 +576,14 @@ int parallel_bottomup(char **root_names, const size_t root_count,
 
     /* enqueue all root directories */
     size_t good_roots = 0;
-    for(size_t i = 0; i < root_count; i++) {
-        good_roots += !parallel_bottomup_enqueue(pool, root_names[i], strlen(root_names[i]), extra_args);
+    if (min_level && subtree_list->data && subtree_list->len) {
+        good_roots += !parallel_bottomup_enqueue_subdirs(pool, root_names[0], strlen(root_names[0]),
+                                                         min_level, subtree_list, extra_args);
+    }
+    else {
+        for(size_t i = 0; i < root_count; i++) {
+            good_roots += !parallel_bottomup_enqueue(pool, root_names[i], strlen(root_names[i]), extra_args);
+        }
     }
 
     return -(parallel_bottomup_fini(pool) || (root_count != good_roots));

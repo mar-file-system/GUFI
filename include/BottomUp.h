@@ -114,7 +114,8 @@ struct BottomUp {
 
 /* Signature of function for processing */
 /* directories while traversing a tree */
-typedef int (*BU_f)(void *user_struct);
+typedef int (*BU_descend_f)(void *user_struct, int *keep_going);
+typedef int (*BU_ascend_f) (void *user_struct);
 
 /* ****************************************************************** */
 /*
@@ -130,7 +131,8 @@ typedef int (*BU_f)(void *user_struct);
  */
 QPTPool_t *parallel_bottomup_init(const size_t thread_count,
                                   const size_t user_struct_size,
-                                  BU_f descend, BU_f ascend,
+                                  const size_t min_level, const size_t max_level,
+                                  BU_descend_f descend, BU_ascend_f ascend,
                                   const int track_non_dirs,
                                   const int generate_alt_name);
 
@@ -150,9 +152,11 @@ int parallel_bottomup_fini(QPTPool_t *pool);
  * This function wraps parallel_bottomup_{init,enqueue,fini}.
  */
 int parallel_bottomup(char **root_names, const size_t root_count,
+                      const size_t min_level, const size_t max_level,
+                      const refstr_t *subtree_list,
                       const size_t thread_count,
                       const size_t user_struct_size,
-                      BU_f descend, BU_f ascend,
+                      BU_descend_f descend, BU_ascend_f ascend,
                       const int track_non_dirs,
                       const int generate_alt_name,
                       void *extra_args);

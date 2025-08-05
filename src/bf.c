@@ -204,6 +204,7 @@ void print_help(const char* prog_name,
       case 's': printf("  -s <path>              File name prefix for swap files"); break;
       case 'p': printf("  -p <path>              Source path prefix for %%s in SQL"); break;
       case 'D': printf("  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y"); break;
+      case 'l': printf("  -l                     if a directory was previously processed, skip descending the subtree"); break;
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -265,6 +266,7 @@ void show_input(struct input* in, int retval) {
    printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
    printf("in.source_prefix            = '%s'\n",          in->sql_format.source_prefix.data);
    printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
+   printf("in.check_already_processed  = %d\n",            in->check_already_processed);
    printf("retval                      = %d\n",            retval);
    printf("\n");
 }
@@ -531,6 +533,10 @@ int parse_cmd_line(int         argc,
 
       case 'D':
           INSTALL_STR(&in->subtree_list, optarg);
+          break;
+
+      case 'l':
+          in->check_already_processed = 1;
           break;
 
       case '?':
