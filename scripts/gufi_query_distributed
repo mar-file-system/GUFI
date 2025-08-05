@@ -81,6 +81,7 @@ def subtree_cmd(args, filename, idx, target):
     cmd = [
         args.gufi_query,
         '-n', str(args.threads),
+        '-d', str(args.delim),
         '-y', str(args.level),
         '-D', filename,
     ]
@@ -96,6 +97,7 @@ def top_cmd(args, target):
     cmd = [
         args.gufi_query,
         '-n', str(args.threads),
+        '-d', str(args.delim),
         '-z', str(args.level - 1),
     ]
 
@@ -122,6 +124,10 @@ def parse_args():
     parser.add_argument('--threads',       '-n', metavar='n',
                         type=gufi_common.get_positive,
                         default=1)
+
+    parser.add_argument('--delim',   '-d',  metavar='c',
+                        type=gufi_common.get_char,
+                        default=b'\x1e')
 
     for flag in SQL_FLAGS:
         parser.add_argument('-{0}'.format(flag), metavar='SQL', type=str)
