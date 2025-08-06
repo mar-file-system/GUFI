@@ -249,7 +249,7 @@ def schedule_top(args, func):
     target = args.hosts[1]
     cmd = func(args, target)
 
-    print("    Process upper directories up to and including level {0} on {1}".format(args.level - 1, target))
+    print("    Process upper directories on {0}".format(target))
 
     if args.dry_run:
         return None

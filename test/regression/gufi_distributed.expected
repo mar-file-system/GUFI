@@ -12,7 +12,7 @@ Splitting 4 paths into 5 groups of max size 1
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 Waiting for slurm jobs to complete
 
 # Query Index
@@ -26,7 +26,7 @@ Splitting 4 paths into 5 groups of max size 1
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 Waiting for slurm jobs to complete
 cat the following slurm job output files to get complete results:
     0
@@ -75,7 +75,7 @@ Splitting 4 paths into 5 groups of max size 1
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 Waiting for slurm jobs to complete
 Index can now be created from "traces.*"
 
@@ -113,7 +113,7 @@ Using existing files
     Range 2: Contents of path_list.2 on localhost
     Range 3: Contents of path_list.3 on 127.0.0.1
     Range 4: Contents of path_list.4 on localhost
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 Waiting for slurm jobs to complete
 
 # Generate treesummary tables
@@ -125,7 +125,7 @@ Using existing files
     Range 3: Contents of path_list.3 on 127.0.0.1
     Range 4: Contents of path_list.4 on localhost
 Waiting for slurm jobs to complete
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 
 # Query the treesummary tables
 $ gufi_query -n 2 -d "|" -T "SELECT path(), totsubdirs, totfiles FROM treesummary;" "search2/prefix"
@@ -135,6 +135,26 @@ search2/prefix/empty_directory|0|0
 search2/prefix/leaf_directory|0|2
 search2/prefix/unusual#? directory ,|0|1
 search2/prefix|5|12
+
+# Roll up the index
+$ gufi_rollup_distributed --sbatch "sbatch" --gufi_rollup "gufi_rollup" --use-existing-group-files slurm "hostfile" 1 "search2/prefix" 2>/dev/null
+Using existing files
+    Range 0: Contents of path_list.0 on localhost
+    Range 1: Contents of path_list.1 on 127.0.0.1
+    Range 2: Contents of path_list.2 on localhost
+    Range 3: Contents of path_list.3 on 127.0.0.1
+    Range 4: Contents of path_list.4 on localhost
+Waiting for slurm jobs to complete
+    Process upper directories on 127.0.0.1
+
+# Query the rolled up index
+$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, rollupscore FROM summary;" "search2/prefix"
+prefix/directory/subdirectory|0|1
+prefix/directory|0|1
+prefix/empty_directory|0|1
+prefix/leaf_directory|0|1
+prefix/unusual#? directory ,|0|1
+prefix|1|1
 
 #####################################
 
@@ -152,7 +172,7 @@ Splitting 4 paths into 5 groups of max size 1
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 Waiting for ssh jobs to complete
 
 # Query Index
@@ -166,7 +186,7 @@ Splitting 4 paths into 5 groups of max size 1
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 Waiting for ssh jobs to complete
 cat "output.*" to get complete results
 
@@ -210,7 +230,7 @@ Splitting 4 paths into 5 groups of max size 1
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
         unusual#? directory , unusual#? directory ,
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 Waiting for ssh jobs to complete
 Index can now be created from "traces.*"
 
@@ -248,7 +268,7 @@ Using existing files
     Range 2: Contents of path_list.2 on localhost
     Range 3: Contents of path_list.3 on 127.0.0.1
     Range 4: Contents of path_list.4 on localhost
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 Waiting for ssh jobs to complete
 
 # Generate treesummary tables
@@ -260,7 +280,7 @@ Using existing files
     Range 3: Contents of path_list.3 on 127.0.0.1
     Range 4: Contents of path_list.4 on localhost
 Waiting for ssh jobs to complete
-    Process upper directories up to and including level 0 on 127.0.0.1
+    Process upper directories on 127.0.0.1
 
 # Query the treesummary tables
 $ gufi_query -n 2 -d "|" -T "SELECT path(), totsubdirs, totfiles FROM treesummary;" "search2/prefix"
@@ -270,5 +290,25 @@ search2/prefix/empty_directory|0|0
 search2/prefix/leaf_directory|0|2
 search2/prefix/unusual#? directory ,|0|1
 search2/prefix|5|12
+
+# Roll up the index
+$ gufi_rollup_distributed --ssh "ssh" --gufi_rollup "gufi_rollup" --use-existing-group-files ssh "hostfile" 1 "search2/prefix" 2>/dev/null | tail -n 9
+Using existing files
+    Range 0: Contents of path_list.0 on localhost
+    Range 1: Contents of path_list.1 on 127.0.0.1
+    Range 2: Contents of path_list.2 on localhost
+    Range 3: Contents of path_list.3 on 127.0.0.1
+    Range 4: Contents of path_list.4 on localhost
+Waiting for ssh jobs to complete
+    Process upper directories on 127.0.0.1
+
+# Query the rolled up index
+$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, rollupscore FROM summary;" "search2/prefix"
+prefix/directory/subdirectory|0|1
+prefix/directory|0|1
+prefix/empty_directory|0|1
+prefix/leaf_directory|0|1
+prefix/unusual#? directory ,|0|1
+prefix|1|1
 
 #####################################

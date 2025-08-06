@@ -220,6 +220,12 @@ run_no_sort "${GUFI_TREESUMMARY_ALL_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --g
 echo "# Query the treesummary tables"
 run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT path(), totsubdirs, totfiles FROM treesummary;\" \"${INDEXROOT2}\""
 
+echo "# Roll up the index"
+run_no_sort "${GUFI_ROLLUP_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_rollup \"${GUFI_ROLLUP}\" --use-existing-group-files slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" 2>/dev/null"
+
+echo "# Query the rolled up index"
+run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT name, isroot, rollupscore FROM summary;\" \"${INDEXROOT2}\""
+
 cleanup
 echo "#####################################"
 echo
@@ -267,6 +273,12 @@ run_no_sort "${GUFI_TREESUMMARY_ALL_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_tr
 
 echo "# Query the treesummary tables"
 run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT path(), totsubdirs, totfiles FROM treesummary;\" \"${INDEXROOT2}\""
+
+echo "# Roll up the index"
+run_no_sort "${GUFI_ROLLUP_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_rollup \"${GUFI_ROLLUP}\" --use-existing-group-files ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" 2>/dev/null | tail -n 9"
+
+echo "# Query the rolled up index"
+run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT name, isroot, rollupscore FROM summary;\" \"${INDEXROOT2}\""
 
 echo "#####################################"
 ) 2>&1 | remove_distributed_output | tee "${OUTPUT}"

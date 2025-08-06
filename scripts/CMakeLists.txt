@@ -121,6 +121,8 @@ set(DISTRIBUTED
   gufi_distributed.py                 # library (installed into ${BIN})
   gufi_query.sbatch                   # sbatch wrapper for gufi_query_distributed
   gufi_query_distributed              # executable
+  gufi_rollup.sbatch                  # sbatch wrapper for gufi_rollup_distributed
+  gufi_rollup_distributed             # executable
   gufi_treesummary_all.sbatch         # sbatch wrapper for gufi_treesummary_all_distributed
   gufi_treesummary_all_distributed    # executable
 )
