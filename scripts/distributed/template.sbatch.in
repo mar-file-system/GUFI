@@ -61,6 +61,10 @@
 
 
 
+# sbatch submits scripts, not binaries
+#
+# this file provides a simple template to
+# wrap gufi tools with a script
 set -e
 
-gufi_query "$@"
+@TOOL@ "$@"

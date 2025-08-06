@@ -65,29 +65,28 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/gufi_distributed.py"
   DESTINATION "${LIB}"
   COMPONENT Server)
 
-# gufi_*_distributed executables
+# executables
 set(DISTRIBUTED
-  dir2index
-  dir2trace
-  query
-  treesummary_all
-  rollup
+  gufi_dir2index
+  gufi_dir2trace
+  gufi_query
+  gufi_treesummary_all
+  gufi_rollup
 )
 
 foreach(TOOL ${DISTRIBUTED})
-  set(NAME "gufi_${TOOL}")
-  configure_file("${NAME}" "${NAME}" COPYONLY)
+  configure_file("${TOOL}" "${TOOL}" COPYONLY)
 
-  set(SBATCH "gufi_${TOOL}.sbatch")
-  configure_file("${SBATCH}" "${SBATCH}" COPYONLY)
+  set(SBATCH "${TOOL}.sbatch")
+  configure_file("template.sbatch.in" "${SBATCH}" @ONLY)
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${NAME}"
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${TOOL}"
     DESTINATION "${BIN}"
     COMPONENT Server
-    RENAME "${NAME}.sbatch")
+    RENAME "${TOOL}_distributed")
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${NAME}"
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${SBATCH}"
     DESTINATION "${BIN}"
     COMPONENT Server
-    RENAME "${NAME}_distributed")
+    RENAME "${TOOL}.sbatch")
 endforeach()
