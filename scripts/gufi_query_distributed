@@ -112,11 +112,6 @@ def parse_args():
     parser = gufi_distributed.parse_args('gufi_query_distributed',
                                          'Script for distributing gufi_query across nodes')
 
-    parser.add_argument('--chunk-size',
-                        type=gufi_common.get_positive,
-                        default=4096,
-                        help='Output file read chunk size. Only used with -W/--wait')
-
     parser.add_argument('--gufi_query',          metavar='path',
                         type=gufi_distributed.is_exec_file,
                         default='gufi_query')
