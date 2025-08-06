@@ -169,6 +169,7 @@ GUFI_TRACE2DIR="@CMAKE_BINARY_DIR@/src/gufi_trace2dir"
 GUFI_TRACE2INDEX="@CMAKE_BINARY_DIR@/src/gufi_trace2index"
 GUFI_TREESUMMARY="@CMAKE_BINARY_DIR@/src/gufi_treesummary"
 GUFI_TREESUMMARY_ALL="@CMAKE_BINARY_DIR@/src/gufi_treesummary_all"
+GUFI_TREESUMMARY_ALL_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/gufi_treesummary_all_distributed"
 GUFI_UNROLLUP="@CMAKE_BINARY_DIR@/src/gufi_unrollup"
 GUFI_VT="@CMAKE_BINARY_DIR@/src/gufi_vt"
 HEXLIFY="@CMAKE_CURRENT_BINARY_DIR@/hexlify.py"
@@ -244,6 +245,7 @@ replace() {
     s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g;
     s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
     s/${GUFI_TREESUMMARY_ALL//\//\\/}/gufi_treesummary_all/g;
+    s/${GUFI_TREESUMMARY_ALL_DISTRIBUTED//\//\\/}/gufi_treesummary_all_distributed/g;
     s/${GUFI_UNROLLUP//\//\\/}/gufi_unrollup/g;
     s/${GUFI_VT//\//\\/}/gufi_vt/g;
     s/${HEXLIFY//\//\\/}/hexlify.py/g;

@@ -167,6 +167,7 @@ remove_distributed_output() {
 
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --help"
 run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --help"
+run_no_sort "${GUFI_TREESUMMARY_ALL_DISTRIBUTED} --help"
 run_no_sort "${GUFI_QUERY_DISTRIBUTED} --help"
 
 (
@@ -195,7 +196,7 @@ run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -d \"${DELIM}\" -S \"SELECT rpath(sname,
 echo "# Diff original index results against querying the new index from a single node"
 run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
-rm -rf "${slurm_files[@]}"
+rm -f "${slurm_files[@]}"
 
 echo "# Convert source tree to trace files"
 run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACES}\""
@@ -213,7 +214,12 @@ run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsumma
 echo "# Use existing group files (path_list.4 does not exist)"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-group-files slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
 
-# cleanup
+echo "# Generate treesummary tables"
+run_no_sort "${GUFI_TREESUMMARY_ALL_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_treesummary_all \"${GUFI_TREESUMMARY_ALL}\" --use-existing-group-files slurm  \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" 2>/dev/null"
+
+echo "# Query the treesummary tables"
+run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT path(), totsubdirs, totfiles FROM treesummary;\" \"${INDEXROOT2}\""
+
 cleanup
 echo "#####################################"
 echo
@@ -255,6 +261,13 @@ run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sro
 
 echo "# Use existing group files (path_list.4 does not exist)"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-group-files ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null | tail -n 9"
+
+echo "# Generate treesummary tables"
+run_no_sort "${GUFI_TREESUMMARY_ALL_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_treesummary_all \"${GUFI_TREESUMMARY_ALL}\" --use-existing-group-files ssh  \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" 2>/dev/null"
+
+echo "# Query the treesummary tables"
+run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT path(), totsubdirs, totfiles FROM treesummary;\" \"${INDEXROOT2}\""
+
 echo "#####################################"
 ) 2>&1 | remove_distributed_output | tee "${OUTPUT}"
 
