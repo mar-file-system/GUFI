@@ -72,7 +72,7 @@ OF SUCH DAMAGE.
 #include "addqueryfuncs.h"
 #include "utils.h"
 
-void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc;
 
@@ -85,7 +85,7 @@ void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
 }
 
-void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc;
 
@@ -98,7 +98,7 @@ void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
 }
 
-void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc;
     int fmode;
@@ -108,7 +108,7 @@ void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
 }
 
-void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc;
 
@@ -142,7 +142,7 @@ static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E'};
  * blocksize(1024, "KiB")  -> 1K
  * blocksize(1024, "1KiB") -> 1
  */
-void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
     const char *size_s = (const char *) sqlite3_value_text(argv[0]);
@@ -242,7 +242,7 @@ void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) {
 }
 
 /* Returns a string containg the size with as large of a unit as reasonable */
-void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
     char buf[MAXPATH];
@@ -271,7 +271,7 @@ void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **arg
     sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
 }
 
-void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
     char *path = (char *) sqlite3_value_text(argv[0]);
@@ -452,7 +452,7 @@ typedef struct {
     uint64_t count;
 } stdev_t;
 
-void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
     stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
     const double value = sqlite3_value_double(argv[0]);
@@ -462,7 +462,7 @@ void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     data->count++;
 }
 
-void stdevs_final(sqlite3_context *context) {
+static void stdevs_final(sqlite3_context *context) {
     stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
 
     if (data->count < 2) {
@@ -474,7 +474,7 @@ void stdevs_final(sqlite3_context *context) {
     }
 }
 
-void stdevp_final(sqlite3_context *context) {
+static void stdevp_final(sqlite3_context *context) {
     stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
 
     if (data->count < 2) {
@@ -486,7 +486,7 @@ void stdevp_final(sqlite3_context *context) {
     }
 }
 
-void median_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void median_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
     sll_t *data = (sll_t *) sqlite3_aggregate_context(context, sizeof(*data));
     if (sll_get_size(data) == 0) {
@@ -501,7 +501,7 @@ static int cmp_double(const void *lhs, const void *rhs) {
     return * (double *) lhs - * (double *) rhs;
 }
 
-void median_final(sqlite3_context *context) {
+static void median_final(sqlite3_context *context) {
     sll_t *data = (sll_t *) sqlite3_aggregate_context(context, sizeof(*data));
 
     const uint64_t count = sll_get_size(data);
@@ -553,7 +553,7 @@ void median_final(sqlite3_context *context) {
 }
 
 /* return the directory you are currently in */
-void path(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
@@ -568,7 +568,7 @@ void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 }
 
 /* return the basename of the directory you are currently in */
-void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
@@ -578,7 +578,7 @@ void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 }
 
 /* return the fullpath of the directory you are currently in */
-void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
@@ -599,7 +599,7 @@ void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
  *     SELECT rpath(sname, sroll) || "/" || name
  *     FROM vrpentries;
  */
-void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc;
 
@@ -649,14 +649,14 @@ void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_text(context, user_dirname, user_dirname_len, free);
 }
 
-void relative_level(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void relative_level(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc; (void) argv;
 
     size_t level = (size_t) (uintptr_t) sqlite3_user_data(context);
     sqlite3_result_int64(context, level);
 }
 
-void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc; (void) argv;
 
     refstr_t *root = (refstr_t *) sqlite3_user_data(context);
