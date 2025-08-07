@@ -115,6 +115,9 @@ echo "# Query treesummary tables"
 run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
 echo
 
+echo "# Generate treesummary tables if they don't already exist"
+run_no_sort "${GUFI_TREESUMMARY_ALL} -l \"${INDEXROOT}\"" | @SED@ '/^Started .*$/d'
+
 rm -rf "${SEARCH}/db.db"
 
 echo "# Missing db.db"

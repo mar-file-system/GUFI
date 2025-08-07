@@ -280,6 +280,25 @@ run_no_sort "${GUFI_ROLLUP_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_rollup \"${
 echo "# Query the rolled up index"
 run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT name, isroot, rollupscore FROM summary;\" \"${INDEXROOT2}\""
 
+echo "# Bad source path"
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-group-files ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${HOSTFILE}\" \"${SEARCH2}\" 2>&1 | tail -n 1"
+
+echo "# Missing argument to gufi_query_distributed"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" 2>&1 | tail -n 1"
+
+echo "# Bad executable"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${HOSTFILE}\" --threads ${THREADS} --delim \"${DELIM}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" 2>&1 | tail -n 1"
+
+(
+    echo
+    echo
+) > "${HOSTFILE}"
+
+echo "# Bad hostfile"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" 2>&1 | tail -n 1"
+
+generate_hostfile
+
 echo "#####################################"
 ) 2>&1 | remove_distributed_output | tee "${OUTPUT}"
 

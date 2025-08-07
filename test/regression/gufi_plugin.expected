@@ -1,4 +1,4 @@
-$ gufi_dir2index -U gufi_test_plugin -x prefix search
+$ gufi_dir2index -U "gufi_test_plugin" -x "prefix" "search"
 Creating GUFI Index search with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      14
@@ -18,4 +18,11 @@ file 2
 file 2
 file 3
 file 6
+
+# bad plugin
+$ gufi_dir2index -U "empty_plugin" -x "prefix" "search" 2>&1 > /dev/null | grep -oh "Could not open plugin library"
+Could not open plugin library
+
+# plugin entry point not found
+$ gufi_dir2index -U "run_vt" -x "prefix" "search" > /dev/null 2>&1
 

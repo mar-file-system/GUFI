@@ -1574,6 +1574,51 @@ prefix/leaf_directory|1
 prefix/unusual#? directory ,|1
 prefix|0
 
+# Complete rollup using existing data
+$ gufi_rollup -l "prefix"
+Roots:
+    prefix
+
+Thread Pool Size:            1
+Files/Links Limit:           0
+
+Not Processed:               0
+Cannot Roll Up:              0
+Can Roll Up:                 1
+    Subdirectories:
+        min:                 4
+        max:                 4
+        median:           4.00
+        sum:                 4
+        average:          4.00
+    Files/Links:
+        min:                 6
+        max:                 6
+        median:           6.00
+        sum:                 6
+        average:          6.00
+    Level:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Successful:              1
+    Failed:                  0
+Files/Links:    6
+Directories:    1 (0 empty)
+Total:          7
+Remaining Dirs: 1 (100.00%)
+
+# Check which directories have been rolled up
+$ gufi_query -d "|" -S "SELECT rpath(sname, sroll), rollupscore FROM vrsummary" "prefix"
+prefix/directory/subdirectory|1
+prefix/directory|1
+prefix/empty_directory|1
+prefix/leaf_directory|1
+prefix/unusual#? directory ,|1
+prefix|1
+
 # bad thread count
 $ gufi_rollup -n 18446744073709551615 "search"
 Could not allocate 18446744073709551615 stat buffers

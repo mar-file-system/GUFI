@@ -118,6 +118,7 @@ set_tests_properties(gary PROPERTIES LABELS "manual")
 # set_tests_properties(gufitest PROPERTIES LABELS manual)
 
 add_library(test_plugin SHARED test_plugin.c)
+add_dependencies(test_plugin install_dependencies)
 
 if (APPLE OR DARWIN)
   # Apple needs to be told to explicitly not try to resolve symbols at compile time when

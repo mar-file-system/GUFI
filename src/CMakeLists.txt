@@ -116,8 +116,6 @@ if (QPTPOOL_SWAP)
   )
 endif()
 
-set(CMAKE_ENABLE_EXPORTS TRUE)
-
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 target_compile_definitions(GUFI PUBLIC SQLITE_CORE)
@@ -193,6 +191,8 @@ set(C_SOURCES
 # build the C executables
 build_and_install("${BIN}" TRUE ${C_SOURCES})
 
+set_target_properties(gufi_dir2index PROPERTIES ENABLE_EXPORTS TRUE)
+
 # this is the gufi_stat binary that operates on indexes directly
 build_and_install_one("${BIN}" TRUE gufi_stat_bin gufi_stat.c)
 
@@ -230,15 +230,6 @@ build_and_install_one(${BIN} TRUE gufi_query
 
 if (DEP_AI)
   target_compile_options(gufi_query PUBLIC "${OpenMP_C_FLAGS}")
-endif()
-
-# dynamically loaded module extension
-if (APPLE OR DARWIN)
-  set(EXT "dylib")
-elseif (CYGWIN)
-  set(EXT "dll.a")
-else ()
-  set(EXT "so")
 endif()
 
 # build custom SQLite virtual tables

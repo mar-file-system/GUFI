@@ -64,14 +64,32 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
+EMPTY_PLUGIN="empty_plugin"
+
 OUTPUT="gufi_plugin.out"
+
+cleanup() {
+    rm -rf "${EMPTY_PLUGIN}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+# shellcheck disable=SC2188
+> "${EMPTY_PLUGIN}"
 
 (
 # remove preexisting indicies
 rm -rf "${SEARCH}"
 
 # generate the index
-run_no_sort "${GUFI_DIR2INDEX} -U ${GUFI_TEST_PLUGIN} -x ${SRCDIR} ${SEARCH}"
+run_no_sort "${GUFI_DIR2INDEX} -U \"${GUFI_TEST_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
 
 echo
 echo "# test plugin summary output:"
@@ -80,6 +98,11 @@ echo "# test plugin summary output:"
 # (`sort` needed to obtain predictable order of results)
 run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT * FROM plugin_test_summary;\" ${INDEXROOT}"
 
+echo "# bad plugin"
+run_no_sort "${GUFI_DIR2INDEX} -U \"${EMPTY_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 > /dev/null | @GREP@ -oh \"Could not open plugin library\""
+
+echo "# plugin entry point not found"
+run_no_sort "${GUFI_DIR2INDEX} -U \"${RUN_VT}.@EXT@\" -x \"${SRCDIR}\" \"${SEARCH}\" > /dev/null 2>&1" | @SED@ "s/.@EXT@//g"
 ) | remove_indexing_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_plugin.expected "${OUTPUT}"

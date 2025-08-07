@@ -311,4 +311,20 @@ prefix/leaf_directory|0|1
 prefix/unusual#? directory ,|0|1
 prefix|1|1
 
+# Bad source path
+$ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" --use-existing-group-files ssh "hostfile" 1 "hostfile" "search2" 2>&1 | tail -n 1
+gufi_dir2index_distributed: error: argument input_dir: Bad directory: hostfile
+
+# Missing argument to gufi_query_distributed
+$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" 2>&1 | tail -n 1
+RuntimeError: --output_prefix must be set
+
+# Bad executable
+$ gufi_query_distributed --ssh "ssh" --gufi_query "hostfile" --threads 2 --delim "|" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" 2>&1 | tail -n 1
+gufi_query_distributed: error: argument --gufi_query: Bad executable file: hostfile
+
+# Bad hostfile
+$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" 2>&1 | tail -n 1
+RuntimeError: Need at least 2 nodes in node list
+
 #####################################
