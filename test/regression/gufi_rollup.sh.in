@@ -176,6 +176,12 @@ run_no_sort "${GUFI_ROLLUP} -y 1 \"${INDEXROOT}\""
 echo "# Check which directories have been rolled up"
 run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""
 
+echo "# Complete rollup using existing data"
+run_no_sort "${GUFI_ROLLUP} -l \"${INDEXROOT}\""
+
+echo "# Check which directories have been rolled up"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""
+
 echo "# bad thread count"
 run_no_sort "${GUFI_ROLLUP} -n 18446744073709551615 \"${SEARCH}\""
 ) | remove_indexing_time | replace | tee "${OUTPUT}"

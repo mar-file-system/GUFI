@@ -170,3 +170,6 @@ input-dir 'db.db' is not a directory
 $ gufi_unrollup "badfile"
 Could not stat input-dir 'badfile'
 
+$ gufi_unrollup -n 18446744073709551615 "prefix"
+Error: Failed to start thread pool
+

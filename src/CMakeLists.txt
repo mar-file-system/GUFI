@@ -232,15 +232,6 @@ if (DEP_AI)
   target_compile_options(gufi_query PUBLIC "${OpenMP_C_FLAGS}")
 endif()
 
-# dynamically loaded module extension
-if (APPLE OR DARWIN)
-  set(EXT "dylib")
-elseif (CYGWIN)
-  set(EXT "dll.a")
-else ()
-  set(EXT "so")
-endif()
-
 # build custom SQLite virtual tables
 add_library(gufi_vt MODULE
   gufi_vt.c

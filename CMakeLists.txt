@@ -481,6 +481,15 @@ include_directories(${COMMON_INCLUDES})
 
 option(QPTPOOL_SWAP "Whether or not to enable swapping in QueuePerThreadPool" On)
 
+# dynamically loaded module extension
+if (APPLE OR DARWIN)
+  set(EXT "dylib")
+elseif (CYGWIN)
+  set(EXT "dll.a")
+else ()
+  set(EXT "so")
+endif()
+
 # enable "make test"
 enable_testing()
 
