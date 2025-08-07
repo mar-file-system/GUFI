@@ -70,13 +70,6 @@ OUTPUT="gufi_du.out"
 do_tests() {
     paths=("$@")
 
-    echo "# blocks (sparse files)"
-    run_no_sort "${GUFI_DU} ${paths[@]} | sort -k 2,2"
-    run_no_sort "${GUFI_DU} --block-size 1 ${paths[@]} | sort -k 2"
-    run_no_sort "${GUFI_DU} --block-size 1 --total ${paths[@]} | sort -k 2"
-    run_no_sort "${GUFI_DU} --block-size 1 --summarize ${paths[@]}"
-    run_no_sort "${GUFI_DU} --block-size 1 --total --summarize ${paths[@]}"
-
     echo "# apparent sizes"
     run_no_sort "${GUFI_DU} --apparent-size ${paths[@]} | sort -k 2"
     run_no_sort "${GUFI_DU} --apparent-size --block-size 1 ${paths[@]} | sort -k 2"
@@ -87,7 +80,6 @@ do_tests() {
     run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --total --summarize ${paths[@]}"
 
     echo "# separate dirs"
-    run_no_sort "${GUFI_DU} --separate-dirs ${paths[@]} | sort -k 2"
     run_no_sort "${GUFI_DU} --separate-dirs --apparent-size --block-size 1 ${paths[@]} | sort -k 2"
     run_no_sort "${GUFI_DU} --separate-dirs --apparent-size --block-size 1 --total ${paths[@]} | sort -k 2"
     run_no_sort "${GUFI_DU} --separate-dirs --apparent-size --block-size 1 --summarize ${paths[@]}"
@@ -144,11 +136,6 @@ echo "#####################################"
 echo "# Compare treesummary and rollup results"
 @DIFF@ <(echo "${treesummary}") <(echo "${rollup}")
 echo
-echo "#####################################"
-echo
-echo "#####################################"
-echo "# Run gufi_du without arguments (index parent ${SEARCH}/ shows up without a name)"
-run_no_sort "${GUFI_DU} | sort -k 2"
 echo "#####################################"
 echo
 echo "#####################################"

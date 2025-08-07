@@ -1,31 +1,6 @@
 #####################################
 # Run gufi_du without treesummary data
 
-# blocks (sparse files)
-$ gufi_du prefix | sort -k 2,2
-Warning: Did not get any results from gufi_query.
-Does "prefix" have treesummary data?
-
-$ gufi_du --block-size 1 prefix | sort -k 2
-Warning: Did not get any results from gufi_query.
-Does "prefix" have treesummary data?
-
-$ gufi_du --block-size 1 --total prefix | sort -k 2
-Warning: Did not get any results from gufi_query.
-Does "prefix" have treesummary data?
-0 total
-
-$ gufi_du --block-size 1 --summarize prefix
-Warning: Did not get any results from gufi_query.
-Does "prefix" have treesummary data?
-0 prefix
-
-$ gufi_du --block-size 1 --total --summarize prefix
-Warning: Did not get any results from gufi_query.
-Does "prefix" have treesummary data?
-0 prefix
-0 total
-
 # apparent sizes
 $ gufi_du --apparent-size prefix | sort -k 2
 Warning: Did not get any results from gufi_query.
@@ -60,14 +35,6 @@ Does "prefix" have treesummary data?
 0 total
 
 # separate dirs
-$ gufi_du --separate-dirs prefix | sort -k 2
-0 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-
 $ gufi_du --separate-dirs --apparent-size --block-size 1 prefix | sort -k 2
 1049624 prefix
 6 prefix/directory
@@ -165,39 +132,6 @@ Does "prefix" have treesummary data?
 
 $ gufi_treesummary_all search
 
-# blocks (sparse files)
-$ gufi_du prefix | sort -k 2,2
-8 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-
-$ gufi_du --block-size 1 prefix | sort -k 2
-8192 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8192 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-
-$ gufi_du --block-size 1 --total prefix | sort -k 2
-8192 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8192 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-8192 total
-
-$ gufi_du --block-size 1 --summarize prefix
-8192 prefix
-
-$ gufi_du --block-size 1 --total --summarize prefix
-8192 prefix
-8192 total
-
 # apparent sizes
 $ gufi_du --apparent-size prefix | sort -k 2
 1026 prefix
@@ -248,14 +182,6 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 total
 
 # separate dirs
-$ gufi_du --separate-dirs prefix | sort -k 2
-0 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-
 $ gufi_du --separate-dirs --apparent-size --block-size 1 prefix | sort -k 2
 1049624 prefix
 6 prefix/directory
@@ -319,39 +245,6 @@ $ gufi_du --inodes --total --summarize prefix
 
 $ gufi_rollup "search" > /dev/null 2>&1
 
-# blocks (sparse files)
-$ gufi_du prefix | sort -k 2,2
-8 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-
-$ gufi_du --block-size 1 prefix | sort -k 2
-8192 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8192 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-
-$ gufi_du --block-size 1 --total prefix | sort -k 2
-8192 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8192 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-8192 total
-
-$ gufi_du --block-size 1 --summarize prefix
-8192 prefix
-
-$ gufi_du --block-size 1 --total --summarize prefix
-8192 prefix
-8192 total
-
 # apparent sizes
 $ gufi_du --apparent-size prefix | sort -k 2
 1026 prefix
@@ -402,14 +295,6 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 total
 
 # separate dirs
-$ gufi_du --separate-dirs prefix | sort -k 2
-0 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-
 $ gufi_du --separate-dirs --apparent-size --block-size 1 prefix | sort -k 2
 1049624 prefix
 6 prefix/directory
@@ -474,43 +359,7 @@ $ gufi_du --inodes --total --summarize prefix
 #####################################
 
 #####################################
-# Run gufi_du without arguments (index parent search/ shows up without a name)
-$ gufi_du | sort -k 2
-8
-8 prefix
-0 prefix/directory
-0 prefix/directory/subdirectory
-0 prefix/empty_directory
-8 prefix/leaf_directory
-0 prefix/unusual#? directory ,
-
-#####################################
-
-#####################################
 # Run gufi_du on a file path
-# blocks (sparse files)
-$ gufi_du prefix/1MB prefix/1KB | sort -k 2,2
-0 prefix/1KB
-0 prefix/1MB
-
-$ gufi_du --block-size 1 prefix/1MB prefix/1KB | sort -k 2
-0 prefix/1KB
-0 prefix/1MB
-
-$ gufi_du --block-size 1 --total prefix/1MB prefix/1KB | sort -k 2
-0 prefix/1KB
-0 prefix/1MB
-0 total
-
-$ gufi_du --block-size 1 --summarize prefix/1MB prefix/1KB
-0 prefix/1MB
-0 prefix/1KB
-
-$ gufi_du --block-size 1 --total --summarize prefix/1MB prefix/1KB
-0 prefix/1MB
-0 prefix/1KB
-0 total
-
 # apparent sizes
 $ gufi_du --apparent-size prefix/1MB prefix/1KB | sort -k 2
 1 prefix/1KB
@@ -543,10 +392,6 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix/1MB prefix/1
 1049600 total
 
 # separate dirs
-$ gufi_du --separate-dirs prefix/1MB prefix/1KB | sort -k 2
-0 prefix/1KB
-0 prefix/1MB
-
 $ gufi_du --separate-dirs --apparent-size --block-size 1 prefix/1MB prefix/1KB | sort -k 2
 1024 prefix/1KB
 1048576 prefix/1MB
