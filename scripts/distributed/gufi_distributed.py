@@ -168,8 +168,8 @@ def dirs_at_level(root, level):
     print('find(1) returned {0} directory paths in {1} seconds'.format(len(dirs), clock_diff(start, end)))
 
     if proc.returncode:
-        sys.stderr.write('find(1) failed with error code {0}'.format(proc.returncode))
-        sys.exit(proc.returncode)
+        sys.stderr.write('Warning: find(1) returned error code {0}\n'.format(proc.returncode))
+        # do not exit - find(1) might fail on active filesystems
 
     return [path.decode()[len(root) + int(root[-1] != os.path.sep):]
             for path in dirs.split(b'\n') if len(path) > 0]
