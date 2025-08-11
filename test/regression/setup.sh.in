@@ -187,6 +187,7 @@ USERFILESPACEHOGUSESUMMARY="@CMAKE_BINARY_DIR@/examples/userfilespacehogusesumma
 VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
+FIND_SH="@CMAKE_BINARY_DIR@/scripts/distributed/find.sh"
 GUFI_DIR2INDEX_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_dir2index"
 GUFI_DIR2TRACE_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_dir2trace"
 GUFI_QUERY_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_query"
@@ -282,6 +283,7 @@ replace() {
     s/${VERIFYTRACE//\//\\/}/verifytrace/g;
     s/${VERIFYTRACEINTREE//\//\\/}/verifytraceintree/g;
 
+    s/${FIND_SH//\//\\/}/find.sh/g;
     s/${GUFI_DIR2INDEX_DISTRIBUTED//\//\\/}/gufi_dir2index_distributed/g;
     s/${GUFI_DIR2TRACE_DISTRIBUTED//\//\\/}/gufi_dir2trace_distributed/g;
     s/${GUFI_QUERY_DISTRIBUTED//\//\\/}/gufi_query_distributed/g;

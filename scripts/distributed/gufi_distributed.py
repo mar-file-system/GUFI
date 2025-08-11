@@ -154,11 +154,10 @@ DISTRIBUTORS = {
 
 # Step 1
 # Run find(1) and return sorted list of directories
-def dirs_at_level(root, level):
+def dirs_at_level(args, root):
     start = clock()
 
-    # can't use %P to remove input path in macos and Alpine Linux
-    cmd = ['find', '-H', root, '-mindepth', str(level), '-maxdepth', str(level), '-type', 'd']
+    cmd = [args.find, root, str(args.level)]
     proc = subprocess.Popen(cmd, # pylint: disable=consider-using-with
                             stdout=subprocess.PIPE,
                             cwd=os.getcwd())
@@ -172,8 +171,7 @@ def dirs_at_level(root, level):
         sys.stderr.write('Warning: find(1) returned error code {0}\n'.format(proc.returncode))
         # do not exit - find(1) might fail on active filesystems
 
-    return [path.decode()[len(root) + int(root[-1] != os.path.sep):]
-            for path in dirs.split(b'\n') if len(path) > 0]
+    return [path.decode() for path in dirs.split(b'\n') if len(path) > 0]
 
 # Step 2
 # Split directories into groups of paths for processing
@@ -267,7 +265,7 @@ def distribute_work(args, root, schedule_subtree_func,
         group_size = None
         groups = None
     else:
-        dirs = dirs_at_level(root, args.level)
+        dirs = dirs_at_level(args, root)
         group_size, groups = group_dirs(dirs, len(args.hosts[0]), args.sort)
 
     # launch jobs in parallel
@@ -347,16 +345,21 @@ def parse_args(name, desc):
     parser.add_argument('--group-file-prefix',   metavar='path',
                         type=str,
                         default='path_list',
-                        help='prefix for file containing paths to be processed by one node')
+                        help='Prefix for file containing paths to be processed by one node')
 
     parser.add_argument('--use-existing-group-files',
                         action='store_true',
-                        help='use existing group files (up to the number of targets) instead of running find(1)')
+                        help='Use existing group files (up to the number of targets) instead of running find(1)')
 
     parser.add_argument('--sort',
                         choices=SORT_DIRS.keys(),
                         default='path',
-                        help='sort paths discovered by find at given level')
+                        help='Sort paths discovered by find at given level')
+
+    parser.add_argument('find',
+                        type=is_exec_file,
+                        default='find.sh',
+                        help='Script that finds paths at level. Script should take in 2 arguments, starting path and level, and remove the starting path from each line (replicate find -H ${root} -mindepth ${level} -maxdepth ${level} -type d -printf "%%P\\n")')
 
     # not using subparser
     parser.add_argument('distributor',
@@ -372,7 +375,7 @@ def parse_args(name, desc):
 
     parser.add_argument('hosts',                 metavar='hostfile',
                         type=read_hostfile,
-                        help='file containing one path (without starting prefix) per line')
+                        help='File containing one path (without starting prefix) per line')
 
     parser.add_argument('level',
                         type=gufi_common.get_positive,

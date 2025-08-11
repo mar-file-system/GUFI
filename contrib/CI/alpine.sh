@@ -84,6 +84,7 @@ apk add \
     clang20 \
     cmake \
     diffutils \
+    findutils \
     gettext-envsubst \
     git \
     make \

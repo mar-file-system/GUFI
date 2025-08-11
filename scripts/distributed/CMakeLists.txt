@@ -65,6 +65,20 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/gufi_distributed.py"
   DESTINATION "${SERVER_LIB}"
   COMPONENT Server)
 
+configure_file(find.sh.in find.sh @ONLY)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/find.sh"
+  DESTINATION "${SERVER_BIN}"
+  COMPONENT Server)
+
+# GNU find with -printf "%P" is required
+#
+# put this check after configuring the script
+# in order to not duplicate call to find
+execute_process(
+  COMMAND "${CMAKE_CURRENT_BINARY_DIR}/find.sh" . 0
+  OUTPUT_QUIET
+  COMMAND_ERROR_IS_FATAL ANY)
+
 # executables
 set(DISTRIBUTED
   gufi_dir2index
