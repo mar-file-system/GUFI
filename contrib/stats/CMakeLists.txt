@@ -60,83 +60,14 @@
 
 
 
-set(CONTRIB_SOURCES
-  gendir.c                # simple source tree generator
-  treediff.c              # walk two trees and print the names that don't match
+set(STATS
+  process-per-level.py
+  per-level.sh
 )
 
-# potentially useful C++ executables
-if (CMAKE_CXX_COMPILER)
-  list(APPEND CONTRIB_SOURCES
-    make_testindex.cpp    # a more complex index generator
-    verifytraceintree.cpp
-  )
-
-  add_executable(verifytrace verifytrace.cpp)
-endif()
-
-# build C/C++ sources that depend on libGUFI
-foreach(SOURCE ${CONTRIB_SOURCES})
-  # NAME_WE removes the directory and the longest extension
-  get_filename_component(TARGET "${SOURCE}" NAME_WE)
-  add_executable("${TARGET}" "${SOURCE}")
-  target_link_libraries("${TARGET}" ${COMMON_LIBRARIES})
+foreach(name ${STATS})
+  configure_file("${name}" "${name}" COPYONLY)
 endforeach()
 
-set(CHECKSTYLE)
-
-# add 'make shellcheck'
-find_program(SHELLCHECK shellcheck)
-if (SHELLCHECK)
-  message(STATUS "Found shellcheck: ${SHELLCHECK}")
-  configure_file(shellcheck.sh shellcheck.sh @ONLY)
-  add_custom_target(shellcheck
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/shellcheck.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE shellcheck)
-else()
-  message(STATUS "shellcheck not found")
-endif()
-
-# add 'make pylint'
-find_program(PYLINT pylint)
-if (PYLINT)
-  message(STATUS "Found pylint: ${PYLINT}")
-  configure_file(pylint.sh pylint.sh @ONLY)
-  add_custom_target(pylint
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/pylint.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE pylint)
-else()
-  message(STATUS "pylint not found")
-endif()
-
-# add 'make checkstyle'
-if (CHECKSTYLE)
-  message(STATUS "checkstyle will run: ${CHECKSTYLE}")
-  add_custom_target(checkstyle
-    DEPENDS ${CHECKSTYLE})
-else()
-  message(STATUS "checkstyle disabled")
-endif()
-
-# potentially useful scripts
-set(USEFUL
-  canned_queries.sh
-  gentrace.py
-  hashes.py
-  trace_anonymizer.py
-)
-
-foreach(file ${USEFUL})
-  configure_file("${file}" "${file}" @ONLY)
-endforeach()
-
-add_subdirectory(CI)
-add_subdirectory(stats)
-
-# See if lustre-devel is installed by checking if the lustreapi.h header is in a standard include path.
-find_path(LUSTRE_PLUGIN "lustre/lustreapi.h")
-# If so, build the lustre example plugin:
-if (LUSTRE_PLUGIN)
-  add_library(lustre_plugin SHARED lustre_plugin.c)
-  target_link_libraries(lustre_plugin lustreapi)
-endif()
+# cannot be a .in file in order for codecov to find this file
+configure_file("snapshot.py" "snapshot.py" @ONLY)

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,83 +61,50 @@
 
 
 
-set(CONTRIB_SOURCES
-  gendir.c                # simple source tree generator
-  treediff.c              # walk two trees and print the names that don't match
-)
+set -e
 
-# potentially useful C++ executables
-if (CMAKE_CXX_COMPILER)
-  list(APPEND CONTRIB_SOURCES
-    make_testindex.cpp    # a more complex index generator
-    verifytraceintree.cpp
-  )
+threads=1
 
-  add_executable(verifytrace verifytrace.cpp)
-endif()
+# https://stackoverflow.com/a/14203146
+# Bruno Bronosky
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
 
-# build C/C++ sources that depend on libGUFI
-foreach(SOURCE ${CONTRIB_SOURCES})
-  # NAME_WE removes the directory and the longest extension
-  get_filename_component(TARGET "${SOURCE}" NAME_WE)
-  add_executable("${TARGET}" "${SOURCE}")
-  target_link_libraries("${TARGET}" ${COMMON_LIBRARIES})
-endforeach()
+case $key in
+    --threads|-n)
+        threads="$2"
+        shift # past count
+        ;;
+    *)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        ;;
+esac
+    shift # past flag
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
 
-set(CHECKSTYLE)
+if [[ "$#" -lt 2 ]]; then
+    echo "Syntax: $0 [--threads|-n <#>] index outdb"
+    exit 1
+fi
 
-# add 'make shellcheck'
-find_program(SHELLCHECK shellcheck)
-if (SHELLCHECK)
-  message(STATUS "Found shellcheck: ${SHELLCHECK}")
-  configure_file(shellcheck.sh shellcheck.sh @ONLY)
-  add_custom_target(shellcheck
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/shellcheck.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE shellcheck)
-else()
-  message(STATUS "shellcheck not found")
-endif()
+index="$1"
+outdb="$2"
 
-# add 'make pylint'
-find_program(PYLINT pylint)
-if (PYLINT)
-  message(STATUS "Found pylint: ${PYLINT}")
-  configure_file(pylint.sh pylint.sh @ONLY)
-  add_custom_target(pylint
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/pylint.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE pylint)
-else()
-  message(STATUS "pylint not found")
-endif()
+rm -f "${outdb}"
 
-# add 'make checkstyle'
-if (CHECKSTYLE)
-  message(STATUS "checkstyle will run: ${CHECKSTYLE}")
-  add_custom_target(checkstyle
-    DEPENDS ${CHECKSTYLE})
-else()
-  message(STATUS "checkstyle disabled")
-endif()
-
-# potentially useful scripts
-set(USEFUL
-  canned_queries.sh
-  gentrace.py
-  hashes.py
-  trace_anonymizer.py
-)
-
-foreach(file ${USEFUL})
-  configure_file("${file}" "${file}" @ONLY)
-endforeach()
-
-add_subdirectory(CI)
-add_subdirectory(stats)
-
-# See if lustre-devel is installed by checking if the lustreapi.h header is in a standard include path.
-find_path(LUSTRE_PLUGIN "lustre/lustreapi.h")
-# If so, build the lustre example plugin:
-if (LUSTRE_PLUGIN)
-  add_library(lustre_plugin SHARED lustre_plugin.c)
-  target_link_libraries(lustre_plugin lustreapi)
-endif()
+# one-pass collection of stats grouped by level
+# writing to database file ${outdb}
+# assuming not rolled up
+gufi_query \
+    -d " " \
+    -n "${threads}" \
+    -O "${outdb}" \
+    -I "CREATE TABLE intermediate (level INT64, size INT64, atime INT64, mtime INT64, ctime INT64, totfiles INT64, totlinks INT64, totsubdirs INT64);" \
+    -E "INSERT INTO intermediate SELECT level() AS level, dtotsize, CAST(TOTAL(atime) AS INT64), CAST(TOTAL(mtime) AS INT64), CAST(TOTAL(ctime) AS INT64), dtotfiles, dtotlinks, subdirs(srollsubdirs, sroll) FROM vrpentries;" \
+    -K "CREATE TABLE aggregate (level INT64, size INT64, atime INT64, mtime INT64, ctime INT64, totdirs INT64, totfiles INT64, totlinks INT64, totsubdirs INT64); CREATE TABLE stats (level INT64, totdirs INT64, totsubdirs INT64, mean_subdirs INT64, totfiles INT64, totlinks INT64, totsize INT64, mean_dir_size INT64, mean_file_size INT64, mean_atime INT64, mean_mtime INT64, mean_ctime INT64)" \
+    -J "INSERT INTO aggregate SELECT level, SUM(size), SUM(atime), SUM(mtime), SUM(ctime), COUNT(*), SUM(totfiles), SUM(totlinks), SUM(totsubdirs) FROM intermediate GROUP BY level" \
+    -G "INSERT INTO stats SELECT level, SUM(totdirs), SUM(totsubdirs), COALESCE(SUM(totsubdirs) / SUM(totdirs), 0), COALESCE(SUM(totfiles), 0), COALESCE(SUM(totlinks), 0), COALESCE(SUM(size), 0), COALESCE(SUM(size) / SUM(totdirs), 0), COALESCE(SUM(size) / SUM(totfiles), 0), COALESCE(SUM(atime) / (SUM(totfiles) + SUM(totlinks)), 0), COALESCE(SUM(mtime) / (SUM(totfiles) + SUM(totlinks)), 0), COALESCE(SUM(ctime) / (SUM(totfiles) + SUM(totlinks)), 0) FROM aggregate GROUP BY level; DROP TABLE aggregate;" \
+    "${index}"
