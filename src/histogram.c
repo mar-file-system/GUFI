@@ -122,7 +122,7 @@ int serialize_bucket(sqlite3_context *context,
 static void log2_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
     log2_hist_t *hist = (log2_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
-    if (hist->buckets == NULL) {
+    if (!hist->buckets) {
         hist->count = sqlite3_value_int(argv[1]);
         hist->lt = 0;
         hist->buckets = calloc(hist->count, sizeof(hist->buckets[0]));
@@ -171,7 +171,7 @@ static ssize_t serialize_log2_bucket(char *curr, const size_t avail, void *key, 
 
 static void log2_hist_final(sqlite3_context *context) {
     log2_hist_t *hist = (log2_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
-    if (hist->buckets == NULL) {
+    if (!hist->buckets) {
         sqlite3_result_text(context, "0;0;0;", -1, SQLITE_TRANSIENT);
         return;
     }
@@ -225,6 +225,66 @@ log2_hist_t *log2_hist_parse(const char *str) {
     }
 
     return hist;
+}
+
+static int log2_hist_combine_inplace(log2_hist_t *lhs, log2_hist_t *rhs) {
+    if (rhs->count == 0) {
+        return 0;
+    }
+
+    if (lhs->count == 0) {
+        lhs->count = rhs->count;
+        free(lhs->buckets);
+        lhs->buckets = calloc(lhs->count, sizeof(lhs->buckets[0]));
+    }
+    else if (lhs->count != rhs->count) {
+        /*
+         * possible other handling: set new histogram size to smaller
+         * histogram and put buckets larger than smaller histogram in
+         * overflow
+         */
+        fprintf(stderr, "Error: Cannot combine log2 histograms with different buckets: %zu vs %zu\n",
+                lhs->count, rhs->count);
+        return 1;
+    }
+
+    lhs->lt += rhs->lt;
+    lhs->ge += rhs->ge;
+    for(size_t i = 0; i < lhs->count; i++) {
+        lhs->buckets[i] += rhs->buckets[i];
+    }
+
+    return 0;
+}
+
+/* add a histogram into an existing histogram */
+static void log2_hist_combine_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argv; (void) argc;
+
+    const char *new_hist_str = (char *) sqlite3_value_text(argv[0]);
+    if (!new_hist_str) {
+        sqlite3_result_error(context, "Missing log2 histograms", -1);
+        return;
+    }
+
+    log2_hist_t *new_hist = log2_hist_parse(new_hist_str);
+    if (!new_hist) {
+        sqlite3_result_error(context, "Could not parse log2 histogram", -1);
+        return;
+    }
+
+    log2_hist_t *hist = (log2_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
+    if (!hist->buckets) {
+        hist->count = new_hist->count;
+        hist->buckets = calloc(hist->count, sizeof(hist->buckets[0]));
+    }
+
+    const int rc = log2_hist_combine_inplace(hist, new_hist);
+    log2_hist_free(new_hist);
+
+    if (rc != 0) {
+        sqlite3_result_error(context, "Could not combine log2 histograms", -1);
+    }
 }
 
 void log2_hist_free(log2_hist_t *hist) {
@@ -286,6 +346,33 @@ mode_hist_t *mode_hist_parse(const char *str) {
     }
 
     return hist;
+}
+
+static void mode_hist_combine_inplace(mode_hist_t *lhs, mode_hist_t *rhs) {
+    for(size_t i = 0; i < 512; i++) {
+        lhs->buckets[i] += rhs->buckets[i];
+    }
+}
+
+/* add a histogram into an existing histogram */
+static void mode_hist_combine_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argv; (void) argc;
+
+    const char *new_hist_str = (char *) sqlite3_value_text(argv[0]);
+    if (!new_hist_str) {
+        sqlite3_result_error(context, "Missing mode histogram", -1);
+        return;
+    }
+
+    mode_hist_t *new_hist = mode_hist_parse(new_hist_str);
+    if (!new_hist) {
+        sqlite3_result_error(context, "Could not parse mode histogram", -1);
+        return;
+    }
+
+    mode_hist_t *hist = (mode_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
+    mode_hist_combine_inplace(hist, new_hist);
+    mode_hist_free(new_hist);
 }
 
 void mode_hist_free(mode_hist_t *hist) {
@@ -401,6 +488,50 @@ time_hist_t *time_hist_parse(const char *str) {
     }
 
     return hist;
+}
+
+static int time_hist_combine_inplace(sqlite_time_hist_t *lhs, time_hist_t *rhs) {
+    if (lhs->ref != rhs->ref) {
+        fprintf(stderr, "Error: Cannot combine time histograms with different reference times: %ld vs %ld\n",
+                lhs->ref, rhs->ref);
+        return 1;
+    }
+
+    for(size_t i = 0; i < TIME_BUCKETS_COUNT; i++) {
+        lhs->buckets[i] += rhs->buckets[i];
+    }
+
+    return 0;
+}
+
+/* add a histogram into an existing histogram */
+static void time_hist_combine_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argv; (void) argc;
+
+    const char *new_hist_str = (char *) sqlite3_value_text(argv[0]);
+    if (!new_hist_str) {
+        sqlite3_result_error(context, "Missing time histogram", -1);
+        return;
+    }
+
+    time_hist_t *new_hist = time_hist_parse(new_hist_str);
+    if (!new_hist) {
+        sqlite3_result_error(context, "Could not parse time histogram", -1);
+        return;
+    }
+
+    sqlite_time_hist_t *hist = (sqlite_time_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
+    if (!hist->init) {
+        hist->ref = new_hist->ref;
+        hist->init = 1;
+    }
+
+    const int rc = time_hist_combine_inplace(hist, new_hist);
+    time_hist_free(new_hist);
+
+    if (rc != 0) {
+        sqlite3_result_error(context, "Could not combine time histograms", -1);
+    }
 }
 
 void time_hist_free(time_hist_t *hist) {
@@ -669,10 +800,16 @@ static void category_hist_combine_step(sqlite3_context *context, int argc, sqlit
 
     const char *new_hist_str = (char *) sqlite3_value_text(argv[0]);
     if (!new_hist_str) {
+        sqlite3_result_error(context, "Missing category histogram", -1);
         return;
     }
 
     category_hist_t *new_hist = category_hist_parse(new_hist_str);
+    if (!new_hist) {
+        sqlite3_result_error(context, "Could not parse category histogram", -1);
+        return;
+    }
+
     category_hist_combine_inplace(hist, new_hist, 1);
     category_hist_free(new_hist);
 }
@@ -785,10 +922,16 @@ int addhistfuncs(sqlite3 *db) {
     return (
         (sqlite3_create_function(db,   "log2_hist",             2,  SQLITE_UTF8,
                                  NULL, NULL,  log2_hist_step,             log2_hist_final)     == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "log2_hist_combine",     1,  SQLITE_UTF8,
+                                 NULL, NULL,  log2_hist_combine_step, log2_hist_final)         == SQLITE_OK) &&
         (sqlite3_create_function(db,   "mode_hist",             1,  SQLITE_UTF8,
                                  NULL, NULL,  mode_hist_step,             mode_hist_final)     == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "mode_hist_combine",     1,  SQLITE_UTF8,
+                                 NULL, NULL,  mode_hist_combine_step, mode_hist_final)         == SQLITE_OK) &&
         (sqlite3_create_function(db,   "time_hist",             2,  SQLITE_UTF8,
                                  NULL, NULL,  time_hist_step,             time_hist_final)     == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "time_hist_combine",     1,  SQLITE_UTF8,
+                                 NULL, NULL,  time_hist_combine_step, time_hist_final)         == SQLITE_OK) &&
         (sqlite3_create_function(db,   "category_hist",         2,  SQLITE_UTF8,
                                  NULL, NULL,  category_hist_step,         category_hist_final) == SQLITE_OK) &&
         (sqlite3_create_function(db,   "category_hist_combine", 1,  SQLITE_UTF8,

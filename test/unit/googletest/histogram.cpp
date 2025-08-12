@@ -231,6 +231,59 @@ TEST(histogram, log2) {
     test_log2_hist({"INT",  "DOUBLE"}, {"0",   "1",   "2",    "3",     "4",      "8",          "NULL"});
     test_log2_hist({"TEXT", "BLOB"},   {"''",  "'1'", "'22'", "'333'", "'4444'", "'88888888'", "NULL"});
 
+    // combine histograms
+    {
+        sqlite3 *db = nullptr;
+        setup_db(&db);
+
+        ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hist (str TEXT);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log2_hist(str, 2) FROM hist;",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log2_hist(1, 2);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log2_hist(2, 2);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+
+        char *hist_str = nullptr;
+        EXPECT_EQ(sqlite3_exec(db, "SELECT log2_hist_combine(str) FROM hist;",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        log2_hist *hist = log2_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+        ASSERT_NE(hist->buckets, nullptr);
+
+        EXPECT_EQ(hist->count,      (std::size_t) 2);
+        EXPECT_EQ(hist->lt,         (std::size_t) 0);
+        EXPECT_EQ(hist->ge,         (std::size_t) 0);
+        EXPECT_EQ(hist->buckets[0], (std::size_t) 1);
+        EXPECT_EQ(hist->buckets[1], (std::size_t) 1);
+
+        log2_hist_free(hist);
+        free(hist_str);
+        hist_str = nullptr;
+
+        // cannot combine histograms with different bucket counts
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log2_hist(2, 4);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        EXPECT_NE(sqlite3_exec(db, "SELECT log2_hist_combine(str) FROM hist;",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_EQ(hist_str, nullptr);
+
+        // NULL input
+        EXPECT_NE(sqlite3_exec(db, "SELECT log2_hist_combine(NULL);",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_EQ(hist_str, nullptr);
+
+        // bad histogram string input
+        EXPECT_NE(sqlite3_exec(db, "SELECT log2_hist_combine('a');",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_EQ(hist_str, nullptr);
+
+        sqlite3_close(db);
+    }
+
     // bad strings
     EXPECT_EQ(log2_hist_parse("'"),          nullptr);
     EXPECT_EQ(log2_hist_parse("0"),          nullptr);
@@ -295,6 +348,43 @@ TEST(histogram, mode) {
 
         mode_hist_free(hist);
         free(hist_str);
+    }
+
+    // combine histograms
+    {
+        ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hist (str TEXT);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT mode_hist(str) FROM hist;",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT mode_hist(1);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT mode_hist(2);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+
+        char *hist_str = nullptr;
+        EXPECT_EQ(sqlite3_exec(db, "SELECT mode_hist_combine(str) FROM hist;",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        mode_hist *hist = mode_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+
+        EXPECT_EQ(hist->buckets[1], (std::size_t) 1);
+        EXPECT_EQ(hist->buckets[2], (std::size_t) 1);
+
+        mode_hist_free(hist);
+        free(hist_str);
+        hist_str = nullptr;
+
+        // NULL input
+        EXPECT_NE(sqlite3_exec(db, "SELECT mode_hist_combine(NULL);",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_EQ(hist_str, nullptr);
+
+        // bad histogram string input
+        EXPECT_NE(sqlite3_exec(db, "SELECT mode_hist_combine('a');",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_EQ(hist_str, nullptr);
     }
 
     sqlite3_close(db);
@@ -372,6 +462,58 @@ TEST(histogram, time) {
 
         time_hist_free(hist);
         free(hist_str);
+    }
+
+    // combine histograms
+    {
+        char sql[MAXSQL];
+
+        ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hist (str TEXT);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+
+        SNPRINTF(sql, sizeof(sql), "INSERT INTO hist SELECT time_hist(%s, %s);", timestamps[4].c_str(), reftime);
+        ASSERT_EQ(sqlite3_exec(db, sql, nullptr, nullptr, nullptr), SQLITE_OK);
+        SNPRINTF(sql, sizeof(sql), "INSERT INTO hist SELECT time_hist(%s, %s);", timestamps[1].c_str(), reftime);
+        ASSERT_EQ(sqlite3_exec(db, sql, nullptr, nullptr, nullptr), SQLITE_OK);
+
+        char *hist_str = nullptr;
+        EXPECT_EQ(sqlite3_exec(db, "SELECT time_hist_combine(str) FROM hist;",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        time_hist *hist = time_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+
+        EXPECT_EQ(hist->ref,        (std::time_t) 31536000);
+        EXPECT_EQ(hist->buckets[0], (std::size_t) 0); // < second
+        EXPECT_EQ(hist->buckets[1], (std::size_t) 1); // < minute
+        EXPECT_EQ(hist->buckets[2], (std::size_t) 0); // < hour
+        EXPECT_EQ(hist->buckets[3], (std::size_t) 1); // < day
+        EXPECT_EQ(hist->buckets[4], (std::size_t) 0); // < week
+        EXPECT_EQ(hist->buckets[5], (std::size_t) 0); // < 4 weeks
+        EXPECT_EQ(hist->buckets[6], (std::size_t) 0); // < year
+        EXPECT_EQ(hist->buckets[7], (std::size_t) 0); // >= year
+
+        time_hist_free(hist);
+        free(hist_str);
+        hist_str = nullptr;
+
+        // different reference time
+        EXPECT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT time_hist(3600, 1);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        EXPECT_NE(sqlite3_exec(db, "SELECT time_hist_combine(str) FROM hist;",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_EQ(hist_str, nullptr);
+
+        // NULL input
+        EXPECT_NE(sqlite3_exec(db, "SELECT time_hist_combine(NULL);",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_EQ(hist_str, nullptr);
+
+        // bad histogram string input
+        EXPECT_NE(sqlite3_exec(db, "SELECT time_hist_combine('a');",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_EQ(hist_str, nullptr);
     }
 
     sqlite3_close(db);
@@ -589,20 +731,17 @@ TEST(histogram, category) {
         category_hist_free(sql_sum);
 
         free(combined_str);
-    }
+        combined_str = nullptr;
 
-    // empty histogram
-    {
-        char *combined_str = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist_combine(NULL) FROM hists;",
-                               copy_columns_callback, &combined_str, nullptr), SQLITE_OK);
-        EXPECT_NE(combined_str, nullptr);
+        // empty histogram
+        EXPECT_EQ(sqlite3_exec(db, "SELECT category_hist_combine(NULL);",
+                               copy_columns_callback, &combined_str, nullptr), SQLITE_ERROR);
+        EXPECT_EQ(combined_str, nullptr);
 
-        category_hist_t *empty = category_hist_parse(combined_str);
-        EXPECT_EQ(empty->count, (std::size_t) 0);
-        category_hist_free(empty);
-
-        free(combined_str);
+        // bad histogram string input
+        EXPECT_EQ(sqlite3_exec(db, "SELECT category_hist_combine('a');",
+                               copy_columns_callback, &combined_str, nullptr), SQLITE_ERROR);
+        EXPECT_EQ(combined_str, nullptr);
     }
 
     sqlite3_close(db);
