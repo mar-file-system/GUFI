@@ -43,7 +43,7 @@ path of source database file(s) to add to view
 .Pp
 .Sh FILES
 .Bl -tag -width -compact
-.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/querydbs
+.It Pa @CMAKE_INSTALL_PREFIX@/@SERVER_BIN@/querydbs
 .El
 
 .\" .Sh BUGS

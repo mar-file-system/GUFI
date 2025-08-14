@@ -189,12 +189,12 @@ set(C_SOURCES
 )
 
 # build the C executables
-build_and_install("${BIN}" TRUE ${C_SOURCES})
+build_and_install("${SERVER_BIN}" TRUE ${C_SOURCES})
 
 set_target_properties(gufi_dir2index PROPERTIES ENABLE_EXPORTS TRUE)
 
 # this is the gufi_stat binary that operates on indexes directly
-build_and_install_one("${BIN}" TRUE gufi_stat_bin gufi_stat.c)
+build_and_install_one("${SERVER_BIN}" TRUE gufi_stat_bin gufi_stat.c)
 
 # gufi_sqlite3 loads AI extensions
 if (DEP_AI)
@@ -223,7 +223,7 @@ endif()
 add_dependencies(gufi_query_lib GUFI)
 target_compile_definitions(gufi_query_lib PUBLIC SQLITE_CORE)
 
-build_and_install_one(${BIN} TRUE gufi_query
+build_and_install_one("${SERVER_BIN}" TRUE gufi_query
   gufi_query/main.c
   $<TARGET_OBJECTS:gufi_query_lib>
 )
@@ -263,7 +263,7 @@ endif()
 # installed files
 target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}")
 add_dependencies(gufi_vt install_dependencies)
-install(TARGETS gufi_vt DESTINATION "${LIB}" COMPONENT Server)
+install(TARGETS gufi_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
 
 add_library(run_vt MODULE
   run_vt.c
@@ -274,11 +274,11 @@ if (APPLE OR DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_target_properties(run_vt PROPERTIES SUFFIX ".${EXT}")
 endif()
-install(TARGETS run_vt DESTINATION "${LIB}" COMPONENT Server)
+install(TARGETS run_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
-build_and_install("${BIN}" FALSE ${MISC_SOURCES})
+build_and_install("${SERVER_BIN}" FALSE ${MISC_SOURCES})
 
 # only build bffuse and bfresultfuse if FUSE is found
 if (MY_FUSE_FOUND AND FUSE_BUILD)
@@ -296,8 +296,8 @@ if (MY_FUSE_FOUND AND FUSE_BUILD)
   set_target_properties(bfresultfuse PROPERTIES COMPILE_FLAGS "${MY_FUSE_CFLAGS}")
   target_link_libraries(bfresultfuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
 
-  # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/${BIN}
-  install(TARGETS bffuse bfresultfuse DESTINATION "${BIN}" COMPONENT Server)
+  # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/${SERVER_BIN}
+  install(TARGETS bffuse bfresultfuse DESTINATION "${SERVER_BIN}" COMPONENT Server)
 endif()
 
 # only build db2 sources if db2 is found

@@ -94,13 +94,13 @@ function(config_file var_name type)
   endif()
 endfunction()
 
-config_file(CONFIG_SERVER "server")
+config_file(SERVER_CONFIG "server")
 if (CLIENT)
-  config_file(CONFIG_CLIENT "client")
+  config_file(CLIENT_CONFIG "client")
 endif()
 
 if (CLIENT)
-  get_filename_component(CONFIG_CLIENT_PARENT "${CONFIG_CLIENT}" DIRECTORY)
+  get_filename_component(CLIENT_CONFIG_PARENT "${CLIENT_CONFIG}" DIRECTORY)
 
   # client config
   # copy the hard coded client example file
@@ -108,12 +108,12 @@ if (CLIENT)
 
   # make install and rpm
   install(FILES "${CMAKE_BINARY_DIR}/client.example"
-          DESTINATION "${CONFIG_CLIENT_PARENT}"
+          DESTINATION "${CLIENT_CONFIG_PARENT}"
           PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
           COMPONENT Client)
 endif()
 
-get_filename_component(CONFIG_SERVER_PARENT "${CONFIG_SERVER}" DIRECTORY)
+get_filename_component(SERVER_CONFIG_PARENT "${SERVER_CONFIG}" DIRECTORY)
 
 # server config
 # copy the hard coded server example file
@@ -121,6 +121,6 @@ configure_file(server.example.in "${CMAKE_BINARY_DIR}/server.example" @ONLY)
 
 # make install and rpm
 install(FILES "${CMAKE_BINARY_DIR}/server.example"
-        DESTINATION "${CONFIG_SERVER_PARENT}"
+        DESTINATION "${SERVER_CONFIG_PARENT}"
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
         COMPONENT Server)

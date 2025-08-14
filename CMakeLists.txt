@@ -282,9 +282,6 @@ else()
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_GNU_XATTRS")
 endif()
 
-set(BIN "bin" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")
-set(LIB "lib" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")
-
 # Need pthread
 find_package(Threads REQUIRED)
 
@@ -480,6 +477,14 @@ list(APPEND COMMON_LIBRARIES
 include_directories(${COMMON_INCLUDES})
 
 option(QPTPOOL_SWAP "Whether or not to enable swapping in QueuePerThreadPool" On)
+
+set(SERVER_BIN "bin" CACHE PATH "Directory to install executables at")
+set(SERVER_LIB "lib" CACHE PATH "Directory to install libraries at")
+
+if (CLIENT)
+  set(CLIENT_BIN "${SERVER_BIN}" CACHE PATH "Directory to install client executables at")
+  set(CLIENT_LIB "${SERVER_LIB}" CACHE PATH "Directory to install client libraries at")
+endif()
 
 # dynamically loaded module extension
 if (APPLE OR DARWIN)

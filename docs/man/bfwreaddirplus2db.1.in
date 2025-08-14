@@ -65,7 +65,7 @@ process xattrs if you are creating GUFI dbs of suspect directories
 .Pp
 .Sh FILES
 .Bl -tag -width -compact
-.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/bfwreaddirplus2db
+.It Pa @CMAKE_INSTALL_PREFIX@/@SERVER_BIN@/bfwreaddirplus2db
 .El
 
 .\" .Sh NOTES

@@ -38,7 +38,7 @@ walk this tree to produce a trace file.
 .Pp
 .Sh FILES
 .Bl -tag -width -compact
-.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_dir2trace
+.It Pa @CMAKE_INSTALL_PREFIX@/@SERVER_BIN@/gufi_dir2trace
 .El
 
 

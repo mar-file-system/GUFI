@@ -143,6 +143,42 @@ Actions and might no longer work.
 \end{tabularx}
 \end{table}
 
+\subsubsection{Install Paths}
+Files are categorized as server or client components. Instead of
+installing to \texttt{BIN} and \texttt{LIB}, they can now be installed
+to server and client specific paths. If the paths provided are
+relative, they will be installed under
+\texttt{CMAKE\_INSTALL\_PREFIX}. If they are absolute, they will be
+installed there. if \texttt{CLIENT=Off}, only the server values will
+be used.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
+  \hline
+  \texttt{-D<VAR>=<VALUE>} & Description \\
+  \hline
+  \texttt{SERVER\_BIN=<DIR>} & Directory to install executables at \\
+                             & (default: bin) \\
+  \texttt{CLIENT\_BIN=<DIR>} & Directory to install client executables at \\
+                             & (default: \texttt{\$\{SERVER\_BIN\}}) \\
+  \hline
+  \texttt{SERVER\_LIB=<DIR>} & Directory to install libraries at \\
+                             & (default: lib) \\
+  \texttt{CLIENT\_LIB=<DIR>} & Directory to install client libraries at \\
+                             & (default: \texttt{\$\{SERVER\_LIB\}}) \\
+  \hline
+  \texttt{SERVER\_CONFIG=<FILEPATH>} & Path of configuration file used by scripts. \\
+  \texttt{CLIENT\_CONFIG=<FILEPATH>} & \\
+                                     & Two different paths are available in case the server \\
+                                     & and client deployments place their configuration files \\
+                                     & at different locations. \\
+                                     & \\
+                                     & Both default to \guficonfigfile. \\
+  \hline
+\end{tabularx}
+\end{table}
+
 \subsubsection{Dependencies}
 \begin{table}[H] % do not change
 \centering
@@ -197,38 +233,6 @@ have effect.
 \end{tabularx}
 \end{table}
 
-\subsubsection{System Paths}
-Some files are installed into system paths that are not
-\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/bin} or \texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/lib}.
-
-\begin{table}[H]
-\centering
-\begin{tabularx}{1.2\textwidth}{| l | X |}
-  \hline
-  \texttt{-D<VAR>=<VALUE>} & Description \\
-  \hline
-  \texttt{CONFIG\_SERVER=<FILEPATH>} & Path of configuration file used by scripts. \\
-  \texttt{CONFIG\_CLIENT=<FILEPATH>} & \\
-                                     & Two different paths are available in case the server and client\\
-                                     & deployments place their configuration files at different \\
-                                     & locations. \\
-                                     & \\
-                                     & Both default to \guficonfigfile. \\
-                                     & \\
-                                     & When \texttt{CLIENT=Off}, \texttt{CONFIG\_SERVER} is used as the location of \\
-                                     & the configuration file. \\
-                                     & \\
-                                     & Note that many paths will conflict with the paths of other \\
-                                     & packages if installing GUFI via package. If installing GUFI \\
-                                     & with \texttt{make install}, point to a convenient location. \\
-  \hline
-  \texttt{BASH\_COMPLETION=<On|Off>} & Whether or not to install bash completion script to \\
-                                     & \texttt{/etc/bash\_completion.d} (default: On). \\
-                                     & Useful when running \texttt{make install} without root.\\
-  \hline
-\end{tabularx}
-\end{table}
-
 \subsubsection{Features}
 \begin{table}[H]
 \centering
@@ -244,6 +248,10 @@ Some files are installed into system paths that are not
   \texttt{QPTPOOL\_SWAP=<On|Off>}
   & Whether or not to build QueuePerThreadPool with work swapping
   (default: On) \\
+  \hline
+  \texttt{BASH\_COMPLETION=<On|Off>} & Whether or not to install bash completion script to \\
+                                     & \texttt{/etc/bash\_completion.d} (default: On). \\
+                                     & Useful when running \texttt{make install} without root.\\
   \hline
 \end{tabularx}
 \end{table}

@@ -74,7 +74,7 @@ foreach(TOOL ${TOOLS})
   set(USER_TOOL "gufi_${TOOL}")
   configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${BIN}" COMPONENT Server)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${SERVER_BIN}" COMPONENT Server)
 
   if (CLIENT)
     # client files WILL NOT overwrite server files in build directory
@@ -83,9 +83,9 @@ foreach(TOOL ${TOOLS})
 
     # client files WILL NOT overwrite server files when installing
     install(PROGRAMS "${CLIENT_TOOL}"
-      RENAME "${USER_TOOL}"
-      DESTINATION "${BIN}"
-      COMPONENT Client) # this is always needed for make package
+      DESTINATION "${CLIENT_BIN}"
+      COMPONENT Client # this is always needed for make package
+      RENAME "${USER_TOOL}")
   endif()
 endforeach()
 
@@ -94,23 +94,23 @@ if (CLIENT)
   set(TOOL "query.py")
   set(USER_TOOL "gufi_${TOOL}")
   configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${BIN}" COMPONENT Server)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${SERVER_BIN}" COMPONENT Server)
 
   set(CLIENT_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_query")
   configure_file("gufi_client" "${CLIENT_TOOL}" @ONLY)
   install(PROGRAMS "${CLIENT_TOOL}"
-    RENAME "gufi_query"
-    DESTINATION "${BIN}"
-    COMPONENT Client) # this is always needed for make package
+    DESTINATION "${CLIENT_BIN}"
+    COMPONENT Client # this is always needed for make package
+    RENAME "gufi_query")
 endif()
 
 # gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
 configure_file(gufi_jail gufi_jail @ONLY)
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail" DESTINATION "${BIN}" COMPONENT Server)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail" DESTINATION "${SERVER_BIN}" COMPONENT Server)
 
 # not prefixed with gufi_ and no client tool
 configure_file(querydbs querydbs @ONLY)
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs" DESTINATION "${BIN}" COMPONENT Server)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs" DESTINATION "${SERVER_BIN}" COMPONENT Server)
 
 # python libraries installed into bin for convenience (server and client)
 set(LIBRARIES
@@ -119,16 +119,16 @@ set(LIBRARIES
 )
 
 foreach(LIBRARY ${LIBRARIES})
-  set(CONFIG_FILE "${CONFIG_SERVER}")
+  set(CONFIG_FILE "${SERVER_CONFIG}")
   configure_file("${LIBRARY}" "${LIBRARY}" @ONLY)
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}" DESTINATION "${LIB}" COMPONENT Server)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}" DESTINATION "${SERVER_LIB}" COMPONENT Server)
 
   # when running make install, client files will not overwrite server files
   if (CLIENT)
-    set(CONFIG_FILE "${CONFIG_CLIENT}")
+    set(CONFIG_FILE "${CLIENT_CONFIG}")
     configure_file("${LIBRARY}" "client_${LIBRARY}" @ONLY)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/client_${LIBRARY}" DESTINATION "${LIB}" COMPONENT Client
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/client_${LIBRARY}" DESTINATION "${CLIENT_LIB}" COMPONENT Client
       RENAME "${LIBRARY}")
   endif()
 endforeach()

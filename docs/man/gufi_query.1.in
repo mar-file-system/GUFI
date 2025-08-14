@@ -76,7 +76,7 @@ open the database files in read-write mode instead of read only mode
 .Pp
 .Sh FILES
 .Bl -tag -width -compact
-.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_query
+.It Pa @CMAKE_INSTALL_PREFIX@/@SERVER_BIN@/gufi_query
 .El
 
 .Sh NOTES

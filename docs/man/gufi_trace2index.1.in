@@ -37,7 +37,7 @@ build GUFI index here
 .Pp
 .Sh FILES
 .Bl -tag -width -compact
-.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_trace2index
+.It Pa @CMAKE_INSTALL_PREFIX@/@SERVER_BIN@/gufi_trace2index
 .El
 
 

@@ -63,7 +63,7 @@
 
 GUFI_PWD=""
 
-CONFIG="${1-@CONFIG_SERVER@}"
+CONFIG="${1-@SERVER_CONFIG@}"
 
 __gufi() {
     # make sure the config file exists

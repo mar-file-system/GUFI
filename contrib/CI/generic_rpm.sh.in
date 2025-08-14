@@ -79,7 +79,7 @@ rpm -ql gufi-*.rpm | sed '/.*\.build-id/d' | sort
 dnf install -y gufi-*.rpm
 
 # compare the configuration files
-@DIFF@ server.example "$(dirname @CONFIG_SERVER@)/server.example"
+@DIFF@ server.example "$(dirname @SERVER_CONFIG@)/server.example"
 
 # remove the configuration file
-rm -r "$(dirname @CONFIG_SERVER@)"
+rm -r "$(dirname @SERVER_CONFIG@)"
