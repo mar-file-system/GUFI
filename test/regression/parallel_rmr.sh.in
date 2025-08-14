@@ -62,7 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="parallel_rmr.out"
 

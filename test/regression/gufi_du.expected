@@ -101,7 +101,6 @@ minsize 1 maxsize 5
 totzero 0 totltk 4 totmtk 0 totltm 4 totmtm 0 totmtg 0 totmtt 0
 minmtime 1 maxmtime 5
 minatime 1 maxatime 5
-minblocks 0 maxblocks 0
 totxattr 0
 mincrtime 0 maxcrtime 0
 minossint1 0 maxossint1 0 totossint1 0

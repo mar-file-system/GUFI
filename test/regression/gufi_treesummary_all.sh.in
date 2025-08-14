@@ -62,11 +62,11 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-
-PATH_LIST="path_list"
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_treesummary_all.out"
+
+PATH_LIST="path_list"
 
 cleanup() {
     rm -rf "${PATH_LIST}"

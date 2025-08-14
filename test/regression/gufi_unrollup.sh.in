@@ -62,15 +62,15 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
+. @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
 
 OUTPUT="gufi_unrollup.out"
 
 PATH_LIST="path_list"
 
 cleanup() {
-    rollup_tree_cleanup
     rm -f "${PATH_LIST}"
+    rollup_tree_cleanup
 }
 
 cleanup_exit() {
@@ -93,6 +93,19 @@ cleanup
     # been dropped
 ) > "${PATH_LIST}"
 
+rollup() {
+    echo "# Roll up the index"
+    echo "$ ${GUFI_ROLLUP} \"${INDEXROOT}\"" | replace
+    "${GUFI_ROLLUP}" "${INDEXROOT}" | replace 2> /dev/null
+    echo
+}
+
+query() {
+    echo "# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
+    echo
+}
+
 (
 echo "# ${GUFI_UNROLLUP} help" | replace
 run_no_sort "${GUFI_UNROLLUP}"
@@ -101,14 +114,8 @@ run_no_sort "${GUFI_UNROLLUP}"
 run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${SEARCH}\""
 
 # ###########################################
-echo "# roll up the index"
-echo "$ ${GUFI_ROLLUP} \"${INDEXROOT}\"" | replace
-"${GUFI_ROLLUP}" "${INDEXROOT}" | replace 2> /dev/null
-echo
-
-echo "# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory"
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
-echo
+rollup
+query
 
 echo "# rolled up directories should have rows in pentries_rollup"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(name, rollupscore), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1;\" \"${INDEXROOT}\""
@@ -116,44 +123,30 @@ run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(name, rollupscore), rollupsco
 echo "# unroll up the entire index"
 run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}\""
 
-echo "# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory"
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
-echo
+query
 # ###########################################
 
 # ###########################################
-echo "# re-roll up the index"
-echo "$ ${GUFI_ROLLUP} \"${INDEXROOT}\"" | replace
-"${GUFI_ROLLUP}" "${INDEXROOT}" | replace 2> /dev/null
-echo
+rollup
 
 echo "# only unroll up levels 0 and 1"
 run_no_sort "${GUFI_UNROLLUP} -y 0 -z 1 \"${INDEXROOT}\""
 
-echo "# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory"
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
-echo
+query
 
 echo "# only unroll up level 2 and below"
 run_no_sort "${GUFI_UNROLLUP} -y 2 \"${INDEXROOT}\""
 
-echo "# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory"
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
-echo
+query
 # ###########################################
 
 # ###########################################
-echo "# re-roll up the index"
-echo "$ ${GUFI_ROLLUP} \"${INDEXROOT}\"" | replace
-"${GUFI_ROLLUP}" "${INDEXROOT}" | replace 2> /dev/null
-echo
+rollup
 
 echo "# partial unroll up"
 run_no_sort "${GUFI_UNROLLUP} -y 2 -D \"${PATH_LIST}\" \"${INDEXROOT}\""
 
-echo "# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory"
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
-echo
+query
 # ###########################################
 
 run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}/db.db\""

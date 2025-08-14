@@ -62,15 +62,15 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
-
-PATH_LIST="path_list"
+. @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
 
 OUTPUT="gufi_rollup.out"
 
+PATH_LIST="path_list"
+
 cleanup() {
-    rollup_tree_cleanup
     rm -f "${PATH_LIST}"
+    rollup_tree_cleanup
 }
 
 cleanup_exit() {

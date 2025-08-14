@@ -73,7 +73,7 @@ fi
 
 GENERATE_INDEX="$1"
 
-source @CMAKE_CURRENT_BINARY_DIR@/os_specific.sh
+. @CMAKE_CURRENT_BINARY_DIR@/os_specific.sh
 
 SRCDIR="prefix"
 BASENAME="$(basename ${SRCDIR})"

@@ -62,7 +62,9 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+
+OUTPUT="gufi_distributed.out"
 
 # shellcheck disable=SC2153
 SEARCH2="${SEARCH}2"
@@ -120,8 +122,6 @@ do
     )
 done
 
-OUTPUT="gufi_distributed.out"
-
 trace_files() {
     prefix="TRACES"
     list=()
@@ -146,6 +146,10 @@ trace_files() {
     echo "${list[@]}"
 }
 
+remove_distributed_output() {
+    remove_indexing_time | @GREP@ -v "Creating GUFI\|Total Dirs:\|Total Non-Dirs\|Total Files:\|find(1) returned\|Jobs completed in"
+}
+
 cleanup() {
     # shellcheck disable=SC2207
     traces=($(trace_files))
@@ -160,10 +164,6 @@ cleanup_exit() {
 trap cleanup_exit EXIT
 
 cleanup
-
-remove_distributed_output() {
-    remove_indexing_time | @GREP@ -v "Creating GUFI\|Total Dirs:\|Total Non-Dirs\|Total Files:\|find(1) returned\|Jobs completed in"
-}
 
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --help"
 run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --help"

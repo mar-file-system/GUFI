@@ -62,12 +62,12 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+
+OUTPUT="gufi_query.out"
 
 SRC_CSV="${SRCDIR}/data.csv"
 IDX_CSV="${INDEXROOT}/data.csv"
-
-OUTPUT="gufi_query.out"
 
 cleanup() {
     rm -rf "${SRC_CSV}" "${IDX_CSV}"

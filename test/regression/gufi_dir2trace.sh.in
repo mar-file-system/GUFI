@@ -62,15 +62,15 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+
+OUTPUT="gufi_dir2trace.out"
 
 NEWDIR="$(mktemp -d 'XXXXXX')"
 
 # partial trace files
 FIRST="first"
 SECOND="second"
-
-OUTPUT="gufi_dir2trace.out"
 
 cleanup() {
     rm -rf "${NEWDIR}" "${FIRST}".* "${SECOND}".*

@@ -62,9 +62,10 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_trace2dir.out"
+
 DST="reconstructed"
 
 cleanup() {

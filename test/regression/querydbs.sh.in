@@ -62,9 +62,10 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTDB="outdb"
+
 TABLE="out"
 THREADS="2"
 

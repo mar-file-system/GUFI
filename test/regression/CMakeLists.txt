@@ -79,33 +79,25 @@ foreach(NAME ${CORE} ${AUX})
 endforeach()
 
 set(BINARIES
-  gufi_sqlite3
   gufi_dir2index
   gufi_dir2trace
   gufi_index2dir
+  gufi_plugin
+  gufi_query
+  gufi_sqlite3
+  gufi_stat_bin
   gufi_trace2dir
   gufi_trace2index
   gufi_treesummary
   gufi_treesummary_all
-  gufi_query
-  gufi_stat_bin
   querydbs
-  gufi_plugin
 
   gufi_vt
   run_vt
 )
 
-set(PYTHON)
-
-# gufi_du results are only valid on linux
-if (UNIX AND NOT APPLE AND NOT DARWIN AND NOT CYGWIN)
-  list(APPEND PYTHON
-    gufi_du
-  )
-endif()
-
-list(APPEND PYTHON
+set(PYTHON
+  gufi_du
   gufi_find
   gufi_getfattr
   gufi_ls

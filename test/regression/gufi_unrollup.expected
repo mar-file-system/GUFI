@@ -18,7 +18,7 @@ Creating GUFI Index search with 1 threads
 Total Dirs:          69
 Total Non-Dirs:      96
 
-# roll up the index
+# Roll up the index
 $ gufi_rollup "prefix"
 Roots:
     prefix
@@ -241,7 +241,7 @@ $ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT 
 3 2 0 0 ugo/ugo/dir2
 3 3 0 0 ugo/ugo/dir3
 
-# re-roll up the index
+# Roll up the index
 $ gufi_rollup "prefix"
 Roots:
     prefix
@@ -447,7 +447,7 @@ $ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT 
 3 2 0 0 ugo/ugo/dir2
 3 3 0 0 ugo/ugo/dir3
 
-# re-roll up the index
+# Roll up the index
 $ gufi_rollup "prefix"
 Roots:
     prefix

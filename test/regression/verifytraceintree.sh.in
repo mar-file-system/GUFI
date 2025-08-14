@@ -63,7 +63,9 @@
 
 set -e
 
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+
+OUTPUT="verifytraceintree.out"
 
 # column indicies for awk (1 based)
 AWK_TYPE=2
@@ -88,8 +90,6 @@ cleanup_exit() {
 trap cleanup_exit EXIT
 
 cleanup
-
-OUTPUT="verifytraceintree.out"
 
 (
 echo "# ${VERIFYTRACEINTREE} help" | replace

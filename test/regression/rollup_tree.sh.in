@@ -62,7 +62,7 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 TMP="tmp"
 
