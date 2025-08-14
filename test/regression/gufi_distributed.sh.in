@@ -226,6 +226,12 @@ run_no_sort "${GUFI_ROLLUP_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_rollu
 echo "# Query the rolled up index"
 run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT name, isroot, rollupscore FROM summary;\" \"${INDEXROOT2}\""
 
+echo "# Unroll up the index"
+run_no_sort "${GUFI_UNROLLUP_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_unrollup \"${GUFI_UNROLLUP}\" --use-existing-group-files slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" 2>/dev/null"
+
+echo "# Query the unrolled up index"
+run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT name, isroot, rollupscore FROM summary;\" \"${INDEXROOT2}\""
+
 cleanup
 echo "#####################################"
 echo
@@ -278,6 +284,12 @@ echo "# Roll up the index"
 run_no_sort "${GUFI_ROLLUP_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_rollup \"${GUFI_ROLLUP}\" --use-existing-group-files ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" 2>/dev/null | tail -n 9"
 
 echo "# Query the rolled up index"
+run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT name, isroot, rollupscore FROM summary;\" \"${INDEXROOT2}\""
+
+echo "# Unroll up the index"
+run_no_sort "${GUFI_UNROLLUP_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_unrollup \"${GUFI_UNROLLUP}\" --use-existing-group-files ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" 2>/dev/null"
+
+echo "# Query the unrolled up index"
 run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT name, isroot, rollupscore FROM summary;\" \"${INDEXROOT2}\""
 
 echo "# Bad source path"

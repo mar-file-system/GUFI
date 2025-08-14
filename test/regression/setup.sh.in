@@ -191,6 +191,7 @@ GUFI_DIR2TRACE_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_dir2trac
 GUFI_QUERY_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_query"
 GUFI_ROLLUP_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_rollup"
 GUFI_TREESUMMARY_ALL_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_treesummary_all"
+GUFI_UNROLLUP_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_unrollup"
 
 # test plugin path depends on the environment:
 # shellcheck disable=SC2194
@@ -281,6 +282,7 @@ replace() {
     s/${GUFI_QUERY_DISTRIBUTED//\//\\/}/gufi_query_distributed/g;
     s/${GUFI_ROLLUP_DISTRIBUTED//\//\\/}/gufi_rollup_distributed/g;
     s/${GUFI_TREESUMMARY_ALL_DISTRIBUTED//\//\\/}/gufi_treesummary_all_distributed/g;
+    s/${GUFI_UNROLLUP_DISTRIBUTED//\//\\/}/gufi_unrollup_distributed/g;
 
     s/&vfs=.*//g;
     /gufi_tool/d;

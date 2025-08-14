@@ -156,6 +156,26 @@ prefix/leaf_directory|0|1
 prefix/unusual#? directory ,|0|1
 prefix|1|1
 
+# Unroll up the index
+$ gufi_unrollup_distributed --sbatch "sbatch" --gufi_unrollup "gufi_unrollup" --use-existing-group-files slurm "hostfile" 1 "search2/prefix" 2>/dev/null
+Using existing files
+    Range 0: Contents of path_list.0 on localhost
+    Range 1: Contents of path_list.1 on 127.0.0.1
+    Range 2: Contents of path_list.2 on localhost
+    Range 3: Contents of path_list.3 on 127.0.0.1
+    Range 4: Contents of path_list.4 on localhost
+Waiting for slurm jobs to complete
+    Process upper directories on 127.0.0.1
+
+# Query the unrolled up index
+$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, rollupscore FROM summary;" "search2/prefix"
+directory|1|0
+empty_directory|1|0
+leaf_directory|1|0
+prefix|1|0
+subdirectory|1|0
+unusual#? directory ,|1|0
+
 #####################################
 
 #####################################
@@ -310,6 +330,26 @@ prefix/empty_directory|0|1
 prefix/leaf_directory|0|1
 prefix/unusual#? directory ,|0|1
 prefix|1|1
+
+# Unroll up the index
+$ gufi_unrollup_distributed --ssh "ssh" --gufi_unrollup "gufi_unrollup" --use-existing-group-files ssh "hostfile" 1 "search2/prefix" 2>/dev/null
+Using existing files
+    Range 0: Contents of path_list.0 on localhost
+    Range 1: Contents of path_list.1 on 127.0.0.1
+    Range 2: Contents of path_list.2 on localhost
+    Range 3: Contents of path_list.3 on 127.0.0.1
+    Range 4: Contents of path_list.4 on localhost
+Waiting for ssh jobs to complete
+    Process upper directories on 127.0.0.1
+
+# Query the unrolled up index
+$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, rollupscore FROM summary;" "search2/prefix"
+directory|1|0
+empty_directory|1|0
+leaf_directory|1|0
+prefix|1|0
+subdirectory|1|0
+unusual#? directory ,|1|0
 
 # Bad source path
 $ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" --use-existing-group-files ssh "hostfile" 1 "hostfile" "search2" 2>&1 | tail -n 1

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,34 +61,47 @@
 
 
 
-configure_file(gufi_distributed.py gufi_distributed.py COPYONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/gufi_distributed.py"
-  DESTINATION "${LIB}"
-  COMPONENT Server)
+import gufi_common
+import gufi_distributed
 
-# executables
-set(DISTRIBUTED
-  gufi_dir2index
-  gufi_dir2trace
-  gufi_query
-  gufi_rollup
-  gufi_treesummary_all
-  gufi_unrollup
-)
+def subtree_cmd(args, filename, _idx, _target):
+    return [
+        args.gufi_unrollup,
+        '-n', str(args.threads),
+        '-y', str(args.level),
+        '-D', filename,
+        args.GUFI_tree
+    ]
 
-foreach(TOOL ${DISTRIBUTED})
-  configure_file("${TOOL}" "${TOOL}" COPYONLY)
+def top_cmd(args, _target):
+    return [
+        args.gufi_unrollup,
+        '-n', str(args.threads),
+        '-z', str(args.level),
+        args.GUFI_tree
+    ]
 
-  set(SBATCH "${TOOL}.sbatch")
-  configure_file("template.sbatch.in" "${SBATCH}" @ONLY)
+def parse_args():
+    parser = gufi_distributed.parse_args('gufi_unrollup_distributed',
+                                         'Script for distributing gufi_unrollup across nodes')
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${TOOL}"
-    DESTINATION "${BIN}"
-    COMPONENT Server
-    RENAME "${TOOL}_distributed")
+    parser.add_argument('--gufi_unrollup',          metavar='path',
+                        type=gufi_distributed.is_exec_file,
+                        default='gufi_unrollup')
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${SBATCH}"
-    DESTINATION "${BIN}"
-    COMPONENT Server
-    RENAME "${TOOL}.sbatch")
-endforeach()
+    parser.add_argument('--threads',       '-n', metavar='n',
+                        type=gufi_common.get_positive,
+                        default=1)
+
+    parser.add_argument('GUFI_tree',
+                        type=gufi_distributed.dir_arg)
+
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+
+    gufi_distributed.distribute_work(args, args.GUFI_tree, subtree_cmd, top_cmd, True)
+
+if __name__ == '__main__':
+    main()
