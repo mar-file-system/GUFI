@@ -79,12 +79,58 @@ OF SUCH DAMAGE.
 struct Unrollup {
     char name[MAXPATH];
     size_t name_len;
+    size_t level;
     int rolledup; /* set by parent, can be modified by self */
 };
 
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    (void) args;
+static struct Unrollup *unrollup_create(const char *name, const size_t name_len,
+                                        const char *subpath, const size_t subpath_len,
+                                        const size_t level) {
+    /*
+     * This assumes that lstat/S_ISDIR failures do not occur too
+     * often, causing wasted mallocs.
+     *
+     * To avoid mallocs that get freed immediately, another way to do
+     * this is to create the path name, stat it, and if it is a
+     * directory, copy it into a newly malloc-ed struct Unrollup,
+     * which is expected to happen most of it not all the time, so not
+     * doing this to avoid memcpys.
+     */
+    struct Unrollup *work = malloc(sizeof(struct Unrollup));
+    if (subpath && subpath_len) {
+        work->name_len = SNFORMAT_S(work->name, MAXPATH, 3,
+                                    name, name_len,
+                                    "/", (size_t) 1,
+                                    subpath, subpath_len);
+    }
+    else {
+        work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, name, name_len);
+    }
+    work->level = level;
+    work->rolledup = 0; /* assume this path was not rolled up */
 
+    struct stat st;
+    if (lstat(work->name, &st) != 0) {
+        fprintf(stderr, "Could not stat '%s'\n", work->name);
+        free(work);
+        return NULL;
+    }
+
+    if (!S_ISDIR(st.st_mode)) {
+        fprintf(stderr, "'%s' is not a directory\n", work->name);
+        free(work);
+        return NULL;
+    }
+
+    return work;
+}
+
+static int deep_enough(struct input *in, struct Unrollup *work) {
+    return (in->min_level <= work->level);
+}
+
+static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+    struct input *in = (struct input *) args;
     struct Unrollup *work = (struct Unrollup *) data;
     int rc = 0;
 
@@ -95,12 +141,17 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto free_work;
     }
 
-    char dbname[MAXPATH];
-    SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, work->name);
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
+    sqlite3 *db = NULL;
 
-    if (!db) {
-        rc = 1;
+    if (deep_enough(in, work)) {
+        char dbname[MAXPATH];
+        SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, work->name);
+
+        db = opendb(dbname, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
+
+        if (!db) {
+            rc = 1;
+        }
     }
 
     /* get roll up status set by parent */
@@ -110,37 +161,45 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
      * if parent of this directory was rolled up, all children are rolled up, so skip this check
      * if parent of this directory was not rolled up, this directory might be
      */
-    if (db && !rolledup) {
+    if (deep_enough(in, work) && db && !rolledup) {
         rc = !!get_rollupscore(db, &rolledup);
     }
 
     /*
-     * always descend
-     *     if rolled up, all child also need processing
-     *     if not rolled up, children might be
-     *
-     * descend first to keep working while cleaning up db
+     * < not <= because (max_level - 1) will queue up work at max_level
+     *     - there is no point for max_level to queue up
+     *       work at (max_level + 1) only to do nothing
      */
-    struct dirent *entry = NULL;
-    while ((entry = readdir(dir))) {
-        const size_t len = strlen(entry->d_name);
-        if (len < 3) {
-            if ((strncmp(entry->d_name, ".",  2) == 0) ||
-                (strncmp(entry->d_name, "..", 3) == 0)) {
-                continue;
+    if (work->level < in->max_level) {
+        const size_t next_level = work->level + 1;
+
+        /*
+         * always descend
+         *     if rolled up, all child also need processing
+         *     if not rolled up, children might be
+         *
+         * descend first to keep working while cleaning up db
+         */
+        struct dirent *entry = NULL;
+        while ((entry = readdir(dir))) {
+            const size_t len = strlen(entry->d_name);
+            if (len < 3) {
+                if ((strncmp(entry->d_name, ".",  2) == 0) ||
+                    (strncmp(entry->d_name, "..", 3) == 0)) {
+                    continue;
+                }
             }
-        }
+            else if (len > 3) {
+                if (strncmp(entry->d_name + len - 3, ".db", 4) == 0) {
+                    continue;
+                }
+            }
 
-        char name[MAXPATH];
-        size_t name_len = SNPRINTF(name, MAXPATH, "%s/%s", work->name, entry->d_name);
+            struct Unrollup *subdir = unrollup_create(work->name, work->name_len,
+                                                      entry->d_name, len,
+                                                      next_level);
 
-        struct stat st;
-        if (lstat(name, &st) == 0) {
-            if (S_ISDIR(st.st_mode)) {
-                struct Unrollup *subdir = malloc(sizeof(struct Unrollup));
-                memcpy(subdir->name, name, name_len + 1);
-                subdir->name_len = name_len;
-
+            if (subdir) {
                 /* set child rolledup status so that if this dir */
                 /* was rolled up, child can skip roll up check */
                 subdir->rolledup = rolledup;
@@ -151,7 +210,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* now that work has been pushed onto the queue, clean up this db */
-    if (db && rolledup) {
+    if (deep_enough(in, work) && db && rolledup) {
         refstr_t name = {
             .data = work->name,
             .len  = work->name_len,
@@ -159,19 +218,56 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         char *err = NULL;
         if (sqlite3_exec(db, ROLLUP_CLEANUP, xattrs_rollup_cleanup, &name, &err) != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Could not remove roll up data from \"%s\": %s\n", work->name, err);
+            sqlite_print_err_and_free(err, stderr, "Could not remove roll up data from \"%s\": %s\n",
+                                      work->name, err);
             rc = 1;
         }
         err = NULL;
     }
 
-    closedb(db);
+    if (deep_enough(in, work)) {
+        closedb(db);
+    }
+
     closedir(dir);
 
   free_work:
     free(work);
 
     return rc;
+}
+
+static int enqueue_subtree_roots(struct input *in, struct Unrollup *root,
+                                 QPTPool_t *ctx, QPTPool_f func) {
+    FILE *file = fopen(in->subtree_list.data, "r");
+    if (!file) {
+        const int err = errno;
+        fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
+                in->subtree_list.data, strerror(err), err);
+        return 1;
+    }
+
+    char *line = NULL;
+    size_t n = 0;
+    ssize_t got = 0;
+    while ((got = getline(&line, &n, file)) != -1) {
+        /* remove trailing CRLF */
+        const size_t len = trailing_non_match_index(line, got, "\r\n", 2);
+
+        struct Unrollup *subtree_root = unrollup_create(root->name, root->name_len,
+                                                        line, len,
+                                                        in->min_level);
+
+        if (subtree_root) {
+            QPTPool_enqueue(ctx, 0, func, subtree_root);
+        }
+    }
+
+    free(line);
+    fclose(file);
+    free(root);
+
+    return 0;
 }
 
 static void sub_help(void) {
@@ -181,9 +277,11 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct input in;
-    process_args_and_maybe_exit("hHvn:", 1, "GUFI_index ...", &in);
+    process_args_and_maybe_exit("hHvn:y:z:D:", 1, "GUFI_index ...", &in);
 
-    QPTPool_t *pool = QPTPool_init(in.maxthreads, NULL);
+    const int root_count = argc - idx;
+
+    QPTPool_t *pool = QPTPool_init(in.maxthreads, &in);
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
@@ -198,32 +296,17 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        /* remove trailing slashes */
-        len = trailing_non_match_index(argv[i] + 1, strlen(argv[i] + 1), "/", 1) + 1;
+        struct Unrollup *root = unrollup_create(argv[i], len, NULL, 0, 0);
 
-        struct Unrollup *mywork = malloc(sizeof(struct Unrollup));
-
-        /* copy argv[i] into the work item */
-        mywork->name_len = SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
-
-        /* assume index root was not rolled up */
-        mywork->rolledup = 0;
-
-        struct stat st;
-        if (lstat(mywork->name, &st) != 0) {
-            fprintf(stderr,"Could not stat input-dir '%s'\n", mywork->name);
-            free(mywork);
-            continue;
+        if (root) {
+            if (doing_partial_walk(&in, root_count)) {
+                enqueue_subtree_roots(&in, root, pool, processdir);
+            }
+            else {
+                /* push the path onto the queue */
+                QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
+            }
         }
-
-        if (!S_ISDIR(st.st_mode)) {
-            fprintf(stderr,"input-dir '%s' is not a directory\n", mywork->name);
-            free(mywork);
-            continue;
-        }
-
-        /* push the path onto the queue */
-        QPTPool_enqueue(pool, i % in.maxthreads, processdir, mywork);
     }
 
     QPTPool_stop(pool);

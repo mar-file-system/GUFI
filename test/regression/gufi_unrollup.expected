@@ -6,6 +6,9 @@ options:
   -H                     show assigned input values (debugging)
   -v                     version
   -n <threads>           number of threads
+  -y <min level>         minimum level to go down
+  -z <max level>         maximum level to go down
+  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
 
 GUFI_index        GUFI index to unroll up
 
@@ -15,6 +18,7 @@ Creating GUFI Index search with 1 threads
 Total Dirs:          69
 Total Non-Dirs:      96
 
+# roll up the index
 $ gufi_rollup "prefix"
 Roots:
     prefix
@@ -70,6 +74,78 @@ Directories:    69 (21 empty)
 Total:          165
 Remaining Dirs: 17 (24.64%)
 
+# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory
+$ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"
+0 0 0 0 prefix
+1 0 0 0 o+rx
+2 0 6 1 o+rx/o+rx
+2 0 6 1 o+rx/o+rx/dir1
+2 0 6 1 o+rx/o+rx/dir2
+2 0 6 1 o+rx/o+rx/dir3
+2 0 6 1 o+rx/u
+2 0 6 1 o+rx/u/dir1
+2 0 6 1 o+rx/u/dir2
+2 0 6 1 o+rx/u/dir3
+2 0 6 1 o+rx/ug
+2 0 6 1 o+rx/ug/dir1
+2 0 6 1 o+rx/ug/dir2
+2 0 6 1 o+rx/ug/dir3
+2 0 6 1 o+rx/ugo
+2 0 6 1 o+rx/ugo/dir1
+2 0 6 1 o+rx/ugo/dir2
+2 0 6 1 o+rx/ugo/dir3
+1 0 0 0 u
+2 0 6 1 u/o+rx
+2 0 6 1 u/o+rx/dir1
+2 0 6 1 u/o+rx/dir2
+2 0 6 1 u/o+rx/dir3
+2 0 6 1 u/u
+2 0 6 1 u/u/dir1
+2 0 6 1 u/u/dir2
+2 0 6 1 u/u/dir3
+2 0 6 1 u/ug
+2 0 6 1 u/ug/dir1
+2 0 6 1 u/ug/dir2
+2 0 6 1 u/ug/dir3
+2 0 6 1 u/ugo
+2 0 6 1 u/ugo/dir1
+2 0 6 1 u/ugo/dir2
+2 0 6 1 u/ugo/dir3
+1 0 0 0 ug
+2 0 6 1 ug/o+rx
+2 0 6 1 ug/o+rx/dir1
+2 0 6 1 ug/o+rx/dir2
+2 0 6 1 ug/o+rx/dir3
+2 0 6 1 ug/u
+2 0 6 1 ug/u/dir1
+2 0 6 1 ug/u/dir2
+2 0 6 1 ug/u/dir3
+2 0 6 1 ug/ug
+2 0 6 1 ug/ug/dir1
+2 0 6 1 ug/ug/dir2
+2 0 6 1 ug/ug/dir3
+2 0 6 1 ug/ugo
+2 0 6 1 ug/ugo/dir1
+2 0 6 1 ug/ugo/dir2
+2 0 6 1 ug/ugo/dir3
+1 0 24 1 ugo
+1 0 24 1 ugo/o+rx
+1 0 24 1 ugo/o+rx/dir1
+1 0 24 1 ugo/o+rx/dir2
+1 0 24 1 ugo/o+rx/dir3
+1 0 24 1 ugo/u
+1 0 24 1 ugo/u/dir1
+1 0 24 1 ugo/u/dir2
+1 0 24 1 ugo/u/dir3
+1 0 24 1 ugo/ug
+1 0 24 1 ugo/ug/dir1
+1 0 24 1 ugo/ug/dir2
+1 0 24 1 ugo/ug/dir3
+1 0 24 1 ugo/ugo
+1 0 24 1 ugo/ugo/dir1
+1 0 24 1 ugo/ugo/dir2
+1 0 24 1 ugo/ugo/dir3
+
 # rolled up directories should have rows in pentries_rollup
 $ gufi_query -d " " -S "SELECT rpath(name, rollupscore), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1;" "prefix"
 prefix 0 0
@@ -90,85 +166,423 @@ ug/ug 1 6
 ug/ugo 1 6
 ugo 1 24
 
+# unroll up the entire index
 $ gufi_unrollup "prefix"
 
-# level, COUNT(entries), COUNT(pentries_rollup), directory
-$ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"
-0 0 0 prefix
-1 0 0 o+rx
-2 0 0 o+rx/o+rx
-3 1 0 o+rx/o+rx/dir1
-3 2 0 o+rx/o+rx/dir2
-3 3 0 o+rx/o+rx/dir3
-2 0 0 o+rx/u
-3 1 0 o+rx/u/dir1
-3 2 0 o+rx/u/dir2
-3 3 0 o+rx/u/dir3
-2 0 0 o+rx/ug
-3 1 0 o+rx/ug/dir1
-3 2 0 o+rx/ug/dir2
-3 3 0 o+rx/ug/dir3
-2 0 0 o+rx/ugo
-3 1 0 o+rx/ugo/dir1
-3 2 0 o+rx/ugo/dir2
-3 3 0 o+rx/ugo/dir3
-1 0 0 u
-2 0 0 u/o+rx
-3 1 0 u/o+rx/dir1
-3 2 0 u/o+rx/dir2
-3 3 0 u/o+rx/dir3
-2 0 0 u/u
-3 1 0 u/u/dir1
-3 2 0 u/u/dir2
-3 3 0 u/u/dir3
-2 0 0 u/ug
-3 1 0 u/ug/dir1
-3 2 0 u/ug/dir2
-3 3 0 u/ug/dir3
-2 0 0 u/ugo
-3 1 0 u/ugo/dir1
-3 2 0 u/ugo/dir2
-3 3 0 u/ugo/dir3
-1 0 0 ug
-2 0 0 ug/o+rx
-3 1 0 ug/o+rx/dir1
-3 2 0 ug/o+rx/dir2
-3 3 0 ug/o+rx/dir3
-2 0 0 ug/u
-3 1 0 ug/u/dir1
-3 2 0 ug/u/dir2
-3 3 0 ug/u/dir3
-2 0 0 ug/ug
-3 1 0 ug/ug/dir1
-3 2 0 ug/ug/dir2
-3 3 0 ug/ug/dir3
-2 0 0 ug/ugo
-3 1 0 ug/ugo/dir1
-3 2 0 ug/ugo/dir2
-3 3 0 ug/ugo/dir3
-1 0 0 ugo
-2 0 0 ugo/o+rx
-3 1 0 ugo/o+rx/dir1
-3 2 0 ugo/o+rx/dir2
-3 3 0 ugo/o+rx/dir3
-2 0 0 ugo/u
-3 1 0 ugo/u/dir1
-3 2 0 ugo/u/dir2
-3 3 0 ugo/u/dir3
-2 0 0 ugo/ug
-3 1 0 ugo/ug/dir1
-3 2 0 ugo/ug/dir2
-3 3 0 ugo/ug/dir3
-2 0 0 ugo/ugo
-3 1 0 ugo/ugo/dir1
-3 2 0 ugo/ugo/dir2
-3 3 0 ugo/ugo/dir3
+# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory
+$ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"
+0 0 0 0 prefix
+1 0 0 0 o+rx
+2 0 0 0 o+rx/o+rx
+3 1 0 0 o+rx/o+rx/dir1
+3 2 0 0 o+rx/o+rx/dir2
+3 3 0 0 o+rx/o+rx/dir3
+2 0 0 0 o+rx/u
+3 1 0 0 o+rx/u/dir1
+3 2 0 0 o+rx/u/dir2
+3 3 0 0 o+rx/u/dir3
+2 0 0 0 o+rx/ug
+3 1 0 0 o+rx/ug/dir1
+3 2 0 0 o+rx/ug/dir2
+3 3 0 0 o+rx/ug/dir3
+2 0 0 0 o+rx/ugo
+3 1 0 0 o+rx/ugo/dir1
+3 2 0 0 o+rx/ugo/dir2
+3 3 0 0 o+rx/ugo/dir3
+1 0 0 0 u
+2 0 0 0 u/o+rx
+3 1 0 0 u/o+rx/dir1
+3 2 0 0 u/o+rx/dir2
+3 3 0 0 u/o+rx/dir3
+2 0 0 0 u/u
+3 1 0 0 u/u/dir1
+3 2 0 0 u/u/dir2
+3 3 0 0 u/u/dir3
+2 0 0 0 u/ug
+3 1 0 0 u/ug/dir1
+3 2 0 0 u/ug/dir2
+3 3 0 0 u/ug/dir3
+2 0 0 0 u/ugo
+3 1 0 0 u/ugo/dir1
+3 2 0 0 u/ugo/dir2
+3 3 0 0 u/ugo/dir3
+1 0 0 0 ug
+2 0 0 0 ug/o+rx
+3 1 0 0 ug/o+rx/dir1
+3 2 0 0 ug/o+rx/dir2
+3 3 0 0 ug/o+rx/dir3
+2 0 0 0 ug/u
+3 1 0 0 ug/u/dir1
+3 2 0 0 ug/u/dir2
+3 3 0 0 ug/u/dir3
+2 0 0 0 ug/ug
+3 1 0 0 ug/ug/dir1
+3 2 0 0 ug/ug/dir2
+3 3 0 0 ug/ug/dir3
+2 0 0 0 ug/ugo
+3 1 0 0 ug/ugo/dir1
+3 2 0 0 ug/ugo/dir2
+3 3 0 0 ug/ugo/dir3
+1 0 0 0 ugo
+2 0 0 0 ugo/o+rx
+3 1 0 0 ugo/o+rx/dir1
+3 2 0 0 ugo/o+rx/dir2
+3 3 0 0 ugo/o+rx/dir3
+2 0 0 0 ugo/u
+3 1 0 0 ugo/u/dir1
+3 2 0 0 ugo/u/dir2
+3 3 0 0 ugo/u/dir3
+2 0 0 0 ugo/ug
+3 1 0 0 ugo/ug/dir1
+3 2 0 0 ugo/ug/dir2
+3 3 0 0 ugo/ug/dir3
+2 0 0 0 ugo/ugo
+3 1 0 0 ugo/ugo/dir1
+3 2 0 0 ugo/ugo/dir2
+3 3 0 0 ugo/ugo/dir3
+
+# re-roll up the index
+$ gufi_rollup "prefix"
+Roots:
+    prefix
+
+Thread Pool Size:            1
+Files/Links Limit:           0
+
+Not Processed:               0
+Cannot Roll Up:              4
+    Subdirectories:
+        min:                 4
+        max:                 4
+        median:           4.00
+        sum:                16
+        average:          4.00
+    Files/Links:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Level:
+        min:                 0
+        max:                 1
+        median:           1.00
+        sum:                 3
+        average:          0.75
+    Too Many Before:         0
+    Too Many After:          0
+Can Roll Up:                65
+    Subdirectories:
+        min:                 0
+        max:                 4
+        median:           0.00
+        sum:                52
+        average:          0.80
+    Files/Links:
+        min:                 0
+        max:                 3
+        median:           1.00
+        sum:                96
+        average:          1.48
+    Level:
+        min:                 1
+        max:                 3
+        median:           3.00
+        sum:               177
+        average:          2.72
+    Successful:             65
+    Failed:                  0
+Files/Links:    96
+Directories:    69 (21 empty)
+Total:          165
+Remaining Dirs: 17 (24.64%)
+
+# only unroll up levels 0 and 1
+$ gufi_unrollup -y 0 -z 1 "prefix"
+
+# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory
+$ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"
+0 0 0 0 prefix
+1 0 0 0 o+rx
+2 0 6 1 o+rx/o+rx
+2 0 6 1 o+rx/o+rx/dir1
+2 0 6 1 o+rx/o+rx/dir2
+2 0 6 1 o+rx/o+rx/dir3
+2 0 6 1 o+rx/u
+2 0 6 1 o+rx/u/dir1
+2 0 6 1 o+rx/u/dir2
+2 0 6 1 o+rx/u/dir3
+2 0 6 1 o+rx/ug
+2 0 6 1 o+rx/ug/dir1
+2 0 6 1 o+rx/ug/dir2
+2 0 6 1 o+rx/ug/dir3
+2 0 6 1 o+rx/ugo
+2 0 6 1 o+rx/ugo/dir1
+2 0 6 1 o+rx/ugo/dir2
+2 0 6 1 o+rx/ugo/dir3
+1 0 0 0 u
+2 0 6 1 u/o+rx
+2 0 6 1 u/o+rx/dir1
+2 0 6 1 u/o+rx/dir2
+2 0 6 1 u/o+rx/dir3
+2 0 6 1 u/u
+2 0 6 1 u/u/dir1
+2 0 6 1 u/u/dir2
+2 0 6 1 u/u/dir3
+2 0 6 1 u/ug
+2 0 6 1 u/ug/dir1
+2 0 6 1 u/ug/dir2
+2 0 6 1 u/ug/dir3
+2 0 6 1 u/ugo
+2 0 6 1 u/ugo/dir1
+2 0 6 1 u/ugo/dir2
+2 0 6 1 u/ugo/dir3
+1 0 0 0 ug
+2 0 6 1 ug/o+rx
+2 0 6 1 ug/o+rx/dir1
+2 0 6 1 ug/o+rx/dir2
+2 0 6 1 ug/o+rx/dir3
+2 0 6 1 ug/u
+2 0 6 1 ug/u/dir1
+2 0 6 1 ug/u/dir2
+2 0 6 1 ug/u/dir3
+2 0 6 1 ug/ug
+2 0 6 1 ug/ug/dir1
+2 0 6 1 ug/ug/dir2
+2 0 6 1 ug/ug/dir3
+2 0 6 1 ug/ugo
+2 0 6 1 ug/ugo/dir1
+2 0 6 1 ug/ugo/dir2
+2 0 6 1 ug/ugo/dir3
+1 0 0 0 ugo
+2 0 6 1 ugo/o+rx
+2 0 6 1 ugo/o+rx/dir1
+2 0 6 1 ugo/o+rx/dir2
+2 0 6 1 ugo/o+rx/dir3
+2 0 6 1 ugo/u
+2 0 6 1 ugo/u/dir1
+2 0 6 1 ugo/u/dir2
+2 0 6 1 ugo/u/dir3
+2 0 6 1 ugo/ug
+2 0 6 1 ugo/ug/dir1
+2 0 6 1 ugo/ug/dir2
+2 0 6 1 ugo/ug/dir3
+2 0 6 1 ugo/ugo
+2 0 6 1 ugo/ugo/dir1
+2 0 6 1 ugo/ugo/dir2
+2 0 6 1 ugo/ugo/dir3
+
+# only unroll up level 2 and below
+$ gufi_unrollup -y 2 "prefix"
+
+# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory
+$ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"
+0 0 0 0 prefix
+1 0 0 0 o+rx
+2 0 0 0 o+rx/o+rx
+3 1 0 0 o+rx/o+rx/dir1
+3 2 0 0 o+rx/o+rx/dir2
+3 3 0 0 o+rx/o+rx/dir3
+2 0 0 0 o+rx/u
+3 1 0 0 o+rx/u/dir1
+3 2 0 0 o+rx/u/dir2
+3 3 0 0 o+rx/u/dir3
+2 0 0 0 o+rx/ug
+3 1 0 0 o+rx/ug/dir1
+3 2 0 0 o+rx/ug/dir2
+3 3 0 0 o+rx/ug/dir3
+2 0 0 0 o+rx/ugo
+3 1 0 0 o+rx/ugo/dir1
+3 2 0 0 o+rx/ugo/dir2
+3 3 0 0 o+rx/ugo/dir3
+1 0 0 0 u
+2 0 0 0 u/o+rx
+3 1 0 0 u/o+rx/dir1
+3 2 0 0 u/o+rx/dir2
+3 3 0 0 u/o+rx/dir3
+2 0 0 0 u/u
+3 1 0 0 u/u/dir1
+3 2 0 0 u/u/dir2
+3 3 0 0 u/u/dir3
+2 0 0 0 u/ug
+3 1 0 0 u/ug/dir1
+3 2 0 0 u/ug/dir2
+3 3 0 0 u/ug/dir3
+2 0 0 0 u/ugo
+3 1 0 0 u/ugo/dir1
+3 2 0 0 u/ugo/dir2
+3 3 0 0 u/ugo/dir3
+1 0 0 0 ug
+2 0 0 0 ug/o+rx
+3 1 0 0 ug/o+rx/dir1
+3 2 0 0 ug/o+rx/dir2
+3 3 0 0 ug/o+rx/dir3
+2 0 0 0 ug/u
+3 1 0 0 ug/u/dir1
+3 2 0 0 ug/u/dir2
+3 3 0 0 ug/u/dir3
+2 0 0 0 ug/ug
+3 1 0 0 ug/ug/dir1
+3 2 0 0 ug/ug/dir2
+3 3 0 0 ug/ug/dir3
+2 0 0 0 ug/ugo
+3 1 0 0 ug/ugo/dir1
+3 2 0 0 ug/ugo/dir2
+3 3 0 0 ug/ugo/dir3
+1 0 0 0 ugo
+2 0 0 0 ugo/o+rx
+3 1 0 0 ugo/o+rx/dir1
+3 2 0 0 ugo/o+rx/dir2
+3 3 0 0 ugo/o+rx/dir3
+2 0 0 0 ugo/u
+3 1 0 0 ugo/u/dir1
+3 2 0 0 ugo/u/dir2
+3 3 0 0 ugo/u/dir3
+2 0 0 0 ugo/ug
+3 1 0 0 ugo/ug/dir1
+3 2 0 0 ugo/ug/dir2
+3 3 0 0 ugo/ug/dir3
+2 0 0 0 ugo/ugo
+3 1 0 0 ugo/ugo/dir1
+3 2 0 0 ugo/ugo/dir2
+3 3 0 0 ugo/ugo/dir3
+
+# re-roll up the index
+$ gufi_rollup "prefix"
+Roots:
+    prefix
+
+Thread Pool Size:            1
+Files/Links Limit:           0
+
+Not Processed:               0
+Cannot Roll Up:              4
+    Subdirectories:
+        min:                 4
+        max:                 4
+        median:           4.00
+        sum:                16
+        average:          4.00
+    Files/Links:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Level:
+        min:                 0
+        max:                 1
+        median:           1.00
+        sum:                 3
+        average:          0.75
+    Too Many Before:         0
+    Too Many After:          0
+Can Roll Up:                65
+    Subdirectories:
+        min:                 0
+        max:                 4
+        median:           0.00
+        sum:                52
+        average:          0.80
+    Files/Links:
+        min:                 0
+        max:                 3
+        median:           1.00
+        sum:                96
+        average:          1.48
+    Level:
+        min:                 1
+        max:                 3
+        median:           3.00
+        sum:               177
+        average:          2.72
+    Successful:             65
+    Failed:                  0
+Files/Links:    96
+Directories:    69 (21 empty)
+Total:          165
+Remaining Dirs: 17 (24.64%)
+
+# partial unroll up
+$ gufi_unrollup -y 2 -D "path_list" "prefix"
+
+# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory
+$ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"
+0 0 0 0 prefix
+1 0 0 0 o+rx
+2 0 6 1 o+rx/o+rx
+2 0 6 1 o+rx/o+rx/dir1
+2 0 6 1 o+rx/o+rx/dir2
+2 0 6 1 o+rx/o+rx/dir3
+2 0 6 1 o+rx/u
+2 0 6 1 o+rx/u/dir1
+2 0 6 1 o+rx/u/dir2
+2 0 6 1 o+rx/u/dir3
+2 0 0 0 o+rx/ug
+3 1 0 0 o+rx/ug/dir1
+3 2 0 0 o+rx/ug/dir2
+3 3 0 0 o+rx/ug/dir3
+2 0 0 0 o+rx/ugo
+3 1 0 0 o+rx/ugo/dir1
+3 2 0 0 o+rx/ugo/dir2
+3 3 0 0 o+rx/ugo/dir3
+1 0 0 0 u
+2 0 6 1 u/o+rx
+2 0 6 1 u/o+rx/dir1
+2 0 6 1 u/o+rx/dir2
+2 0 6 1 u/o+rx/dir3
+2 0 6 1 u/u
+2 0 6 1 u/u/dir1
+2 0 6 1 u/u/dir2
+2 0 6 1 u/u/dir3
+2 0 6 1 u/ug
+2 0 6 1 u/ug/dir1
+2 0 6 1 u/ug/dir2
+2 0 6 1 u/ug/dir3
+2 0 6 1 u/ugo
+2 0 6 1 u/ugo/dir1
+2 0 6 1 u/ugo/dir2
+2 0 6 1 u/ugo/dir3
+1 0 0 0 ug
+2 0 6 1 ug/o+rx
+2 0 6 1 ug/o+rx/dir1
+2 0 6 1 ug/o+rx/dir2
+2 0 6 1 ug/o+rx/dir3
+2 0 6 1 ug/u
+2 0 6 1 ug/u/dir1
+2 0 6 1 ug/u/dir2
+2 0 6 1 ug/u/dir3
+2 0 0 0 ug/ug
+3 1 0 0 ug/ug/dir1
+3 2 0 0 ug/ug/dir2
+3 3 0 0 ug/ug/dir3
+2 0 0 0 ug/ugo
+3 1 0 0 ug/ugo/dir1
+3 2 0 0 ug/ugo/dir2
+3 3 0 0 ug/ugo/dir3
+1 0 24 1 ugo
+1 0 24 1 ugo/o+rx
+1 0 24 1 ugo/o+rx/dir1
+1 0 24 1 ugo/o+rx/dir2
+1 0 24 1 ugo/o+rx/dir3
+1 0 24 1 ugo/u
+1 0 24 1 ugo/u/dir1
+1 0 24 1 ugo/u/dir2
+1 0 24 1 ugo/u/dir3
+1 0 24 1 ugo/ug
+1 0 24 1 ugo/ug/dir1
+1 0 24 1 ugo/ug/dir2
+1 0 24 1 ugo/ug/dir3
+1 0 24 1 ugo/ugo
+1 0 24 1 ugo/ugo/dir1
+1 0 24 1 ugo/ugo/dir2
+1 0 24 1 ugo/ugo/dir3
 
 $ gufi_unrollup "db.db"
-input-dir 'db.db' is not a directory
+'db.db' is not a directory
 
 $ gufi_unrollup "badfile"
-Could not stat input-dir 'badfile'
+Could not stat 'badfile'
 
 $ gufi_unrollup -n 18446744073709551615 "prefix"
 Error: Failed to start thread pool
