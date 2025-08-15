@@ -84,7 +84,7 @@ foreach(MAN_PAGE ${SERVER_MAN_PAGES} ${SERVER_CLIENT_MAN_PAGES})
   configure_file(${MAN_PAGE_SRC} ${MAN_PAGE_DST} @ONLY)
   string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
   install(FILES "${MAN_PAGE_DST}"
-    DESTINATION share/man/man${SECTION}
+    DESTINATION "${SERVER_MAN}/man${SECTION}"
     COMPONENT Server)
 endforeach()
 
@@ -96,7 +96,7 @@ if (CLIENT)
     configure_file(${MAN_PAGE_SRC} ${MAN_PAGE_DST} @ONLY)
     string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
     install(FILES "${MAN_PAGE_DST}"
-      DESTINATION share/man/man${SECTION}
+      DESTINATION "${CLIENT_MAN}/man${SECTION}"
       COMPONENT Client)
   endforeach()
 endif()

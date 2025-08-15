@@ -478,12 +478,14 @@ include_directories(${COMMON_INCLUDES})
 
 option(QPTPOOL_SWAP "Whether or not to enable swapping in QueuePerThreadPool" On)
 
-set(SERVER_BIN "bin" CACHE PATH "Directory to install executables at")
-set(SERVER_LIB "lib" CACHE PATH "Directory to install libraries at")
+set(SERVER_BIN "bin"       CACHE PATH "Directory to install executables at")
+set(SERVER_LIB "lib"       CACHE PATH "Directory to install libraries at")
+set(SERVER_MAN "share/man" CACHE PATH "Directory to install man pages at")
 
 if (CLIENT)
   set(CLIENT_BIN "${SERVER_BIN}" CACHE PATH "Directory to install client executables at")
   set(CLIENT_LIB "${SERVER_LIB}" CACHE PATH "Directory to install client libraries at")
+  set(CLIENT_MAN "${SERVER_MAN}" CACHE PATH "Directory to install client man pages at")
 endif()
 
 # dynamically loaded module extension
