@@ -81,8 +81,9 @@ set(SERVER_MAN_PAGES
 foreach(MAN_PAGE ${SERVER_MAN_PAGES} ${SERVER_CLIENT_MAN_PAGES})
   set(MAN_PAGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${MAN_PAGE}.in")
   set(MAN_PAGE_DST "${CMAKE_CURRENT_BINARY_DIR}/${MAN_PAGE}")
-  configure_file(${MAN_PAGE_SRC} ${MAN_PAGE_DST} @ONLY)
+  configure_file("${MAN_PAGE_SRC}" "${MAN_PAGE_DST}" @ONLY)
   string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
+  set(INSTALL_CONFIG "${SERVER_CONFIG}")
   install(FILES "${MAN_PAGE_DST}"
     DESTINATION "${SERVER_MAN}/man${SECTION}"
     COMPONENT Server)
@@ -92,12 +93,14 @@ endforeach()
 if (CLIENT)
   foreach(MAN_PAGE ${SERVER_CLIENT_MAN_PAGES})
     set(MAN_PAGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${MAN_PAGE}.in")
-    set(MAN_PAGE_DST "${CMAKE_CURRENT_BINARY_DIR}/${MAN_PAGE}")
-    configure_file(${MAN_PAGE_SRC} ${MAN_PAGE_DST} @ONLY)
+    set(MAN_PAGE_DST "${CMAKE_CURRENT_BINARY_DIR}/client_${MAN_PAGE}")
+    configure_file("${MAN_PAGE_SRC}" "${MAN_PAGE_DST}" @ONLY)
     string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
+    set(INSTALL_CONFIG "${CLIENT_CONFIG}")
     install(FILES "${MAN_PAGE_DST}"
       DESTINATION "${CLIENT_MAN}/man${SECTION}"
-      COMPONENT Client)
+      COMPONENT Client
+      RENAME "${MAN_PAGE}")
   endforeach()
 endif()
 
