@@ -1,0 +1,49 @@
+$ SSH_ORIGINAL_COMMAND="cd" gufi_jail
+Error: Command "cd" is not allowed
+
+$ SSH_ORIGINAL_COMMAND="ls" gufi_jail
+Error: Command "ls" is not allowed
+
+$ SSH_ORIGINAL_COMMAND="gufi_find" gufi_jail
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+$ SSH_ORIGINAL_COMMAND="gufi_ls -R" gufi_jail
+prefix
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+

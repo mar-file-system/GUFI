@@ -154,6 +154,7 @@ GUFI_DU="${GUFI_TOOL} du"
 GUFI_FIND="${GUFI_TOOL} find"
 GUFI_GETFATTR="${GUFI_TOOL} getfattr"
 GUFI_INDEX2DIR="@CMAKE_BINARY_DIR@/src/gufi_index2dir"
+GUFI_JAIL="@CMAKE_BINARY_DIR@/scripts/gufi_jail"
 GUFI_LS="${GUFI_TOOL} ls"
 GUFI_QUERY="@CMAKE_BINARY_DIR@/src/gufi_query"
 GUFI_QUERY_PY="${GUFI_TOOL} query.py"
@@ -192,6 +193,9 @@ GUFI_QUERY_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_query"
 GUFI_ROLLUP_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_rollup"
 GUFI_TREESUMMARY_ALL_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_treesummary_all"
 GUFI_UNROLLUP_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_unrollup"
+
+# this is created and deleted by the test
+TEST_GUFI_JAIL="@CMAKE_CURRENT_BINARY_DIR@/gufi_jail"
 
 # test plugin path depends on the environment:
 # shellcheck disable=SC2194
@@ -244,6 +248,7 @@ replace() {
     s/${GUFI_FIND//\//\\/}/gufi_find/g;
     s/${GUFI_GETFATTR//\//\\/}/gufi_getfattr/g;
     s/${GUFI_INDEX2DIR//\//\\/}/gufi_index2dir/g;
+    s/${GUFI_JAIL//\//\\/}/gufi_jail/g;
     s/${GUFI_LS//\//\\/}/gufi_ls/g;
     s/${GUFI_QUERY//\//\\/}/gufi_query/g;
     s/${GUFI_QUERY_PY//\//\\/}/gufi_query.py/g;
@@ -283,6 +288,8 @@ replace() {
     s/${GUFI_ROLLUP_DISTRIBUTED//\//\\/}/gufi_rollup_distributed/g;
     s/${GUFI_TREESUMMARY_ALL_DISTRIBUTED//\//\\/}/gufi_treesummary_all_distributed/g;
     s/${GUFI_UNROLLUP_DISTRIBUTED//\//\\/}/gufi_unrollup_distributed/g;
+
+    s/${TEST_GUFI_JAIL//\//\\/}/gufi_jail/g;
 
     s/&vfs=.*//g;
     /gufi_tool/d;

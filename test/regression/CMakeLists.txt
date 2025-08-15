@@ -128,6 +128,7 @@ set(OTHERS
   deploy
   external_databases
   gufi_distributed
+  gufi_jail
   longitudinal_snapshot
   parallel_cpr
   parallel_rmr
