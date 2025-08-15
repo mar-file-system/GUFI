@@ -60,7 +60,7 @@
 
 
 
-configure_file(gufi_distributed.py gufi_distributed.py COPYONLY)
+configure_file(gufi_distributed.py gufi_distributed.py @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/gufi_distributed.py"
   DESTINATION "${SERVER_LIB}"
   COMPONENT Server)
@@ -76,7 +76,7 @@ set(DISTRIBUTED
 )
 
 foreach(TOOL ${DISTRIBUTED})
-  configure_file("${TOOL}" "${TOOL}" COPYONLY)
+  configure_file("${TOOL}" "${TOOL}" @ONLY)
 
   set(SBATCH "${TOOL}.sbatch")
   configure_file("template.sbatch.in" "${SBATCH}" @ONLY)
