@@ -155,7 +155,7 @@ int create_xattrs_template(struct template_db *tdb) {
         const int err = errno;
         fprintf(stderr, "Error: Could not create temporary xattrs db: %s (%d)\n",
                 strerror(err), err);
-        return 1;
+        return -1;
     }
     close(fd);
 
@@ -171,7 +171,7 @@ int create_dbdb_template(struct template_db *tdb) {
         const int err = errno;
         fprintf(stderr, "Error: Could not create temporary db.db: %s (%d)\n",
                 strerror(err), err);
-        return 1;
+        return -1;
     }
     close(fd);
 

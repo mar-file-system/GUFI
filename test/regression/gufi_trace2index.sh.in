@@ -104,6 +104,7 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"
 # have to add to combined trace to not accidentally end up at top if trace.0 is empty
 (
     cat "${TRACES[@]}"
+    echo
     echo "external_db${DELIM}e${DELIM}"
 ) > "${TRACE}"
 

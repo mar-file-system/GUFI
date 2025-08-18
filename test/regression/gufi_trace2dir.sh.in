@@ -119,8 +119,9 @@ fi
 echo
 
 (
-cat "${TRACES[@]}"
-echo "${DELIM}e"
+    cat "${TRACES[@]}"
+    echo
+    echo "${DELIM}e"
 ) > "${TRACE}"
 
 run_no_sort "rm -rf \"${DST}\""

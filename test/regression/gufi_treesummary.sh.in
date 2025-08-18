@@ -159,7 +159,7 @@ run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totx
 echo
 
 echo "# Bad path"
-remove_extra "${GUFI_TREESUMMARY} \"${INDEXROOT}/1KB\""
+remove_extra "${GUFI_TREESUMMARY} \"${INDEXROOT}/1KB\"" | @SED@ 's/statx/lstat/g;'
 echo
 
 echo "# Bad thread count"

@@ -107,6 +107,12 @@ gufi_stat: bad format sequence: "%"
 \60a -> 0a
 \yabcd -> \yabcd
 
+# insert an entry with a bad type
+$ sqlite3 prefix/db.db "INSERT INTO entries (name, type, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, linkname, xattr_names) VALUES ('bad type', '?', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '');"
+
+# pull entry with bad columns
+$ gufi_stat_bin -f "%n [%F]" prefix/bad\ type
+prefix/bad type []
 # existing non-directory path
 $ gufi_stat_bin prefix/db.db
 gufi_stat: cannot stat 'prefix/db.db': No such file or directory

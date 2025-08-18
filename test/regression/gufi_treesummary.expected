@@ -131,6 +131,7 @@ prefix/unusual#? directory , 0
 
 # Bad path
 $ gufi_treesummary "prefix/1KB"
+Error: Could not lstat "prefix/1KB": No such file or directory (2)
 Cannot open database: prefix/1KB/db.db unable to open database file rc 14
 totals:
 totfiles 0 totlinks 0

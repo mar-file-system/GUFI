@@ -259,7 +259,7 @@ static int process_entries(void *args, int count, char **data, char **columns) {
 }
 
 static int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
-    struct work * work = (struct work *) data;
+    struct work *work = (struct work *) data;
     struct PoolArgs *pa = (struct PoolArgs *) args;
 
     sqlite3 *db = NULL;
@@ -273,8 +273,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     }
 
     // get source directory info
-    struct stat dir_st;
-    if (lstat(work->name, &dir_st) < 0)  {
+    if (lstat_wrapper(work) != 0)  {
         rc = 1;
         goto cleanup;
     }
@@ -286,7 +285,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
                                          "/", (size_t) 1,
                                          work->name + pa->src_dirname_len, work->name_len - pa->src_dirname_len);
 
-    rc = mkdir(topath, dir_st.st_mode); /* don't need recursion because parent is guaranteed to exist */
+    rc = mkdir(topath, work->statuso.st_mode); /* don't need recursion because parent is guaranteed to exist */
     if (rc < 0) {
         const int err = errno;
         if (err != EEXIST) {
@@ -296,7 +295,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
         }
     }
 
-    descend(ctx, id, args, &pa->in, work, dir_st.st_ino,
+    descend(ctx, id, args, &pa->in, work, work->statuso.st_ino,
             dir, 1,
             processdir, NULL, NULL,
             NULL);
@@ -329,12 +328,12 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
 
     char *err = NULL;
     if (sqlite3_exec(db, SELECT_ENTRIES, process_entries, &dcba, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Could create entries at %s: %s\n", topath, err);
+        sqlite_print_err_and_free(err, stderr, "Could not create entries at %s: %s\n", topath, err);
         rc = 1;
     }
 
     if (sqlite3_exec(db, SELECT_SUMMARY, process_summary, &dcba, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Could set directory metadata at %s: %s\n", topath, err);
+        sqlite_print_err_and_free(err, stderr, "Could not set directory metadata at %s: %s\n", topath, err);
         rc = 1;
     }
 
@@ -347,8 +346,8 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     }
 
     /* ignore errors */
-    chmod(topath, dir_st.st_mode & 0777);
-    chown(topath, dir_st.st_uid, dir_st.st_gid);
+    chmod(topath, work->statuso.st_mode & 0777);
+    chown(topath, work->statuso.st_uid, work->statuso.st_gid);
 
   cleanup:
 
@@ -377,7 +376,7 @@ struct work *validate_inputs(struct PoolArgs *pa) {
 
     // get input path metadata
     struct stat src_st;
-    if (lstat(pa->in.name.data, &src_st) < 0) {
+    if (lstat(pa->in.name.data, &src_st) != 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", pa->in.name.data);
         return NULL;
     }

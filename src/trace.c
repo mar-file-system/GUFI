@@ -328,7 +328,12 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     size = 0;
     len = 0;
     while ((offset < sta->tr.end) &&
-           (len = getline_fd(&line, &size, sta->tr.fd, &offset, GETLINE_DEFAULT_SIZE)) > 0) {
+           (len = getline_fd(&line, &size, sta->tr.fd, &offset, GETLINE_DEFAULT_SIZE)) > -1) {
+        /* empty line */
+        if (len == 0) {
+            continue;
+        }
+
         first_delim = memchr(line, sta->delim, len);
 
         /*

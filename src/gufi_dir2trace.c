@@ -238,7 +238,7 @@ static FILE **outfiles_init(const char *prefix, const size_t count) {
 static int validate_source(const char *path, struct work **work) {
     /* get input path metadata */
     struct stat st;
-    if (lstat(path, &st) < 0) {
+    if (lstat(path, &st) != 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", path);
         return 1;
     }

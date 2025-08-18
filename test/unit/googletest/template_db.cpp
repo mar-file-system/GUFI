@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 #include <string>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -148,6 +149,45 @@ TEST(template_db, bad_inputs) {
     EXPECT_EQ(template_to_db(&tdb,     template_name, -1, -1), nullptr);
 
     ASSERT_EQ(close_template_db(&tdb), 0);
+}
+
+TEST(create_temporary_template, not_enough_fds) {
+    struct rlimit orig_fds;
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+
+    struct rlimit fewer_fds = orig_fds;
+    fewer_fds.rlim_cur = 3;
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
+
+    // mkstemp should fail
+    struct template_db tdb;
+    EXPECT_EQ(create_dbdb_template(&tdb), -1);
+    EXPECT_EQ(create_xattrs_template(&tdb), -1);
+
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+}
+
+TEST(copy_template, not_enough_fds) {
+    // need name of an a non-existent file
+    char name[] = "XXXXXX";
+    const int fd = mkstemp(name);
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(close(fd), 0);
+
+    struct rlimit orig_fds;
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+
+    struct rlimit fewer_fds = orig_fds;
+    fewer_fds.rlim_cur = 3;
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
+
+    // open should fail
+    struct template_db tdb;
+    EXPECT_EQ(copy_template(&tdb, name, 0, 0), -1);
+
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+
+    ASSERT_EQ(remove(name), 0);
 }
 
 TEST(create_empty_dbdb, good) {

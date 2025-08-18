@@ -84,7 +84,6 @@ if (CMAKE_CXX_COMPILER)
     template_db.cpp
     trace.cpp
     trie.cpp
-    utils.cpp
     xattrs.cpp
   )
 
@@ -101,6 +100,7 @@ if (CMAKE_CXX_COMPILER)
     dbutils.cpp
     descend.cpp
     external.cpp
+    utils.cpp
   )
   foreach(SRC ${NEED_PATH})
     configure_file("${SRC}.in" "${SRC}" @ONLY)

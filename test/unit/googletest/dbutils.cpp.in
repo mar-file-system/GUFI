@@ -145,9 +145,15 @@ TEST(insertdbprep, nullptr) {
     EXPECT_EQ(insertdbprep(nullptr, nullptr), nullptr);
 }
 
+TEST(insertdbgo, nullptr) {
+    struct work work = {};
+    struct entry_data ed = {};
+
+    EXPECT_EQ(insertdbgo(&work, &ed, nullptr), 1);
+}
+
 TEST(insertdbgo_xattrs_avail, nullptr) {
-    struct entry_data ed;
-    memset(&ed, 0, sizeof(ed));
+    struct entry_data ed = {};
     EXPECT_NE(insertdbgo_xattrs_avail(nullptr, &ed, nullptr), SQLITE_OK);
 
     ed.xattrs.count = 1;
@@ -157,7 +163,7 @@ TEST(insertdbgo_xattrs_avail, nullptr) {
     struct work work;
     memset(&work, 0, sizeof(work));
 
-    EXPECT_NE(insertdbgo_xattrs_avail(&work, &ed, nullptr), SQLITE_OK);
+    EXPECT_NE(insertdbgo_xattrs_avail(&work, &ed, nullptr), SQLITE_DONE);
 }
 
 TEST(insertsumdb, nullptr) {
@@ -997,7 +1003,7 @@ TEST(get_col_types, no_cols) {
     sqlite3_close(db);
 }
 
-TEST(get_col_types, bad) {
+TEST(get, col_types) {
     sqlite3 *db = nullptr;
     refstr_t str = {};
     int cols = 0;
@@ -1025,6 +1031,50 @@ TEST(get_col_types, bad) {
 
     EXPECT_EQ(get_col_types(db, &str, &types, &cols), -1);
     EXPECT_EQ(types, nullptr);
+
+    sqlite3_close(db);
+}
+
+TEST(get, col_names) {
+    sqlite3 *db = nullptr;
+    refstr_t sql = {};
+    char **names = nullptr;
+    std::size_t *lens = nullptr;
+    int cols = 0;
+
+    // bad db
+    EXPECT_EQ(get_col_names(nullptr,  &sql, &names, &lens, &cols), -1);
+
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db,
+                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                              nullptr),
+              SQLITE_OK);
+
+    // good db, bad sql
+    sql.data = "";
+    sql.len = 0;
+    EXPECT_EQ(get_col_names(db,  &sql, &names, &lens, &cols), -1);
+
+    // good sql
+    // since the columns are not being pulled from a table, the columns are used as the names
+    sql.data = "SELECT 1, 'abc' AS def;";
+    sql.len = 24;
+    EXPECT_EQ(get_col_names(db,  &sql, &names, &lens, &cols), 0);
+    EXPECT_NE(names, nullptr);
+    EXPECT_NE(lens, nullptr);
+    EXPECT_EQ(cols, 2);
+
+    EXPECT_STREQ(names[0], "1");
+    EXPECT_EQ(lens[0], (std::size_t) 1);
+
+    EXPECT_STREQ(names[1], "def");        // not 'abc'
+    EXPECT_EQ(lens[1], (std::size_t) 3);
+
+    free(lens);
+    for(int i = 0; i < cols; i++) {
+        free(names[i]);
+    }
+    free(names);
 
     sqlite3_close(db);
 }

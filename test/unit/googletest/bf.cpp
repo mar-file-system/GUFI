@@ -623,6 +623,23 @@ TEST(parse_cmd_line, invalid) {
     input_fini(&in);
 }
 
+TEST(parse_cmd_line, bad_distributed_level) {
+    const char opts[] = "y:D:";
+
+    const char *argv[] = {
+        exec.c_str(),
+        y.c_str(), "0",
+        D.c_str(), D_arg.c_str(),
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]);
+
+    struct input in;
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+
+    input_fini(&in);
+}
+
 TEST(INSTALL, STR) {
     const std::string SOURCE = "INSTALL_STR";
     refstr_t dst;

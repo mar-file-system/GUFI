@@ -340,7 +340,7 @@ static int process_subtree_root(QPTPool_t *ctx, const size_t id, void *data, voi
     struct work *subtree_root = (struct work *) data;
     struct PoolArgs *pa = (struct PoolArgs *) args;
 
-    if (lstat(subtree_root->name, &subtree_root->statuso) != 0) {
+    if (lstat_wrapper(subtree_root) != 0) {
         const int err = errno;
         fprintf(stderr, "Error: Could not stat subtree root \"%s\". Skipping: %s (%d)\n",
                 subtree_root->name, strerror(err), err);
@@ -458,7 +458,7 @@ static int setup_dst(const char *nameto) {
 static int validate_source(struct input *in, const char *path, struct work **work) {
     /* get input path metadata */
     struct stat st;
-    if (lstat(path, &st) < 0) {
+    if (lstat(path, &st) != 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", path);
         return 1;
     }
