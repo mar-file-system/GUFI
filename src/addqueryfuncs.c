@@ -301,13 +301,15 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
 
 /* prefix should end with an opening single quote */
 static void return_error(sqlite3_context *context,
-                         const char *prefix, const size_t prefix_len,
+                         const char *prefix, const size_t prefix_size,
                          const char *str) {
     const size_t str_len = strlen(str);
-    size_t err_len = prefix_len - 1 + str_len + 1; /* closing quote */
+    const size_t err_len = prefix_size - 1 + str_len + 1; /* closing quote */
     char *err = malloc(err_len + 1);
-    SNFORMAT_S(err, err_len + 1, 3,
-               prefix, prefix_len,
+    SNFORMAT_S(err, err_len + 1, 5,
+               prefix, prefix_size - 1,
+               " ", (size_t) 1,
+               "'", (size_t) 1,
                str, str_len,
                "'", (size_t) 1);
     sqlite3_result_error(context, err, err_len);
@@ -322,8 +324,8 @@ static void return_error(sqlite3_context *context,
 static int lineop(sqlite3_context *context, const char *cmd, char **line, size_t *line_len) {
     FILE *p = popen(cmd, "r");
     if (p == NULL) {
-        static const char ERR_PREFIX[] = "lineop: popen failed to run '";
-        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        static const char ERR_PREFIX[] = "lineop: popen failed to run";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX), cmd);
         return -1;
     }
 
@@ -332,16 +334,16 @@ static int lineop(sqlite3_context *context, const char *cmd, char **line, size_t
     pclose(p);
 
     if (len < 0) {
-        static const char ERR_PREFIX[] = "lineop: failed to read result of '%s'";
-        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        static const char ERR_PREFIX[] = "lineop: failed to read result of";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX), cmd);
         free(*line);
         return -1;
     }
 
     /* only newline, so no value */
     if (len == 1) {
-        static const char ERR_PREFIX[] = "lineop: did not get result from '";
-        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        static const char ERR_PREFIX[] = "lineop: did not get result from";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX), cmd);
         free(*line);
         return -1;
     }
@@ -383,8 +385,8 @@ static void intop(sqlite3_context *context, int argc, sqlite3_value **argv) {
 
     int retval = 0;
     if (sscanf(line, "%d", &retval) != 1) {
-        static const char ERR_PREFIX[] = "intop: could not parse result from '";
-        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, line);
+        static const char ERR_PREFIX[] = "intop: could not parse result from";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX), line);
         free(line);
         return;
     }
@@ -401,8 +403,8 @@ static void blobop(sqlite3_context *context, int argc, sqlite3_value **argv) {
     const char *cmd = (const char *) sqlite3_value_text(argv[0]);
     FILE *p = popen(cmd, "r");
     if (p == NULL) {
-        static const char ERR_PREFIX[] = "blobop: popen failed to run '";
-        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX) -  1, cmd);
+        static const char ERR_PREFIX[] = "blobop: popen failed to run";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX), cmd);
         return;
     }
 

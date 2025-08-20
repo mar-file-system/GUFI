@@ -121,6 +121,18 @@ TEST(BottomUp, builddir) {
                                         zero_descend, zero_ascend, THREAD_COUNT, 0, nullptr), 0);
 }
 
+TEST(BottomUp, do_nothing) {
+    const char *roots[] = {
+        (char *) ROOT.c_str(),
+    };
+
+    const std::size_t root_count = sizeof(roots) / sizeof(roots[0]);
+
+    EXPECT_EQ(parallel_bottomup_wrapper((char **) roots, root_count, THREAD_COUNT,
+                                        sizeof(struct BottomUp),
+                                        nullptr, nullptr, THREAD_COUNT, 0, nullptr), 0);
+}
+
 TEST(BottomUp, bad) {
     // bad user struct size
     EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, THREAD_COUNT,

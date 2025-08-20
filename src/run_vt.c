@@ -177,9 +177,7 @@ static int run_read_row(run_vtab_cursor *pCur) {
 
 /* remove ', ", and leading/trailing spaces */
 static void cleanup_arg(refstr_t *value) {
-    if (!value->data || !value->len) {
-        return;
-    }
+    /* (!value->data || !value->len) can't happen */
 
     if ((value->data[0] == '\'') ||
         (value->data[0] == '"')) {
@@ -192,6 +190,7 @@ static void cleanup_arg(refstr_t *value) {
         value->len--;
     }
 
+    /* this should be trailing_non_match_index, but not linking with GUFI */
     if (value->len &&
         ((value->data[value->len - 1] == '\'') ||
          (value->data[value->len - 1] == '"'))) {
@@ -199,6 +198,7 @@ static void cleanup_arg(refstr_t *value) {
         ((char *) (value->data))[value->len] = '\0';
     }
 
+    /* this should be trailing_non_match_index, but not linking with GUFI */
     while (value->len && (value->data[value->len - 1] == ' ')) {
         value->len--;
         ((char *) (value->data))[value->len] = '\0';

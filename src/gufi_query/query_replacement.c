@@ -120,7 +120,7 @@ int replace_sql(const refstr_t *orig, const sll_t *idx,
                 fprintf(stderr, "Error: Could not realloc replacement buffer: %s (%d)\n",
                         strerror(err), err);
                 free(replaced.data);
-                return -11;
+                return -1;
             }
 
             replaced.data = new_buf;

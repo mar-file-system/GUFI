@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <ctime>
 #include <grp.h>
 #include <pwd.h>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -615,6 +616,23 @@ TEST(addqueryfuncs, strop) {
     sqlite3_free(err);
     err = nullptr;
 
+    // not enough file descriptors
+    {
+        struct rlimit orig_fds;
+        ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+
+        struct rlimit fewer_fds = orig_fds;
+        fewer_fds.rlim_cur = 3;
+        ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
+
+        ASSERT_EQ(sqlite3_exec(db, "SELECT strop('echo abc def')", copy_columns_callback, &output, &err), SQLITE_ERROR);
+        EXPECT_NE(err, nullptr);
+        sqlite3_free(err);
+        err = nullptr;
+
+        ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+    }
+
     sqlite3_close(db);
 }
 
@@ -651,6 +669,23 @@ TEST(addqueryfuncs, intop) {
     EXPECT_NE(err, nullptr);
     sqlite3_free(err);
     err = nullptr;
+
+    // not enough file descriptors
+    {
+        struct rlimit orig_fds;
+        ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+
+        struct rlimit fewer_fds = orig_fds;
+        fewer_fds.rlim_cur = 3;
+        ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
+
+        ASSERT_EQ(sqlite3_exec(db, "SELECT intop('echo 123')", copy_columns_callback, &output, &err), SQLITE_ERROR);
+        EXPECT_NE(err, nullptr);
+        sqlite3_free(err);
+        err = nullptr;
+
+        ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+    }
 
     sqlite3_close(db);
 }
@@ -705,6 +740,23 @@ TEST(addqueryfuncs, blobop) {
     str_free_existing(&output);
     sqlite3_free(err);
     err = nullptr;
+
+    // not enough file descriptors
+    {
+        struct rlimit orig_fds;
+        ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+
+        struct rlimit fewer_fds = orig_fds;
+        fewer_fds.rlim_cur = 3;
+        ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
+
+        ASSERT_EQ(sqlite3_exec(db, "SELECT blobop('echo blob')", copy_columns_callback, &output, &err), SQLITE_ERROR);
+        EXPECT_NE(err, nullptr);
+        sqlite3_free(err);
+        err = nullptr;
+
+        ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+    }
 
     sqlite3_close(db);
     remove(temp);

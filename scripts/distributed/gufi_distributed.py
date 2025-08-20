@@ -138,8 +138,9 @@ def handle_ssh_procs(_args, procs):
         proc.wait()
 
         if proc.returncode != 0:
-            sys.stderr.write('ssh to {0} failed with error code {1}\n'.format(proc.args[1], # args[1] only works because there are no arguments between ssh and the target
-                                                                            proc.returncode))
+            # args[1] only works because there are no arguments between ssh and the target
+            sys.stderr.write('ssh to {0} failed with error code {1}\n'.format(proc.args[1],
+                                                                              proc.returncode))
             continue
 
         jobids += [proc.pid]
