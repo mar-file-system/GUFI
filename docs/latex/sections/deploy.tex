@@ -62,14 +62,14 @@
 
 \section{Deployment}
 \label{sec:deploy}
-GUFI functionality as described so far has been local (source
-filesystem and index on the same node). However, this is not the
-expected way to deploy GUFI at scale. Users should not log into the
-machine containing both the filesystems and indexes with an
-interactive shell. Instead, indexes are to be placed on a dedicated
-GUFI server (which may or may not be able to see the source
-filesystems) and users will call client scripts from client nodes to
-forward commands to the server via ssh.
+Other than Section~\ref{sec:distributed}, GUFI functionality as
+described so far has been local (source filesystem and index on the
+same node). However, this is not the expected way to deploy
+GUFI. Users should not log into the machine containing both the
+filesystems and indexes with an interactive shell. Instead, indexes
+are to be placed on a dedicated GUFI server (which may or may not be
+able to see the source filesystems) and users will call client scripts
+from client nodes to forward commands to the server via ssh.
 
 There are multiple reasons why GUFI is being deployed this way. First,
 indexes should not be colocated with the source filesystems in order
@@ -130,10 +130,11 @@ renamed to the corresponding script's name.
 The wrapper scripts on both the server and client require a valid GUFI
 configuration file to function correctly. The path to the
 configuration file can be set at configure time with the
-\texttt{CONFIG\_FILE} CMake variable (defaults to
-\guficonfigfile). The configuration file will be readable by all users
-but should only be writable by the administrators (664 permissions) in
-order to prevent non-admin users from changing how GUFI runs.
+\texttt{SERVER\_CONFIG\_FILE} and \texttt{CLIENT\_CONFIG\_FILE} CMake
+variable (both default to \guficonfigfile). The configuration file
+will be readable by all users but should only be writable by the
+administrators (664 permissions) in order to prevent non-admin users
+from changing how GUFI runs.
 
 GUFI configuration files are simple text files containing lines of
 \texttt{<key>=<value>}. Duplicate configuration keys are overwritten
