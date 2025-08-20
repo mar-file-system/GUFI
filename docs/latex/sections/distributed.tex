@@ -1,0 +1,138 @@
+% This file is part of GUFI, which is part of MarFS, which is released
+% under the BSD license.
+%
+%
+% Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+% All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without modification,
+% are permitted provided that the following conditions are met:
+%
+% 1. Redistributions of source code must retain the above copyright notice, this
+% list of conditions and the following disclaimer.
+%
+% 2. Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation and/or
+% other materials provided with the distribution.
+%
+% 3. Neither the name of the copyright holder nor the names of its contributors
+% may be used to endorse or promote products derived from this software without
+% specific prior written permission.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+% ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+% IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+% INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+% BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+% DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+% OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+% ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+%
+%
+% From Los Alamos National Security, LLC:
+% LA-CC-15-039
+%
+% Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+% Copyright 2017. Los Alamos National Security, LLC. This software was produced
+% under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+% Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+% the U.S. Department of Energy. The U.S. Government has rights to use,
+% reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+% ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+% ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+% modified to produce derivative works, such modified software should be
+% clearly marked, so as not to confuse it with the version available from
+% LANL.
+%
+% THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+% "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+% ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+% OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+% CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+% OF SUCH DAMAGE.
+
+
+
+\subsection{Distributed Processing}
+
+Filesystem trees are easily composable by simply placing multiple
+(sub)trees under the same parent directory. This concept can be
+inverted to allow for many GUFI operations to be distributed across
+multiple nodes. This capability has become required due to resource
+utilization issues when running GUFI at scale.
+
+\texttt{gufi\_distributed.py} has been created to provide a framework
+for distributing GUFI operations across multiple threads. How this
+framework works at a high level is as follows: view a filesystem tree
+as approximately pyramidal. The root is a single point at the very
+top, and subdirectories fan out the further down one is. Slice the
+pyramid horizontally at a fixed level. Each directory at and below the
+slice level is a work item for one of the worker nodes. The top of the
+pyramid, root to level - 1, will be processed by another worker. This
+framework makes distributing GUFI operations into a balancing act of
+distributing approximately the same number of directories across all
+worker nodes to maximize parallelism.
+
+More formally:
+
+\begin{enumerate}
+\item Choose a level in the tree to split up across nodes.
+\item Write the directory paths (without the starting path) at the
+  selected level to a file. The generic POSIX command would be:
+  \texttt{find <path> -mindepth <level> -maxdepth <level> -type d
+    -printf "\%P\textbackslash n"}. If a specific filesystem has a
+  faster tool for finding paths, that tool should be used instead.
+\item Let \texttt{W > 1} be the number of worker nodes used to process
+  the tree. \texttt{S~=~W~-~1} nodes will be used to process the
+  subtrees. 1 node will process the top.
+\item Distribute the directories from the previous step to \texttt{S}
+  separate files. Each file will be the work a single node processes.
+\item On the \texttt{S} subtree worker nodes, run the executable with
+  \texttt{-y level} and \texttt{-D <filename>}. All other flags and
+  arguments used should remain the same.
+\item On the final worker node, run the executable with \texttt{-z
+  (level - 1)} to process the directories above the ones that were
+  split across nodes.
+\end{enumerate}
+
+\texttt{gufi\_distributed.py} allows for work to be distributed via
+\texttt{ssh} and \texttt{sbatch}.
+
+\subsubsection{Distributed Operations}
+The following operations have scripts that distribute processing:
+
+\begin{itemize}
+\item \gufidirindex
+\item \gufidirtrace
+\item \gufitreesummaryall
+\item \gufirollup
+\item \gufiunrollup
+\item \gufiquery
+\end{itemize}
+
+These scripts are found in \texttt{scripts/distributed} in the source
+and build directories, and are installed as
+\texttt{<operation>\_distributed}.
+
+\paragraph{Notes}
+\begin{itemize}
+\item The target path of an indexing operation does not need to be a
+  shared location, as long as the root path on each worker node is the
+  same. This works because trees are composable, so there is no
+  difference between a tree with subdirectories \texttt{dir1} and
+  \texttt{dir2}, and two separate trees with one of \texttt{dir1} or
+  \texttt{dir2}. The only practical difference when querying would be
+  more warnings due to missing \texttt{db.db} files in the parents of
+  the starting points.
+\item Querying has an additional steps of requiring results to be
+  written to per-worker-node file(s) and at the end, combining the
+  results and processing them one last time. This is currently an
+  action the user must do themselves.
+\end{itemize}

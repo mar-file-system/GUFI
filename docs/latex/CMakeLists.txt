@@ -98,6 +98,7 @@ set(gufi_developer_inputs
     sections/virtual_tables.tex
     sections/gufi_stat_bin.tex
     sections/utility.tex
+    sections/distributed.tex
     sections/reconstruct.tex
     sections/implementation.tex
     sections/qptp.tex
@@ -131,6 +132,7 @@ set(gufi_administrator_inputs
     sections/virtual_tables.tex
     sections/gufi_stat_bin.tex
     sections/utility.tex
+    sections/distributed.tex
     sections/reconstruct.tex
     sections/deploy.tex
 )
