@@ -77,6 +77,7 @@ foreach(TEST
     bfwiflat2gufitest
     dfw2gufitest
     gitest.py
+    gitestcomplex.py
     gufitest.py
     robinhoodin
     runbffuse
