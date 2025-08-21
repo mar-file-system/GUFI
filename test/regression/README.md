@@ -56,6 +56,8 @@ the .expected file with `cat` and a redirect, `cp`, or `mv`. The
 - [`gufi_tool.py`](gufi_tool.py.in) fakes entry points into Python tools in order to use
   a test configuration file instead of the real one
 
+- [`os_specific.sh`](os_specific.sh.in) OS specific values and functions go here
+
 ## Test Script Structure
 1. `#!/usr/bin/env bash`
 2. License
