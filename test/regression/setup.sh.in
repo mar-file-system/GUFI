@@ -198,17 +198,6 @@ GUFI_UNROLLUP_DISTRIBUTED="@CMAKE_BINARY_DIR@/scripts/distributed/gufi_unrollup"
 # this is created and deleted by the test
 TEST_GUFI_JAIL="@CMAKE_CURRENT_BINARY_DIR@/gufi_jail"
 
-# test plugin path depends on the environment:
-# shellcheck disable=SC2194
-case "@CMAKE_SYSTEM_NAME@" in
-    "APPLE" | "Darwin")
-        GUFI_TEST_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_plugin.dylib"
-        ;;
-    "Linux" | "CYGWIN")
-        GUFI_TEST_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_plugin.so"
-        ;;
-esac
-
 AWK="@AWK@"
 COLUMN="@COLUMN@"
 DIFF="@DIFF@"
