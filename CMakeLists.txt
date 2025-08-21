@@ -80,7 +80,7 @@ if (CMAKE_BINARY_DIR STREQUAL CMAKE_INSTALL_PREFIX)
   message(FATAL_ERROR "Refusing to install into build directory \"${CMAKE_BINARY_DIR}\"")
 endif()
 
-project(GUFI VERSION 0.6.7 LANGUAGES C)
+project(GUFI VERSION 0.6.8 LANGUAGES C)
 
 # print version info
 find_package(Git)                     # not required
