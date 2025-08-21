@@ -67,7 +67,7 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
 # Install GNU version of tools
-for tool in diffutils findutils gnu-sed grep
+for tool in coreutils diffutils findutils gnu-sed grep
 do
     brew install "${tool}"
     echo "$(brew --prefix ${tool})/libexec/gnubin" >> "${GITHUB_PATH}"

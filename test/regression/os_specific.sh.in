@@ -74,7 +74,6 @@ esac
 # shellcheck disable=SC2034,SC2194,SC2215
 case "@CMAKE_SYSTEM_NAME@" in
     "APPLE" | "Darwin")
-        STAT_FMT="-f"
         GUFI_TEST_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_plugin.dylib"
 
         os_setfattr() {
@@ -117,7 +116,6 @@ case "@CMAKE_SYSTEM_NAME@" in
 
         ;;
     "Linux" | "CYGWIN")
-        STAT_FMT="-c"
         GUFI_TEST_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_plugin.so"
 
         os_setfattr() {

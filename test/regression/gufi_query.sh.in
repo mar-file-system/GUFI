@@ -252,31 +252,13 @@ echo "# Set timestamps of one db.db file to epoch, query the index with -m flag,
 run_no_sort "touch -amt 197001010000.00 \"${INDEXROOT}/db.db\""
 
 echo "Expect:"
-# shellcheck disable=SC2194
-case "@CMAKE_SYSTEM_NAME@" in
-    "APPLE" | "Darwin")
-        @STAT@ -f "    atime: %a" -t "%X" "${INDEXROOT}/db.db"
-        @STAT@ -f "    mtime: %m" -t "%Y" "${INDEXROOT}/db.db"
-        ;;
-    "Linux" | "CYGWIN")
-        @STAT@ -c "    atime: %X" "${INDEXROOT}/db.db"
-        @STAT@ -c "    mtime: %Y" "${INDEXROOT}/db.db"
-        ;;
-esac
+@STAT@ -c "    atime: %X" "${INDEXROOT}/db.db"
+@STAT@ -c "    mtime: %Y" "${INDEXROOT}/db.db"
 echo
 run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
 echo "Got:"
-# shellcheck disable=SC2194
-case "@CMAKE_SYSTEM_NAME@" in
-    "APPLE" | "Darwin")
-        @STAT@ -f "    atime: %a" -t "%X" "${INDEXROOT}/db.db"
-        @STAT@ -f "    mtime: %m" -t "%Y" "${INDEXROOT}/db.db"
-        ;;
-    "Linux" | "CYGWIN")
-        @STAT@ -c "    atime: %X" "${INDEXROOT}/db.db"
-        @STAT@ -c "    mtime: %Y" "${INDEXROOT}/db.db"
-        ;;
-esac
+@STAT@ -c "    atime: %X" "${INDEXROOT}/db.db"
+@STAT@ -c "    mtime: %Y" "${INDEXROOT}/db.db"
 echo
 
 echo "# Symlink at Level 1"
