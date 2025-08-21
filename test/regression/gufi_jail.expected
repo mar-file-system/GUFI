@@ -1,10 +1,10 @@
-$ SSH_ORIGINAL_COMMAND="cd" gufi_jail
+$ SSH_ORIGINAL_COMMAND="'cd'" gufi_jail
 Error: Command "cd" is not allowed
 
-$ SSH_ORIGINAL_COMMAND="ls" gufi_jail
+$ SSH_ORIGINAL_COMMAND="'ls'" gufi_jail
 Error: Command "ls" is not allowed
 
-$ SSH_ORIGINAL_COMMAND="gufi_find" gufi_jail
+$ SSH_ORIGINAL_COMMAND="'gufi_find'" gufi_jail
 prefix
 prefix/.hidden
 prefix/1KB
@@ -26,7 +26,7 @@ prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
-$ SSH_ORIGINAL_COMMAND="gufi_ls -R" gufi_jail
+$ SSH_ORIGINAL_COMMAND="'gufi_ls -R'" gufi_jail
 prefix
 prefix/1KB
 prefix/1MB
@@ -46,4 +46,23 @@ prefix/old_file
 prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
+
+$ SSH_ORIGINAL_COMMAND="'gufi_stat -c \"%n %s %X %Y %Z\" prefix/old_file'" gufi_jail
+prefix/old_file 0 0 0 0
+
+$ SSH_ORIGINAL_COMMAND="'gufi_query.py -d ' ' -E \"SELECT path() || '/' || name, size FROM entries\"'" gufi_jail
+prefix/.hidden 10
+prefix/1KB 1024
+prefix/1MB 1048576
+prefix/directory/executable 1
+prefix/directory/readonly 2
+prefix/directory/subdirectory/directory_symlink 4
+prefix/directory/subdirectory/repeat_name 5
+prefix/directory/writable 3
+prefix/file_symlink 9
+prefix/leaf_directory/leaf_file1 11
+prefix/leaf_directory/leaf_file2 12
+prefix/old_file 0
+prefix/repeat_name 14
+prefix/unusual#? directory ,/unusual, name?# 15
 

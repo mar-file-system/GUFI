@@ -90,12 +90,12 @@ foreach(TOOL ${TOOLS})
 endforeach()
 
 # allow for clients to call gufi_query via a script
-if (CLIENT)
-  set(TOOL "query.py")
-  set(USER_TOOL "gufi_${TOOL}")
-  configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${SERVER_BIN}" COMPONENT Server)
+set(TOOL "query.py")
+set(USER_TOOL "gufi_${TOOL}")
+configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${SERVER_BIN}" COMPONENT Server)
 
+if (CLIENT)
   set(CLIENT_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_query")
   configure_file("gufi_client" "${CLIENT_TOOL}" @ONLY)
   install(PROGRAMS "${CLIENT_TOOL}"

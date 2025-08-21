@@ -84,15 +84,17 @@ def run(args):
         config.server,
         '-p', str(config.port),
         '--',
-        'gufi_@TOOL@',
-    ] + args
-
-    # sanitize the command
-    sanitized = [sanitize(arg) for arg in cmd]
+        # sanitize the command segments
+        #
+        # then combine args into one string and send over
+        # as a single string so that it doesn't get parsed
+        # on the client side
+        '\'{0}\''.format(' '.join(sanitize(arg) for arg in ['gufi_@TOOL@'] + args))
+     ]
 
     # run the command
-    query = subprocess.Popen(sanitized) # pylint: disable=consider-using-with
-    query.communicate()                 # block until query finishes
+    query = subprocess.Popen(cmd) # pylint: disable=consider-using-with
+    query.communicate()           # block until query finishes
 
     return query.returncode
 
