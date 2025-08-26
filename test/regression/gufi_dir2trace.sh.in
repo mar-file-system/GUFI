@@ -113,13 +113,13 @@ echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
 # count separators
 # shellcheck disable=SC2016
-columns=$(@SED@ "/^.*${DELIM}e${DELIM}$/d; s/[^${DELIM}]//g;" "${TRACES[@]}" | @AWK@ '{ print length }' | sort | uniq)
+columns=$(@SED@ "\%^.*${DELIM}e${DELIM}$%d; s%[^${DELIM}]%%g;" "${TRACES[@]}" | @AWK@ '{ print length }' | sort | uniq)
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
 src=$(find "${SRCDIR}" | sort)
 # shellcheck disable=SC2016
-lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | @SED@ "/\\/external\\/db/d; s/\\/\\//\\//g;" | sort)
+lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | @SED@ "\%/external/db%d;" | sort)
 
 echo "Source Directory:"
 # shellcheck disable=SC2016
@@ -172,13 +172,13 @@ rm "${TRACES[@]}"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${TRACE}\""
 
 echo "# nonexistant trace directory"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${NEWDIR}/baddir/${TRACE}\"" | @SED@ "s/${NEWDIR}\\///g"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${NEWDIR}/baddir/${TRACE}\"" | @SED@ "s%${NEWDIR}/%%g;"
 
 echo "# skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}\" \"${SRCDIR}\" \"${TRACE}\""
 
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}' | @SED@ '/\\/external\\/db/d;'"
+run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}' | @SED@ '\%/external/db%d;'"
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""

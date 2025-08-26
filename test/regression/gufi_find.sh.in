@@ -112,7 +112,7 @@ run_sort "${GUFI_FIND} -links 1 -type f"          # directory and symlinks chang
 run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
 run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file link name
 # shellcheck disable=SC2016
-run_no_sort "${GUFI_FIND} -ls" | @SED@ "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g;" | @AWK@ '{ if (NF > 10) { $1="0"; $2="0"; $4=1; $7="0"; } print }' | sort -k 11; echo
+run_no_sort "${GUFI_FIND} -ls" | @SED@ "s%${USER_NAME} ${GROUP_NAME}%${TEST_USER_NAME} ${TEST_GROUP_NAME}%g;" | @AWK@ '{ if (NF > 10) { $1="0"; $2="0"; $4=1; $7="0"; } print }' | sort -k 11; echo
 run_sort "${GUFI_FIND} -maxdepth 2"
 run_sort "${GUFI_FIND} -mindepth 3"
 run_sort "${GUFI_FIND} -mmin  +0"
@@ -168,10 +168,10 @@ run_no_sort "${GUFI_FIND} --verbose --largest -type f"
 # multiple input directories
 run_sort "${GUFI_FIND} ${BASENAME}/directory ${BASENAME}/leaf_directory"
 
-run_sort "${GUFI_FIND} -uid   \"${USER_ID}\""   | @SED@ "s/\"${USER_ID}\"/${TEST_USER_ID}/g;"
-run_sort "${GUFI_FIND} -user  \"${USER_NAME}\"" | @SED@ "s/\"${USER_NAME}\"/${TEST_USER_NAME}/g;"
-run_sort "${GUFI_FIND} -gid   \"${GROUP_ID}\""  | @SED@ "s/\"${GROUP_ID}\"/${TEST_GROUP_ID}/g;"
-run_sort "${GUFI_FIND} -group \"${GROUP_NAME}\""| @SED@ "s/\"${GROUP_NAME}\"/${TEST_GROUP_NAME}/g;"
+run_sort "${GUFI_FIND} -uid   \"${USER_ID}\""   | @SED@ "s%\"${USER_ID}\"%${TEST_USER_ID}%g;"
+run_sort "${GUFI_FIND} -user  \"${USER_NAME}\"" | @SED@ "s%\"${USER_NAME}\"%${TEST_USER_NAME}%g;"
+run_sort "${GUFI_FIND} -gid   \"${GROUP_ID}\""  | @SED@ "s%\"${GROUP_ID}\"%${TEST_GROUP_ID}%g;"
+run_sort "${GUFI_FIND} -group \"${GROUP_NAME}\""| @SED@ "s%\"${GROUP_NAME}\"%${TEST_GROUP_NAME}%g;"
 
 # zero some columns to make test easier
 run_no_sort "${GUFI_QUERY} -a 1 -w -E \"UPDATE entries SET inode = 0, uid = 0, gid = 0;\" \"${SEARCH}\""
@@ -197,7 +197,7 @@ run_no_sort "${GUFI_FIND} --skip \"${SKIP}.bad\""
 
 # bad path
 run_no_sort "${GUFI_FIND} .. ${BASENAME}/../.."
-) | @SED@ 's+@CMAKE_BINARY_DIR@/++g; s/\,\ line\ [0-9]\+\,/, line n,/g;' | tee "${OUTPUT}"
+) | @SED@ 's%@CMAKE_BINARY_DIR@/%%g; s%\,\ line\ [0-9]\+\,%, line n,%g;' | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"
 rm "${OUTPUT}"

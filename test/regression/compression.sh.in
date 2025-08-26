@@ -83,7 +83,7 @@ trap cleanup_exit EXIT
 cleanup
 
 remove_e() {
-    @SED@ 's/-e/  /g;'
+    @SED@ 's%-e%  %g;'
 }
 
 # calling gufi_query with and without -e should result in the same output

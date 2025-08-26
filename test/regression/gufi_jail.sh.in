@@ -80,7 +80,7 @@ trap cleanup_exit EXIT
 cleanup
 
 # replace gufi_jail's pattern with gufi_tool.py
-@SED@ "s/gufi_.*)/${GUFI_TOOL//\//\\/})/g" "${GUFI_JAIL}" > "${TEST_GUFI_JAIL}"
+@SED@ "s%gufi_.*)%${GUFI_TOOL})%g;" "${GUFI_JAIL}" > "${TEST_GUFI_JAIL}"
 chmod +x "${TEST_GUFI_JAIL}"
 
 (

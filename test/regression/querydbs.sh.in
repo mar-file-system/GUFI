@@ -108,7 +108,7 @@ run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} 
 
 echo "# Attach too many database files"
 run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many} ${OUTDB}.*"
-) | @SED@ "s/${SRCDIR//\//\\/}\\///g;" | tee "${OUTPUT}"
+) | @SED@ "s%${SRCDIR}/%%g;" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"
 rm "${OUTPUT}"

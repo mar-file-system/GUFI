@@ -103,7 +103,7 @@ show_schema() {
 
         echo "# running with snapshot db replacement will overwrite the previous data"
         run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --replace-outdb"
-    ) | @SED@ 's/time, [0-9]*)/time, now)/g'
+    ) | @SED@ 's%time, [0-9]*)%time, now)%g;'
 
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
 
@@ -155,8 +155,8 @@ do_test() {
 
     get_view "graph"
     get_view "level"
-    get_view "pinode"                        # parent
-    get_view "inode" | @SED@ "s/${DIR}/6/g"  # directory
+    get_view "pinode"                         # parent
+    get_view "inode" | @SED@ "s%${DIR}%6%g;"  # directory
 
     echo "# ${FLATDB}:"
     echo

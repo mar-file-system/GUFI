@@ -17,6 +17,7 @@ GUFI_tree                path to GUFI tree
 # Start with no treesummary tables
 $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');" -E "SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;" "prefix"
 
+
 # Generate treesummary tables in some directories at level 1
 $ gufi_treesummary_all -y 1 -D "path_list" "prefix"
 

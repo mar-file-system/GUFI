@@ -152,7 +152,7 @@ query
 run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}/db.db\""
 run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}/badfile\""
 run_no_sort "${GUFI_UNROLLUP} -n 18446744073709551615 \"${INDEXROOT}\""
-) | @SED@ "s/${SRCDIR//\//\\/}\\///g" | remove_indexing_time | tee "${OUTPUT}"
+) | @SED@ "s%${SRCDIR}/%%g;" | remove_indexing_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_unrollup.expected "${OUTPUT}"
 rm "${OUTPUT}"

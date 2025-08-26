@@ -151,7 +151,7 @@ echo "# run_vt with {s} (source directory) and {i} (index directory)"
 
 run_no_sort "${GUFI_QUERY} -d \" \" -p \"${SRCDIR}\" -S \"CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \\\"{s}\\\" \\\"{i}\\\" -maxdepth 1 -name \\\"*.csv\\\" -exec cat \\\"{}\\\" \\\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;\" \"${INDEXROOT}\""
 
-run_sort "${GUFI_QUERY} -d \" \" -I \"SELECT setstr('-I', 'init');\" -S \"SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));\" -E \"SELECT level(), '{-I}', {abc}, {def};\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
+run_sort "${GUFI_QUERY} -d \" \" -I \"SELECT setstr('-I', 'init');\" -S \"SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));\" -E \"SELECT level(), '{-I}', {abc}, {def};\" \"${INDEXROOT}\"" | @SED@ '\%^$%d;'
 
 run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT thread_id();\" \"${INDEXROOT}\""
 
@@ -208,7 +208,7 @@ echo "# Bad thread count"
 run_no_sort "${GUFI_QUERY} -n 18446744073709551615 \"${INDEXROOT}\""
 
 echo "# Bad user data key"
-run_sort "${GUFI_QUERY} -d \" \" -z 0 -E \"SELECT {abc}, {def;\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
+run_sort "${GUFI_QUERY} -d \" \" -z 0 -E \"SELECT {abc}, {def;\" \"${INDEXROOT}\"" | @SED@ '\%^$%d;'
 
 echo "#####################################"
 echo "# Extra Inputs                      #"

@@ -88,7 +88,7 @@ case "@CMAKE_SYSTEM_NAME@" in
                 echo "${xattrs}" | sort | while read -r name
                 do
                     @XATTR@ -pl "${name}" "$1"
-                done | @SED@ 's/: /="/g; s/$/"/g'
+                done | @SED@ 's%: %="%g; s%$%"%g;'
                 echo
             fi
         }
@@ -101,7 +101,7 @@ case "@CMAKE_SYSTEM_NAME@" in
             do
                 # figure out where copy went
                 # shellcheck disable=SC2001
-                dst=$(echo "${path}" | @SED@ "s/^${1//\//\\/}/${2//\//\\/}/g;")
+                dst=$(echo "${path}" | @SED@ "s%^${1}%${2}%g;")
 
                 # list all xattrs of original file and copy one at a time
                 # shellcheck disable=SC2215

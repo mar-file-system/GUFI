@@ -68,7 +68,7 @@ OUTPUT="groupfilespacehogusesummary.out"
 
 (
     run_no_sort "${GROUPFILESPACEHOGUSESUMMARY} \"${INDEXROOT}\" ${THREADS}"
-) | @SED@ "s/${GROUP_NAME}/${TEST_GROUP_NAME}/g" | tee "${OUTPUT}"
+) | @SED@ "s%${GROUP_NAME}%${TEST_GROUP_NAME}%g;" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/groupfilespacehogusesummary.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -157,7 +157,7 @@ echo -e "${trace}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${trace}")
 
 # query rolled up index
-run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" 2>&1 | @SED@ '/Started /d; /Took /d;'
+run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" 2>&1 | @SED@ '\%Started %d; \%Took %d;'
 rolled="$(query)"
 echo -e "${rolled}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${rolled}")

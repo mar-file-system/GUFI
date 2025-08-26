@@ -98,13 +98,13 @@ order_tracefile "${TRACE}.0" > "${TRACE}"
 
 # replace the numeric fields in the trace with 0s
 # need the negative on macOS
-@SED@ -i 's/-\?[0-9]\+/0/g' "${TRACE}"
+@SED@ -i 's%-\?[0-9]\+%0%g;' "${TRACE}"
 
 # replace some rows with fixed data
-@SED@ -i "s/^${DELIM}d${DELIM}.*\$/${DELIM}d${DELIM}1${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}/g" "${TRACE}"
-@SED@ -i "s/^leaf_directory${DELIM}d${DELIM}.*\$/leaf_directory${DELIM}d${DELIM}4${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
-@SED@ -i "s/^directory${DELIM}d${DELIM}.*\$/directory${DELIM}d${DELIM}2${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
-@SED@ -i "s/^directory\\/subdirectory${DELIM}d${DELIM}.*\$/directory\\/subdirectory${DELIM}d${DELIM}3${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}2${DELIM}/g" "${TRACE}"
+@SED@ -i "s%^${DELIM}d${DELIM}.*$%${DELIM}d${DELIM}1${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}%g;" "${TRACE}"
+@SED@ -i "s%^leaf_directory${DELIM}d${DELIM}.*$%leaf_directory${DELIM}d${DELIM}4${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}%g;" "${TRACE}"
+@SED@ -i "s%^directory${DELIM}d${DELIM}.*$%directory${DELIM}d${DELIM}2${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}%g;" "${TRACE}"
+@SED@ -i "s%^directory/subdirectory${DELIM}d${DELIM}.*$%directory/subdirectory${DELIM}d${DELIM}3${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}2${DELIM}%g;" "${TRACE}"
 
 echo "# not enough arguments"
 run_no_sort "${VERIFYTRACE}"

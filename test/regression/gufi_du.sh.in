@@ -107,7 +107,7 @@ echo
 echo "#####################################"
 echo "# Generate treesummary in only one directory"
 echo
-run_no_sort "${GUFI_TREESUMMARY} ${INDEXROOT}/directory" | @SED@ '/.*uid.*/d; /.*ctime.*/d; s/crtime [0-9]\+/crtime 0/g; /.*blocks*/d;'
+run_no_sort "${GUFI_TREESUMMARY} ${INDEXROOT}/directory" | @SED@ '\%.*uid.*%d; \%.*ctime.*%d; s%crtime [0-9]\+%crtime 0%g; \%.*blocks*%d;'
 echo "# Run gufi_du on that the single directory that has treesummary data (success)"
 run_no_sort "${GUFI_DU} --apparent-size --block-size 1 ${SRCDIR}/directory"
 echo "# Run gufi_du on the parent directory (only prints size of path with treesummary data)"

@@ -98,7 +98,7 @@ run_no_sort "${PARALLEL_CPR} -n ${THREADS} \"${SRCDIR}\" \"${CPR_ROOT}\""
 
 echo "$ compare <(find \"${SRCDIR}\") <(find \"${CPR_ROOT}/${SRCDIR}\")"
 # cannot use "find -print0 | sort -z" or text will be considered binary and diff won't show
-@DIFF@ ${DIFF_FLAGS} <(find "${SRCDIR}" | sort) <(find "${CPR_ROOT}/${SRCDIR}" | @SED@ 's/copy\///g' | sort)
+@DIFF@ ${DIFF_FLAGS} <(find "${SRCDIR}" | sort) <(find "${CPR_ROOT}/${SRCDIR}" | @SED@ 's%copy/%%g;' | sort)
 echo
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
@@ -110,7 +110,7 @@ set +e
 find "${SRCDIR}" -print0 | sort -z | while IFS= read -r -d '' name
 do
     echo "$ compare xattrs of \"${name}\""
-    @DIFF@ ${DIFF_FLAGS} <(os_getfattr "${name}") <(os_getfattr "${CPR_ROOT}/${name}" | @SED@ 's/copy\///g')
+    @DIFF@ ${DIFF_FLAGS} <(os_getfattr "${name}") <(os_getfattr "${CPR_ROOT}/${name}" | @SED@ 's%copy/%%g;')
 done
 set -e
 

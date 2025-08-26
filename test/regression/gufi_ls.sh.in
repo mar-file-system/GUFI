@@ -141,7 +141,7 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     # human readable sizes without -l (should only show name)
     run_no_sort "${GUFI_LS} -h ${BASENAME}/1KB"
     run_no_sort "${GUFI_LS} -h ${BASENAME}/1MB"
-) | @SED@ "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g; s/${USER_NAME}/${TEST_USER_NAME}/g;"
+) | @SED@ "s%${USER_NAME} ${GROUP_NAME}%${TEST_USER_NAME} ${TEST_GROUP_NAME}%g; s%${USER_NAME}%${TEST_USER_NAME}%g;"
 
 (
     # bad blocksizes
@@ -149,7 +149,7 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     run_no_sort "${GUFI_LS} --block-size=-"
     run_no_sort "${GUFI_LS} --block-size=-1GB"
     run_no_sort "${GUFI_LS} --block-size=0GB"
-) | @SED@ 's/\[paths \[paths ...\]\]/\[paths ...\]/g;'
+) | @SED@ 's%\[paths \[paths ...\]\]%\[paths ...\]%g;'
 
 # skip
 run_sort "${GUFI_LS} --skip \"${SKIP}\" ${BASENAME}"

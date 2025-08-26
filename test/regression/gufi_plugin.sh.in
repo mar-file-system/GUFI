@@ -102,7 +102,7 @@ echo "# bad plugin"
 run_no_sort "${GUFI_DIR2INDEX} -U \"${EMPTY_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 > /dev/null | @GREP@ -oh \"Could not open plugin library\""
 
 echo "# plugin entry point not found"
-run_no_sort "${GUFI_DIR2INDEX} -U \"${RUN_VT}.@EXT@\" -x \"${SRCDIR}\" \"${SEARCH}\" > /dev/null 2>&1" | @SED@ "s/.@EXT@//g"
+run_no_sort "${GUFI_DIR2INDEX} -U \"${RUN_VT}.@EXT@\" -x \"${SRCDIR}\" \"${SEARCH}\" > /dev/null 2>&1" | @SED@ "s%.@EXT@%%g;"
 ) | remove_indexing_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_plugin.expected "${OUTPUT}"

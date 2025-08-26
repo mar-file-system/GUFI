@@ -187,7 +187,7 @@ run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_query 
 
 echo "# combine output files"
 # shellcheck disable=SC2145
-run_sort "cat ${slurm_files[@]}" | @SED@ "s/${INDEXROOT2//\//\\/}/prefix2/g"
+run_sort "cat ${slurm_files[@]}" | @SED@ "s%${INDEXROOT2}%prefix2%g;"
 
 echo "# Diff original index results against the combined results"
 # shellcheck disable=SC2145,SC2153
@@ -209,7 +209,7 @@ run_sort "cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }'"
 
 echo "# Diff original index results against the trace files"
 # shellcheck disable=SC2145,SC2153
-run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's/${SEARCH//\//\\/}\\///g') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's%${SEARCH}/%%g;') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
 
 echo "# Use existing group files (path_list.4 does not exist)"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-group-files \"${FIND_SH}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
@@ -249,7 +249,7 @@ run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GU
 
 echo "# combine output files"
 # shellcheck disable=SC2145
-run_sort "cat ${ssh_files[@]}" | @SED@ "s/${INDEXROOT2//\//\\/}/prefix2/g"
+run_sort "cat ${ssh_files[@]}" | @SED@ "s%${INDEXROOT2}%prefix2%g;"
 
 echo "# Diff original index results against the combined results"
 # shellcheck disable=SC2145,SC2153
@@ -269,7 +269,7 @@ run_sort "cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }'"
 
 echo "# Diff original index results against the trace files"
 # shellcheck disable=SC2145,SC2153
-run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's/${SEARCH//\//\\/}\\///g') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's%${SEARCH}/%%g;') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
 
 echo "# Use existing group files (path_list.4 does not exist)"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-group-files \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null | tail -n 9"

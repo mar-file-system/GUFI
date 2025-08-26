@@ -256,7 +256,7 @@ prefix/unusual#? directory ,/unusual, name?#
 
 # ######################################
 # partial indexing setup
-$ find "prefix" -mindepth 1 -maxdepth 1 -type d | sed "s/prefix\///g;" | sort > distributed
+$ find "prefix" -mindepth 1 -maxdepth 1 -type d | sed "s%prefix/%%g;" | sort > distributed
 
 $ head -n 2 "distributed" > "distributed.0"
 

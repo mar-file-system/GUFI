@@ -91,37 +91,37 @@ echo "# ${GUFI_TREESUMMARY_ALL} help" | replace
 run_no_sort "${GUFI_TREESUMMARY_ALL}"
 
 echo "# Start with no treesummary tables"
-    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');\" -E \"SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;\" \"${INDEXROOT}\"" | @SED@ '/^$/d'
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');\" -E \"SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;\" \"${INDEXROOT}\"" | @SED@ '\%\^$%d;'
 echo
 
 echo "# Generate treesummary tables in some directories at level 1"
-run_no_sort "${GUFI_TREESUMMARY_ALL} -y 1 -D \"${PATH_LIST}\" \"${INDEXROOT}\"" | @SED@ '/^Started .*$/d'
+run_no_sort "${GUFI_TREESUMMARY_ALL} -y 1 -D \"${PATH_LIST}\" \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
 
 echo "# Query treesummary tables"
 run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
 echo
 
 echo "# Generate treesummary tables in all directories at level 1"
-run_no_sort "${GUFI_TREESUMMARY_ALL} -y 1 \"${INDEXROOT}\"" | @SED@ '/^Started .*$/d'
+run_no_sort "${GUFI_TREESUMMARY_ALL} -y 1 \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
 
 echo "# Query treesummary tables"
 run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
 echo
 
 echo "# Generate treesummary tables in all directories"
-run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | @SED@ '/^Started .*$/d'
+run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
 
 echo "# Query treesummary tables"
 run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
 echo
 
 echo "# Generate treesummary tables if they don't already exist"
-run_no_sort "${GUFI_TREESUMMARY_ALL} -l \"${INDEXROOT}\"" | @SED@ '/^Started .*$/d'
+run_no_sort "${GUFI_TREESUMMARY_ALL} -l \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
 
 rm -rf "${SEARCH}/db.db"
 
 echo "# Missing db.db"
-run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\"" | @SED@ '/^Started .*$/d'
+run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\"" | @SED@ '\%^Started .*$%d;'
 
 echo "# Multiple paths with -y and -D"
 run_no_sort "${GUFI_TREESUMMARY_ALL} -y 1 -D path_list \"${SEARCH}\" \"${SEARCH}\""

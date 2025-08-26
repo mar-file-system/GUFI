@@ -86,7 +86,7 @@ $ rm -r "prefix.0"
 
 # ######################################
 # partial indexing setup
-$ find "prefix" -mindepth 1 -maxdepth 1 -type d | sed "s/prefix\///g;" | sort > distributed
+$ find "prefix" -mindepth 1 -maxdepth 1 -type d | sed "s%prefix/%%g;" | sort > distributed
 
 $ head -n 2 "distributed" > "distributed.0"
 
@@ -214,7 +214,7 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          4
 Total Files:         10
 
-$ cat trace.0 trace.1 | awk -F "|" '{print $1}' | sed '/\/external\/db/d;'
+$ cat trace.0 trace.1 | awk -F "|" '{print $1}' | sed '\%/external/db%d;'
 prefix
 prefix/.hidden
 prefix/1KB

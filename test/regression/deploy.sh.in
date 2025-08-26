@@ -94,7 +94,7 @@ echo "# Expose \"${SEARCH}\" to users via a symlink"
 run_no_sort "ln -s \"${SEARCH}\" \"${USER_PATH}\""
 
 echo "# Allow users to query via consistent \"${USER_PATH}\" in the config file"
-@SED@ -i "/^IndexRoot=.*$/d" "${CONFIG}"
+@SED@ -i "\%^IndexRoot=.*$%d" "${CONFIG}"
 echo "IndexRoot=${USER_PATH}" >> "${CONFIG}"
 run_no_sort "cat \"${CONFIG}\""
 

@@ -15,7 +15,7 @@ output_dir        reconstruct the tree under here
 $ gufi_index2dir -n 2 -x "prefix" "reconstructed"
 
 # Diff Trees
-$ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s/reconstructed\///g" | sort)
+$ diff <(find "prefix" | sort) <(find reconstructed/* | sed "s%reconstructed/%%g;" | sort)
 
 # Diff xattrs
 
