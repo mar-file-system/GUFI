@@ -279,8 +279,16 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
     DIR *dir = opendir(bu->name);
 
     if (!dir) {
-        fprintf(stderr, "Error: Could not open directory \"%s\": %s\n", bu->name, strerror(errno));
-        bottomup_destroy(bu);
+        const int err = errno;
+        fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n", bu->name, strerror(err), err);
+        sll_destroy(&bu->subdirs, bottomup_destroy);
+        sll_destroy(&bu->subnondirs, bottomup_destroy);
+        if (bu->parent) {
+            QPTPool_enqueue(ctx, id, ascend_to_top, bu->parent); /* reduce parent counter */
+        }
+        else {
+            bottomup_destroy(bu);
+        }
         return 1;
     }
 
