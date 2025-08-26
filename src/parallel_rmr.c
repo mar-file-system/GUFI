@@ -73,23 +73,34 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #include "utils.h"
 
-/* Remove all non-subdirectories in the   */
-/* current directory. Then remove itself. */
-/* Subdirectories are already gone, so    */
-/* they don't have to processed at the    */
-/* current level.                         */
-static int rm_dir(void *args) {
+/* Remove non-directory entries while descending */
+static int rm_nondir(void *args, int *keep_going) {
     struct BottomUp *dir = (struct BottomUp *) args;
 
-    int rc = 0;
     sll_loop(&dir->subnondirs, node) {
-        struct BottomUp * entry = (struct BottomUp *) sll_node_data(node);
+        struct BottomUp *entry = (struct BottomUp *) sll_node_data(node);
         if (unlink(entry->name) != 0) {
             const int err = errno;
             fprintf(stderr, "Warning: Failed to delete \"%s\": %s\n", entry->name, strerror(err));
-            rc = 1;
+            *keep_going = 0;
         }
     }
+
+    /*
+     * free up some memory during descent to
+     * reduce cost of holding tree in memory
+     */
+    sll_destroy(&dir->subnondirs, bottomup_destroy);
+
+    return !*keep_going;
+}
+
+/*
+ * Remove self. Subdirectories are already gone, so
+ * they don't have to handled at the current level.
+ */
+static int rm_dir(void *args) {
+    struct BottomUp *dir = (struct BottomUp *) args;
 
     if (rmdir(dir->name) != 0) {
         const int err = errno;
@@ -97,7 +108,7 @@ static int rm_dir(void *args) {
         return 1;
     }
 
-    return rc;
+    return 0;
 }
 
 static void sub_help(void) {
@@ -114,7 +125,7 @@ int main(int argc, char * argv[]) {
                                      NULL,
                                      in.maxthreads,
                                      sizeof(struct BottomUp),
-                                     NULL, rm_dir,
+                                     rm_nondir, rm_dir,
                                      1,
                                      0,
                                      NULL);
