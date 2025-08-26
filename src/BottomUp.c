@@ -315,6 +315,21 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
 
         int is_dir = 0;
         if (entry->d_type == DT_UNKNOWN) {
+            #if HAVE_STATX
+            struct statx stx;
+            if (statx(dir_fd, entry->d_name,
+                      AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
+                      STATX_ALL, &stx) != 0) {
+                const int err = errno;
+                fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
+                        entry->d_name, strerror(err), err);
+                return 1;
+            }
+
+            if (S_ISDIR(stx.stx_mode)) {
+                is_dir = 1;
+            }
+            #else
             struct stat st;
             const int rc = fstatat(dir_fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW);
 
@@ -324,8 +339,10 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
                 continue;
             }
 
-            if (S_ISDIR(st.st_mode))
+            if (S_ISDIR(st.st_mode)) {
                 is_dir = 1;
+            }
+            #endif
         } else if (entry->d_type == DT_DIR) {
             is_dir = 1;
         }
