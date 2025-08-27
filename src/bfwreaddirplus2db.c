@@ -225,7 +225,7 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
         memset(&qwork_ed, 0, sizeof(qwork_ed));
         qwork->pinode = passmywork->statuso.st_ino;
 
-        lstat(qwork->name, &qwork->statuso);
+        try_skip_lstat(entry->d_type, qwork);
         xattrs_setup(&qwork_ed.xattrs);
         if (in->process_xattrs) {
             xattrs_get(qwork->name, &qwork_ed.xattrs);
@@ -287,7 +287,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
-    if (lstat(passmywork->name, &passmywork->statuso) != 0) {
+    if (lstat_wrapper(passmywork) != 0) {
         const int err = errno;
         fprintf(stderr, "couldn't stat dir '%s': %s\n",
                 passmywork->name, strerror(err));
@@ -344,7 +344,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             }
             else if (in->suspectmethod > 1) {
                 /* mark the dir suspect if mtime or ctime are >= provided last run time */
-                lstat(passmywork->name, &passmywork->statuso);
+                lstat_wrapper(passmywork);
                 if (passmywork->statuso.st_ctime >= locsuspecttime) ed.suspect = 1;
                 if (passmywork->statuso.st_mtime >= locsuspecttime) ed.suspect = 1;
             }
@@ -392,6 +392,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         struct entry_data qwork_ed;
         memset(&qwork_ed, 0, sizeof(qwork_ed));
 
+        try_skip_lstat(entry->d_type, qwork);
+
         qwork->pinode = passmywork->statuso.st_ino;
         qwork->statuso.st_ino = entry->d_ino;
 
@@ -437,10 +439,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 }
                 if (in->suspectmethod > 2) {
                     /* stat the file/link and if ctime or mtime is >= provided last run time mark dir suspect */
-                    struct stat st;
-                    lstat(qwork->name, &st);
-                    if (st.st_ctime >= locsuspecttime) ed.suspect = 1;
-                    if (st.st_mtime >= locsuspecttime) ed.suspect = 1;
+                    lstat_wrapper(qwork);
+                    if (qwork->statuso.st_ctime >= locsuspecttime) ed.suspect = 1;
+                    if (qwork->statuso.st_mtime >= locsuspecttime) ed.suspect = 1;
                 }
             }
 
