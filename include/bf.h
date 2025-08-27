@@ -357,6 +357,12 @@ typedef enum {
    CLOSE_DB  = 0x04,
 } CleanUpTasks;
 
+typedef enum {
+    STAT_NOT_CALLED = 0,
+    NOT_STATX_CALLED,    /* stat(2), lstat(2), fstatat(2), etc. */
+    STATX_CALLED,
+} StatCalled;
+
 /*
  * Minimum data needs to be passed around between threads.
  *
@@ -378,7 +384,7 @@ struct work {
    size_t        basename_len;           /* can usually get through readdir */
    struct stat   statuso;
    time_t        crtime;
-   uint8_t       lstat_called;
+   StatCalled    stat_called;
    long long int pinode;
    size_t        recursion_level;
 

@@ -857,6 +857,11 @@ void statx_to_work(struct statx *stx, struct work *work) {
 
 /* try to call statx if available, otherwise, call lstat */
 int lstat_wrapper(struct work *work) {
+    /* don't duplicate work */
+    if (work->stat_called == NOT_STATX_CALLED) {
+        return 0;
+    }
+
     #if HAVE_STATX
     struct statx stx;
     if (statx(AT_FDCWD, work->name,
@@ -869,6 +874,8 @@ int lstat_wrapper(struct work *work) {
     }
 
     statx_to_work(&stx, work);
+
+    work->stat_called = STATX_CALLED;
     #else
     if (lstat(work->name, &work->statuso) != 0) {
         const int err = errno;
@@ -878,9 +885,9 @@ int lstat_wrapper(struct work *work) {
     }
 
     work->crtime = 0;
-    #endif
 
-    work->lstat_called = 1;
+    work->stat_called = NOT_STATX_CALLED;
+    #endif
 
     return 0;
 }
@@ -888,7 +895,7 @@ int lstat_wrapper(struct work *work) {
 /* used by gufi_dir2index and gufi_dir2trace */
 int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
     /* don't duplicate work */
-    if (entry->lstat_called) {
+    if (entry->stat_called != STAT_NOT_CALLED) {
         return 0;
     }
 
@@ -906,6 +913,8 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
     }
 
     statx_to_work(&stx, entry);
+
+    entry->stat_called = STATX_CALLED;
     #else
     if (fstatat(ed->parent_fd, basename, &entry->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
         const int err = errno;
@@ -915,6 +924,8 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
     }
 
     entry->crtime = 0;
+
+    entry->stat_called = NOT_STATX_CALLED;
     #endif
 
     return 0;

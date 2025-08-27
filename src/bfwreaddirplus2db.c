@@ -156,7 +156,7 @@ static int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3_stmt *
 
 static int reprocessdir(struct input *in, void *passv, DIR *dir) {
     struct work *passmywork = passv;
-    if (!passmywork->lstat_called && (lstat(passmywork->name, &passmywork->statuso) != 0)) {
+    if ((passmywork->stat_called != STAT_NOT_CALLED) && (lstat(passmywork->name, &passmywork->statuso) != 0)) {
         return 1;
     }
 

@@ -130,7 +130,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
-    if (!passmywork->lstat_called && (lstat_wrapper(passmywork) != 0)) {
+    if (lstat_wrapper(passmywork) != 0) {
         goto out_free;
     }
 

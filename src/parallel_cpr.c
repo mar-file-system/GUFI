@@ -126,12 +126,12 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     int rc = 0;
 
     struct stat *st = &work->statuso;
-    struct stat st_stack;
-    if (!work->lstat_called) {
-        if (lstat(work->name, &st_stack) != 0) {
+
+    /* need the actual size */
+    if (work->stat_called != NOT_STATX_CALLED) {
+        if (lstat(work->name, st) != 0) {
             print_error_and_goto("Could not lstat file", work->name, cleanup);
         }
-        st = &st_stack;
     }
 
     const int src_fd = open(work->name, O_RDONLY);

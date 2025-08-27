@@ -1077,7 +1077,16 @@ TEST(write_read, size) {
 TEST(lstat_wrapper, bad) {
     const char name[] = "@CMAKE_CURRENT_BINARY_DIR@/utils.cpp/";
     struct work *work = new_work_with_name(name, strlen(name), nullptr, 0);
+
+    work->stat_called = STAT_NOT_CALLED;
     EXPECT_EQ(lstat_wrapper(work), 1);
+
+    work->stat_called = NOT_STATX_CALLED;
+    EXPECT_EQ(lstat_wrapper(work), 0);
+
+    work->stat_called = STATX_CALLED;
+    EXPECT_EQ(lstat_wrapper(work), 1);
+
     free(work);
 }
 
@@ -1087,11 +1096,14 @@ TEST(fstatat_wrapper, bad) {
     struct entry_data ed;
     ed.parent_fd = -1;
 
-    work->lstat_called = 1;
+    work->stat_called = STAT_NOT_CALLED;
+    EXPECT_EQ(fstatat_wrapper(work, &ed), 1);
+
+    work->stat_called = NOT_STATX_CALLED;
     EXPECT_EQ(fstatat_wrapper(work, &ed), 0);
 
-    work->lstat_called = 0;
-    EXPECT_EQ(fstatat_wrapper(work, &ed), 1);
+    work->stat_called = STATX_CALLED;
+    EXPECT_EQ(fstatat_wrapper(work, &ed), 0);
 
     free(work);
 }

@@ -193,7 +193,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     const int process_dir = ((pa->in.min_level <= nda.work->level) &&
                              (nda.work->level <= pa->in.max_level));
 
-    if (!nda.work->lstat_called && (lstat_wrapper(nda.work) != 0)) {
+    if (lstat_wrapper(nda.work) != 0) {
         rc = 1;
         goto cleanup;
     }

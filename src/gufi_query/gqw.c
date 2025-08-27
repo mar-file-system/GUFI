@@ -115,7 +115,7 @@ gqw_t *new_gqw_with_name(const char *prefix, const size_t prefix_len,
             return NULL;
         }
 
-        gqw->work.lstat_called = 1;
+        gqw->work.stat_called = NOT_STATX_CALLED;
     }
     else {
         if (!try_skip_lstat(d_type, &gqw->work)) {

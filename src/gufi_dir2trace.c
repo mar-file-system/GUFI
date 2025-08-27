@@ -141,7 +141,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     memset(&ed, 0, sizeof(ed));
-    if (!work->lstat_called && (lstat_wrapper(work) != 0)) {
+    if (lstat_wrapper(work) != 0) {
         goto cleanup;
     }
 
