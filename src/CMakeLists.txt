@@ -64,19 +64,9 @@ include(CheckSymbolExists)
 check_symbol_exists(localtime_r "time.h" LOCALTIME_R)
 
 # use statx if it is available
-include(CheckCSourceCompiles) # check_symbol_exists can't seem to find sys/stat.h symbols
-check_c_source_compiles("
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
-#include <sys/stat.h>
-
-int main() {
-    (void) statx;
-    return 0;
-}
-" HAVE_STATX)
+include(CheckSymbolExists)
+set(CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
+check_symbol_exists(statx "sys/stat.h" HAVE_STATX)
 
 if (HAVE_STATX)
   add_definitions(-D_GNU_SOURCE -DHAVE_STATX=1)
