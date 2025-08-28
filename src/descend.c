@@ -119,7 +119,7 @@ struct work *try_skip_lstat(const unsigned char d_type, struct work *work) {
  * allocated space when the entry was a directory.
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work, ino_t inode,
+            struct input *in, struct work *work,
             DIR *dir, const int skip_db,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters) {
@@ -168,7 +168,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             child->level = next_level;
             child->root_parent = work->root_parent;
             child->root_basename_len = work->root_basename_len;
-            child->pinode = inode;
+            child->pinode = work->statuso.st_ino;
 
             if (!try_skip_lstat(dir_child->d_type, child)) {
                 free(child);

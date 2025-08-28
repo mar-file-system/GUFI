@@ -183,9 +183,25 @@ TEST(copy_template, not_enough_fds) {
 
     // open should fail
     struct template_db tdb;
-    EXPECT_EQ(copy_template(&tdb, name, 0, 0), -1);
+    EXPECT_EQ(copy_template(&tdb, name, -1, -1), -1);
 
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+
+    ASSERT_EQ(remove(name), 0);
+}
+
+TEST(copy_template, bad_size) {
+    // need name of an a non-existent file
+    char name[] = "XXXXXX";
+    const int fd = mkstemp(name);
+    ASSERT_GT(fd, 0);
+
+    struct template_db tdb;
+    tdb.fd = fd;
+    tdb.size = 1024; // bad size
+    EXPECT_EQ(copy_template(&tdb, name, -1, -1), -1);
+
+    ASSERT_EQ(close(fd), 0);
 
     ASSERT_EQ(remove(name), 0);
 }

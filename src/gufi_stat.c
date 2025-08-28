@@ -131,108 +131,100 @@ static int print_callback(void * args, int count, char **data, char **columns) {
     char ctime_str[MAXPATH];
 
     while (*f) {
-        if (*f != '%') {
-            /* handle escape sequences */
-            if (*f == '\\') {
-                unsigned char escape = *f;
-                switch (*++f) {
-                    case 'a':
-                        escape = '\x07';
+        if (*f == '\\') {        /* handle escape sequences */
+            unsigned char escape = *f++;
+            switch (*f) {
+                case 'a':
+                    escape = '\x07';
+                    break;
+                case 'b':
+                    escape = '\x08';
+                    break;
+                case 'e':
+                    escape = '\x1b';
+                    break;
+                case 'f':
+                    escape = '\x0c';
+                    break;
+                case 'n':
+                    escape = '\x0a';
+                    break;
+                case 'r':
+                    escape = '\x0d';
+                    break;
+                case 't':
+                    escape = '\x09';
+                    break;
+                case 'v':
+                    escape = '\x0b';
+                    break;
+                case '\\':
+                    escape = '\x5c';
+                    break;
+                case '\'':
+                    escape = '\x27';
+                    break;
+                case '"':
+                    escape = '\x22';
+                    break;
+                case '?':
+                    escape = '\x3f';
+                    break;
+                case 'x':
+                    f++;
+                    if (('0' <= *f) && (*f <= '9')) {
+                        escape = *f - '0';
+                    }
+                    else if (('a' <= *f) && (*f <= 'f')) {
+                        escape = *f - 'a' + 10;
+                    }
+                    else if (('A' <= *f) && (*f <= 'F')) {
+                        escape = *f - 'A' + 10;
+                    }
+                    else {
+                        fprintf(stderr, "gufi_stat: missing hex digit for \\x\n");
+                        f -= 2;
                         break;
-                    case 'b':
-                        escape = '\x08';
-                        break;
-                    case 'e':
-                        escape = '\x1b';
-                        break;
-                    case 'f':
-                        escape = '\x0c';
-                        break;
-                    case 'n':
-                        escape = '\x0a';
-                        break;
-                    case 'r':
-                        escape = '\x0d';
-                        break;
-                    case 't':
-                        escape = '\x09';
-                        break;
-                    case 'v':
-                        escape = '\x0b';
-                        break;
-                    case '\\':
-                        escape = '\x5c';
-                        break;
-                    case '\'':
-                        escape = '\x27';
-                        break;
-                    case '"':
-                        escape = '\x22';
-                        break;
-                    case '?':
-                        escape = '\x3f';
-                        break;
-                    case 'x':
-                        f++;
-                        if (('0' <= *f) && (*f <= '9')) {
-                            escape = *f - '0';
-                        }
-                        else if (('a' <= *f) && (*f <= 'f')) {
-                            escape = *f - 'a' + 10;
-                        }
-                        else if (('A' <= *f) && (*f <= 'F')) {
-                            escape = *f - 'A' + 10;
-                        }
-                        else {
-                            fprintf(stderr, "gufi_stat: missing hex digit for \\x\n");
-                            f -= 2;
+                    }
+
+                    f++;
+                    if (('0' <= *f) && (*f <= '9')) {
+                        escape = (escape << 4) | (*f - '0');
+                    }
+                    else if (('a' <= *f) && (*f <= 'f')) {
+                        escape = (escape << 4) | (*f - 'a' + 10);
+                    }
+                    else if (('A' <= *f) && (*f <= 'F')) {
+                        escape = (escape << 4) | (*f - 'A' + 10);
+                    }
+                    else {
+                        f--;
+                    }
+
+                    break;
+                case '0': case '1':
+                case '2': case '3':
+                case '4': case '5':
+                case '6': case '7':
+                case '8': case '9':
+                    for(int i = 0; i < 3; i++) {
+                        if (!(('0' <= *f) && (*f <= '9'))) {
                             break;
                         }
-
+                        escape = (escape << 3) | (*f - '0');
                         f++;
-                        if (('0' <= *f) && (*f <= '9')) {
-                            escape = (escape << 4) | (*f - '0');
-                        }
-                        else if (('a' <= *f) && (*f <= 'f')) {
-                            escape = (escape << 4) | (*f - 'a' + 10);
-                        }
-                        else if (('A' <= *f) && (*f <= 'F')) {
-                            escape = (escape << 4) | (*f - 'A' + 10);
-                        }
-                        else {
-                            f--;
-                        }
-
-                        break;
-                    case '0': case '1':
-                    case '2': case '3':
-                    case '4': case '5':
-                    case '6': case '7':
-                    case '8': case '9':
-                        for(int i = 0; i < 3; i++) {
-                            if (!(('0' <= *f) && (*f <= '9'))) {
-                                break;
-                            }
-                            escape = (escape << 3) | (*f - '0');
-                            f++;
-                        }
-                        f--;
-                        break;
-                    default:
-                        fwrite("\\", sizeof(char), 1, out);
-                        escape = *f;
-                        break;
-                }
-                fwrite(&escape, sizeof(char), 1, out);
+                    }
+                    f--;
+                    break;
+                default:
+                    fwrite("\\", sizeof(char), 1, out);
+                    escape = *f;
+                    break;
             }
-            else {
-                fwrite(f, sizeof(char), 1, out);
-            }
+            fwrite(&escape, sizeof(char), 1, out);
         }
-        else {
-            const char *start = f;
-
-            f++;
+        else if (*f == '%') {        /* handle format specifiers */
+            const char *start = f++;
 
             /* if the first character starts a number */
             int width = 0;
@@ -415,7 +407,9 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     break;
             }
         }
-
+        else {
+            fwrite(f, sizeof(char), 1, out);
+        }
         f++;
     }
 

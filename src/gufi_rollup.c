@@ -565,7 +565,7 @@ static int can_rollup(struct input *in,
     }
 
     /* get permissions of the current directory */
-    struct Permissions perms;
+    struct Permissions perms = {0};
     const int exec_rc = sqlite3_exec(dst, PERM_SQL, get_permissions, &perms, &err);
 
     if (exec_rc != SQLITE_OK) {

@@ -1110,7 +1110,7 @@ int main(int argc, char *argv[]) {
         std::cout << "Would have generated" << std::endl;
     }
     else {
-        std::cout << "Generated" << std::endl;;
+        std::cout << "Generated" << std::endl;
     }
 
     std::size_t leaf_nodes = 0;

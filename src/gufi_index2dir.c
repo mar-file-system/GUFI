@@ -295,10 +295,8 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
         }
     }
 
-    descend(ctx, id, args, &pa->in, work, work->statuso.st_ino,
-            dir, 1,
-            processdir, NULL, NULL,
-            NULL);
+    descend(ctx, id, args, &pa->in, work, dir, 1,
+            processdir, NULL, NULL, NULL);
 
     /* open the index db.db */
     char dbname[MAXPATH];

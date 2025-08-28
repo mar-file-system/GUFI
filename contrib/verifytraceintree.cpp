@@ -222,7 +222,7 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
     // if the database path is too long, skip checking the entries
     if (db_name.size() > 490) {
         std::cerr << "Warning: Name too long. Skipping " << db_name << std::endl;
-        return 0;;
+        return 0;
     }
 
     // open the database file

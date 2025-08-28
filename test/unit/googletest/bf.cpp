@@ -254,7 +254,7 @@ TEST(parse_cmd_line, help) {
 
     const int fd = dup(STDOUT_FILENO);
     ASSERT_NE(fd, -1);
-    EXPECT_EQ(close(STDOUT_FILENO), 0);;
+    EXPECT_EQ(close(STDOUT_FILENO), 0);
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
@@ -279,7 +279,7 @@ TEST(parse_cmd_line, version) {
 
     const int fd = dup(STDOUT_FILENO);
     ASSERT_NE(fd, -1);
-    EXPECT_EQ(close(STDOUT_FILENO), 0);;
+    EXPECT_EQ(close(STDOUT_FILENO), 0);
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);

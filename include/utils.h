@@ -177,8 +177,8 @@ int doing_partial_walk(struct input *in, const size_t root_count);
  *
  * used by gufi_dir2index and gufi_dir2trace
  */
-int process_subtree_list(struct input *in, struct work *root,
-                         QPTPool_t *ctx, QPTPool_f func);
+ssize_t process_subtree_list(struct input *in, struct work *root,
+                             QPTPool_t *ctx, QPTPool_f func);
 
 #ifdef __cplusplus
 }

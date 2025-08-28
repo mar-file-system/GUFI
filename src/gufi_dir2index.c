@@ -275,9 +275,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     struct descend_counters ctrs;
-    descend(ctx, id, pa, nda.in, nda.work, nda.work->statuso.st_ino, dir, 0,
-            processdir, process_dir?process_nondir:NULL, &nda,
-            &ctrs);
+    descend(ctx, id, pa, nda.in, nda.work, dir, 0,
+            processdir, process_dir?process_nondir:NULL, &nda, &ctrs);
 
     if (process_dir) {
         if (pa->in.plugin_ops->db_exit) {
@@ -339,22 +338,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 static int process_subtree_root(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct work *subtree_root = (struct work *) data;
     struct PoolArgs *pa = (struct PoolArgs *) args;
-
-    if (lstat_wrapper(subtree_root) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not stat subtree root \"%s\". Skipping: %s (%d)\n",
-                subtree_root->name, strerror(err), err);
-        free(subtree_root);
-        return 1;
-    }
-
-    /* check that the input path is a directory */
-    if (!S_ISDIR(subtree_root->statuso.st_mode)) {
-        fprintf(stderr, "Error: Subtree root is not a directory \"%s\"\n",
-                subtree_root->name);
-        free(subtree_root);
-        return 1;
-    }
 
     /* offset by root_parent.len to remove prefix */
     const size_t topath_len = pa->in.nameto.len + 1 + subtree_root->name_len - subtree_root->root_parent.len;

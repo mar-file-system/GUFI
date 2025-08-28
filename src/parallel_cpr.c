@@ -139,7 +139,7 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         print_error_and_goto("Could not open file", work->name, cleanup);
     }
 
-    str_t dst = create_dst_name(in, work);
+    const str_t dst = create_dst_name(in, work);
 
     const int dst_fd = open(dst.data, O_CREAT | O_WRONLY | O_TRUNC, st->st_mode);
     if (dst_fd < 0) {
@@ -171,7 +171,7 @@ static int cpr_link(struct work *work, struct entry_data *ed, struct input *in) 
 
     /* need to give users ability to force overwriting of links */
 
-    str_t dst = create_dst_name(in, work);
+    const str_t dst = create_dst_name(in, work);
 
     if (symlink(ed->linkname, dst.data) != 0) {
         print_error_and_goto("Could not create link", dst.data, cleanup);
@@ -189,7 +189,6 @@ struct QPTPool_vals {
     struct input *in;
 };
 
-/* enqueue nondirs instead of copying them right here because they might be enormous */
 static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir_args) {
     struct QPTPool_vals *args = (struct QPTPool_vals *) nondir_args;
 
@@ -207,6 +206,7 @@ static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir
             memcpy(wd->ed.xattrs.pairs, ed->xattrs.pairs, ed->xattrs.count * sizeof(struct xattr));
         }
 
+        /* enqueue files instead of copying them right here because they might be enormous */
         QPTPool_enqueue(args->ctx, args->id, cpr_file, wd);
     }
     else if (S_ISLNK(work->statuso.st_mode)) {
@@ -229,21 +229,20 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         print_error_and_goto("Could not open_directory", work->name, cleanup);
     }
 
-    struct stat st;
-    if (lstat(work->name, &st) != 0) {
+    if (lstat_wrapper(work) != 0) {
         print_error_and_goto("Could not lstat directory", work->name, cleanup);
     }
 
-    str_t dst = create_dst_name(in, work);
+    const str_t dst = create_dst_name(in, work);
 
     /* ensure parent directory exists before processing children */
-    if (mkdir(dst.data, st.st_mode & 0777) != 0) {
+    if (mkdir(dst.data, work->statuso.st_mode & 0777) != 0) {
         if (errno != EEXIST) {
             print_error_and_goto("Could not create directory", dst.data, free_dst);
         }
     }
 
-    if (chown(dst.data, st.st_uid, st.st_gid) != 0) {
+    if (chown(dst.data, work->statuso.st_uid, work->statuso.st_gid) != 0) {
         print_error_and_goto("Could not chown directory", dst.data, free_dst);
     }
 
@@ -254,11 +253,8 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     };
 
     /* process children */
-    descend(ctx, id, args, in,
-            work, st.st_ino, dir, 0,
-            cpr_dir,
-            enqueue_nondir, &qptp_vals,
-            NULL);
+    descend(ctx, id, args, in, work, dir, 0,
+            cpr_dir,enqueue_nondir, &qptp_vals, NULL);
 
     if (in->process_xattrs) {
         struct xattrs xattrs;

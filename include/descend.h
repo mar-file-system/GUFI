@@ -91,7 +91,7 @@ struct work *try_skip_lstat(const unsigned char d_type, struct work *work);
  * and process non directories using a user provided function
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work, ino_t inode,
+            struct input *in, struct work *work,
             DIR *dir, const int skip_db,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters);

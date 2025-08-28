@@ -940,15 +940,17 @@ int doing_partial_walk(struct input *in, const size_t root_count) {
  * attach directory paths directly to the root path and
  * run starting at -y instead of walking to -y first
  */
-int process_subtree_list(struct input *in, struct work *root,
-                         QPTPool_t *ctx, QPTPool_f func) {
+ssize_t process_subtree_list(struct input *in, struct work *root,
+                             QPTPool_t *ctx, QPTPool_f func) {
     FILE *file = fopen(in->subtree_list.data, "r");
     if (!file) {
         const int err = errno;
         fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
                 in->subtree_list.data, strerror(err), err);
-        return 1;
+        return -1;
     }
+
+    ssize_t enqueue_count = 0;
 
     char *line = NULL;
     size_t n = 0;
@@ -957,7 +959,26 @@ int process_subtree_list(struct input *in, struct work *root,
         /* remove trailing CRLF */
         const size_t len = trailing_non_match_index(line, got, "\r\n", 2);
 
+        if (len == 0) {
+            continue;
+        }
+
         struct work *subtree_root = new_work_with_name(root->name, root->name_len, line, len);
+
+        /* directory symlinks are not allowed under the root */
+        if (lstat_wrapper(subtree_root) != 0) {
+            free(subtree_root);
+            continue;
+        }
+
+        /* check that the subtree root is a directory */
+        if (!S_ISDIR(subtree_root->statuso.st_mode)) {
+            line[len] = '\0';
+            fprintf(stderr, "Error: Subtree root is not a directory \"%s\"\n",
+                    line);
+            free(subtree_root);
+            continue;
+        }
 
         subtree_root->orig_root = root->orig_root;
 
@@ -971,11 +992,13 @@ int process_subtree_list(struct input *in, struct work *root,
         subtree_root->level = in->min_level;
 
         QPTPool_enqueue(ctx, 0, func, subtree_root);
+
+        enqueue_count++;
     }
 
     free(line);
     fclose(file);
     free(root);
 
-    return 0;
+    return enqueue_count;
 }

@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
+#include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "utils.h"
 
@@ -1106,4 +1107,61 @@ TEST(fstatat_wrapper, bad) {
     EXPECT_EQ(fstatat_wrapper(work, &ed), 0);
 
     free(work);
+}
+
+TEST(parse_subtree, list) {
+    const char ROOT[] = "@CMAKE_BINARY_DIR@";
+    const char SUBDIR[] = "@CMAKE_CURRENT_BINARY_DIR@";
+
+    char list[] = "XXXXXX";
+    const int fd = mkstemp(list);
+    ASSERT_GT(fd, -1);
+
+    // empty line
+    EXPECT_EQ(write(fd, "\n", 1), (ssize_t) 1);
+
+    // bad path
+    char bad[sizeof(SUBDIR) + 11 + 1] = {0};
+    const size_t bad_len = snprintf(bad, sizeof(bad), "%s/utils.cpp/\n", SUBDIR + sizeof(ROOT));
+    EXPECT_EQ(write(fd, bad, bad_len), (ssize_t) bad_len);
+
+    // file path
+    char file[sizeof(SUBDIR) + 10 + 1] = {0};
+    const size_t file_len = snprintf(file, sizeof(file), "%s/utils.cpp\n", SUBDIR + sizeof(ROOT));
+    EXPECT_EQ(write(fd, file, file_len), (ssize_t) file_len);
+
+    // subdirectory
+    char line[sizeof(SUBDIR) + 1] = {0};
+    const size_t len = snprintf(line, sizeof(line), "%s\n", SUBDIR + sizeof(ROOT));
+    EXPECT_EQ(write(fd, line, len), (ssize_t) len);
+
+    EXPECT_EQ(close(fd), 0);
+
+    struct input in = {};
+    in.subtree_list.data = list;
+    in.subtree_list.len = strlen(list);
+
+    // this gets freed by process_subtree_list
+    struct work *root = new_work_with_name(ROOT, strlen(ROOT), nullptr, 0);
+    ASSERT_NE(root, nullptr);
+
+    QPTPool_t *pool = QPTPool_init(1, nullptr);
+    ASSERT_NE(pool, nullptr);
+    ASSERT_EQ(QPTPool_start(pool), 0);
+
+    EXPECT_EQ(process_subtree_list(&in, root, pool,
+                                   [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
+                                       free(data);
+                                       return 0;
+                                   }), (ssize_t) 1);
+
+    QPTPool_stop(pool);
+    QPTPool_destroy(pool);
+    EXPECT_EQ(remove(list), 0);
+
+    // bad subtree list file
+    EXPECT_EQ(process_subtree_list(&in, root, pool,
+                                   [](QPTPool_t *, const std::size_t, void *, void *) -> int {
+                                       return 0;
+                                   }), (ssize_t) -1);
 }

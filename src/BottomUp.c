@@ -302,7 +302,7 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
 
     const size_t next_level = bu->level + 1;
     while (1) {
-        struct dirent *entry = readdir(dir);;
+        struct dirent *entry = readdir(dir);
 
         if (!entry) {
             break;
