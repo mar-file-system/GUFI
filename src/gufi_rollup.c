@@ -598,7 +598,27 @@ end_can_rollup:
 static const char rollup_subdir[] =
     /* copy subdir/db.db tables into current db.db */
     "INSERT INTO " PENTRIES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." PENTRIES ";"
-    "INSERT INTO " SUMMARY " SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattr_names, sub.totfiles, sub.totlinks, sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, sub.minsize, sub.maxsize, sub.totzero, sub.totltk, sub.totmtk, sub.totltm, sub.totmtm, sub.totmtg, sub.totmtt, sub.totsize, sub.minctime, sub.maxctime, sub.minmtime, sub.maxmtime, sub.minatime, sub.maxatime, sub.minblocks, sub.maxblocks, sub.totblocks, sub.totxattr, sub.depth + 1, sub.mincrtime, sub.maxcrtime, sub.minossint1, sub.maxossint1, sub.totossint1, sub.minossint2, sub.maxossint2, sub.totossint2, sub.minossint3, sub.maxossint3, sub.totossint3, sub.minossint4, sub.maxossint4, sub.totossint4, sub.rectype, sub.pinode, 0, sub.rollupscore FROM " SUMMARY " AS s, " SUBDIR_ATTACH_NAME "." SUMMARY " AS sub WHERE s.isroot == 1;"
+    "INSERT INTO " SUMMARY " "
+    "SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattr_names, sub.totfiles, sub.totlinks, "
+    "sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, "
+    "sub.minsize, sub.maxsize, sub.totzero, "
+    "sub.totltk, sub.totmtk, "
+    "sub.totltm, sub.totmtm, "
+    "sub.totmtg, sub.totmtt, "
+    "sub.totsize, sub.totsqsize, "
+    "sub.epoch, "
+    "sub.minctime,   sub.maxctime,  sub.totctime,  sub.totsqctime, "
+    "sub.minmtime,   sub.maxmtime,  sub.totmtime,  sub.totsqmtime, "
+    "sub.minatime,   sub.maxatime,  sub.totatime,  sub.totsqatime, "
+    "sub.minblocks,  sub.maxblocks, sub.totblocks, sub.totsqblocks, "
+    "sub.totxattr,   sub.depth + 1, "
+    "sub.mincrtime,  sub.maxcrtime,  sub.totcrtime,  sub.totsqcrtime, "
+    "sub.minossint1, sub.maxossint1, sub.totossint1, sub.totsqossint1, "
+    "sub.minossint2, sub.maxossint2, sub.totossint2, sub.totsqossint2, "
+    "sub.minossint3, sub.maxossint3, sub.totossint3, sub.totsqossint3, "
+    "sub.minossint4, sub.maxossint4, sub.totossint4, sub.totsqossint4, "
+    "sub.rectype, sub.pinode, 0, sub.rollupscore "
+    "FROM " SUMMARY " AS s, " SUBDIR_ATTACH_NAME "." SUMMARY " AS sub WHERE s.isroot == 1;"
     "INSERT INTO " TREESUMMARY " SELECT * FROM " SUBDIR_ATTACH_NAME "." TREESUMMARY ";"
     "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
     "INSERT OR IGNORE INTO " EXTERNAL_DBS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS ";"
@@ -904,8 +924,6 @@ static void sub_help(void) {
 }
 
 int main(int argc, char *argv[]) {
-    epoch = since_epoch(NULL);
-
     struct start_end runtime;
     clock_gettime(CLOCK_MONOTONIC, &runtime.start);
 

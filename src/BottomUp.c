@@ -80,6 +80,7 @@ processed before processing the current one
 
 #include "BottomUp.h"
 #include "dbutils.h"
+#include "debug.h"
 #include "utils.h"
 
 /* define so that descend and ascend always have valid functions to call */
@@ -104,6 +105,7 @@ void bottomup_destroy(void *p) {
 }
 
 struct UserArgs {
+    long long int epoch;
     size_t user_struct_size;
     size_t min_level;
     size_t max_level;
@@ -250,7 +252,8 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
  */
 static struct BottomUp *track(struct BottomUp *src,
                               const size_t user_struct_size, sll_t *sll,
-                              const size_t level, const int generate_alt_name) {
+                              const size_t level, const long long int epoch,
+                              const int generate_alt_name) {
     struct BottomUp *copy = calloc(user_struct_size, 1);
 
     copy->name = src->name;
@@ -262,6 +265,7 @@ static struct BottomUp *track(struct BottomUp *src,
     }
 
     copy->level = level;
+    copy->epoch = epoch;
 
     /* store the subdirectories without enqueuing them */
     sll_push(sll, copy);
@@ -368,12 +372,12 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         if (is_dir) {
             track(&new_work,
                   ua->user_struct_size, &bu->subdirs,
-                  next_level, ua->generate_alt_name);
+                  next_level, bu->epoch, ua->generate_alt_name);
         }
         else {
             track(&new_work,
                   ua->user_struct_size, &bu->subnondirs,
-                  next_level, ua->generate_alt_name);
+                  next_level, bu->epoch, ua->generate_alt_name);
         }
     }
 
@@ -439,7 +443,11 @@ QPTPool_t *parallel_bottomup_init(const size_t thread_count,
         return NULL;
     }
 
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
     struct UserArgs *ua = calloc(1, sizeof(*ua));
+    ua->epoch = (long long int) sec(since_epoch(&now));
     ua->user_struct_size = user_struct_size;
     ua->min_level = min_level;
     ua->max_level = max_level;

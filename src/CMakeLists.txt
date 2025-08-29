@@ -63,18 +63,6 @@
 include(CheckSymbolExists)
 check_symbol_exists(localtime_r "time.h" LOCALTIME_R)
 
-# use statx if it is available
-include(CheckSymbolExists)
-set(CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
-check_symbol_exists(statx "sys/stat.h" HAVE_STATX)
-
-if (HAVE_STATX)
-  add_definitions(-D_GNU_SOURCE -DHAVE_STATX=1)
-  message(STATUS "Using statx(2) for tree traversal")
-else()
-  message(STATUS "statx(2) not found. Falling back to lstat(2).")
-endif()
-
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES
   BottomUp.c
@@ -233,7 +221,8 @@ add_library(gufi_vt MODULE
   addqueryfuncs.c
   bf.c
   dbutils.c
-  external
+  debug.c
+  external.c
   histogram.c
   str.c
   template_db.c

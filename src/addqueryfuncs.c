@@ -488,6 +488,30 @@ static void stdevp_final(sqlite3_context *context) {
     }
 }
 
+/*
+ * allow for computation of standard deviation using previously collected data
+ *
+ * Args:
+ *     sum of squares
+ *     sum
+ *     n (count)
+ *     0 for population, 1 for sample
+ */
+static void stdev_from_parts(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    const double        sum_sq = sqlite3_value_double(argv[0]);
+    /* integer, but cast to a double to reduce effects of overflow */
+    const double        sum    = sqlite3_value_double(argv[1]);
+    const sqlite3_int64 n      = sqlite3_value_int64(argv[2]);
+    const int           sample = sqlite3_value_int(argv[3]);
+
+    const double variance = ((n * sum_sq) - (sum * sum)) / (n * (n - !!sample));
+    const double stdev = sqrt(variance);
+
+    sqlite3_result_double(context, stdev);
+}
+
 static void median_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
     sll_t *data = (sll_t *) sqlite3_aggregate_context(context, sizeof(*data));
@@ -691,6 +715,8 @@ int addqueryfuncs(sqlite3 *db) {
                                  NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&
         (sqlite3_create_function(db,   "stdevp",              1,   SQLITE_UTF8,
                                  NULL, NULL,  stdev_step,          stdevp_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "stdev_from_parts",    4,   SQLITE_UTF8,
+                                 NULL, stdev_from_parts,           NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "median",              1,   SQLITE_UTF8,
                                  NULL, NULL,  median_step,         median_final) == SQLITE_OK) &&
         addhistfuncs(db)

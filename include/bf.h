@@ -88,51 +88,72 @@ extern "C" {
 #define GETLINE_DEFAULT_SIZE 750 /* magic number */
 
 struct sum {
-  long long int totfiles;
-  long long int totlinks;
-  long long int minuid;
-  long long int maxuid;
-  long long int mingid;
-  long long int maxgid;
-  long long int minsize;
-  long long int maxsize;
-  long long int totzero;
-  long long int totltk;
-  long long int totmtk;
-  long long int totltm;
-  long long int totmtm;
-  long long int totmtg;
-  long long int totmtt;
-  long long int totsize;
-  long long int minctime;
-  long long int maxctime;
-  long long int minmtime;
-  long long int maxmtime;
-  long long int minatime;
-  long long int maxatime;
-  long long int minblocks;
-  long long int maxblocks;
-  long long int totblocks; /* files only - does not include directory/self */
-  long long int totxattr;
-  long long int totsubdirs;
-  long long int maxsubdirfiles;
-  long long int maxsubdirlinks;
-  long long int maxsubdirsize;
-  long long int mincrtime;
-  long long int maxcrtime;
-  long long int minossint1;
-  long long int maxossint1;
-  long long int totossint1;
-  long long int minossint2;
-  long long int maxossint2;
-  long long int totossint2;
-  long long int minossint3;
-  long long int maxossint3;
-  long long int totossint3;
-  long long int minossint4;
-  long long int maxossint4;
-  long long int totossint4;
-  long long int totextdbs; /* only tracked in treesummary, not summary */
+    long long int totfiles;
+    long long int totlinks;
+    long long int minuid;
+    long long int maxuid;
+    long long int mingid;
+    long long int maxgid;
+    long long int minsize;
+    long long int maxsize;
+    long long int totzero;
+    long long int totltk;
+    long long int totmtk;
+    long long int totltm;
+    long long int totmtm;
+    long long int totmtg;
+    long long int totmtt;
+    long long int totsize;
+    double        totsqsize;         /* sum(size ** 2),  used for single pass standard deviation */
+    long long int epoch;             /*
+                                      * used to shift timestamp means closer to 0, allowing for
+                                      * higher precision standard deviation
+                                      *
+                                      * min/max timestamps contain the original values
+                                      * tot/totsql timestamps are offset by epoch
+                                      */
+    long long int minctime;
+    long long int maxctime;
+    long long int totctime;          /*                  used for single pass standard deviation */
+    double        totsqctime;        /* sum(ctime ** 2), used for single pass standard deviation */
+    long long int minmtime;
+    long long int maxmtime;
+    long long int totmtime;          /*                  used for single pass standard deviation */
+    double        totsqmtime;        /* sum(mtime ** 2), used for single pass standard deviation */
+    long long int minatime;
+    long long int maxatime;
+    long long int totatime;          /*                  used for single pass standard deviation */
+    double        totsqatime;        /* sum(atime ** 2), used for single pass standard deviation */
+    long long int minblocks;
+    long long int maxblocks;
+    long long int totblocks;         /* files only - does not include directory/self */
+    double        totsqblocks;       /* sum(blocks ** 2), used for single pass standard deviation */
+    long long int totxattr;
+    long long int totsubdirs;
+    long long int maxsubdirfiles;
+    long long int maxsubdirlinks;
+    long long int maxsubdirsize;
+    long long int mincrtime;
+    long long int maxcrtime;
+    long long int totcrtime;         /*                   used for single pass standard deviation */
+    double        totsqcrtime;       /* sum(crtime ** 2), used for single pass standard deviation */
+    long long int minossint1;
+    long long int maxossint1;
+    long long int totossint1;
+    double        totsqossint1;
+    long long int minossint2;
+    long long int maxossint2;
+    long long int totossint2;
+    double        totsqossint2;
+    long long int minossint3;
+    long long int maxossint3;
+    long long int totossint3;
+    double        totsqossint3;
+    long long int minossint4;
+    long long int maxossint4;
+    long long int totossint4;
+    double        totsqossint4;
+    long long int totextdbs; /* only tracked in treesummary, not summary */
 };
 
 typedef enum AFlag {
@@ -156,6 +177,7 @@ enum filter_type {
 struct input {
    refstr_t  name;
    refstr_t  nameto;
+   long long int epoch; /* common timestamp used to compute tot and totsq times for standard deviation */
    int process_xattrs;
    struct {
        uid_t uid;

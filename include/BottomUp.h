@@ -102,6 +102,9 @@ struct BottomUp {
     sll_t subnondirs;
     struct BottomUp *parent;
 
+    /* when this run was started */
+    long long int epoch;
+
     /* extra arguments available at all times */
     void *extra_args;
 

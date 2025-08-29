@@ -1,4 +1,4 @@
-/*
+ /*
 This file is part of GUFI, which is part of MarFS, which is released
 under the BSD license.
 
@@ -112,7 +112,7 @@ TEST(get, queue_limit) {
 
 TEST(summary, zeroit) {
     struct sum summary;
-    ASSERT_EQ(zeroit(&summary), 0);
+    ASSERT_EQ(zeroit(&summary, 0), 0);
 
     EXPECT_EQ(summary.totfiles, 0);
     EXPECT_EQ(summary.totlinks, 0);
@@ -129,6 +129,7 @@ TEST(summary, zeroit) {
     EXPECT_EQ(summary.totmtg, 0);
     EXPECT_EQ(summary.totmtt, 0);
     EXPECT_EQ(summary.totsize, 0);
+    EXPECT_EQ(summary.epoch, 0);
     EXPECT_EQ(summary.minctime, LLONG_MAX);
     EXPECT_EQ(summary.maxctime, LLONG_MIN);
     EXPECT_EQ(summary.minmtime, LLONG_MAX);
@@ -147,15 +148,19 @@ TEST(summary, zeroit) {
     EXPECT_EQ(summary.minossint1, LLONG_MAX);
     EXPECT_EQ(summary.maxossint1, LLONG_MIN);
     EXPECT_EQ(summary.totossint1, 0);
+    EXPECT_EQ(summary.totsqossint1, 0);
     EXPECT_EQ(summary.minossint2, LLONG_MAX);
     EXPECT_EQ(summary.maxossint2, LLONG_MIN);
     EXPECT_EQ(summary.totossint2, 0);
+    EXPECT_EQ(summary.totsqossint2, 0);
     EXPECT_EQ(summary.minossint3, LLONG_MAX);
     EXPECT_EQ(summary.maxossint3, LLONG_MIN);
     EXPECT_EQ(summary.totossint3, 0);
+    EXPECT_EQ(summary.totsqossint3, 0);
     EXPECT_EQ(summary.minossint4, LLONG_MAX);
     EXPECT_EQ(summary.maxossint4, LLONG_MIN);
     EXPECT_EQ(summary.totossint4, 0);
+    EXPECT_EQ(summary.totsqossint4, 0);
 }
 
 TEST(summary, sumit_file) {
@@ -163,8 +168,10 @@ TEST(summary, sumit_file) {
     std::mt19937 gen(rd());
     std::uniform_int_distribution <> dist(1, INT_MAX);
 
+    const long long int epoch = dist(gen);
+
     struct sum summary;
-    ASSERT_EQ(zeroit(&summary), 0);
+    ASSERT_EQ(zeroit(&summary, epoch), 0);
 
     struct work *pwork = new_work_with_name(nullptr, 0, nullptr, 0);
     struct entry_data ed;
@@ -174,12 +181,12 @@ TEST(summary, sumit_file) {
     pwork->statuso.st_uid    = dist(gen);
     pwork->statuso.st_gid    = dist(gen);
     pwork->statuso.st_size   = dist(gen);
-    pwork->statuso.st_ctime  = dist(gen);
-    pwork->statuso.st_mtime  = dist(gen);
-    pwork->statuso.st_atime  = dist(gen);
+    pwork->statuso.st_ctime  = (time_t) (epoch + 1);
+    pwork->statuso.st_mtime  = (time_t) (epoch + 2);
+    pwork->statuso.st_atime  = (time_t) (epoch + 3);
     pwork->statuso.st_blocks = dist(gen);
     pwork->pinode            = dist(gen);
-    pwork->crtime            = dist(gen);
+    pwork->crtime            = (time_t) (epoch + 4);
     ed.ossint1               = dist(gen);
     ed.ossint2               = dist(gen);
     ed.ossint3               = dist(gen);
@@ -187,33 +194,69 @@ TEST(summary, sumit_file) {
 
     ASSERT_EQ(sumit(&summary, pwork, &ed), 0);
 
-    EXPECT_EQ(summary.totfiles,   1);
-    EXPECT_EQ(summary.totlinks,   0);
-    EXPECT_EQ(summary.minblocks,  pwork->statuso.st_blocks);
-    EXPECT_EQ(summary.maxblocks,  pwork->statuso.st_blocks);
-    EXPECT_EQ(summary.minuid,     pwork->statuso.st_uid);
-    EXPECT_EQ(summary.maxuid,     pwork->statuso.st_uid);
-    EXPECT_EQ(summary.mingid,     pwork->statuso.st_gid);
-    EXPECT_EQ(summary.maxgid,     pwork->statuso.st_gid);
-    EXPECT_EQ(summary.minsize,    pwork->statuso.st_size);
-    EXPECT_EQ(summary.maxsize,    pwork->statuso.st_size);
-    EXPECT_EQ(summary.minctime,   pwork->statuso.st_ctime);
-    EXPECT_EQ(summary.maxctime,   pwork->statuso.st_ctime);
-    EXPECT_EQ(summary.minmtime,   pwork->statuso.st_mtime);
-    EXPECT_EQ(summary.maxmtime,   pwork->statuso.st_mtime);
-    EXPECT_EQ(summary.minatime,   pwork->statuso.st_atime);
-    EXPECT_EQ(summary.maxatime,   pwork->statuso.st_atime);
-    EXPECT_EQ(summary.mincrtime,  pwork->crtime);
-    EXPECT_EQ(summary.maxcrtime,  pwork->crtime);
-    EXPECT_EQ(summary.minossint1, ed.ossint1);
-    EXPECT_EQ(summary.maxossint1, ed.ossint1);
-    EXPECT_EQ(summary.minossint2, ed.ossint2);
-    EXPECT_EQ(summary.maxossint2, ed.ossint2);
-    EXPECT_EQ(summary.minossint3, ed.ossint3);
-    EXPECT_EQ(summary.maxossint3, ed.ossint3);
-    EXPECT_EQ(summary.minossint4, ed.ossint4);
-    EXPECT_EQ(summary.maxossint4, ed.ossint4);
-    EXPECT_EQ(summary.totxattr,   0);
+    EXPECT_EQ(summary.totfiles,              1);
+    EXPECT_EQ(summary.totlinks,              0);
+    EXPECT_EQ(summary.minblocks,             pwork->statuso.st_blocks);
+    EXPECT_EQ(summary.maxblocks,             pwork->statuso.st_blocks);
+    EXPECT_EQ(summary.totblocks,             pwork->statuso.st_blocks);
+    EXPECT_EQ(summary.totsqblocks,           pwork->statuso.st_blocks * pwork->statuso.st_blocks);
+
+    EXPECT_EQ(summary.minuid,                pwork->statuso.st_uid);
+    EXPECT_EQ(summary.maxuid,                pwork->statuso.st_uid);
+    EXPECT_EQ(summary.mingid,                pwork->statuso.st_gid);
+    EXPECT_EQ(summary.maxgid,                pwork->statuso.st_gid);
+
+    EXPECT_EQ(summary.minsize,               pwork->statuso.st_size);
+    EXPECT_EQ(summary.maxsize,               pwork->statuso.st_size);
+    EXPECT_EQ(summary.totsize,               pwork->statuso.st_size);
+    EXPECT_EQ(summary.totsqsize,             pwork->statuso.st_size * pwork->statuso.st_size);
+
+    EXPECT_EQ(summary.minctime,              pwork->statuso.st_ctime);
+    EXPECT_EQ(summary.maxctime,              pwork->statuso.st_ctime);
+    const long long int dctime = pwork->statuso.st_ctime - epoch;
+    EXPECT_EQ(summary.totctime,              dctime);
+    EXPECT_DOUBLE_EQ(summary.totsqctime,     dctime * dctime);
+
+    EXPECT_EQ(summary.minmtime,              pwork->statuso.st_mtime);
+    EXPECT_EQ(summary.maxmtime,              pwork->statuso.st_mtime);
+    const long long int dmtime = pwork->statuso.st_mtime - epoch;
+    EXPECT_EQ(summary.totmtime,              dmtime);
+    EXPECT_DOUBLE_EQ(summary.totsqmtime,     dmtime * dmtime);
+
+    EXPECT_EQ(summary.minatime,              pwork->statuso.st_atime);
+    EXPECT_EQ(summary.maxatime,              pwork->statuso.st_atime);
+    const long long int datime = pwork->statuso.st_atime - epoch;
+    EXPECT_EQ(summary.totatime,              datime);
+    EXPECT_DOUBLE_EQ(summary.totsqatime,     datime * datime);
+
+    EXPECT_EQ(summary.mincrtime,             pwork->crtime);
+    EXPECT_EQ(summary.maxcrtime,             pwork->crtime);
+    #if HAVE_STATX
+    const long long int dcrtime = pwork->crtime - epoch;
+    EXPECT_EQ(summary.totcrtime,             dcrtime);
+    EXPECT_DOUBLE_EQ(summary.totsqcrtime,    dcrtime * dcrtime);
+    #else
+    EXPECT_EQ(summary.totcrtime,             0);
+    EXPECT_DOUBLE_EQ(summary.totsqcrtime,    0);
+    #endif
+
+    EXPECT_EQ(summary.minossint1,            ed.ossint1);
+    EXPECT_EQ(summary.maxossint1,            ed.ossint1);
+    EXPECT_DOUBLE_EQ(summary.totossint1,     ed.ossint1);
+    EXPECT_DOUBLE_EQ(summary.totsqossint1,   ((double) ed.ossint1) * ed.ossint1);
+    EXPECT_EQ(summary.minossint2,            ed.ossint2);
+    EXPECT_EQ(summary.maxossint2,            ed.ossint2);
+    EXPECT_DOUBLE_EQ(summary.totossint2,     ed.ossint2);
+    EXPECT_DOUBLE_EQ(summary.totsqossint2,   ((double) ed.ossint2) * ed.ossint2);
+    EXPECT_EQ(summary.minossint3,            ed.ossint3);
+    EXPECT_EQ(summary.maxossint3,            ed.ossint3);
+    EXPECT_DOUBLE_EQ(summary.totossint3,     ed.ossint3);
+    EXPECT_DOUBLE_EQ(summary.totsqossint3,   ((double) ed.ossint3) * ed.ossint3);
+    EXPECT_EQ(summary.minossint4,            ed.ossint4);
+    EXPECT_EQ(summary.maxossint4,            ed.ossint4);
+    EXPECT_DOUBLE_EQ(summary.totossint4,     ed.ossint4);
+    EXPECT_DOUBLE_EQ(summary.totsqossint4,   ((double) ed.ossint4) * ed.ossint4);
+    EXPECT_EQ(summary.totxattr,              0);
 
     free(pwork);
 }
@@ -223,8 +266,10 @@ TEST(summary, sumit_link) {
     std::mt19937 gen(rd());
     std::uniform_int_distribution <> dist(1, INT_MAX);
 
+    const long long int epoch = dist(gen);
+
     struct sum summary;
-    ASSERT_EQ(zeroit(&summary), 0);
+    ASSERT_EQ(zeroit(&summary, epoch), 0);
 
     struct work *pwork = new_work_with_name(nullptr, 0, nullptr, 0);
     struct entry_data ed;
@@ -247,89 +292,138 @@ TEST(summary, sumit_link) {
 
     ASSERT_EQ(sumit(&summary, pwork, &ed), 0);
 
-    EXPECT_EQ(summary.totfiles,   0);
-    EXPECT_EQ(summary.totlinks,   1);
-    EXPECT_EQ(summary.minblocks,  LLONG_MAX);
-    EXPECT_EQ(summary.maxblocks,  LLONG_MIN);
-    EXPECT_EQ(summary.minuid,     pwork->statuso.st_uid);
-    EXPECT_EQ(summary.maxuid,     pwork->statuso.st_uid);
-    EXPECT_EQ(summary.mingid,     pwork->statuso.st_gid);
-    EXPECT_EQ(summary.maxgid,     pwork->statuso.st_gid);
-    EXPECT_EQ(summary.minsize,    LLONG_MAX);
-    EXPECT_EQ(summary.maxsize,    LLONG_MIN);
-    EXPECT_EQ(summary.minctime,   pwork->statuso.st_ctime);
-    EXPECT_EQ(summary.maxctime,   pwork->statuso.st_ctime);
-    EXPECT_EQ(summary.minmtime,   pwork->statuso.st_mtime);
-    EXPECT_EQ(summary.maxmtime,   pwork->statuso.st_mtime);
-    EXPECT_EQ(summary.minatime,   pwork->statuso.st_atime);
-    EXPECT_EQ(summary.maxatime,   pwork->statuso.st_atime);
-    EXPECT_EQ(summary.mincrtime,  pwork->crtime);
-    EXPECT_EQ(summary.maxcrtime,  pwork->crtime);
-    EXPECT_EQ(summary.minossint1, ed.ossint1);
-    EXPECT_EQ(summary.maxossint1, ed.ossint1);
-    EXPECT_EQ(summary.minossint2, ed.ossint2);
-    EXPECT_EQ(summary.maxossint2, ed.ossint2);
-    EXPECT_EQ(summary.minossint3, ed.ossint3);
-    EXPECT_EQ(summary.maxossint3, ed.ossint3);
-    EXPECT_EQ(summary.minossint4, ed.ossint4);
-    EXPECT_EQ(summary.maxossint4, ed.ossint4);
-    EXPECT_EQ(summary.totxattr,   0);
+    EXPECT_EQ(summary.totfiles,              0);
+    EXPECT_EQ(summary.totlinks,              1);
+    EXPECT_EQ(summary.minblocks,             LLONG_MAX);
+    EXPECT_EQ(summary.maxblocks,             LLONG_MIN);
+
+    EXPECT_EQ(summary.minuid,                pwork->statuso.st_uid);
+    EXPECT_EQ(summary.maxuid,                pwork->statuso.st_uid);
+    EXPECT_EQ(summary.mingid,                pwork->statuso.st_gid);
+    EXPECT_EQ(summary.maxgid,                pwork->statuso.st_gid);
+
+    EXPECT_EQ(summary.minsize,               LLONG_MAX);
+    EXPECT_EQ(summary.maxsize,               LLONG_MIN);
+    EXPECT_EQ(summary.totsize,               0);
+    EXPECT_EQ(summary.totsqsize,             0);
+
+    EXPECT_EQ(summary.minctime,              pwork->statuso.st_ctime);
+    EXPECT_EQ(summary.maxctime,              pwork->statuso.st_ctime);
+    const long long int dctime = pwork->statuso.st_ctime - epoch;
+    EXPECT_EQ(summary.totctime,              dctime);
+    EXPECT_DOUBLE_EQ(summary.totsqctime,     dctime * dctime);
+
+    EXPECT_EQ(summary.minmtime,              pwork->statuso.st_mtime);
+    EXPECT_EQ(summary.maxmtime,              pwork->statuso.st_mtime);
+    const long long int dmtime = pwork->statuso.st_mtime - epoch;
+    EXPECT_EQ(summary.totmtime,              dmtime);
+    EXPECT_DOUBLE_EQ(summary.totsqmtime,     dmtime * dmtime);
+
+    EXPECT_EQ(summary.minatime,              pwork->statuso.st_atime);
+    EXPECT_EQ(summary.maxatime,              pwork->statuso.st_atime);
+    const long long int datime = pwork->statuso.st_atime - epoch;
+    EXPECT_EQ(summary.totatime,              datime);
+    EXPECT_DOUBLE_EQ(summary.totsqatime,     datime * datime);
+
+    EXPECT_EQ(summary.mincrtime,             pwork->crtime);
+    EXPECT_EQ(summary.maxcrtime,             pwork->crtime);
+    #if HAVE_STATX
+    const long long int dcrtime = pwork->crtime - epoch;
+    EXPECT_EQ(summary.totcrtime,             dcrtime);
+    EXPECT_DOUBLE_EQ(summary.totsqcrtime,    dcrtime * dcrtime);
+    #else
+    EXPECT_EQ(summary.totcrtime,             0);
+    EXPECT_DOUBLE_EQ(summary.totsqcrtime,    0);
+    #endif
+
+    EXPECT_EQ(summary.minossint1,            ed.ossint1);
+    EXPECT_EQ(summary.maxossint1,            ed.ossint1);
+    EXPECT_DOUBLE_EQ(summary.totossint1,     ed.ossint1);
+    EXPECT_DOUBLE_EQ(summary.totsqossint1,   ((double) ed.ossint1) * ed.ossint1);
+    EXPECT_EQ(summary.minossint2,            ed.ossint2);
+    EXPECT_EQ(summary.maxossint2,            ed.ossint2);
+    EXPECT_DOUBLE_EQ(summary.totossint2,     ed.ossint2);
+    EXPECT_DOUBLE_EQ(summary.totsqossint2,   ((double) ed.ossint2) * ed.ossint2);
+    EXPECT_EQ(summary.minossint3,            ed.ossint3);
+    EXPECT_EQ(summary.maxossint3,            ed.ossint3);
+    EXPECT_DOUBLE_EQ(summary.totossint3,     ed.ossint3);
+    EXPECT_DOUBLE_EQ(summary.totsqossint3,   ((double) ed.ossint3) * ed.ossint3);
+    EXPECT_EQ(summary.minossint4,            ed.ossint4);
+    EXPECT_EQ(summary.maxossint4,            ed.ossint4);
+    EXPECT_DOUBLE_EQ(summary.totossint4,     ed.ossint4);
+    EXPECT_DOUBLE_EQ(summary.totsqossint4,   ((double) ed.ossint4) * ed.ossint4);
+    EXPECT_EQ(summary.totxattr,              0);
 
     free(pwork);
 }
 
 TEST(summary, tsumit) {
     struct sum in;
-    zeroit(&in);
+    zeroit(&in, 0);
 
     struct sum out;
-    zeroit(&out);
+    zeroit(&out, 0);
 
     // values that get summed
-    in.totfiles   = 1; out.totfiles   = 1;
-    in.totlinks   = 1; out.totlinks   = 1;
-    in.totltk     = 1; out.totltk     = 1;
-    in.totmtk     = 1; out.totmtk     = 1;
-    in.totltm     = 1; out.totltm     = 1;
-    in.totmtm     = 1; out.totmtm     = 1;
-    in.totmtg     = 1; out.totmtg     = 1;
-    in.totmtt     = 1; out.totmtt     = 1;
-    in.totsize    = 1; out.totsize    = 1;
-    in.totxattr   = 1; out.totxattr   = 1;
-    in.totossint1 = 1; out.totossint1 = 1;
-    in.totossint2 = 1; out.totossint2 = 1;
-    in.totossint3 = 1; out.totossint3 = 1;
-    in.totossint4 = 1; out.totossint4 = 1;
+    in.totfiles      = 1; out.totfiles      = 1;
+    in.totlinks      = 1; out.totlinks      = 1;
+    in.totltk        = 1; out.totltk        = 1;
+    in.totmtk        = 1; out.totmtk        = 1;
+    in.totltm        = 1; out.totltm        = 1;
+    in.totmtm        = 1; out.totmtm        = 1;
+    in.totmtg        = 1; out.totmtg        = 1;
+    in.totmtt        = 1; out.totmtt        = 1;
+    in.totsize       = 1; out.totsize       = 1;
+    in.totsqsize     = 1; out.totsqsize     = 1;
+    in.totctime      = 1; out.totctime      = 1;
+    in.totsqctime    = 1; out.totsqctime    = 1;
+    in.totmtime      = 1; out.totmtime      = 1;
+    in.totsqmtime    = 1; out.totsqmtime    = 1;
+    in.totatime      = 1; out.totatime      = 1;
+    in.totsqatime    = 1; out.totsqatime    = 1;
+    in.totblocks     = 1; out.totblocks     = 1;
+    in.totsqblocks   = 1; out.totsqblocks   = 1;
+    in.totcrtime     = 1; out.totcrtime     = 1;
+    in.totsqcrtime   = 1; out.totsqcrtime   = 1;
+    in.totxattr      = 1; out.totxattr      = 1;
+    in.totossint1    = 1; out.totossint1    = 0;
+    in.totsqossint1  = 1; out.totsqossint1  = 0;
+    in.totossint2    = 1; out.totossint2    = 0;
+    in.totsqossint2  = 1; out.totsqossint2  = 0;
+    in.totossint3    = 1; out.totossint3    = 0;
+    in.totsqossint3  = 1; out.totsqossint3  = 0;
+    in.totossint4    = 1; out.totossint4    = 0;
+    in.totsqossint4  = 1; out.totsqossint4  = 0;
 
     // all of out gets replaced
     out.maxsubdirfiles = 0;
     out.maxsubdirlinks = 0;
     out.maxsubdirsize  = 0;
 
-    in.minuid     = 0; out.minuid     = 1;
-    in.maxuid     = 1; out.maxuid     = 0;
-    in.mingid     = 0; out.mingid     = 1;
-    in.maxgid     = 1; out.maxgid     = 0;
-    in.minsize    = 0; out.minsize    = 1;
-    in.maxsize    = 1; out.maxsize    = 0;
-    in.minblocks  = 0; out.minblocks  = 1;
-    in.maxblocks  = 1; out.maxblocks  = 0;
-    in.minctime   = 0; out.minctime   = 1;
-    in.maxctime   = 1; out.maxctime   = 0;
-    in.minmtime   = 0; out.minmtime   = 1;
-    in.maxmtime   = 1; out.maxmtime   = 0;
-    in.minatime   = 0; out.minatime   = 1;
-    in.maxatime   = 1; out.maxatime   = 0;
-    in.mincrtime  = 0; out.mincrtime  = 1;
-    in.maxcrtime  = 1; out.maxcrtime  = 0;
-    in.minossint1 = 0; out.minossint1 = 1;
-    in.maxossint1 = 1; out.maxossint1 = 0;
-    in.minossint2 = 0; out.minossint2 = 1;
-    in.maxossint2 = 1; out.maxossint2 = 0;
-    in.minossint3 = 0; out.minossint3 = 1;
-    in.maxossint3 = 1; out.maxossint3 = 0;
-    in.minossint4 = 0; out.minossint4 = 1;
-    in.maxossint4 = 1; out.maxossint4 = 0;
+    in.minuid      = 0; out.minuid      = 1;
+    in.maxuid      = 1; out.maxuid      = 0;
+    in.mingid      = 0; out.mingid      = 1;
+    in.maxgid      = 1; out.maxgid      = 0;
+    in.minsize     = 0; out.minsize     = 1;
+    in.maxsize     = 1; out.maxsize     = 0;
+    in.minblocks   = 0; out.minblocks   = 1;
+    in.maxblocks   = 1; out.maxblocks   = 0;
+    in.minctime    = 0; out.minctime    = 1;
+    in.maxctime    = 1; out.maxctime    = 0;
+    in.minmtime    = 0; out.minmtime    = 1;
+    in.maxmtime    = 1; out.maxmtime    = 0;
+    in.minatime    = 0; out.minatime    = 1;
+    in.maxatime    = 1; out.maxatime    = 0;
+    in.mincrtime   = 0; out.mincrtime   = 1;
+    in.maxcrtime   = 1; out.maxcrtime   = 0;
+    in.minossint1  = 0; out.minossint1  = 1;
+    in.maxossint1  = 1; out.maxossint1  = 0;
+    in.minossint2  = 0; out.minossint2  = 1;
+    in.maxossint2  = 1; out.maxossint2  = 0;
+    in.minossint3  = 0; out.minossint3  = 1;
+    in.maxossint3  = 1; out.maxossint3  = 0;
+    in.minossint4  = 0; out.minossint4  = 1;
+    in.maxossint4  = 1; out.maxossint4  = 0;
 
     ASSERT_EQ(tsumit(&in, &out), 0);
 
@@ -337,47 +431,71 @@ TEST(summary, tsumit) {
     EXPECT_EQ(out.maxsubdirlinks, 1);
     EXPECT_EQ(out.maxsubdirsize,  1);
 
-    EXPECT_EQ(out.totfiles,   2);
-    EXPECT_EQ(out.totlinks,   2);
-    EXPECT_EQ(out.totltk,     2);
-    EXPECT_EQ(out.totmtk,     2);
-    EXPECT_EQ(out.totltm,     2);
-    EXPECT_EQ(out.totmtk,     2);
-    EXPECT_EQ(out.totltm,     2);
-    EXPECT_EQ(out.totmtm,     2);
-    EXPECT_EQ(out.totmtg,     2);
-    EXPECT_EQ(out.totmtt,     2);
-    EXPECT_EQ(out.totsize,    2);
-    EXPECT_EQ(out.totxattr,   2);
-    EXPECT_EQ(out.totossint1, 2);
-    EXPECT_EQ(out.totossint2, 2);
-    EXPECT_EQ(out.totossint3, 2);
-    EXPECT_EQ(out.totossint4, 2);
+    EXPECT_EQ(out.totfiles,      2);
+    EXPECT_EQ(out.totlinks,      2);
+    EXPECT_EQ(out.totltk,        2);
+    EXPECT_EQ(out.totmtk,        2);
+    EXPECT_EQ(out.totltm,        2);
+    EXPECT_EQ(out.totmtk,        2);
+    EXPECT_EQ(out.totltm,        2);
+    EXPECT_EQ(out.totmtm,        2);
+    EXPECT_EQ(out.totmtg,        2);
+    EXPECT_EQ(out.totmtt,        2);
+    EXPECT_EQ(out.totsize,       2);
+    EXPECT_EQ(out.totsqsize,     2);
+    EXPECT_EQ(out.totctime,      2);
+    EXPECT_EQ(out.totsqctime,    2);
+    EXPECT_EQ(out.totmtime,      2);
+    EXPECT_EQ(out.totsqmtime,    2);
+    EXPECT_EQ(out.totatime,      2);
+    EXPECT_EQ(out.totsqatime,    2);
+    EXPECT_EQ(out.totblocks,     2);
+    EXPECT_EQ(out.totsqblocks,   2);
+    EXPECT_EQ(out.totcrtime,     2);
+    EXPECT_EQ(out.totsqcrtime,   2);
 
-    EXPECT_EQ(in.minuid,     out.minuid);
-    EXPECT_EQ(in.maxuid,     out.maxuid);
-    EXPECT_EQ(in.mingid,     out.mingid);
-    EXPECT_EQ(in.maxgid,     out.maxgid);
-    EXPECT_EQ(in.minsize,    out.minsize);
-    EXPECT_EQ(in.maxsize,    out.maxsize);
-    EXPECT_EQ(in.minblocks,  out.minblocks);
-    EXPECT_EQ(in.maxblocks,  out.maxblocks);
-    EXPECT_EQ(in.minctime,   out.minctime);
-    EXPECT_EQ(in.maxctime,   out.maxctime);
-    EXPECT_EQ(in.minmtime,   out.minmtime);
-    EXPECT_EQ(in.maxmtime,   out.maxmtime);
-    EXPECT_EQ(in.minatime,   out.minatime);
-    EXPECT_EQ(in.maxatime,   out.maxatime);
-    EXPECT_EQ(in.mincrtime,  out.mincrtime);
-    EXPECT_EQ(in.maxcrtime,  out.maxcrtime);
-    EXPECT_EQ(in.minossint1, out.minossint1);
-    EXPECT_EQ(in.maxossint1, out.maxossint1);
-    EXPECT_EQ(in.minossint2, out.minossint2);
-    EXPECT_EQ(in.maxossint2, out.maxossint2);
-    EXPECT_EQ(in.minossint3, out.minossint3);
-    EXPECT_EQ(in.maxossint3, out.maxossint3);
-    EXPECT_EQ(in.minossint4, out.minossint4);
-    EXPECT_EQ(in.maxossint4, out.maxossint4);
+    EXPECT_EQ(out.totxattr,      2);
+    EXPECT_EQ(out.totossint1,    1);
+    EXPECT_EQ(out.totsqossint1,  1);
+    EXPECT_EQ(out.totossint2,    1);
+    EXPECT_EQ(out.totsqossint2,  1);
+    EXPECT_EQ(out.totossint3,    1);
+    EXPECT_EQ(out.totsqossint3,  1);
+    EXPECT_EQ(out.totossint4,    1);
+    EXPECT_EQ(out.totsqossint4,  1);
+
+    EXPECT_EQ(in.minuid,                out.minuid);
+    EXPECT_EQ(in.maxuid,                out.maxuid);
+    EXPECT_EQ(in.mingid,                out.mingid);
+    EXPECT_EQ(in.maxgid,                out.maxgid);
+    EXPECT_EQ(in.minsize,               out.minsize);
+    EXPECT_EQ(in.maxsize,               out.maxsize);
+    EXPECT_EQ(in.minblocks,             out.minblocks);
+    EXPECT_EQ(in.maxblocks,             out.maxblocks);
+    EXPECT_EQ(in.minctime,              out.minctime);
+    EXPECT_EQ(in.maxctime,              out.maxctime);
+    EXPECT_EQ(in.minmtime,              out.minmtime);
+    EXPECT_EQ(in.maxmtime,              out.maxmtime);
+    EXPECT_EQ(in.minatime,              out.minatime);
+    EXPECT_EQ(in.maxatime,              out.maxatime);
+    EXPECT_EQ(in.mincrtime,             out.mincrtime);
+    EXPECT_EQ(in.maxcrtime,             out.maxcrtime);
+    EXPECT_EQ(in.minossint1,            out.minossint1);
+    EXPECT_EQ(in.maxossint1,            out.maxossint1);
+    EXPECT_DOUBLE_EQ(in.totossint1,     out.totossint1);
+    EXPECT_DOUBLE_EQ(in.totsqossint1,   ((double) out.totsqossint1) * out.totsqossint1);
+    EXPECT_EQ(in.minossint2,            out.minossint2);
+    EXPECT_EQ(in.maxossint2,            out.maxossint2);
+    EXPECT_DOUBLE_EQ(in.totossint2,     out.totossint2);
+    EXPECT_DOUBLE_EQ(in.totsqossint2,   ((double) out.totsqossint2) * out.totsqossint2);
+    EXPECT_EQ(in.minossint3,            out.minossint3);
+    EXPECT_EQ(in.maxossint3,            out.maxossint3);
+    EXPECT_DOUBLE_EQ(in.totossint3,     out.totossint3);
+    EXPECT_DOUBLE_EQ(in.totsqossint3,   ((double) out.totsqossint3) * out.totsqossint3);
+    EXPECT_EQ(in.minossint4,            out.minossint4);
+    EXPECT_EQ(in.maxossint4,            out.maxossint4);
+    EXPECT_DOUBLE_EQ(in.totossint4,     out.totossint4);
+    EXPECT_DOUBLE_EQ(in.totsqossint4,   ((double) out.totsqossint4) * out.totsqossint4);
 }
 
 TEST(shortpath, split) {

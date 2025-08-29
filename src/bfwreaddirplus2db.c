@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "debug.h"
 #include "dbutils.h"
 #include "trie.h"
 #include "utils.h"
@@ -196,7 +197,7 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
     sqlite3_stmt *res = insertdbprep(db, ENTRIES_INSERT);
     startdb(db);
     struct sum summary;
-    zeroit(&summary);
+    zeroit(&summary, in->epoch);
 
     /* rewind the directory */
     rewinddir(dir);

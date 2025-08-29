@@ -94,7 +94,7 @@ static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
 
 uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads);
 
-int zeroit(struct sum *summary);
+int zeroit(struct sum *summary, const long long int epoch);
 
 int sumit(struct sum *summary, struct work *work, struct entry_data *data);
 

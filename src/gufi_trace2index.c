@@ -71,7 +71,6 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "debug.h"
 #include "dbutils.h"
 #include "external.h"
 #include "template_db.h"
@@ -136,7 +135,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (db) {
         struct sum summary;
-        zeroit(&summary);
+        zeroit(&summary, in->epoch);
 
         sll_t xattr_db_list;
         sll_init(&xattr_db_list);

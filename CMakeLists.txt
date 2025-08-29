@@ -497,6 +497,20 @@ else ()
   set(EXT "so")
 endif()
 
+include(CheckSymbolExists)
+
+# use statx if it is available
+include(CheckSymbolExists)
+set(CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
+check_symbol_exists(statx "sys/stat.h" HAVE_STATX)
+
+if (HAVE_STATX)
+  add_definitions(-D_GNU_SOURCE -DHAVE_STATX=1)
+  message(STATUS "Using statx(2) for tree traversal")
+else()
+  message(STATUS "statx(2) not found. Falling back to lstat(2).")
+endif()
+
 # enable "make test"
 enable_testing()
 

@@ -248,7 +248,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
 
         /* prepare to insert into the database */
-        zeroit(&nda.summary);
+        zeroit(&nda.summary, pa->in.epoch);
 
         /* prepared statements within db.db */
         nda.entries_res = insertdbprep(nda.db, ENTRIES_INSERT);

@@ -79,6 +79,9 @@ OF SUCH DAMAGE.
 #include "str.h"
 #include "utils.h"
 
+#define MIN_ASSIGN_LHS(lhs, rhs) if ((lhs) > (rhs)) { (lhs) = (rhs); }
+#define MAX_ASSIGN_LHS(lhs, rhs) if ((lhs) < (rhs)) { (lhs) = (rhs); }
+
 uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads) {
     /* not set */
     if (target_memory_footprint == 0) {
@@ -89,179 +92,238 @@ uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t 
     return max(target_memory_footprint / sizeof(struct work) / nthreads, 1);
 }
 
-int zeroit(struct sum *summary)
-{
-  summary->totfiles=0;
-  summary->totlinks=0;
-  summary->minuid=LLONG_MAX;
-  summary->maxuid=LLONG_MIN;
-  summary->mingid=LLONG_MAX;
-  summary->maxgid=LLONG_MIN;
-  summary->minsize=LLONG_MAX;
-  summary->maxsize=LLONG_MIN;
-  summary->totzero=0;
-  summary->totltk=0;
-  summary->totmtk=0;
-  summary->totltm=0;
-  summary->totmtm=0;
-  summary->totmtg=0;
-  summary->totmtt=0;
-  summary->totsize=0;
-  summary->minctime=LLONG_MAX;
-  summary->maxctime=LLONG_MIN;
-  summary->minmtime=LLONG_MAX;
-  summary->maxmtime=LLONG_MIN;
-  summary->minatime=LLONG_MAX;
-  summary->maxatime=LLONG_MIN;
-  summary->minblocks=LLONG_MAX;
-  summary->maxblocks=LLONG_MIN;
-  summary->totblocks=0;
-  summary->totxattr=0;
-  summary->totsubdirs=0;
-  summary->maxsubdirfiles=LLONG_MIN;
-  summary->maxsubdirlinks=LLONG_MIN;
-  summary->maxsubdirsize=LLONG_MIN;
-  summary->mincrtime=LLONG_MAX;
-  summary->maxcrtime=LLONG_MIN;
-  summary->minossint1=LLONG_MAX;
-  summary->maxossint1=LLONG_MIN;
-  summary->totossint1=0;
-  summary->minossint2=LLONG_MAX;
-  summary->maxossint2=LLONG_MIN;
-  summary->totossint2=0;
-  summary->minossint3=LLONG_MAX;
-  summary->maxossint3=LLONG_MIN;
-  summary->totossint3=0;
-  summary->minossint4=LLONG_MAX;
-  summary->maxossint4=LLONG_MIN;
-  summary->totossint4=0;
-  summary->totextdbs=0;
-  return 0;
+int zeroit(struct sum *summary, const long long int epoch) {
+    summary->totfiles = 0;
+    summary->totlinks = 0;
+    summary->minuid = LLONG_MAX;
+    summary->maxuid = LLONG_MIN;
+    summary->mingid = LLONG_MAX;
+    summary->maxgid = LLONG_MIN;
+    summary->minsize = LLONG_MAX;
+    summary->maxsize = LLONG_MIN;
+    summary->totzero = 0;
+    summary->totltk = 0;
+    summary->totmtk = 0;
+    summary->totltm = 0;
+    summary->totmtm = 0;
+    summary->totmtg = 0;
+    summary->totmtt = 0;
+    summary->totsize = 0;
+    summary->totsqsize = 0;
+    summary->epoch = epoch;
+    summary->minctime = LLONG_MAX;
+    summary->maxctime = LLONG_MIN;
+    summary->totctime = 0;
+    summary->totsqctime = 0;
+    summary->minmtime = LLONG_MAX;
+    summary->maxmtime = LLONG_MIN;
+    summary->totmtime = 0;
+    summary->totsqmtime = 0;
+    summary->minatime = LLONG_MAX;
+    summary->maxatime = LLONG_MIN;
+    summary->totatime = 0;
+    summary->totsqatime = 0;
+    summary->minblocks = LLONG_MAX;
+    summary->maxblocks = LLONG_MIN;
+    summary->totblocks = 0;
+    summary->totsqblocks = 0;
+    summary->totxattr = 0;
+    summary->totsubdirs = 0;
+    summary->maxsubdirfiles = LLONG_MIN;
+    summary->maxsubdirlinks = LLONG_MIN;
+    summary->maxsubdirsize = LLONG_MIN;
+    summary->mincrtime = LLONG_MAX;
+    summary->maxcrtime = LLONG_MIN;
+    summary->totcrtime = 0;
+    summary->totsqcrtime = 0;
+    summary->minossint1 = LLONG_MAX;
+    summary->maxossint1 = LLONG_MIN;
+    summary->totossint1 = 0;
+    summary->totsqossint1 = 0;
+    summary->minossint2 = LLONG_MAX;
+    summary->maxossint2 = LLONG_MIN;
+    summary->totossint2 = 0;
+    summary->totsqossint2 = 0;
+    summary->minossint3 = LLONG_MAX;
+    summary->maxossint3 = LLONG_MIN;
+    summary->totossint3 = 0;
+    summary->totsqossint3 = 0;
+    summary->minossint4 = LLONG_MAX;
+    summary->maxossint4 = LLONG_MIN;
+    summary->totossint4 = 0;
+    summary->totsqossint4 = 0;
+    summary->totextdbs = 0;
+    return 0;
 }
 
 int sumit(struct sum *summary, struct work *work, struct entry_data *ed) {
-  if (ed->type == 'f') {
-     summary->totfiles++;
-     if (work->statuso.st_size < summary->minsize) summary->minsize=work->statuso.st_size;
-     if (work->statuso.st_size > summary->maxsize) summary->maxsize=work->statuso.st_size;
-     if (work->statuso.st_size == 0) summary->totzero++;
-     if (work->statuso.st_size <= 1024) summary->totltk++;
-     if (work->statuso.st_size > 1024) summary->totmtk++;
-     if (work->statuso.st_size <= 1048576) summary->totltm++;
-     if (work->statuso.st_size > 1048576) summary->totmtm++;
-     if (work->statuso.st_size > 1073741824) summary->totmtg++;
-     if (work->statuso.st_size > 1099511627776) summary->totmtt++;
-     summary->totsize=summary->totsize+work->statuso.st_size;
+    if (ed->type == 'f') {
+        summary->totfiles++;
+        MIN_ASSIGN_LHS(summary->minsize, work->statuso.st_size);
+        MAX_ASSIGN_LHS(summary->maxsize, work->statuso.st_size);
+        if (work->statuso.st_size == 0)             summary->totzero++;
+        if (work->statuso.st_size <= 1024)          summary->totltk++;
+        if (work->statuso.st_size >  1024)          summary->totmtk++;
+        if (work->statuso.st_size <= 1048576)       summary->totltm++;
+        if (work->statuso.st_size >  1048576)       summary->totmtm++;
+        if (work->statuso.st_size >  1073741824)    summary->totmtg++;
+        if (work->statuso.st_size >  1099511627776) summary->totmtt++;
+        summary->totsize += work->statuso.st_size;
+        summary->totsqsize += ((double) work->statuso.st_size) * work->statuso.st_size;
 
-     if (work->statuso.st_blocks < summary->minblocks) summary->minblocks=work->statuso.st_blocks;
-     if (work->statuso.st_blocks > summary->maxblocks) summary->maxblocks=work->statuso.st_blocks;
-     summary->totblocks+=work->statuso.st_blocks;
-  }
-  if (ed->type == 'l') {
-     summary->totlinks++;
-  }
+        MIN_ASSIGN_LHS(summary->minblocks, work->statuso.st_blocks);
+        MAX_ASSIGN_LHS(summary->maxblocks, work->statuso.st_blocks);
+        summary->totblocks += work->statuso.st_blocks;
+        summary->totsqblocks += ((double) work->statuso.st_blocks) * work->statuso.st_blocks;
+    }
+    if (ed->type == 'l') {
+        summary->totlinks++;
+    }
 
-  if (work->statuso.st_uid < summary->minuid) summary->minuid=work->statuso.st_uid;
-  if (work->statuso.st_uid > summary->maxuid) summary->maxuid=work->statuso.st_uid;
-  if (work->statuso.st_gid < summary->mingid) summary->mingid=work->statuso.st_gid;
-  if (work->statuso.st_gid > summary->maxgid) summary->maxgid=work->statuso.st_gid;
-  if (work->statuso.st_ctime < summary->minctime) summary->minctime=work->statuso.st_ctime;
-  if (work->statuso.st_ctime > summary->maxctime) summary->maxctime=work->statuso.st_ctime;
-  if (work->statuso.st_mtime < summary->minmtime) summary->minmtime=work->statuso.st_mtime;
-  if (work->statuso.st_mtime > summary->maxmtime) summary->maxmtime=work->statuso.st_mtime;
-  if (work->statuso.st_atime < summary->minatime) summary->minatime=work->statuso.st_atime;
-  if (work->statuso.st_atime > summary->maxatime) summary->maxatime=work->statuso.st_atime;
-  if (work->crtime < summary->mincrtime) summary->mincrtime=work->crtime;
-  if (work->crtime > summary->maxcrtime) summary->maxcrtime=work->crtime;
+    MIN_ASSIGN_LHS(summary->minuid, work->statuso.st_uid);
+    MAX_ASSIGN_LHS(summary->maxuid, work->statuso.st_uid);
+    MIN_ASSIGN_LHS(summary->mingid, work->statuso.st_gid);
+    MAX_ASSIGN_LHS(summary->maxgid, work->statuso.st_gid);
 
-  if (ed->ossint1 < summary->minossint1) summary->minossint1=ed->ossint1;
-  if (ed->ossint1 > summary->maxossint1) summary->maxossint1=ed->ossint1;
-  summary->totossint1=summary->totossint1+ed->ossint1;
+    MIN_ASSIGN_LHS(summary->minctime, work->statuso.st_ctime);
+    MAX_ASSIGN_LHS(summary->maxctime, work->statuso.st_ctime);
+    const long long int ctime = work->statuso.st_ctime - summary->epoch;
+    summary->totctime += ctime;
+    summary->totsqctime += ctime * ctime;
 
-  if (ed->ossint2 < summary->minossint2) summary->minossint2=ed->ossint2;
-  if (ed->ossint2 > summary->maxossint2) summary->maxossint2=ed->ossint2;
-  summary->totossint2=summary->totossint2+ed->ossint2;
+    MIN_ASSIGN_LHS(summary->minmtime, work->statuso.st_mtime);
+    MAX_ASSIGN_LHS(summary->maxmtime, work->statuso.st_mtime);
+    const long long int mtime = work->statuso.st_mtime - summary->epoch;
+    summary->totmtime += mtime;
+    summary->totsqmtime += mtime * mtime;
 
-  if (ed->ossint3 < summary->minossint3) summary->minossint3=ed->ossint3;
-  if (ed->ossint3 > summary->maxossint3) summary->maxossint3=ed->ossint3;
-  summary->totossint3=summary->totossint3+ed->ossint3;
+    MIN_ASSIGN_LHS(summary->minatime, work->statuso.st_atime);
+    MAX_ASSIGN_LHS(summary->maxatime, work->statuso.st_atime);
+    const long long int atime = work->statuso.st_atime - summary->epoch;
+    summary->totatime += atime;
+    summary->totsqatime += atime * atime;
 
-  if (ed->ossint4 < summary->minossint4) summary->minossint4=ed->ossint4;
-  if (ed->ossint4 > summary->maxossint4) summary->maxossint4=ed->ossint4;
-  summary->totossint4=summary->totossint4+ed->ossint4;
+    MIN_ASSIGN_LHS(summary->mincrtime, work->crtime);
+    MAX_ASSIGN_LHS(summary->maxcrtime, work->crtime);
+    #if HAVE_STATX
+    const long long int crtime = work->crtime - summary->epoch;
+    summary->totcrtime += crtime;
+    summary->totsqcrtime += crtime * crtime;
+    #endif
 
-  summary->totxattr += ed->xattrs.count;
+    MIN_ASSIGN_LHS(summary->minossint1, ed->ossint1);
+    MAX_ASSIGN_LHS(summary->maxossint1, ed->ossint1);
+    summary->totossint1 += ed->ossint1;
+    summary->totsqossint1 += ((double) ed->ossint1) * ed->ossint1;
 
-  return 0;
+    MIN_ASSIGN_LHS(summary->minossint2, ed->ossint2);
+    MAX_ASSIGN_LHS(summary->maxossint2, ed->ossint2);
+    summary->totossint2 += ed->ossint2;
+    summary->totsqossint2 += ((double) ed->ossint2) * ed->ossint2;
+
+    MIN_ASSIGN_LHS(summary->minossint3, ed->ossint3);
+    MAX_ASSIGN_LHS(summary->maxossint3, ed->ossint3);
+    summary->totossint3 += ed->ossint3;
+    summary->totsqossint3 += ((double) ed->ossint3) * ed->ossint3;
+
+    MIN_ASSIGN_LHS(summary->minossint4, ed->ossint4);
+    MAX_ASSIGN_LHS(summary->maxossint4, ed->ossint4);
+    summary->totossint4 += ed->ossint4;
+    summary->totsqossint4 += ((double) ed->ossint4) * ed->ossint4;
+
+    summary->totxattr += ed->xattrs.count;
+
+    return 0;
 }
 
 int tsumit(struct sum *sumin, struct sum *smout) {
-  /* count self as subdirectory because can't tell from here where treesummary descent started */
-  smout->totsubdirs++;
+    /* count self as subdirectory because can't tell from here where treesummary descent started */
+    smout->totsubdirs++;
 
-  /* if sumin totsubdirs is > 0 we are summing a treesummary not a dirsummary */
-  if (sumin->totsubdirs > 0) {
-    smout->totsubdirs += sumin->totsubdirs;
-    if (sumin->maxsubdirfiles > smout->maxsubdirfiles) smout->maxsubdirfiles = sumin->maxsubdirfiles;
-    if (sumin->maxsubdirlinks > smout->maxsubdirlinks) smout->maxsubdirlinks = sumin->maxsubdirlinks;
-    if (sumin->maxsubdirsize  > smout->maxsubdirsize)  smout->maxsubdirsize  = sumin->maxsubdirsize;
-  } else {
-    if (sumin->totfiles > smout->maxsubdirfiles) smout->maxsubdirfiles = sumin->totfiles;
-    if (sumin->totlinks > smout->maxsubdirlinks) smout->maxsubdirlinks = sumin->totlinks;
-    if (sumin->totsize  > smout->maxsubdirsize)  smout->maxsubdirsize  = sumin->totsize;
-  }
+    /* if sumin totsubdirs is > 0 we are summing a treesummary not a dirsummary */
+    if (sumin->totsubdirs > 0) {
+        smout->totsubdirs += sumin->totsubdirs;
+        MAX_ASSIGN_LHS(smout->maxsubdirfiles, sumin->maxsubdirfiles);
+        MAX_ASSIGN_LHS(smout->maxsubdirlinks, sumin->maxsubdirlinks);
+        MAX_ASSIGN_LHS(smout->maxsubdirsize,  sumin->maxsubdirsize);
+    } else {
+        MAX_ASSIGN_LHS(smout->maxsubdirfiles, sumin->totfiles);
+        MAX_ASSIGN_LHS(smout->maxsubdirlinks, sumin->totlinks);
+        MAX_ASSIGN_LHS(smout->maxsubdirsize,  sumin->totsize);
+    }
 
-  smout->totfiles += sumin->totfiles;
-  smout->totlinks += sumin->totlinks;
+    smout->totfiles += sumin->totfiles;
+    smout->totlinks += sumin->totlinks;
 
-  if (sumin->totfiles > 0) {
-  /* only set these mins and maxes if there are files in the directory
-     otherwise mins are all zero */
-  //if (sumin->totfiles > 0) {
-    if (sumin->minuid < smout->minuid) smout->minuid=sumin->minuid;
-    if (sumin->maxuid > smout->maxuid) smout->maxuid=sumin->maxuid;
-    if (sumin->mingid < smout->mingid) smout->mingid=sumin->mingid;
-    if (sumin->maxgid > smout->maxgid) smout->maxgid=sumin->maxgid;
-    if (sumin->minsize < smout->minsize) smout->minsize=sumin->minsize;
-    if (sumin->maxsize > smout->maxsize) smout->maxsize=sumin->maxsize;
-    if (sumin->minblocks < smout->minblocks) smout->minblocks=sumin->minblocks;
-    if (sumin->maxblocks > smout->maxblocks) smout->maxblocks=sumin->maxblocks;
-    if (sumin->minctime < smout->minctime) smout->minctime=sumin->minctime;
-    if (sumin->maxctime > smout->maxctime) smout->maxctime=sumin->maxctime;
-    if (sumin->minmtime < smout->minmtime) smout->minmtime=sumin->minmtime;
-    if (sumin->maxmtime > smout->maxmtime) smout->maxmtime=sumin->maxmtime;
-    if (sumin->minatime < smout->minatime) smout->minatime=sumin->minatime;
-    if (sumin->maxatime > smout->maxatime) smout->maxatime=sumin->maxatime;
-    if (sumin->mincrtime < smout->mincrtime) smout->mincrtime=sumin->mincrtime;
-    if (sumin->maxcrtime > smout->maxcrtime) smout->maxcrtime=sumin->maxcrtime;
-    if (sumin->minossint1 < smout->minossint1) smout->minossint1=sumin->minossint1;
-    if (sumin->maxossint1 > smout->maxossint1) smout->maxossint1=sumin->maxossint1;
-    if (sumin->minossint2 < smout->minossint2) smout->minossint2=sumin->minossint2;
-    if (sumin->maxossint2 > smout->maxossint2) smout->maxossint2=sumin->maxossint2;
-    if (sumin->minossint3 < smout->minossint3) smout->minossint3=sumin->minossint3;
-    if (sumin->maxossint3 > smout->maxossint3) smout->maxossint3=sumin->maxossint3;
-    if (sumin->minossint4 < smout->minossint4) smout->minossint4=sumin->minossint4;
-    if (sumin->maxossint4 > smout->maxossint4) smout->maxossint4=sumin->maxossint4;
-  }
+    if (sumin->totfiles > 0) {
+        /* only set these mins and maxes if there are files in the directory
+           otherwise mins are all zero */
+        MIN_ASSIGN_LHS(smout->minuid, sumin->minuid);
+        MAX_ASSIGN_LHS(smout->maxuid, sumin->maxuid);
+        MIN_ASSIGN_LHS(smout->mingid, sumin->mingid);
+        MAX_ASSIGN_LHS(smout->maxgid, sumin->maxgid);
 
-  smout->totblocks  += sumin->totblocks;
-  smout->totzero    += sumin->totzero;
-  smout->totltk     += sumin->totltk;
-  smout->totmtk     += sumin->totmtk;
-  smout->totltm     += sumin->totltm;
-  smout->totmtm     += sumin->totmtm;
-  smout->totmtg     += sumin->totmtg;
-  smout->totmtt     += sumin->totmtt;
-  smout->totsize    += sumin->totsize;
-  smout->totxattr   += sumin->totxattr;
-  smout->totossint1 += sumin->totossint1;
-  smout->totossint2 += sumin->totossint2;
-  smout->totossint3 += sumin->totossint3;
-  smout->totossint4 += sumin->totossint4;
+        MIN_ASSIGN_LHS(smout->minsize, sumin->minsize);
+        MAX_ASSIGN_LHS(smout->maxsize, sumin->maxsize);
 
-  smout->totextdbs  += sumin->totextdbs;
+        MIN_ASSIGN_LHS(smout->minblocks, sumin->minblocks);
+        MAX_ASSIGN_LHS(smout->maxblocks, sumin->maxblocks);
 
-  return 0;
+        MIN_ASSIGN_LHS(smout->minctime, sumin->minctime);
+        MAX_ASSIGN_LHS(smout->maxctime, sumin->maxctime);
+        smout->totctime += sumin->totctime;
+        smout->totsqctime += sumin->totctime * sumin->totctime;
+
+        MIN_ASSIGN_LHS(smout->minmtime, sumin->minmtime);
+        MAX_ASSIGN_LHS(smout->maxmtime, sumin->maxmtime);
+        smout->totmtime += sumin->totmtime;
+        smout->totsqmtime += sumin->totmtime * sumin->totmtime;
+
+        MIN_ASSIGN_LHS(smout->minatime, sumin->minatime);
+        MAX_ASSIGN_LHS(smout->maxatime, sumin->maxatime);
+        smout->totatime += sumin->totatime;
+        smout->totsqatime += sumin->totatime * sumin->totatime;
+
+        MIN_ASSIGN_LHS(smout->mincrtime, sumin->mincrtime);
+        MAX_ASSIGN_LHS(smout->maxcrtime, sumin->maxcrtime);
+        smout->totcrtime += sumin->totcrtime;
+        smout->totsqcrtime += sumin->totcrtime * sumin->totcrtime;
+
+        MIN_ASSIGN_LHS(smout->minossint1, sumin->minossint1);
+        MAX_ASSIGN_LHS(smout->maxossint1, sumin->maxossint1);
+        MIN_ASSIGN_LHS(smout->minossint2, sumin->minossint2);
+        MAX_ASSIGN_LHS(smout->maxossint2, sumin->maxossint2);
+        MIN_ASSIGN_LHS(smout->minossint3, sumin->minossint3);
+        MAX_ASSIGN_LHS(smout->maxossint3, sumin->maxossint3);
+        MIN_ASSIGN_LHS(smout->minossint4, sumin->minossint4);
+        MAX_ASSIGN_LHS(smout->maxossint4, sumin->maxossint4);
+    }
+
+    smout->epoch         = sumin->epoch;
+    smout->totblocks    += sumin->totblocks;
+    smout->totsqblocks  += sumin->totblocks * sumin->totblocks;
+    smout->totzero      += sumin->totzero;
+    smout->totltk       += sumin->totltk;
+    smout->totmtk       += sumin->totmtk;
+    smout->totltm       += sumin->totltm;
+    smout->totmtm       += sumin->totmtm;
+    smout->totmtg       += sumin->totmtg;
+    smout->totmtt       += sumin->totmtt;
+    smout->totsize      += sumin->totsize;
+    smout->totsqsize    += sumin->totsize * sumin->totsize;
+    smout->totxattr     += sumin->totxattr;
+    smout->totossint1   += sumin->totossint1;
+    smout->totsqossint1 += sumin->totossint1 * sumin->totossint1;
+    smout->totossint2   += sumin->totossint2;
+    smout->totsqossint2 += sumin->totossint2 * sumin->totossint2;
+    smout->totossint3   += sumin->totossint3;
+    smout->totsqossint3 += sumin->totossint3 * sumin->totossint3;
+    smout->totossint4   += sumin->totossint4;
+    smout->totsqossint4 += sumin->totossint4 * sumin->totossint4;
+
+    smout->totextdbs    += sumin->totextdbs;
+
+    return 0;
 }
 
 // given a possibly-multi-level path of directories (final component is
