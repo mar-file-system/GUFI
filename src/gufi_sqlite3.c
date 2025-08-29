@@ -122,6 +122,7 @@ int main(int argc, char *argv[]) {
         .outfile = stdout,
         .rows = 0,
         .types = NULL,
+        .suppress_newline = 0,
     };
 
     /* if using in-memory db or no SQL statements following db path, read from stdin */

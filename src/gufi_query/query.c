@@ -82,6 +82,7 @@ void querydb(struct work *work,
         .outfile = ta->outfile,
         .rows = 0,
         .types = types,
+        .suppress_newline = 0
     };
 
     char *err = NULL;

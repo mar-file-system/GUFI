@@ -164,6 +164,7 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
             .outfile = aggregate->outfile,
             .rows = 0,
             .types = in->types.agg,
+            .suppress_newline = 0,
         };
 
         char *err = NULL;

@@ -178,6 +178,7 @@ GUFI_VT="${BINARY_DIR}/src/gufi_vt"
 LONGITUDINAL_SNAPSHOT="${BINARY_DIR}/contrib/stats/snapshot.py"
 OLDBIGFILES="${BINARY_DIR}/examples/oldbigfiles"
 PARALLEL_CPR="${BINARY_DIR}/src/parallel_cpr"
+PARALLEL_FIND="${BINARY_DIR}/src/parallel_find"
 PARALLEL_RMR="${BINARY_DIR}/src/parallel_rmr"
 PUGSQL="${GUFI_TOOL} pugsql"
 QUERYDBS="${GUFI_TOOL} querydbs"
@@ -266,6 +267,7 @@ replace() {
     s%${LONGITUDINAL_SNAPSHOT}%longitudinal_snapshot.py%g;
     s%${OLDBIGFILES}%oldbigfiles%g;
     s%${PARALLEL_CPR}%parallel_cpr%g;
+    s%${PARALLEL_FIND}%parallel_find%g;
     s%${PARALLEL_RMR}%parallel_rmr%g;
     s%${PUGSQL}%pugsql%g;
     s%${QUERYDBS}%querydbs%g;
@@ -442,3 +444,4 @@ then
 
     clean_index "${INDEXROOT}" 1
 fi
+

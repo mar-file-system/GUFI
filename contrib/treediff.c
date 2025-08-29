@@ -244,6 +244,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         .outfile = stdout,
         .rows = 0,
         .types = NULL,
+        .suppress_newline = 0,
     };
 
     char *buf[] = {NULL, NULL};     /* passed to print_parallel */

@@ -147,6 +147,12 @@ typedef enum OutputMethod {
     OUTDB,     /* -O */
 } OutputMethod_t;
 
+enum filter_type {
+  FILTER_TYPE_FILE = 1,
+  FILTER_TYPE_DIR  = 2,
+  FILTER_TYPE_LINK = 4
+};
+
 struct input {
    refstr_t  name;
    refstr_t  nameto;
@@ -296,6 +302,9 @@ struct input {
 
    /* A handle to a plugin shared library, or NULL if no plugin is being used. */
    void *plugin_handle;
+
+   /* only used by parallel_find */
+   int filter_types;
 };
 
 struct input *input_init(struct input *in);

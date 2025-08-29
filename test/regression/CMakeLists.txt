@@ -131,6 +131,7 @@ set(OTHERS
   gufi_jail
   longitudinal_snapshot
   parallel_cpr
+  parallel_find
   parallel_rmr
   treediff
 )

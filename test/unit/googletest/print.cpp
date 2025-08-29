@@ -105,6 +105,7 @@ static void print_parallel_mutex_actual(pthread_mutex_t *mutex) {
     pa.outfile = file;
     pa.rows = 0;
     pa.types = nullptr;
+    pa.suppress_newline = 0;
 
     // A\n is buffered in OutputBuffer and takes up all available space
     {

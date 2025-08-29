@@ -90,7 +90,11 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         row_len += count * (sizeof(char) + sizeof(size_t));  /* type and length per column */
     }
     else {
-        row_len += count - 1 + 1; /* one delimiter per column except last column + newline */
+        row_len += count - 1; /* one delimiter per column except last column */
+
+        if (!print->suppress_newline) {
+           row_len++;
+        }
     }
 
     /* if a row cannot fit the buffer for whatever reason, flush the existing buffer */
@@ -150,7 +154,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             fwrite(data[last], sizeof(char), lens[last], print->outfile);
         }
 
-        if (!types) {
+        if (!types && !print->suppress_newline) {
             fwrite("\n", sizeof(char), 1, print->outfile);
         }
 
@@ -197,9 +201,15 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         }
 
         if (!types) {
-            /* replace final delimiter with newline */
-            buf[filled - 1] = '\n';
-        }
+            if (print->suppress_newline) {
+                /* remove final delimiter without replacement */
+                filled--;
+            }
+            else {
+               /* replace final delimiter with newline */
+               buf[filled - 1] = '\n';
+           }
+       }
 
         ob->filled = filled;
         ob->count++;
