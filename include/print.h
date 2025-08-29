@@ -84,6 +84,7 @@ typedef struct PrintArgs {
     size_t rows;                          /* number of rows returned by the query */
     const int *types;                     /* if set, prefix output with 1 char type and 1 length */
     /* size_t printed;                    /\* number of records printed by the callback *\/ */
+    int suppress_newline;
 } PrintArgs_t;
 
 int print_parallel(void *args, int count, char **data, char **columns);

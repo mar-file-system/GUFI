@@ -247,6 +247,7 @@ void print_help(const char* prog_name,
       case 'D': printf("  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y"); break;
       case 'l': printf("  -l                     if a directory was previously processed, skip descending the subtree"); break;
       case 'U': printf("  -U <library_name>      plugin library for modifying db entries"); break;
+      case 't': printf("  -t <filter_type>       one or more types to keep ('f', 'd', 'l')"); break;
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -309,6 +310,8 @@ void show_input(struct input* in, int retval) {
    printf("in.source_prefix            = '%s'\n",          in->sql_format.source_prefix.data);
    printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
    printf("in.check_already_processed  = %d\n",            in->check_already_processed);
+   printf("in.filter_types             = %d\n",            in->filter_types);
+
    printf("retval                      = %d\n",            retval);
    printf("\n");
 }
@@ -587,6 +590,27 @@ int parse_cmd_line(int         argc,
           }
           break;
 
+      case 't':
+          while (*optarg) {
+              switch (*optarg) {
+                  case 'f':
+                      in->filter_types |= FILTER_TYPE_FILE;
+                      break;
+                  case 'd':
+                      in->filter_types |= FILTER_TYPE_DIR;
+                      break;
+                  case 'l':
+                      in->filter_types |= FILTER_TYPE_LINK;
+                      break;
+                  default:
+                      fprintf(stderr, "%c is not a valid option\n", *optarg);
+                      retval = -1;
+                      break;
+              }
+              ++optarg; 
+          }
+          break;
+
       case '?':
          // getopt returns '?' when there is a problem.  In this case it
          // also prints, e.g. "getopt_test: illegal option -- z"
@@ -613,6 +637,10 @@ int parse_cmd_line(int         argc,
 
    if (in->printed_version) {
        return -1;
+   }
+
+   if (in->filter_types == 0) {
+      in->filter_types = FILTER_TYPE_FILE | FILTER_TYPE_DIR | FILTER_TYPE_LINK;
    }
 
    // caller requires given number of positional args, after the options.

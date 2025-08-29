@@ -175,6 +175,7 @@ set(C_SOURCES
   gufi_treesummary_all.c
   gufi_unrollup.c
   parallel_cpr.c
+  parallel_find.c
   parallel_rmr.c
 )
 

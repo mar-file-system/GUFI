@@ -1,0 +1,275 @@
+$ parallel_find -h
+usage: parallel_find [options] input_dir...
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -v                     version
+  -n <threads>           number of threads
+  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT
+  -y <min level>         minimum level to go down
+  -z <max level>         maximum level to go down
+  -t <filter_type>       one or more types to keep ('f', 'd', 'l')
+
+input_dir...      walk one or more trees to search files
+
+
+$ parallel_find
+usage: parallel_find [options] input_dir...
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -v                     version
+  -n <threads>           number of threads
+  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT
+  -y <min level>         minimum level to go down
+  -z <max level>         maximum level to go down
+  -t <filter_type>       one or more types to keep ('f', 'd', 'l')
+
+input_dir...      walk one or more trees to search files
+
+
+$ parallel_find -n 2 "prefix"
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+$ parallel_find -n 2 "prefix/1MB"
+prefix/1MB
+
+# comparing parallel_find result to find result
+# link to a directory with slash at the end
+$ parallel_find -n 2 "prefix/directory/subdirectory/directory_symlink/"
+prefix/directory/subdirectory/directory_symlink/
+prefix/directory/subdirectory/directory_symlink//directory_symlink
+prefix/directory/subdirectory/directory_symlink//repeat_name
+
+# link to a directory without slash at the end
+$ parallel_find -n 2 "prefix/directory/subdirectory/directory_symlink"
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/directory_symlink/directory_symlink
+prefix/directory/subdirectory/directory_symlink/repeat_name
+
+# link to a file without slash at the end
+$ parallel_find -n 2 "prefix/file_symlink"
+prefix/file_symlink
+
+# mix of files, dirs, links
+$ parallel_find -n 2 "prefix/directory/subdirectory/directory_symlink" "prefix/1MB" "prefix/"
+prefix/
+prefix//.hidden
+prefix//1KB
+prefix//1MB
+prefix//directory
+prefix//directory/executable
+prefix//directory/readonly
+prefix//directory/subdirectory
+prefix//directory/subdirectory/directory_symlink
+prefix//directory/subdirectory/repeat_name
+prefix//directory/writable
+prefix//empty_directory
+prefix//file_symlink
+prefix//leaf_directory
+prefix//leaf_directory/leaf_file1
+prefix//leaf_directory/leaf_file2
+prefix//old_file
+prefix//repeat_name
+prefix//unusual#? directory ,
+prefix//unusual#? directory ,/unusual, name?#
+prefix/1MB
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/directory_symlink/directory_symlink
+prefix/directory/subdirectory/directory_symlink/repeat_name
+
+# only get directories at level 2
+$ parallel_find -n 2 -t d -y 2 -z 2 "prefix"
+prefix/directory/subdirectory
+
+# only get links
+$ parallel_find -n 2 -t l "prefix"
+prefix/directory/subdirectory/directory_symlink
+prefix/file_symlink
+
+# get links and files
+$ parallel_find -n 2 -t lf "prefix"
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/file_symlink
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,/unusual, name?#
+
+# remove starting path with newline
+$ parallel_find -n 2 -f "%P\n" "prefix"
+
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_directory
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
+
+# get full path with newline
+$ parallel_find -n 2 -f "\n" "prefix"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# level higher than the level of the tree
+$ parallel_find -n 2 -y 10 "prefix"
+
+# directory with multiple slashes
+$ parallel_find -n 2 "prefix////"
+prefix////
+prefix/////.hidden
+prefix/////1KB
+prefix/////1MB
+prefix/////directory
+prefix/////directory/executable
+prefix/////directory/readonly
+prefix/////directory/subdirectory
+prefix/////directory/subdirectory/directory_symlink
+prefix/////directory/subdirectory/repeat_name
+prefix/////directory/writable
+prefix/////empty_directory
+prefix/////file_symlink
+prefix/////leaf_directory
+prefix/////leaf_directory/leaf_file1
+prefix/////leaf_directory/leaf_file2
+prefix/////old_file
+prefix/////repeat_name
+prefix/////unusual#? directory ,
+prefix/////unusual#? directory ,/unusual, name?#
+
+# multiple starting paths
+$ parallel_find -n 2 "prefix/directory/" "prefix/directory/subdirectory"
+prefix/directory/
+prefix/directory//executable
+prefix/directory//readonly
+prefix/directory//subdirectory
+prefix/directory//subdirectory/directory_symlink
+prefix/directory//subdirectory/repeat_name
+prefix/directory//writable
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+
+# keep full path with newline
+$ parallel_find -n 2 -f "%p\n" "prefix"
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+# empty path
+$ parallel_find -n 2 ""
+Error: Cannot stat "": No such file or directory (2)
+
+# nonexistent file
+$ parallel_find -n 2 "prefix/nonexistent_file"
+Error: Cannot stat "prefix/nonexistent_file": No such file or directory (2)
+
+# single unsupported type
+$ parallel_find -n 2 -t s "prefix"
+
+
+  -H                     show assigned input values (debugging)
+  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT
+  -h                     help
+  -n <threads>           number of threads
+  -t <filter_type>       one or more types to keep ('f', 'd', 'l')
+  -v                     version
+  -y <min level>         minimum level to go down
+  -z <max level>         maximum level to go down
+input_dir...      walk one or more trees to search files
+options:
+s is not a valid option
+usage: parallel_find [options] input_dir...
+
+# mix of supported and unsupported types
+$ parallel_find -n 2 -t lfs "prefix"
+
+
+  -H                     show assigned input values (debugging)
+  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT
+  -h                     help
+  -n <threads>           number of threads
+  -t <filter_type>       one or more types to keep ('f', 'd', 'l')
+  -v                     version
+  -y <min level>         minimum level to go down
+  -z <max level>         maximum level to go down
+input_dir...      walk one or more trees to search files
+options:
+s is not a valid option
+usage: parallel_find [options] input_dir...
+

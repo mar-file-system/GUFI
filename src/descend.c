@@ -164,6 +164,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             memset(&child_ed, 0, sizeof(child_ed));
             child_ed.parent_fd = -1;
 
+            child->orig_root = work->orig_root;
             child->basename_len = len;
             child->level = next_level;
             child->root_parent = work->root_parent;
