@@ -952,11 +952,10 @@ class LoopedThread {
               mutex(mutex),
               cv(),
               thread([this, &func, &args...]() {
-                      auto run = std::bind(std::forward <F> (func), std::forward <Args>(args)...);
                       std::unique_lock <std::mutex> lock(this->mutex);
                       while (this->rate.count()) {
                           this->cv.wait_for(lock, this->rate);
-                          run();
+                          func(std::forward<Args>(args)...);
                       }
                   }
                   )

@@ -74,4 +74,4 @@ do
 done
 
 # install required packages
-brew install autoconf cmake gettext llvm libomp pcre2 python
+brew install autoconf gettext llvm libomp pcre2 python
