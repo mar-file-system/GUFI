@@ -9,6 +9,8 @@ options:
   -y <min level>         minimum level to go down
   -z <max level>         maximum level to go down
   -t <filter_type>       one or more types to keep ('f', 'd', 'l')
+  -o <out_fname>         output file (one-per-thread, with thread-id suffix)
+  -B <buffer size>       size of each thread's output buffer in bytes
 
 input_dir...      walk one or more trees to search files
 
@@ -24,6 +26,8 @@ options:
   -y <min level>         minimum level to go down
   -z <max level>         maximum level to go down
   -t <filter_type>       one or more types to keep ('f', 'd', 'l')
+  -o <out_fname>         output file (one-per-thread, with thread-id suffix)
+  -B <buffer size>       size of each thread's output buffer in bytes
 
 input_dir...      walk one or more trees to search files
 
@@ -146,28 +150,32 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-# get full path with newline
-$ parallel_find -n 2 -f "\n" "prefix"
+# print escape characters
+$ parallel_find -n 2 -f "[\t\]\r\n" "prefix" | head -n 1
+[	\]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# print non-format characters
+$ parallel_find -n 2 -f "Path: %p\n" "prefix"
+Path: prefix
+Path: prefix/.hidden
+Path: prefix/1KB
+Path: prefix/1MB
+Path: prefix/directory
+Path: prefix/directory/executable
+Path: prefix/directory/readonly
+Path: prefix/directory/subdirectory
+Path: prefix/directory/subdirectory/directory_symlink
+Path: prefix/directory/subdirectory/repeat_name
+Path: prefix/directory/writable
+Path: prefix/empty_directory
+Path: prefix/file_symlink
+Path: prefix/leaf_directory
+Path: prefix/leaf_directory/leaf_file1
+Path: prefix/leaf_directory/leaf_file2
+Path: prefix/old_file
+Path: prefix/repeat_name
+Path: prefix/unusual#? directory ,
+Path: prefix/unusual#? directory ,/unusual, name?#
 
 # level higher than the level of the tree
 $ parallel_find -n 2 -y 10 "prefix"
@@ -231,6 +239,59 @@ prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
+# write to output files
+$ parallel_find -n 2 -o "parallel_find_output" "prefix"
+
+$ cat parallel_find_output.0 parallel_find_output.1
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+# write to same output files
+$ parallel_find -n 2 -o "parallel_find_output" "prefix"
+"parallel_find_output.0" Already exists!
+"parallel_find_output.1" Already exists!
+
+# small output buffer
+$ parallel_find -n 2 -B 16 "prefix"
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
 # empty path
 $ parallel_find -n 2 ""
 Error: Cannot stat "": No such file or directory (2)
@@ -240,36 +301,43 @@ $ parallel_find -n 2 "prefix/nonexistent_file"
 Error: Cannot stat "prefix/nonexistent_file": No such file or directory (2)
 
 # single unsupported type
-$ parallel_find -n 2 -t s "prefix"
-
-
-  -H                     show assigned input values (debugging)
-  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT
-  -h                     help
-  -n <threads>           number of threads
-  -t <filter_type>       one or more types to keep ('f', 'd', 'l')
-  -v                     version
-  -y <min level>         minimum level to go down
-  -z <max level>         maximum level to go down
-input_dir...      walk one or more trees to search files
-options:
+$ parallel_find -n 2 -t s "prefix" > /dev/null
 s is not a valid option
-usage: parallel_find [options] input_dir...
 
 # mix of supported and unsupported types
-$ parallel_find -n 2 -t lfs "prefix"
-
-
-  -H                     show assigned input values (debugging)
-  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT
-  -h                     help
-  -n <threads>           number of threads
-  -t <filter_type>       one or more types to keep ('f', 'd', 'l')
-  -v                     version
-  -y <min level>         minimum level to go down
-  -z <max level>         maximum level to go down
-input_dir...      walk one or more trees to search files
-options:
+$ parallel_find -n 2 -t lfs "prefix" > /dev/null
 s is not a valid option
-usage: parallel_find [options] input_dir...
+
+# unknown escape character
+$ parallel_find -n 2 -f "\d\n" "prefix" | head -n 1
+\d
+
+# unknown format specifier
+$ parallel_find -n 2 -f "%Q\n" "prefix" | head -n 1
+%Q
+
+# bad format
+$ parallel_find -n 2 -f "%" "prefix" 2>&1 | head -n 1
+Error: bad format sequence at end
+
+# bad output file (missing parent directories)
+$ parallel_find -n 2 -o "non/existant/path/parallel_find_output" "prefix"
+Could not open output file non/existant/path/parallel_find_output.0
+
+# bad output file (actually a directory)
+$ parallel_find -n 2 -o "parallel_find_outputdir" "prefix"
+"parallel_find_outputdir.0" Already exists!
+Destination path is not a file "parallel_find_outputdir.0"
+
+# bad output buffer size
+$ parallel_find -n 2 -B 18446744073709551615 "prefix"
+Error: Could not initialize 2 output buffers
+
+# bad thread count
+$ parallel_find -n 18446744073709551615 "prefix"
+Could not allocate space for 18446744073709551615 files
+
+# bad input file type
+$ parallel_find -n 2 "/dev/null"
+Error: Unsupported type for "/dev/null"
 

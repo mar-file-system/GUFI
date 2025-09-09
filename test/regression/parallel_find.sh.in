@@ -65,6 +65,31 @@ set -e
 . @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 OUTPUT="parallel_find.out"
+
+OUTFILE_PREFIX="parallel_find_output"
+OUTFILES=()
+for (( i = 0; i < THREADS; i++ ))
+do
+    OUTFILES+=("${OUTFILE_PREFIX}.${i}")
+done
+PARENT="$(mktemp -d XXXXXX)"
+
+OUTPUTDIR_PREFIX="parallel_find_outputdir"
+OUTPUTDIR="${OUTPUTDIR_PREFIX}.0"
+
+cleanup() {
+    rm -rf "${OUTFILES[@]}" "${PARENT}" "${OUTPUTDIR}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
 "${GENERATETREE}" "${SRCDIR}"
 
 (
@@ -75,7 +100,7 @@ run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}\""
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/1MB\""
 
 echo "# comparing parallel_find result to find result"
-@DIFF@ <(find "${SRCDIR}" | sort) <(${PARALLEL_FIND} "${SRCDIR}" | sort)
+@DIFF@ <(find "${SRCDIR}" | sort) <("${PARALLEL_FIND}" "${SRCDIR}" | sort)
 
 echo "# link to a directory with slash at the end"
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/directory/subdirectory/directory_symlink/\""
@@ -101,8 +126,11 @@ run_sort "${PARALLEL_FIND} -n ${THREADS} -t lf \"${SRCDIR}\""
 echo "# remove starting path with newline"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"%P\\n\" \"${SRCDIR}\""
 
-echo "# get full path with newline"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"\\n\" \"${SRCDIR}\""
+echo "# print escape characters"
+run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"[\\t\\]\\r\\n\" \"${SRCDIR}\" | head -n 1"
+
+echo "# print non-format characters"
+run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"Path: %p\\n\" \"${SRCDIR}\""
 
 echo "# level higher than the level of the tree"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -y 10 \"${SRCDIR}\""
@@ -116,6 +144,17 @@ run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/directory/\" \"${SRCDIR}/di
 echo "# keep full path with newline"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"%p\\n\" \"${SRCDIR}\""
 
+echo "# write to output files"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTFILE_PREFIX}\" \"${SRCDIR}\""
+# shellcheck disable=SC2145
+run_sort "cat ${OUTFILES[@]}"
+
+echo "# write to same output files"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTFILE_PREFIX}\" \"${SRCDIR}\""
+
+echo "# small output buffer"
+run_sort "${PARALLEL_FIND} -n ${THREADS} -B 16 \"${SRCDIR}\""
+
 # errors
 
 echo "# empty path"
@@ -125,13 +164,37 @@ echo "# nonexistent file"
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/nonexistent_file\""
 
 echo "# single unsupported type"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -t s \"${SRCDIR}\""
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} -t s \"${SRCDIR}\" > /dev/null"
 
 echo "# mix of supported and unsupported types"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -t lfs \"${SRCDIR}\""
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} -t lfs \"${SRCDIR}\" > /dev/null"
+
+echo "# unknown escape character"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} -f \"\\d\\n\" \"${SRCDIR}\" | head -n 1"
+
+echo "# unknown format specifier"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} -f \"%Q\\n\" \"${SRCDIR}\" | head -n 1"
+
+echo "# bad format"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} -f \"%\" \"${SRCDIR}\" 2>&1 | head -n 1"
+
+echo "# bad output file (missing parent directories)"
+run_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${PARENT}/non/existant/path/${OUTFILE_PREFIX}\" \"${SRCDIR}\"" | @SED@ "s%${PARENT}/%%g"
+
+echo "# bad output file (actually a directory)"
+mkdir "${OUTPUTDIR}"
+run_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTPUTDIR_PREFIX}\" \"${SRCDIR}\""
+
+echo "# bad output buffer size"
+run_sort "${PARALLEL_FIND} -n ${THREADS} -B 18446744073709551615 \"${SRCDIR}\""
+
+echo "# bad thread count"
+run_no_sort "${PARALLEL_FIND} -n 18446744073709551615 \"${SRCDIR}\""
+
+echo "# bad input file type"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} \"/dev/null\""
 
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/parallel_find.expected "${OUTPUT}"
 rm "${OUTPUT}"
-

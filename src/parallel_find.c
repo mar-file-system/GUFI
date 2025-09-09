@@ -82,6 +82,7 @@ OF SUCH DAMAGE.
 struct PoolArgs {
     struct input in;
     struct OutputBuffers obufs;
+    FILE **outfiles;
 };
 
 void sub_help(void) {
@@ -128,19 +129,21 @@ static int format_output(const char *format, const char *path, struct PrintArgs 
             format++; /* Skip % */
 
             if (!*format) {
-                fprintf(stderr, "parallel_find: bad format sequence at end\n");
+                fprintf(stderr, "Error: bad format sequence at end\n");
                 break;
             }
 
+            const size_t rem = sizeof(output) - (out - output);
+
             switch (*format) {
                 case 'P': /* Starting-point removed from path */
-                    out += snprintf(out, sizeof(output) - (out - output), "%s", path + root_len); 
+                    out += SNPRINTF(out, rem, "%s", path + root_len);
                     break;
                 case 'p':
-                    out += snprintf(out, sizeof(output) - (out - output), "%s", path);
+                    out += SNPRINTF(out, rem, "%s", path);
                     break;
                 default:
-                    *out++ = '?';
+                    out += SNPRINTF(out, rem, "%%%c\n", *format);
                     break;
             }
         }
@@ -150,10 +153,10 @@ static int format_output(const char *format, const char *path, struct PrintArgs 
 
         format++;
     }
-    
+
     *out = '\0';
 
-    char *buf[] = {output}; 
+    char *buf[] = {output};
     print_parallel(print_args, 1, buf, NULL);
     return 0;
 }
@@ -161,14 +164,6 @@ static int format_output(const char *format, const char *path, struct PrintArgs 
 static int process_output(struct work *work, struct entry_data *ed, void *nondir_args) {
     (void) ed;
     struct QPTPool_vals *args = (struct QPTPool_vals *) nondir_args;
-    const size_t user_types = args->pa->in.filter_types;
-
-    const struct stat *st = &work->statuso;
-    if (!((S_ISREG(st->st_mode) && (user_types & FILTER_TYPE_FILE)) || 
-          (S_ISDIR(st->st_mode) && (user_types & FILTER_TYPE_DIR))  ||
-          (S_ISLNK(st->st_mode) && (user_types & FILTER_TYPE_LINK)))) {
-        return 0;
-    }
 
     /*
     When this function is called in processdir, descend is not called yet
@@ -191,15 +186,23 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
     root_dir/dir1/file1.txt
     */
 
-    if ((work->level < args->pa->in.min_level) || (work->level > args->pa->in.max_level)) {
+    if (work->level < args->pa->in.min_level) { /* work->level > max_level is handled by descend */
        return 0;
+    }
+
+    const size_t user_types = args->pa->in.filter_types;
+    const struct stat *st = &work->statuso;
+    if (!((S_ISREG(st->st_mode) && (user_types & FILTER_TYPE_FILE)) ||
+          (S_ISDIR(st->st_mode) && (user_types & FILTER_TYPE_DIR))  ||
+          (S_ISLNK(st->st_mode) && (user_types & FILTER_TYPE_LINK)))) {
+        return 0;
     }
 
     struct PrintArgs print = {
         .output_buffer = &args->pa->obufs.buffers[args->id],
-        .delim = '\0', 
+        .delim = '\0',
         .mutex = args->pa->obufs.mutex,
-        .outfile = stdout,
+        .outfile = args->pa->outfiles[args->id],
         .types = NULL,
         .suppress_newline = args->pa->in.format_set,
     };
@@ -218,7 +221,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct PoolArgs *pa = (struct PoolArgs *) args;
 
     int rc = 0;
-    
+
     struct QPTPool_vals qptp_vals = {
         .ctx = ctx,
         .id = id,
@@ -226,7 +229,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     };
 
     process_output(work, NULL, &qptp_vals);
-  
+
     DIR *dir = opendir(work->name);
     if (!dir) {
         fprintf(stderr, "Error: Could not open directory \"%s\"\n", work->name);
@@ -244,17 +247,77 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return rc;
 }
 
+/* close all output files */
+static int outfiles_fin(FILE **files, const size_t end) {
+    /* Not checking arguments */
+    for(size_t i = 0; i < end; i++) {
+        fflush(files[i]);
+        fclose(files[i]);
+    }
+    free(files);
+    return 0;
+}
+
+/* allocate the array of FILE * and open files */
+static FILE **outfiles_init(struct input *in) {
+    /* Not checking arguments */
+    FILE **files = calloc(in->maxthreads, sizeof(*files));
+    if (!files) {
+        fprintf(stderr, "Could not allocate space for %zu files\n", in->maxthreads);
+        return NULL;
+    }
+
+    if (in->output == OUTFILE) {
+        for(size_t i = 0; i < in->maxthreads; i++) {
+            char outname[MAXPATH];
+            SNPRINTF(outname, MAXPATH, "%s.%zu", in->outname.data, i);
+
+            /* check if the destination path already exists (not an error) */
+            struct stat st;
+            if (stat(outname, &st) == 0) {
+                fprintf(stderr, "\"%s\" Already exists!\n", outname);
+
+                /* if the destination path is not a regular file (error) */
+                if (!S_ISREG(st.st_mode)) {
+                    outfiles_fin(files, i);
+                    fprintf(stderr, "Destination path is not a file \"%s\"\n", outname);
+                    return NULL;
+                }
+            }
+
+            if (!(files[i] = fopen(outname, "w"))) {
+                outfiles_fin(files, i);
+                fprintf(stderr, "Could not open output file %s\n", outname);
+                return NULL;
+            }
+        }
+    }
+    else {
+        for(size_t i = 0; i < in->maxthreads; i++) {
+            files[i] = stdout;
+        }
+    }
+
+    return files;
+}
+
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:f:y:z:t:", 1, "input_dir...", &pa.in);
+    process_args_and_maybe_exit("hHvn:f:y:z:t:o:B:", 1, "input_dir...", &pa.in);
     int rc = 0;
+
+    pa.outfiles = outfiles_init(&pa.in);
+    if (!pa.outfiles) {
+        rc = 1;
+        goto cleanup_exit;
+    }
 
     /* Initialize output buffers */
     static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     if (!OutputBuffers_init(&pa.obufs, pa.in.maxthreads, pa.in.output_buffer_size, &mutex)) {
         fprintf(stderr, "Error: Could not initialize %zu output buffers\n", pa.in.maxthreads);
         rc = 1;
-        goto cleanup_exit;
+        goto close_outfiles;
     }
 
     /* create a queue per thread pool */
@@ -264,22 +327,22 @@ int main(int argc, char *argv[]) {
         rc = 1;
         goto cleanup_qptp;
     }
-  
+
     for (int i = idx; i < argc; i++) {
         const char *path = argv[i];
         const size_t path_len = strlen(path);
 
         struct work *work = new_work_with_name(NULL, 0, path, path_len);
-        work->orig_root.data = path;
-        /* add 1 to remove the slash added from descend */
-        work->orig_root.len = path_len + 1;
         if (!work) {
             fprintf(stderr, "Error: Failed to create work item for \"%s\"\n", path);
             rc = 1;
             continue;
         }
 
-        /* input path that are links are followed */ 
+        work->orig_root.data = path;
+        work->orig_root.len = path_len + 1;  /* add 1 to remove the slash added from descend */
+
+        /* input path that are links are followed */
         if (stat(path, &work->statuso) != 0) {
             const int err = errno;
             fprintf(stderr, "Error: Cannot stat \"%s\": %s (%d)\n",
@@ -315,8 +378,11 @@ int main(int argc, char *argv[]) {
   cleanup_qptp:
     QPTPool_destroy(pool);
 
-    OutputBuffers_flush_to_single(&pa.obufs, stdout);
+    OutputBuffers_flush_to_multiple(&pa.obufs, pa.outfiles);
     OutputBuffers_destroy(&pa.obufs);
+
+  close_outfiles:
+    outfiles_fin(pa.outfiles, pa.in.maxthreads);
 
   cleanup_exit:
     input_fini(&pa.in);

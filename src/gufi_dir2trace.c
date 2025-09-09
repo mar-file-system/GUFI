@@ -212,10 +212,10 @@ static FILE **outfiles_init(const char *prefix, const size_t count) {
 
         /* check if the destination path already exists (not an error) */
         struct stat st;
-        if (lstat(outname, &st) == 0) {
+        if (stat(outname, &st) == 0) {
             fprintf(stderr, "\"%s\" Already exists!\n", outname);
 
-            /* if the deestination path is not a regular file (error) */
+            /* if the destination path is not a regular file (error) */
             if (!S_ISREG(st.st_mode)) {
                 outfiles_fin(files, i);
                 fprintf(stderr, "Destination path is not a file \"%s\"\n", outname);
