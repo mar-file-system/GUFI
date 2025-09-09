@@ -108,6 +108,8 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         }
     }
 
+    const int last = count - 1;
+
     /* if the row is larger than the entire buffer, flush this row */
     if (ob->capacity < row_len) {
         /* the existing buffer will have been flushed a few lines ago, maintaining output order */
@@ -123,7 +125,6 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             fwrite(&count, sizeof(char), sizeof(count), print->outfile);
         }
 
-        const int last = count - 1;
         for(int i = 0; i < last; i++) {
             if (types) {
                 const char col_type = types[i];
@@ -180,7 +181,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             filled += sizeof(count);
         }
 
-        for(int i = 0; i < count; i++) {
+        for(int i = 0; i < last; i++) {
             if (types) {
                 buf[filled] = types[i];
                 filled++;
@@ -200,15 +201,25 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             }
         }
 
-        if (!types) {
-            if (print->suppress_newline) {
-                /* remove final delimiter without replacement */
-                filled--;
-            }
-            else {
-               /* replace final delimiter with newline */
-               buf[filled - 1] = '\n';
-           }
+        /* print last column with no follow up delimiter */
+
+        if (types) {
+            buf[filled] = types[last];
+            filled++;
+
+            memcpy(&buf[filled], &lens[last], sizeof(lens[last]));
+            filled += sizeof(lens[last]);
+        }
+
+        if (data[last]) {
+            memcpy(&buf[filled], data[last], lens[last]);
+            filled += lens[last];
+        }
+
+        if (!types && !print->suppress_newline) {
+            /* replace final delimiter with newline */
+            buf[filled] = '\n';
+            filled++;
        }
 
         ob->filled = filled;
