@@ -90,10 +90,6 @@ def parse_args():
                         type=gufi_distributed.is_exec_file,
                         default='gufi_rollup')
 
-    parser.add_argument('--threads',       '-n', metavar='n',
-                        type=gufi_common.get_positive,
-                        default=1)
-
     parser.add_argument('GUFI_tree',
                         type=gufi_distributed.dir_arg)
 

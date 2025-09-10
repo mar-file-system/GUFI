@@ -153,11 +153,13 @@ DISTRIBUTORS = {
 }
 
 # Step 1
-# Run find(1) and return sorted list of directories
+# Run
+#     find -H "${root}" -mindepth "${level}" -maxdepth "${level}" -type d -printf "%P\n"
+# (or equivalent) to get list of directories at given level without ${root}
 def dirs_at_level(args, root):
     start = clock()
 
-    cmd = [args.find, root, str(args.level)]
+    cmd = [args.find, root, str(args.level), str(args.threads)]
     proc = subprocess.Popen(cmd, # pylint: disable=consider-using-with
                             stdout=subprocess.PIPE,
                             cwd=os.getcwd())
@@ -174,7 +176,7 @@ def dirs_at_level(args, root):
     return [path.decode() for path in dirs.split(b'\n') if len(path) > 0]
 
 # Step 2
-# Split directories into groups of paths for processing
+# Sort the directories and split them into groups of paths for processing
 def group_dirs(dirs, splits, sort):
     count = len(dirs)
     group_size = count // splits + int(bool(count % splits))
@@ -342,6 +344,11 @@ def parse_args(name, desc):
 
     parser.add_argument('--dry-run',             action='store_true')
 
+    parser.add_argument('find',
+                        type=is_exec_file,
+                        default='find.sh',
+                        help='Script that finds paths at level. Script should take in 2 arguments, starting path and level, and remove the starting path from each line (replicate find -H "${root}" -mindepth "${level}" -maxdepth "${level}" -type d -printf "%%P\\n")')
+
     parser.add_argument('--group-file-prefix',   metavar='path',
                         type=str,
                         default='path_list',
@@ -355,11 +362,6 @@ def parse_args(name, desc):
                         choices=SORT_DIRS.keys(),
                         default='path',
                         help='Sort paths discovered by find at given level')
-
-    parser.add_argument('find',
-                        type=is_exec_file,
-                        default='find.sh',
-                        help='Script that finds paths at level. Script should take in 2 arguments, starting path and level, and remove the starting path from each line (replicate find -H ${root} -mindepth ${level} -maxdepth ${level} -type d -printf "%%P\\n")')
 
     # not using subparser
     parser.add_argument('distributor',
@@ -380,5 +382,9 @@ def parse_args(name, desc):
     parser.add_argument('level',
                         type=gufi_common.get_positive,
                         help='Level at which work is distributed across nodes')
+
+    parser.add_argument('--threads', '-n',       metavar='n',
+                        type=gufi_common.get_positive,
+                        default=1)
 
     return parser # allow for others to use this parser

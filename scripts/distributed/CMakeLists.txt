@@ -65,19 +65,30 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/gufi_distributed.py"
   DESTINATION "${SERVER_LIB}"
   COMPONENT Server)
 
-configure_file(find.sh.in find.sh @ONLY)
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/find.sh"
-  DESTINATION "${SERVER_BIN}"
-  COMPONENT Server)
-
 # GNU find with -printf "%P" is required
+# for the serial find script
 #
 # put this check after configuring the script
 # in order to not duplicate call to find
+#
+# only install the script if it worked
+configure_file(find.sh.in find.sh @ONLY)
 execute_process(
   COMMAND "${CMAKE_CURRENT_BINARY_DIR}/find.sh" . 0
-  OUTPUT_QUIET
-  COMMAND_ERROR_IS_FATAL ANY)
+  RESULT_VARIABLE FIND_P_ERROR
+  OUTPUT_QUIET)
+
+if (FIND_P_ERROR EQUAL 0)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/find.sh"
+    DESTINATION "${SERVER_BIN}"
+    COMPONENT Server)
+endif()
+
+# find using parallel_find in src
+configure_file(parallel_find.sh.in parallel_find.sh @ONLY)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/parallel_find.sh"
+  DESTINATION "${SERVER_BIN}"
+  COMPONENT Server)
 
 # executables
 set(DISTRIBUTED

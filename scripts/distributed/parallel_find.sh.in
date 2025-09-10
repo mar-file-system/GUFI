@@ -1,4 +1,4 @@
-#!@Python3_EXECUTABLE@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,43 +61,10 @@
 
 
 
-import gufi_common
-import gufi_distributed
+set -e
 
-def subtree_cmd(args, filename, _idx, _target):
-    return [
-        args.gufi_treesummary_all,
-        '-n', str(args.threads),
-        '-y', str(args.level),
-        '-D', filename,
-        args.GUFI_tree
-    ]
+root="$1"
+level="$2"
+threads="$3"
 
-def top_cmd(args, _target):
-    return [
-        args.gufi_treesummary_all,
-        '-n', str(args.threads),
-        '-z', str(args.level - 1),
-        args.GUFI_tree
-    ]
-
-def parse_args():
-    parser = gufi_distributed.parse_args('gufi_treesummary_all_distributed',
-                                         'Script for distributing gufi_treesummary_all across nodes')
-
-    parser.add_argument('--gufi_treesummary_all',          metavar='path',
-                        type=gufi_distributed.is_exec_file,
-                        default='gufi_treesummary_all')
-
-    parser.add_argument('GUFI_tree',
-                        type=gufi_distributed.dir_arg)
-
-    return parser.parse_args()
-
-def main():
-    args = parse_args()
-
-    gufi_distributed.distribute_work(args, args.GUFI_tree, subtree_cmd, top_cmd, True)
-
-if __name__ == '__main__':
-    main()
+parallel_find -n "${threads}" -y "${level}" -z "${level}" -t d -f "%P\n" "${root}"
