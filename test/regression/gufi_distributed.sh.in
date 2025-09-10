@@ -147,7 +147,7 @@ trace_files() {
 }
 
 remove_distributed_output() {
-    remove_indexing_time | @GREP@ -v "Creating GUFI\|Total Dirs:\|Total Non-Dirs\|Total Files:\|find(1) returned\|Jobs completed in"
+    remove_indexing_time | @GREP@ -v "Creating GUFI\|Total Dirs:\|Total Non-Dirs\|Total Files:\|find.sh returned\|Jobs completed in"
 }
 
 cleanup() {

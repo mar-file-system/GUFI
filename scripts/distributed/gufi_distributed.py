@@ -71,9 +71,9 @@ import time
 
 import gufi_common
 
-# how to sort paths found by find(1) at given level
+# how to sort paths found by find at given level
 SORT_DIRS = {
-    'unsorted' : lambda dirs : dirs,         # whatever order find(1) printed in
+    'unsorted' : lambda dirs : dirs,         # whatever order find printed in
     'path'     : lambda dirs : sorted(dirs), # pylint: disable=unnecessary-lambda
     'basename' : lambda dirs : sorted(dirs, key = os.path.basename),
     'random'   : lambda dirs : random.sample(dirs, len(dirs)),
@@ -167,11 +167,11 @@ def dirs_at_level(args, root):
 
     end = clock()
 
-    print('find(1) returned {0} directory paths in {1} seconds'.format(len(dirs), clock_diff(start, end)))
+    print('{0} returned {1} directory paths in {2} seconds'.format(args.find, len(dirs), clock_diff(start, end)))
 
     if proc.returncode:
-        sys.stderr.write('Warning: find(1) returned error code {0}\n'.format(proc.returncode))
-        # do not exit - find(1) might fail on active filesystems
+        sys.stderr.write('Warning: {0} returned error code {1}\n'.format(args.find, proc.returncode))
+        # do not exit - find might fail on active filesystems
 
     return [path.decode() for path in dirs.split(b'\n') if len(path) > 0]
 
@@ -356,7 +356,7 @@ def parse_args(name, desc):
 
     parser.add_argument('--use-existing-group-files',
                         action='store_true',
-                        help='Use existing group files (up to the number of targets) instead of running find(1)')
+                        help='Use existing group files (up to the number of targets) instead of running find')
 
     parser.add_argument('--sort',
                         choices=SORT_DIRS.keys(),
