@@ -359,6 +359,7 @@ int main(int argc, char *argv[]) {
                 .pa = &pa,
             };
             process_output(work, NULL, &qptp_vals);
+            free(work);
         }
         else if (S_ISDIR(work->statuso.st_mode)) {
             QPTPool_enqueue(pool, 0, processdir, work);
