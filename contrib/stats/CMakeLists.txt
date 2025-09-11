@@ -71,3 +71,7 @@ endforeach()
 
 # cannot be a .in file in order for codecov to find this file
 configure_file("snapshot.py" "snapshot.py" @ONLY)
+
+add_executable(find_outliers find_outliers.c DirData.c handle_columns.c)
+target_link_libraries(find_outliers ${COMMON_LIBRARIES})
+add_dependencies(find_outliers GUFI)
