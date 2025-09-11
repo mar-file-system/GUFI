@@ -8,9 +8,9 @@ At a high level, this might conceptually look something like:
 
 In this example,
  1. Filesystems to be indexed are mounted on the **GUFI Server**.
- 2. Indexes are created from these filesystems using **Index Creation** programs (e.g., `gufi_dir2index`, `gufi_trace2index`) and placed into a location backed by dedicated, high-performant **Index Storage (NVMe)**.
+ 2. Indexes are created from these filesystems using **Index Creation** programs (e.g., `gufi_dir2index`, `gufi_trace2index`) and are placed into a location backed by dedicated, high-performant **Index Storage (NVMe)**.
  3. In-progress GUFI indexes are symlinked to locations in `/search_in_progress`, and then, upon completion, are symlinked to a location in `/search`. This results in atomic index updates from the point of view of the user.
- 4. A **restricted shell** (`rbash`) is configured on the GUFI Server so that users can only run GUFI programs on the GUFI Server.
- 5. GUFI programs that query indexes are placed into `/gufi_bin`, and are executed via the restricted shell by users.
- 6. A custom home directory (`/gufi_home`) is configured to set up the read-only user environment; this involves configuring read-only dotfiles that sets up user environment variables (e.g., `PATH=/gufi_home`).
- 7. Users can log into a `GUFI Client` and run `GUFI Client Programs`, which themselves access the GUFI Server to run the **GUFI Server Programs** used for querying GUFI indexes.
+ 4. A **Restricted Shell** (`rbash`) is configured on the GUFI Server so that users can only run GUFI Server Programs on the GUFI Server.
+ 5. GUFI programs that query indexes are placed into `/gufi_bin`, and are executed via the Restricted Shell by users.
+ 6. A custom home directory (`/gufi_home`) is configured to set up the read-only user environment; this involves configuring read-only dotfiles that set up user environment variables (e.g., `PATH=/gufi_home`).
+ 7. Users can log into a **GUFI Client** and run **GUFI Client Programs**, which themselves access the GUFI Server to run the **GUFI Server Programs** used for querying GUFI indexes.
