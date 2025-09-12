@@ -675,18 +675,25 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_text(context, user_dirname, user_dirname_len, free);
 }
 
-static void relative_level(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc; (void) argv;
-
-    size_t level = (size_t) (uintptr_t) sqlite3_user_data(context);
-    sqlite3_result_int64(context, level);
-}
-
 static void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc; (void) argv;
 
     refstr_t *root = (refstr_t *) sqlite3_user_data(context);
     sqlite3_result_text(context, root->data, root->len, SQLITE_STATIC);
+}
+
+static void relative_level(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc; (void) argv;
+
+    const size_t level = (size_t) (uintptr_t) sqlite3_user_data(context);
+    sqlite3_result_int64(context, level);
+}
+
+static void pinode(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc; (void) argv;
+
+    const long long int pinode = (long long int) (uintptr_t) sqlite3_user_data(context);
+    sqlite3_result_int64(context, pinode);
 }
 
 int addqueryfuncs(sqlite3 *db) {
@@ -725,17 +732,19 @@ int addqueryfuncs(sqlite3 *db) {
 
 int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
     return !(
-        (sqlite3_create_function(db,  "path",                      0, SQLITE_UTF8,
-                                 work,                             &path,           NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "epath",                     0, SQLITE_UTF8,
-                                 work,                             &epath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "fpath",                     0, SQLITE_UTF8,
-                                 work,                             &fpath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "rpath",                     2, SQLITE_UTF8,
-                                 work,                             &rpath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "starting_point",            0,  SQLITE_UTF8,
-                                 (void *) &work->orig_root,        &starting_point, NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "level",                     0,  SQLITE_UTF8,
-                                 (void *) (uintptr_t) work->level, &relative_level, NULL, NULL) == SQLITE_OK)
+        (sqlite3_create_function(db,  "path",                       0, SQLITE_UTF8,
+                                 work,                              &path,           NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "epath",                      0, SQLITE_UTF8,
+                                 work,                              &epath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "fpath",                      0, SQLITE_UTF8,
+                                 work,                              &fpath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "rpath",                      2, SQLITE_UTF8,
+                                 work,                              &rpath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "starting_point",             0,  SQLITE_UTF8,
+                                 (void *) &work->orig_root,         &starting_point, NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "level",                      0,  SQLITE_UTF8,
+                                 (void *) (uintptr_t) work->level,  &relative_level, NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "pinode",                     0,  SQLITE_UTF8,
+                                 (void *) (uintptr_t) work->pinode, &pinode,         NULL, NULL) == SQLITE_OK)
         );
 }
