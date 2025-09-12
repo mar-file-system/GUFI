@@ -88,7 +88,7 @@ static int get_single_value_callback(void *args, int count, char **data, char **
     (void) count; (void) columns;
     DirData_t *dd = (DirData_t *) args;
 
-    return !((sscanf(data[0], "%lf", &dd->tot)   == 1));
+    return !(sscanf(data[0], "%lf", &dd->tot) == 1);
 }
 
 /* compute partial sample stdev for single value columns */
@@ -98,7 +98,7 @@ static void compute_single_value_mean_stdev(sll_t *subdirs, double *mean, double
     sll_loop(subdirs, node) {
         DirData_t *dd = (DirData_t *) sll_node_data(node);
         tot   += dd->tot;
-        totsq += dd->tot * dd->tot;
+        totsq += ((double) dd->tot) * dd->tot;
     }
 
     const uint64_t n = sll_get_size(subdirs);
@@ -113,8 +113,8 @@ static void compute_single_value_mean_stdev(sll_t *subdirs, double *mean, double
 /* ************************************* */
 str_t *gen_sum_sql(str_t *dst, const char *col) {
     str_alloc_existing(dst, MAXSQL);
-    dst->len = SNPRINTF(dst->data, dst->len, "SELECT tot%s, totsq%s FROM %s;",
-                        col, col, TREESUMMARY);
+    dst->len = SNPRINTF(dst->data, dst->len, "SELECT tot%s FROM %s;",
+                        col, TREESUMMARY);
     return dst;
 }
 
@@ -122,8 +122,7 @@ static int get_sum_callback(void *args, int count, char **data, char **columns) 
     (void) count; (void) columns;
     DirData_t *dd = (DirData_t *) args;
 
-    return !((sscanf(data[0], "%lf", &dd->tot)   == 1) &&
-             (sscanf(data[1], "%lf", &dd->totsq) == 1));
+    return !(sscanf(data[0], "%lf", &dd->tot) == 1);
 }
 
 /* compute partial sample stdev for sum columns */
@@ -133,7 +132,7 @@ static void compute_sum_mean_stdev(sll_t *subdirs, double *mean, double *stdev) 
     sll_loop(subdirs, node) {
         DirData_t *dd = (DirData_t *) sll_node_data(node);
         tot   += dd->tot;
-        totsq += dd->totsq;
+        totsq += ((double) dd->tot) * dd->tot;
     }
 
     const uint64_t n = sll_get_size(subdirs);
@@ -148,8 +147,8 @@ static void compute_sum_mean_stdev(sll_t *subdirs, double *mean, double *stdev) 
 /* ************************************* */
 str_t *gen_time_sql(str_t *dst, const char *col) {
     str_alloc_existing(dst, MAXSQL);
-    dst->len = SNPRINTF(dst->data, dst->len, "SELECT tot%s, totsq%s, epoch, totfiles + totlinks FROM %s;",
-                        col, col, TREESUMMARY);
+    dst->len = SNPRINTF(dst->data, dst->len, "SELECT tot%s, epoch, totfiles + totlinks FROM %s;",
+                        col, TREESUMMARY);
     return dst;
 }
 
@@ -158,9 +157,8 @@ static int get_time_callback(void *args, int count, char **data, char **columns)
     DirData_t *dd = (DirData_t *) args;
 
     return !((sscanf(data[0], "%lf",      &dd->tot)     == 1) &&
-             (sscanf(data[1], "%lf",      &dd->totsq)   == 1) &&
-             (sscanf(data[2], "%" PRId64, &dd->epoch)   == 1) &&
-             (sscanf(data[3], "%" PRId64, &dd->nondirs) == 1));
+             (sscanf(data[1], "%" PRId64, &dd->epoch)   == 1) &&
+             (sscanf(data[2], "%" PRId64, &dd->nondirs) == 1));
 }
 
 /* compute partial sample stdev for time columns */
@@ -171,8 +169,8 @@ static void compute_time_mean_stdev(sll_t *subdirs, double *mean, double *stdev)
     sll_loop(subdirs, node) {
         DirData_t *dd = (DirData_t *) sll_node_data(node);
         tot      += dd->tot;
-        totsq    += dd->tot * dd->tot;
-        mean_sum += dd->epoch * dd->nondirs + dd->tot;
+        totsq    += ((double) dd->tot) * dd->tot;
+        mean_sum += ((double) (dd->epoch * dd->nondirs)) + dd->tot;
     }
 
     const uint64_t n = sll_get_size(subdirs);
