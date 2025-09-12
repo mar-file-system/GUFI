@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <math.h>
 #include <stddef.h>
+#include <string.h>
 
 /* GUFI headers */
 #include "bf.h"
@@ -75,80 +76,168 @@ OF SUCH DAMAGE.
 #include "DirData.h"
 #include "handle_columns.h"
 
-/* ************************************* */
-static str_t *gen_single_value_sql(str_t *dst, const char *col) {
-    str_alloc_existing(dst, MAXSQL);
-    dst->len = SNPRINTF(dst->data, dst->len, "SELECT %s FROM %s;",
-                        col, TREESUMMARY);
+static double stdev_from_parts(const double totsq, const double tot, const size_t n, const int is_sample) {
+    const double variance = ((n * totsq) - (tot * tot)) / (n * (n - !!is_sample));
+    return sqrt(variance);
+}
 
+/* ************************************* */
+static str_t *gen_t_only_sql(str_t *dst, const char *col) {
+    str_alloc_existing(dst, MAXSQL);
+    dst->len = SNPRINTF(dst->data, dst->len,
+                        "SELECT t.%s "
+                        "FROM   %s AS t "
+                        "       INNER JOIN "
+                        "       %s AS s "
+                        "       ON (t.inode == s.inode) AND (s.isroot == 1) "
+                        ";",
+                        col, TREESUMMARY, SUMMARY);
     return dst;
 }
 
-static int get_single_value_callback(void *args, int count, char **data, char **columns) {
+static int get_t_only_callback(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
     DirData_t *dd = (DirData_t *) args;
-
-    return !(sscanf(data[0], "%lf", &dd->tot) == 1);
+    return !(sscanf(data[0], "%lf", &dd->t.value) == 1);
 }
 
 /* compute partial sample stdev for single value columns */
-static void compute_single_value_mean_stdev(sll_t *subdirs, double *mean, double *stdev) {
-    double tot   = 0;
-    double totsq = 0;
+static void compute_t_only_mean_stdev(sll_t *subdirs,
+                                      double *t_mean, double *t_stdev,
+                                      double *s_mean, double *s_stdev) {
+    double t_tot   = 0;
+    double t_totsq = 0;
     sll_loop(subdirs, node) {
         DirData_t *dd = (DirData_t *) sll_node_data(node);
-        tot   += dd->tot;
-        totsq += ((double) dd->tot) * dd->tot;
+
+        t_tot   += dd->t.value;
+        t_totsq += ((double) dd->t.value) * dd->t.value;
     }
 
     const uint64_t n = sll_get_size(subdirs);
 
-    const double variance = ((n * totsq) - (tot * tot)) / (n * (n - 1));
+    *t_mean  = t_tot / n;
+    *t_stdev = stdev_from_parts(t_totsq, t_tot, n, 0);
 
-    *mean  = tot / n;
-    *stdev = sqrt(variance);
+    *s_mean = 0;
+    *s_stdev = 0;
 }
 /* ************************************* */
 
 /* ************************************* */
-str_t *gen_sum_sql(str_t *dst, const char *col) {
+static str_t *gen_minmax_sql(str_t *dst, const char *col) {
     str_alloc_existing(dst, MAXSQL);
-    dst->len = SNPRINTF(dst->data, dst->len, "SELECT tot%s FROM %s;",
-                        col, TREESUMMARY);
+    dst->len = SNPRINTF(dst->data, dst->len,
+                        "SELECT t.%s, "
+                        "       s.%s  "
+                        "FROM   %s AS t "
+                        "       INNER JOIN "
+                        "       %s AS s "
+                        "       ON (t.inode == s.inode) AND (s.isroot == 1) "
+                        ";",
+                        col, col, TREESUMMARY, SUMMARY);
     return dst;
 }
 
-static int get_sum_callback(void *args, int count, char **data, char **columns) {
+static int get_minmax_callback(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
     DirData_t *dd = (DirData_t *) args;
 
-    return !(sscanf(data[0], "%lf", &dd->tot) == 1);
+    return !((sscanf(data[0], "%lf", &dd->t.value) == 1) &&
+             (sscanf(data[1], "%lf", &dd->s.value) == 1));
 }
 
-/* compute partial sample stdev for sum columns */
-static void compute_sum_mean_stdev(sll_t *subdirs, double *mean, double *stdev) {
-    double tot   = 0;
-    double totsq = 0;
+/* compute partial sample stdev for single value columns */
+static void compute_minmax_mean_stdev(sll_t *subdirs,
+                                            double *t_mean, double *t_stdev,
+                                            double *s_mean, double *s_stdev) {
+    double t_tot   = 0;
+    double t_totsq = 0;
+    double s_tot   = 0;
+    double s_totsq = 0;
     sll_loop(subdirs, node) {
         DirData_t *dd = (DirData_t *) sll_node_data(node);
-        tot   += dd->tot;
-        totsq += ((double) dd->tot) * dd->tot;
+
+        t_tot   += dd->t.value;
+        t_totsq += ((double) dd->t.value) * dd->t.value;
+
+        s_tot   += dd->s.value;
+        s_totsq += ((double) dd->s.value) * dd->s.value;
     }
 
     const uint64_t n = sll_get_size(subdirs);
 
-    const double variance = ((n * totsq) - (tot * tot)) / (n * (n - 1));
+    *t_mean  = t_tot / n;
+    *t_stdev = stdev_from_parts(t_totsq, t_tot, n, 0);
 
-    *mean  = tot / n;
-    *stdev = sqrt(variance);
+    *s_mean  = s_tot / n;
+    *s_stdev = stdev_from_parts(s_totsq, s_tot, n, 0);
+}
+/* ************************************* */
+
+/* ************************************* */
+str_t *gen_tot_sql(str_t *dst, const char *col) {
+    str_alloc_existing(dst, MAXSQL);
+    dst->len = SNPRINTF(dst->data, dst->len,
+                        "SELECT t.%s, "
+                        "       s.%s  "
+                        "FROM   %s AS t "
+                        "       INNER JOIN "
+                        "       %s AS s "
+                        "       ON (t.inode == s.inode) AND (s.isroot == 1) "
+                        ";",
+                        col, col, TREESUMMARY, SUMMARY);
+    return dst;
+}
+
+static int get_tot_callback(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+    DirData_t *dd = (DirData_t *) args;
+
+    return !((sscanf(data[0], "%lf", &dd->t.value) == 1) &&
+             (sscanf(data[1], "%lf", &dd->s.value) == 1));
+}
+
+/* compute partial sample stdev for sum columns */
+static void compute_tot_mean_stdev(sll_t *subdirs,
+                                   double *t_mean, double *t_stdev,
+                                   double *s_mean, double *s_stdev) {
+    double t_tot   = 0;
+    double t_totsq = 0;
+    double s_tot   = 0;
+    double s_totsq = 0;
+    sll_loop(subdirs, node) {
+        DirData_t *dd = (DirData_t *) sll_node_data(node);
+
+        t_tot   += dd->t.value;
+        t_totsq += ((double) dd->t.value) * dd->t.value;
+
+        s_tot   += dd->s.value;
+        s_totsq += ((double) dd->s.value) * dd->s.value;
+    }
+
+    const uint64_t n = sll_get_size(subdirs);
+
+    *t_mean  = t_tot / n;
+    *t_stdev = stdev_from_parts(t_totsq, t_tot, n, 0);
+
+    *s_mean  = s_tot / n;
+    *s_stdev = stdev_from_parts(s_totsq, s_tot, n, 0);
 }
 /* ************************************* */
 
 /* ************************************* */
 str_t *gen_time_sql(str_t *dst, const char *col) {
     str_alloc_existing(dst, MAXSQL);
-    dst->len = SNPRINTF(dst->data, dst->len, "SELECT tot%s, epoch, totfiles + totlinks FROM %s;",
-                        col, TREESUMMARY);
+    dst->len = SNPRINTF(dst->data, dst->len,
+                        "SELECT t.%s, t.epoch, t.totfiles + t.totlinks, "
+                        "       s.%s, s.epoch, s.totfiles + s.totlinks  "
+                        "FROM   %s AS t "
+                        "       INNER JOIN "
+                        "       %s AS s "
+                        "       ON (t.inode == s.inode) AND (s.isroot == 1) "
+                        ";",
+                        col, col, TREESUMMARY, SUMMARY);
     return dst;
 }
 
@@ -156,43 +245,63 @@ static int get_time_callback(void *args, int count, char **data, char **columns)
     (void) count; (void) columns;
     DirData_t *dd = (DirData_t *) args;
 
-    return !((sscanf(data[0], "%lf",      &dd->tot)     == 1) &&
-             (sscanf(data[1], "%" PRId64, &dd->epoch)   == 1) &&
-             (sscanf(data[2], "%" PRId64, &dd->nondirs) == 1));
+    return !((sscanf(data[0], "%lf",      &dd->t.value) == 1) &&
+             (sscanf(data[1], "%" PRId64, &dd->t.epoch)     == 1) &&
+             (sscanf(data[2], "%" PRId64, &dd->t.nondirs)   == 1) &&
+             (sscanf(data[3], "%lf",      &dd->s.value) == 1) &&
+             (sscanf(data[4], "%" PRId64, &dd->s.epoch)     == 1) &&
+             (sscanf(data[5], "%" PRId64, &dd->s.nondirs)   == 1));
 }
 
 /* compute partial sample stdev for time columns */
-static void compute_time_mean_stdev(sll_t *subdirs, double *mean, double *stdev) {
-    double tot      = 0;
-    double totsq    = 0;
-    double mean_sum = 0;
+static void compute_time_mean_stdev(sll_t *subdirs,
+                                    double *t_mean, double *t_stdev,
+                                    double *s_mean, double *s_stdev) {
+    double t_tot      = 0;
+    double t_totsq    = 0;
+    double t_mean_sum = 0;
+    double s_tot      = 0;
+    double s_totsq    = 0;
+    double s_mean_sum = 0;
     sll_loop(subdirs, node) {
         DirData_t *dd = (DirData_t *) sll_node_data(node);
-        tot      += dd->tot;
-        totsq    += ((double) dd->tot) * dd->tot;
-        mean_sum += ((double) (dd->epoch * dd->nondirs)) + dd->tot;
+
+        t_tot      += dd->t.value;
+        t_totsq    += ((double) dd->t.value) * dd->t.value;
+        t_mean_sum += ((double) (dd->t.epoch * dd->t.nondirs)) + dd->t.value;
+
+        s_tot      += dd->s.value;
+        s_totsq    += ((double) dd->s.value) * dd->s.value;
+        s_mean_sum += ((double) (dd->s.epoch * dd->s.nondirs)) + dd->s.value;
     }
 
     const uint64_t n = sll_get_size(subdirs);
 
-    const double variance = ((n * totsq) - (tot * tot)) / (n * (n - 1));
+    *t_mean  = t_mean_sum / n;
+    *t_stdev = stdev_from_parts(t_totsq, t_tot, n, 0);
 
-    *mean  = mean_sum / n;
-    *stdev = sqrt(variance);
+    *s_mean  = s_mean_sum / n;
+    *s_stdev = stdev_from_parts(s_totsq, s_tot, n, 0);
 }
 /* ************************************* */
 
 trie_t *setup_column_functions(void) {
-    static const ColHandler_t SINGLE_VALUE = {
-        .gen_sql            = gen_single_value_sql,
-        .sqlite_callback    = get_single_value_callback,
-        .compute_mean_stdev = compute_single_value_mean_stdev,
+    static const ColHandler_t T_ONLY = {
+        .gen_sql            = gen_t_only_sql,
+        .sqlite_callback    = get_t_only_callback,
+        .compute_mean_stdev = compute_t_only_mean_stdev,
     };
 
-    static const ColHandler_t SUM = {
-        .gen_sql            = gen_sum_sql,
-        .sqlite_callback    = get_sum_callback,
-        .compute_mean_stdev = compute_sum_mean_stdev,
+    static const ColHandler_t MINMAX = {
+        .gen_sql            = gen_minmax_sql,
+        .sqlite_callback    = get_minmax_callback,
+        .compute_mean_stdev = compute_minmax_mean_stdev,
+    };
+
+    static const ColHandler_t TOT = {
+        .gen_sql            = gen_tot_sql,
+        .sqlite_callback    = get_tot_callback,
+        .compute_mean_stdev = compute_tot_mean_stdev,
     };
 
     static const ColHandler_t TIME = {
@@ -203,43 +312,190 @@ trie_t *setup_column_functions(void) {
 
     trie_t *col_funcs = trie_alloc();
 
-    /* single value */
-    trie_insert(col_funcs, "totsubdirs",     10, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "totfiles",        8, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "totlinks",        8, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxsubdirfiles", 14, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxsubdirlinks", 14, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxsubdirsize",  13, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "minatime",        8, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxatime",        8, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "minmtime",        8, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxmtime",        8, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "minctime",        8, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxctime",        8, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "mincrtime",       9, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxcrtime",       9, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "minossint1",     10, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxossint1",     10, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "minossint2",     10, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxossint2",     10, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "minossint3",     10, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxossint3",     10, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "minossint4",     10, (void *) &SINGLE_VALUE, NULL);
-    trie_insert(col_funcs, "maxossint4",     10, (void *) &SINGLE_VALUE, NULL);
+    /* only available in treesummary */
+    trie_insert(col_funcs, "totsubdirs",     10, (void *) &T_ONLY, NULL);
+    trie_insert(col_funcs, "maxsubdirfiles", 14, (void *) &T_ONLY, NULL);
+    trie_insert(col_funcs, "maxsubdirlinks", 14, (void *) &T_ONLY, NULL);
+    trie_insert(col_funcs, "maxsubdirsize",  13, (void *) &T_ONLY, NULL);
 
-    /* sum of multiple values */
-    trie_insert(col_funcs, "size",            4, (void *) &SUM,          NULL);
-    trie_insert(col_funcs, "blocks",          6, (void *) &SUM,          NULL);
-    trie_insert(col_funcs, "ossint1",         7, (void *) &SUM,          NULL);
-    trie_insert(col_funcs, "ossint2",         8, (void *) &SUM,          NULL);
-    trie_insert(col_funcs, "ossint3",         8, (void *) &SUM,          NULL);
-    trie_insert(col_funcs, "ossint4",         8, (void *) &SUM,          NULL);
+    /* min/max columns */
+    /* trie_insert(col_funcs, "minuid",          6, (void *) &MINMAX, NULL); */
+    /* trie_insert(col_funcs, "maxuid",          6, (void *) &MINMAX, NULL); */
+    /* trie_insert(col_funcs, "mingid",          6, (void *) &MINMAX, NULL); */
+    /* trie_insert(col_funcs, "maxgid",          6, (void *) &MINMAX, NULL); */
+    trie_insert(col_funcs, "minsize",         7, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxsize",         7, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "minblocks",       9, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxblocks",       9, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "minatime",        8, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxatime",        8, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "minmtime",        8, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxmtime",        8, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "minctime",        8, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxctime",        8, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "mincrtime",       9, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxcrtime",       9, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "minossint1",     10, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxossint1",     10, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "minossint2",     10, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxossint2",     10, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "minossint3",     10, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxossint3",     10, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "minossint4",     10, (void *) &MINMAX, NULL);
+    trie_insert(col_funcs, "maxossint4",     10, (void *) &MINMAX, NULL);
+
+    /* raw tot columns */
+    trie_insert(col_funcs, "totfiles",        8, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totlinks",        8, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totsize",         7, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totzero",         7, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totltk",          6, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totmtk",          6, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totltm",          6, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totmtm",          6, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totmtg",          6, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totmtt",          6, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totblocks",       9, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totossint1",     10, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totossint2",     10, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totossint3",     10, (void *) &TOT,    NULL);
+    trie_insert(col_funcs, "totossint4",     10, (void *) &TOT,    NULL);
 
     /* requires epoch + count */
-    trie_insert(col_funcs, "atime",           5, (void *) &TIME,         NULL);
-    trie_insert(col_funcs, "mtime",           5, (void *) &TIME,         NULL);
-    trie_insert(col_funcs, "ctime",           5, (void *) &TIME,         NULL);
-    trie_insert(col_funcs, "crtime",          6, (void *) &TIME,         NULL);
+    trie_insert(col_funcs, "totatime",        8, (void *) &TIME,   NULL);
+    trie_insert(col_funcs, "totmtime",        8, (void *) &TIME,   NULL);
+    trie_insert(col_funcs, "totctime",        8, (void *) &TIME,   NULL);
+    trie_insert(col_funcs, "totcrtime",       9, (void *) &TIME,   NULL);
 
     return col_funcs;
+}
+
+#define T_ONLY_COLS                             \
+    { "totsubdirs",     10, },                  \
+    { "maxsubdirfiles", 14, },                  \
+    { "maxsubdirlinks", 14, },                  \
+    { "maxsubdirsize",  13, },
+
+#define MIN_COLS                                \
+    /* { "minuid",          6, },            */ \
+    /* { "mingid",          6, },            */ \
+    { "minsize",         7, },                  \
+    { "minblocks",       9, },                  \
+    { "minatime",        8, },                  \
+    { "minmtime",        8, },                  \
+    { "minctime",        8, },                  \
+    { "mincrtime",       9, },                  \
+    { "minossint1",     10, },                  \
+    { "minossint2",     10, },                  \
+    { "minossint3",     10, },                  \
+    { "minossint4",     10, },
+
+#define MAX_COLS                                \
+    /* { "maxuid",          6, },          */   \
+    /* { "maxgid",          6, },          */   \
+    { "maxsize",         7, },                  \
+    { "maxblocks",       9, },                  \
+    { "maxatime",        8, },                  \
+    { "maxmtime",        8, },                  \
+    { "maxctime",        8, },                  \
+    { "maxcrtime",       9, },                  \
+    { "maxossint1",     10, },                  \
+    { "maxossint2",     10, },                  \
+    { "maxossint3",     10, },                  \
+    { "maxossint4",     10, },
+
+#define TOT_COLS                                \
+    { "totfiles",        8, },                  \
+    { "totlinks",        8, },                  \
+    { "totsize",         7, },                  \
+    { "totzero",         7, },                  \
+    { "totltk",          6, },                  \
+    { "totmtk",          6, },                  \
+    { "totltm",          6, },                  \
+    { "totmtm",          6, },                  \
+    { "totmtg",          6, },                  \
+    { "totmtt",          6, },                  \
+    { "totblocks",       9, },                  \
+    { "totossint1",     10, },                  \
+    { "totossint2",     10, },                  \
+    { "totossint3",     10, },                  \
+    { "totossint4",     10, },
+
+#define TIME_COLS                               \
+    { "totatime",        8, },                  \
+    { "totmtime",        8, },                  \
+    { "totctime",        8, },                  \
+    { "totcrtime",       9, },
+
+#define LAST                                    \
+    { NULL,              0, },
+
+static const refstr_t T_ONLY[] = {
+    T_ONLY_COLS
+    LAST
+};
+
+static const refstr_t MIN[] = {
+    MIN_COLS
+    LAST
+};
+
+static const refstr_t MAX[] = {
+    MAX_COLS
+    LAST
+};
+
+static const refstr_t MINMAX[] = {
+    MIN_COLS
+    MAX_COLS
+    LAST
+};
+
+static const refstr_t TOT[] = {
+    TOT_COLS
+    LAST
+};
+
+static const refstr_t TIME[] = {
+    TIME_COLS
+    LAST
+};
+
+static const refstr_t ALL[] = {
+    T_ONLY_COLS
+    MIN_COLS
+    MAX_COLS
+    TOT_COLS
+    TIME_COLS
+    LAST
+};
+
+typedef struct {
+    const refstr_t name;
+    const refstr_t *cols;
+} Group_t;
+
+const refstr_t *handle_group(const char *name, const size_t len) {
+    static const Group_t GROUPS[] = {
+        { { "T_ONLY", 6, }, T_ONLY, },
+        { { "MIN",    3, }, MIN,    },
+        { { "MAX",    3, }, MAX,    },
+        { { "MINMAX", 6, }, MINMAX, },
+        { { "TOT",    3, }, TOT,    },
+        { { "TIME",   4, }, TIME,   },
+        { { "ALL",    3, }, ALL,    },
+    };
+
+    static const size_t GROUP_COUNT = sizeof(GROUPS) / sizeof(GROUPS[0]);
+
+    for(size_t i = 0; i < GROUP_COUNT; i++) {
+        const Group_t *g = &GROUPS[i];
+        if (g->name.len == len) {
+            if (strncmp(g->name.data, name, len) == 0) {
+                return g->cols;
+            }
+        }
+    }
+
+    return NULL;
 }

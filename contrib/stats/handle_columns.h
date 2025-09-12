@@ -77,9 +77,14 @@ typedef struct ColHandler {
     int (*sqlite_callback)(void *args, int count, char **data, char **columns);
 
     /* compute mean and standard deviation for the column */
-    void (*compute_mean_stdev)(sll_t *subdirs, double *mean, double *stdev);
+    void (*compute_mean_stdev)(sll_t *subdirs,
+                               double *t_mean, double *t_stdev,
+                               double *s_mean, double *s_stdev);
 } ColHandler_t;
 
 trie_t *setup_column_functions(void);
+
+/* T_ONLY, MIN, MAX, MINMAX, TOT, TIME, ALL */
+const refstr_t *handle_group(const char *name, const size_t len);
 
 #endif

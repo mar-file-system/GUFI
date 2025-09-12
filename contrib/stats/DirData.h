@@ -69,13 +69,21 @@ OF SUCH DAMAGE.
 
 #include "str.h"
 
-typedef struct DirData {
-    str_t path;
-    double tot;
+typedef struct {
+    double value; /* value from single directory/subtree, not combined value */
+    double mean;
+    double stdev;
 
     /* only used by timestamps */
     int64_t epoch;
     int64_t nondirs;
+} Stats_t;
+
+typedef struct DirData {
+    str_t path;
+    int reported;   /* has this path already been reported? */
+    Stats_t t;      /* treesummary */
+    Stats_t s;      /* summary */
 } DirData_t;
 
 DirData_t *DirData_create(const str_t *path,

@@ -163,6 +163,10 @@ int QPTPool_generic_alloc_and_deserialize(const int fd, QPTPool_f *func, void **
  *
  * This function can be called before starting the thread pool.
  *
+ * Note that because this function may be called a massive number
+ * of times, this function does not check the value of id, so
+ * invalid ids will cause segfaults.
+ *
  * @param ctx      the pool context the function is running in
  * @param id       the id of the thread used to select where the work item should be enqueued
  * @param func     the function to run
@@ -181,6 +185,10 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id,
  * This function can be called before starting the thread pool.
  * However, note that if the queue limit or swap prefix is set after
  * pushing to the swap queue, all data in the swap files will be lost.
+ *
+ * Note that because this function may be called a massive number
+ * of times, this function does not check the value of id, so
+ * invalid ids will cause segfaults.
  *
  * @param ctx         the pool context the function is running in
  * @param id          the id of the thread used to select where the work item should be enqueued
@@ -203,6 +211,10 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_t *ctx, const size_t id,
  * This function can be called before starting the thread pool.
  * However, note that if the queue limit or swap prefix is set after
  * pushing to the swap queue, all data in the swap files will be lost.
+ *
+ * Note that because this function may be called a massive number
+ * of times, this function does not check the value of id, so
+ * invalid ids will cause segfaults.
  *
  * @param ctx         the pool context the function is running in
  * @param id          the id of the thread that will process this work
