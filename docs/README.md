@@ -58,6 +58,9 @@ configuration `-DLATEX_BUILD=On`.
 - [userfilespacehog](/examples/userfilespacehog)
 - [userfilespacehogusesummary](/examples/userfilespacehogusesummary)
 
+## [Deploying GUFI](/examples/deploy)
+- [Simple GUFI Server/Client](/examples/deploy/simple)
+
 ## Extra Information
 - [Configuration Files](config)
 - [Tests](tests)
