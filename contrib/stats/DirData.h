@@ -72,7 +72,6 @@ OF SUCH DAMAGE.
 typedef struct DirData {
     str_t path;
     double tot;
-    double totsq;
 
     /* only used by timestamps */
     int64_t epoch;
