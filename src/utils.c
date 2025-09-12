@@ -272,22 +272,22 @@ int tsumit(struct sum *sumin, struct sum *smout) {
         MIN_ASSIGN_LHS(smout->minctime, sumin->minctime);
         MAX_ASSIGN_LHS(smout->maxctime, sumin->maxctime);
         smout->totctime += sumin->totctime;
-        smout->totsqctime += sumin->totctime * sumin->totctime;
+        smout->totsqctime += sumin->totsqctime;
 
         MIN_ASSIGN_LHS(smout->minmtime, sumin->minmtime);
         MAX_ASSIGN_LHS(smout->maxmtime, sumin->maxmtime);
         smout->totmtime += sumin->totmtime;
-        smout->totsqmtime += sumin->totmtime * sumin->totmtime;
+        smout->totsqmtime += sumin->totsqmtime;
 
         MIN_ASSIGN_LHS(smout->minatime, sumin->minatime);
         MAX_ASSIGN_LHS(smout->maxatime, sumin->maxatime);
         smout->totatime += sumin->totatime;
-        smout->totsqatime += sumin->totatime * sumin->totatime;
+        smout->totsqatime += sumin->totsqatime;
 
         MIN_ASSIGN_LHS(smout->mincrtime, sumin->mincrtime);
         MAX_ASSIGN_LHS(smout->maxcrtime, sumin->maxcrtime);
         smout->totcrtime += sumin->totcrtime;
-        smout->totsqcrtime += sumin->totcrtime * sumin->totcrtime;
+        smout->totsqcrtime += sumin->totsqcrtime;
 
         MIN_ASSIGN_LHS(smout->minossint1, sumin->minossint1);
         MAX_ASSIGN_LHS(smout->maxossint1, sumin->maxossint1);
@@ -301,7 +301,7 @@ int tsumit(struct sum *sumin, struct sum *smout) {
 
     smout->epoch         = sumin->epoch;
     smout->totblocks    += sumin->totblocks;
-    smout->totsqblocks  += sumin->totblocks * sumin->totblocks;
+    smout->totsqblocks  += sumin->totsqblocks;
     smout->totzero      += sumin->totzero;
     smout->totltk       += sumin->totltk;
     smout->totmtk       += sumin->totmtk;
@@ -310,16 +310,16 @@ int tsumit(struct sum *sumin, struct sum *smout) {
     smout->totmtg       += sumin->totmtg;
     smout->totmtt       += sumin->totmtt;
     smout->totsize      += sumin->totsize;
-    smout->totsqsize    += sumin->totsize * sumin->totsize;
+    smout->totsqsize    += sumin->totsqsize;
     smout->totxattr     += sumin->totxattr;
     smout->totossint1   += sumin->totossint1;
-    smout->totsqossint1 += sumin->totossint1 * sumin->totossint1;
+    smout->totsqossint1 += sumin->totsqossint1;
     smout->totossint2   += sumin->totossint2;
-    smout->totsqossint2 += sumin->totossint2 * sumin->totossint2;
+    smout->totsqossint2 += sumin->totsqossint2;
     smout->totossint3   += sumin->totossint3;
-    smout->totsqossint3 += sumin->totossint3 * sumin->totossint3;
+    smout->totsqossint3 += sumin->totsqossint3;
     smout->totossint4   += sumin->totossint4;
-    smout->totsqossint4 += sumin->totossint4 * sumin->totossint4;
+    smout->totsqossint4 += sumin->totsqossint4;
 
     smout->totextdbs    += sumin->totextdbs;
 

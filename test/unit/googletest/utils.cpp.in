@@ -352,6 +352,7 @@ TEST(summary, sumit_link) {
     EXPECT_EQ(summary.maxossint4,            ed.ossint4);
     EXPECT_DOUBLE_EQ(summary.totossint4,     ed.ossint4);
     EXPECT_DOUBLE_EQ(summary.totsqossint4,   ((double) ed.ossint4) * ed.ossint4);
+
     EXPECT_EQ(summary.totxattr,              0);
 
     free(pwork);
@@ -385,7 +386,6 @@ TEST(summary, tsumit) {
     in.totsqblocks   = 1; out.totsqblocks   = 1;
     in.totcrtime     = 1; out.totcrtime     = 1;
     in.totsqcrtime   = 1; out.totsqcrtime   = 1;
-    in.totxattr      = 1; out.totxattr      = 1;
     in.totossint1    = 1; out.totossint1    = 0;
     in.totsqossint1  = 1; out.totsqossint1  = 0;
     in.totossint2    = 1; out.totossint2    = 0;
@@ -394,6 +394,7 @@ TEST(summary, tsumit) {
     in.totsqossint3  = 1; out.totsqossint3  = 0;
     in.totossint4    = 1; out.totossint4    = 0;
     in.totsqossint4  = 1; out.totsqossint4  = 0;
+    in.totxattr      = 1; out.totxattr      = 1;
 
     // all of out gets replaced
     out.maxsubdirfiles = 0;
@@ -454,7 +455,6 @@ TEST(summary, tsumit) {
     EXPECT_EQ(out.totcrtime,     2);
     EXPECT_EQ(out.totsqcrtime,   2);
 
-    EXPECT_EQ(out.totxattr,      2);
     EXPECT_EQ(out.totossint1,    1);
     EXPECT_EQ(out.totsqossint1,  1);
     EXPECT_EQ(out.totossint2,    1);
@@ -463,6 +463,8 @@ TEST(summary, tsumit) {
     EXPECT_EQ(out.totsqossint3,  1);
     EXPECT_EQ(out.totossint4,    1);
     EXPECT_EQ(out.totsqossint4,  1);
+
+    EXPECT_EQ(out.totxattr,      2);
 
     EXPECT_EQ(in.minuid,                out.minuid);
     EXPECT_EQ(in.maxuid,                out.maxuid);
@@ -483,19 +485,19 @@ TEST(summary, tsumit) {
     EXPECT_EQ(in.minossint1,            out.minossint1);
     EXPECT_EQ(in.maxossint1,            out.maxossint1);
     EXPECT_DOUBLE_EQ(in.totossint1,     out.totossint1);
-    EXPECT_DOUBLE_EQ(in.totsqossint1,   ((double) out.totsqossint1) * out.totsqossint1);
+    EXPECT_DOUBLE_EQ(in.totsqossint1,   out.totsqossint1);
     EXPECT_EQ(in.minossint2,            out.minossint2);
     EXPECT_EQ(in.maxossint2,            out.maxossint2);
     EXPECT_DOUBLE_EQ(in.totossint2,     out.totossint2);
-    EXPECT_DOUBLE_EQ(in.totsqossint2,   ((double) out.totsqossint2) * out.totsqossint2);
+    EXPECT_DOUBLE_EQ(in.totsqossint2,   out.totsqossint2);
     EXPECT_EQ(in.minossint3,            out.minossint3);
     EXPECT_EQ(in.maxossint3,            out.maxossint3);
     EXPECT_DOUBLE_EQ(in.totossint3,     out.totossint3);
-    EXPECT_DOUBLE_EQ(in.totsqossint3,   ((double) out.totsqossint3) * out.totsqossint3);
+    EXPECT_DOUBLE_EQ(in.totsqossint3,   out.totsqossint3);
     EXPECT_EQ(in.minossint4,            out.minossint4);
     EXPECT_EQ(in.maxossint4,            out.maxossint4);
     EXPECT_DOUBLE_EQ(in.totossint4,     out.totossint4);
-    EXPECT_DOUBLE_EQ(in.totsqossint4,   ((double) out.totsqossint4) * out.totsqossint4);
+    EXPECT_DOUBLE_EQ(in.totsqossint4,   out.totsqossint4);
 }
 
 TEST(shortpath, split) {
