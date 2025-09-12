@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <errno.h>
 #include <fcntl.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,18 +90,28 @@ struct PoolArgs {
     struct OutputBuffers obufs;
 };
 
-typedef struct OutlierWork {
+typedef struct {
+    double value;
+    double mean;
+    double stdev;
+} Stats_t;
+
+typedef struct {
     str_t path;
     refstr_t col;
-    ColHandler_t *handler; /* functions for handling the column type */
-    refstr_t query;        /* SQL selecting 1 column from summary table; reference to allocation in main */
+    const ColHandler_t *handler;  /* functions for handling the column type */
+    refstr_t query;               /* SQL for pulling data from index; reference to allocation in main */
     int is_outlier;
+    int reported;                 /* has this path already been reported? */
+
+    Stats_t t;
+    Stats_t s;
 } OutlierWork_t;
 
-static OutlierWork_t *OutlierWork_create(const str_t *path,
-                                         const refstr_t col,
-                                         ColHandler_t *handler, refstr_t query,
-                                         const int is_outlier) {
+static OutlierWork_t *OutlierWork_create(const str_t *path, const refstr_t col,
+                                         const ColHandler_t *handler, const refstr_t query,
+                                         const int is_outlier, const int reported,
+                                         const StdevData_t * t, const StdevData_t *s) {
     OutlierWork_t *ow = calloc(1, sizeof(OutlierWork_t));
     ow->path.data = malloc(path->len + 1);
     ow->path.len = SNFORMAT_S(ow->path.data, path->len + 1, 1,
@@ -110,6 +121,15 @@ static OutlierWork_t *OutlierWork_create(const str_t *path,
     ow->handler = handler;
     ow->query = query;
     ow->is_outlier = is_outlier;
+    ow->reported = reported;
+
+    ow->t.value = t->tot;
+    ow->t.mean = t->mean;
+    ow->t.stdev = t->stdev;
+
+    ow->s.value = s->tot;
+    ow->s.mean = s->mean;
+    ow->s.stdev = s->stdev;
 
     return ow;
 }
@@ -261,6 +281,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         .suppress_newline = 0,
     };
 
+    /* buffers for printing value, mean, and stdev as strings */
+    char t_v[32], t_m[32], t_s[32];
+    char s_v[32], s_m[32], s_s[32];
+
     sll_t subdirs;
     get_subdirs(ow, &subdirs);
 
@@ -269,9 +293,20 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* nothing under here */
     if (n == 0) {
         /* if this directory was an outlier, print this directory */
-        if (ow->is_outlier) {
-            char *out[] = {ow->path.data, (char *) ow->col.data};
-            print_parallel(&print, 2, out, NULL);
+        if (ow->is_outlier && !ow->reported) {
+            SNPRINTF(t_v, sizeof(t_v), "%lf", ow->t.value);
+            SNPRINTF(t_m, sizeof(t_m), "%lf", ow->t.mean);
+            SNPRINTF(t_s, sizeof(t_s), "%lf", ow->t.stdev);
+            SNPRINTF(s_v, sizeof(s_v), "%lf", ow->s.value);
+            SNPRINTF(s_m, sizeof(s_m), "%lf", ow->s.mean);
+            SNPRINTF(s_s, sizeof(s_s), "%lf", ow->s.stdev);
+
+            char *out[] = {
+                ow->path.data, (char *) ow->col.data,
+                t_v, t_m, t_s,
+                s_v, s_m, s_s,
+            };
+            print_parallel(&print, 8, out, NULL);
         }
         sll_destroy(&subdirs, NULL);
     }
@@ -287,42 +322,93 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
         else {
             /* compute mean and standard deviation */
-            double mean = 0, stdev = 0;
-            ow->handler->compute_mean_stdev(&subdirs, &mean, &stdev);
+            double t_mean = 0, t_stdev = 0;
+            double s_mean = 0, s_stdev = 0;
+            ow->handler->compute_mean_stdev(&subdirs,
+                                            &t_mean, &t_stdev,
+                                            &s_mean, &s_stdev);
 
             /* get 3 sigma values */
-            const double limit    = 3 * stdev;
-            const double low      = mean - limit;
-            const double high     = mean + limit;
+            const double t_limit = 3 * t_stdev;
+            const double t_low   = t_mean - t_limit;
+            const double t_high  = t_mean + t_limit;
+
+            const double s_limit = 3 * s_stdev;
+            const double s_low   = s_mean - s_limit;
+            const double s_high  = s_mean + s_limit;
 
             /* find outliers */
             sll_loop(&subdirs, node) {
                 DirData_t *dd = (DirData_t *) sll_node_data(node);
+                dd->t.mean = t_mean;
+                dd->t.stdev = t_stdev;
+                dd->s.mean = s_mean;
+                dd->s.stdev = s_stdev;
 
-                if ((dd->tot < low) || (high < dd->tot)) {
+                /* if the subtree is an outlier, queue it up for procesing */
+                if ((dd->t.tot < t_low) || (t_high < dd->t.tot)) {
                     sll_push(&outliers, dd);
+                }
+
+                /* if the subdirectory is an outlier, report it now */
+                if ((dd->s.tot < s_low) || (s_high < dd->s.tot)) {
+                    SNPRINTF(t_v, sizeof(t_v), "%lf", dd->t.tot);
+                    SNPRINTF(t_m, sizeof(t_m), "%lf", dd->t.mean);
+                    SNPRINTF(t_s, sizeof(t_s), "%lf", dd->t.stdev);
+                    SNPRINTF(s_v, sizeof(s_v), "%lf", dd->s.tot);
+                    SNPRINTF(s_m, sizeof(s_m), "%lf", dd->s.mean);
+                    SNPRINTF(s_s, sizeof(s_s), "%lf", dd->s.stdev);
+
+                    char *out[] = {
+                        dd->path.data, (char *) ow->col.data,
+                        t_v, t_m, t_s,
+                        s_v, s_m, s_s,
+                    };
+                    print_parallel(&print, 8, out, NULL);
+
+                    dd->reported = 1;
                 }
             }
 
-            /* if there is at least one outlier, process only outliers */
+            /*
+             * if there is at least one subtree outlier, process only outliers
+             * otherwise, process all subdirs/subtrees
+             */
             work = (sll_get_size(&outliers) == 0)?&subdirs:&outliers;
         }
 
         const int sub_outlier = (work == &outliers); /* all outliers or all not outliers */
 
-        /* current directory is an outlier but there are no subdirectory outliers */
+        /*
+         * current directory is the outlier because the subtree
+         * contains an outlier but none of the subdirectory
+         * subtrees have outliers
+         */
         if (ow->is_outlier && !sub_outlier) {
-            char *out[] = {ow->path.data, (char *) ow->col.data};
-            print_parallel(&print, 2, out, NULL);
-            /* TODO: keep processing subdirectories? */
+            if (!ow->reported) {
+                SNPRINTF(t_v, sizeof(t_v), "%lf", ow->t.value);
+                SNPRINTF(t_m, sizeof(t_m), "%lf", ow->t.mean);
+                SNPRINTF(t_s, sizeof(t_s), "%lf", ow->t.stdev);
+                SNPRINTF(s_v, sizeof(s_v), "%lf", ow->s.value);
+                SNPRINTF(s_m, sizeof(s_m), "%lf", ow->s.mean);
+                SNPRINTF(s_s, sizeof(s_s), "%lf", ow->s.stdev);
+
+                char *out[] = {
+                    ow->path.data, (char *) ow->col.data,
+                    t_v, t_m, t_s,
+                    s_v, s_m, s_s,
+                };
+                print_parallel(&print, 8, out, NULL);
+            }
         }
-        /* current directory is NOT an outlier + descend with subdirs/outliers */
+        /* current subtree is NOT an outlier: descend with subdirs/outliers */
         else {
             sll_loop(work, node) {
                 DirData_t *dd = (DirData_t *) sll_node_data(node);
                 OutlierWork_t *new_ow = OutlierWork_create(&dd->path, ow->col,
                                                            ow->handler, ow->query,
-                                                           sub_outlier);
+                                                           sub_outlier, dd->reported,
+                                                           &dd->t, &dd->s);
                 QPTPool_enqueue(ctx, id, processdir, new_ow);
             }
         }
@@ -337,8 +423,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 }
 
 static void sub_help(void) {
-   printf("input_dir         walk one or more trees to find outliers\n");
+   printf("input_dir         walk this tree to find the roots of subtrees with outliers\n");
    printf("column            column to look at\n");
+   printf("\n");
+   printf("Make sure every directory under the starting path has a db.db file.\n");
+   printf("Make sure treesummary tables have been generated for every directory.\n");
    printf("\n");
 }
 
@@ -374,6 +463,14 @@ int main(int argc, char *argv[]) {
 
     const size_t pairs = (argc - idx) / 2;
     str_t *queries = calloc(sizeof(*queries), pairs);
+
+    const StdevData_t root_stats = {
+        .tot = NAN,
+        .mean = NAN,
+        .stdev = NAN,
+        .epoch = -1,
+        .nondirs = -1,
+    };
 
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
@@ -415,12 +512,13 @@ int main(int argc, char *argv[]) {
         };
 
         OutlierWork_t *ow = OutlierWork_create(&p, c, handler, q,
-                                               0); /*
+                                               0,  /*
                                                     * starting path cannot be an outlier because
                                                     * there is only one directory at that level
                                                     * (even if the path is not root and has
                                                     * siblings, we do not know that)
                                                     */
+                                               0, &root_stats, &root_stats);
         QPTPool_enqueue(pool, i, processdir, ow);
     }
 
@@ -431,7 +529,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     const long double processtime = sec(nsec(&after_init));
 
-    fprintf(stdout, "Time Spent Processing: %.2Lfs\n", processtime);
+    const uint64_t thread_count = QPTPool_threads_completed(pool);
 
     for(size_t i = 0; i < pairs; i++) {
         str_free_existing(&queries[i]);
@@ -441,11 +539,16 @@ int main(int argc, char *argv[]) {
 
     QPTPool_destroy(pool);
 
+    fprintf(stdout, "Ran %" PRIu64 " threads\n", thread_count);
+    fprintf(stdout, "Time Spent Processing: %.2Lfs\n", processtime);
+
   cleanup_outputbuffers:
     OutputBuffers_destroy(&pa.obufs);
 
   cleanup:
     input_fini(&pa.in);
+
+    dump_memory_usage();
 
     return rc;
 }
