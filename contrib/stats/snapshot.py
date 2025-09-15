@@ -423,7 +423,7 @@ def gen_num_unique_col(col):
 
 def gen_log2_hist_col(col, buckets):
     return [
-        Stat('hist',       SQLITE3_TEXT, 'log2_hist({0}, {1})'.format(col, buckets)),
+        Stat('hist',       SQLITE3_TEXT, 'log_hist({0}, 2, {1})'.format(col, buckets)),
     ]
 
 def gen_category_hist_col(col):

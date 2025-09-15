@@ -90,31 +90,40 @@ int addhistfuncs(sqlite3 *db);
 
 /* ********************************************* */
 /*
- * log2 Histograms
- * log2_hist(input, bucket_count) ->  bucket_count;underflow;overflow;bucket1:count1;bucket2:count2;...
+ * log Histograms
+ * log_hist(input, bucket_count) ->  base;bucket_count;underflow;overflow;bucket1:count1;bucket2:count2;...
  *
- * Convert an input into a number and take the floor(log2()) of that
- * value. Strings and blobs are converted to lengths. Integers and
- * floats are not converted.
+ * Convert an input into a number and get
+ * floor(log2(value)/log2(base)) of that value. Strings and blobs are
+ * converted to lengths. Integers and floats are not converted.
  *
  * The histogram contains buckets of the range [0, count). Each bucket
- * holds counts for values from [2^i, 2^(i+1)). There are also
+ * holds counts for values from [base^i, base^(i+1)). There are also
  * underflow and overflow values for handling 0 values and values that
  * are larger than the expected range.
  *
  * The returned string only contains buckets with counts greater than
  * 0. The underflow and overflow counts are always returned even if
  * the counts are 0.
+ *
+ * This is not generic because if 0 values are inserted into the
+ * histogram, a "base" value would not get set.
  */
-typedef struct log2_hist {
-    size_t count;
-    size_t lt;       /* len == 0 */
-    size_t *buckets; /* integers range [0, count) - use floor(log2(len)) to get bucket to increment */
-    size_t ge;       /* len >= 2^count */
-} log2_hist_t;
+typedef struct log_hist {
+    size_t base;     /* this is also used to check for initialization */
+    double conv;     /* log2(base) constant */
+    size_t count;    /* bucket count */
+    size_t lt;       /* value == 0 */
+    size_t *buckets; /* integers range [0, count) - use floor(log2(value) / log2(base)) to get bucket to increment */
+    size_t ge;       /* value >= base^count */
+} log_hist_t;
 
-log2_hist_t *log2_hist_parse(const char *str);
-void log2_hist_free(log2_hist_t *hist);
+log_hist_t *log_hist_init(log_hist_t *hist, const size_t base, const size_t count);
+int log_hist_insert(log_hist_t *hist, const uint64_t value);
+char *log_hist_serialize(log_hist_t *hist);
+log_hist_t *log_hist_parse(const char *str);
+int log_hist_combine_inplace(log_hist_t *lhs, log_hist_t *rhs);
+void log_hist_free(log_hist_t *hist);
 /* ********************************************* */
 
 /* ********************************************* */

@@ -78,15 +78,23 @@ static void setup_db(sqlite3 **db) {
     ASSERT_EQ(addhistfuncs(*db), 1);
 }
 
+static const char INSERT_ERR[] = "Error: Could not set test value: %s\n";
+
 // macro so that error messages print useful line numbers
-#define insert(db, col, val)                                    \
-    do {                                                        \
-        char sql[MAXSQL];                                       \
-        snprintf(sql, sizeof(sql),                              \
-                 "INSERT INTO test (%s) VALUES (%s);",          \
-                 col, val.c_str());                             \
-        ASSERT_EQ(sqlite3_exec(db, sql, nullptr,                \
-                               nullptr, nullptr), SQLITE_OK);   \
+#define insert(db, col, val)                                            \
+    do {                                                                \
+        char sql[MAXSQL];                                               \
+        snprintf(sql, sizeof(sql),                                      \
+                 "INSERT INTO test (%s) VALUES (%s);",                  \
+                 col, val.c_str());                                     \
+        char *err = nullptr;                                            \
+        const int rc = sqlite3_exec(db, sql, nullptr, nullptr, &err);   \
+        if (rc != SQLITE_OK) {                                          \
+            sqlite_print_err_and_free(err, stderr,                      \
+                                      (char *) INSERT_ERR,              \
+                                      err);                             \
+        }                                                               \
+        ASSERT_EQ(rc, SQLITE_OK);                                       \
     } while (0)
 
 #ifdef __cplusplus
@@ -102,38 +110,18 @@ int serialize_bucket(sqlite3_context *context,
 }
 #endif
 
-struct test_hist_ctx {
-    bool reset;
-    int good;
-};
-
 static void test_hist_step(sqlite3_context *context, int, sqlite3_value **argv) {
-    struct test_hist_ctx *ctx = (struct test_hist_ctx *) sqlite3_aggregate_context(context, sizeof(*ctx));
-    ctx->reset = true;
-    ctx->good = sqlite3_value_int(argv[0]);
+    int *r = (int *) sqlite3_aggregate_context(context, sizeof(*r));
+    *r = sqlite3_value_int(argv[0]);
 }
 
 static ssize_t serialize_test_bucket(char *, const size_t, void *key, void *) {
-    struct test_hist_ctx *ctx = (struct test_hist_ctx *) sqlite3_aggregate_context((sqlite3_context *) key, sizeof(*ctx));
-    if (ctx->good) {
-        return 2;       // write the same size both times
-    }
-
-    static size_t iter;
-    static ssize_t ret;
-
-    if (ctx->reset) {
-        iter = 0;
-        ret = 2;
-        ctx->reset = false;
-    }
-
-    ret += iter++ * 10; // second call will "write" more than reallocated space provides
-    return ret;
+    int *r = (int *) sqlite3_aggregate_context((sqlite3_context *) key, sizeof(*r));
+    return 1 + *r;
 }
 
 static void test_hist_final(sqlite3_context *context) {
-    size_t size = 1;
+    size_t size = 2;
     char *serialized = (char *) malloc(size);
     char *curr = serialized;
 
@@ -151,12 +139,11 @@ TEST(histogram, serialize_bucket) {
     ASSERT_EQ(sqlite3_create_function(db,               "test_hist",         1,  SQLITE_UTF8,
                                       nullptr, nullptr,  test_hist_step,     test_hist_final), SQLITE_OK);
 
-    char *err = nullptr;
-    EXPECT_NE(sqlite3_exec(db, "SELECT test_hist(0);",
-                           nullptr, nullptr, &err), SQLITE_OK);
-    EXPECT_NE(err, nullptr);
-    sqlite3_free(err);
+    /* write */
+    EXPECT_EQ(sqlite3_exec(db, "SELECT test_hist(0);",
+                           nullptr, nullptr, nullptr), SQLITE_OK);
 
+    /* write with realloc */
     EXPECT_EQ(sqlite3_exec(db, "SELECT test_hist(1);",
                            nullptr, nullptr, nullptr), SQLITE_OK);
 
@@ -178,11 +165,11 @@ static void test_log2_hist(const std::vector <std::string> &types,
         }
 
         char *hist_str = {nullptr};
-        ASSERT_EQ(sqlite3_exec(db, "SELECT log2_hist(value, 3) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "SELECT log_hist(value, 2, 3) FROM test;",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
-        log2_hist *hist = log2_hist_parse(hist_str);
+        log_hist *hist = log_hist_parse(hist_str);
         ASSERT_NE(hist, nullptr);
         ASSERT_NE(hist->buckets, nullptr);
 
@@ -193,36 +180,40 @@ static void test_log2_hist(const std::vector <std::string> &types,
         EXPECT_EQ(hist->buckets[2], (std::size_t) 1); // 4
         EXPECT_EQ(hist->ge,         (std::size_t) 1); // 8
 
-        log2_hist_free(hist);
+        log_hist_free(hist);
         free(hist_str);
         sqlite3_close(db);
     }
 }
 
-TEST(histogram, log2) {
+TEST(histogram, log) {
     // nothing in buckets
     {
         sqlite3 *db = nullptr;
         setup_db(&db);
+
+        // bad base
+        EXPECT_NE(sqlite3_exec(db, "SELECT log_hist(value, 1, 3);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
 
         char create[MAXSQL];
         snprintf(create, sizeof(create), "CREATE TABLE test (value INT);");
         ASSERT_EQ(sqlite3_exec(db, create, nullptr, nullptr, nullptr), SQLITE_OK);
 
         char *hist_str = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, "SELECT log2_hist(value, 3) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "SELECT log_hist(value, 2, 3) FROM test;",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
-        log2_hist *hist = log2_hist_parse(hist_str);
+        log_hist *hist = log_hist_parse(hist_str);
         ASSERT_NE(hist, nullptr);
-        ASSERT_NE(hist->buckets, nullptr); // not null, but don't access
+        EXPECT_EQ(hist->buckets, nullptr);
 
-        EXPECT_EQ(hist->count,      (std::size_t) 0);
-        EXPECT_EQ(hist->lt,         (std::size_t) 0);
-        EXPECT_EQ(hist->ge,         (std::size_t) 0);
+        EXPECT_EQ(hist->count,  (std::size_t) 0);
+        EXPECT_EQ(hist->lt,     (std::size_t) 0);
+        EXPECT_EQ(hist->ge,     (std::size_t) 0);
 
-        log2_hist_free(hist);
+        log_hist_free(hist);
         free(hist_str);
         sqlite3_close(db);
     }
@@ -238,19 +229,19 @@ TEST(histogram, log2) {
 
         ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hist (str TEXT);",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log2_hist(str, 2) FROM hist;",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(str, 2, 2) FROM hist;",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log2_hist(1, 2);",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(1, 2, 2);",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log2_hist(2, 2);",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(2, 2, 2);",
                                nullptr, nullptr, nullptr), SQLITE_OK);
 
         char *hist_str = nullptr;
-        EXPECT_EQ(sqlite3_exec(db, "SELECT log2_hist_combine(str) FROM hist;",
+        EXPECT_EQ(sqlite3_exec(db, "SELECT log_hist_combine(str) FROM hist;",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
-        log2_hist *hist = log2_hist_parse(hist_str);
+        log_hist *hist = log_hist_parse(hist_str);
         ASSERT_NE(hist, nullptr);
         ASSERT_NE(hist->buckets, nullptr);
 
@@ -260,24 +251,24 @@ TEST(histogram, log2) {
         EXPECT_EQ(hist->buckets[0], (std::size_t) 1);
         EXPECT_EQ(hist->buckets[1], (std::size_t) 1);
 
-        log2_hist_free(hist);
+        log_hist_free(hist);
         free(hist_str);
         hist_str = nullptr;
 
         // cannot combine histograms with different bucket counts
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log2_hist(2, 4);",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(2, 2, 4);",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        EXPECT_NE(sqlite3_exec(db, "SELECT log2_hist_combine(str) FROM hist;",
+        EXPECT_NE(sqlite3_exec(db, "SELECT log_hist_combine(str) FROM hist;",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         EXPECT_EQ(hist_str, nullptr);
 
         // NULL input
-        EXPECT_NE(sqlite3_exec(db, "SELECT log2_hist_combine(NULL);",
+        EXPECT_NE(sqlite3_exec(db, "SELECT log_hist_combine(NULL);",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         EXPECT_EQ(hist_str, nullptr);
 
         // bad histogram string input
-        EXPECT_NE(sqlite3_exec(db, "SELECT log2_hist_combine('a');",
+        EXPECT_NE(sqlite3_exec(db, "SELECT log_hist_combine('a');",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         EXPECT_EQ(hist_str, nullptr);
 
@@ -285,15 +276,15 @@ TEST(histogram, log2) {
     }
 
     // bad strings
-    EXPECT_EQ(log2_hist_parse("'"),          nullptr);
-    EXPECT_EQ(log2_hist_parse("0"),          nullptr);
-    EXPECT_EQ(log2_hist_parse("0;"),         nullptr);
-    EXPECT_EQ(log2_hist_parse("0;0"),        nullptr);
-    EXPECT_EQ(log2_hist_parse("0;0;"),       nullptr);
-    EXPECT_EQ(log2_hist_parse("0;0;0"),      nullptr);
-    EXPECT_EQ(log2_hist_parse("0;0;0;0"),    nullptr);
-    EXPECT_EQ(log2_hist_parse("0;0;0;0:"),   nullptr);
-    EXPECT_EQ(log2_hist_parse("0;0;0;0:0"),  nullptr);
+    EXPECT_EQ(log_hist_parse("'"),          nullptr);
+    EXPECT_EQ(log_hist_parse("0"),          nullptr);
+    EXPECT_EQ(log_hist_parse("0;"),         nullptr);
+    EXPECT_EQ(log_hist_parse("0;0"),        nullptr);
+    EXPECT_EQ(log_hist_parse("0;0;"),       nullptr);
+    EXPECT_EQ(log_hist_parse("0;0;0"),      nullptr);
+    EXPECT_EQ(log_hist_parse("0;0;0;0"),    nullptr);
+    EXPECT_EQ(log_hist_parse("0;0;0;0:"),   nullptr);
+    EXPECT_EQ(log_hist_parse("0;0;0;0:0"),  nullptr);
 }
 
 TEST(histogram, mode) {
