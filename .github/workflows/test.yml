@@ -159,7 +159,7 @@ jobs:
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
     - name: Configure CMake
-      run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY="$(pwd)" -DOpenMP_C_LIB_NAMES="libomp" -DOpenMP_C_FLAGS="-fopenmp" -DOpenMP_C_INCLUDE_DIRS="$(brew --prefix libomp)/include" -DOpenMP_libomp_LIBRARY="$(brew --prefix libomp)/lib/libomp.dylib"
+      run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_OSX_SYSROOT=macosx -DOpenMP_C_LIB_NAMES="libomp" -DOpenMP_C_FLAGS="-fopenmp" -DOpenMP_C_INCLUDE_DIRS="$(brew --prefix libomp)/include" -DOpenMP_libomp_LIBRARY="$(brew --prefix libomp)/lib/libomp.dylib"
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
