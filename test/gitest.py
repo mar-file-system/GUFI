@@ -79,6 +79,7 @@ dirs2=[0,1,2]
 files=[0,1,2]
 
 def make_source_tree(root):
+    print("make_source_tree: ", root)
     # clean up and make initial directories
     os.system('rm -rf %s' % (root))
     os.system('mkdir %s' % (root))
@@ -285,6 +286,11 @@ def test_prep(testn):
 
     print ("---------- test %s start" % (testn))
 
+def test_finish(testn):
+    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
+    cmd = os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
+    exit_code = os.WEXITSTATUS(cmd)
+    print ("---------- test %s done result %d" % (testn,exit_code))
 
 def test_1():
     testn="change contents of one file"
@@ -300,11 +306,8 @@ def test_1():
     # do incremental update of gufi tree
     suspectopt="-A 3"
     gincr()
-    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-    exit_code = os.WEXITSTATUS(cmd)
-    print ("---------- test %s done result %d" % (testn,exit_code))
+
+    test_finish(testn)
 
 def test_2():
     testn="delete directory segment"
@@ -318,11 +321,9 @@ def test_2():
     # do incremental update of gufi tree
     suspectopt="-A 3"
     gincr()
-    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-    os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-    cmd=exit_code = os.WEXITSTATUS(cmd)
-    print ("---------- test %s done result %d" % (testn,exit_code))
+
+    test_finish(testn)
+
 
 def test_3():
     testn="move a directory segment"
@@ -338,11 +339,8 @@ def test_3():
     # do incremental update of gufi tree
     suspectopt="-A 3"
     gincr()
-    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-    exit_code = os.WEXITSTATUS(cmd)
-    print ("---------- test %s done result %d" % (testn,exit_code))
+
+    test_finish(testn)
 
 def test_4():
     testn="add a directory segment"
@@ -362,12 +360,8 @@ def test_4():
     # do incremental update of gufi tree
     suspectopt="-A 3"
     gincr()
-    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-    exit_code = os.WEXITSTATUS(cmd)
-    print ("---------- test %s done result %d" % (testn,exit_code))
-    #end incremental test
+
+    test_finish(testn)
 
 def test_5():
     testn="add, delete, move multiple segments and touch an existing file"
@@ -390,12 +384,8 @@ def test_5():
     # do incremental update of gufi tree
     suspectopt="-A 3"
     gincr()
-    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-    exit_code = os.WEXITSTATUS(cmd)
-    print ("---------- test %s done result %d" % (testn,exit_code))
-    #end incremental test
+
+    test_finish(testn)
 
 def test_6():
     testn="change an existing file using suspect file for file suspects"
@@ -418,11 +408,8 @@ def test_6():
     # now that we have a suspect file we tell bfwreaddirplus2db to use that for file suspects (stat dirs but use suspect file for files/links
     suspectopt="-A 2 -W %s/suspects " % (top)
     gincr()
-    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-    exit_code = os.WEXITSTATUS(cmd)
-    print ("---------- test %s done result %d" % (testn,exit_code))
+
+    test_finish(testn)
 
 if __name__ == "__main__":
     suspectopt=" "
