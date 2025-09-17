@@ -272,10 +272,7 @@ def gfullafter():
     os.system('gufi_query -n1 -x -d\'|\' -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from vrpentries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from vsummarydir;" -a 1 -o %s/fullbfqoutafter d0'  % (top))
     os.chdir(top)
 
-
-suspectopt=" "
-def test_1():
-    testn="change contents of one file"
+def test_prep(testn):
     # this cleans up and makes a fresh gufi
     # you have to not be in the top temp directory as this deletes that and rebuilds it
     os.chdir(mtmp)
@@ -287,6 +284,12 @@ def test_1():
     time.sleep(1)
 
     print ("---------- test %s start" % (testn))
+
+
+def test_1():
+    testn="change contents of one file"
+    test_prep(testn)
+
     os.system('echo cheese >> d0/d00/d000/f0000')
 
     # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
@@ -305,17 +308,7 @@ def test_1():
 
 def test_2():
     testn="delete directory segment"
-    # this cleans up and makes a fresh gufi
-    # you have to not be in the top temp directory as this deletes that and rebuilds it
-    os.chdir(mtmp)
-    ginit()
-    # set the dir back to top temp directory
-    os.chdir(top)
-
-    # wait a bit and make a change
-    time.sleep(1)
-
-    print ("---------- test %s start" % (testn))
+    test_prep(testn)
     os.system('rm -rf d0/d00/d000')
 
     # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
@@ -333,18 +326,8 @@ def test_2():
 
 def test_3():
     testn="move a directory segment"
-    # this cleans up and makes a fresh gufi
-    # you have to not be in the top temp directory as this deletes that and rebuilds it
-    os.chdir(mtmp)
-    ginit()
-    # set the dir back to top temp directory
-    os.chdir(top)
+    test_prep(testn)
 
-    # wait a bit and make a change
-    time.sleep(1)
-
-    ############incremental test
-    print ("---------- test %s start" % (testn))
     os.system('mv d0/d00/d000 d0')
     #############################
 
@@ -363,18 +346,8 @@ def test_3():
 
 def test_4():
     testn="add a directory segment"
-    # this cleans up and makes a fresh gufi
-    # you have to not be in the top temp directory as this deletes that and rebuilds it
-    os.chdir(mtmp)
-    ginit()
-    # set the dir back to top temp directory
-    os.chdir(top)
+    test_prep(testn)
 
-    # wait a bit and make a change
-    time.sleep(1)
-
-    ############incremental test
-    print ("---------- test %s start" % (testn))
     os.system('mkdir d0/d00/nd000')
     os.system('touch d0/d00/nd000/fnd000')
     os.system('mkdir d0/d00/nd000/nd0000')
@@ -398,18 +371,8 @@ def test_4():
 
 def test_5():
     testn="add, delete, move multiple segments and touch an existing file"
-    # this cleans up and makes a fresh gufi
-    # you have to not be in the top temp directory as this deletes that and rebuilds it
-    os.chdir(mtmp)
-    ginit()
-    # set the dir back to top temp directory
-    os.chdir(top)
+    test_prep(testn)
 
-    # wait a bit and make a change
-    time.sleep(1)
-
-    ############incremental test
-    print ("---------- test %s start" % (testn))
     os.system('mkdir d0/d00/nd000')
     os.system('touch d0/d00/nd000/fnd000')
     os.system('mkdir d0/d00/nd000/nd0000')
@@ -419,8 +382,6 @@ def test_5():
     os.system('mv d0/d000 d0/d0000')
     os.system('rm -rf d0/d01/d000')
     os.system('echo cheese >> d0/d02/d020/f0200')
-
-    #############################
 
     # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
     gfullafter()
@@ -438,18 +399,8 @@ def test_5():
 
 def test_6():
     testn="change an existing file using suspect file for file suspects"
-    # this cleans up and makes a fresh gufi
-    # you have to not be in the top temp directory as this deletes that and rebuilds it
-    os.chdir(mtmp)
-    ginit()
-    # set the dir back to top temp directory
-    os.chdir(top)
+    test_prep(testn)
 
-    # wait a bit and make a change
-    time.sleep(1)
-
-    ############incremental test
-    print ("---------- test %s start" % (testn))
     os.system('echo cheese >> d0/d02/d020/f0200')
 
     #############################
@@ -472,9 +423,9 @@ def test_6():
     cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
     exit_code = os.WEXITSTATUS(cmd)
     print ("---------- test %s done result %d" % (testn,exit_code))
-    #end incremental test
 
 if __name__ == "__main__":
+    suspectopt=" "
     test_1()
     test_2()
     test_3()
