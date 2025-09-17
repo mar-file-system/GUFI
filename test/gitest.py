@@ -61,9 +61,6 @@
 
 
 
-## get subprocess module
-## get os module
-## get time module
 import subprocess
 import os
 import time
@@ -121,7 +118,6 @@ def ginit():
 
     # make a directory structure snapshot database from the full
     #i think this just needs to be path not path name as its the summary table and last part of path is the name
-    #os.system('gufi_query -n2 -S "insert into readdirplus select case path()||\'Z\' when \'Z\' then name else path()||\'/\'||name end,type,inode,pinode,0 from vsummarydir;" -I "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);" -O %s/fullinitsnapdb d0'  % (top))
     os.system('gufi_query -n2 -S "insert into readdirplus select path(),type,inode,pinode,0 from vsummarydir;" -I "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);" -O %s/fullinitsnapdb d0'  % (top))
 
     os.chdir(top)
@@ -129,7 +125,6 @@ def ginit():
     # what have we accomplished
     print ("we should have created a source tree d0, a gufi tree gt, a full gufi_query output /tmp/giteset/fullbfqout0 to compare to, a full initial snap of the tree structure /tmp/gitest/fulinitsnapdb.0 and .1 (two threads), and a time stamp /tmp/gitest/fulltime")
 
-    #os.system('ls -l %s' % (top))
     print ("time after create initial gufi tree sec %s" % (mysec[0]))
 
 # this is where incremental of a gufi is done in addition we do a gufi_query of the incrementally updated gufi tree for comparison
@@ -143,12 +138,8 @@ def gincr():
     itt = fo.read(12);
     it = itt.rstrip()
     fo.close()
-    #print ('time from fulltime %s' % (it))
     os.system('mkdir %s' % (toptg))
-    #os.system('bfwreaddirplus2db -R -n 2 -A 3 -O incrsnapdb -c %s -x -t %s d0'  % (it,toptg))
     os.system('bfwreaddirplus2db -R -n 2 %s -O incrsnapdb -c %s -x d0 %s'  % (suspectopt,it,toptg))
-
-    #sys.exit()
 
     # now that we have initial and incremental snaps we need to do a full outer join to diff these, we need to calculate depths for operation ordering, and we need to create a permanent diff table so we can do several queries against it efficiently
     # attach full and incr dbs one per thread
@@ -179,10 +170,8 @@ def gincr():
         a1inode=line.split('|')[2]
         delr=line.split('|')[3]
         mdel=delr.rstrip()
-        #my_dir="%s/%s" % (topgt,a0path)
         my_dir="%s/%s" % (topgt,a0path)
         my_lot="%s/d.%s" % (toptg,a1inode)
-        #print "a0path %s a1path %s a1inode %s mdel %s src dir %s park dir %s" % (a0path, a1path, a1inode, mdel ,my_dir, my_lot)
         # if delete remove with recursion this dir
         if mdel=='1':
             #del
@@ -206,7 +195,6 @@ def gincr():
         mnew=newr.strip()
         my_dir="%s/%s" % (topgt,a1path)
         my_lot="%s/d.%s" % (toptg,a1inode)
-        #print "a0path %s a1path %s a1inode %s newr %s srcdir %s parkdir %s" % (a0path, a1path, a1inode, mnew, my_dir, my_lot)
         # if new add the directory
         if mnew=='1':
             #add new dir assume we will fix the permissions later when we populate it
@@ -232,11 +220,9 @@ def gincr():
         a1pinode=line.split('|')[4]
         mover=line.split('|')[5]
         move=mover.rstrip()
-        #print "a0path %s a1path %s rename %s a1inode %s a1pinode %s move %s" % (a0path, a1path, rename, a1inode, a1pinode, move)
         my_file="%s/%s" % (toptg,a1inode)
         exists=os.path.isfile(my_file)
         if exists:
-            #print "file %s found" % (my_file)
             sqlstmt="sqlite3 %s \'select mode, uid, gid from vsummarydir;\'" % (my_file)
             pproc = subprocess.Popen(sqlstmt,stdout=subprocess.PIPE,shell=True,text=True)
             for pline in pproc.stdout:
@@ -244,11 +230,8 @@ def gincr():
                  a1uid=pline.split('|')[1]
                  a1gidr=pline.split('|')[2]
                  a1gid=a1gidr.rstrip()
-                 #print "a1mode %s a1uid %s a1gid %s" % (a1mode, a1uid, a1gid)
                  # we copy/move the gufi into this dir
                  topath='%s/%s' % (thegt,a1path)
-                 #print "moving %s to  %s" % (frompath,topath)
-                 #os.system('mv %s %s' % (frompath,topath))
                  # we set the mode, uid and gid
                  # go through the mode bits conversion
                  # we copy/move the gufi into this dir
