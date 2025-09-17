@@ -411,7 +411,7 @@ clean_index() {
 
     "${GUFI_QUERY}" \
         -w \
-        -S "UPDATE summary SET minatime = (SELECT MIN(mtime) FROM entries), maxatime = (SELECT MAX(mtime) FROM entries);" \
+        -S "UPDATE summary SET minatime = (SELECT COALESCE(MIN(mtime), 9223372036854775807) FROM entries), maxatime = (SELECT COALESCE(MAX(mtime), -9223372036854775808) FROM entries);" \
         "${INDEX}"
 
     # set parent pinodes
@@ -444,4 +444,3 @@ then
 
     clean_index "${INDEXROOT}" 1
 fi
-
