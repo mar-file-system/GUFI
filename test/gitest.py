@@ -78,27 +78,30 @@ dirs1=[0,1,2]
 dirs2=[0,1,2]
 files=[0,1,2]
 
+def make_source_tree(root):
+    # clean up and make initial directories
+    os.system('rm -rf %s' % (root))
+    os.system('mkdir %s' % (root))
+    os.system('mkdir %s/d0' % (root))
+    os.system('mkdir %s/gt' % (root))
+    # make the source tree
+    for i in dirs0:
+        os.system('mkdir %s/d0/d0%d' % (root,i))
+        for j in files:
+           os.system('touch %s/d0/d0%d/f0%d%d' % (root,i,i,j))
+        for k in dirs1:
+             os.system('mkdir %s/d0/d0%d/d0%d%d' % (root,i,i,k))
+             for l in files:
+                 os.system('touch %s/d0/d0%d/d0%d%d/f0%d%d%d' % (root,i,i,k,i,k,l))
+             for m in dirs2:
+                 os.system('mkdir %s/d0/d0%d/d0%d%d/d0%d%d%d' % (root,i,i,k,i,k,m))
+                 for n in files:
+                     os.system('touch %s/d0/d0%d/d0%d%d/d0%d%d%d/f0%d%d%d%d' % (root,i,i,k,i,k,m,i,k,m,n))
+
 # initialize a src tree, make a full gufi tree, do a bfq in case we want to compare with the full at initial state, make a full initial tree snap
 def ginit():
     print ("initializing a tree, full gufi tree, and full tree snap")
-    # clean up and make initial directories
-    os.system('rm -rf %s' % (top))
-    os.system('mkdir %s' % (top))
-    os.system('mkdir %s/d0' % (top))
-    os.system('mkdir %s/gt' % (top))
-    # make the source tree
-    for i in dirs0:
-        os.system('mkdir %s/d0/d0%d' % (top,i))
-        for j in files:
-           os.system('touch %s/d0/d0%d/f0%d%d' % (top,i,i,j))
-           for k in dirs1:
-               os.system('mkdir %s/d0/d0%d/d0%d%d' % (top,i,i,k))
-           for l in files:
-                os.system('touch %s/d0/d0%d/d0%d%d/f0%d%d%d' % (top,i,i,k,i,k,l))
-           for m in dirs2:
-               os.system('mkdir %s/d0/d0%d/d0%d%d/d0%d%d%d' % (top,i,i,k,i,k,m))
-           for n in files:
-               os.system('touch %s/d0/d0%d/d0%d%d/d0%d%d%d/f0%d%d%d%d' % (top,i,i,k,i,k,m,i,k,m,n))
+    make_source_tree(top)
 
     # wait a second and then put time in the current timestamp file - about to start the full
     time.sleep(1)
@@ -270,219 +273,211 @@ def gfullafter():
     os.chdir(top)
 
 
-##################################  main  ############################################
 suspectopt=" "
-################################### test1 ############################################
-testn="change contents of one file"
-# this cleans up and makes a fresh gufi
-# you have to not be in the top temp directory as this deletes that and rebuilds it
-os.chdir(mtmp)
-ginit()
-# set the dir back to top temp directory
-os.chdir(top)
+def test_1():
+    testn="change contents of one file"
+    # this cleans up and makes a fresh gufi
+    # you have to not be in the top temp directory as this deletes that and rebuilds it
+    os.chdir(mtmp)
+    ginit()
+    # set the dir back to top temp directory
+    os.chdir(top)
 
-# wait a bit and make a change
-time.sleep(1)
+    # wait a bit and make a change
+    time.sleep(1)
 
-###########incremental test
-print ("---------- test %s start" % (testn))
-os.system('echo cheese >> d0/d00/d000/f0000')
-#############################
+    print ("---------- test %s start" % (testn))
+    os.system('echo cheese >> d0/d00/d000/f0000')
 
-# do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-gfullafter()
-# wait until incremental time
-time.sleep(1)
+    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+    gfullafter()
+    # wait until incremental time
+    time.sleep(1)
 
-#sys.exit()
+    # do incremental update of gufi tree
+    suspectopt="-A 3"
+    gincr()
+    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
+    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
+    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
+    exit_code = os.WEXITSTATUS(cmd)
+    print ("---------- test %s done result %d" % (testn,exit_code))
 
-# do incremental update of gufi tree
-suspectopt="-A 3"
-gincr()
-# gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-exit_code = os.WEXITSTATUS(cmd)
-print ("---------- test %s done result %d" % (testn,exit_code))
-#end incremental test
-################################### test1 end ########################################
+def test_2():
+    testn="delete directory segment"
+    # this cleans up and makes a fresh gufi
+    # you have to not be in the top temp directory as this deletes that and rebuilds it
+    os.chdir(mtmp)
+    ginit()
+    # set the dir back to top temp directory
+    os.chdir(top)
 
-#sys.exit()
+    # wait a bit and make a change
+    time.sleep(1)
 
-################################### test2 ############################################
-testn="delete directory segment"
-# this cleans up and makes a fresh gufi
-# you have to not be in the top temp directory as this deletes that and rebuilds it
-os.chdir(mtmp)
-ginit()
-# set the dir back to top temp directory
-os.chdir(top)
+    print ("---------- test %s start" % (testn))
+    os.system('rm -rf d0/d00/d000')
 
-# wait a bit and make a change
-time.sleep(1)
+    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+    gfullafter()
+    # wait until incremental time
+    time.sleep(1)
+    # do incremental update of gufi tree
+    suspectopt="-A 3"
+    gincr()
+    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
+    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
+    os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
+    cmd=exit_code = os.WEXITSTATUS(cmd)
+    print ("---------- test %s done result %d" % (testn,exit_code))
 
-############incremental test
-print ("---------- test %s start" % (testn))
-os.system('rm -rf d0/d00/d000')
-#############################
+def test_3():
+    testn="move a directory segment"
+    # this cleans up and makes a fresh gufi
+    # you have to not be in the top temp directory as this deletes that and rebuilds it
+    os.chdir(mtmp)
+    ginit()
+    # set the dir back to top temp directory
+    os.chdir(top)
 
-# do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-gfullafter()
-# wait until incremental time
-time.sleep(1)
-# do incremental update of gufi tree
-suspectopt="-A 3"
-gincr()
-# gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-cmd=exit_code = os.WEXITSTATUS(cmd)
-print ("---------- test %s done result %d" % (testn,exit_code))
-#end incremental test
-################################### test2 end ########################################
-################################### test3 ############################################
-testn="move a directory segment"
-# this cleans up and makes a fresh gufi
-# you have to not be in the top temp directory as this deletes that and rebuilds it
-os.chdir(mtmp)
-ginit()
-# set the dir back to top temp directory
-os.chdir(top)
+    # wait a bit and make a change
+    time.sleep(1)
 
-# wait a bit and make a change
-time.sleep(1)
+    ############incremental test
+    print ("---------- test %s start" % (testn))
+    os.system('mv d0/d00/d000 d0')
+    #############################
 
-############incremental test
-print ("---------- test %s start" % (testn))
-os.system('mv d0/d00/d000 d0')
-#############################
+    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+    gfullafter()
+    # wait until incremental time
+    time.sleep(1)
+    # do incremental update of gufi tree
+    suspectopt="-A 3"
+    gincr()
+    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
+    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
+    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
+    exit_code = os.WEXITSTATUS(cmd)
+    print ("---------- test %s done result %d" % (testn,exit_code))
 
-# do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-gfullafter()
-# wait until incremental time
-time.sleep(1)
-# do incremental update of gufi tree
-suspectopt="-A 3"
-gincr()
-# gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-exit_code = os.WEXITSTATUS(cmd)
-print ("---------- test %s done result %d" % (testn,exit_code))
-#end incremental test
-################################### test3 end ########################################
-################################### test4 ############################################
-testn="add a directory segment"
-# this cleans up and makes a fresh gufi
-# you have to not be in the top temp directory as this deletes that and rebuilds it
-os.chdir(mtmp)
-ginit()
-# set the dir back to top temp directory
-os.chdir(top)
+def test_4():
+    testn="add a directory segment"
+    # this cleans up and makes a fresh gufi
+    # you have to not be in the top temp directory as this deletes that and rebuilds it
+    os.chdir(mtmp)
+    ginit()
+    # set the dir back to top temp directory
+    os.chdir(top)
 
-# wait a bit and make a change
-time.sleep(1)
+    # wait a bit and make a change
+    time.sleep(1)
 
-############incremental test
-print ("---------- test %s start" % (testn))
-os.system('mkdir d0/d00/nd000')
-os.system('touch d0/d00/nd000/fnd000')
-os.system('mkdir d0/d00/nd000/nd0000')
-os.system('touch d0/d00/nd000/nd0000/fnd0000')
+    ############incremental test
+    print ("---------- test %s start" % (testn))
+    os.system('mkdir d0/d00/nd000')
+    os.system('touch d0/d00/nd000/fnd000')
+    os.system('mkdir d0/d00/nd000/nd0000')
+    os.system('touch d0/d00/nd000/nd0000/fnd0000')
 
-#############################
+    #############################
 
-# do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-gfullafter()
-# wait until incremental time
-time.sleep(1)
-# do incremental update of gufi tree
-suspectopt="-A 3"
-gincr()
-# gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-exit_code = os.WEXITSTATUS(cmd)
-print ("---------- test %s done result %d" % (testn,exit_code))
-#end incremental test
-################################### test4 end ########################################
-################################### test5 ############################################
-testn="add, delete, move multiple segments and touch an existing file"
-# this cleans up and makes a fresh gufi
-# you have to not be in the top temp directory as this deletes that and rebuilds it
-os.chdir(mtmp)
-ginit()
-# set the dir back to top temp directory
-os.chdir(top)
+    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+    gfullafter()
+    # wait until incremental time
+    time.sleep(1)
+    # do incremental update of gufi tree
+    suspectopt="-A 3"
+    gincr()
+    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
+    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
+    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
+    exit_code = os.WEXITSTATUS(cmd)
+    print ("---------- test %s done result %d" % (testn,exit_code))
+    #end incremental test
 
-# wait a bit and make a change
-time.sleep(1)
+def test_5():
+    testn="add, delete, move multiple segments and touch an existing file"
+    # this cleans up and makes a fresh gufi
+    # you have to not be in the top temp directory as this deletes that and rebuilds it
+    os.chdir(mtmp)
+    ginit()
+    # set the dir back to top temp directory
+    os.chdir(top)
 
-############incremental test
-print ("---------- test %s start" % (testn))
-os.system('mkdir d0/d00/nd000')
-os.system('touch d0/d00/nd000/fnd000')
-os.system('mkdir d0/d00/nd000/nd0000')
-os.system('touch d0/d00/nd000/nd0000/fnd0000')
-os.system('mv d0/d00/d000 d0')
-os.system('mv d0/d000/d0000 d0')
-os.system('mv d0/d000 d0/d0000')
-os.system('rm -rf d0/d01/d000')
-os.system('echo cheese >> d0/d02/d020/f0200')
+    # wait a bit and make a change
+    time.sleep(1)
 
-#############################
+    ############incremental test
+    print ("---------- test %s start" % (testn))
+    os.system('mkdir d0/d00/nd000')
+    os.system('touch d0/d00/nd000/fnd000')
+    os.system('mkdir d0/d00/nd000/nd0000')
+    os.system('touch d0/d00/nd000/nd0000/fnd0000')
+    os.system('mv d0/d00/d000 d0')
+    os.system('mv d0/d000/d0000 d0')
+    os.system('mv d0/d000 d0/d0000')
+    os.system('rm -rf d0/d01/d000')
+    os.system('echo cheese >> d0/d02/d020/f0200')
 
-# do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-gfullafter()
-# wait until incremental time
-time.sleep(1)
-# do incremental update of gufi tree
-suspectopt="-A 3"
-gincr()
-# gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-exit_code = os.WEXITSTATUS(cmd)
-print ("---------- test %s done result %d" % (testn,exit_code))
-#end incremental test
-################################### test5 end ########################################
-################################### test6 ############################################
-testn="change an existing file using suspect file for file suspects"
-# this cleans up and makes a fresh gufi
-# you have to not be in the top temp directory as this deletes that and rebuilds it
-os.chdir(mtmp)
-ginit()
-# set the dir back to top temp directory
-os.chdir(top)
+    #############################
 
-# wait a bit and make a change
-time.sleep(1)
+    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+    gfullafter()
+    # wait until incremental time
+    time.sleep(1)
+    # do incremental update of gufi tree
+    suspectopt="-A 3"
+    gincr()
+    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
+    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
+    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
+    exit_code = os.WEXITSTATUS(cmd)
+    print ("---------- test %s done result %d" % (testn,exit_code))
+    #end incremental test
 
-############incremental test
-print ("---------- test %s start" % (testn))
-os.system('echo cheese >> d0/d02/d020/f0200')
+def test_6():
+    testn="change an existing file using suspect file for file suspects"
+    # this cleans up and makes a fresh gufi
+    # you have to not be in the top temp directory as this deletes that and rebuilds it
+    os.chdir(mtmp)
+    ginit()
+    # set the dir back to top temp directory
+    os.chdir(top)
 
-#############################
+    # wait a bit and make a change
+    time.sleep(1)
 
-# do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-gfullafter()
-# wait until incremental time
-time.sleep(1)
-# do incremental update of gufi tree
-# since we are using suspect mode 2 where we provide a list of files that are suspect we have to put the inode and type in a file
-ttpath="d0/d02/d020/f0200"
-mstat = os.stat(ttpath)
-mksus="echo %s f >> %s/suspects" % (mstat.st_ino,top)
-os.system(mksus)
-# now that we have a suspect file we tell bfwreaddirplus2db to use that for file suspects (stat dirs but use suspect file for files/links
-#suspectopt="-A 3"
-suspectopt="-A 2 -W %s/suspects " % (top)
-#print "%s inode is %s suspectopts %s" % (ttpath,mstat.st_ino,suspectopt)
-gincr()
-# gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
-print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
-exit_code = os.WEXITSTATUS(cmd)
-print ("---------- test %s done result %d" % (testn,exit_code))
-#end incremental test
-################################### test6 end ########################################
+    ############incremental test
+    print ("---------- test %s start" % (testn))
+    os.system('echo cheese >> d0/d02/d020/f0200')
+
+    #############################
+
+    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+    gfullafter()
+    # wait until incremental time
+    time.sleep(1)
+    # do incremental update of gufi tree
+    # since we are using suspect mode 2 where we provide a list of files that are suspect we have to put the inode and type in a file
+    ttpath="d0/d02/d020/f0200"
+    mstat = os.stat(ttpath)
+    mksus="echo %s f >> %s/suspects" % (mstat.st_ino,top)
+    os.system(mksus)
+    # now that we have a suspect file we tell bfwreaddirplus2db to use that for file suspects (stat dirs but use suspect file for files/links
+    suspectopt="-A 2 -W %s/suspects " % (top)
+    gincr()
+    # gincr makes a bfq of gufi tree after incr update so we can compare the full gufi tree after change and incr gufi tree after change
+    print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
+    cmd=os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
+    exit_code = os.WEXITSTATUS(cmd)
+    print ("---------- test %s done result %d" % (testn,exit_code))
+    #end incremental test
+
+if __name__ == "__main__":
+    test_1()
+    test_2()
+    test_3()
+    test_4()
+    test_5()
+    test_6()
