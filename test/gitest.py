@@ -132,8 +132,7 @@ def ginit():
     print ("time after create initial gufi tree sec %s" % (mysec[0]))
 
 # this is where incremental of a gufi is done in addition we do a gufi_query of the incrementally updated gufi tree for comparison
-def gincr():
-    global suspectopt
+def gincr(suspectopt):
     mytime=str(time.mktime(time.localtime()))
     mysec=mytime.partition(".")
     os.system('echo %s > incrtime' % (mysec[0]))
@@ -304,8 +303,7 @@ def test_1():
     time.sleep(1)
 
     # do incremental update of gufi tree
-    suspectopt="-A 3"
-    gincr()
+    gincr("-A 3")
 
     test_finish(testn)
 
@@ -319,8 +317,7 @@ def test_2():
     # wait until incremental time
     time.sleep(1)
     # do incremental update of gufi tree
-    suspectopt="-A 3"
-    gincr()
+    gincr("-A 3")
 
     test_finish(testn)
 
@@ -337,8 +334,7 @@ def test_3():
     # wait until incremental time
     time.sleep(1)
     # do incremental update of gufi tree
-    suspectopt="-A 3"
-    gincr()
+    gincr("-A 3")
 
     test_finish(testn)
 
@@ -358,8 +354,7 @@ def test_4():
     # wait until incremental time
     time.sleep(1)
     # do incremental update of gufi tree
-    suspectopt="-A 3"
-    gincr()
+    gincr("-A 3")
 
     test_finish(testn)
 
@@ -382,8 +377,7 @@ def test_5():
     # wait until incremental time
     time.sleep(1)
     # do incremental update of gufi tree
-    suspectopt="-A 3"
-    gincr()
+    gincr("-A 3")
 
     test_finish(testn)
 
@@ -406,13 +400,11 @@ def test_6():
     mksus="echo %s f >> %s/suspects" % (mstat.st_ino,top)
     os.system(mksus)
     # now that we have a suspect file we tell bfwreaddirplus2db to use that for file suspects (stat dirs but use suspect file for files/links
-    suspectopt="-A 2 -W %s/suspects " % (top)
-    gincr()
+    gincr("-A 2 -W %s/suspects " % (top))
 
     test_finish(testn)
 
 if __name__ == "__main__":
-    suspectopt=" "
     test_1()
     test_2()
     test_3()
