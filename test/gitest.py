@@ -118,11 +118,32 @@ def ginit():
 
     # this is just for testing - make a bfq output to compare with if we want to - leave out atime as it may change
     os.chdir(topgt)
-    os.system('gufi_query -n1 -x -d\'|\' -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from entries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from vsummarydir;" -a 1 -o %s/fullbfqout %s/d0'  % (top,topgt))
+    entries_sql = """
+SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,
+       xattr_names
+FROM   entries;
+    """
+    summary_sql = """
+SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,
+       xattr_names
+FROM   vsummarydir;
+    """
+    os.system('gufi_query -n1 -x -d\'|\' -E "%s" -S "%s" -a 1 -o %s/fullbfqout %s/d0'  % (entries_sql, summary_sql, top,topgt))
 
+    summary_sql = """
+INSERT INTO readdirplus
+SELECT Path(),type,inode,pinode,0
+FROM   vsummarydir;
+    """
+    initial_sql = """
+CREATE TABLE readdirplus
+  (
+     path TEXT,type TEXT,inode INT64 PRIMARY KEY,pinode INT64,suspect INT64
+  );
+    """
     # make a directory structure snapshot database from the full
     #i think this just needs to be path not path name as its the summary table and last part of path is the name
-    os.system('gufi_query -n2 -S "insert into readdirplus select path(),type,inode,pinode,0 from vsummarydir;" -I "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);" -O %s/fullinitsnapdb d0'  % (top))
+    os.system('gufi_query -n2 -S "%s" -I "%s" -O %s/fullinitsnapdb d0'  % (summary_sql, initial_sql, top))
 
     os.chdir(top)
 
@@ -146,27 +167,103 @@ def gincr(suspectopt):
 
     # now that we have initial and incremental snaps we need to do a full outer join to diff these, we need to calculate depths for operation ordering, and we need to create a permanent diff table so we can do several queries against it efficiently
     # attach full and incr dbs one per thread
-    fd = open("incrdiff", "a")
-    fd.write("attach \'fullinitsnapdb.0\' as full0;\n")
-    fd.write("attach \'fullinitsnapdb.1\' as full1;\n")
-    fd.write("attach \'incrsnapdb.0\' as incr0;\n")
-    fd.write("attach \'incrsnapdb.1\' as incr1;\n")
+    diff_db_sql_setup = """
+-- attach full and incr dbs one per thread
+attach 'fullinitsnapdb.0' AS full0;
+attach 'fullinitsnapdb.1' AS full1;
+attach 'incrsnapdb.0' AS incr0;
+attach 'incrsnapdb.1' AS incr1;
+"""
     # create temp views of all fulls and all incrs via union
-    fd.write("create temp view b0 as select * from full0.readdirplus union all select * from full1.readdirplus;\n")
-    fd.write("create temp view b1 as select * from incr0.readdirplus union all select * from incr1.readdirplus;\n")
-    #create temp view thats a full outer join the sqlite3 way
-    fd.write("create temp view jt as select a0.path a0path,a0.type a0type,a0.inode a0inode,a0.pinode a0pinode,a0.suspect a0suspect,a1.path a1path,a1.type a1type,a1.inode a1inode,a1.pinode a1pinode,a1.suspect a1suspect from b0 as a0 left outer join b1 as a1 on a0.inode=a1.inode union all select a0.path a0path ,a0.type a0type,a0.inode a0inode,a0.pinode a0pinode,a0.suspect a0suspect,a1.path a1path,a1.type a1type,a1.inode a1inode,a1.pinode a1pinode,a1.suspect a1suspect from b1 as a1 left outer join b0 as a0 on a1.inode=a0.inode where a0.inode is null;\n")
+    diff_db_sql_create_views = """
+CREATE TEMP VIEW b0 AS
+SELECT *
+FROM full0.readdirplus
+UNION ALL
+SELECT *
+FROM full1.readdirplus;
+
+CREATE TEMP VIEW b1 AS
+SELECT *
+FROM incr0.readdirplus
+UNION ALL
+SELECT *
+FROM incr1.readdirplus;
+    """
+    diff_db_sql_join = """
+CREATE TEMP VIEW jt AS
+SELECT a0.path a0path,
+       a0.type a0type,
+       a0.inode a0inode,
+       a0.pinode a0pinode,
+       a0.suspect a0suspect,
+       a1.path a1path,
+       a1.type a1type,
+       a1.inode a1inode,
+       a1.pinode a1pinode,
+       a1.suspect a1suspect
+FROM b0 AS a0
+LEFT OUTER JOIN b1 AS a1 ON a0.inode=a1.inode
+UNION ALL
+SELECT a0.path a0path,
+       a0.type a0type,
+       a0.inode a0inode,
+       a0.pinode a0pinode,
+       a0.suspect a0suspect,
+       a1.path a1path,
+       a1.type a1type,
+       a1.inode a1inode,
+       a1.pinode a1pinode,
+       a1.suspect a1suspect
+FROM b1 AS a1
+LEFT OUTER JOIN b0 AS a0 ON a1.inode=a0.inode
+WHERE a0.inode IS NULL;
+    """
     # create the output diff table
-    fd.write("create table diff (a0path text,a0type text,a0inode int(64),a0pinode int(64),a0suspect int(64),a1path text,a1type text,a1inode int64,a1pinode int(64),a1suspect int(64),a0depth int(64) ,a1depth int(64));\n")
-    # load the diff table from a query of all differences and build depths
-    fd.write("insert into diff select *,(length(a0path)-length(replace(a0path ,'/','')))/1 as a0depth,(length(a1path)-length(replace(a1path ,'/','')))/1 as a1depth from jt where a0pinode!=a1pinode or a0path!=a1path or a0inode is null or a1inode is null or a1suspect=1;\n")
+    diff_db_sql_output = """
+CREATE TABLE diff
+  (
+     a0path TEXT,a0type TEXT,a0inode INT(64),a0pinode INT(64),a0suspect INT(64),
+     a1path TEXT,a1type TEXT,a1inode INT64,a1pinode INT(64),a1suspect INT(64),
+     a0depth INT(64),a1depth INT(64)
+  );
+    """
+    diff_db_sql_final = """
+INSERT INTO diff
+SELECT *,
+       (length(a0path)-length(replace(a0path, '/', '')))/1 AS a0depth,
+       (length(a1path)-length(replace(a1path, '/', '')))/1 AS a1depth
+FROM jt
+WHERE a0pinode!=a1pinode
+  OR a0path!=a1path
+  OR a0inode IS NULL
+  OR a1inode IS NULL
+  OR a1suspect=1;
+    """
+    fd = open("incrdiff", "a")
+    fd.write(diff_db_sql_setup)
+    fd.write(diff_db_sql_create_views)
+    fd.write(diff_db_sql_join)
+    fd.write(diff_db_sql_output)
+    fd.write(diff_db_sql_final)
     fd.close()
     #build the diff db
     os.system('sqlite3 diffdb \'.read incrdiff\'')
 
     # this allows you to start from the bottom of the current gufi tree and do deletes of directories and moves of directories to a parking lot
     print ("delete and move reverse order")
-    proc = subprocess.Popen('sqlite3 diffdb \'select a0path,a1path,a1inode,case when a1path is null then 1 else 0 end from diff where a1path is null or a0pinode!=a1pinode or a0path!=a1path order by a0depth desc;\'',stdout=subprocess.PIPE,shell=True,text=True)
+    diff_db_sql = """
+SELECT a0path,
+       a1path,
+       a1inode,
+       CASE WHEN a1path IS NULL THEN 1 ELSE 0 END
+FROM diff
+WHERE a1path IS NULL
+  OR a0pinode!=a1pinode
+  OR a0path!=a1path
+ORDER BY a0depth DESC;
+    """
+    proc = subprocess.Popen('sqlite3 diffdb \'%s\'' % (diff_db_sql), stdout=subprocess.PIPE, shell=True, text=True)
     for line in proc.stdout:
         a0path=line.split('|')[0]
         a1path=line.split('|')[1]
@@ -189,7 +286,18 @@ def gincr(suspectopt):
 
     # this allows you to start from the top and add new directories and move directories from the parking lot back into the gufi tree
     print ("new and move in order")
-    proc = subprocess.Popen('sqlite3 diffdb \'select a0path,a1path,a1inode,case when a0path is null then 1 else 0 end from diff where a0path is null or a0pinode!=a1pinode or a0path!=a1path  order by a1depth asc;\'',stdout=subprocess.PIPE,shell=True,text=True)
+    diff_db_sql = """
+SELECT a0path,
+       a1path,
+       a1inode,
+       CASE WHEN a0path IS NULL THEN 1 ELSE 0 END
+FROM diff
+WHERE a0path IS NULL
+  OR a0pinode!=a1pinode
+  OR a0path!=a1path
+ORDER BY a1depth ASC;
+    """
+    proc = subprocess.Popen('sqlite3 diffdb \'%s\'' % (diff_db_sql), stdout=subprocess.PIPE, shell=True, text=True)
     for line in proc.stdout:
         a0path=line.split('|')[0]
         a1path=line.split('|')[1]
@@ -213,7 +321,18 @@ def gincr(suspectopt):
     # this tells you what gufi dbs are in the temp area from bfwreaddirplus2db walk that need to be put into the gufi tree/replace/new and potentially
     # update the name of the dir, the mode/owner/group of the dir
     print ("update")
-    proc = subprocess.Popen('sqlite3 diffdb \'select a0path, a1path, case when a0path=a1path then 0 else 1 end, a1inode, a1pinode, case when a0pinode=a1pinode then 0 else 1 end from diff where a1path is not null order by a1depth asc;\'',stdout=subprocess.PIPE,shell=True,text=True)
+    diff_db_sql = """
+SELECT a0path,
+       a1path,
+       CASE WHEN a0path=a1path THEN 0 ELSE 1 END,
+       a1inode,
+       a1pinode,
+       CASE WHEN a0pinode=a1pinode THEN 0 ELSE 1 END
+FROM diff
+WHERE a1path IS NOT NULL
+ORDER BY a1depth ASC;
+    """
+    proc = subprocess.Popen('sqlite3 diffdb \'%s\'' % (diff_db_sql), stdout=subprocess.PIPE, shell=True, text=True)
     for line in proc.stdout:
         #the real code does filtering here
         a0path=line.split('|')[0]
@@ -259,17 +378,32 @@ def gincr(suspectopt):
     print ("update done")
     os.chdir(topgt)
     # leave out atime
-    os.system('gufi_query -n1 -x -d\'|\' -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from entries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from vsummarydir;" -a 1 -o %s/incrbfqoutafter d0'  % (top))
+    entries_sql = """
+SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
+FROM   entries;
+    """
+    summary_sql = """
+SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
+FROM   vsummarydir;
+    """
+    os.system('gufi_query -n1 -x -d\'|\' -E "%s" -S "%s" -a 1 -o %s/incrbfqoutafter d0'  % (entries_sql, summary_sql, top))
     os.chdir(top)
 
 # make a full gufi tree of the src tree after mods then do a bfq of that for comparison with an incrementally updated gufi tree
 def gfullafter():
-
     os.system('mkdir %s' % (topfullafter))
     os.system('gufi_dir2index -n 2 -x d0 %s' % (fa))
     os.chdir(topfullafter)
     #leave out atime
-    os.system('gufi_query -n1 -x -d\'|\' -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from vrpentries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from vsummarydir;" -a 1 -o %s/fullbfqoutafter d0'  % (top))
+    entries_sql = """
+SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
+FROM   vrpentries;
+    """
+    summary_sql = """
+SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
+FROM   vsummarydir;
+    """
+    os.system('gufi_query -n1 -x -d\'|\' -E "%s" -S "%s" -a 1 -o %s/fullbfqoutafter d0'  % (entries_sql, summary_sql, top))
     os.chdir(top)
 
 def test_prep(name):
@@ -277,7 +411,7 @@ def test_prep(name):
     ginit()
     os.chdir(top)
     time.sleep(1)
-    print ("---------- test %s start" % (name))
+    print ("\n---------- test %s start" % (name))
 
 def test_finish(name):
     print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
