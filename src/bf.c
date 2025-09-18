@@ -104,7 +104,6 @@ static const struct plugin_operations null_plugin_ops = {
 struct input *input_init(struct input *in) {
     if (in) {
         memset(in, 0, sizeof(*in));
-        in->epoch                   = (long long int) time(NULL);
         in->maxthreads              = 1;                      // don't default to zero threads
         in->delim                   = fielddelim;
         in->process_sql             = RUN_ON_ROW;
@@ -609,7 +608,7 @@ int parse_cmd_line(int         argc,
                       retval = -1;
                       break;
               }
-              ++optarg; 
+              ++optarg;
           }
           break;
 

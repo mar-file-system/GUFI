@@ -197,7 +197,7 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
     sqlite3_stmt *res = insertdbprep(db, ENTRIES_INSERT);
     startdb(db);
     struct sum summary;
-    zeroit(&summary, in->epoch);
+    zeroit(&summary);
 
     /* rewind the directory */
     rewinddir(dir);

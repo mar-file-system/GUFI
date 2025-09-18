@@ -62,36 +62,13 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_PRINT_H
-#define GUFI_QUERY_PRINT_H
+#ifndef GUFI_FIND_OUTLIERS_PROCESSDIR_H
+#define GUFI_FIND_OUTLIERS_PROCESSDIR_H
 
-#include <pthread.h>
 #include <stddef.h>
-#include <stdio.h>
 
-#include "OutputBuffers.h"
+#include "QueuePerThreadPool.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* sqlite3_exec callback argument data */
-typedef struct PrintArgs {
-    struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */
-    char delim;
-    pthread_mutex_t *mutex;               /* mutex for printing to stdout */
-    FILE *outfile;
-    size_t rows;                          /* number of rows returned by the query */
-    const int *types;                     /* if set, prefix output with 1 char type and 1 length */
-    /* size_t printed;                    /\* number of records printed by the callback *\/ */
-    int suppress_newline;
-} PrintArgs_t;
-
-int print_parallel(void *args, int count, char **data, char **columns);
-int print_uncached(void *args, int count, char **data, char **columns);
-
-#ifdef __cplusplus
-}
-#endif
+int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args);
 
 #endif

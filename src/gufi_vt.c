@@ -395,14 +395,13 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
     "totltk INT64, totmtk INT64, "                                                \
     "totltm INT64, totmtm INT64, "                                                \
     "totmtg INT64, totmtt INT64, "                                                \
-    "totsize INT64, totsqsize FLOAT, "                                            \
-    "epoch INT64, "                                                               \
-    "minctime INT64, maxctime INT64, totctime INT64, totsqctime FLOAT, "          \
-    "minmtime INT64, maxmtime INT64, totmtime INT64, totsqmtime FLOAT, "          \
-    "minatime INT64, maxatime INT64, totatime INT64, totsqatime FLOAT, "          \
-    "minblocks INT64, maxblocks INT64, totblocks INT64, totsqblocks FLOAT, "      \
+    "totsize INT64, "                                                             \
+    "minctime INT64, maxctime INT64, totctime INT64, "                            \
+    "minmtime INT64, maxmtime INT64, totmtime INT64, "                            \
+    "minatime INT64, maxatime INT64, totatime INT64, "                            \
+    "minblocks INT64, maxblocks INT64, totblocks INT64, "                         \
     "totxattr INT64, depth INT64, "                                               \
-    "mincrtime INT64, maxcrtime INT64, totcrtime INT64, totsqcrtime FLOAT, "      \
+    "mincrtime INT64, maxcrtime INT64, totcrtime INT64, "                         \
     "minossint1 INT64, maxossint1 INT64, totossint1 INT64, "                      \
     "minossint2 INT64, maxossint2 INT64, totossint2 INT64, "                      \
     "minossint3 INT64, maxossint3 INT64, totossint3 INT64, "                      \
@@ -423,17 +422,17 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
     "dtotltk INT64, dtotmtk INT64, "                                              \
     "totltm INT64, dtotmtm INT64, "                                               \
     "dtotmtg INT64, dtotmtt INT64, "                                              \
-    "dtotsize INT64, dtotsqsize INT64, "                                          \
-    "depoch INT64, "                                                              \
-    "dminctime INT64, dmaxctime INT64, dtotctime INT64, dtotsqctime FLOAT, "      \
-    "dminmtime INT64, dmaxmtime INT64, dtotmtime INT64, dtotsqmtime FLOAT, "      \
-    "dminatime INT64, dmaxatime INT64, dtotatime INT64, dtotsqatime FLOAT, "      \
-    "dminblocks INT64, dmaxblocks INT64, dtotblocks INT64, dtotsqblocks FLOAT, "  \
+    "dtotsize INT64, "                                                            \
+    "dminctime INT64, dmaxctime INT64, dtotctime INT64, "                         \
+    "dminmtime INT64, dmaxmtime INT64, dtotmtime INT64, "                         \
+    "dminatime INT64, dmaxatime INT64, dtotatime INT64, "                         \
+    "dminblocks INT64, dmaxblocks INT64, dtotblocks INT64, "                      \
     "dtotxattr INT64, ddepth INT64, "                                             \
-    "dmincrtime INT64, dmaxcrtime INT64, dtotcrtime INT64, dtotsqcrtime FLOAT, "  \
+    "dmincrtime INT64, dmaxcrtime INT64, dtotcrtime INT64, "                      \
     "sroll INT64, atroot INT64, srollsubdirs INT64, "                             \
     "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, "                 \
-    "uid INT64, gid INT64, ""size INT64, blksize INT64, blocks INT64, "           \
+    "uid INT64, gid INT64, "                                                      \
+    "size INT64, blksize INT64, blocks INT64, "                                   \
     "atime INT64, mtime INT64, ctime INT64, "                                     \
     "linkname TEXT, xattr_names BLOB, "                                           \
     "crtime INT64, "                                                              \

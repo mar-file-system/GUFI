@@ -256,6 +256,18 @@ if (APPLE OR DARWIN)
 endif()
 install(TARGETS run_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
 
+# build find_outliers
+build_and_install_one("${SERVER_BIN}" TRUE gufi_find_outliers
+  gufi_find_outliers/main.c
+
+  gufi_find_outliers/DirData.c
+  gufi_find_outliers/OutlierWork.c
+  gufi_find_outliers/get_subdirs.c
+  gufi_find_outliers/handle_columns.c
+  gufi_find_outliers/handle_db.c
+  gufi_find_outliers/processdir.c
+)
+
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
 build_and_install("${SERVER_BIN}" FALSE ${MISC_SOURCES})

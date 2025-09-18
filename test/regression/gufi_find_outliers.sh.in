@@ -1,0 +1,352 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0 # not using standard tree/index
+
+OUTPUT="gufi_find_outliers.out"
+OUTDB="outliers.db"
+
+cleanup() {
+    rm -rf "${OUTDB}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+run() {
+    col="$1"
+    message="$2"
+    create_tree="$3"
+    shift 3
+    create_tree_args=( "$@" )
+
+    echo "# #####################################"
+    echo "# create index for tree with ${message}"
+
+    # set up source tree
+    "${create_tree}" "${create_tree_args[@]}"
+
+    (
+        # index tree
+        run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SEARCH}\""
+
+        # need treesummary table in all directories
+        run_no_sort "${GUFI_TREESUMMARY_ALL} -n ${THREADS} \"${SEARCH}\""
+
+        # find outliers
+        echo "# analyze tree"
+        run_no_sort "${GUFI_FIND_OUTLIERS} -d \"${DELIM}\" -n ${THREADS} \"${INDEXROOT}\" ${col} | sort"
+    )
+
+    rm -rf "${SRCDIR}" "${SEARCH}"
+
+    echo "# #####################################"
+    echo
+}
+
+# tree setup functions
+
+# one directory in the entire tree
+empty_tree() {
+    local prefix
+    prefix="${1:-${SRCDIR}}"
+
+    mkdir -p "${prefix}"
+}
+
+# one directory with one subdirectory
+not_enough_subdirs() {
+    local prefix
+    prefix="${1:-${SRCDIR}}"
+
+    empty_tree "${prefix}"
+    mkdir "${prefix}/subdir"
+}
+
+# 10 directories with 1 file each with the same timestamps
+#
+#          prefix
+#            |
+#         -------
+#         |     |
+#        d0 ... d9
+#
+multiple_dirs_no_outliers() {
+    local now
+    now="$(date +%s)"
+
+    local prefix
+    prefix="${1:-${SRCDIR}}"
+
+    local ts
+    ts="${2:-${now}}"
+
+    empty_tree "${prefix}"
+
+    for i in {0..9}
+    do
+        path="${prefix}/d.${i}"
+        mkdir -p "${path}"
+        touch -ad "@${ts}" "${path}/file"
+    done
+
+    touch -ad "@${ts}" "${prefix}"
+}
+
+# 10 directories with 1 file each with the same timestamps
+# 1  directory   with 1 file of timestamp 1 second before the others
+#
+#                   prefix
+#                     |
+#         -----------------------
+#         |                     |
+#       d0..d9               outlier
+#
+one_atime() {
+    local now
+    now="$(date +%s)"
+
+    local prefix="${1:-${SRCDIR}}"
+    local ts="${2:-${now}}"
+
+    empty_tree "${prefix}"
+
+    for i in {0..9}
+    do
+        path="${prefix}/d.${i}"
+        mkdir -p "${path}"
+        touch -ad "@${ts}" "${path}/file"
+    done
+
+    path="${prefix}/outlier"
+    mkdir -p "${path}"
+    touch -ad "@$(( ts - 1 ))" "${path}/file"
+
+    touch -ad "@${ts}" "${prefix}"
+}
+
+# 20 directories with 1 file each with the same timestamps
+# 2  directories with 1 file of timestamp 1 second before the others
+#
+#                   prefix
+#                     |
+#         -----------------------
+#         |           |         |
+#      d0..d19    outlier.1 outlier.2
+#
+two_atime() {
+    local now
+    now="$(date +%s)"
+
+    local prefix
+    prefix="${1:-${SRCDIR}}"
+
+    local ts
+    ts="${2:-${now}}"
+
+    empty_tree "${prefix}"
+
+    for i in {0..19}
+    do
+        path="${prefix}/d.${i}"
+        mkdir -p "${path}"
+        touch -ad "@${now}" "${path}/file"
+    done
+
+    path="${prefix}/outlier.1"
+    mkdir -p "${path}"
+    touch -ad "@$(( ts - 1 ))" "${path}/file"
+
+    path="${prefix}/outlier.2"
+    mkdir -p "${path}"
+    touch -ad "@$(( ts - 1 ))" "${path}/file"
+
+    touch -ad "@${ts}" "${prefix}"
+}
+
+# Level 1: 10 directories + 1 treesummary outlier
+# Level 2: 10 directories + 1 outlier directory under treesummary outlier
+#
+#             prefix
+#               |
+#         -------------
+#         |           |
+#       d0..d9    T_outlier
+#                     |
+#               -------------
+#               |           |
+#             d0..d9     outlier
+#
+level_2() {
+    local now
+    now="$(date +%s)"
+
+    local prefix
+    prefix="${1:-${SRCDIR}}"
+
+    local ts
+    ts="${2:-${now}}"
+
+    empty_tree "${prefix}"
+
+    for i in {0..9}
+    do
+        path="${prefix}/d.${i}"
+        mkdir "${path}"
+        for j in {0..0}
+        do
+            touch -ad "@${ts}" "${path}/file.${j}"
+        done
+    done
+
+    one_atime "${prefix}/T_outlier" "${ts}"
+    touch -ad "@${ts}" "${prefix}"
+}
+
+# Level 1: 10 directories + 1 summary outlier
+# Level 2: 10 directories under summary outlier
+#
+#             prefix
+#               |
+#         -------------
+#         |           |
+#       d0..d9    S_outlier
+#                     |
+#                   d0..d9
+#
+summary_outlier() {
+    local now
+    now="$(date +%s)"
+
+    local prefix
+    prefix="${1:-${SRCDIR}}"
+
+    local ts
+    ts="${2:-${now}}"
+
+    one_atime "${prefix}" "${ts}"
+    multiple_dirs_no_outliers "${prefix}/outlier" "${ts}"
+    touch -ad "@${ts}" "${prefix}"
+}
+
+(
+run_no_sort "${GUFI_FIND_OUTLIERS} -h"
+
+run ALL      "no subdirectories"                       empty_tree
+run ALL      "one subdirectory"                        not_enough_subdirs
+run ALL      "multiple directories but no outliers"    multiple_dirs_no_outliers
+run totatime "one atime outlier"                       one_atime
+run totatime "two atime outliers on the same level"    two_atime
+run totatime "one atime outlier at level 2"            level_2
+run totatime "one atime outlier above non-outliers"    summary_outlier
+
+echo "# #####################################"
+echo "# write output to database"
+(
+    level_2 "${SRCDIR}"
+    "${GUFI_DIR2INDEX}" -n ${THREADS} "${SRCDIR}" "${SEARCH}" 2>&1 > /dev/null
+    "${GUFI_TREESUMMARY_ALL}" -n ${THREADS} "${SEARCH}"
+
+    run_no_sort "${GUFI_FIND_OUTLIERS} -d \"${DELIM}\" -n ${THREADS} -O \"${OUTDB}\" \"${INDEXROOT}\" totatime"
+    run_no_sort "${GUFI_SQLITE3} -d \"|\" \"${OUTDB}\" \"SELECT * FROM outliers;\""
+    rm -rf "${SRCDIR}" "${SEARCH}"
+) | @SED@ '\%Time%d; \%/Sec:%d; \%VmHWM:%d;'
+echo "# #####################################"
+echo
+
+echo "# bad path"
+run_no_sort "${GUFI_FIND_OUTLIERS} \"${INDEXROOT}\" ALL"
+
+mkdir -p "${INDEXROOT}"
+touch "${INDEXROOT}/file"
+echo "# path is not directory"
+run_no_sort "${GUFI_FIND_OUTLIERS} \"${INDEXROOT}/file\" ALL"
+
+echo "# bad column"
+run_no_sort "${GUFI_FIND_OUTLIERS} \"${INDEXROOT}\" bad-column"
+
+echo "# missing column"
+run_no_sort "${GUFI_FIND_OUTLIERS} \"${INDEXROOT}\" ALL \"${INDEXROOT}\""
+
+echo "# bad thread count"
+run_no_sort "${GUFI_FIND_OUTLIERS} -n 18446744073709551615 \"${INDEXROOT}\" ALL" | @SED@ 's%db handles:.*$%db handles%g;'
+
+echo "# bad index"
+rm -rf "${SRCDIR}"
+mkdir "${SRCDIR}"
+touch "${SRCDIR}/file"
+mkdir "${SRCDIR}/subdir"
+touch "${SRCDIR}/subdir/file"
+run_no_sort "${GUFI_FIND_OUTLIERS} \"${SRCDIR}\" totatime"
+rm -rf "${SRCDIR}"
+) | @SED@ '\%Time%d; \%/Sec:%d; \%VmHWM:%d; s%\(.*totatime\)|.*%\1|0|0|0|0|0|0%' | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find_outliers.expected "${OUTPUT}"
+rm "${OUTPUT}"

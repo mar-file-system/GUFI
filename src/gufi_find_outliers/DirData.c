@@ -62,36 +62,26 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_PRINT_H
-#define GUFI_QUERY_PRINT_H
+#include <stdlib.h>
 
-#include <pthread.h>
-#include <stddef.h>
-#include <stdio.h>
+#include "gufi_find_outliers/DirData.h"
+#include "utils.h"
 
-#include "OutputBuffers.h"
+DirData_t *DirData_create(const str_t *path,
+                          const char *subdir, const size_t subdir_len) {
+    DirData_t *dd = calloc(1, sizeof(DirData_t));
+    const size_t new_path_len = path->len + 1 + subdir_len;
+    dd->path.data = malloc(new_path_len + 1);
+    dd->path.len = SNFORMAT_S(dd->path.data, new_path_len + 1, 3,
+                              path->data, path->len,
+                              "/", (size_t) 1,
+                              subdir, subdir_len);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* sqlite3_exec callback argument data */
-typedef struct PrintArgs {
-    struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */
-    char delim;
-    pthread_mutex_t *mutex;               /* mutex for printing to stdout */
-    FILE *outfile;
-    size_t rows;                          /* number of rows returned by the query */
-    const int *types;                     /* if set, prefix output with 1 char type and 1 length */
-    /* size_t printed;                    /\* number of records printed by the callback *\/ */
-    int suppress_newline;
-} PrintArgs_t;
-
-int print_parallel(void *args, int count, char **data, char **columns);
-int print_uncached(void *args, int count, char **data, char **columns);
-
-#ifdef __cplusplus
+    return dd;
 }
-#endif
 
-#endif
+void DirData_free(void *ptr) { /* void * so this function can be used by sll_destroy */
+    DirData_t *dd = (DirData_t *) ptr;
+    str_free_existing(&dd->path);
+    free(dd);
+}

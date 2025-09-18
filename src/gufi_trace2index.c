@@ -135,7 +135,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (db) {
         struct sum summary;
-        zeroit(&summary, in->epoch);
+        zeroit(&summary);
 
         sll_t xattr_db_list;
         sll_init(&xattr_db_list);

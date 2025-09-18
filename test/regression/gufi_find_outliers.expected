@@ -1,0 +1,189 @@
+$ gufi_find_outliers -h
+usage: gufi_find_outliers [options] input_dir data ...
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -v                     version
+  -n <threads>           number of threads
+  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
+  -O <out_DB>            output DB
+
+input_dir         walk this tree to find directories with outliers
+data              column or group (T_ONLY, MINS, MAXS, MINMAXS, TOTS, TIMES, ALL) to look at
+
+Make sure every directory under the starting path has a db.db file.
+Make sure treesummary tables have been generated for every directory.
+
+
+# #####################################
+# create index for tree with no subdirectories
+$ gufi_dir2index -n 2 "prefix" "search"
+Creating GUFI Index search with 2 threads
+Total Dirs:          1
+Total Non-Dirs:      0
+
+$ gufi_treesummary_all -n 2 "search"
+
+# analyze tree
+$ gufi_find_outliers -d "|" -n 2 "prefix" ALL | sort
+Ran 43 threads
+Ran opendb 0 times
+Found 0 outliers
+
+# #####################################
+
+# #####################################
+# create index for tree with one subdirectory
+$ gufi_dir2index -n 2 "prefix" "search"
+Creating GUFI Index search with 2 threads
+Total Dirs:          2
+Total Non-Dirs:      0
+
+$ gufi_treesummary_all -n 2 "search"
+
+# analyze tree
+$ gufi_find_outliers -d "|" -n 2 "prefix" ALL | sort
+Ran 86 threads
+Ran opendb 43 times
+Found 0 outliers
+
+# #####################################
+
+# #####################################
+# create index for tree with multiple directories but no outliers
+$ gufi_dir2index -n 2 "prefix" "search"
+Creating GUFI Index search with 2 threads
+Total Dirs:          11
+Total Non-Dirs:      10
+
+$ gufi_treesummary_all -n 2 "search"
+
+# analyze tree
+$ gufi_find_outliers -d "|" -n 2 "prefix" ALL | sort
+Ran 473 threads
+Ran opendb 430 times
+Found 0 outliers
+
+# #####################################
+
+# #####################################
+# create index for tree with one atime outlier
+$ gufi_dir2index -n 2 "prefix" "search"
+Creating GUFI Index search with 2 threads
+Total Dirs:          12
+Total Non-Dirs:      11
+
+$ gufi_treesummary_all -n 2 "search"
+
+# analyze tree
+$ gufi_find_outliers -d "|" -n 2 "prefix" totatime | sort
+Ran 2 threads
+Ran opendb 11 times
+Found 1 outliers
+prefix/outlier|1|no-subdirs|totatime|0|0|0|0|0|0
+
+# #####################################
+
+# #####################################
+# create index for tree with two atime outliers on the same level
+$ gufi_dir2index -n 2 "prefix" "search"
+Creating GUFI Index search with 2 threads
+Total Dirs:          23
+Total Non-Dirs:      22
+
+$ gufi_treesummary_all -n 2 "search"
+
+# analyze tree
+$ gufi_find_outliers -d "|" -n 2 "prefix" totatime | sort
+Ran 3 threads
+Ran opendb 22 times
+Found 2 outliers
+prefix/outlier.1|1|no-subdirs|totatime|0|0|0|0|0|0
+prefix/outlier.2|1|no-subdirs|totatime|0|0|0|0|0|0
+
+# #####################################
+
+# #####################################
+# create index for tree with one atime outlier at level 2
+$ gufi_dir2index -n 2 "prefix" "search"
+Creating GUFI Index search with 2 threads
+Total Dirs:          23
+Total Non-Dirs:      21
+
+$ gufi_treesummary_all -n 2 "search"
+
+# analyze tree
+$ gufi_find_outliers -d "|" -n 2 "prefix" totatime | sort
+Ran 3 threads
+Ran opendb 22 times
+Found 1 outliers
+prefix/T_outlier/outlier|2|no-subdirs|totatime|0|0|0|0|0|0
+
+# #####################################
+
+# #####################################
+# create index for tree with one atime outlier above non-outliers
+$ gufi_dir2index -n 2 "prefix" "search"
+Creating GUFI Index search with 2 threads
+Total Dirs:          22
+Total Non-Dirs:      21
+
+$ gufi_treesummary_all -n 2 "search"
+
+# analyze tree
+$ gufi_find_outliers -d "|" -n 2 "prefix" totatime | sort
+Ran 2 threads
+Ran opendb 21 times
+Found 1 outliers
+prefix/outlier|1|subdirs-not-outliers|totatime|0|0|0|0|0|0
+
+# #####################################
+
+# #####################################
+# write output to database
+$ gufi_find_outliers -d "|" -n 2 -O "outliers.db" "prefix" totatime
+Ran 3 threads
+Ran opendb 22 times
+Found 1 outliers
+
+$ gufi_sqlite3 -d "|" "outliers.db" "SELECT * FROM outliers;"
+prefix/T_outlier/outlier|2|no-subdirs|totatime|0|0|0|0|0|0
+
+# #####################################
+
+# bad path
+$ gufi_find_outliers "prefix" ALL
+Error: Could not stat root directory "prefix": No such file or directory (2)
+Ran 0 threads
+Ran opendb 0 times
+Found 0 outliers
+
+# path is not directory
+$ gufi_find_outliers "prefix/file" ALL
+Error: "prefix/file" is not a directory. Skipping
+Ran 0 threads
+Ran opendb 0 times
+Found 0 outliers
+
+# bad column
+$ gufi_find_outliers "prefix" bad-column
+Error: Could not find handler for column bad-column
+Ran 0 threads
+Ran opendb 0 times
+Found 0 outliers
+
+# missing column
+$ gufi_find_outliers "prefix" ALL "prefix"
+Error: Input should be pairs of paths and columns
+
+# bad thread count
+$ gufi_find_outliers -n 18446744073709551615 "prefix" ALL
+Error: Could not allocate space for 18446744073709551615 db handles
+
+# bad index
+$ gufi_find_outliers "prefix" totatime
+Cannot open database: prefix/subdir/db.db unable to open database file rc 14
+Ran 2 threads
+Ran opendb 1 times
+Found 0 outliers
+

@@ -158,6 +158,7 @@ GUFI_DIR2INDEX="${BINARY_DIR}/src/gufi_dir2index"
 GUFI_DIR2TRACE="${BINARY_DIR}/src/gufi_dir2trace"
 GUFI_DU="${GUFI_TOOL} du"
 GUFI_FIND="${GUFI_TOOL} find"
+GUFI_FIND_OUTLIERS="${BINARY_DIR}/src/gufi_find_outliers"
 GUFI_GETFATTR="${GUFI_TOOL} getfattr"
 GUFI_INDEX2DIR="${BINARY_DIR}/src/gufi_index2dir"
 GUFI_JAIL="${BINARY_DIR}/scripts/gufi_jail"
@@ -246,6 +247,7 @@ replace() {
     s%${GUFI_DIR2TRACE}%gufi_dir2trace%g;
     s%${GUFI_DU}%gufi_du%g;
     s%${GUFI_FIND}%gufi_find%g;
+    s%${GUFI_FIND_OUTLIERS}%gufi_find_outliers%g;
     s%${GUFI_GETFATTR}%gufi_getfattr%g;
     s%${GUFI_INDEX2DIR}%gufi_index2dir%g;
     s%${GUFI_JAIL}%gufi_jail%g;

@@ -92,7 +92,7 @@ uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t 
     return max(target_memory_footprint / sizeof(struct work) / nthreads, 1);
 }
 
-int zeroit(struct sum *summary, const long long int epoch) {
+int zeroit(struct sum *summary) {
     summary->totfiles = 0;
     summary->totlinks = 0;
     summary->minuid = LLONG_MAX;
@@ -109,24 +109,18 @@ int zeroit(struct sum *summary, const long long int epoch) {
     summary->totmtg = 0;
     summary->totmtt = 0;
     summary->totsize = 0;
-    summary->totsqsize = 0;
-    summary->epoch = epoch;
     summary->minctime = LLONG_MAX;
     summary->maxctime = LLONG_MIN;
     summary->totctime = 0;
-    summary->totsqctime = 0;
     summary->minmtime = LLONG_MAX;
     summary->maxmtime = LLONG_MIN;
     summary->totmtime = 0;
-    summary->totsqmtime = 0;
     summary->minatime = LLONG_MAX;
     summary->maxatime = LLONG_MIN;
     summary->totatime = 0;
-    summary->totsqatime = 0;
     summary->minblocks = LLONG_MAX;
     summary->maxblocks = LLONG_MIN;
     summary->totblocks = 0;
-    summary->totsqblocks = 0;
     summary->totxattr = 0;
     summary->totsubdirs = 0;
     summary->maxsubdirfiles = LLONG_MIN;
@@ -135,23 +129,18 @@ int zeroit(struct sum *summary, const long long int epoch) {
     summary->mincrtime = LLONG_MAX;
     summary->maxcrtime = LLONG_MIN;
     summary->totcrtime = 0;
-    summary->totsqcrtime = 0;
     summary->minossint1 = LLONG_MAX;
     summary->maxossint1 = LLONG_MIN;
     summary->totossint1 = 0;
-    summary->totsqossint1 = 0;
     summary->minossint2 = LLONG_MAX;
     summary->maxossint2 = LLONG_MIN;
     summary->totossint2 = 0;
-    summary->totsqossint2 = 0;
     summary->minossint3 = LLONG_MAX;
     summary->maxossint3 = LLONG_MIN;
     summary->totossint3 = 0;
-    summary->totsqossint3 = 0;
     summary->minossint4 = LLONG_MAX;
     summary->maxossint4 = LLONG_MIN;
     summary->totossint4 = 0;
-    summary->totsqossint4 = 0;
     summary->totextdbs = 0;
     return 0;
 }
@@ -169,12 +158,10 @@ int sumit(struct sum *summary, struct work *work, struct entry_data *ed) {
         if (work->statuso.st_size >  1073741824)    summary->totmtg++;
         if (work->statuso.st_size >  1099511627776) summary->totmtt++;
         summary->totsize += work->statuso.st_size;
-        summary->totsqsize += ((double) work->statuso.st_size) * work->statuso.st_size;
 
         MIN_ASSIGN_LHS(summary->minblocks, work->statuso.st_blocks);
         MAX_ASSIGN_LHS(summary->maxblocks, work->statuso.st_blocks);
         summary->totblocks += work->statuso.st_blocks;
-        summary->totsqblocks += ((double) work->statuso.st_blocks) * work->statuso.st_blocks;
     }
     if (ed->type == 'l') {
         summary->totlinks++;
@@ -187,49 +174,37 @@ int sumit(struct sum *summary, struct work *work, struct entry_data *ed) {
 
     MIN_ASSIGN_LHS(summary->minctime, work->statuso.st_ctime);
     MAX_ASSIGN_LHS(summary->maxctime, work->statuso.st_ctime);
-    const long long int ctime = work->statuso.st_ctime - summary->epoch;
-    summary->totctime += ctime;
-    summary->totsqctime += ctime * ctime;
+    summary->totctime += work->statuso.st_ctime;
 
     MIN_ASSIGN_LHS(summary->minmtime, work->statuso.st_mtime);
     MAX_ASSIGN_LHS(summary->maxmtime, work->statuso.st_mtime);
-    const long long int mtime = work->statuso.st_mtime - summary->epoch;
-    summary->totmtime += mtime;
-    summary->totsqmtime += mtime * mtime;
+    summary->totmtime += work->statuso.st_mtime;
 
     MIN_ASSIGN_LHS(summary->minatime, work->statuso.st_atime);
     MAX_ASSIGN_LHS(summary->maxatime, work->statuso.st_atime);
-    const long long int atime = work->statuso.st_atime - summary->epoch;
-    summary->totatime += atime;
-    summary->totsqatime += atime * atime;
+    summary->totatime += work->statuso.st_atime;
 
     MIN_ASSIGN_LHS(summary->mincrtime, work->crtime);
     MAX_ASSIGN_LHS(summary->maxcrtime, work->crtime);
     #if HAVE_STATX
-    const long long int crtime = work->crtime - summary->epoch;
-    summary->totcrtime += crtime;
-    summary->totsqcrtime += crtime * crtime;
+    summary->totcrtime += work->crtime;
     #endif
 
     MIN_ASSIGN_LHS(summary->minossint1, ed->ossint1);
     MAX_ASSIGN_LHS(summary->maxossint1, ed->ossint1);
     summary->totossint1 += ed->ossint1;
-    summary->totsqossint1 += ((double) ed->ossint1) * ed->ossint1;
 
     MIN_ASSIGN_LHS(summary->minossint2, ed->ossint2);
     MAX_ASSIGN_LHS(summary->maxossint2, ed->ossint2);
     summary->totossint2 += ed->ossint2;
-    summary->totsqossint2 += ((double) ed->ossint2) * ed->ossint2;
 
     MIN_ASSIGN_LHS(summary->minossint3, ed->ossint3);
     MAX_ASSIGN_LHS(summary->maxossint3, ed->ossint3);
     summary->totossint3 += ed->ossint3;
-    summary->totsqossint3 += ((double) ed->ossint3) * ed->ossint3;
 
     MIN_ASSIGN_LHS(summary->minossint4, ed->ossint4);
     MAX_ASSIGN_LHS(summary->maxossint4, ed->ossint4);
     summary->totossint4 += ed->ossint4;
-    summary->totsqossint4 += ((double) ed->ossint4) * ed->ossint4;
 
     summary->totxattr += ed->xattrs.count;
 
@@ -272,22 +247,18 @@ int tsumit(struct sum *sumin, struct sum *smout) {
         MIN_ASSIGN_LHS(smout->minctime, sumin->minctime);
         MAX_ASSIGN_LHS(smout->maxctime, sumin->maxctime);
         smout->totctime += sumin->totctime;
-        smout->totsqctime += sumin->totsqctime;
 
         MIN_ASSIGN_LHS(smout->minmtime, sumin->minmtime);
         MAX_ASSIGN_LHS(smout->maxmtime, sumin->maxmtime);
         smout->totmtime += sumin->totmtime;
-        smout->totsqmtime += sumin->totsqmtime;
 
         MIN_ASSIGN_LHS(smout->minatime, sumin->minatime);
         MAX_ASSIGN_LHS(smout->maxatime, sumin->maxatime);
         smout->totatime += sumin->totatime;
-        smout->totsqatime += sumin->totsqatime;
 
         MIN_ASSIGN_LHS(smout->mincrtime, sumin->mincrtime);
         MAX_ASSIGN_LHS(smout->maxcrtime, sumin->maxcrtime);
         smout->totcrtime += sumin->totcrtime;
-        smout->totsqcrtime += sumin->totsqcrtime;
 
         MIN_ASSIGN_LHS(smout->minossint1, sumin->minossint1);
         MAX_ASSIGN_LHS(smout->maxossint1, sumin->maxossint1);
@@ -299,9 +270,7 @@ int tsumit(struct sum *sumin, struct sum *smout) {
         MAX_ASSIGN_LHS(smout->maxossint4, sumin->maxossint4);
     }
 
-    smout->epoch         = sumin->epoch;
     smout->totblocks    += sumin->totblocks;
-    smout->totsqblocks  += sumin->totsqblocks;
     smout->totzero      += sumin->totzero;
     smout->totltk       += sumin->totltk;
     smout->totmtk       += sumin->totmtk;
@@ -310,16 +279,11 @@ int tsumit(struct sum *sumin, struct sum *smout) {
     smout->totmtg       += sumin->totmtg;
     smout->totmtt       += sumin->totmtt;
     smout->totsize      += sumin->totsize;
-    smout->totsqsize    += sumin->totsqsize;
     smout->totxattr     += sumin->totxattr;
     smout->totossint1   += sumin->totossint1;
-    smout->totsqossint1 += sumin->totsqossint1;
     smout->totossint2   += sumin->totossint2;
-    smout->totsqossint2 += sumin->totsqossint2;
     smout->totossint3   += sumin->totossint3;
-    smout->totsqossint3 += sumin->totsqossint3;
     smout->totossint4   += sumin->totossint4;
-    smout->totsqossint4 += sumin->totsqossint4;
 
     smout->totextdbs    += sumin->totextdbs;
 

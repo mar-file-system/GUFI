@@ -152,7 +152,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
     if (db) {
         struct sum sum;
-        zeroit(&sum, pa->in.epoch);
+        zeroit(&sum);
 
         int rollupscore = 0;
         get_rollupscore(db, &rollupscore);
@@ -215,7 +215,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
 static int compute_treesummary(struct PoolArgs *pa) {
     struct sum sumout;
-    zeroit(&sumout, pa->in.epoch);
+    zeroit(&sumout);
     for(size_t i = 0; i < pa->in.maxthreads; i++) {
         tsumit(&pa->sums[i], &sumout);
         sumout.totsubdirs--; /* tsumit adds 1 to totsubdirs each time it's called */
@@ -326,7 +326,7 @@ int main(int argc, char *argv[]) {
 
     pa.sums = calloc(pa.in.maxthreads, sizeof(struct sum));
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
-        zeroit(&pa.sums[i], pa.in.epoch);
+        zeroit(&pa.sums[i]);
     }
 
     struct work *root = new_work_with_name(NULL, 0, pa.in.name.data, pa.in.name.len);

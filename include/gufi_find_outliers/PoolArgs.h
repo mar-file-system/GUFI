@@ -62,32 +62,20 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_STATS_DIR_DATA_H
-#define GUFI_STATS_DIR_DATA_H
+#ifndef GUFI_FIND_OUTLIERS_POOL_ARGS_H
+#define GUFI_FIND_OUTLIERS_POOL_ARGS_H
 
-#include <inttypes.h>
+#include <stddef.h>
 
-#include "str.h"
+#include "bf.h"
+#include "dbutils.h"
 
-typedef struct {
-    double value; /* value from single directory/subtree, not combined value */
-    double mean;
-    double stdev;
+struct PoolArgs {
+    struct input in;
+    sqlite3 **dbs;   /* per-thread dbs */
 
-    /* only used by timestamps */
-    int64_t epoch;
-    int64_t nondirs;
-} Stats_t;
-
-typedef struct DirData {
-    str_t path;
-    int reported;   /* has this path already been reported? */
-    Stats_t t;      /* treesummary */
-    Stats_t s;      /* summary */
-} DirData_t;
-
-DirData_t *DirData_create(const str_t *path,
-                          const char *subdir, const size_t subdir_len);
-void DirData_free(void *ptr);
+    /* runtime stats */
+    size_t *opendbs; /* per-thread number of attempted opendbs */
+};
 
 #endif

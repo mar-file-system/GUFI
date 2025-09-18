@@ -64,27 +64,31 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 
-/* GUFI headers */
+#include "gufi_find_outliers/OutlierWork.h"
 #include "utils.h"
 
-/* stats headers */
-#include "DirData.h"
+OutlierWork_t *OutlierWork_create(const str_t *path, const size_t level,
+                                  const refstr_t col,
+                                  const ColHandler_t *handler, const str_t *query,
+                                  const int is_outlier,
+                                  const Stats_t *t, const Stats_t *s) {
+    OutlierWork_t *ow = calloc(1, sizeof(OutlierWork_t));
+    ow->path.data = malloc(path->len + 1);
+    ow->path.len = SNFORMAT_S(ow->path.data, path->len + 1, 1,
+                              path->data, path->len);
 
-DirData_t *DirData_create(const str_t *path,
-                          const char *subdir, const size_t subdir_len) {
-    DirData_t *dd = calloc(1, sizeof(DirData_t));
-    const size_t new_path_len = path->len + 1 + subdir_len;
-    dd->path.data = malloc(new_path_len + 1);
-    dd->path.len = SNFORMAT_S(dd->path.data, new_path_len + 1, 3,
-                              path->data, path->len,
-                              "/", (size_t) 1,
-                              subdir, subdir_len);
+    ow->level = level;
+    ow->col = col;
+    ow->handler = handler;
+    ow->query = query;
+    ow->is_outlier = is_outlier;
+    ow->t = *t;
+    ow->s = *s;
 
-    return dd;
+    return ow;
 }
 
-void DirData_free(void *ptr) { /* void * so this function can be used by sll_destroy */
-    DirData_t *dd = (DirData_t *) ptr;
-    str_free_existing(&dd->path);
-    free(dd);
+void OutlierWork_free(OutlierWork_t *ow) {
+    str_free_existing(&ow->path);
+    free(ow);
 }

@@ -62,36 +62,32 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_PRINT_H
-#define GUFI_QUERY_PRINT_H
+#ifndef GUFI_FIND_OUTLIERS_WORK_H
+#define GUFI_FIND_OUTLIERS_WORK_H
 
-#include <pthread.h>
 #include <stddef.h>
-#include <stdio.h>
 
-#include "OutputBuffers.h"
+#include "gufi_find_outliers/DirData.h"
+#include "gufi_find_outliers/handle_columns.h"
+#include "str.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+typedef struct {
+    str_t path;
+    size_t level;
+    refstr_t col;
+    const ColHandler_t *handler;  /* functions for handling the column type */
+    const str_t *query;           /* SQL for pulling data from index; reference to allocation in main */
+    int is_outlier;
 
-/* sqlite3_exec callback argument data */
-typedef struct PrintArgs {
-    struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */
-    char delim;
-    pthread_mutex_t *mutex;               /* mutex for printing to stdout */
-    FILE *outfile;
-    size_t rows;                          /* number of rows returned by the query */
-    const int *types;                     /* if set, prefix output with 1 char type and 1 length */
-    /* size_t printed;                    /\* number of records printed by the callback *\/ */
-    int suppress_newline;
-} PrintArgs_t;
+    Stats_t t;
+    Stats_t s;
+} OutlierWork_t;
 
-int print_parallel(void *args, int count, char **data, char **columns);
-int print_uncached(void *args, int count, char **data, char **columns);
-
-#ifdef __cplusplus
-}
-#endif
+OutlierWork_t *OutlierWork_create(const str_t *path, const size_t level,
+                                  const refstr_t col,
+                                  const ColHandler_t *handler, const str_t *query,
+                                  const int is_outlier,
+                                  const Stats_t *t, const Stats_t *s);
+void OutlierWork_free(OutlierWork_t *ow);
 
 #endif

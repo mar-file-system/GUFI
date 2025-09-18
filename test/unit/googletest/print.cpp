@@ -230,11 +230,12 @@ static void print_parallel_tlv_actual(const bool use_len) {
 
     PrintArgs pa;
     pa.output_buffer = &ob;
-    pa.delim = '|'; // ignored
+    pa.delim = '|';                 // ignored
     pa.mutex = nullptr;
     pa.outfile = file;
     pa.rows = 0;
     pa.types = TYPES;
+    pa.suppress_newline = 1;        // not necessary, but setting to 1 to cover unusual case
 
     EXPECT_EQ(print_parallel(&pa, COL_COUNT, (char **) DATA, nullptr), 0);
     EXPECT_EQ(ob.filled, use_len?total_len:0);
@@ -275,4 +276,35 @@ static void print_parallel_tlv_actual(const bool use_len) {
 TEST(print_parallel, tlv) {
     print_parallel_tlv_actual(true);
     print_parallel_tlv_actual(false);
+}
+
+static void print_uncached_test(const bool lock) {
+    const char *DATA[] = {"abcd", "efgh"};
+    const std::size_t buf_size = 4 + 1 + 4 + 1;
+    char *buf = new char[buf_size]();
+    FILE *file = fmemopen(buf, buf_size, "w+b");
+    ASSERT_NE(file, nullptr);
+
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    PrintArgs pa;
+    pa.output_buffer = nullptr;
+    pa.delim = '|';
+    pa.mutex = lock?&mutex:nullptr;
+    pa.outfile = file;
+    pa.rows = 0;
+    pa.types = nullptr;
+    pa.suppress_newline = 0;
+
+    EXPECT_EQ(print_uncached(&pa, sizeof(DATA) / sizeof(DATA[0]), (char **) DATA, nullptr), 0);
+
+    EXPECT_EQ(pa.rows, (std::size_t) 1);
+
+    fclose(file);
+    delete [] buf;
+}
+
+TEST(print_uncached, mutex) {
+    print_uncached_test(true);
+    print_uncached_test(false);
 }

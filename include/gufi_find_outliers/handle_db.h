@@ -62,36 +62,49 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_PRINT_H
-#define GUFI_QUERY_PRINT_H
+#ifndef GUFI_FIND_OUTLIERS_HANDLE_DB_H
+#define GUFI_FIND_OUTLIERS_HANDLE_DB_H
 
-#include <pthread.h>
 #include <stddef.h>
-#include <stdio.h>
 
-#include "OutputBuffers.h"
+#include "dbutils.h"
+#include "gufi_find_outliers/DirData.h"
+#include "gufi_find_outliers/PoolArgs.h"
+#include "str.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define OUTLIERS_TABLE  "outliers"
+#define OUTLIERS_CREATE                                     \
+    "DROP TABLE IF EXISTS " OUTLIERS_TABLE ";"              \
+    "CREATE TABLE " OUTLIERS_TABLE " ("                     \
+    "path TEXT, level INT64, "                              \
+    "outlier_type TEXT, "                                   \
+    "column TEXT, "                                         \
+    "t_val DOUBLE, t_mean DOUBLE, t_stdev DOUBLE, "         \
+    "s_val DOUBLE, s_mean DOUBLE, s_stdev DOUBLE "          \
+    ");"
+#define OUTLIERS_INSERT "INSERT INTO " OUTLIERS_TABLE " VALUES ("   \
+    "@path, @level, "                                               \
+    "@outlier_type, "                                               \
+    "@column, "                                                     \
+    "@t_val, @t_mean, @t_stdev, "                                   \
+    "@s_val, @s_mean, @s_stdev "                                    \
+    ");"
 
-/* sqlite3_exec callback argument data */
-typedef struct PrintArgs {
-    struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */
-    char delim;
-    pthread_mutex_t *mutex;               /* mutex for printing to stdout */
-    FILE *outfile;
-    size_t rows;                          /* number of rows returned by the query */
-    const int *types;                     /* if set, prefix output with 1 char type and 1 length */
-    /* size_t printed;                    /\* number of records printed by the callback *\/ */
-    int suppress_newline;
-} PrintArgs_t;
+#define INTERMEDIATE_DBNAME_FORMAT "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI
 
-int print_parallel(void *args, int count, char **data, char **columns);
-int print_uncached(void *args, int count, char **data, char **columns);
+/* create a db and the outliers table */
+sqlite3 *db_init(const char *dbname);
 
-#ifdef __cplusplus
-}
-#endif
+/* per-thread in-memory tables */
+void intermediate_dbs_fini(struct PoolArgs *pa);
+int intermediate_dbs_init(struct PoolArgs *pa);
+
+/* insert into intermediate dbs */
+int insert_outlier(sqlite3_stmt *stmt, const str_t *path, const size_t level,
+                   const char *outlier_type, const refstr_t *col,
+                   const Stats_t *t, const Stats_t *s);
+
+/* output */
+void write_results(struct PoolArgs *pa, size_t *rows);
 
 #endif

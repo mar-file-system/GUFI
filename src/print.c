@@ -232,3 +232,29 @@ int print_parallel(void *args, int count, char **data, char **columns) {
 
     return 0;
 }
+
+int print_uncached(void *args, int count, char **data, char **columns) {
+    (void) columns;
+
+    PrintArgs_t *print = (PrintArgs_t *) args;
+
+    count--; /* last column does not get delimiter */
+
+    if (print->mutex) {
+        pthread_mutex_lock(print->mutex);
+    }
+
+    for(int i = 0; i < count; i++ ) {
+        fprintf(print->outfile, "%s%c", data[i], print->delim);
+    }
+
+    fprintf(print->outfile, "%s\n", data[count]);
+
+    if (print->mutex) {
+        pthread_mutex_unlock(print->mutex);
+    }
+
+    print->rows++;
+
+    return 0;
+}

@@ -62,36 +62,17 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_PRINT_H
-#define GUFI_QUERY_PRINT_H
+#ifndef GUFI_FIND_OUTLIERS_GET_SUBDIRS_H
+#define GUFI_FIND_OUTLIERS_GET_SUBDIRS_H
 
-#include <pthread.h>
 #include <stddef.h>
-#include <stdio.h>
 
-#include "OutputBuffers.h"
+#include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
+#include "gufi_find_outliers/OutlierWork.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* sqlite3_exec callback argument data */
-typedef struct PrintArgs {
-    struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */
-    char delim;
-    pthread_mutex_t *mutex;               /* mutex for printing to stdout */
-    FILE *outfile;
-    size_t rows;                          /* number of rows returned by the query */
-    const int *types;                     /* if set, prefix output with 1 char type and 1 length */
-    /* size_t printed;                    /\* number of records printed by the callback *\/ */
-    int suppress_newline;
-} PrintArgs_t;
-
-int print_parallel(void *args, int count, char **data, char **columns);
-int print_uncached(void *args, int count, char **data, char **columns);
-
-#ifdef __cplusplus
-}
-#endif
+/* go down only one level */
+void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
+                 QPTPool_t *pool, const size_t id);
 
 #endif

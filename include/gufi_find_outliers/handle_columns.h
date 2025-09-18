@@ -62,8 +62,8 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_STATS_HANDLE_COLUMNS_H
-#define GUFI_STATS_HANDLE_COLUMNS_H
+#ifndef GUFI_FIND_OUTLIERS_HANDLE_COLUMNS_H
+#define GUFI_FIND_OUTLIERS_HANDLE_COLUMNS_H
 
 #include "SinglyLinkedList.h"
 #include "str.h"

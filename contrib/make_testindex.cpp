@@ -445,7 +445,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
 
     // summary of what is in this directory
     struct sum summary;
-    zeroit(&summary, 0);
+    zeroit(&summary);
 
     // local statistics variables
     off_t curr_size = 0;
