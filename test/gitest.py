@@ -272,96 +272,51 @@ def gfullafter():
     os.system('gufi_query -n1 -x -d\'|\' -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from vrpentries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names from vsummarydir;" -a 1 -o %s/fullbfqoutafter d0'  % (top))
     os.chdir(top)
 
-def test_prep(testn):
-    # this cleans up and makes a fresh gufi
-    # you have to not be in the top temp directory as this deletes that and rebuilds it
+def test_prep(name):
     os.chdir(mtmp)
     ginit()
-    # set the dir back to top temp directory
     os.chdir(top)
-
-    # wait a bit and make a change
     time.sleep(1)
+    print ("---------- test %s start" % (name))
 
-    print ("---------- test %s start" % (testn))
-
-def test_finish(testn):
+def test_finish(name):
     print ("++++++++++ comparing bfq from fullafter and bfq from incrafter")
-    cmd = os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top,top))
+    cmd = os.system('cmp %s/fullbfqoutafter.0 %s/incrbfqoutafter.0' % (top, top))
     exit_code = os.WEXITSTATUS(cmd)
-    print ("---------- test %s done result %d" % (testn,exit_code))
+    print ("---------- test %s done result %d" % (name, exit_code))
+
+# Runs a test with the given name, and calls the function operation()
+# to do the test-specific changes.
+def do_test(name, operation):
+    test_prep(name)
+
+    operation()
+
+    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+    gfullafter()
+    # wait until incremental time
+    time.sleep(1)
+    # do incremental update of gufi tree
+    gincr("-A 3")
+
+    test_finish(name)
 
 def test_1():
-    testn="change contents of one file"
-    test_prep(testn)
-
     os.system('echo cheese >> d0/d00/d000/f0000')
 
-    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-    gfullafter()
-    # wait until incremental time
-    time.sleep(1)
-
-    # do incremental update of gufi tree
-    gincr("-A 3")
-
-    test_finish(testn)
-
 def test_2():
-    testn="delete directory segment"
-    test_prep(testn)
     os.system('rm -rf d0/d00/d000')
 
-    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-    gfullafter()
-    # wait until incremental time
-    time.sleep(1)
-    # do incremental update of gufi tree
-    gincr("-A 3")
-
-    test_finish(testn)
-
-
 def test_3():
-    testn="move a directory segment"
-    test_prep(testn)
-
     os.system('mv d0/d00/d000 d0')
-    #############################
-
-    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-    gfullafter()
-    # wait until incremental time
-    time.sleep(1)
-    # do incremental update of gufi tree
-    gincr("-A 3")
-
-    test_finish(testn)
 
 def test_4():
-    testn="add a directory segment"
-    test_prep(testn)
-
     os.system('mkdir d0/d00/nd000')
     os.system('touch d0/d00/nd000/fnd000')
     os.system('mkdir d0/d00/nd000/nd0000')
     os.system('touch d0/d00/nd000/nd0000/fnd0000')
 
-    #############################
-
-    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-    gfullafter()
-    # wait until incremental time
-    time.sleep(1)
-    # do incremental update of gufi tree
-    gincr("-A 3")
-
-    test_finish(testn)
-
 def test_5():
-    testn="add, delete, move multiple segments and touch an existing file"
-    test_prep(testn)
-
     os.system('mkdir d0/d00/nd000')
     os.system('touch d0/d00/nd000/fnd000')
     os.system('mkdir d0/d00/nd000/nd0000')
@@ -371,15 +326,6 @@ def test_5():
     os.system('mv d0/d000 d0/d0000')
     os.system('rm -rf d0/d01/d000')
     os.system('echo cheese >> d0/d02/d020/f0200')
-
-    # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
-    gfullafter()
-    # wait until incremental time
-    time.sleep(1)
-    # do incremental update of gufi tree
-    gincr("-A 3")
-
-    test_finish(testn)
 
 def test_6():
     testn="change an existing file using suspect file for file suspects"
@@ -405,9 +351,11 @@ def test_6():
     test_finish(testn)
 
 if __name__ == "__main__":
-    test_1()
-    test_2()
-    test_3()
-    test_4()
-    test_5()
+    do_test("change contents of one file", test_1)
+    do_test("delete directory segment", test_2)
+    do_test("move a directory segment", test_3)
+    do_test("add a directory segment", test_4)
+    do_test("add, delete, move multiple segments and touch an existing file", test_5)
+
+    # test 6 has a different structure than the other 5 so it doesn't use do_test()
     test_6()
