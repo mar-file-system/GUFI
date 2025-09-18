@@ -99,6 +99,22 @@ def make_source_tree(root):
                  for n in files:
                      os.system('touch %s/d0/d0%d/d0%d%d/d0%d%d%d/f0%d%d%d%d' % (root,i,i,k,i,k,m,i,k,m,n))
 
+
+def do_gufi_query_command(entries_table, output_file, gufi_index):
+    entries_sql = """
+SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
+FROM   %s;
+    """ % entries_table
+
+    summary_sql = """
+SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
+FROM   vsummarydir;
+    """
+
+    os.system('gufi_query -n1 -x -d\'|\' -E "%s" -S "%s" -a 1 -o "%s" "%s"'
+               % (entries_sql, summary_sql, output_file, gufi_index))
+
+
 # initialize a src tree, make a full gufi tree, do a bfq in case we want to compare with the full at initial state, make a full initial tree snap
 def ginit():
     print ("initializing a tree, full gufi tree, and full tree snap")
@@ -118,17 +134,7 @@ def ginit():
 
     # this is just for testing - make a bfq output to compare with if we want to - leave out atime as it may change
     os.chdir(topgt)
-    entries_sql = """
-SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,
-       xattr_names
-FROM   entries;
-    """
-    summary_sql = """
-SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,
-       xattr_names
-FROM   vsummarydir;
-    """
-    os.system('gufi_query -n1 -x -d\'|\' -E "%s" -S "%s" -a 1 -o %s/fullbfqout %s/d0'  % (entries_sql, summary_sql, top,topgt))
+    do_gufi_query_command(entries_table = "entries", output_file = "%s/fullbfqout" % top, gufi_index = "%s/d0" % topgt)
 
     summary_sql = """
 INSERT INTO readdirplus
@@ -378,15 +384,7 @@ ORDER BY a1depth ASC;
     print ("update done")
     os.chdir(topgt)
     # leave out atime
-    entries_sql = """
-SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
-FROM   entries;
-    """
-    summary_sql = """
-SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
-FROM   vsummarydir;
-    """
-    os.system('gufi_query -n1 -x -d\'|\' -E "%s" -S "%s" -a 1 -o %s/incrbfqoutafter d0'  % (entries_sql, summary_sql, top))
+    do_gufi_query_command(entries_table = "entries", output_file = "%s/incrbfqoutafter" % top, gufi_index = "d0")
     os.chdir(top)
 
 # make a full gufi tree of the src tree after mods then do a bfq of that for comparison with an incrementally updated gufi tree
@@ -395,15 +393,7 @@ def gfullafter():
     os.system('gufi_dir2index -n 2 -x d0 %s' % (fa))
     os.chdir(topfullafter)
     #leave out atime
-    entries_sql = """
-SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
-FROM   vrpentries;
-    """
-    summary_sql = """
-SELECT Path(),NAME,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattr_names
-FROM   vsummarydir;
-    """
-    os.system('gufi_query -n1 -x -d\'|\' -E "%s" -S "%s" -a 1 -o %s/fullbfqoutafter d0'  % (entries_sql, summary_sql, top))
+    do_gufi_query_command(entries_table = "vrpentries", output_file = "%s/fullbfqoutafter" % top, gufi_index = "d0")
     os.chdir(top)
 
 def test_prep(name):
