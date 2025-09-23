@@ -67,8 +67,9 @@ OF SUCH DAMAGE.
 
 #include <sys/types.h>
 
+#include <sqlite3.h>
+
 #include "bf.h"
-#include "dbutils.h"
 
 #ifdef __cplusplus
 extern "C" {

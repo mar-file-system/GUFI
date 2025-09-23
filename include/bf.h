@@ -632,7 +632,10 @@ struct entry_data {
     char          osstext1[MAXXATTR];
     char          osstext2[MAXXATTR];
     char          pinodec[128];
-    int           suspect;  // added for bfwreaddirplus2db for suspect
+
+    /* bfwreaddirplus2db */
+    int           suspect;
+    time_t        suspect_time;
 };
 
 extern const char fielddelim;

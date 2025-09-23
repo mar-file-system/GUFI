@@ -88,6 +88,9 @@ int SNPRINTF(char *str, size_t size, const char *format, ...);
    to size_t or weird bugs may occur */
 size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...);
 
+#define MIN_ASSIGN_LHS(lhs, rhs) if ((lhs) > (rhs)) { (lhs) = (rhs); }
+#define MAX_ASSIGN_LHS(lhs, rhs) if ((lhs) < (rhs)) { (lhs) = (rhs); }
+
 static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
     return (lhs > rhs)?lhs:rhs;
 }

@@ -370,22 +370,6 @@ static int rollup_descend(void *args, int *keep_going) {
 const char PERM_SQL[] = "SELECT mode, uid, gid, (SELECT COUNT(*) FROM pentries) "
                         "FROM " SUMMARY " WHERE isroot == 1;";
 
-struct Permissions {
-    mode_t mode;
-    uid_t uid;
-    gid_t gid;
-};
-
-static int get_permissions(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    struct Permissions *perms = (struct Permissions *) args;
-    perms->mode = atoi(data[0]);
-    perms->uid  = atoi(data[1]);
-    perms->gid  = atoi(data[2]);
-    return 0;
-}
-
 struct ChildData {
     struct Permissions *perms;
     size_t count;
@@ -393,7 +377,7 @@ struct ChildData {
 
 static int get_permissions_and_count(void *args, int count, char **data, char **columns) {
     struct ChildData *child = (struct ChildData *) args;
-    get_permissions(child->perms, count, data, columns);
+    get_permissions_callback(child->perms, count, data, columns);
     child->count = atoi(data[3]);
     return 0;
 }
@@ -566,7 +550,7 @@ static int can_rollup(struct input *in,
 
     /* get permissions of the current directory */
     struct Permissions perms = {0};
-    const int exec_rc = sqlite3_exec(dst, PERM_SQL, get_permissions, &perms, &err);
+    const int exec_rc = sqlite3_exec(dst, PERM_SQL, get_permissions_callback, &perms, &err);
 
     if (exec_rc != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Could not get permissions of current directory \"%s\": %s\n", rollup->data.name, err);

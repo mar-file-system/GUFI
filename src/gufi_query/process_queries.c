@@ -113,7 +113,7 @@ static size_t descend2(QPTPool_t *ctx,
 
             gqw_t *child = new_gqw_with_name(gqw->work.name, gqw->work.name_len,
                                              entry->d_name, len,
-                                             entry->d_type, next_level,
+                                             entry, next_level,
                                              gqw->sqlite3_name, gqw->sqlite3_name_len);
             if (!child) {
                 continue;

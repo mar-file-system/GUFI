@@ -1,0 +1,506 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+
+OUTPUT="gufi_incremental_update.out"
+
+SNAPSHOT="snapshot"
+INDEX_SNAPSHOT="${SNAPSHOT}.index"
+TREE_SNAPSHOT="${SNAPSHOT}.tree"
+URD="${SNAPSHOT}.urd"
+CREATED="${SNAPSHOT}.created"
+DIFF="${SNAPSHOT}.diff"
+
+PARKING_LOT="parking_lot"
+
+FULL_INDEX="updated-index"
+
+SUSPECT_FILE="suspectfile"
+
+BADDIR=$(mktemp -d "XXXXXX") # this gets removed instantly
+
+cleanup() {
+    rm -rf "${INDEX_SNAPSHOT}" "${TREE_SNAPSHOT}" "${URD}" "${CREATED}" "${DIFF}" "${PARKING_LOT}" "${FULL_INDEX}" "${SUSPECT_FILE}" "${BADDIR}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+(
+run_no_sort "${GUFI_INCREMENTAL_UPDATE}"
+
+setup_index_and_update_simple_tree() {
+    search="$1"
+
+    cleanup
+    # delete SEARCH, not the input path
+    # shellcheck disable=SC2153
+    rm -rf "${SRCDIR}" "${SEARCH}"
+
+    # original:
+    #     prefix/
+    #     |---- change/
+    #     |---- delete/
+    #     |---- no-change/
+    #     |---- rename/
+
+    # after changes:
+    #     prefix/
+    #     |---- change/
+    #           |---- new_file
+    #     |---- created/
+    #     |---- no-change/
+    #     |---- renamed/
+
+    echo "# create source tree"
+    mkdir --mode 775 "${SRCDIR}"
+    mkdir --mode 775 "${SRCDIR}/change"
+    mkdir --mode 775 "${SRCDIR}/delete"
+    mkdir --mode 775 "${SRCDIR}/no-change"
+    mkdir --mode 775 "${SRCDIR}/rename"
+    run_sort "find \"${SRCDIR}\""
+
+    PREFIX_INODE=$(stat -c '%i' "${SRCDIR}")                    # 0
+    CHANGE_INODE=$(stat -c '%i' "${SRCDIR}/change")             # 1
+    DELETE_INODE=$(stat -c '%i' "${SRCDIR}/delete")             # 2
+    NO_CHANGE_INODE=$(stat -c '%i' "${SRCDIR}/no-change")       # 3
+    RENAME_INODE=$(stat -c '%i' "${SRCDIR}/rename")             # 4
+
+    echo "# get index original version of source tree"
+    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${search}" | remove_indexing_time
+
+    echo "# modify source tree"
+    mkdir --mode 775 "${SRCDIR}/created"
+    mv "${SRCDIR}/rename" "${SRCDIR}/renamed"
+    touch "${SRCDIR}/change/new_file"
+    chmod 664 "${SRCDIR}/change/new_file"
+    rm -rf "${SRCDIR}/delete"      # delete last to avoid inode reuse
+    run_sort "find \"${SRCDIR}\""
+
+    CREATED_INODE=$(stat -c '%i' "${SRCDIR}/created")           # 5
+    NEW_FILE_INODE=$(stat -c '%i' "${SRCDIR}/change/new_file")  # 6
+
+    # update timestamps so that changes are guaranteed to be detected
+    now="$(date +%s)"
+    future="$(( now + 60 ))"
+
+    # atime doesn't need to change
+    touch -md "@${future}" "${SRCDIR}/created"
+    touch -md "@${future}" "${SRCDIR}/renamed"
+    touch -md "@${future}" "${SRCDIR}/change/new_file"
+    touch -md "@${future}" "${SRCDIR}/change"
+    touch -md "@${future}" "${SRCDIR}"
+
+    echo "# run ${GUFI_DIR2INDEX} on the updated tree to serve as the expected results" | replace
+    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${FULL_INDEX}" | remove_indexing_time
+
+    sleep 1 # need to make sure no-change's ctime is in the past
+}
+
+setup_index_and_update_complex_tree() {
+    search="$1"
+
+    cleanup
+    # delete SEARCH, not the input path
+    # shellcheck disable=SC2153
+    rm -rf "${SRCDIR}" "${SEARCH}"
+
+    # original:
+    #     prefix/
+    #     |---- A                                     # mtime updated when C was deleted
+    #           |---- B                               # no change
+    #                 |---- D                         # create new directory under here with old name (C)
+    #                 |---- E                         # F moved under here
+    #           |---- C                               # deleted
+    #                 |---- F                         # renamed (moved under E)
+    #                 |---- G                         # renamed (moved under F)
+    #                       |---- H                   # no change
+    #                             |---- I             # renamed, still under H
+    #                                   |---- J       # no change
+
+    # after changes:
+    #     prefix/
+    #     |---- A
+    #           |---- B
+    #                 |---- D
+    #                       |---- C                   # created
+    #                 |---- E
+    #                       |---- F
+    #                             |---- G
+    #                                    |---- H
+    #                                           |---- renamed_I
+    #                                                 |---- J
+
+    echo "# create source tree"
+    mkdir --mode 775 "${SRCDIR}"
+    mkdir --mode 775 "${SRCDIR}/A"
+    mkdir --mode 775 "${SRCDIR}/A/B"
+    mkdir --mode 775 "${SRCDIR}/A/B/D"
+    mkdir --mode 775 "${SRCDIR}/A/B/E"
+    mkdir --mode 775 "${SRCDIR}/A/C"
+    mkdir --mode 775 "${SRCDIR}/A/C/F"
+    mkdir --mode 775 "${SRCDIR}/A/C/G"
+    mkdir --mode 775 "${SRCDIR}/A/C/G/H"
+    mkdir --mode 775 "${SRCDIR}/A/C/G/H/I"
+    mkdir --mode 775 "${SRCDIR}/A/C/G/H/I/J"
+    run_sort "find \"${SRCDIR}\""
+
+    PREFIX_INODE=$(stat -c '%i' "${SRCDIR}")             # 0
+    A_INODE=$(stat -c '%i' "${SRCDIR}/A")                # 1
+    B_INODE=$(stat -c '%i' "${SRCDIR}/A/B")              # 2
+    D_INODE=$(stat -c '%i' "${SRCDIR}/A/B/D")            # 3
+    E_INODE=$(stat -c '%i' "${SRCDIR}/A/B/E")            # 4
+    C_INODE=$(stat -c '%i' "${SRCDIR}/A/C")              # 5
+    F_INODE=$(stat -c '%i' "${SRCDIR}/A/C/F")            # 6
+    G_INODE=$(stat -c '%i' "${SRCDIR}/A/C/G")            # 7
+    H_INODE=$(stat -c '%i' "${SRCDIR}/A/C/G/H")          # 8
+    I_INODE=$(stat -c '%i' "${SRCDIR}/A/C/G/H/I")        # 9
+    J_INODE=$(stat -c '%i' "${SRCDIR}/A/C/G/H/I/J")      # 10
+
+    echo "# get index original version of source tree"
+    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${search}" | remove_indexing_time
+
+    echo "# modify source tree"
+    mkdir --mode 775 "${SRCDIR}/A/B/D/C"
+    mv "${SRCDIR}/A/C/F" "${SRCDIR}/A/B/E/"
+    mv "${SRCDIR}/A/C/G" "${SRCDIR}/A/B/E/F/"
+    mv "${SRCDIR}/A/B/E/F/G/H/I" "${SRCDIR}/A/B/E/F/G/H/renamed_I"
+    rm -rf "${SRCDIR}/A/C"
+    run_sort "find \"${SRCDIR}\""
+
+    SAME_NAME_INODE=$(stat -c '%i' "${SRCDIR}/A/B/D/C")  # 11
+
+    # update timestamps so that changes are guaranteed to be detected
+    now="$(date +%s)"
+    future="$(( now + 60 ))"
+
+    # atime doesn't need to change
+    touch -md "@${future}" "${SRCDIR}/A/B/D/C"
+    touch -md "@${future}" "${SRCDIR}/A/B/E"
+    touch -md "@${future}" "${SRCDIR}/A/B/E/F"
+    touch -md "@${future}" "${SRCDIR}/A/B/E/F/G"
+    touch -md "@${future}" "${SRCDIR}/A/B/E/F/G/H/renamed_I"
+    touch -md "@${future}" "${SRCDIR}/A"
+
+    echo "# run ${GUFI_DIR2INDEX} on the updated tree to serve as the expected results" | replace
+    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${FULL_INDEX}" | remove_indexing_time
+
+    sleep 1 # need to make sure no-change's ctime is in the past
+}
+
+run_query() {
+    index="$1"
+    "${GUFI_QUERY}" \
+        -d "${DELIM}" \
+        -S "SELECT rpath(sname, sroll),               mode, uid, gid FROM vrsummary;"  \
+        -E "SELECT rpath(sname, sroll) || '/' ||name, mode, uid, gid FROM vrpentries;" \
+        "${index}" | sort | @SED@ "s%$(id -u)${DELIM}$(id -g)%uid${DELIM}gid%g;"
+}
+
+check_incremental_update() {
+    echo "# Snapshot of original index"
+    run_sort "${SQLITE3} \"${INDEX_SNAPSHOT}\" \"SELECT * FROM readdirplus;\""
+
+    echo "# Snapshot of tree in current state"
+    run_sort "${SQLITE3} \"${TREE_SNAPSHOT}\" \"SELECT * FROM readdirplus;\""
+
+    echo "# Diff of snapshots"
+    run_sort "${SQLITE3} \"${DIFF}\" \"SELECT * FROM diff;\""
+
+    # compare the indexes
+    GOOD=$(run_query "${FULL_INDEX}/${BASENAME}" | @SED@ "s%^${FULL_INDEX}/%%g;")
+    # shellcheck disable=SC2153
+    INCR=$(run_query "${INDEXROOT}" | @SED@ "s%^${SEARCH}/%%g;")
+
+    echo "# State of updated index created with ${GUFI_DIR2INDEX}" | replace
+    echo "${GOOD}"
+    echo
+    echo "# State of incrementally updated index"
+    echo "${INCR}"
+    echo
+    echo "# Compare index states"
+    @DIFF@ --color=never --ignore-matching-lines "    Warning: Could not stat update db\.db in parking lot .*" <(echo "${GOOD}") <(echo "${INCR}")
+    echo
+}
+
+replace_inodes() {
+    @SED@ "
+        s%${PREFIX_INODE}%0%g;
+        s%${CHANGE_INODE}%1%g;
+        s%${DELETE_INODE}%2%g;
+        s%${NO_CHANGE_INODE}%3%g;
+        s%${RENAME_INODE}%4%g;
+        s%${CREATED_INODE}%5%g;
+        s%${NEW_FILE_INODE}%6%g;
+
+        s%${PREFIX_INODE}%0%g; # repeat
+        s%${A_INODE}%1%g;
+        s%${B_INODE}%2%g;
+        s%${D_INODE}%3%g;
+        s%${E_INODE}%4%g;
+        s%${C_INODE}%5%g;
+        s%${F_INODE}%6%g;
+        s%${G_INODE}%7%g;
+        s%${H_INODE}%8%g;
+        s%${I_INODE}%9%g;
+        s%${J_INODE}%10%g;
+        s%${SAME_NAME_INODE}%11%g;
+    "
+}
+
+(
+    echo "#####################################"
+    echo "# suspect mode 0"
+    setup_index_and_update_simple_tree "${SEARCH}"
+
+    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
+    echo "# Update the original index via incremental update"
+    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 0 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null" | replace_inodes)
+    echo "${out}" | head -n 1
+    echo "${out}" | tail -n +2 | sort
+    echo
+    check_incremental_update | replace_inodes
+    echo "# differences showed up because the directories were not marked as suspect and were not reindexed"
+    echo "# when the update dbs were being applied, the directories that needed new db.dbs did not have them"
+    echo "#####################################"
+echo
+)
+
+(
+    echo "#####################################"
+    echo "# suspect mode 1 (check suspect file for inodes of all directories, files, and links)"
+    setup_index_and_update_simple_tree "${SEARCH}"
+
+    (
+        echo "${CHANGE_INODE} d"
+        echo "${RENAME_INODE} d"   # this is required because a move causes a reindex even if nothing changed
+        echo "${CREATED_INODE} d"
+        echo "${NEW_FILE_INODE} f"
+        echo "0 t"                 # good inode, bad type
+        echo "bad d"               # bad inode, good type
+    ) > "${SUSPECT_FILE}"
+    echo "# suspect file"
+    run_no_sort "cat \"${SUSPECT_FILE}\"" | replace_inodes
+
+    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
+    echo "# Update the original index via incremental update"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 1 -W \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null" | replace_inodes
+    check_incremental_update | replace_inodes
+    echo "#####################################"
+    echo
+)
+
+(
+    echo "#####################################"
+    echo "# suspect mode 2 (check suspect file for inodes of files and links)"
+    setup_index_and_update_simple_tree "${SEARCH}"
+
+    (
+        echo "${NEW_FILE_INODE} f"
+        echo "0   t"               # good inode, bad type, different spacing
+        echo "bad d"               # bad inode, good type
+    ) > "${SUSPECT_FILE}"
+    echo "# suspect file"
+    run_no_sort "cat \"${SUSPECT_FILE}\"" | replace_inodes
+
+    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
+    echo "# Update the original index via incremental update"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 2 -W \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null" | replace_inodes
+    check_incremental_update | replace_inodes
+    echo "#####################################"
+    echo
+)
+
+(
+    echo "#####################################"
+    echo "# suspect mode 3"
+    setup_index_and_update_simple_tree "${SEARCH}"
+
+    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
+    echo "# Update the original index via incremental update"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
+    check_incremental_update | replace_inodes
+    echo "#####################################"
+    echo
+)
+
+(
+    echo "#####################################"
+    echo "# suspect mode 3, in-place update"
+    setup_index_and_update_simple_tree "${SRCDIR}/.."
+
+    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
+    echo "# Update the original index via incremental update"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${SRCDIR}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
+
+    # compare the indexes
+    GOOD=$(run_query "${FULL_INDEX}/${BASENAME}" | @SED@ "s%^${FULL_INDEX}/%%g;")
+    INCR=$(run_query "${SRCDIR}")
+
+    echo "# State of updated index created with ${GUFI_DIR2INDEX}" | replace
+    echo "${GOOD}"
+    echo
+    echo "# State of incrementally updated index"
+    echo "${INCR}"
+    echo
+    echo "# Compare index states"
+    @DIFF@ --color=never <(echo "${GOOD}") <(echo "${INCR}")
+    echo
+    echo "#####################################"
+    echo
+)
+
+(
+    echo "#####################################"
+    echo "# treat all directories as suspect"
+    setup_index_and_update_simple_tree "${SEARCH}"
+
+    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
+    echo "# Update the original index via incremental update"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 0 -Y \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
+    check_incremental_update | replace_inodes
+    echo "#####################################"
+    echo
+)
+
+(
+    echo "#####################################"
+    echo "# treat all files/links as suspect (need suspect method 3 because most directories do not have files)"
+    setup_index_and_update_simple_tree "${SEARCH}"
+
+    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
+    echo "# Update the original index via incremental update"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 -Z \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
+    check_incremental_update | replace_inodes
+    echo "#####################################"
+    echo
+)
+
+(
+    echo "#####################################"
+    echo "# suspect mode 3 with more complex tree"
+    setup_index_and_update_complex_tree "${SEARCH}"
+
+    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
+    echo "# Update the original index via incremental update"
+    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null " | replace_inodes)
+    echo "${out}" | head -n 1
+    echo "${out}" | tail -n +2 | sort
+    echo
+    echo "# Incremental update showed errors because while directories H and J's full paths"
+    echo "# changed, the directories themselves did not change, so there were no update"
+    echo "# databases to copy in"
+    echo
+    check_incremental_update | replace_inodes
+    echo "#####################################"
+    echo
+)
+
+echo "#####################################"
+echo "# existing parking lot"
+run_no_sort "find -name \"${PARKING_LOT}\" 2>/dev/null"
+run_no_sort "mkdir \"${PARKING_LOT}\""
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null 2>&1"
+run_no_sort "find -name \"${PARKING_LOT}\" 2>/dev/null"
+echo "#####################################"
+echo
+
+echo "#####################################"
+echo "# Invalid Inputs                    #"
+echo "#####################################"
+
+echo "# non-existent index"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${BADDIR}/${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+
+echo "# non-existent tree"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${BADDIR}/${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+
+echo "# non-existent parking lot"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${BADDIR}/${PARKING_LOT}\" > /dev/null"
+
+echo "# file index"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${GUFI_INCREMENTAL_UPDATE}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+
+echo "# file tree"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${GUFI_INCREMENTAL_UPDATE}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+
+echo "# file parking lot"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${GUFI_INCREMENTAL_UPDATE}\" > /dev/null"
+
+echo "# bad suspect file"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 -W \"${BADDIR}/suspectfile\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+
+echo "# bad thread count"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 -n 18446744073709551615 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+) | @SED@ "s%${BADDIR}%baddir%g;" | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_incremental_update.expected "${OUTPUT}"
+rm "${OUTPUT}"

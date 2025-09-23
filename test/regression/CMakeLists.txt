@@ -82,6 +82,7 @@ set(BINARIES
   gufi_dir2index
   gufi_dir2trace
   # gufi_find_outliers
+  gufi_incremental_update
   gufi_index2dir
   gufi_plugin
   gufi_query

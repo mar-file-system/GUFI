@@ -1,0 +1,741 @@
+$ gufi_incremental_update
+usage: gufi_incremental_update [options] GUFI_tree tree snapshotdb parking_lot
+options:
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+  -n, --threads <threads>           number of threads
+  -r                                insert files and links into db (for gufi_incremental_update)
+  -R                                insert dires into db (for gufi_incremental_update)
+  -Y                                default to all directories suspect
+  -Z                                default to all files/links suspect
+  -W <INSUSPECT>                    suspect input file
+  -A <suspectmethod>                suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl
+  -c <suspecttime>                  time in seconds since epoch for suspect comparision
+  -x, --index-xattrs                index xattrs
+      --compress                    compress work items
+
+GUFI_tree         GUFI tree
+tree              source tree
+snapshotdb        database file containing records of all directories
+parking_lot       directory to place update db.dbs and moved directories
+
+GUFI_tree and tree may be the same path
+
+
+#####################################
+# suspect mode 0
+# create source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/delete
+prefix/no-change
+prefix/rename
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI Index search with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/change/new_file
+prefix/created
+prefix/no-change
+prefix/renamed
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI Index updated-index with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      1
+
+# Update the original index via incremental update
+$ gufi_incremental_update -x -R -A 0 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+    Warning: Could not stat update db.db in parking lot "parking_lot/4": No such file or directory (2)
+    Warning: Could not stat update db.db in parking lot "parking_lot/5": No such file or directory (2)
+
+# Snapshot of original index
+$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|0
+prefix/delete|d|2|0|1|0
+prefix/no-change|d|3|0|1|0
+prefix/rename|d|4|0|1|0
+prefix|d|0|0|0|0
+
+# Snapshot of tree in current state
+$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|0
+prefix/created|d|5|0|1|0
+prefix/no-change|d|3|0|1|0
+prefix/renamed|d|4|0|1|0
+prefix|d|0|0|0|0
+
+# Diff of snapshots
+$ sqlite3 "diff" "SELECT * FROM diff;"
+prefix/delete|d|2|0|1|0||||||
+prefix/rename|d|4|0|1|0|prefix/renamed|d|4|0|1|0
+||||||prefix/created|d|5|0|1|0
+
+# State of updated index created with gufi_dir2index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/change|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+1d0
+< prefix/change/new_file|33204|uid|gid
+3d1
+< prefix/created|16893|uid|gid
+# differences showed up because the directories were not marked as suspect and were not reindexed
+# when the update dbs were being applied, the directories that needed new db.dbs did not have them
+#####################################
+
+#####################################
+# suspect mode 1 (check suspect file for inodes of all directories, files, and links)
+# create source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/delete
+prefix/no-change
+prefix/rename
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI Index search with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/change/new_file
+prefix/created
+prefix/no-change
+prefix/renamed
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI Index updated-index with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      1
+
+# suspect file
+$ cat "suspectfile"
+1 d
+4 d
+5 d
+6 f
+0 t
+bad d
+
+# Update the original index via incremental update
+$ gufi_incremental_update -x -R -A 1 -W "suspectfile" "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+
+# Snapshot of original index
+$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|0
+prefix/delete|d|2|0|1|0
+prefix/no-change|d|3|0|1|0
+prefix/rename|d|4|0|1|0
+prefix|d|0|0|0|0
+
+# Snapshot of tree in current state
+$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|1
+prefix/created|d|5|0|1|1
+prefix/no-change|d|3|0|1|0
+prefix/renamed|d|4|0|1|1
+prefix|d|0|0|0|0
+
+# Diff of snapshots
+$ sqlite3 "diff" "SELECT * FROM diff;"
+prefix/change|d|1|0|1|0|prefix/change|d|1|0|1|1
+prefix/delete|d|2|0|1|0||||||
+prefix/rename|d|4|0|1|0|prefix/renamed|d|4|0|1|1
+||||||prefix/created|d|5|0|1|1
+
+# State of updated index created with gufi_dir2index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
+# suspect mode 2 (check suspect file for inodes of files and links)
+# create source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/delete
+prefix/no-change
+prefix/rename
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI Index search with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/change/new_file
+prefix/created
+prefix/no-change
+prefix/renamed
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI Index updated-index with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      1
+
+# suspect file
+$ cat "suspectfile"
+6 f
+0   t
+bad d
+
+# Update the original index via incremental update
+$ gufi_incremental_update -x -R -A 2 -W "suspectfile" "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+
+# Snapshot of original index
+$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|0
+prefix/delete|d|2|0|1|0
+prefix/no-change|d|3|0|1|0
+prefix/rename|d|4|0|1|0
+prefix|d|0|0|0|0
+
+# Snapshot of tree in current state
+$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|1
+prefix/created|d|5|0|1|1
+prefix/no-change|d|3|0|1|0
+prefix/renamed|d|4|0|1|1
+prefix|d|0|0|0|1
+
+# Diff of snapshots
+$ sqlite3 "diff" "SELECT * FROM diff;"
+prefix/change|d|1|0|1|0|prefix/change|d|1|0|1|1
+prefix/delete|d|2|0|1|0||||||
+prefix/rename|d|4|0|1|0|prefix/renamed|d|4|0|1|1
+prefix|d|0|0|0|0|prefix|d|0|0|0|1
+||||||prefix/created|d|5|0|1|1
+
+# State of updated index created with gufi_dir2index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
+# suspect mode 3
+# create source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/delete
+prefix/no-change
+prefix/rename
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI Index search with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/change/new_file
+prefix/created
+prefix/no-change
+prefix/renamed
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI Index updated-index with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      1
+
+# Update the original index via incremental update
+$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+
+# Snapshot of original index
+$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|0
+prefix/delete|d|2|0|1|0
+prefix/no-change|d|3|0|1|0
+prefix/rename|d|4|0|1|0
+prefix|d|0|0|0|0
+
+# Snapshot of tree in current state
+$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|1
+prefix/created|d|5|0|1|1
+prefix/no-change|d|3|0|1|0
+prefix/renamed|d|4|0|1|1
+prefix|d|0|0|0|1
+
+# Diff of snapshots
+$ sqlite3 "diff" "SELECT * FROM diff;"
+prefix/change|d|1|0|1|0|prefix/change|d|1|0|1|1
+prefix/delete|d|2|0|1|0||||||
+prefix/rename|d|4|0|1|0|prefix/renamed|d|4|0|1|1
+prefix|d|0|0|0|0|prefix|d|0|0|0|1
+||||||prefix/created|d|5|0|1|1
+
+# State of updated index created with gufi_dir2index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
+# suspect mode 3, in-place update
+# create source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/delete
+prefix/no-change
+prefix/rename
+
+# get index original version of source tree
+$ gufi_dir2index prefix prefix/..
+"prefix/.." Already exists!
+Creating GUFI Index prefix/.. with 1 threads
+You are putting the index dbs in input directory
+Total Dirs:          5
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/change/db.db
+prefix/change/new_file
+prefix/created
+prefix/db.db
+prefix/no-change
+prefix/no-change/db.db
+prefix/renamed
+prefix/renamed/db.db
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI Index updated-index with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      1
+
+# Update the original index via incremental update
+$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+You are putting the index dbs in input directory
+
+# State of updated index created with gufi_dir2index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
+# treat all directories as suspect
+# create source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/delete
+prefix/no-change
+prefix/rename
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI Index search with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/change/new_file
+prefix/created
+prefix/no-change
+prefix/renamed
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI Index updated-index with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      1
+
+# Update the original index via incremental update
+$ gufi_incremental_update -x -R -A 0 -Y "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+
+# Snapshot of original index
+$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|0
+prefix/delete|d|2|0|1|0
+prefix/no-change|d|3|0|1|0
+prefix/rename|d|4|0|1|0
+prefix|d|0|0|0|0
+
+# Snapshot of tree in current state
+$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|1
+prefix/created|d|5|0|1|1
+prefix/no-change|d|3|0|1|1
+prefix/renamed|d|4|0|1|1
+prefix|d|0|0|0|1
+
+# Diff of snapshots
+$ sqlite3 "diff" "SELECT * FROM diff;"
+prefix/change|d|1|0|1|0|prefix/change|d|1|0|1|1
+prefix/delete|d|2|0|1|0||||||
+prefix/no-change|d|3|0|1|0|prefix/no-change|d|3|0|1|1
+prefix/rename|d|4|0|1|0|prefix/renamed|d|4|0|1|1
+prefix|d|0|0|0|0|prefix|d|0|0|0|1
+||||||prefix/created|d|5|0|1|1
+
+# State of updated index created with gufi_dir2index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
+# treat all files/links as suspect (need suspect method 3 because most directories do not have files)
+# create source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/delete
+prefix/no-change
+prefix/rename
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI Index search with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/change
+prefix/change/new_file
+prefix/created
+prefix/no-change
+prefix/renamed
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI Index updated-index with 1 threads
+Total Dirs:          5
+Total Non-Dirs:      1
+
+# Update the original index via incremental update
+$ gufi_incremental_update -x -R -A 3 -Z "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+
+# Snapshot of original index
+$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|0
+prefix/delete|d|2|0|1|0
+prefix/no-change|d|3|0|1|0
+prefix/rename|d|4|0|1|0
+prefix|d|0|0|0|0
+
+# Snapshot of tree in current state
+$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+prefix/change|d|1|0|1|1
+prefix/created|d|5|0|1|1
+prefix/no-change|d|3|0|1|0
+prefix/renamed|d|4|0|1|1
+prefix|d|0|0|0|1
+
+# Diff of snapshots
+$ sqlite3 "diff" "SELECT * FROM diff;"
+prefix/change|d|1|0|1|0|prefix/change|d|1|0|1|1
+prefix/delete|d|2|0|1|0||||||
+prefix/rename|d|4|0|1|0|prefix/renamed|d|4|0|1|1
+prefix|d|0|0|0|0|prefix|d|0|0|0|1
+||||||prefix/created|d|5|0|1|1
+
+# State of updated index created with gufi_dir2index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/change/new_file|33204|uid|gid
+prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
+prefix/no-change|16893|uid|gid
+prefix/renamed|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
+# suspect mode 3 with more complex tree
+# create source tree
+$ find "prefix"
+prefix
+prefix/A
+prefix/A/B
+prefix/A/B/D
+prefix/A/B/E
+prefix/A/C
+prefix/A/C/F
+prefix/A/C/G
+prefix/A/C/G/H
+prefix/A/C/G/H/I
+prefix/A/C/G/H/I/J
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI Index search with 1 threads
+Total Dirs:          11
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/A
+prefix/A/B
+prefix/A/B/D
+prefix/A/B/D/C
+prefix/A/B/E
+prefix/A/B/E/F
+prefix/A/B/E/F/G
+prefix/A/B/E/F/G/H
+prefix/A/B/E/F/G/H/renamed_I
+prefix/A/B/E/F/G/H/renamed_I/J
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI Index updated-index with 1 threads
+Total Dirs:          11
+Total Non-Dirs:      0
+
+# Update the original index via incremental update
+$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+    Warning: Could not stat update db.db in parking lot "parking_lot/10": No such file or directory (2)
+    Warning: Could not stat update db.db in parking lot "parking_lot/8": No such file or directory (2)
+
+# Incremental update showed errors because while directories H and J's full paths
+# changed, the directories themselves did not change, so there were no update
+# databases to copy in
+
+# Snapshot of original index
+$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+prefix/A/B/D|d|3|2|3|0
+prefix/A/B/E|d|4|2|3|0
+prefix/A/B|d|2|1|2|0
+prefix/A/C/F|d|6|5|3|0
+prefix/A/C/G/H/I/J|d|10|9|6|0
+prefix/A/C/G/H/I|d|9|8|5|0
+prefix/A/C/G/H|d|8|7|4|0
+prefix/A/C/G|d|7|5|3|0
+prefix/A/C|d|5|1|2|0
+prefix/A|d|1|0|1|0
+prefix|d|0|0|0|0
+
+# Snapshot of tree in current state
+$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+prefix/A/B/D/C|d|11|3|4|1
+prefix/A/B/D|d|3|2|3|0
+prefix/A/B/E/F/G/H/renamed_I/J|d|10|9|8|0
+prefix/A/B/E/F/G/H/renamed_I|d|9|8|7|1
+prefix/A/B/E/F/G/H|d|8|7|6|0
+prefix/A/B/E/F/G|d|7|6|5|1
+prefix/A/B/E/F|d|6|4|4|1
+prefix/A/B/E|d|4|2|3|1
+prefix/A/B|d|2|1|2|0
+prefix/A|d|1|0|1|1
+prefix|d|0|0|0|0
+
+# Diff of snapshots
+$ sqlite3 "diff" "SELECT * FROM diff;"
+prefix/A/B/E|d|4|2|3|0|prefix/A/B/E|d|4|2|3|1
+prefix/A/C/F|d|6|5|3|0|prefix/A/B/E/F|d|6|4|4|1
+prefix/A/C/G/H/I/J|d|10|9|6|0|prefix/A/B/E/F/G/H/renamed_I/J|d|10|9|8|0
+prefix/A/C/G/H/I|d|9|8|5|0|prefix/A/B/E/F/G/H/renamed_I|d|9|8|7|1
+prefix/A/C/G/H|d|8|7|4|0|prefix/A/B/E/F/G/H|d|8|7|6|0
+prefix/A/C/G|d|7|5|3|0|prefix/A/B/E/F/G|d|7|6|5|1
+prefix/A/C|d|5|1|2|0||||||
+prefix/A|d|1|0|1|0|prefix/A|d|1|0|1|1
+||||||prefix/A/B/D/C|d|11|3|4|1
+
+# State of updated index created with gufi_dir2index
+prefix/A/B/D/C|16893|uid|gid
+prefix/A/B/D|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I/J|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I|16893|uid|gid
+prefix/A/B/E/F/G/H|16893|uid|gid
+prefix/A/B/E/F/G|16893|uid|gid
+prefix/A/B/E/F|16893|uid|gid
+prefix/A/B/E|16893|uid|gid
+prefix/A/B|16893|uid|gid
+prefix/A|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/A/B/D/C|16893|uid|gid
+prefix/A/B/D|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I/J|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I|16893|uid|gid
+prefix/A/B/E/F/G/H|16893|uid|gid
+prefix/A/B/E/F/G|16893|uid|gid
+prefix/A/B/E/F|16893|uid|gid
+prefix/A/B/E|16893|uid|gid
+prefix/A/B|16893|uid|gid
+prefix/A|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
+# existing parking lot
+$ find -name "parking_lot" 2>/dev/null
+
+$ mkdir "parking_lot"
+
+$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null 2>&1
+
+$ find -name "parking_lot" 2>/dev/null
+./parking_lot
+
+#####################################
+
+#####################################
+# Invalid Inputs                    #
+#####################################
+# non-existent index
+$ gufi_incremental_update -x -R -A 3 "baddir/prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+Could not stat index "baddir/prefix": No such file or directory (2)
+
+# non-existent tree
+$ gufi_incremental_update -x -R -A 3 "prefix" "baddir/prefix" "snapshot" "parking_lot" > /dev/null
+Could not stat tree "baddir/prefix": No such file or directory (2)
+
+# non-existent parking lot
+$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "baddir/parking_lot" > /dev/null
+Error: Could not create parking lot directory "baddir/parking_lot": No such file or directory (2)
+
+# file index
+$ gufi_incremental_update -x -R -A 3 "gufi_incremental_update" "prefix" "snapshot" "parking_lot" > /dev/null
+Index path is not a directory "gufi_incremental_update"
+
+# file tree
+$ gufi_incremental_update -x -R -A 3 "prefix" "gufi_incremental_update" "snapshot" "parking_lot" > /dev/null
+Tree path is not a directory "gufi_incremental_update"
+
+# file parking lot
+$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "gufi_incremental_update" > /dev/null
+Error: Existing parking lot path "gufi_incremental_update" is not a directory
+
+# bad suspect file
+$ gufi_incremental_update -x -R -A 3 -W "baddir/suspectfile" "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+Can't open suspect file baddir/suspectfile
+
+# bad thread count
+$ gufi_incremental_update -x -R -A 3 -n 18446744073709551615 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+Error: Failed to start thread pool
+

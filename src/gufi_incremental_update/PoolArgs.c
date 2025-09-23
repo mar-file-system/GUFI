@@ -62,44 +62,80 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef DESCEND_H
-#define DESCEND_H
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <dirent.h>
+#include <trie.h>
 
-#include "bf.h"
-#include "QueuePerThreadPool.h"
+#include "gufi_incremental_update/PoolArgs.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+static int setup_suspect_file(struct PoolArgs *pa) {
+    pa->suspects.dir.inodes = trie_alloc();
+    pa->suspects.dir.min = (ino_t) -1;
+    pa->suspects.dir.max = 0;
 
-typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
+    pa->suspects.fl.inodes = trie_alloc();
+    pa->suspects.fl.min = (ino_t) -1;
+    pa->suspects.fl.max = 0;
 
-struct descend_counters {
-    size_t dirs;
-    size_t dirs_insitu;
-    size_t nondirs;
-    size_t nondirs_processed;
-    size_t external_dbs;
-};
+    if (pa->in.suspectfile > 0) {
+        FILE *f = fopen(pa->in.insuspect.data, "r");
+        if(!f) {
+            fprintf(stderr, "Can't open suspect file %s\n", pa->in.insuspect.data);
+            return 1;
+        }
 
-struct work *try_skip_lstat(struct dirent *entry, struct work *work);
+        /* read suspect file and insert inodes into tries depending on type */
+        char inode_str[32];  /* inode in string form */
+        char type;           /* d/f/l */
+        while (fscanf(f, "%s %c", inode_str, &type) == 2) {
+            ino_t inode = 0;
+            if (sscanf(inode_str, "%" STAT_ino, &inode) != 1) {
+                continue;
+            }
 
-/*
- * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
- */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work,
-            DIR *dir, const int skip_db,
-            QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
-            struct descend_counters *counters);
+            if (type == 'd') {
+                MIN_ASSIGN_LHS(pa->suspects.dir.min, inode);
+                MAX_ASSIGN_LHS(pa->suspects.dir.max, inode);
 
-/* decompress work struct coming out of descend() */
-void decompress_work(struct work **dst, void *src);
+                trie_insert(pa->suspects.dir.inodes, inode_str, strlen(inode_str), NULL, NULL);
+            }
+            else if ((type == 'f') || (type == 'l')) {
+                MIN_ASSIGN_LHS(pa->suspects.fl.min, inode);
+                MAX_ASSIGN_LHS(pa->suspects.fl.max, inode);
 
-#ifdef __cplusplus
+                trie_insert(pa->suspects.fl.inodes, inode_str, strlen(inode_str), NULL, NULL);
+            }
+        }
+
+        fclose(f);
+    }
+
+    return 0;
 }
-#endif
-#endif
+
+int PoolArgs_init(struct PoolArgs *pa) {
+    pa->index.parent_len = trailing_match_index(pa->index.path.data, pa->index.path.len, "/", 1);
+    pa->tree.parent_len = trailing_match_index(pa->tree.path.data, pa->tree.path.len, "/", 1);
+
+    if (setup_suspect_file(pa) != 0) {
+        return 1;
+    }
+
+    pa->pool = QPTPool_init(pa->in.maxthreads, pa);
+    if (QPTPool_start(pa->pool) != 0) {
+        fprintf(stderr, "Error: Failed to start thread pool\n");
+        return 1;
+    }
+
+    return 0;
+}
+
+void PoolArgs_fini(struct PoolArgs *pa) {
+    QPTPool_stop(pa->pool);
+    QPTPool_destroy(pa->pool);
+    trie_free(pa->suspects.fl.inodes);
+    trie_free(pa->suspects.dir.inodes);
+    input_fini(&pa->in);
+}
