@@ -72,10 +72,11 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "OutputBuffers.h"
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "descend.h"
-#include "OutputBuffers.h"
+#include "outfiles.h"
 #include "print.h"
 #include "utils.h"
 
@@ -247,19 +248,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return rc;
 }
 
-/* close all output files */
-static int outfiles_fin(FILE **files, const size_t end) {
-    /* Not checking arguments */
-    for(size_t i = 0; i < end; i++) {
-        fflush(files[i]);
-        fclose(files[i]);
-    }
-    free(files);
-    return 0;
-}
-
 /* allocate the array of FILE * and open files */
-static FILE **outfiles_init(struct input *in) {
+static FILE **stdout_init(struct input *in) {
     /* Not checking arguments */
     FILE **files = calloc(in->maxthreads, sizeof(*files));
     if (!files) {
@@ -267,32 +257,7 @@ static FILE **outfiles_init(struct input *in) {
         return NULL;
     }
 
-    if (in->output == OUTFILE) {
-        for(size_t i = 0; i < in->maxthreads; i++) {
-            char outname[MAXPATH];
-            SNPRINTF(outname, MAXPATH, "%s.%zu", in->outname.data, i);
-
-            /* check if the destination path already exists (not an error) */
-            struct stat st;
-            if (stat(outname, &st) == 0) {
-                fprintf(stderr, "\"%s\" Already exists!\n", outname);
-
-                /* if the destination path is not a regular file (error) */
-                if (!S_ISREG(st.st_mode)) {
-                    outfiles_fin(files, i);
-                    fprintf(stderr, "Destination path is not a file \"%s\"\n", outname);
-                    return NULL;
-                }
-            }
-
-            if (!(files[i] = fopen(outname, "w"))) {
-                outfiles_fin(files, i);
-                fprintf(stderr, "Could not open output file %s\n", outname);
-                return NULL;
-            }
-        }
-    }
-    else {
+    if (in->output == STDOUT) {
         for(size_t i = 0; i < in->maxthreads; i++) {
             files[i] = stdout;
         }
@@ -306,7 +271,7 @@ int main(int argc, char *argv[]) {
     process_args_and_maybe_exit("hHvn:f:y:z:t:o:B:", 1, "input_dir...", &pa.in);
     int rc = 0;
 
-    pa.outfiles = outfiles_init(&pa.in);
+    pa.outfiles = (pa.in.output == OUTFILE)?outfiles_init(pa.in.outname.data, pa.in.maxthreads):stdout_init(&pa.in);
     if (!pa.outfiles) {
         rc = 1;
         goto cleanup_exit;
@@ -314,7 +279,8 @@ int main(int argc, char *argv[]) {
 
     /* Initialize output buffers */
     static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    if (!OutputBuffers_init(&pa.obufs, pa.in.maxthreads, pa.in.output_buffer_size, &mutex)) {
+    if (!OutputBuffers_init(&pa.obufs, pa.in.maxthreads, pa.in.output_buffer_size,
+                            (pa.in.output == STDOUT)?&mutex:NULL)) {
         fprintf(stderr, "Error: Could not initialize %zu output buffers\n", pa.in.maxthreads);
         rc = 1;
         goto close_outfiles;

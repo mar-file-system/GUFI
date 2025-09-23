@@ -64,9 +64,10 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 
-#include "gufi_query/query.h"
 #include "print.h"
 #include "utils.h"
+
+#include "gufi_query/query.h"
 
 /* wrapper wround sqlite3_exec to pass arguments and check for errors */
 void querydb(struct work *work,

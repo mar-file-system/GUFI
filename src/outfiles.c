@@ -62,18 +62,55 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_QUERY_H
-#define GUFI_QUERY_QUERY_H
+#include <stdlib.h>
 
-#include "SinglyLinkedList.h"
 #include "bf.h"
+#include "outfiles.h"
+#include "utils.h"
 
-#include "gufi_query/PoolArgs.h"
+/* allocate the array of FILE * and open files */
+FILE **outfiles_init(const char *prefix, const size_t count) {
+    /* Not checking arguments */
+    FILE **files = calloc(count, sizeof(FILE *));
+    if (!files) {
+        fprintf(stderr, "Could not allocate space for %zu files\n", count);
+        return NULL;
+    }
 
-void querydb(struct work *work,
-             const char *dbname, const size_t dbname_len, sqlite3 *db,
-             const char *sql, const int *types,
-             PoolArgs_t *pa, int id,
-             int (*callback)(void *, int, char **, char**), int *rc);
+    for(size_t i = 0; i < count; i++) {
+        char outname[MAXPATH];
+        SNPRINTF(outname, MAXPATH, "%s.%zu", prefix, i);
 
-#endif
+        /* check if the destination path already exists (not an error) */
+        struct stat st;
+        if (stat(outname, &st) == 0) {
+            fprintf(stderr, "\"%s\" Already exists!\n", outname);
+
+            /* if the destination path is not a regular file (error) */
+            if (!S_ISREG(st.st_mode)) {
+                outfiles_fin(files, i);
+                fprintf(stderr, "Destination path is not a file \"%s\"\n", outname);
+                return NULL;
+            }
+        }
+
+        if (!(files[i] = fopen(outname, "w"))) {
+            outfiles_fin(files, i);
+            fprintf(stderr, "Could not open output file %s\n", outname);
+            return NULL;
+        }
+    }
+
+    return files;
+}
+
+/* close all output files */
+int outfiles_fin(FILE **files, const size_t end) {
+    /* Not checking arguments */
+    for(size_t i = 0; i < end; i++) {
+        fflush(files[i]);
+        fclose(files[i]);
+    }
+    free(files);
+    return 0;
+}

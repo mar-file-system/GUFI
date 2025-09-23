@@ -1,6 +1,6 @@
 # gufi_rollup help
 $ gufi_rollup
-usage: gufi_rollup [options] GUFI_index ...
+usage: gufi_rollup [options] GUFI_tree ...
 options:
   -h                     help
   -H                     show assigned input values (debugging)

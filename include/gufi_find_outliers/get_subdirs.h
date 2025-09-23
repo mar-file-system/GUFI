@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
+
 #include "gufi_find_outliers/OutlierWork.h"
 
 /* go down only one level */

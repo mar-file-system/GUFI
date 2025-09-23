@@ -69,9 +69,10 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "dbutils.h"
+#include "utils.h"
+
 #include "gufi_find_outliers/DirData.h"
 #include "gufi_find_outliers/handle_columns.h"
-#include "utils.h"
 
 static double stdev_from_parts(const double totsq, const double tot, const size_t n, const int is_sample) {
     const double variance = ((n * totsq) - (tot * tot)) / (n * (n - !!is_sample));

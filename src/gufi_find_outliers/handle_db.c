@@ -67,8 +67,9 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #include "dbutils.h"
-#include "gufi_find_outliers/handle_db.h"
 #include "print.h"
+
+#include "gufi_find_outliers/handle_db.h"
 
 static int create_outliers_table(const char *name, sqlite3 *db, void *args) {
     (void) args;

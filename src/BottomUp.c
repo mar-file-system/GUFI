@@ -443,11 +443,8 @@ QPTPool_t *parallel_bottomup_init(const size_t thread_count,
         return NULL;
     }
 
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
     struct UserArgs *ua = calloc(1, sizeof(*ua));
-    ua->epoch = (long long int) sec(since_epoch(&now));
+    ua->epoch = (long long int) sec(since_epoch(NULL));
     ua->user_struct_size = user_struct_size;
     ua->min_level = min_level;
     ua->max_level = max_level;

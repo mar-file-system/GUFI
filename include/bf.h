@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #define BF_H
 
 #include <inttypes.h>
+#include <stdlib.h> /* EXIT_SUCCESS and EXIT_FAILURE */
 #include <sys/stat.h>
 
 #include "SinglyLinkedList.h"

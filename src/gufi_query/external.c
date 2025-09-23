@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include "external.h"
+
 #include "gufi_query/external.h"
 
 void attach_extdbs(struct input *in, sqlite3 *db,

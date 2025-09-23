@@ -927,7 +927,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &runtime.start);
 
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:L:Xy:z:D:l", 1, "GUFI_index ...", &pa.in);
+    process_args_and_maybe_exit("hHvn:L:Xy:z:D:l", 1, "GUFI_tree ...", &pa.in);
 
     init_template_db(&pa.xattr_template);
     if (create_xattrs_template(&pa.xattr_template) != 0) {

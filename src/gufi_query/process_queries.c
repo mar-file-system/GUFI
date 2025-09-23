@@ -67,13 +67,14 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "external.h"
+#include "print.h"
+#include "str.h"
+#include "utils.h"
+
 #include "gufi_query/process_queries.h"
 #include "gufi_query/processdir.h"
 #include "gufi_query/query.h"
 #include "gufi_query/query_replacement.h"
-#include "print.h"
-#include "str.h"
-#include "utils.h"
 
 #ifdef QPTPOOL_SWAP
 static int gqw_serialize_and_free(const int fd, QPTPool_f func, void *work, size_t *size) {

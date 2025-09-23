@@ -64,8 +64,9 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 
-#include "gufi_find_outliers/DirData.h"
 #include "utils.h"
+
+#include "gufi_find_outliers/DirData.h"
 
 DirData_t *DirData_create(const str_t *path,
                           const char *subdir, const size_t subdir_len) {

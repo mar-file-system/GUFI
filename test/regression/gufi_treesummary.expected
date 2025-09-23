@@ -1,6 +1,6 @@
 # gufi_treesummary help
 $ gufi_treesummary
-usage: gufi_treesummary [options] GUFI_index
+usage: gufi_treesummary [options] GUFI_tree
 options:
   -h                     help
   -H                     show assigned input values (debugging)
@@ -10,7 +10,7 @@ options:
   -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
   -X                     Dry run
 
-GUFI_index               path to GUFI index
+GUFI_tree               path to GUFI tree
 
 
 # Start with no treesummary tables

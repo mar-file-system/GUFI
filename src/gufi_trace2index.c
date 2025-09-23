@@ -225,8 +225,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 }
 
 static void sub_help(void) {
-   printf("trace_file...     parse one or more trace files to produce the GUFI index\n");
-   printf("output_dir        build GUFI index here\n");
+   printf("trace_file...     parse one or more trace files to produce the GUFI tree\n");
+   printf("output_dir        build GUFI tree here\n");
    printf("\n");
 }
 

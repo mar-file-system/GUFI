@@ -295,7 +295,7 @@ static int compute_treesummary(struct PoolArgs *pa) {
 }
 
 static void sub_help(void) {
-    printf("GUFI_index               path to GUFI index\n");
+    printf("GUFI_tree               path to GUFI tree\n");
     printf("\n");
 }
 
@@ -307,7 +307,7 @@ int main(int argc, char *argv[]) {
      * control which options are parsed for each program.
      */
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvPn:d:X", 1, "GUFI_index", &pa.in);
+    process_args_and_maybe_exit("hHvPn:d:X", 1, "GUFI_tree", &pa.in);
 
     INSTALL_STR(&pa.in.name, argv[idx++]);
 

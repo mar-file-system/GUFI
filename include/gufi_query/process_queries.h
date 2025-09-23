@@ -69,9 +69,10 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "trie.h"
+
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/gqw.h"
-#include "trie.h"
 
 int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
                     DIR *dir, gqw_t *gqw, sqlite3 *db, trie_t *user_strs,

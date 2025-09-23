@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "dbutils.h"
+
 #include "gufi_find_outliers/get_subdirs.h"
 #include "gufi_find_outliers/processdir.h"
 

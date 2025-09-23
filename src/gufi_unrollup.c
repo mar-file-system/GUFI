@@ -271,13 +271,13 @@ static int enqueue_subtree_roots(struct input *in, struct Unrollup *root,
 }
 
 static void sub_help(void) {
-   printf("GUFI_index        GUFI index to unroll up\n");
+   printf("GUFI_tree        GUFI tree to unroll up\n");
    printf("\n");
 }
 
 int main(int argc, char *argv[]) {
     struct input in;
-    process_args_and_maybe_exit("hHvn:y:z:D:", 1, "GUFI_index ...", &in);
+    process_args_and_maybe_exit("hHvn:y:z:D:", 1, "GUFI_tree ...", &in);
 
     const int root_count = argc - idx;
 

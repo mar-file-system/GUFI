@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
      * control which options are parsed for each program.
      */
     struct input in;
-    process_args_and_maybe_exit("hHvn:y:z:D:l", 1, "GUFI_index", &in);
+    process_args_and_maybe_exit("hHvn:y:z:D:l", 1, "GUFI_tree", &in);
 
     BU_descend_f desc = in.check_already_processed?treesummary_descend:NULL;
 

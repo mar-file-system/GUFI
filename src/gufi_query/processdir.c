@@ -78,6 +78,9 @@ OF SUCH DAMAGE.
 #include "compress.h"
 #include "dbutils.h"
 #include "external.h"
+#include "print.h"
+#include "utils.h"
+
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/external.h"
 #include "gufi_query/gqw.h"
@@ -85,8 +88,6 @@ OF SUCH DAMAGE.
 #include "gufi_query/processdir.h"
 #include "gufi_query/query.h"
 #include "gufi_query/query_replacement.h"
-#include "print.h"
-#include "utils.h"
 
 static inline int save_matime(gqw_t *gqw,
                               char *dbpath, const size_t dbpath_size,

@@ -70,8 +70,9 @@ OF SUCH DAMAGE.
 
 #include "descend.h"
 #include "dbutils.h"
-#include "gufi_query/gqw.h"
 #include "utils.h"
+
+#include "gufi_query/gqw.h"
 
 size_t gqw_size(gqw_t *gqw) {
     return sizeof(*gqw) + gqw->work.name_len + 1 + gqw->sqlite3_name_len + 1;

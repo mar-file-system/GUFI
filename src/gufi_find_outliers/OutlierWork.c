@@ -64,8 +64,9 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 
-#include "gufi_find_outliers/OutlierWork.h"
 #include "utils.h"
+
+#include "gufi_find_outliers/OutlierWork.h"
 
 OutlierWork_t *OutlierWork_create(const str_t *path, const size_t level,
                                   const refstr_t col,

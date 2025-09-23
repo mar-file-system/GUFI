@@ -68,9 +68,10 @@ OF SUCH DAMAGE.
 #include <stddef.h>
 
 #include "dbutils.h"
+#include "str.h"
+
 #include "gufi_find_outliers/DirData.h"
 #include "gufi_find_outliers/PoolArgs.h"
-#include "str.h"
 
 #define OUTLIERS_TABLE  "outliers"
 #define OUTLIERS_CREATE                                     \

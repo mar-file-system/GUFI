@@ -1,6 +1,6 @@
 # gufi_query help
 $ gufi_query
-usage: gufi_query [options] GUFI_index ...
+usage: gufi_query [options] GUFI_tree ...
 options:
   -h                     help
   -H                     show assigned input values (debugging)
@@ -39,7 +39,7 @@ options:
      <view>              External database file basename, per-attach table name, template + table name, and the resultant view
   -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
 
-GUFI_index        find GUFI index here
+GUFI_tree        find GUFI tree here
 
 
 # Walk without returning results

@@ -67,9 +67,10 @@ OF SUCH DAMAGE.
 
 #include <stddef.h>
 
+#include "str.h"
+
 #include "gufi_find_outliers/DirData.h"
 #include "gufi_find_outliers/handle_columns.h"
-#include "str.h"
 
 typedef struct {
     str_t path;

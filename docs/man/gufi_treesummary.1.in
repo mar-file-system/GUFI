@@ -69,7 +69,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op options
-GUFI_index
+GUFI_tree
 
 .Sh DESCRIPTION
 Walks breadth first below the input directory path and summarizes all directories below it into a tree summary table record by reading all the directory summaries in the tree below.
@@ -86,8 +86,8 @@ print directories as they are encountered
 number of threads
 .It Fl s
 generate tree-summary table (in top-level DB)
-.It GUFI_index
-path to GUFI index
+.It GUFI_tree
+path to GUFI tree
 .El
 
 .Sh EXIT STATUS

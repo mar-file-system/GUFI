@@ -89,7 +89,7 @@ OF SUCH DAMAGE.
  *      $ export LD_LIBRARY_PATH=$LUSTRE_LIBRARY_DIR
  *
  *      $ cd build
- *      $ ./src/gufi_dir2index -U ../contrib/liblustre_plugin.so -n1 /mnt/lustre /tmp/gufi_index/
+ *      $ ./src/gufi_dir2index -U ../contrib/liblustre_plugin.so -n1 /mnt/lustre /tmp/gufi_tree/
  */
 
 #include <errno.h>

@@ -62,18 +62,15 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_QUERY_H
-#define GUFI_QUERY_QUERY_H
+#ifndef GUFI_OUTFILES_H
+#define GUFI_OUTFILES_H
 
-#include "SinglyLinkedList.h"
-#include "bf.h"
+#include <stdio.h>
 
-#include "gufi_query/PoolArgs.h"
+/* allocate the array of FILE * and open files */
+FILE **outfiles_init(const char *prefix, const size_t count);
 
-void querydb(struct work *work,
-             const char *dbname, const size_t dbname_len, sqlite3 *db,
-             const char *sql, const int *types,
-             PoolArgs_t *pa, int id,
-             int (*callback)(void *, int, char **, char**), int *rc);
+/* close all output files */
+int outfiles_fin(FILE **files, const size_t end);
 
 #endif

@@ -67,8 +67,9 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-#include "gufi_query/query_user_strs.h"
 #include "utils.h"
+
+#include "gufi_query/query_user_strs.h"
 
 /* insert position of user string into list of indexes */
 void save_user_str(sll_t *idx, const refstr_t *sql, const size_t *i) {

@@ -78,6 +78,7 @@ set(GUFI_SOURCES
   external.c
   gufi_vt.c
   histogram.c
+  outfiles.c
   print.c
   run_vt.c
   str.c

@@ -69,7 +69,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op options
-GUFI_index
+GUFI_tree
 .Op ...
 .Sh DESCRIPTION
 .Nm

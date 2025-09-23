@@ -476,8 +476,8 @@ static int validate_source(struct input *in, const char *path, struct work **wor
 }
 
 static void sub_help(void) {
-   printf("input_dir...      walk one or more trees to produce GUFI index\n");
-   printf("output_dir        build GUFI index here\n");
+   printf("input_dir...      walk one or more trees to produce GUFI tree\n");
+   printf("output_dir        build GUFI tree here\n");
    printf("\n");
 }
 

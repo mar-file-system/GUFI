@@ -1,6 +1,6 @@
 # gufi_treesummary_all help
 $ gufi_treesummary_all
-usage: gufi_treesummary_all [options] GUFI_index
+usage: gufi_treesummary_all [options] GUFI_tree
 options:
   -h                     help
   -H                     show assigned input values (debugging)

@@ -66,9 +66,10 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 
 #include "dbutils.h"
+#include "template_db.h"
+
 #include "gufi_query/handle_sql.h"
 #include "gufi_query/query_replacement.h"
-#include "template_db.h"
 
 static int validate(struct input *in) {
     /*

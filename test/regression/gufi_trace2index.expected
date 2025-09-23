@@ -10,8 +10,8 @@ options:
   -M <bytes>             target memory footprint
   -s <path>              File name prefix for swap files
 
-trace_file...     parse one or more trace files to produce the GUFI index
-output_dir        build GUFI index here
+trace_file...     parse one or more trace files to produce the GUFI tree
+output_dir        build GUFI tree here
 
 
 # generate the tree

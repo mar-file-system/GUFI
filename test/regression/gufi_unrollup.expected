@@ -1,6 +1,6 @@
 # gufi_unrollup help
 $ gufi_unrollup
-usage: gufi_unrollup [options] GUFI_index ...
+usage: gufi_unrollup [options] GUFI_tree ...
 options:
   -h                     help
   -H                     show assigned input values (debugging)
@@ -10,7 +10,7 @@ options:
   -z <max level>         maximum level to go down
   -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
 
-GUFI_index        GUFI index to unroll up
+GUFI_tree        GUFI tree to unroll up
 
 
 $ gufi_dir2index -x "prefix" "search"

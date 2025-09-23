@@ -18,8 +18,8 @@ options:
   -q                     check that external databases are valid before tracking during indexing
   -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
 
-input_dir...      walk one or more trees to produce GUFI index
-output_dir        build GUFI index here
+input_dir...      walk one or more trees to produce GUFI tree
+output_dir        build GUFI tree here
 
 
 Index Everything:

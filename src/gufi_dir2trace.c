@@ -78,6 +78,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "debug.h"
 #include "external.h"
+#include "outfiles.h"
 #include "trace.h"
 #include "trie.h"
 #include "utils.h"
@@ -184,53 +185,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     pa->total_files[id] += ctrs.nondirs_processed;
 
     return rc;
-}
-
-/* close all output files */
-static int outfiles_fin(FILE **files, const size_t end) {
-    /* Not checking arguments */
-    for(size_t i = 0; i < end; i++) {
-        fflush(files[i]);
-        fclose(files[i]);
-    }
-    free(files);
-    return 0;
-}
-
-/* allocate the array of FILE * and open files */
-static FILE **outfiles_init(const char *prefix, const size_t count) {
-    /* Not checking arguments */
-    FILE **files = calloc(count, sizeof(FILE *));
-    if (!files) {
-        fprintf(stderr, "Could not allocate space for %zu files\n", count);
-        return NULL;
-    }
-
-    for(size_t i = 0; i < count; i++) {
-        char outname[MAXPATH];
-        SNPRINTF(outname, MAXPATH, "%s.%zu", prefix, i);
-
-        /* check if the destination path already exists (not an error) */
-        struct stat st;
-        if (stat(outname, &st) == 0) {
-            fprintf(stderr, "\"%s\" Already exists!\n", outname);
-
-            /* if the destination path is not a regular file (error) */
-            if (!S_ISREG(st.st_mode)) {
-                outfiles_fin(files, i);
-                fprintf(stderr, "Destination path is not a file \"%s\"\n", outname);
-                return NULL;
-            }
-        }
-
-        if (!(files[i] = fopen(outname, "w"))) {
-            outfiles_fin(files, i);
-            fprintf(stderr, "Could not open output file %s\n", outname);
-            return NULL;
-        }
-    }
-
-    return files;
 }
 
 static int validate_source(const char *path, struct work **work) {

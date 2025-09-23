@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include "SinglyLinkedList.h"
+
 #include "gufi_find_outliers/OutlierWork.h"
 #include "gufi_find_outliers/PoolArgs.h"
 #include "gufi_find_outliers/get_subdirs.h"
