@@ -517,21 +517,22 @@ ssize_t setup_directory_skip(trie_t *skip, const char *filename) {
     }
 
     ssize_t count = 0;
-    char line[MAXPATH];
-    while (fgets(line, MAXPATH, skipfile) == line) {
-        /* only keep first word */
-        char name[MAXPATH];
-        if (sscanf(line, "%s", name) != 1) {
+
+    char *line = NULL;
+    size_t n = 0;
+    ssize_t len = 0;
+    while ((len = getline(&line, &n, skipfile)) > -1) {
+        len = trailing_non_match_index(line, len, "\r\n", 2);
+        if (len == 0) {
             continue;
         }
 
-        const size_t len = strlen(name);
-
-        if (!trie_search(skip, name, len, NULL)) {
-            trie_insert(skip, name, len, NULL, NULL);
+        if (!trie_search(skip, line, len, NULL)) {
+            trie_insert(skip, line, len, NULL, NULL);
             count++;
         }
     }
+    free(line);
 
     fclose(skipfile);
 

@@ -804,7 +804,7 @@ TEST(setup_directory_skip, file) {
     const std::string skip_dirs[] = {
         "skip0",
         "skip1",
-        "skip0", // duplicate
+        "s p a c e s",
     };
 
     char skip_name[] = "XXXXXX";
@@ -818,13 +818,14 @@ TEST(setup_directory_skip, file) {
 
         skip_stream << std::endl; // start with empty line
         for(std::string const & skip_dir : skip_dirs) {
-            skip_stream << skip_dir << std::endl;
+            skip_stream << skip_dir <<         std::endl;
+            skip_stream << skip_dir << "\r" << std::endl; // duplicates
         }
     }
 
     trie_t *skip = trie_alloc();
     ASSERT_NE(skip, nullptr);
-    EXPECT_EQ(setup_directory_skip(skip, skip_name), (ssize_t) (sizeof(skip_dirs) / sizeof(skip_dirs[0])) - 1);
+    EXPECT_EQ(setup_directory_skip(skip, skip_name), (ssize_t) (sizeof(skip_dirs) / sizeof(skip_dirs[0])));
     for(std::string const & skip_dir : skip_dirs) {
         EXPECT_EQ(trie_search(skip, skip_dir.c_str(), skip_dir.size(), nullptr), 1);
     }
