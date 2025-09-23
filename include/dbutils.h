@@ -94,7 +94,7 @@ extern "C" {
 
 #define READDIRPLUS      "readdirplus"
 #define READDIRPLUS_SCHEMA(name)                    \
-    "CREATE TABLE " name "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, suspect INT64);"
+    "CREATE TABLE " name "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, depth INT64, suspect INT64);"
 extern const char READDIRPLUS_CREATE[];
 extern const char READDIRPLUS_INSERT[];
 
@@ -331,6 +331,15 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
 int get_col_types(sqlite3 *db, const refstr_t *sql, int **types, int *cols);
 /* caller frees names, names[i], and lens */
 int get_col_names(sqlite3 *db, const refstr_t *sql, char ***names, size_t **lens, int *cols);
+
+struct Permissions {
+    mode_t mode;
+    uid_t uid;
+    gid_t gid;
+};
+
+/* SELECT mode, uid, gid FROM <table>; */
+int get_permissions_callback(void *args, int count, char **data, char **columns);
 
 /* ******************************************************************* */
 /* virtual table signatures (since they don't have associated headers) */

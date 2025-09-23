@@ -62,44 +62,21 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef DESCEND_H
-#define DESCEND_H
+#ifndef GUFI_AGGREGATE_H
+#define GUFI_AGGREGATE_H
 
-#include <dirent.h>
+#include <stdio.h>
 
 #include "bf.h"
-#include "QueuePerThreadPool.h"
+#include "dbutils.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+typedef struct Aggregate {
+    sqlite3 **dbs; /* per-thread dbs */
+    sqlite3 *agg;  /* final db */
+} Aggregate_t;
 
-typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
+int  aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *name, const size_t offset);
+void aggregate_intermediate(Aggregate_t *aggregate, const size_t threads, const size_t offset);
+void aggregate_fin(Aggregate_t *aggregate, const size_t threads);
 
-struct descend_counters {
-    size_t dirs;
-    size_t dirs_insitu;
-    size_t nondirs;
-    size_t nondirs_processed;
-    size_t external_dbs;
-};
-
-struct work *try_skip_lstat(struct dirent *entry, struct work *work);
-
-/*
- * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
- */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work,
-            DIR *dir, const int skip_db,
-            QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
-            struct descend_counters *counters);
-
-/* decompress work struct coming out of descend() */
-void decompress_work(struct work **dst, void *src);
-
-#ifdef __cplusplus
-}
-#endif
 #endif

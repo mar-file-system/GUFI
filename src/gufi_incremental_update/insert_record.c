@@ -62,44 +62,35 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef DESCEND_H
-#define DESCEND_H
+#include "gufi_incremental_update/incremental_update.h"
 
-#include <dirent.h>
+int insert_record(struct work *work, struct entry_data *ed,
+                  sqlite3_stmt *res, const size_t offset_name) {
+    char *zname = sqlite3_mprintf("%q", work->name + offset_name); /* remove parents of starting paths */
+    char *ztype = sqlite3_mprintf("%c", ed->type);
+    sqlite3_bind_text (res, 1, zname, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text (res, 2, ztype, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(res, 3, work->statuso.st_ino);
+    sqlite3_bind_int64(res, 4, work->pinode);
+    sqlite3_bind_int64(res, 5, work->level);
+    sqlite3_bind_int64(res, 6, ed->suspect);
 
-#include "bf.h"
-#include "QueuePerThreadPool.h"
+    int error = sqlite3_step(res);
+    if (error != SQLITE_DONE) {
+        fprintf(stderr,  "SQL insertdbgor step: %s error %d err %s\n",
+                work->name, error, sqlite3_errstr(error));
+    }
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+    error = sqlite3_reset(res);
+    if (error != SQLITE_OK) {
+        fprintf(stderr,  "SQL insertdbgor reset: %s error %d err %s\n",
+                work->name, error, sqlite3_errstr(error));
+    }
 
-typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
+    sqlite3_free(ztype);
+    sqlite3_free(zname);
+    sqlite3_reset(res);
+    sqlite3_clear_bindings(res);
 
-struct descend_counters {
-    size_t dirs;
-    size_t dirs_insitu;
-    size_t nondirs;
-    size_t nondirs_processed;
-    size_t external_dbs;
-};
-
-struct work *try_skip_lstat(struct dirent *entry, struct work *work);
-
-/*
- * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
- */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work,
-            DIR *dir, const int skip_db,
-            QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
-            struct descend_counters *counters);
-
-/* decompress work struct coming out of descend() */
-void decompress_work(struct work **dst, void *src);
-
-#ifdef __cplusplus
+    return !(error == SQLITE_OK);
 }
-#endif
-#endif

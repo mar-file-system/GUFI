@@ -378,7 +378,7 @@ Error: Missing -G
 
 # Bad -K (aggregate, stdout)
 $ gufi_query            -I "CREATE TABLE test(col TEXT)" -S "insert;" -E "insert;" -K "create;" -J "insert;" -G "query;" "prefix"
-Could not create aggregation table "create;" on file:aggregatedb?mode=memory&cache=shared
+Could not create aggregation table "create;" on file:aggregatedb?mode=memory&cache=shared: syntax error
 
 # Bad skip file
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" --skip-file "skip.bad" "prefix"
@@ -402,12 +402,12 @@ Warning: Could not find stop character for user string key starting at index 14 
 # Have -J even though not aggregating (stdout)
 $ gufi_query            -I "create" -S "insert;" -E "insert;"              -J "insert;" "prefix"
 Warning: Got -J even though not aggregating. Ignoring
-Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared
+Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared: incomplete input
 
 # Have -J even though not aggregating (outfile)
 $ gufi_query -o outfile -I "create" -S "insert;" -E "insert;"              -J "insert;" "prefix"
 Warning: Got -J even though not aggregating. Ignoring
-Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared
+Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared: incomplete input
 
 # Have -J even though not aggregating (outdb)
 $ gufi_query -O outdb   -I "create" -S "insert;" -E "insert;"              -J "insert;" "prefix"
@@ -417,12 +417,12 @@ Error: Could not run SQL Init "create" on outdb.0: incomplete input
 # Have -G even though not aggregating (stdout)
 $ gufi_query            -I "create" -S "insert;" -E "insert;"              -G "query;"  "prefix"
 Warning: Got -G even though not aggregating. Ignoring
-Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared
+Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared: incomplete input
 
 # Have -G even though not aggregating (outfile)
 $ gufi_query -o outfile -I "create" -S "insert;" -E "insert;"              -G "query;"  "prefix"
 Warning: Got -G even though not aggregating. Ignoring
-Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared
+Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared: incomplete input
 
 # Have -G even though not aggregating (outdb)
 $ gufi_query -O outdb   -I "create" -S "insert;" -E "insert;"              -G "query;"  "prefix"
