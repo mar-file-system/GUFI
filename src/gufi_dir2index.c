@@ -278,7 +278,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     struct descend_counters ctrs;
-    descend(ctx, id, pa, nda.in, nda.work, dir, 0,
+    descend(ctx, id, pa, nda.in, nda.work, dir, 1,
             processdir, process_dir?process_nondir:NULL, &nda, &ctrs);
 
     if (process_dir) {

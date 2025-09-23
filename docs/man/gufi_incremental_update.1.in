@@ -1,0 +1,159 @@
+\# This file is part of GUFI, which is part of MarFS, which is released
+\# under the BSD license.
+\#
+\#
+\# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+\# All rights reserved.
+\#
+\# Redistribution and use in source and binary forms, with or without modification,
+\# are permitted provided that the following conditions are met:
+\#
+\# 1. Redistributions of source code must retain the above copyright notice, this
+\# list of conditions and the following disclaimer.
+\#
+\# 2. Redistributions in binary form must reproduce the above copyright notice,
+\# this list of conditions and the following disclaimer in the documentation and/or
+\# other materials provided with the distribution.
+\#
+\# 3. Neither the name of the copyright holder nor the names of its contributors
+\# may be used to endorse or promote products derived from this software without
+\# specific prior written permission.
+\#
+\# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+\# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+\# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+\# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+\# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+\# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+\# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+\# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+\# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+\# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+\#
+\#
+\# From Los Alamos National Security, LLC:
+\# LA-CC-15-039
+\#
+\# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+\# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+\# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+\# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+\# the U.S. Department of Energy. The U.S. Government has rights to use,
+\# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+\# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+\# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+\# modified to produce derivative works, such modified software should be
+\# clearly marked, so as not to confuse it with the version available from
+\# LANL.
+\#
+\# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+\# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+\# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+\# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+\# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+\# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+\# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+\# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+\# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+\# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+\# OF SUCH DAMAGE.
+
+
+
+.Dd October 9, 2025
+.Dt gufi_incremental_update
+.Os Linux
+.Sh NAME
+.Nm gufi_incremental_update
+.Nd
+.Sh SYNOPSIS
+.Nm
+.Op options
+GUFI_tree tree snapshotdb parking_lot
+
+.Sh DESCRIPTION
+Perform an index update instead of reindexing the entire source tree.
+
+1. Scan the old index and get a listing of all directories
+
+2. Scan the source tree and get a listing of all directories
+    - Directories that are suspected to have changed (can use log files or timestamps) are re-indexed, with the update database file placed into the "parking lot" (or directly into the index if the index is in the source tree)
+
+3. Compare the directory listings to find directories that were unchanged, renamed, deleted, or created
+
+4. Apply deletes and renames (move out), bottom to up
+    - Prevents deletes of subdirectories that were renamed
+    - Renames won't prevent subdirectories deletions
+    - Renamed directories are moved to the parking lot
+
+5. Apply directory creations and renames (move in), top to bottom
+    - Prevents creating directories without parent
+    - Create empty directories
+    - Renamed directories are moved from the parking lot back into the index at the new location
+
+6. Apply updates
+    - Move the update database files in the parking lot into the correct locations
+    - Update permissions and owners
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+help
+.It Fl H
+show assigned input values (debugging)
+.It Fl v
+version
+.It Fl n\ <threads>
+number of threads
+.It Fl d\ <delimiter>
+delimiter for output file
+.It Fl r
+insert files and links into db
+.It Fl R
+insert dires into db
+.It Fl Y
+default all directories as suspect
+.It Fl Z
+default all files links as suspect
+.It Fl W\ <insuspectfile>
+path to input suspect file, if suspects are generated via another program like a GPFS Inode Scan
+
+Each line of the suspect file contains an inode followed by one of the characters 'd', 'f', or 'l' indicating the type the inode points to
+.It Fl A\ <suspectmethod>
+0: No suspects
+
+1: Given a suspect file, check if any directory, file, or link inode shows up in the suspect file
+
+2: Given a suspect file, check if any file or link inode shows up in the suspect file
+   Directories have their mtime and ctime compared with the suspect time
+
+3: All directories, files, and links have their mtime and ctime compared with the suspect time
+.It Fl c\ <suspecttime>
+time in seconds since epoch for suspect Comparison, (ignored if GUFI index in src tree)
+.It Fl x
+process xattrs if you are creating GUFI dbs of suspect directories
+.It Fl e
+compress work items
+
+.It GUFI_tree         GUFI tree
+.It tree              source tree
+.It snapshotdb        database file containing records of all directories
+.It parking_lot       directory to place update db.dbs and moved directories
+
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It EXIT_SUCCESS or EXIT_FAILURE
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It gufi_incremental_update
+.El
+
+\# .Sh NOTES
+\# .Sh BUGS
+\# .Sh EXAMPLE
+\# .Sh SEE ALSO

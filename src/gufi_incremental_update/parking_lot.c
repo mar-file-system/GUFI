@@ -62,44 +62,59 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef DESCEND_H
-#define DESCEND_H
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include <dirent.h>
-
-#include "bf.h"
-#include "QueuePerThreadPool.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
-
-struct descend_counters {
-    size_t dirs;
-    size_t dirs_insitu;
-    size_t nondirs;
-    size_t nondirs_processed;
-    size_t external_dbs;
-};
-
-struct work *try_skip_lstat(struct dirent *entry, struct work *work);
+#include "gufi_incremental_update/incremental_update.h"
 
 /*
- * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
+ * set up the parking lot directory
+ * returns -1 on error
+ *          0 on parking lot already exists
+ *          1 on new parking lot directory (should remove)
  */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work,
-            DIR *dir, const int skip_db,
-            QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
-            struct descend_counters *counters);
+int setup_parking_lot(const char *path) {
+    struct stat pl;
+    if (stat(path, &pl) == 0) {
+        if (!S_ISDIR(pl.st_mode)) {
+            fprintf(stderr, "Error: Existing parking lot path \"%s\" is not a directory\n", path);
+            return -1;
+        }
 
-/* decompress work struct coming out of descend() */
-void decompress_work(struct work **dst, void *src);
+        return 0; /* parking lot already exists - don't remove; ignoring permissions here */
+    }
 
-#ifdef __cplusplus
+    int err = errno;
+    if (err != ENOENT) {
+        fprintf(stderr, "Error: Could not stat parking lot directory \"%s\": %s (%d)\n",
+            path, strerror(err), err);
+        return -1;
+    }
+
+    /* parking lot doesn't exist yet - create it */
+
+    /* not creating parents */
+    if (mkdir(path, S_IRWXU | S_IRWXG) != 0) {
+        err = errno;
+        fprintf(stderr, "Error: Could not create parking lot directory \"%s\": %s (%d)\n",
+            path, strerror(err), err);
+        return -1;
+    }
+
+    return 1;
 }
-#endif
-#endif
+
+int cleanup_parking_lot(const char *path, const int created) {
+    if (created == 1) {
+        if (remove(path) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not remove parking lot directory \"%s\": %s (%d)\n",
+                    path, strerror(err), err);
+            return -1;
+        }
+    }
+    return 0;
+}

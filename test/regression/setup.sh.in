@@ -160,6 +160,7 @@ GUFI_DU="${GUFI_TOOL} du"
 GUFI_FIND="${GUFI_TOOL} find"
 GUFI_FIND_OUTLIERS="${BINARY_DIR}/src/gufi_find_outliers"
 GUFI_GETFATTR="${GUFI_TOOL} getfattr"
+GUFI_INCREMENTAL_UPDATE="${BINARY_DIR}/src/gufi_incremental_update"
 GUFI_INDEX2DIR="${BINARY_DIR}/src/gufi_index2dir"
 GUFI_JAIL="${BINARY_DIR}/scripts/gufi_jail"
 GUFI_LS="${GUFI_TOOL} ls"
@@ -249,6 +250,7 @@ replace() {
     s%${GUFI_FIND}%gufi_find%g;
     s%${GUFI_FIND_OUTLIERS}%gufi_find_outliers%g;
     s%${GUFI_GETFATTR}%gufi_getfattr%g;
+    s%${GUFI_INCREMENTAL_UPDATE}%gufi_incremental_update%g;
     s%${GUFI_INDEX2DIR}%gufi_index2dir%g;
     s%${GUFI_JAIL}%gufi_jail%g;
     s%${GUFI_LS}%gufi_ls%g;
@@ -294,6 +296,8 @@ replace() {
 
     s%${TEST_GUFI_JAIL}%gufi_jail%g;
 
+    s%&vfs=.* as % as %g;
+    s%&vfs=.*:%:%g;
     s%&vfs=.*%%g;
     \%-e                          compress work items%d;
     \%Started [0-9]* threads. Successfully completed [0-9]* threads.%d;

@@ -80,8 +80,10 @@ static int work_serialize_and_free(const int fd, QPTPool_f func, void *work, siz
 }
 #endif
 
-struct work *try_skip_lstat(const unsigned char d_type, struct work *work) {
-    switch (d_type) {
+struct work *try_skip_lstat(struct dirent *entry, struct work *work) {
+    work->statuso.st_ino = entry->d_ino;
+
+    switch (entry->d_type) {
         case DT_DIR:
             work->statuso.st_mode = S_IFDIR;
             break;
@@ -150,8 +152,8 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             const int skip = (
                 /* skip ., .., and anything else in skip_names */
                 trie_search(skip_names, dir_child->d_name, len, NULL) ||
-                /* skip *.db */
-                (skip_db && (len >= 3) && (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0))
+                /* skip db.db */
+                (skip_db && (len == DBNAME_LEN) && (strncmp(dir_child->d_name, DBNAME, DBNAME_LEN) == 0))
             );
 
             if (skip) {
@@ -160,9 +162,12 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
 
             struct work *child = new_work_with_name(work->name, work->name_len, dir_child->d_name, len);
 
-            struct entry_data child_ed;
-            memset(&child_ed, 0, sizeof(child_ed));
-            child_ed.parent_fd = -1;
+            child->statuso.st_ino = dir_child->d_ino;
+
+            if (!try_skip_lstat(dir_child, child)) {
+                free(child);
+                continue;
+            }
 
             child->orig_root = work->orig_root;
             child->basename_len = len;
@@ -171,10 +176,9 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             child->root_basename_len = work->root_basename_len;
             child->pinode = work->statuso.st_ino;
 
-            if (!try_skip_lstat(dir_child->d_type, child)) {
-                free(child);
-                continue;
-            }
+            struct entry_data child_ed;
+            memset(&child_ed, 0, sizeof(child_ed));
+            child_ed.parent_fd = -1;
 
             /* push subdirectories onto the queue */
             if (S_ISDIR(child->statuso.st_mode)) {

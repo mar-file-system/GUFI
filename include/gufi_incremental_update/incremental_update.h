@@ -62,44 +62,54 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef DESCEND_H
-#define DESCEND_H
+#ifndef GUFI_INCREMENTAL_UPDATE_H
+#define GUFI_INCREMENTAL_UPDATE_H
 
 #include <dirent.h>
+#include <stddef.h>
 
 #include "bf.h"
-#include "QueuePerThreadPool.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "gufi_incremental_update/PoolArgs.h"
 
-typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
-
-struct descend_counters {
-    size_t dirs;
-    size_t dirs_insitu;
-    size_t nondirs;
-    size_t nondirs_processed;
-    size_t external_dbs;
-};
-
-struct work *try_skip_lstat(struct dirent *entry, struct work *work);
+/* directory for placing update databases and moved directories */
+int setup_parking_lot(const char *path);
+int cleanup_parking_lot(const char *path, const int created);
 
 /*
- * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
+ * insert records into the per-thread readdirplus table/db
+ *
+ * these will be merged into one at the end
+ *
+ * used by gen_index_snapshot and find_suspects
  */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work,
-            DIR *dir, const int skip_db,
-            QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
-            struct descend_counters *counters);
+int insert_record(struct work *work, struct entry_data *ed,
+                  sqlite3_stmt *res, const size_t offset_name);
 
-/* decompress work struct coming out of descend() */
-void decompress_work(struct work **dst, void *src);
+/* *********************************************************** */
+/* walk the old index and generate a readdirplus table in <snapshot>.index */
+size_t gen_index_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size);
+int gen_index_snapshot(struct PoolArgs *pa, struct work *work); /* TODO: reuse gufi_query code */
+/* *********************************************************** */
 
-#ifdef __cplusplus
-}
-#endif
+/* *********************************************************** */
+/*
+ * If a directory is suspected to have changed, reindex that one directory
+ * If the index is separate from the tree, place the database file under <parking lot>/<dir inode>
+ * If the index is in the tree, replace the existing database file (no need to call incremental_update)
+ *
+ * TODO: reuse gufi_dir2index code
+ */
+int reindex_dir(struct PoolArgs *pa,
+                struct work *work, struct entry_data *ed,
+                DIR *dir);
+
+/* walk the current index and generate a readdirplus table in <snapshot>.tree */
+size_t gen_tree_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size);
+int find_suspects(struct PoolArgs *pa, struct work *work);
+/* *********************************************************** */
+
+/* do the incremental update after getting snapshots from the original index and updated tree */
+int incremental_update(struct PoolArgs *pa);
+
 #endif

@@ -143,7 +143,8 @@ static int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3_stmt *
     sqlite3_bind_text (res, 2, ztype, -1, SQLITE_TRANSIENT);
     sqlite3_bind_int64(res, 3, pwork->statuso.st_ino);
     sqlite3_bind_int64(res, 4, pwork->pinode);
-    sqlite3_bind_int64(res, 5, ed->suspect);
+    sqlite3_bind_int64(res, 5, pwork->level);
+    sqlite3_bind_int64(res, 6, ed->suspect);
 
     const int error = sqlite3_step(res);
     if (error != SQLITE_DONE) {
@@ -230,7 +231,7 @@ static int reprocessdir(struct PoolArgs *pa, void *passv, DIR *dir) {
         memset(&qwork_ed, 0, sizeof(qwork_ed));
         qwork->pinode = passmywork->statuso.st_ino;
 
-        try_skip_lstat(entry->d_type, qwork);
+        try_skip_lstat(entry, qwork);
         xattrs_setup(&qwork_ed.xattrs);
         if (pa->in.process_xattrs) {
             xattrs_get(qwork->name, &qwork_ed.xattrs);
@@ -309,14 +310,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
      * this way we will just be looking at dirs or files that have
      * changed since the gufi db was last updated
      */
-    int locsuspecttime = in->suspecttime;
+    ed.suspect_time = in->suspecttime;
     if (in->buildindex == 1) {
-        locsuspecttime = 0; /* all timestamps are suspect */
+        ed.suspect_time = 0; /* all timestamps are suspect */
         char dbpath[MAXPATH];
         SNPRINTF(dbpath, MAXPATH, "%s/%s", passmywork->name, DBNAME);
         struct stat st;
         if (lstat(dbpath, &st) == 0) {
-            locsuspecttime = st.st_mtime;
+            ed.suspect_time = st.st_mtime;
         } else {
             ed.suspect = 1;
         }
@@ -350,8 +351,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             else if (in->suspectmethod > 1) {
                 /* mark the dir suspect if mtime or ctime are >= provided last run time */
                 lstat_wrapper(passmywork);
-                if (passmywork->statuso.st_ctime >= locsuspecttime) ed.suspect = 1;
-                if (passmywork->statuso.st_mtime >= locsuspecttime) ed.suspect = 1;
+                if (passmywork->statuso.st_ctime >= ed.suspect_time) ed.suspect = 1;
+                if (passmywork->statuso.st_mtime >= ed.suspect_time) ed.suspect = 1;
             }
         }
     }
@@ -376,6 +377,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
     }
 
+    const size_t next_level = passmywork->level;
+
     /*
      * loop over dirents, if dir push it on the queue, if file or link
      * print it, fill up qwork structure for each
@@ -397,10 +400,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         struct entry_data qwork_ed;
         memset(&qwork_ed, 0, sizeof(qwork_ed));
 
-        try_skip_lstat(entry->d_type, qwork);
+        try_skip_lstat(entry, qwork);
 
         qwork->pinode = passmywork->statuso.st_ino;
         qwork->statuso.st_ino = entry->d_ino;
+        qwork->level = next_level;
 
         if (entry->d_type == DT_DIR) {
             QPTPool_enqueue(ctx, id, processdir, qwork);
@@ -412,6 +416,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         else if (entry->d_type == DT_REG) {
             qwork_ed.type = 'f';
         }
+
+        ed.suspect |= pa->in.suspectfl;
 
         /*
          * if suspect method is not zero then we can insert files and links
@@ -445,8 +451,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 if (in->suspectmethod > 2) {
                     /* stat the file/link and if ctime or mtime is >= provided last run time mark dir suspect */
                     lstat_wrapper(qwork);
-                    if (qwork->statuso.st_ctime >= locsuspecttime) ed.suspect = 1;
-                    if (qwork->statuso.st_mtime >= locsuspecttime) ed.suspect = 1;
+                    if (qwork->statuso.st_ctime >= ed.suspect_time) ed.suspect = 1;
+                    if (qwork->statuso.st_mtime >= ed.suspect_time) ed.suspect = 1;
                 }
             }
 

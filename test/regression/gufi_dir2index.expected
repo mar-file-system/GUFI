@@ -278,7 +278,7 @@ Total Dirs:          3
 Total Non-Dirs:      5
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
-Cannot attach database as "tree": unable to open database: file:prefix/db.db?mode=ro
+Cannot attach database "prefix/db.db" as "tree": unable to open database: file:prefix/db.db?mode=ro
 prefix/directory
 prefix/directory/executable
 prefix/directory/readonly
@@ -304,7 +304,7 @@ Total Dirs:          2
 Total Non-Dirs:      3
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
-Cannot attach database as "tree": unable to open database: file:prefix/db.db?mode=ro
+Cannot attach database "prefix/db.db" as "tree": unable to open database: file:prefix/db.db?mode=ro
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2

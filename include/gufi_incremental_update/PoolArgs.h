@@ -62,44 +62,54 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef DESCEND_H
-#define DESCEND_H
+#ifndef GUFI_INCREMENTAL_UPDATE_POOLARGS_H
+#define GUFI_INCREMENTAL_UPDATE_POOLARGS_H
 
-#include <dirent.h>
+#include <sys/types.h>
 
-#include "bf.h"
 #include "QueuePerThreadPool.h"
+#include "bf.h"
+#include "str.h"
+#include "template_db.h"
+#include "trie.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "gufi_incremental_update/aggregate.h"
 
-typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
-
-struct descend_counters {
-    size_t dirs;
-    size_t dirs_insitu;
-    size_t nondirs;
-    size_t nondirs_processed;
-    size_t external_dbs;
+/* used to generate snapshots of the index and tree */
+struct GenSnapshot {
+    refstr_t path;         /* argv */
+    size_t parent_len;     /* strlen(diriname(path) */
+    Aggregate_t agg;       /* per-thread in-memory databases that are merged at end to get final results */
 };
 
-struct work *try_skip_lstat(struct dirent *entry, struct work *work);
+struct SuspectInodes {
+    /* quick filter to skip searching trie */
+    ino_t min;
+    ino_t max;
 
-/*
- * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
- */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work,
-            DIR *dir, const int skip_db,
-            QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
-            struct descend_counters *counters);
+    trie_t *inodes;
+};
 
-/* decompress work struct coming out of descend() */
-void decompress_work(struct work **dst, void *src);
+struct PoolArgs {
+    struct input in;
+    refstr_t parking_lot;  /* directory to place update db.dbs and directories */
+    struct template_db db; /* (optimization) db.db with empty tables for copying when creating update db.dbs */
 
-#ifdef __cplusplus
-}
-#endif
+    QPTPool_t *pool;
+
+    struct GenSnapshot index;
+    struct GenSnapshot tree;
+
+    int same;   /* is the index in the tree? */
+
+    /* only used when scanning tree */
+    struct {
+        struct SuspectInodes dir;  /* directory inodes (used only in suspect method 1) */
+        struct SuspectInodes fl;   /* file/link inodes (used in suspect methods 1 and 2) */
+    } suspects;
+};
+
+int PoolArgs_init(struct PoolArgs *pa);
+void PoolArgs_fini(struct PoolArgs *pa);
+
 #endif
