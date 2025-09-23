@@ -223,7 +223,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->suspectfile,                    0);
         EXPECT_EQ(in->suspectmethod,                  0);
         EXPECT_EQ(in->stride,                         0);
-        EXPECT_EQ(in->suspecttime,                    0);
+        EXPECT_NE(in->suspecttime,                    0);
         EXPECT_EQ(in->min_level,                      (std::size_t) 0);
         EXPECT_EQ(in->max_level,                      (std::size_t) -1);
         EXPECT_EQ(in->sql.intermediate,               empty);

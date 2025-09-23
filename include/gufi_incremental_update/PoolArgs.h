@@ -62,44 +62,60 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef DESCEND_H
-#define DESCEND_H
+#ifndef GUFI_INCREMENTAL_UPDATE_POOLARGS_H
+#define GUFI_INCREMENTAL_UPDATE_POOLARGS_H
 
-#include <dirent.h>
+#include <sys/types.h>
 
-#include "bf.h"
 #include "QueuePerThreadPool.h"
+#include "bf.h"
+#include "str.h"
+#include "template_db.h"
+#include "trie.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "gufi_incremental_update/aggregate.h"
 
-typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
+struct SuspectInodes {
+    /* quick filter to skip searching trie */
+    ino_t min;
+    ino_t max;
 
-struct descend_counters {
-    size_t dirs;
-    size_t dirs_insitu;
-    size_t nondirs;
-    size_t nondirs_processed;
-    size_t external_dbs;
+    trie_t *inodes;
 };
 
-struct work *try_skip_lstat(struct dirent *entry, struct work *work);
+struct PoolArgs {
+    struct input in;
+    refstr_t parking_lot;  /* directory to place update db.dbs and directories */
+    struct template_db db; /* (optimization) db.db with empty tables for copying when creating update db.dbs */
 
-/*
- * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
- */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work,
-            DIR *dir, const int skip_db,
-            QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
-            struct descend_counters *counters);
+    QPTPool_t *pool;
 
-/* decompress work struct coming out of descend() */
-void decompress_work(struct work **dst, void *src);
+    /* realpaths */
+    str_t index;
+    str_t tree;
+    int same;   /* is the index in the tree? */
 
-#ifdef __cplusplus
-}
-#endif
+    /* strlen(dirname(realpaths)) */
+    struct {
+        size_t index;
+        size_t tree;
+    } parent_len;
+
+    /* original argv strings */
+    struct {
+        refstr_t index;
+        refstr_t tree;
+    } orig;
+
+    struct SuspectInodes suspectdirs; /* used only in suspect mode 1 (directories) */
+    struct SuspectInodes suspectfl;   /* used in suspect mode 1 and 2 (files/links) */
+
+    /* used during both index and tree walking */
+    Aggregate_t agg_index;
+    Aggregate_t agg_tree;
+};
+
+int PoolArgs_init(struct PoolArgs *pa);
+void PoolArgs_fini(struct PoolArgs *pa);
+
 #endif

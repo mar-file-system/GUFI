@@ -107,6 +107,7 @@ struct input *input_init(struct input *in) {
         in->maxthreads              = 1;                      // don't default to zero threads
         in->delim                   = fielddelim;
         in->process_sql             = RUN_ON_ROW;
+        in->suspecttime             = time(NULL);
         in->max_level               = -1;                     // default to all the way down
         in->nobody.uid              = 65534;
         in->nobody.gid              = 65534;
@@ -214,8 +215,8 @@ void print_help(const char* prog_name,
       case 'S': printf("  -S <SQL_sum>           SQL for summary table"); break;
       case 'E': printf("  -E <SQL_ent>           SQL for entries table"); break;
       case 'F': printf("  -F <SQL_fin>           SQL cleanup"); break;
-      case 'r': printf("  -r                     insert files and links into db (for bfwreaddirplus2db"); break;
-      case 'R': printf("  -R                     insert dires into db (for bfwreaddirplus2db"); break;
+      case 'r': printf("  -r                     insert files and links into db (for bfwreaddirplus2db)"); break;
+      case 'R': printf("  -R                     insert dires into db (for bfwreaddirplus2db)"); break;
       case 'Y': printf("  -Y                     default to all directories suspect"); break;
       case 'Z': printf("  -Z                     default to all files/links suspect"); break;
       case 'W': printf("  -W <INSUSPECT>         suspect input file"); break;

@@ -416,19 +416,22 @@ struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
 
 /* extra data used by entries that does not depend on data from other directories */
 struct entry_data {
-   int           parent_fd;    /* holds an FD that can be used for fstatat(2), etc. */
-   char          type;
-   char          linkname[MAXPATH];
-   long long int offset;
-   struct xattrs xattrs;
-   int           ossint1;
-   int           ossint2;
-   int           ossint3;
-   int           ossint4;
-   char          osstext1[MAXXATTR];
-   char          osstext2[MAXXATTR];
-   char          pinodec[128];
-   int           suspect;  // added for bfwreaddirplus2db for suspect
+    int           parent_fd;    /* holds an FD that can be used for fstatat(2), etc. */
+    char          type;
+    char          linkname[MAXPATH];
+    long long int offset;
+    struct xattrs xattrs;
+    int           ossint1;
+    int           ossint2;
+    int           ossint3;
+    int           ossint4;
+    char          osstext1[MAXXATTR];
+    char          osstext2[MAXXATTR];
+    char          pinodec[128];
+
+    /* bfwreaddirplus2db */
+    int           suspect;
+    time_t        suspect_time;
 };
 
 extern const char fielddelim;

@@ -79,9 +79,6 @@ OF SUCH DAMAGE.
 #include "str.h"
 #include "utils.h"
 
-#define MIN_ASSIGN_LHS(lhs, rhs) if ((lhs) > (rhs)) { (lhs) = (rhs); }
-#define MAX_ASSIGN_LHS(lhs, rhs) if ((lhs) < (rhs)) { (lhs) = (rhs); }
-
 uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads) {
     /* not set */
     if (target_memory_footprint == 0) {
