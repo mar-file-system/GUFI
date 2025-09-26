@@ -140,8 +140,12 @@ int main(int argc, char *argv[]) {
      * Callers provide the options-string for get_opt(), which will
      * control which options are parsed for each program.
      */
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_MIN_LEVEL,
+        FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST, FLAG_ALREADY_PROCESSED, FLAG_END
+    };
     struct input in;
-    process_args_and_maybe_exit("hHvn:y:z:D:l", 1, "GUFI_tree", &in);
+    process_args_and_maybe_exit(options, 1, "GUFI_tree", &in);
 
     BU_descend_f desc = in.check_already_processed?treesummary_descend:NULL;
 

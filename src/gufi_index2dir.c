@@ -425,8 +425,11 @@ void sub_help(void) {
 }
 
 int main(int argc, char * argv[]) {
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_XATTRS, FLAG_END
+    };
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:x", 2, "input_dir output_dir", &pa.in);
+    process_args_and_maybe_exit(options, 2, "input_dir output_dir", &pa.in);
 
     INSTALL_STR(&pa.in.name,   argv[idx++]);
     INSTALL_STR(&pa.in.nameto, argv[idx++]);

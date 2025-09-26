@@ -155,8 +155,8 @@ def nondir(args, name):
 
     # isroot is set to 1 since the size should be used for --total
     return [
-        '-y', '0',
-        '-z', '0',
+        '--min-level', '0',
+        '--max-level', '0',
         '-E', 'SELECT level(), 1, {0}, rpath(sname, sroll) || \'/\' || name FROM {1} WHERE name == \'{2}\';'.format(E_col,
                                                                                                                     gufi_common.VRPENTRIES,
                                                                                                                     name),
@@ -191,8 +191,8 @@ def separate_dirs(args):
     # summarize is turned on -> get only input path
     if args.summarize:
         return [
-        '-y', '0',
-        '-z', '0',
+        '--min-level', '0',
+        '--max-level', '0',
         '-S', 'SELECT level(), isroot, {0}, rpath(sname, sroll) FROM {1} WHERE isroot == 1;'.format(S_col,
                                                                                                     gufi_common.VRSUMMARY),
     ]
@@ -214,8 +214,8 @@ def summarize(args):
         T_col = '{0}.totblocks'
 
     return [
-        '-y', '0',
-        '-z', '0',
+        '--min-level', '0',
+        '--max-level', '0',
         '-T', 'SELECT level(), isroot, {0}, rpath(sname, sroll) FROM {1} LEFT JOIN {2} ON {1}.inode == {2}.inode WHERE {2}.isroot == 1;'.format(T_col.format(gufi_common.TREESUMMARY),
                                                                                                                                                 gufi_common.TREESUMMARY,
                                                                                                                                                 gufi_common.VRSUMMARY),

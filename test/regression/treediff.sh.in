@@ -85,7 +85,7 @@ run_sort "${TREEDIFF} \"${SRCDIR}\" \"${INDEXROOT}\""
 run_sort "${TREEDIFF} \"${INDEXROOT}\" \"${SRCDIR}\""
 
 echo "# Not enough levels to show differences"
-run_sort "${TREEDIFF} -z 0 \"${SRCDIR}\" \"${INDEXROOT}\""
+run_sort "${TREEDIFF} --max-level 0 \"${SRCDIR}\" \"${INDEXROOT}\""
 
 echo "# Bad left hand path"
 run_no_sort "${TREEDIFF} \"\" \"${SEARCH}\""

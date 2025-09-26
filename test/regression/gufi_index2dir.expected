@@ -2,11 +2,11 @@
 $ gufi_index2dir
 usage: gufi_index2dir [options] input_dir output_dir
 options:
-  -h                     help
-  -H                     show assigned input values (debugging)
-  -v                     version
-  -n <threads>           number of threads
-  -x                     index/query xattrs
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+  -n, --threads <threads>           number of threads
+  -x, --xattrs                      index/query xattrs
 
 input_dir         walk this GUFI index to produce a tree
 output_dir        reconstruct the tree under here

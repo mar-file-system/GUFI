@@ -905,10 +905,10 @@ def run(argv, config_path):
         ]
 
     if args.maxdepth is not None:
-        query_cmd += ['-z', str(args.maxdepth)]
+        query_cmd += ['--max-level', str(args.maxdepth)]
 
     if args.mindepth is not None:
-        query_cmd += ['-y', str(args.mindepth)]
+        query_cmd += ['--min-level', str(args.mindepth)]
 
     if args.skip:
         query_cmd += ['-k', args.skip]

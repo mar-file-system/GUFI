@@ -166,8 +166,8 @@ def getfattr(args, indexroot, dirname, nondirname):
 
     # a non directory prevents recursion
     if nondirname:
-        query_args += ['-y', '0',
-                       '-z', '0']
+        query_args += ['--min-level', '0',
+                       '--max-level', '0']
 
     return query_args + [dirname]
 

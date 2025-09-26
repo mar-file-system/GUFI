@@ -165,13 +165,13 @@ rm -rf "${SEARCH}"
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}" 2>&1
 
 echo "# Partial Rollup up to level 1"
-run_no_sort "${GUFI_ROLLUP} -y 1 -D \"${PATH_LIST}\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_ROLLUP} --min-level 1 -D \"${PATH_LIST}\" \"${INDEXROOT}\""
 
 echo "# Check which directories have been rolled up"
 run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""
 
 echo "# Full Rollup up to level 1"
-run_no_sort "${GUFI_ROLLUP} -y 1 \"${INDEXROOT}\""
+run_no_sort "${GUFI_ROLLUP} --min-level 1 \"${INDEXROOT}\""
 
 echo "# Check which directories have been rolled up"
 run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""

@@ -183,138 +183,168 @@ static int load_plugin_library(struct input *in, char *plugin_name) {
 }
 
 void print_help(const char* prog_name,
-                const char* getopt_str,
+                const struct option* options,
                 const char* positional_args_help_str) {
    /* Not checking arguments */
 
-   const char* opt = getopt_str;
    printf("usage: %s [options] %s\n", prog_name, positional_args_help_str);
    printf("options:\n");
 
-   int ch;
-   while ((ch = *opt++)) {
-      switch (ch) {
-      case ':': continue;
-      case 'h': printf("  -h                     help"); break;
-      case 'H': printf("  -H                     show assigned input values (debugging)"); break;
-      case 'v': printf("  -v                     version"); break;
-      case 'x': printf("  -x                     index/query xattrs"); break;
-      case 'P': printf("  -P                     print directories as they are encountered"); break;
-      case 'b': printf("  -b                     build GUFI index tree"); break;
-      case 'a': printf("  -a <0|1|2>             0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
-                       "                         1 - skip T, run S and E whether or not a row was returned (old -a)\n"
-                       "                         2 - run T, S, and E whether or not a row was returned"); break;
-      case 'n': printf("  -n <threads>           number of threads"); break;
-      case 'd': printf("  -d <delim>             delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
-      case 'o': printf("  -o <out_fname>         output file (one-per-thread, with thread-id suffix)"); break;
-      case 'O': printf("  -O <out_DB>            output DB"); break;
-      case 'u': printf("  -u                     prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
-      case 'I': printf("  -I <SQL_init>          SQL init"); break;
-      case 'T': printf("  -T <SQL_tsum>          SQL for tree-summary table"); break;
-      case 'S': printf("  -S <SQL_sum>           SQL for summary table"); break;
-      case 'E': printf("  -E <SQL_ent>           SQL for entries table"); break;
-      case 'F': printf("  -F <SQL_fin>           SQL cleanup"); break;
-      case 'r': printf("  -r                     insert files and links into db (for bfwreaddirplus2db"); break;
-      case 'R': printf("  -R                     insert dires into db (for bfwreaddirplus2db"); break;
-      case 'Y': printf("  -Y                     default to all directories suspect"); break;
-      case 'Z': printf("  -Z                     default to all files/links suspect"); break;
-      case 'W': printf("  -W <INSUSPECT>         suspect input file"); break;
-      case 'A': printf("  -A <suspectmethod>     suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
-      case 'g': printf("  -g <stridesize>        stride size for striping inodes"); break;
-      case 'c': printf("  -c <suspecttime>       time in seconds since epoch for suspect comparision"); break;
-      case 'y': printf("  -y <min level>         minimum level to go down"); break;
-      case 'z': printf("  -z <max level>         maximum level to go down"); break;
-      case 'J': printf("  -J <SQL_interm>        SQL for intermediate results"); break;
-      case 'K': printf("  -K <create aggregate>  SQL to create the final aggregation table"); break;
-      case 'G': printf("  -G <SQL_aggregate>     SQL for aggregated results"); break;
-      case 'm': printf("  -m                     Keep mtime and atime same on the database files"); break;
-      case 'B': printf("  -B <buffer size>       size of each thread's output buffer in bytes"); break;
-      case 'w': printf("  -w                     open the database files in read-write mode instead of read only mode"); break;
-      case 'f': printf("  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
-      case 'j': printf("  -j                     print the information in terse form"); break; /* output from stat --help */
-      case 'X': printf("  -X                     Dry run"); break;
-      case 'L': printf("  -L <count>             Highest number of files/links in a directory allowed to be rolled up"); break;
-      case 'k': printf("  -k <filename>          file containing directory names to skip"); break;
-      case 'M': printf("  -M <bytes>             target memory footprint"); break;
-      case 'C': printf("  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
-      case 'e': printf("  -e                     compress work items"); break;
-      case 'q': printf("  -q                     check that external databases are valid before tracking during indexing"); break;
-      case 'Q': printf("  -Q <basename>\n"
-                       "     <table>\n"
-                       "     <template>.<table>\n"
-                       "     <view>              External database file basename, per-attach table name, template + table name, and the resultant view"); break;
-      case 's': printf("  -s <path>              File name prefix for swap files"); break;
-      case 'p': printf("  -p <path>              Source path prefix"); break;
-      case 'D': printf("  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y"); break;
-      case 'l': printf("  -l                     if a directory was previously processed, skip descending the subtree"); break;
-      case 'U': printf("  -U <library_name>      plugin library for modifying db entries"); break;
-      case 't': printf("  -t <filter_type>       one or more types to keep ('f', 'd', 'l')"); break;
-      default: printf("print_help(): unrecognized option '%c'", (char)ch);
-      }
-      printf("\n");
+   while (options && options->name != NULL) { 
+          switch (options->val) {
+                case FLAG_HELP_SHORT:                    printf("  -h, --help                        help"); break;
+                case FLAG_DEBUG_SHORT:                   printf("  -H, --debug                       show assigned input values (debugging)"); break;
+                case FLAG_VERSION_SHORT:                 printf("  -v, --version                     version"); break;
+                case FLAG_XATTRS_SHORT:                  printf("  -x, --xattrs                      index/query xattrs"); break;
+                case FLAG_PRINTDIR_SHORT:                printf("  -P                                print directories as they are encountered"); break;
+                case FLAG_BUILDINDEX_SHORT:              printf("  -b                                build GUFI index tree"); break;
+                case FLAG_PROCESS_SQL_SHORT:             printf("  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
+                                                                "                                    1 - skip T, run S and E whether or not a row was returned (old -a)\n"
+                                                                "                                    2 - run T, S, and E whether or not a row was returned"); break;
+                case FLAG_THREADS_SHORT:                 printf("  -n, --threads <threads>           number of threads"); break;
+                case FLAG_DELIM_SHORT:                   printf("  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
+                case FLAG_OUTPUT_FILE_SHORT:             printf("  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)"); break;
+                case FLAG_OUTPUT_DB_SHORT:               printf("  -O, --output-db <out_DB>          output DB"); break;
+                case FLAG_PREFIX_SHORT:                  printf("  -u                                prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
+                case FLAG_SQL_INIT_SHORT:                printf("  -I <SQL_init>                     SQL init"); break;
+                case FLAG_SQL_TSUM_SHORT:                printf("  -T <SQL_tsum>                     SQL for tree-summary table"); break;
+                case FLAG_SQL_SUM_SHORT:                 printf("  -S <SQL_sum>                      SQL for summary table"); break;
+                case FLAG_SQL_ENT_SHORT:                 printf("  -E <SQL_ent>                      SQL for entries table"); break;
+                case FLAG_SQL_FIN_SHORT:                 printf("  -F <SQL_fin>                      SQL cleanup"); break;
+                case FLAG_INSERT_FILE_LINK_SHORT:        printf("  -r                                insert files and links into db (for bfwreaddirplus2db"); break;
+                case FLAG_INSERT_DIR_SHORT:              printf("  -R                                insert dires into db (for bfwreaddirplus2db"); break;
+                case FLAG_SUSPECT_DIR_SHORT:             printf("  -Y                                default to all directories suspect"); break;
+                case FLAG_SUSPECT_FILE_LINK_SHORT:       printf("  -Z                                default to all files/links suspect"); break;
+                case FLAG_INSUSPECT_SHORT:               printf("  -W <INSUSPECT>                    suspect input file"); break;
+                case FLAG_SUSPECT_METHOD_SHORT:          printf("  -A <suspectmethod>                suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
+                case FLAG_STRIDE_SHORT:                  printf("  -g <stridesize>                   stride size for striping inodes"); break;
+                case FLAG_SUSPECT_TIME_SHORT:            printf("  -c <suspecttime>                  time in seconds since epoch for suspect comparision"); break;
+                case FLAG_SQL_INTERM_SHORT:              printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
+                case FLAG_SQL_CREATE_AGG_SHORT:          printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
+                case FLAG_SQL_AGG_SHORT:                 printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
+                case FLAG_KEEP_MATIME_SHORT:             printf("  -m                                Keep mtime and atime same on the database files"); break;
+                case FLAG_BUFFER_SIZE_SHORT:             printf("  -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes"); break;
+                case FLAG_READ_WRITE_SHORT:              printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
+                case FLAG_FORMAT_SHORT:                  printf("  -f, --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
+                case FLAG_TERSE_FORMAT_SHORT:            printf("  -j, --terse-form                  print the information in terse form"); break; /* output from stat --help */
+                case FLAG_DRY_RUN_SHORT:                 printf("  -X, --dry-run                     Dry run"); break;
+                case FLAG_MAX_IN_DIR_SHORT:              printf("  -L <count>                        Highest number of files/links in a directory allowed to be rolled up"); break;
+                case FLAG_SKIP_SHORT:                    printf("  -k, --skip <filename>             file containing directory names to skip"); break;
+                case FLAG_TARGET_MEMORY_FOOTPRINT_SHORT: printf("  -M <bytes>                        target memory footprint"); break;
+                case FLAG_SUBDIR_LIMIT_SHORT:            printf("  -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
+                case FLAG_COMPRESS_SHORT:                printf("  -e                                compress work items"); break;
+                case FLAG_CHECK_EXTDB_VALID_SHORT:       printf("  -q                                check that external databases are valid before tracking during indexing"); break;
+                case FLAG_EXTERNAL_ATTACH_SHORT:         printf("  -Q <basename>\n"
+                                                                "     <table>\n"
+                                                                "     <template>.<table>\n"
+                                                                "     <view>                         External database file basename, per-attach table name, template + table name, and the resultant view"); break;
+                case FLAG_SWAP_PREFIX_SHORT:             printf("  -s, --swap-prefix <path>          File name prefix for swap files"); break;
+                case FLAG_PATH_SHORT:                    printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
+                case FLAG_SUBTREE_LIST_SHORT:            printf("  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
+                case FLAG_ALREADY_PROCESSED_SHORT:       printf("  -l                                if a directory was previously processed, skip descending the subtree"); break;
+                case FLAG_PLUGIN_SHORT:                  printf("  -U <library_name>                 plugin library for modifying db entries"); break;
+                case FLAG_FILTER_TYPE_SHORT:             printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
+                case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <min level>       minimum level to go down"); break;
+                case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <max level>       maximum level to go down"); break;
+                default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
+          }
+          options++;
+          printf("\n");
    }
    printf("\n");
 }
 
 // DEBUGGING
 void show_input(struct input* in, int retval) {
-   printf("in.printed_version          = %d\n",            in->printed_version);
-   printf("in.printdir                 = %d\n",            in->printdir);
-   printf("in.buildindex               = %d\n",            in->buildindex);
-   printf("in.maxthreads               = %zu\n",           in->maxthreads);
-   printf("in.delim                    = '%c'\n",          in->delim);
-   printf("in.process_sql              = %d\n",            (int) in->process_sql);
-   printf("in.types.prefix             = %d\n",            in->types.prefix);
-   printf("in.process_xattrs           = %d\n",            in->process_xattrs);
-   printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
-   printf("in.nobody.gid               = %" STAT_gid "\n", in->nobody.gid);
-   printf("in.sql.init                 = '%s'\n",          in->sql.init.data);
-   printf("in.sql.tsum                 = '%s'\n",          in->sql.tsum.data);
-   printf("in.sql.sum                  = '%s'\n",          in->sql.sum.data);
-   printf("in.sql.ent                  = '%s'\n",          in->sql.ent.data);
-   printf("in.sql.fin                  = '%s'\n",          in->sql.fin.data);
-   printf("in.insertdir                = '%d'\n",          in->insertdir);
-   printf("in.insertfl                 = '%d'\n",          in->insertfl);
-   printf("in.suspectd                 = '%d'\n",          in->suspectd);
-   printf("in.suspectfl                = '%d'\n",          in->suspectfl);
-   printf("in.insuspect                = '%s'\n",          in->insuspect.data);
-   printf("in.suspectfile              = '%d'\n",          in->suspectfile);
-   printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
-   printf("in.suspecttime              = '%d'\n",          in->suspecttime);
-   printf("in.stride                   = '%d'\n",          in->stride);
-   printf("in.min_level                = %zu\n",           in->min_level);
-   printf("in.max_level                = %zu\n",           in->max_level);
-   printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate.data);
-   printf("in.sql.init_agg             = '%s'\n",          in->sql.init_agg.data);
-   printf("in.sql.agg                  = '%s'\n",          in->sql.agg.data);
-   printf("in.keep_matime              = %d\n",            in->keep_matime);
-   printf("in.output_buffer_size       = %zu\n",           in->output_buffer_size);
-   printf("in.open_flags               = %d\n",            in->open_flags);
-   printf("in.format_set               = %d\n",            in->format_set);
-   printf("in.format                   = '%s'\n",          in->format.data);
-   printf("in.terse                    = %d\n",            in->terse);
-   printf("in.dry_run                  = %d\n",            in->dry_run);
-   printf("in.max_in_dir               = %zu\n",           in->max_in_dir);
-   printf("in.skip_count               = '%zu'\n",         in->skip_count);
-   printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
-   printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
-   printf("in.compress                 = %d\n",            in->compress);
-   printf("in.check_extdb_valid        = %d\n",            in->check_extdb_valid);
-   size_t i = 0;
-   sll_loop(&in->external_attach, node) {
-       eus_t *eus = (eus_t *) sll_node_data(node);
-       printf("in.external_attach[%zu] = ('%s', '%s', '%s', '%s')\n",
-              i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
-   }
-   printf("\n");
-   printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
-   printf("in.source_prefix            = '%s'\n",          in->source_prefix.data);
-   printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
-   printf("in.check_already_processed  = %d\n",            in->check_already_processed);
-   printf("in.filter_types             = %d\n",            in->filter_types);
+    printf("in.printed_version          = %d\n",            in->printed_version);
+    printf("in.printdir                 = %d\n",            in->printdir);
+    printf("in.buildindex               = %d\n",            in->buildindex);
+    printf("in.maxthreads               = %zu\n",           in->maxthreads);
+    printf("in.delim                    = '%c'\n",          in->delim);
+    printf("in.process_sql              = %d\n",            (int) in->process_sql);
+    printf("in.types.prefix             = %d\n",            in->types.prefix);
+    printf("in.process_xattrs           = %d\n",            in->process_xattrs);
+    printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
+    printf("in.nobody.gid               = %" STAT_gid "\n", in->nobody.gid);
+    printf("in.sql.init                 = '%s'\n",          in->sql.init.data);
+    printf("in.sql.tsum                 = '%s'\n",          in->sql.tsum.data);
+    printf("in.sql.sum                  = '%s'\n",          in->sql.sum.data);
+    printf("in.sql.ent                  = '%s'\n",          in->sql.ent.data);
+    printf("in.sql.fin                  = '%s'\n",          in->sql.fin.data);
+    printf("in.insertdir                = '%d'\n",          in->insertdir);
+    printf("in.insertfl                 = '%d'\n",          in->insertfl);
+    printf("in.suspectd                 = '%d'\n",          in->suspectd);
+    printf("in.suspectfl                = '%d'\n",          in->suspectfl);
+    printf("in.insuspect                = '%s'\n",          in->insuspect.data);
+    printf("in.suspectfile              = '%d'\n",          in->suspectfile);
+    printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
+    printf("in.suspecttime              = '%d'\n",          in->suspecttime);
+    printf("in.stride                   = '%d'\n",          in->stride);
+    printf("in.min_level                = %zu\n",           in->min_level);
+    printf("in.max_level                = %zu\n",           in->max_level);
+    printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate.data);
+    printf("in.sql.init_agg             = '%s'\n",          in->sql.init_agg.data);
+    printf("in.sql.agg                  = '%s'\n",          in->sql.agg.data);
+    printf("in.keep_matime              = %d\n",            in->keep_matime);
+    printf("in.output_buffer_size       = %zu\n",           in->output_buffer_size);
+    printf("in.open_flags               = %d\n",            in->open_flags);
+    printf("in.format_set               = %d\n",            in->format_set);
+    printf("in.format                   = '%s'\n",          in->format.data);
+    printf("in.terse                    = %d\n",            in->terse);
+    printf("in.dry_run                  = %d\n",            in->dry_run);
+    printf("in.max_in_dir               = %zu\n",           in->max_in_dir);
+    printf("in.skip_count               = '%zu'\n",         in->skip_count);
+    printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
+    printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
+    printf("in.compress                 = %d\n",            in->compress);
+    printf("in.check_extdb_valid        = %d\n",            in->check_extdb_valid);
+    size_t i = 0;
+    sll_loop(&in->external_attach, node) {
+        eus_t *eus = (eus_t *) sll_node_data(node);
+        printf("in.external_attach[%zu] = ('%s', '%s', '%s', '%s')\n",
+               i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
+    }
+    printf("\n");
+    printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
+    printf("in.source_prefix            = '%s'\n",          in->source_prefix.data);
+    printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
+    printf("in.check_already_processed  = %d\n",            in->check_already_processed);
+    printf("in.filter_types             = %d\n",            in->filter_types);
 
-   printf("retval                      = %d\n",            retval);
-   printf("\n");
+    printf("retval                      = %d\n",            retval);
+    printf("\n");
+}
+
+char *build_getopt_str(const struct option *options) {
+    size_t len = 1; /* null terminator */
+
+    for (const struct option *opt = options; opt->name != NULL; opt++) {
+        if (opt->val >= '0' && opt->val <= 'z') {
+            len++;
+            if (opt->has_arg == required_argument) {
+                len++;
+            } else if (opt->has_arg == optional_argument) {
+                len += 2;
+            }
+        }
+    }
+
+    char *getopt_str = calloc(len, sizeof(char));
+
+    char *ptr = getopt_str;
+    for (const struct option *opt = options; opt->name != NULL; opt++) {
+        if (opt->val >= '0' && opt->val <= 'z') {
+            *ptr++ = (char) opt->val;
+            if (opt->has_arg == required_argument) {
+                *ptr++ = ':';
+            } else if (opt->has_arg == optional_argument) {
+                *ptr++ = ':';
+                *ptr++ = ':';
+            }
+        }
+    }
+    *ptr = '\0';
+    return getopt_str;
 }
 
 // process command-line options
@@ -331,332 +361,334 @@ void show_input(struct input* in, int retval) {
 //    positional argument in <argv>.  This allows the caller to do a custom
 //    parse of the remaining arguments as required (positional) args.
 //
-int parse_cmd_line(int         argc,
-                   char*       argv[],
-                   const char* getopt_str,
-                   int         n_positional,
-                   const char* positional_args_help_str,
-                   struct input *in) {
-
-   input_init(in);
-
-   int show                    = 0;
-   int retval                  = 0;
-   int bad_skipfile            = 0;
-   int ch;
-   optind = 1; // reset to 1, not 0 (man 3 getopt)
-   while ( (ch = getopt(argc, argv, getopt_str)) != -1) {
-      switch (ch) {
-
-      case 'h':               // help
-         print_help(argv[0], getopt_str, positional_args_help_str);
-         in->helped = 1;
-         retval = -1;
-         break;
-
-      case 'H':               // show parsed inputs
-         show = 1;
-         retval = -1;
-         break;
-
-      case 'v':
-          printf(STR(GUFI_VERSION) "\n");
-          in->printed_version = 1;
-          break;
-
-      case 'x':               // enable xattr processing
-         in->process_xattrs = 1;
-         break;
-
-      case 'P':               // print dirs?
-         in->printdir = 1;
-         break;
-
-      case 'b':               // build index?
-         in->buildindex = 1;
-         break;
-
-      case 'a':
-         {
-             int a = -1;
-             INSTALL_INT(&a, optarg, 0, 2, "-a", &retval);
-             in->process_sql = a;
-         }
-         break;
-
-      case 'n':
-          INSTALL_SIZE(&in->maxthreads, optarg, 1, (size_t) -1, "-n", &retval);
-         break;
-
-      case 'd':
-         if (optarg[0] == 'x') {
-             in->delim = fielddelim;
-         }
-         else {
-             in->delim = optarg[0];
-         }
-         break;
-
-      case 'o':
-         in->output = OUTFILE;
-         INSTALL_STR(&in->outname, optarg);
-         break;
-
-      case 'O':
-         in->output = OUTDB;
-         INSTALL_STR(&in->outname, optarg);
-         break;
-
-      case 'u':
-         in->types.prefix = 1;
-         break;
-
-      case 'I':               // SQL initializations
-         INSTALL_STR(&in->sql.init, optarg);
-         break;
-
-      case 'T':               // SQL for tree-summary
-         INSTALL_STR(&in->sql.tsum, optarg);
-         break;
-
-      case 'S':               // SQL for summary
-         INSTALL_STR(&in->sql.sum, optarg);
-         break;
-
-      case 'E':               // SQL for entries
-         INSTALL_STR(&in->sql.ent, optarg);
-         break;
-
-      case 'F':               // SQL clean-up
-         INSTALL_STR(&in->sql.fin, optarg);
-         break;
-
-      case 'r':               // insert files and links into db for bfwreaddirplus2db
-         in->insertfl = 1;
-         break;
-
-      case 'R':               // insert dirs into db for bfwreaddirplus2db
-         in->insertdir = 1;
-         break;
-
-      case 'Y':               // default is 0
-         in->suspectd = 1;
-         break;
-
-      case 'Z':               // default is 0
-         in->suspectfl = 1;
-         break;
-
-      case 'W':               // SQL clean-up
-         INSTALL_STR(&in->insuspect, optarg);
-         in->suspectfile = 1;
-         break;
-
-      case 'A':
-         INSTALL_INT(&in->suspectmethod, optarg, 0, 3, "-A", &retval);
-         break;
-
-      case 'g':
-         INSTALL_INT(&in->stride, optarg, 1, MAXSTRIDE, "-g", &retval);
-         break;
-
-      case 'c':
-         INSTALL_INT(&in->suspecttime, optarg, 1, 2147483646, "-c", &retval);
-         break;
-
-      case 'y':
-         INSTALL_SIZE(&in->min_level, optarg, (size_t) 0, (size_t) -1, "-y", &retval);
-         break;
-
-      case 'z':
-         INSTALL_SIZE(&in->max_level, optarg, (size_t) 0, (size_t) -1, "-z", &retval);
-         break;
-
-      case 'J':
-         INSTALL_STR(&in->sql.intermediate, optarg);
-         break;
-
-      case 'K':
-         INSTALL_STR(&in->sql.init_agg, optarg);
-         break;
-
-      case 'G':
-         INSTALL_STR(&in->sql.agg, optarg);
-         break;
-
-      case 'm':
-         in->keep_matime = 1;
-         break;
-
-      case 'B':
-         INSTALL_SIZE(&in->output_buffer_size, optarg, (size_t) 0, (size_t) -1, "-z", &retval);
-         break;
-
-      case 'w':
-         in->open_flags = SQLITE_OPEN_READWRITE;
-         break;
-
-      case 'f':
-          INSTALL_STR(&in->format, optarg);
-          in->format_set = 1;
-          break;
-
-      case 'j':
-          in->terse = 1;
-          break;
-
-      case 'X':
-          in->dry_run = 1;
-          break;
-
-      case 'L':
-          INSTALL_SIZE(&in->max_in_dir, optarg, (size_t) 0, (size_t) -1, "-L", &retval);
-          break;
-
-      case 'k':
-          {
-              refstr_t skipfile = {
-                  .data = NULL,
-                  .len = 0,
-              };
-              INSTALL_STR(&skipfile, optarg);
-              const ssize_t added = setup_directory_skip(in->skip, skipfile.data);
-              if (added < 0) {
-                  retval = -1;
-                  bad_skipfile = 1;
-                  /* cannot return here - expected behavior is to parse remaining options first */
-              }
-              else {
-                  in->skip_count += added;
-              }
-          }
-          break;
-
-      case 'M':
-          INSTALL_UINT64(&in->target_memory_footprint, optarg, (uint64_t) 0, (uint64_t) -1, "-M", &retval);
-          break;
-
-      case 'C':
-          INSTALL_SIZE(&in->subdir_limit, optarg, (size_t) 0, (size_t) -1, "-C", &retval);
-          break;
-
-      case 'e':
-          in->compress = 1;
-          break;
-
-      case 'q':
-          in->check_extdb_valid = 1;
-          break;
-
-      case 'Q':
-          {
-              eus_t *user = calloc(1, sizeof(*user));
-
-              INSTALL_STR(&user->basename, optarg);
-
-              optarg = argv[optind];
-              INSTALL_STR(&user->table, optarg);
-
-              optarg = argv[++optind];
-              INSTALL_STR(&user->template_table, optarg);
-
-              optarg = argv[++optind];
-              INSTALL_STR(&user->view, optarg);
-
-              optarg = argv[++optind];
-
-              sll_push(&in->external_attach, user);
-          }
-          break;
-
-      case 's':
-          INSTALL_STR(&in->swap_prefix, optarg);
-          break;
-
-      case 'p':
-          INSTALL_STR(&in->source_prefix, optarg);
-          break;
-
-      case 'D':
-          INSTALL_STR(&in->subtree_list, optarg);
-          break;
-
-      case 'l':
-          in->check_already_processed = 1;
-          break;
-
-      case 'U':
-          if (load_plugin_library(in, optarg)) {
-              retval = -1;
-          }
-          break;
-
-      case 't':
-          while (*optarg) {
-              switch (*optarg) {
-                  case 'f':
-                      in->filter_types |= FILTER_TYPE_FILE;
-                      break;
-                  case 'd':
-                      in->filter_types |= FILTER_TYPE_DIR;
-                      break;
-                  case 'l':
-                      in->filter_types |= FILTER_TYPE_LINK;
-                      break;
-                  default:
-                      fprintf(stderr, "%c is not a valid option\n", *optarg);
-                      retval = -1;
-                      break;
-              }
-              ++optarg;
-          }
-          break;
-
-      case '?':
-         // getopt returns '?' when there is a problem.  In this case it
-         // also prints, e.g. "getopt_test: illegal option -- z"
-         fprintf(stderr, "unrecognized option '%s'\n", argv[optind -1]);
-         retval = -1;
-         break;
-
-      default:
-         retval = -1;
-         fprintf(stderr, "?? getopt returned character code 0%o ??\n", ch);
-      };
-   }
-
-   // if there were no other errors,
-   // make sure min_level <= max_level
-   if (retval == 0) {
-       retval = -(in->min_level > in->max_level);
-   }
-
-   if (in->printed_version) {
-       return -1;
-   }
-
-   if (in->filter_types == 0) {
-      in->filter_types = FILTER_TYPE_FILE | FILTER_TYPE_DIR | FILTER_TYPE_LINK;
-   }
-
-   // caller requires given number of positional args, after the options.
-   // <optind> is the number of argv[] values that were recognized as options.
-   // NOTE: caller may have custom options ovf their own, so returning a
-   //       value > n_positional is okay (?)
-   if (retval
-       || ((argc - optind) < n_positional)) {
-      if (!in->helped && !bad_skipfile) {
-         print_help(argv[0], getopt_str, positional_args_help_str);
-         in->helped = 1;
-      }
-      retval = -1;
-   }
-
-   // DEBUGGING:
-   if (show)
-      show_input(in, retval);
-
-   return (retval ? retval : optind);
+int parse_cmd_line(int                  argc,
+                   char*                argv[],
+                   const struct option* options,
+                   int                  n_positional,
+                   const char*          positional_args_help_str,
+                   struct input*        in) {
+    input_init(in);
+    char *getopt_str = build_getopt_str(options);
+
+    int show                    = 0;
+    int retval                  = 0;
+    int bad_skipfile            = 0;
+    int ch;
+    setenv("POSIXLY_CORRECT", "1", 1); /* don't check errors? */
+    optind = 0;                        /* man 3 getopt_long */
+    while ( (ch = getopt_long(argc, argv, getopt_str, options, NULL)) != -1) {
+        switch (ch) {
+
+            case FLAG_HELP_SHORT:               // help
+                print_help(argv[0], options, positional_args_help_str);
+                in->helped = 1;
+                retval = -1;
+                break;
+
+            case FLAG_DEBUG_SHORT:               // show parsed inputs
+                show = 1;
+                retval = -1;
+                break;
+
+            case FLAG_VERSION_SHORT:
+                printf(STR(GUFI_VERSION) "\n");
+                in->printed_version = 1;
+                break;
+
+            case FLAG_XATTRS_SHORT:               // enable xattr processing
+                in->process_xattrs = 1;
+                break;
+
+            case FLAG_PRINTDIR_SHORT:               // print dirs?
+                in->printdir = 1;
+                break;
+
+            case FLAG_BUILDINDEX_SHORT:               // build index?
+                in->buildindex = 1;
+                break;
+
+            case FLAG_PROCESS_SQL_SHORT:
+                {
+                    int a = -1;
+                    INSTALL_INT(&a, optarg, 0, 2, "-a", &retval);
+                    in->process_sql = a;
+                }
+                break;
+
+            case FLAG_THREADS_SHORT:
+                INSTALL_SIZE(&in->maxthreads, optarg, 1, (size_t) -1, "-n", &retval);
+                break;
+
+            case FLAG_DELIM_SHORT:
+                if (optarg[0] == 'x') {
+                    in->delim = fielddelim;
+                }
+                else {
+                    in->delim = optarg[0];
+                }
+                break;
+
+            case FLAG_OUTPUT_FILE_SHORT:
+                in->output = OUTFILE;
+                INSTALL_STR(&in->outname, optarg);
+                break;
+
+            case FLAG_OUTPUT_DB_SHORT:
+                in->output = OUTDB;
+                INSTALL_STR(&in->outname, optarg);
+                break;
+
+            case FLAG_PREFIX_SHORT:
+                in->types.prefix = 1;
+                break;
+
+            case FLAG_SQL_INIT_SHORT:               // SQL initializations
+                INSTALL_STR(&in->sql.init, optarg);
+                break;
+
+            case FLAG_SQL_TSUM_SHORT:               // SQL for tree-summary
+                INSTALL_STR(&in->sql.tsum, optarg);
+                break;
+
+            case FLAG_SQL_SUM_SHORT:               // SQL for summary
+                INSTALL_STR(&in->sql.sum, optarg);
+                break;
+
+            case FLAG_SQL_ENT_SHORT:               // SQL for entries
+                INSTALL_STR(&in->sql.ent, optarg);
+                break;
+
+            case FLAG_SQL_FIN_SHORT:               // SQL clean-up
+                INSTALL_STR(&in->sql.fin, optarg);
+                break;
+
+            case FLAG_INSERT_FILE_LINK_SHORT:     // insert files and links into db for bfwreaddirplus2db
+                in->insertfl = 1;
+                break;
+
+            case FLAG_INSERT_DIR_SHORT:          // insert dirs into db for bfwreaddirplus2db
+                in->insertdir = 1;
+                break;
+
+            case FLAG_SUSPECT_DIR_SHORT:         // default is 0
+                in->suspectd = 1;
+                break;
+
+            case FLAG_SUSPECT_FILE_LINK_SHORT:               // default is 0
+                in->suspectfl = 1;
+                break;
+
+            case FLAG_INSUSPECT_SHORT:               // SQL clean-up
+                INSTALL_STR(&in->insuspect, optarg);
+                in->suspectfile = 1;
+                break;
+
+            case FLAG_SUSPECT_METHOD_SHORT:
+                INSTALL_INT(&in->suspectmethod, optarg, 0, 3, "-A", &retval);
+                break;
+
+            case FLAG_STRIDE_SHORT:
+                INSTALL_INT(&in->stride, optarg, 1, MAXSTRIDE, "-g", &retval);
+                break;
+
+            case FLAG_SUSPECT_TIME_SHORT:
+                INSTALL_INT(&in->suspecttime, optarg, 1, 2147483646, "-c", &retval);
+                break;
+
+            case FLAG_MIN_LEVEL_SHORT: /* min-level */
+                INSTALL_SIZE(&in->min_level, optarg, (size_t) 0, (size_t) -1, "--min-level", &retval);
+                break;
+
+            case FLAG_MAX_LEVEL_SHORT: /* max-level */
+                INSTALL_SIZE(&in->max_level, optarg, (size_t) 0, (size_t) -1, "--max-level", &retval);
+                break;
+
+            case FLAG_SQL_INTERM_SHORT:
+                INSTALL_STR(&in->sql.intermediate, optarg);
+                break;
+
+            case FLAG_SQL_CREATE_AGG_SHORT:
+                INSTALL_STR(&in->sql.init_agg, optarg);
+                break;
+
+            case FLAG_SQL_AGG_SHORT:
+                INSTALL_STR(&in->sql.agg, optarg);
+                break;
+
+            case FLAG_KEEP_MATIME_SHORT:
+                in->keep_matime = 1;
+                break;
+
+            case FLAG_BUFFER_SIZE_SHORT:
+                INSTALL_SIZE(&in->output_buffer_size, optarg, (size_t) 0, (size_t) -1, "-B", &retval);
+                break;
+
+            case FLAG_READ_WRITE_SHORT:
+                in->open_flags = SQLITE_OPEN_READWRITE;
+                break;
+
+            case FLAG_FORMAT_SHORT:
+                INSTALL_STR(&in->format, optarg);
+                in->format_set = 1;
+                break;
+
+            case FLAG_TERSE_FORMAT_SHORT:
+                in->terse = 1;
+                break;
+
+            case FLAG_DRY_RUN_SHORT:
+                in->dry_run = 1;
+                break;
+
+            case FLAG_MAX_IN_DIR_SHORT:
+                INSTALL_SIZE(&in->max_in_dir, optarg, (size_t) 0, (size_t) -1, "-L", &retval);
+                break;
+
+            case FLAG_SKIP_SHORT:
+                {
+                    refstr_t skipfile = {
+                        .data = NULL,
+                        .len = 0,
+                    };
+                    INSTALL_STR(&skipfile, optarg);
+                    const ssize_t added = setup_directory_skip(in->skip, skipfile.data);
+                    if (added < 0) {
+                        retval = -1;
+                        bad_skipfile = 1;
+                        /* cannot return here - expected behavior is to parse remaining options first */
+                    }
+                    else {
+                        in->skip_count += added;
+                    }
+                }
+                break;
+
+            case FLAG_TARGET_MEMORY_FOOTPRINT_SHORT:
+                INSTALL_UINT64(&in->target_memory_footprint, optarg, (uint64_t) 0, (uint64_t) -1, "-M", &retval);
+                break;
+
+            case FLAG_SUBDIR_LIMIT_SHORT:
+                INSTALL_SIZE(&in->subdir_limit, optarg, (size_t) 0, (size_t) -1, "-C", &retval);
+                break;
+
+            case FLAG_COMPRESS_SHORT:
+                in->compress = 1;
+                break;
+
+            case FLAG_CHECK_EXTDB_VALID_SHORT:
+                in->check_extdb_valid = 1;
+                break;
+
+            case FLAG_EXTERNAL_ATTACH_SHORT:
+                {
+                    eus_t *user = calloc(1, sizeof(*user));
+
+                    INSTALL_STR(&user->basename, optarg);
+
+                    optarg = argv[optind];
+                    INSTALL_STR(&user->table, optarg);
+
+                    optarg = argv[++optind];
+                    INSTALL_STR(&user->template_table, optarg);
+
+                    optarg = argv[++optind];
+                    INSTALL_STR(&user->view, optarg);
+
+                    optarg = argv[++optind];
+
+                    sll_push(&in->external_attach, user);
+                }
+                break;
+
+            case FLAG_SWAP_PREFIX_SHORT:
+                INSTALL_STR(&in->swap_prefix, optarg);
+                break;
+
+            case FLAG_PATH_SHORT:
+                INSTALL_STR(&in->source_prefix, optarg);
+                break;
+
+            case FLAG_SUBTREE_LIST_SHORT:
+                INSTALL_STR(&in->subtree_list, optarg);
+                break;
+
+            case FLAG_ALREADY_PROCESSED_SHORT:
+                in->check_already_processed = 1;
+                break;
+
+            case FLAG_PLUGIN_SHORT:
+                if (load_plugin_library(in, optarg)) {
+                    retval = -1;
+                }
+                break;
+
+            case FLAG_FILTER_TYPE_SHORT:
+                while (*optarg) {
+                    switch (*optarg) {
+                        case 'f':
+                            in->filter_types |= FILTER_TYPE_FILE;
+                            break;
+                        case 'd':
+                            in->filter_types |= FILTER_TYPE_DIR;
+                            break;
+                        case 'l':
+                            in->filter_types |= FILTER_TYPE_LINK;
+                            break;
+                        default:
+                            fprintf(stderr, "%c is not a valid option\n", *optarg);
+                            retval = -1;
+                            break;
+                    }
+                    ++optarg; 
+                }
+                break;
+
+            case '?':
+                // getopt returns '?' when there is a problem.  In this case it
+                // also prints, e.g. "getopt_test: illegal option -- z"
+                fprintf(stderr, "unrecognized option '%s'\n", argv[optind -1]);
+                retval = -1;
+                break;
+
+            default:
+                retval = -1;
+                fprintf(stderr, "?? getopt returned character code 0%o ??\n", ch);
+        };
+    }
+    free(getopt_str);
+
+    // if there were no other errors,
+    // make sure min_level <= max_level
+    if (retval == 0) {
+        retval = -(in->min_level > in->max_level);
+    }
+
+    if (in->printed_version) {
+        return -1;
+    }
+
+    if (in->filter_types == 0) {
+        in->filter_types = FILTER_TYPE_FILE | FILTER_TYPE_DIR | FILTER_TYPE_LINK;
+    }
+
+    // caller requires given number of positional args, after the options.
+    // <optind> is the number of argv[] values that were recognized as options.
+    // NOTE: caller may have custom options ovf their own, so returning a
+    //       value > n_positional is okay (?)
+    if (retval
+        || ((argc - optind) < n_positional)) {
+        if (!in->helped && !bad_skipfile) {
+            print_help(argv[0], options, positional_args_help_str);
+            in->helped = 1;
+        }
+        retval = -1;
+    }
+
+    // DEBUGGING:
+    if (show)
+        show_input(in, retval);
+
+    return (retval ? retval : optind);
 }
 
 int INSTALL_STR(refstr_t *VAR, const char *SOURCE) {

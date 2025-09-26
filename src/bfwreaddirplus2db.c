@@ -661,9 +661,16 @@ int main(int argc, char *argv[]) {
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
+        FLAG_OUTPUT_DB, FLAG_OUTPUT_FILE, FLAG_DELIM, FLAG_INSERT_FILE_LINK,
+        FLAG_INSERT_DIR, FLAG_SUSPECT_DIR, FLAG_SUSPECT_FILE_LINK, FLAG_INSUSPECT,
+        FLAG_STRIDE, FLAG_SUSPECT_METHOD, FLAG_SUSPECT_TIME, FLAG_XATTRS,
+        FLAG_BUILDINDEX, FLAG_END
+    };
     struct PoolArgs pa;
     memset(&pa, 0, sizeof(pa));
-    int idx = parse_cmd_line(argc, argv, "hHvn:O:o:d:rRYZW:g:A:c:xb", 1, "input_dir [index]", &pa.in);
+    int idx = parse_cmd_line(argc, argv, options, 1, "input_dir [index]", &pa.in);
     if (pa.in.helped)
         sub_help();
 

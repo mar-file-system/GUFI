@@ -5,8 +5,8 @@ $ gufi_ls --verbose
 GUFI query is
    gufi_query \
     -n 1 \
-    -y 0 \
-    -z 2 \
+    --min-level 0 \
+    --max-level 2 \
     -I 'CREATE TABLE out (fullpath TEXT, name TEXT, type TEXT, inode INT64, nlink INT64, size INT64, mode INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, mtime INT64, atime INT64, ctime INT64, linkname TEXT, xattr_names TEXT, pinode INT64);' \
     -S 'INSERT INTO out SELECT rpath(sname, sroll), basename(name), type, inode, nlink, size, mode, uid, gid, blksize, blocks, mtime, atime, ctime, linkname, xattr_names, pinode FROM vrsummary WHERE (name REGEXP '"'"'^(?![\.]).*$'"'"') AND (
     CASE level()

@@ -236,8 +236,12 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &main_func.start);
     epoch = since_epoch(&main_func.start);
 
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
+        FLAG_DELIM, FLAG_TARGET_MEMORY_FOOTPRINT, FLAG_SWAP_PREFIX, FLAG_END
+    };
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:d:M:s:", 2, "trace_file... output_dir", &pa.in);
+    process_args_and_maybe_exit(options, 2, "trace_file... output_dir", &pa.in);
 
     /* parse positional args, following the options */
     INSTALL_STR(&pa.in.nameto, argv[argc - 1]);

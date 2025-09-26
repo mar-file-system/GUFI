@@ -97,8 +97,8 @@ static const std::string W = "-W"; static const std::string W_arg = "W arg";
 static const std::string A = "-A"; static const std::string A_arg = "1";
 static const std::string g = "-g"; static const std::string g_arg = "1";
 static const std::string c = "-c"; static const std::string c_arg = "1";
-static const std::string y = "-y"; static const std::string y_arg = "1";
-static const std::string z = "-z"; static const std::string z_arg = "1";
+static const std::string y = "--min-level"; static const std::string y_arg = "1";
+static const std::string z = "--max-level"; static const std::string z_arg = "1";
 static const std::string J = "-J"; static const std::string J_arg = "J arg";
 static const std::string K = "-K"; static const std::string K_arg = "K arg";
 static const std::string G = "-G"; static const std::string G_arg = "G arg";
@@ -243,7 +243,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
 }
 
 TEST(parse_cmd_line, help) {
-    const char opts[] = "h";
+    const struct option opts[] = { FLAG_HELP, FLAG_END };
 
     const char *argv[] = {
         exec.c_str(),
@@ -268,7 +268,7 @@ TEST(parse_cmd_line, help) {
 }
 
 TEST(parse_cmd_line, version) {
-    const char opts[] = "v";
+    const struct option opts[] = { FLAG_VERSION, FLAG_END };
 
     const char *argv[] = {
         exec.c_str(),
@@ -293,7 +293,25 @@ TEST(parse_cmd_line, version) {
 }
 
 TEST(parse_cmd_line, debug) {
-    const char opts[] = "HxPba:n:d:i:t:o:O:uI:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT "qQ:s:D:";
+    /* flag i is missing */
+    const struct option opts[] = {
+        FLAG_DEBUG, FLAG_XATTRS, FLAG_PRINTDIR, FLAG_BUILDINDEX,
+        FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
+        FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PREFIX, FLAG_SQL_INIT,
+        FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
+        FLAG_INSERT_FILE_LINK, FLAG_INSERT_DIR, FLAG_SUSPECT_DIR,
+        FLAG_SUSPECT_FILE_LINK, FLAG_INSUSPECT, FLAG_SUSPECT_METHOD,
+        FLAG_STRIDE, FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
+        FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
+        FLAG_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE_FORMAT,
+        FLAG_DRY_RUN, FLAG_MAX_IN_DIR, FLAG_SKIP, FLAG_TARGET_MEMORY_FOOTPRINT,
+        FLAG_SUBDIR_LIMIT, FLAG_CHECK_EXTDB_VALID, FLAG_EXTERNAL_ATTACH,
+        FLAG_SWAP_PREFIX, FLAG_SUBTREE_LIST,
+        #ifdef HAVE_ZLIB
+        FLAG_COMPRESS,
+        #endif
+        FLAG_END
+    };
 
     const char *argv[] = {
         exec.c_str(),
@@ -360,7 +378,16 @@ TEST(parse_cmd_line, debug) {
 }
 
 TEST(parse_cmd_line, flags) {
-    const char opts[] = "xPburRYZmwjX" COMPRESS_OPT "q";
+    const struct option opts[] = {
+        FLAG_XATTRS, FLAG_PRINTDIR, FLAG_BUILDINDEX, FLAG_PREFIX,
+        FLAG_INSERT_FILE_LINK, FLAG_INSERT_DIR, FLAG_SUSPECT_DIR,
+        FLAG_SUSPECT_FILE_LINK, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
+        FLAG_TERSE_FORMAT, FLAG_DRY_RUN,
+        #ifdef HAVE_ZLIB
+        FLAG_COMPRESS,
+        #endif
+        FLAG_CHECK_EXTDB_VALID, FLAG_END
+    };
 
     const char *argv[] = {
         exec.c_str(),
@@ -392,7 +419,16 @@ TEST(parse_cmd_line, flags) {
 }
 
 TEST(parse_cmd_line, options) {
-    const char opts[] = "a:n:d:i:t:I:T:S:E:F:W:A:g:c:y:z:J:K:G:B:f:L:k:M:C:Q:s:D:";
+    const struct option opts[] = {
+        FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
+        FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT,
+        FLAG_SQL_FIN, FLAG_INSUSPECT, FLAG_SUSPECT_METHOD, FLAG_STRIDE,
+        FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
+        FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_BUFFER_SIZE, FLAG_FORMAT,
+        FLAG_MAX_IN_DIR, FLAG_SKIP, FLAG_TARGET_MEMORY_FOOTPRINT,
+        FLAG_SUBDIR_LIMIT, FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX,
+        FLAG_SUBTREE_LIST, FLAG_END
+    };
 
     const char *argv[] = {
         exec.c_str(),
@@ -434,7 +470,7 @@ TEST(parse_cmd_line, options) {
 }
 
 TEST(parse_cmd_line, delimiter) {
-    const char opts[] = "d:";
+    const struct option opts[] = { FLAG_DELIM, FLAG_END };
 
     // x -> \x1E
     {
@@ -474,7 +510,7 @@ TEST(parse_cmd_line, delimiter) {
 }
 
 TEST(parse_cmd_line, output_arguments) {
-    const char opts[] = "o:O:";
+    const struct option opts[] = { FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_END };
 
     // neither
     {
@@ -563,6 +599,7 @@ TEST(parse_cmd_line, output_arguments) {
 }
 
 TEST(parse_cmd_line, positional) {
+    const struct option opt[] = { FLAG_END };
     const std::string pos1 = "positional1";
     const std::string pos2 = "positional2";
 
@@ -576,7 +613,7 @@ TEST(parse_cmd_line, positional) {
 
     struct input in;
     // 1, since no options were read
-    ASSERT_EQ(parse_cmd_line(argc, (char **) argv, "", 0, "", &in), 1);
+    ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), 1);
 
     check_input(&in, false, false, false, false, RUN_ON_ROW);
 
@@ -584,13 +621,17 @@ TEST(parse_cmd_line, positional) {
 }
 
 TEST(parse_cmd_line, unused) {
-    #define UNUSED "0"
+    #define UNUSED { "", no_argument, 0, '0' }
 
-    const char opts[] = UNUSED;
+    const struct option opts[] = {
+        UNUSED,
+        FLAG_END
+    };
 
+    char unused_opt[] = {'-', static_cast<char>(opts[0].val), '\0'};
     const char *argv[] = {
         exec.c_str(),
-        "-" UNUSED,
+        unused_opt,
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
@@ -604,13 +645,17 @@ TEST(parse_cmd_line, unused) {
 }
 
 TEST(parse_cmd_line, invalid) {
-    #define INVALID ";"
+    #define INVALID { "", no_argument, 0, ';' }
 
-    const char opts[] = INVALID;
+    const struct option opts[] = {
+        INVALID,
+        FLAG_END
+    };
 
+    char invalid_opt[] = {'-', static_cast<char>(opts[0].val), '\0'};
     const char *argv[] = {
         exec.c_str(),
-        "-" INVALID,
+        invalid_opt,
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);

@@ -176,7 +176,7 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
     ├── dir1/ --- level 1
     │   └── file1.txt --- level 1
 
-    parallel_find -n -y 1 -z 1
+    parallel_find -n --min-level 1 --max-level 1
     The expected output is:
     root_dir/dir1
     root_dir/dir1/file1.txt
@@ -267,8 +267,12 @@ static FILE **stdout_init(struct input *in) {
 }
 
 int main(int argc, char *argv[]) {
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_FORMAT, FLAG_MIN_LEVEL,
+        FLAG_MAX_LEVEL, FLAG_FILTER_TYPE, FLAG_OUTPUT_FILE, FLAG_BUFFER_SIZE, FLAG_END
+    };
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:f:y:z:t:o:B:", 1, "input_dir...", &pa.in);
+    process_args_and_maybe_exit(options, 1, "input_dir...", &pa.in);
     int rc = 0;
 
     pa.outfiles = (pa.in.output == OUTFILE)?outfiles_init(&pa.in.outname, pa.in.maxthreads):stdout_init(&pa.in);

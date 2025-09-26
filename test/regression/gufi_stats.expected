@@ -20,8 +20,8 @@ GUFI query is
     -J 'INSERT INTO aggregate SELECT * FROM out ' \
     -K 'CREATE TABLE aggregate(name TEXT)' \
     -G 'SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '"'"'/'"'"', '"'"''"'"')) + 1 END FROM aggregate ORDER BY name ASC' \
-    -y 0 \
-    -z 0 \
+    --min-level 0 \
+    --max-level 0 \
     prefix
 1
 

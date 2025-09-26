@@ -84,8 +84,11 @@ static void sub_help(void) {
 }
 
 int main(int argc, char *argv[]) {
+    const struct option options[] = {
+        FLAG_HELP, FLAG_VERSION, FLAG_DELIM, FLAG_END
+    };
     struct input in;
-    process_args_and_maybe_exit("hvd:", 0, "[db [SQL]...]", &in);
+    process_args_and_maybe_exit(options, 0, "[db [SQL]...]", &in);
 
     const int args_left = argc - idx;
     const char *dbname = (args_left == 0)?SQLITE_MEMORY:argv[idx++];
