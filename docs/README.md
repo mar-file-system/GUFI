@@ -10,7 +10,7 @@ Dominic Manno, Jason Lee, Prajwal Challa, Qing Zheng, David Bonnie, Gary Grider,
 ## Usage
 See the root [README](/README.md#quick-start) for quick start instructions.
 
-For more detailed instructions, see the [user, administrator, and developer guides](latex) 
+For more detailed instructions, see the [user, administrator, and developer guides](latex)
 that will be placed into `docs/latex/pdfs` if building them is enabled with the CMake
 configuration `-DLATEX_BUILD=On`.
 
@@ -29,7 +29,6 @@ configuration `-DLATEX_BUILD=On`.
 ## [Executables](/src)
 - [bffuse](bffuse)
 - [bfresultfuse](bfresultfuse)
-- [bfwreaddirplus2db](bfwreaddriplus2b)
 - [dfw](dfw)
 - [gufi_dir2index](gufi_dir2index)
 - [gufi_dir2trace](gufi_dir2trace)
@@ -38,8 +37,6 @@ configuration `-DLATEX_BUILD=On`.
 - [gufi_treesummary](gufi_treesummary)
 - [make_testindex](make_testindex)
 - [querydbs](querydbs)
-- [tsmepoch2time](tsmepoch2time)
-- [tsmtime2epoch](tsmtime2epoch)
 
 ## [Running GUFI](/examples)
 - [deluidgidsummaryrecs](/examples/deluidgidsummaryrecs)
@@ -54,7 +51,6 @@ configuration `-DLATEX_BUILD=On`.
 - [listschemadb](/examples/listschemadb)
 - [listtablesdb](/examples/listtablesdb)
 - [oldbigfiles](/examples/oldbigfiles)
-- [runtsm](/examples/runtsm)
 - [userfilespacehog](/examples/userfilespacehog)
 - [userfilespacehogusesummary](/examples/userfilespacehogusesummary)
 

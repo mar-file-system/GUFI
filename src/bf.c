@@ -197,7 +197,6 @@ void print_help(const char* prog_name,
             case FLAG_DEBUG_SHORT:                   printf("  -H, --debug                       show assigned input values (debugging)"); break;
             case FLAG_VERSION_SHORT:                 printf("  -v, --version                     version"); break;
             case FLAG_PRINTDIR_SHORT:                printf("  -P                                print directories as they are encountered"); break;
-            case FLAG_BUILDINDEX_SHORT:              printf("  -b                                build GUFI index tree"); break;
             case FLAG_PROCESS_SQL_SHORT:             printf("  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
                                                             "                                    1 - skip T, run S and E whether or not a row was returned (old -a)\n"
                                                             "                                    2 - run T, S, and E whether or not a row was returned"); break;
@@ -219,7 +218,6 @@ void print_help(const char* prog_name,
             case FLAG_SUSPECT_FILE_LINK_SHORT:       printf("  -Z                                default to all files/links suspect"); break;
             case FLAG_INSUSPECT_SHORT:               printf("  -W <INSUSPECT>                    suspect input file"); break;
             case FLAG_SUSPECT_METHOD_SHORT:          printf("  -A <suspectmethod>                suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
-            case FLAG_STRIDE_SHORT:                  printf("  -g <stridesize>                   stride size for striping inodes"); break;
             case FLAG_SUSPECT_TIME_SHORT:            printf("  -c <suspecttime>                  time in seconds since epoch for suspect comparision"); break;
             case FLAG_READ_WRITE_SHORT:              printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
             case FLAG_CHECK_EXTDB_VALID_SHORT:       printf("  -q                                check that external databases are valid before tracking during indexing"); break;
@@ -292,7 +290,6 @@ void show_input(struct input* in, int retval) {
     printf("in.suspectfile              = '%d'\n",          in->suspectfile);
     printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
     printf("in.suspecttime              = '%d'\n",          in->suspecttime);
-    printf("in.stride                   = '%d'\n",          in->stride);
     printf("in.open_flags               = %d\n",            in->open_flags);
     printf("in.check_extdb_valid        = %d\n",            in->check_extdb_valid);
     size_t i = 0;
@@ -420,10 +417,6 @@ int parse_cmd_line(int                  argc,
                 in->printdir = 1;
                 break;
 
-            case FLAG_BUILDINDEX_SHORT:               // build index?
-                in->buildindex = 1;
-                break;
-
             case FLAG_PROCESS_SQL_SHORT:
                 {
                     int a = -1;
@@ -487,11 +480,11 @@ int parse_cmd_line(int                  argc,
                 INSTALL_STR(&in->sql.fin, optarg);
                 break;
 
-            case FLAG_INSERT_FILE_LINK_SHORT:     // insert files and links into db for bfwreaddirplus2db
+            case FLAG_INSERT_FILE_LINK_SHORT:     // insert files and links into db for gufi_incremental_update
                 in->insertfl = 1;
                 break;
 
-            case FLAG_INSERT_DIR_SHORT:          // insert dirs into db for bfwreaddirplus2db
+            case FLAG_INSERT_DIR_SHORT:          // insert dirs into db for gufi_incremental_update
                 in->insertdir = 1;
                 break;
 
@@ -510,10 +503,6 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_SUSPECT_METHOD_SHORT:
                 INSTALL_INT(&in->suspectmethod, optarg, 0, 3, "-A", &retval);
-                break;
-
-            case FLAG_STRIDE_SHORT:
-                INSTALL_INT(&in->stride, optarg, 1, MAXSTRIDE, "-g", &retval);
                 break;
 
             case FLAG_SUSPECT_TIME_SHORT:

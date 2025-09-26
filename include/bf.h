@@ -84,7 +84,6 @@ extern "C" {
 #define MAXPATH 4096
 #define MAXSQL 8192
 #define MAXRECS 100000
-#define MAXSTRIDE 1000000000   /* maximum records per stripe */
 #define DBNAME "db.db"
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
 #define GETLINE_DEFAULT_SIZE 750 /* magic number */
@@ -103,9 +102,6 @@ extern "C" {
 
 #define FLAG_PRINTDIR_SHORT 'P'
 #define FLAG_PRINTDIR {"", no_argument, NULL, FLAG_PRINTDIR_SHORT}
-
-#define FLAG_BUILDINDEX_SHORT 'b'
-#define FLAG_BUILDINDEX {"", no_argument, NULL, FLAG_BUILDINDEX_SHORT}
 
 #define FLAG_PROCESS_SQL_SHORT 'a'
 #define FLAG_PROCESS_SQL {"", required_argument, NULL, FLAG_PROCESS_SQL_SHORT}
@@ -167,9 +163,6 @@ extern "C" {
 
 #define FLAG_SUSPECT_METHOD_SHORT 'A'
 #define FLAG_SUSPECT_METHOD {"", required_argument, NULL, FLAG_SUSPECT_METHOD_SHORT}
-
-#define FLAG_STRIDE_SHORT 'g'
-#define FLAG_STRIDE {"", required_argument, NULL, FLAG_STRIDE_SHORT}
 
 #define FLAG_SUSPECT_TIME_SHORT 'c'
 #define FLAG_SUSPECT_TIME {"", required_argument, NULL, FLAG_SUSPECT_TIME_SHORT}
@@ -437,7 +430,6 @@ struct input {
     refstr_t insuspect;            /* added for bfwreaddirplus2db input path for suspects file */
     int  suspectfile;              /* added for bfwreaddirplus2db flag for if we are processing suspects file */
     int  suspectmethod;            /* added for bfwreaddirplus2db flag for if we are processing suspects what method do we use */
-    int  stride;                   /* added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping) */
     int  suspecttime;              /* added for bfwreaddirplus2db time for suspect comparison in seconds since epoch */
     size_t min_level;              /* minimum level of recursion to reach before running queries */
     size_t max_level;              /* maximum level of recursion to run queries on */
@@ -633,7 +625,7 @@ struct entry_data {
     char          osstext2[MAXXATTR];
     char          pinodec[128];
 
-    /* bfwreaddirplus2db */
+    /* gufi_incremental_update */
     int           suspect;
     time_t        suspect_time;
 };

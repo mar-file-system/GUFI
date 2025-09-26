@@ -76,8 +76,6 @@ add_subdirectory(unit)
 foreach(TEST
     bfwiflat2gufitest
     dfw2gufitest
-    gitest.py
-    gitestcomplex.py
     gufitest.py
     robinhoodin
     runbffuse
@@ -85,8 +83,6 @@ foreach(TEST
     runbfqforfuse
     runbfti
     runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
     rundfw
     rungenuidgidsummaryavoidentriesscan
     rungroupfilespacehog
