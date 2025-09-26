@@ -77,7 +77,6 @@ static const std::string H = "-H";
 static const std::string v = "-v";
 static const std::string x = "-x";
 static const std::string P = "-P";
-static const std::string b = "-b";
 static const std::string a = "-a"; static const std::string a_arg = "2";
 static const std::string n = "-n"; static const std::string n_arg = "1";
 static const std::string d = "-d"; static const std::string d_arg = "|";
@@ -94,7 +93,6 @@ static const std::string Y = "-Y";
 static const std::string Z = "-Z";
 static const std::string W = "-W"; static const std::string W_arg = "W arg";
 static const std::string A = "-A"; static const std::string A_arg = "1";
-static const std::string g = "-g"; static const std::string g_arg = "1";
 static const std::string c = "-c"; static const std::string c_arg = "1";
 static const std::string J = "-J"; static const std::string J_arg = "J arg";
 static const std::string K = "-K"; static const std::string K_arg = "K arg";
@@ -149,7 +147,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
 
     EXPECT_EQ(in->process_xattrs,                     flags);
     EXPECT_EQ(in->printdir,                           flags);
-    EXPECT_EQ(in->buildindex,                         flags);
     EXPECT_EQ(in->types.print_tlv,                    flags);
     EXPECT_EQ(in->insertfl,                           flags);
     EXPECT_EQ(in->insertdir,                          flags);
@@ -177,7 +174,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->insuspect.data,                 W_arg.c_str());
         EXPECT_EQ(in->suspectfile,                    1);
         EXPECT_EQ(in->suspectmethod,                  1);
-        EXPECT_EQ(in->stride,                         1);
         EXPECT_EQ(in->suspecttime,                    1);
         EXPECT_EQ(in->min_level,                      (std::size_t) 1);
         EXPECT_EQ(in->max_level,                      (std::size_t) 1);
@@ -223,7 +219,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->insuspect.data,                 nullptr);
         EXPECT_EQ(in->suspectfile,                    0);
         EXPECT_EQ(in->suspectmethod,                  0);
-        EXPECT_EQ(in->stride,                         0);
         EXPECT_NE(in->suspecttime,                    0);
         EXPECT_EQ(in->min_level,                      (std::size_t) 0);
         EXPECT_EQ(in->max_level,                      (std::size_t) -1);
@@ -295,13 +290,13 @@ TEST(parse_cmd_line, version) {
 
 TEST(parse_cmd_line, debug) {
     const struct option opts[] = {
-        FLAG_DEBUG, FLAG_XATTRS, FLAG_PRINTDIR, FLAG_BUILDINDEX,
+        FLAG_DEBUG, FLAG_XATTRS, FLAG_PRINTDIR,
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
         FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SQL_INIT,
         FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
         FLAG_INSERT_FILE_LINK, FLAG_INSERT_DIR, FLAG_SUSPECT_DIR,
         FLAG_SUSPECT_FILE_LINK, FLAG_INSUSPECT, FLAG_SUSPECT_METHOD,
-        FLAG_STRIDE, FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
+        FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
         FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
         FLAG_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE_FORMAT,
         FLAG_DRY_RUN, FLAG_MAX_IN_DIR, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY_FOOTPRINT,
@@ -318,7 +313,6 @@ TEST(parse_cmd_line, debug) {
         H.c_str(),
         x.c_str(),
         P.c_str(),
-        b.c_str(),
         a.c_str(), a_arg.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
@@ -334,7 +328,6 @@ TEST(parse_cmd_line, debug) {
         Z.c_str(),
         W.c_str(), W_arg.c_str(),
         A.c_str(), A_arg.c_str(),
-        g.c_str(), g_arg.c_str(),
         c.c_str(), c_arg.c_str(),
         min_level.c_str(), min_level_arg.c_str(),
         max_level.c_str(), max_level_arg.c_str(),
@@ -379,7 +372,7 @@ TEST(parse_cmd_line, debug) {
 
 TEST(parse_cmd_line, flags) {
     const struct option opts[] = {
-        FLAG_XATTRS, FLAG_PRINTDIR, FLAG_BUILDINDEX, FLAG_PRINT_TLV,
+        FLAG_XATTRS, FLAG_PRINTDIR, FLAG_PRINT_TLV,
         FLAG_INSERT_FILE_LINK, FLAG_INSERT_DIR, FLAG_SUSPECT_DIR,
         FLAG_SUSPECT_FILE_LINK, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
         FLAG_TERSE_FORMAT, FLAG_DRY_RUN,
@@ -394,7 +387,6 @@ TEST(parse_cmd_line, flags) {
         exec.c_str(),
         x.c_str(),
         P.c_str(),
-        b.c_str(),
         print_tlv.c_str(),
         r.c_str(),
         R.c_str(),
@@ -423,7 +415,7 @@ TEST(parse_cmd_line, options) {
     const struct option opts[] = {
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
         FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT,
-        FLAG_SQL_FIN, FLAG_INSUSPECT, FLAG_SUSPECT_METHOD, FLAG_STRIDE,
+        FLAG_SQL_FIN, FLAG_INSUSPECT, FLAG_SUSPECT_METHOD,
         FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_BUFFER_SIZE, FLAG_FORMAT,
         FLAG_MAX_IN_DIR, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY_FOOTPRINT,
@@ -444,7 +436,6 @@ TEST(parse_cmd_line, options) {
         F.c_str(), F_arg.c_str(),
         W.c_str(), W_arg.c_str(),
         A.c_str(), A_arg.c_str(),
-        g.c_str(), g_arg.c_str(),
         c.c_str(), c_arg.c_str(),
         min_level.c_str(), min_level_arg.c_str(),
         max_level.c_str(), max_level_arg.c_str(),

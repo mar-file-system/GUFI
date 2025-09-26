@@ -69,7 +69,6 @@ set(SERVER_CLIENT_MAN_PAGES
 )
 
 set(SERVER_MAN_PAGES
-  bfwreaddirplus2db.1
   gufi_dir2index.1
   gufi_dir2trace.1
   gufi_incremental_update.1
