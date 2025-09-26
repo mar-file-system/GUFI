@@ -6,8 +6,8 @@ options:
   -v                     version
   -n <threads>           number of threads
   -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
-  -r                     insert files and links into db (for bfwreaddirplus2db)
-  -R                     insert dires into db (for bfwreaddirplus2db)
+  -r                     insert files and links into db (for gufi_incremental_update)
+  -R                     insert dires into db (for gufi_incremental_update)
   -Y                     default to all directories suspect
   -Z                     default to all files/links suspect
   -W <INSUSPECT>         suspect input file

@@ -72,7 +72,6 @@ runbfti - run bfti and create a tree index at the top of testdirdup
 runbfq - run various queries on testdirdup/testdir gufi tree including output files and output dbs
 runquerydb - do various queries on one of the gufi dbs in testdirdup/testdir
 runquerydbn - do various queries on outdb.* output dbs using the union capability of querydbn
-runbfwreaddirplus2db - run tests that walk trees using readdirplus and write path,inode,pinode etc. to output dbs
 runbfqforfuse - run bfwi to create gufi then run bfq to create an output db and then run bfresultfuse on that output db
 runbffuse - run bfwi to create gufi then run bfq to show you have a gufi then run bffuse over that gufi
 

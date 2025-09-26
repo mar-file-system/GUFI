@@ -77,7 +77,6 @@ static const std::string H = "-H";
 static const std::string v = "-v";
 static const std::string x = "-x";
 static const std::string P = "-P";
-static const std::string b = "-b";
 static const std::string a = "-a"; static const std::string a_arg = "2";
 static const std::string n = "-n"; static const std::string n_arg = "1";
 static const std::string d = "-d"; static const std::string d_arg = "|";
@@ -95,7 +94,6 @@ static const std::string Y = "-Y";
 static const std::string Z = "-Z";
 static const std::string W = "-W"; static const std::string W_arg = "W arg";
 static const std::string A = "-A"; static const std::string A_arg = "1";
-static const std::string g = "-g"; static const std::string g_arg = "1";
 static const std::string c = "-c"; static const std::string c_arg = "1";
 static const std::string y = "-y"; static const std::string y_arg = "1";
 static const std::string z = "-z"; static const std::string z_arg = "1";
@@ -148,7 +146,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
 
     EXPECT_EQ(in->process_xattrs,                     flags);
     EXPECT_EQ(in->printdir,                           flags);
-    EXPECT_EQ(in->buildindex,                         flags);
     EXPECT_EQ(in->types.prefix,                       flags);
     EXPECT_EQ(in->insertfl,                           flags);
     EXPECT_EQ(in->insertdir,                          flags);
@@ -176,7 +173,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->insuspect.data,                 W_arg.c_str());
         EXPECT_EQ(in->suspectfile,                    1);
         EXPECT_EQ(in->suspectmethod,                  1);
-        EXPECT_EQ(in->stride,                         1);
         EXPECT_EQ(in->suspecttime,                    1);
         EXPECT_EQ(in->min_level,                      (std::size_t) 1);
         EXPECT_EQ(in->max_level,                      (std::size_t) 1);
@@ -222,7 +218,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->insuspect.data,                 nullptr);
         EXPECT_EQ(in->suspectfile,                    0);
         EXPECT_EQ(in->suspectmethod,                  0);
-        EXPECT_EQ(in->stride,                         0);
         EXPECT_NE(in->suspecttime,                    0);
         EXPECT_EQ(in->min_level,                      (std::size_t) 0);
         EXPECT_EQ(in->max_level,                      (std::size_t) -1);
@@ -300,7 +295,6 @@ TEST(parse_cmd_line, debug) {
         H.c_str(),
         x.c_str(),
         P.c_str(),
-        b.c_str(),
         a.c_str(), a_arg.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
@@ -316,7 +310,6 @@ TEST(parse_cmd_line, debug) {
         Z.c_str(),
         W.c_str(), W_arg.c_str(),
         A.c_str(), A_arg.c_str(),
-        g.c_str(), g_arg.c_str(),
         c.c_str(), c_arg.c_str(),
         y.c_str(), y_arg.c_str(),
         z.c_str(), z_arg.c_str(),
@@ -366,7 +359,6 @@ TEST(parse_cmd_line, flags) {
         exec.c_str(),
         x.c_str(),
         P.c_str(),
-        b.c_str(),
         u.c_str(),
         r.c_str(),
         R.c_str(),
@@ -406,7 +398,6 @@ TEST(parse_cmd_line, options) {
         F.c_str(), F_arg.c_str(),
         W.c_str(), W_arg.c_str(),
         A.c_str(), A_arg.c_str(),
-        g.c_str(), g_arg.c_str(),
         c.c_str(), c_arg.c_str(),
         y.c_str(), y_arg.c_str(),
         z.c_str(), z_arg.c_str(),
