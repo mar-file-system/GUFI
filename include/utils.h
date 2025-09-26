@@ -173,7 +173,7 @@ int doing_partial_walk(struct input *in, const size_t root_count);
 
 /*
  * attach directory paths directly to the root path and
- * run starting at -y instead of walking to -y first
+ * run starting at --min-level instead of walking to --min-level first
  *
  * used by gufi_dir2index and gufi_dir2trace
  */

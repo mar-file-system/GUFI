@@ -68,7 +68,7 @@ def subtree_cmd(args, filename, _idx, _target):
     return [
         args.gufi_unrollup,
         '-n', str(args.threads),
-        '-y', str(args.level),
+        '--min-level', str(args.level),
         '-D', filename,
         args.GUFI_tree
     ]
@@ -77,7 +77,7 @@ def top_cmd(args, _target):
     return [
         args.gufi_unrollup,
         '-n', str(args.threads),
-        '-z', str(args.level),
+        '--max-level', str(args.level),
         args.GUFI_tree
     ]
 

@@ -86,7 +86,7 @@ DIFF_FLAGS="--side-by-side --width 100 --expand-tabs"
 # shellcheck disable=SC2050
 if [[ "@DIFF@" =~ .*colordiff ]]
 then
-    DIFF_FLAGS="${DIFF_FLAGS} --color=no"
+    DIFF_FLAGS="${DIFF_FLAGS} --color=never"
 fi
 
 (

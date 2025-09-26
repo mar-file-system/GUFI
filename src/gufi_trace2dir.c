@@ -201,8 +201,11 @@ void sub_help(void) {
 }
 
 int main(int argc, char * argv[]) {
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_DELIM, FLAG_XATTRS, FLAG_END
+    };
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:d:x", 2, "trace_file... output_dir", &pa.in);
+    process_args_and_maybe_exit(options, 2, "trace_file... output_dir", &pa.in);
 
     // parse positional args, following the options
     INSTALL_STR(&pa.in.nameto, argv[argc - 1]);

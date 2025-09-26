@@ -218,8 +218,16 @@ static void sub_help(void) {
 }
 
 int main(int argc, char *argv[]) {
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_XATTRS, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
+        FLAG_DELIM, FLAG_SKIP, FLAG_TARGET_MEMORY_FOOTPRINT, FLAG_SWAP_PREFIX, FLAG_SUBDIR_LIMIT,
+        #ifdef HAVE_ZLIB
+        FLAG_COMPRESS,
+        #endif
+        FLAG_CHECK_EXTDB_VALID, FLAG_SUBTREE_LIST, FLAG_END
+    };
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:xy:z:d:k:M:s:C:" COMPRESS_OPT "qD:", 2, "input_dir... output_prefix", &pa.in);
+    process_args_and_maybe_exit(options, 2, "input_dir... output_prefix", &pa.in);
 
     /* parse positional args, following the options */
     INSTALL_STR(&pa.in.nameto, argv[argc - 1]);

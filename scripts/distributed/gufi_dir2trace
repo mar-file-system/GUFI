@@ -69,7 +69,7 @@ def subtree_cmd(args, filename, idx, _target):
         args.gufi_dir2trace,
         '-d', args.delim,
         '-n', str(args.threads),
-        '-y', str(args.level),
+        '--min-level', str(args.level),
         '-D', filename,
         args.input_dir,
         '{0}.{1}'.format(args.output_prefix, idx),
@@ -80,7 +80,7 @@ def top_cmd(args, _target):
         args.gufi_dir2trace,
         '-d', args.delim,
         '-n', str(args.threads),
-        '-z', str(args.level - 1),
+        '--max-level', str(args.level - 1),
         args.input_dir,
         args.output_prefix,
     ]

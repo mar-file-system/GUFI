@@ -83,7 +83,7 @@ OF SUCH DAMAGE.
 
 /*
  * attach directory paths directly to the root path and
- * run starting at -y instead of walking to -y first
+ * run starting at --min-level instead of walking to --min-level first
  */
 int gqw_process_subtree_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
     FILE *file = fopen(in->subtree_list.data, "r");
@@ -133,7 +133,7 @@ int gqw_process_subtree_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
 
         subtree_root->work.root_basename_len = root->work.basename_len;
 
-        /* go directly to -y */
+        /* go directly to --min-level */
         subtree_root->work.level = in->min_level;
 
         QPTPool_enqueue(ctx, 0, processdir, subtree_root);
@@ -157,8 +157,20 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT,
+        FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_TERSE_FORMAT, FLAG_OUTPUT_FILE, FLAG_DELIM,
+        FLAG_OUTPUT_DB, FLAG_PREFIX, FLAG_SQL_INIT, FLAG_SQL_FIN, FLAG_MIN_LEVEL,
+        FLAG_MAX_LEVEL, FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
+        FLAG_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_XATTRS, FLAG_SKIP, FLAG_TARGET_MEMORY_FOOTPRINT,
+        FLAG_SWAP_PREFIX, FLAG_PATH,
+        #ifdef HAVE_ZLIB
+        FLAG_COMPRESS,
+        #endif
+        FLAG_EXTERNAL_ATTACH, FLAG_SUBTREE_LIST, FLAG_END
+    };
     struct input in;
-    process_args_and_maybe_exit("hHvT:S:E:a:n:jo:d:O:uI:F:y:z:J:K:G:mB:wxk:M:s:p:" COMPRESS_OPT "Q:D:", 1, "GUFI_tree ...", &in);
+    process_args_and_maybe_exit(options, 1, "GUFI_tree ...", &in);
 
     if (handle_sql(&in) != 0) {
         input_fini(&in);

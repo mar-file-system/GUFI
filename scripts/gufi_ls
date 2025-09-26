@@ -288,8 +288,8 @@ def run(argv, config_path):
         ]
 
         if not args.recursive:
-            query_cmd += ['-y', '0',
-                          '-z', '2']
+            query_cmd += ['--min-level', '0',
+                          '--max-level', '2']
 
         columns = [
             'fullpath', 'name', 'type', 'inode', 'nlink', 'size',

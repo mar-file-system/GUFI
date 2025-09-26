@@ -2,21 +2,21 @@
 $ gufi_dir2trace
 usage: gufi_dir2trace [options] input_dir... output_prefix
 options:
-  -h                     help
-  -H                     show assigned input values (debugging)
-  -v                     version
-  -n <threads>           number of threads
-  -x                     index/query xattrs
-  -y <min level>         minimum level to go down
-  -z <max level>         maximum level to go down
-  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
-  -k <filename>          file containing directory names to skip
-  -M <bytes>             target memory footprint
-  -s <path>              File name prefix for swap files
-  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
-  -e                     compress work items
-  -q                     check that external databases are valid before tracking during indexing
-  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+  -n, --threads <threads>           number of threads
+  -x, --xattrs                      index/query xattrs
+      --min-level <min level>       minimum level to go down
+      --max-level <max level>       maximum level to go down
+  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
+  -k, --skip <filename>             file containing directory names to skip
+  -M <bytes>                        target memory footprint
+  -s, --swap-prefix <path>          File name prefix for swap files
+  -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
+  -e                                compress work items
+  -q                                check that external databases are valid before tracking during indexing
+  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level
 
 input_dir...         walk one or more trees to produce trace file
 output_prefix        prefix of output files (<prefix>.<tid>)
@@ -100,7 +100,7 @@ $ cat "distributed.0"
 directory
 empty_directory
 
-$ gufi_dir2trace -d "|" -n 2 -D "distributed.0" -y 1 "prefix" "trace"
+$ gufi_dir2trace -d "|" -n 2 -D "distributed.0" --min-level 1 "prefix" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
@@ -125,7 +125,7 @@ $ cat "distributed.1"
 leaf_directory
 unusual#? directory ,
 
-$ gufi_dir2trace -d "|" -n 2 -D "distributed.1" -y 1 "prefix" "trace"
+$ gufi_dir2trace -d "|" -n 2 -D "distributed.1" --min-level 1 "prefix" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
@@ -143,17 +143,17 @@ prefix/unusual#? directory ,/unusual, name?#
 
 # ######################################
 # combine partial indexing
-$ gufi_dir2trace -d "|" -n 2 -D "distributed.0" -y 1 "prefix" "first"
+$ gufi_dir2trace -d "|" -n 2 -D "distributed.0" --min-level 1 "prefix" "first"
 Creating GUFI Traces first with 2 threads
 Total Dirs:          3
 Total Files:         5
 
-$ gufi_dir2trace -d "|" -n 2 -D "distributed.1" -y 1 "prefix" "second"
+$ gufi_dir2trace -d "|" -n 2 -D "distributed.1" --min-level 1 "prefix" "second"
 Creating GUFI Traces second with 2 threads
 Total Dirs:          2
 Total Files:         3
 
-$ gufi_dir2trace -d "|" -n 2 -z 0 "prefix" "trace"
+$ gufi_dir2trace -d "|" -n 2 --max-level 0 "prefix" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
@@ -264,7 +264,7 @@ $ gufi_dir2trace -n 18446744073709551615 "prefix" "trace"
 Could not allocate space for 18446744073709551615 files
 
 # multiple input directories are not allowed for partial indexing
-$ gufi_dir2trace -n 2 -D "distributed.1" -y 1 "prefix" "prefix" "trace"
+$ gufi_dir2trace -n 2 -D "distributed.1" --min-level 1 "prefix" "prefix" "trace"
 Error: When -D is passed in, only one source directory may be specified
 
 write to stdout with more than 1 thread is not allowed

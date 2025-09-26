@@ -136,8 +136,8 @@ def depth(config, args, where):
     ]
 
     if not args.recursive:
-        queries += ['-y', '0',
-                    '-z', '0']
+        queries += ['--min-level', '0',
+                    '--max-level', '0']
 
     return queries
 
@@ -184,8 +184,8 @@ def filesize(config, args, where):
     ]
 
     if not args.recursive:
-        queries += ['-y', '0',
-                    '-z', '0']
+        queries += ['--min-level', '0',
+                    '--max-level', '0']
 
     return queries
 
@@ -208,8 +208,8 @@ def entries_count(config, args, where, type): # pylint: disable=redefined-builti
     ]
 
     if not args.recursive:
-        queries += ['-y', '0',
-                    '-z', '0']
+        queries += ['--min-level', '0',
+                    '--max-level', '0']
 
     return queries
 
@@ -249,7 +249,7 @@ def extensions(_config, args, where):
     ]
 
     if args.recursive is False:
-        queries += ['-z', '0']
+        queries += ['--max-level', '0']
 
     return queries
 
@@ -450,8 +450,8 @@ def dircount(config, args, where):
 
     if not args.recursive:
         queries += [
-            '-y', '0',
-            '-z', '2']
+            '--min-level', '0',
+            '--max-level', '2']
 
     return queries
 
@@ -547,8 +547,8 @@ def leaf_dirs(config, args, where):
     ]
 
     if not args.recursive:
-        queries += ['-y', '1',
-                    '-z', '2']
+        queries += ['--min-level', '1',
+                    '--max-level', '2']
 
     return queries
 
@@ -595,8 +595,8 @@ def leaf_depth(config, args, where):
     ]
 
     if not args.recursive:
-        queries += ['-y', '1',
-                    '-z', '2']
+        queries += ['--min-level', '1',
+                    '--max-level', '2']
 
     return queries
 
@@ -642,8 +642,8 @@ def leaf(config, args, where, type): # pylint: disable=redefined-builtin
     ]
 
     if not args.recursive:
-        queries += ['-y', '1',
-                    '-z', '2']
+        queries += ['--min-level', '1',
+                    '--max-level', '2']
 
     return queries
 
@@ -1050,7 +1050,7 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
     ]
 
     if not args.recursive and not args.cumulative:
-        queries += ['-z', '0']
+        queries += ['--max-level', '0']
 
     return queries
 

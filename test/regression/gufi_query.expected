@@ -2,42 +2,42 @@
 $ gufi_query
 usage: gufi_query [options] GUFI_tree ...
 options:
-  -h                     help
-  -H                     show assigned input values (debugging)
-  -v                     version
-  -T <SQL_tsum>          SQL for tree-summary table
-  -S <SQL_sum>           SQL for summary table
-  -E <SQL_ent>           SQL for entries table
-  -a <0|1|2>             0 - if returned row, run next SQL, else stop (continue descent) (default)
-                         1 - skip T, run S and E whether or not a row was returned (old -a)
-                         2 - run T, S, and E whether or not a row was returned
-  -n <threads>           number of threads
-  -j                     print the information in terse form
-  -o <out_fname>         output file (one-per-thread, with thread-id suffix)
-  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
-  -O <out_DB>            output DB
-  -u                     prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
-  -I <SQL_init>          SQL init
-  -F <SQL_fin>           SQL cleanup
-  -y <min level>         minimum level to go down
-  -z <max level>         maximum level to go down
-  -J <SQL_interm>        SQL for intermediate results
-  -K <create aggregate>  SQL to create the final aggregation table
-  -G <SQL_aggregate>     SQL for aggregated results
-  -m                     Keep mtime and atime same on the database files
-  -B <buffer size>       size of each thread's output buffer in bytes
-  -w                     open the database files in read-write mode instead of read only mode
-  -x                     index/query xattrs
-  -k <filename>          file containing directory names to skip
-  -M <bytes>             target memory footprint
-  -s <path>              File name prefix for swap files
-  -p <path>              Source path prefix
-  -e                     compress work items
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+  -T <SQL_tsum>                     SQL for tree-summary table
+  -S <SQL_sum>                      SQL for summary table
+  -E <SQL_ent>                      SQL for entries table
+  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)
+                                    1 - skip T, run S and E whether or not a row was returned (old -a)
+                                    2 - run T, S, and E whether or not a row was returned
+  -n, --threads <threads>           number of threads
+  -j, --terse-form                  print the information in terse form
+  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
+  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
+  -O, --output-db <out_DB>          output DB
+  -u                                prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
+  -I <SQL_init>                     SQL init
+  -F <SQL_fin>                      SQL cleanup
+      --min-level <min level>       minimum level to go down
+      --max-level <max level>       maximum level to go down
+  -J <SQL_interm>                   SQL for intermediate results
+  -K <create aggregate>             SQL to create the final aggregation table
+  -G <SQL_aggregate>                SQL for aggregated results
+  -m                                Keep mtime and atime same on the database files
+  -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes
+  -w, --read-write                  open the database files in read-write mode instead of read only mode
+  -x, --xattrs                      index/query xattrs
+  -k, --skip <filename>             file containing directory names to skip
+  -M <bytes>                        target memory footprint
+  -s, --swap-prefix <path>          File name prefix for swap files
+  -p, --path <path>                 Source path prefix for %s in SQL
+  -e                                compress work items
   -Q <basename>
      <table>
      <template>.<table>
-     <view>              External database file basename, per-attach table name, template + table name, and the resultant view
-  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
+     <view>                         External database file basename, per-attach table name, template + table name, and the resultant view
+  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level
 
 GUFI_tree        find GUFI tree here
 
@@ -242,7 +242,7 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # limit tree traversal to directories at level 1 (missing prefix/ and prefix/directory/subdirectory/)
-$ gufi_query -d " " -n 2 -y 1 -z 1 -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+$ gufi_query -d " " -n 2 --min-level 1 --max-level 1 -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
 prefix/directory
 prefix/directory/executable
 prefix/directory/readonly
@@ -269,7 +269,7 @@ directory
 empty_directory
 
 # limit tree traversal to some directories under at level 1 (only prefix/directory and prefix/empty_directory)
-$ gufi_query -d " " -n 2 -y 1 -D "distributed.0" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+$ gufi_query -d " " -n 2 --min-level 1 -D "distributed.0" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
 prefix/directory
 prefix/directory/executable
 prefix/directory/readonly
@@ -392,7 +392,7 @@ $ gufi_query -n 18446744073709551615 "prefix"
 Error: Could not allocate 18446744073709551615 thread structures
 
 # Bad user data key
-$ gufi_query -d " " -z 0 -E "SELECT {abc}, {def;" "prefix"
+$ gufi_query -d " " --max-level 0 -E "SELECT {abc}, {def;" "prefix"
 Error: Failed to do string replacements for -E
 Error: replacement key not found: abc
 Warning: Could not find stop character for user string key starting at index 14 of "SELECT {abc}, {def;"
@@ -536,6 +536,6 @@ $ gufi_query -d " " -m -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrp
 Could not database file's timestamps "prefix/db.db": No such file or directory (2)
 
 # multiple input directories are not allowed for partial querying
-$ gufi_query -n 2 -D "distributed.0" -y 1 "search" "search"
+$ gufi_query -n 2 -D "distributed.0" --min-level 1 "search" "search"
 Error: When -D is passed in, only one root directory may be specified
 

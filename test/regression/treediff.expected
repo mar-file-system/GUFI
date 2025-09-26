@@ -1,11 +1,11 @@
 $ treediff -h
 usage: treediff [options] lhs rhs
 options:
-  -h                     help
-  -H                     show assigned input values (debugging)
-  -n <threads>           number of threads
-  -z <max level>         maximum level to go down
-  -k <filename>          file containing directory names to skip
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -n, --threads <threads>           number of threads
+      --max-level <max level>       maximum level to go down
+  -k, --skip <filename>             file containing directory names to skip
 
 lhs               starting path of tree used on left hand side of this comparision
 rhs               starting path of tree used on right hand side of this comparision
@@ -34,7 +34,7 @@ prefix/new_name
 prefix/xyz
 
 # Not enough levels to show differences
-$ treediff -z 0 "prefix" "prefix"
+$ treediff --max-level 0 "prefix" "prefix"
 
 # Bad left hand path
 $ treediff "" "search"

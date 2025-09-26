@@ -926,8 +926,13 @@ int main(int argc, char *argv[]) {
     struct start_end runtime;
     clock_gettime(CLOCK_MONOTONIC, &runtime.start);
 
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_MAX_IN_DIR,
+        FLAG_DRY_RUN, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,FLAG_SUBTREE_LIST,
+        FLAG_ALREADY_PROCESSED, FLAG_END
+    };
     struct PoolArgs pa;
-    process_args_and_maybe_exit("hHvn:L:Xy:z:D:l", 1, "GUFI_tree ...", &pa.in);
+    process_args_and_maybe_exit(options, 1, "GUFI_tree ...", &pa.in);
 
     init_template_db(&pa.xattr_template);
     if (create_xattrs_template(&pa.xattr_template) != 0) {

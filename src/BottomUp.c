@@ -588,7 +588,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       void *extra_args) {
     if (min_level && subtree_list->data && subtree_list->len) {
         if (root_count > 1) {
-            fprintf(stderr, "Error: Only one root may be provided when a -y and -D are both provided\n");
+            fprintf(stderr, "Error: Only one root may be provided when a --min-level and -D are both provided\n");
             return -1;
         }
     }

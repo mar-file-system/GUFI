@@ -359,8 +359,12 @@ int main(int argc, char *argv[]) {
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
+  const struct option options[] = {
+    FLAG_HELP, FLAG_DEBUG, FLAG_THREADS, FLAG_DELIM, FLAG_STRIDE, FLAG_END
+  };
   struct input in;
-  int idx = parse_cmd_line(argc, argv, "hHn:d:g:", 1, "input_dir", &in);
+  int idx = parse_cmd_line(argc, argv, options, 1, "input_dir", &in);
+
   lastrun = fopen(".lastrun", "r");
   if (lastrun == NULL) {
     intime=atoll(pastsec);

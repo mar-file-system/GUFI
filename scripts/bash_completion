@@ -90,7 +90,7 @@ __gufi() {
         # return all entries in the directory and directory names in subdirectories
         matches=$("${gufi_query}" \
             -a 1 \
-            -z 2 \
+            --max-level 2 \
             -d $' ' \
             -I "CREATE TABLE out(name TEXT);" \
             -S "INSERT INTO out SELECT name || '/' FROM summary WHERE (level() == 1);" \
@@ -117,7 +117,7 @@ __gufi() {
         # search the index for matches on the name
         matches=$("${gufi_query}" \
             -a 1 \
-            -z 2 \
+            --max-level 2 \
             -d " " \
             -I "CREATE TABLE out(name TEXT);" \
             -S "INSERT INTO out SELECT name || '/' FROM summary WHERE (name REGEXP '^${name}') AND (level() == 1);" \

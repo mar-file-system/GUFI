@@ -82,7 +82,7 @@ def subtree_cmd(args, filename, idx, target):
         args.gufi_query,
         '-n', str(args.threads),
         '-d', str(args.delim),
-        '-y', str(args.level),
+        '--min-level', str(args.level),
         '-D', filename,
     ]
 
@@ -98,7 +98,7 @@ def top_cmd(args, target):
         args.gufi_query,
         '-n', str(args.threads),
         '-d', str(args.delim),
-        '-z', str(args.level - 1),
+        '--max-level', str(args.level - 1),
     ]
 
     if args.distributor == 'ssh':

@@ -968,7 +968,7 @@ int doing_partial_walk(struct input *in, const size_t root_count) {
 
 /*
  * attach directory paths directly to the root path and
- * run starting at -y instead of walking to -y first
+ * run starting at --min-level instead of walking to --min-level first
  */
 ssize_t process_subtree_list(struct input *in, struct work *root,
                              QPTPool_t *ctx, QPTPool_f func) {
@@ -1018,7 +1018,7 @@ ssize_t process_subtree_list(struct input *in, struct work *root,
         /* remove trailing slashes (+ 1 to keep at least 1 character) */
         subtree_root->basename_len = subtree_root->name_len - (trailing_match_index(subtree_root->name + 1, subtree_root->name_len - 1, "/", 1) + 1);
 
-        /* go directly to -y */
+        /* go directly to --min-level */
         subtree_root->level = in->min_level;
 
         QPTPool_enqueue(ctx, 0, func, subtree_root);

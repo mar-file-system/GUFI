@@ -2,13 +2,13 @@
 $ gufi_unrollup
 usage: gufi_unrollup [options] GUFI_tree ...
 options:
-  -h                     help
-  -H                     show assigned input values (debugging)
-  -v                     version
-  -n <threads>           number of threads
-  -y <min level>         minimum level to go down
-  -z <max level>         maximum level to go down
-  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+  -n, --threads <threads>           number of threads
+      --min-level <min level>       minimum level to go down
+      --max-level <max level>       maximum level to go down
+  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level
 
 GUFI_tree        GUFI tree to unroll up
 
@@ -298,7 +298,7 @@ Total:          165
 Remaining Dirs: 17 (24.64%)
 
 # only unroll up levels 0 and 1
-$ gufi_unrollup -y 0 -z 1 "prefix"
+$ gufi_unrollup --min-level 0 --max-level 1 "prefix"
 
 # level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory
 $ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"
@@ -373,7 +373,7 @@ $ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT 
 2 0 6 1 ugo/ugo/dir3
 
 # only unroll up level 2 and below
-$ gufi_unrollup -y 2 "prefix"
+$ gufi_unrollup --min-level 2 "prefix"
 
 # level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory
 $ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"
@@ -504,7 +504,7 @@ Total:          165
 Remaining Dirs: 17 (24.64%)
 
 # partial unroll up
-$ gufi_unrollup -y 2 -D "path_list" "prefix"
+$ gufi_unrollup --min-level 2 -D "path_list" "prefix"
 
 # level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory
 $ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"

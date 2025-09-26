@@ -276,8 +276,12 @@ static void sub_help(void) {
 }
 
 int main(int argc, char *argv[]) {
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_MIN_LEVEL,
+        FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST, FLAG_END
+    };
     struct input in;
-    process_args_and_maybe_exit("hHvn:y:z:D:", 1, "GUFI_tree ...", &in);
+    process_args_and_maybe_exit(options, 1, "GUFI_tree ...", &in);
 
     const int root_count = argc - idx;
 

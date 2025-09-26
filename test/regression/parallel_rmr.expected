@@ -1,10 +1,10 @@
 $ parallel_rmr -h
 usage: parallel_rmr [options] directory ...
 options:
-  -h                     help
-  -H                     show assigned input values (debugging)
-  -v                     version
-  -n <threads>           number of threads
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+  -n, --threads <threads>           number of threads
 
 directory        directory to delete
 

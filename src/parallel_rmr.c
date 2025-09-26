@@ -117,8 +117,11 @@ static void sub_help(void) {
 }
 
 int main(int argc, char * argv[]) {
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_END
+    };
     struct input in;
-    process_args_and_maybe_exit("hHvn:", 1, "directory ...", &in);
+    process_args_and_maybe_exit(options, 1, "directory ...", &in);
 
     const int rc = parallel_bottomup(argv + idx, argc - idx,
                                      0, (size_t) -1,

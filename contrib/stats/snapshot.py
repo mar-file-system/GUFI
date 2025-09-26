@@ -125,9 +125,9 @@ def parse_args(argv, now):
                         help='path to gufi_query executable')
     parser.add_argument('--threads', '-n',   metavar='count',   type=get_positive,     default=1,
                         help='thread count')
-    parser.add_argument('--min-level', '-y', metavar='level',   type=get_non_negative, default=0,
+    parser.add_argument('--min-level', metavar='level',   type=get_non_negative, default=0,
                         help='level to start querying (min_level <= current_level)')
-    parser.add_argument('--max-level', '-z', metavar='level',   type=get_non_negative, default=(1 << 64) - 1,
+    parser.add_argument('--max-level', metavar='level',   type=get_non_negative, default=(1 << 64) - 1,
                         help='level to stop querying (current_level < max_level)')
 
     return parser.parse_args(argv[1:])
@@ -379,8 +379,8 @@ def flatten_index(args):                         # pylint: disable=too-many-loca
         args.gufi_query,
         '-n', str(args.threads),
         '-x',
-        '-y', str(args.min_level),
-        '-z', str(args.max_level),
+        '--min-level', str(args.min_level),
+        '--max-level', str(args.max_level),
         '-O', args.flatdb,
         '-I', I,
         '-T', T,

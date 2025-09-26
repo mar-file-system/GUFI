@@ -115,7 +115,7 @@ echo "# mix of files, dirs, links"
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/directory/subdirectory/directory_symlink\" \"${SRCDIR}/1MB\" \"${SRCDIR}/\""
 
 echo "# only get directories at level 2"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -t d -y 2 -z 2 \"${SRCDIR}\""
+run_sort "${PARALLEL_FIND} -n ${THREADS} -t d --min-level 2 --max-level 2 \"${SRCDIR}\""
 
 echo "# only get links"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -t l \"${SRCDIR}\""
@@ -133,7 +133,7 @@ echo "# print non-format characters"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"Path: %p\\n\" \"${SRCDIR}\""
 
 echo "# level higher than the level of the tree"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -y 10 \"${SRCDIR}\""
+run_sort "${PARALLEL_FIND} -n ${THREADS} --min-level 10 \"${SRCDIR}\""
 
 echo "# directory with multiple slashes"
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}////\""

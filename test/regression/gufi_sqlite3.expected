@@ -2,9 +2,9 @@
 $ gufi_sqlite3 -h
 usage: gufi_sqlite3 [options] [db [SQL]...]
 options:
-  -h                     help
-  -v                     version
-  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
+  -h, --help                        help
+  -v, --version                     version
+  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
 
 db                       db file path
 SQL                      SQL statements to run

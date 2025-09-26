@@ -12,8 +12,8 @@ GUFI query is
    gufi_query \
     -n 1 \
     -x \
-    -y 0 \
-    -z 18446744073709551615 \
+    --min-level 0 \
+    --max-level 18446744073709551615 \
     -O flattened_index.db \
     -I 'DROP TABLE IF EXISTS intermediate_treesummary;
               CREATE TABLE intermediate_treesummary(level INT64, inode TEXT, pinode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64);

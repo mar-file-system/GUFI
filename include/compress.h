@@ -82,12 +82,6 @@ typedef struct compressed {
     size_t          len;      /* includes self; only meaningful if yes == 1 */
 } compressed_t;
 
-#if HAVE_ZLIB /* or any other algorithm */
-#define COMPRESS_OPT "e"
-#else
-#define COMPRESS_OPT
-#endif
-
 void *compress_struct(const int comp, void *src, const size_t struct_len);
 
 void decompress_struct(void **dst, void *src);

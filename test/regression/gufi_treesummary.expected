@@ -2,13 +2,13 @@
 $ gufi_treesummary
 usage: gufi_treesummary [options] GUFI_tree
 options:
-  -h                     help
-  -H                     show assigned input values (debugging)
-  -v                     version
-  -P                     print directories as they are encountered
-  -n <threads>           number of threads
-  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
-  -X                     Dry run
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+  -P                                print directories as they are encountered
+  -n, --threads <threads>           number of threads
+  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
+  -X, --dry-run                     Dry run
 
 GUFI_tree               path to GUFI tree
 

@@ -498,8 +498,11 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_FORMAT, FLAG_TERSE_FORMAT, FLAG_END
+    };
     struct input in;
-    process_args_and_maybe_exit("hHvf:j", 1, "path ...", &in);
+    process_args_and_maybe_exit(options, 1, "path ...", &in);
 
     const char *format = DEFAULT_FORMAT;
 

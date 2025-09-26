@@ -130,12 +130,12 @@ query
 rollup
 
 echo "# only unroll up levels 0 and 1"
-run_no_sort "${GUFI_UNROLLUP} -y 0 -z 1 \"${INDEXROOT}\""
+run_no_sort "${GUFI_UNROLLUP} --min-level 0 --max-level 1 \"${INDEXROOT}\""
 
 query
 
 echo "# only unroll up level 2 and below"
-run_no_sort "${GUFI_UNROLLUP} -y 2 \"${INDEXROOT}\""
+run_no_sort "${GUFI_UNROLLUP} --min-level 2 \"${INDEXROOT}\""
 
 query
 # ###########################################
@@ -144,7 +144,7 @@ query
 rollup
 
 echo "# partial unroll up"
-run_no_sort "${GUFI_UNROLLUP} -y 2 -D \"${PATH_LIST}\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_UNROLLUP} --min-level 2 -D \"${PATH_LIST}\" \"${INDEXROOT}\""
 
 query
 # ###########################################

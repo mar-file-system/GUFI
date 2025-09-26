@@ -2,12 +2,12 @@
 $ gufi_trace2dir
 usage: gufi_trace2dir [options] trace_file... output_dir
 options:
-  -h                     help
-  -H                     show assigned input values (debugging)
-  -v                     version
-  -n <threads>           number of threads
-  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
-  -x                     index/query xattrs
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+  -n, --threads <threads>           number of threads
+  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
+  -x, --xattrs                      index/query xattrs
 
 input_dir         walk this GUFI index to produce a tree
 output_dir        reconstruct the tree under here
