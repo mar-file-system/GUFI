@@ -89,8 +89,8 @@ extern "C" {
 #endif
 #define GUFI_SQLITE_VFS_URI   "&vfs=" GUFI_SQLITE_VFS
 
-#define DROP_TABLE(name) "DROP TABLE IF EXISTS " #name ";"
-#define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " #name ";"
+#define DROP_TABLE(name) "DROP TABLE IF EXISTS " name ";"
+#define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " name ";"
 
 #define READDIRPLUS      "readdirplus"
 #define READDIRPLUS_SCHEMA(name)                    \

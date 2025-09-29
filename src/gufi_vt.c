@@ -612,17 +612,15 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
     /* parse args */
     for(int i = 3; i < argc; i++) {
-        char *saveptr = NULL;
-        char *key   = strtok_r((char *) argv[i], "=", &saveptr);
-        char *value = strtok_r(NULL, "=", &saveptr);
+        char *value = NULL;
+        char *key   = strtok_r((char *) argv[i], "=", &value);
+        const size_t len = strlen(key);
 
         /* assume this is an index path */
-        if (!value) {
+        if (!value || (value == (key + len))) {
             indexroot = argv[i]; /* keep last one */
             continue;
         }
-
-        const size_t len = strlen(key);
 
         if (len == 1) {
             switch (*key) {

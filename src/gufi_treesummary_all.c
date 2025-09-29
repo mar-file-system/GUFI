@@ -94,7 +94,7 @@ static int treesummary_descend(void *args, int *keep_going) {
     if (db) {
         char *err = NULL;
         /* check if treesummary table exists - if it does, don't descend */
-        if (sqlite3_exec(db, TREESUMMARY_EXISTS, treesummary_found, &keep_going, &err) != SQLITE_OK) {
+        if (sqlite3_exec(db, TREESUMMARY_EXISTS, treesummary_found, keep_going, &err) != SQLITE_OK) {
             fprintf(stderr, "Error: Could not check for existence of treesummary table at \"%s\": %s\n",
                     dir->name, err);
             sqlite3_free(err);
