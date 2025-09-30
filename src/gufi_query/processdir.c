@@ -223,8 +223,13 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     size_t subdirs_walked_count = 0;
 
     if (db && (gqw->work.level >= in->min_level)) {
+        aqfctx_t aqfctx = {
+            .in = in,
+            .work = &gqw->work,
+        };
+
         /* add some query functions like path() uidtouser() gidtogroup() */
-        if (addqueryfuncs_with_context(db, &gqw->work) != 0) {
+        if (addqueryfuncs_with_context(db, &aqfctx) != 0) {
             fprintf(stderr, "Warning: Could not add functions to sqlite\n");
         }
 

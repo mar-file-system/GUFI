@@ -244,7 +244,7 @@ void print_help(const char* prog_name,
                        "     <template>.<table>\n"
                        "     <view>              External database file basename, per-attach table name, template + table name, and the resultant view"); break;
       case 's': printf("  -s <path>              File name prefix for swap files"); break;
-      case 'p': printf("  -p <path>              Source path prefix for %%s in SQL"); break;
+      case 'p': printf("  -p <path>              Source path prefix"); break;
       case 'D': printf("  -D <filename>          File containing paths at single level to index (not including starting path). Must also use -y"); break;
       case 'l': printf("  -l                     if a directory was previously processed, skip descending the subtree"); break;
       case 'U': printf("  -U <library_name>      plugin library for modifying db entries"); break;
@@ -308,7 +308,7 @@ void show_input(struct input* in, int retval) {
    }
    printf("\n");
    printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
-   printf("in.source_prefix            = '%s'\n",          in->sql_format.source_prefix.data);
+   printf("in.source_prefix            = '%s'\n",          in->source_prefix.data);
    printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
    printf("in.check_already_processed  = %d\n",            in->check_already_processed);
    printf("in.filter_types             = %d\n",            in->filter_types);
@@ -574,7 +574,7 @@ int parse_cmd_line(int         argc,
           break;
 
       case 'p':
-          INSTALL_STR(&in->sql_format.source_prefix, optarg);
+          INSTALL_STR(&in->source_prefix, optarg);
           break;
 
       case 'D':

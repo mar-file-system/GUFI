@@ -31,7 +31,7 @@ options:
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
   -s <path>              File name prefix for swap files
-  -p <path>              Source path prefix for %s in SQL
+  -p <path>              Source path prefix
   -e                     compress work items
   -Q <basename>
      <table>

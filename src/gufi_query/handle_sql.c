@@ -163,7 +163,11 @@ static int gen_types(struct input *in) {
         int cols = 0; /* discarded */
 
         struct work work;
-        if (addqueryfuncs_with_context(db, &work) != 0) {
+        aqfctx_t ctx = {
+            .in = in,
+            .work = &work,
+        };
+        if (addqueryfuncs_with_context(db, &ctx) != 0) {
             goto error;
         }
 

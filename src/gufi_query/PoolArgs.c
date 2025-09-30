@@ -164,8 +164,8 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
          *
          * maybe move this into processdir?
          */
-        if (in->sql_format.source_prefix.data && in->sql_format.source_prefix.len) {
-            trie_insert(ta->user_strs, "s", 1, &in->sql_format.source_prefix, NULL);
+        if (in->source_prefix.data && in->source_prefix.len) {
+            trie_insert(ta->user_strs, "s", 1, &in->source_prefix, NULL);
         }
 
         if (sqlite3_create_function(ta->outdb, "setstr", 2, SQLITE_UTF8,

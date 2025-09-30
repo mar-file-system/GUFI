@@ -188,6 +188,8 @@ struct input {
        refstr_t fin;
    } sql;
 
+   refstr_t source_prefix; /* for {s} and spath() since the source directory is not stored in the index */
+
    /*
     * if the SQL has any formatting in it,
     * store (at least) the positions of the
@@ -196,7 +198,6 @@ struct input {
     * each item should be malloc-ed
     */
    struct {
-       refstr_t source_prefix; /* for %s since the source directory is not stored in the index */
        sll_t tsum;
        sll_t sum;
        sll_t ent;

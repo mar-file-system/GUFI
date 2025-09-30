@@ -617,23 +617,9 @@ static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_text(context, work->fullpath, work->fullpath_len, SQLITE_STATIC);
 }
 
-/*
- * Usage:
- *     SELECT rpath(sname, sroll)
- *     FROM vrsummary;
- *
- *     SELECT rpath(sname, sroll, name)
- *     FROM vrpentries;
- *
- *     equivalent to:
- *
- *     SELECT rpath(sname, sroll) || '/' || name
- *     FROM vrpentries;
- */
-static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **argv,
+                          struct work *work, refstr_t *prefix)
 {
-    /* work->name contains the current directory being operated on */
-    struct work *work = (struct work *) sqlite3_user_data(context);
     const int rollupscore = sqlite3_value_int(argv[1]);
 
     const char *entry = NULL;
@@ -649,19 +635,19 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     const size_t root_len = work->root_parent.len + work->root_basename_len;
 
     if (rollupscore == 0) { /* use work->name */
-        user_dirname_len = work->orig_root.len + work->name_len - root_len + entry_len;
+        user_dirname_len = prefix->len + work->name_len - root_len + entry_len;
         user_dirname = malloc(user_dirname_len + 1);
 
         if (entry) {
             SNFORMAT_S(user_dirname, user_dirname_len + 1, 4,
-                       work->orig_root.data, work->orig_root.len,
+                       prefix->data, prefix->len,
                        work->name + root_len, work->name_len - root_len,
                        "/", (size_t) 1,
                        entry, entry_len - 1);
         }
         else {
             SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                       work->orig_root.data, work->orig_root.len,
+                       prefix->data, prefix->len,
                        work->name + root_len, work->name_len - root_len);
         }
     }
@@ -680,21 +666,21 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
                    input.data, input.len);
 
         /*
-         * replace fullpath prefix with original user input
+         * replace fullpath in->source_prefix with original user input
          */
-        user_dirname_len = work->orig_root.len + fullpath_len - root_len + entry_len;
+        user_dirname_len = prefix->len + fullpath_len - root_len + entry_len;
         user_dirname = malloc(user_dirname_len + 1);
 
         if (entry) {
             SNFORMAT_S(user_dirname, user_dirname_len + 1, 4,
-                       work->orig_root.data, work->orig_root.len,
+                       prefix->data, prefix->len,
                        fullpath + root_len, fullpath_len - root_len,
                        "/", (size_t) 1,
                        entry, entry_len - 1);
         }
         else {
             SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                       work->orig_root.data, work->orig_root.len,
+                       prefix->data, prefix->len,
                        fullpath + root_len, fullpath_len - root_len);
         }
 
@@ -702,6 +688,53 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     }
 
     sqlite3_result_text(context, user_dirname, user_dirname_len, free);
+}
+
+/*
+ * Usage:
+ *     SELECT rpath(sname, sroll)
+ *     FROM vrsummary;
+ *
+ *     SELECT rpath(sname, sroll, name)
+ *     FROM vrpentries;
+ *
+ *     equivalent to:
+ *
+ *     SELECT rpath(sname, sroll) || '/' || name
+ *     FROM vrpentries;
+ */
+static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    /* work->name contains the current directory being operated on */
+    struct work *work = (struct work *) sqlite3_user_data(context);
+    modify_prefix(context, argc, argv, work, &work->orig_root);
+}
+
+/*
+ * Usage:
+ *     SELECT spath(sname, sroll)
+ *     FROM vrsummary;
+ *
+ *     SELECT spath(sname, sroll, name)
+ *     FROM vrpentries;
+ *
+ *     equivalent to:
+ *
+ *     SELECT spath(sname, sroll) || '/' || name
+ *     FROM vrpentries;
+ */
+static void spath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    aqfctx_t *ctx = (aqfctx_t *) sqlite3_user_data(context);
+    struct input *in = ctx->in;
+    if (!in->source_prefix.data || !in->source_prefix.len) {
+        static const char ERR[] = "spath() requires source path (-p)";
+        sqlite3_result_error(context, ERR, sizeof(ERR) - 1);
+        return;
+    }
+
+    struct work *work = ctx->work;
+    modify_prefix(context, argc, argv, work, &in->source_prefix);
 }
 
 static void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -759,21 +792,27 @@ int addqueryfuncs(sqlite3 *db) {
         );
 }
 
-int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
+int addqueryfuncs_with_context(sqlite3 *db, aqfctx_t *ctx) {
+    void *orig_root = &ctx->work->orig_root;
+    void *level     = (void *) (uintptr_t) ctx->work->level;
+    void *pino      = (void *) (uintptr_t) ctx->work->pinode;
+
     return !(
-        (sqlite3_create_function(db,  "path",                       0, SQLITE_UTF8,
-                                 work,                              &path,           NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "epath",                      0, SQLITE_UTF8,
-                                 work,                              &epath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "fpath",                      0, SQLITE_UTF8,
-                                 work,                              &fpath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "rpath",                      -1, SQLITE_UTF8,
-                                 work,                              &rpath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "starting_point",             0,  SQLITE_UTF8,
-                                 (void *) &work->orig_root,         &starting_point, NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "level",                      0,  SQLITE_UTF8,
-                                 (void *) (uintptr_t) work->level,  &relative_level, NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "pinode",                     0,  SQLITE_UTF8,
-                                 (void *) (uintptr_t) work->pinode, &pinode,         NULL, NULL) == SQLITE_OK)
+        (sqlite3_create_function(db,          "path",           0,   SQLITE_UTF8,
+                                 ctx->work,   &path,           NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,          "epath",          0,   SQLITE_UTF8,
+                                 ctx->work,   &epath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,          "fpath",          0,   SQLITE_UTF8,
+                                 ctx->work,   &fpath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,          "rpath",         -1,   SQLITE_UTF8,
+                                 ctx->work,   &rpath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,          "spath",         -1,   SQLITE_UTF8,
+                                 ctx,         &spath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,          "starting_point", 0,   SQLITE_UTF8,
+                                 orig_root,   &starting_point, NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,          "level",          0,   SQLITE_UTF8,
+                                 level,       &relative_level, NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,          "pinode",         0,   SQLITE_UTF8,
+                                 pino,        &pinode,         NULL, NULL) == SQLITE_OK)
         );
 }

@@ -204,9 +204,12 @@ Convenience \href{https://www.sqlite.org/appfunc.html}{user defined functions} a
     \hline
     \texttt{fpath()} & Full path of current directory \\
     \hline
-    \rpath(sname, sroll [, name]) & Current directory relative to path passed into executable
-                                    taking into account the rolled up name in summary table
-                                    and rollup score. Should only be used with the \texttt{sname}
+    \rpath(sname, sroll [, name]) & Current directory relative to path passed into executable \\
+                                  & \\
+    \spath(sname, sroll [, name]) & Source directory of current entry. Requires \texttt{-p}.  \\
+                                  & \\
+                                  & These functions take into account the rolled up name in summary
+                                    table and rollup score. Should only be used with the \texttt{sname}
                                     and \texttt{sroll} columns of the \vrpentries, \vrsummary,
                                     \vrxpentries, and \vrxsummary views. \\
                                   & \\
@@ -221,6 +224,8 @@ Convenience \href{https://www.sqlite.org/appfunc.html}{user defined functions} a
                                   & \\
                                   & \texttt{SELECT rpath(sname, sroll) || `/' || name} \\
                                   & \texttt{FROM} \vrpentries /\vrxpentries; \\
+                                  & \\
+                                  & Same for \spath \\
     \hline
     \texttt{level()} & Depth of the current directory from the starting directory \\
     \hline

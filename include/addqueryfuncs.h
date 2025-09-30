@@ -80,7 +80,13 @@ extern "C" {
 #endif
 
 int addqueryfuncs(sqlite3 *db);
-int addqueryfuncs_with_context(sqlite3 *db, struct work *work);
+
+typedef struct AddQueryFuncsContext {
+    struct input *in; /* source_prefix is required for spath() */
+    struct work *work;
+} aqfctx_t;
+
+int addqueryfuncs_with_context(sqlite3 *db, aqfctx_t *ctx);
 
 #ifdef __cplusplus
 }

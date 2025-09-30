@@ -311,6 +311,26 @@ prefix/old_file||
 prefix/repeat_name||
 prefix/unusual#? directory ,/unusual, name?#||
 
+# Get source paths
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;", p="source/prefix");SELECT size, srcpath FROM gufi ORDER BY size ASC, srcpath ASC;"
+) | sqlite3
+0|source/prefix/old_file
+1|source/prefix/directory/executable
+2|source/prefix/directory/readonly
+3|source/prefix/directory/writable
+4|source/prefix/directory/subdirectory/directory_symlink
+5|source/prefix/directory/subdirectory/repeat_name
+9|source/prefix/file_symlink
+10|source/prefix/.hidden
+11|source/prefix/leaf_directory/leaf_file1
+12|source/prefix/leaf_directory/leaf_file2
+14|source/prefix/repeat_name
+15|source/prefix/unusual#? directory ,/unusual, name?#
+1024|source/prefix/1KB
+1048576|source/prefix/1MB
+
 # ######################################
 # errors
 # Missing indexroot (error)
@@ -391,4 +411,15 @@ $ (
 ) | sqlite3
 Error: Could not prepare 'SELECT * FROM intermediate' for getting column types: SQL logic error (1)
 Runtime error near line 2: vtable constructor failed: gufi
+
+# Missing p
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;");SELECT size, srcpath FROM gufi ORDER BY size ASC, srcpath ASC;"
+) | sqlite3
+Error: spath() requires source path (-p): prefix/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
+Error: spath() requires source path (-p): prefix/directory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
+Error: spath() requires source path (-p): prefix/directory/subdirectory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
+Error: spath() requires source path (-p): prefix/leaf_directory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
+Error: spath() requires source path (-p): prefix/unusual%23%3f directory ,/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 

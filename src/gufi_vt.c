@@ -99,7 +99,8 @@ SQLITE_EXTENSION_INIT1
  * See the respective comments below for details.
  */
 
-typedef struct gufi_query_sql {
+typedef struct gufi_query_flags {
+    /* sql */
     refstr_t I;
     refstr_t T;
     refstr_t S;
@@ -108,13 +109,15 @@ typedef struct gufi_query_sql {
     refstr_t J;
     refstr_t G;
     refstr_t F;
-} gq_sql_t;
+
+    refstr_t p; /* source path */
+} gq_flags_t;
 
 typedef struct gufi_vtab {
     sqlite3_vtab base;
     const char *indexroot;     /* if this is present, CREATE VIRTUAL TABLE was called */
     const char *threads;       /* if this is present, CREATE VIRTUAL TABLE was called, but use indexroot to determine if this is a gufi_vt or gufi_vt_* */
-    gq_sql_t sql;
+    gq_flags_t flags;
 } gufi_vtab;
 
 typedef struct gufi_vtab_cursor {
@@ -135,7 +138,7 @@ typedef struct gufi_vtab_cursor {
  * have to fork+exec - cannot link gufi_query in without changing
  * everything to link dynamically
  */
-static int gufi_query(const char *indexroot, const char *threads, const gq_sql_t *sql,
+static int gufi_query(const char *indexroot, const char *threads, const gq_flags_t *flags,
                       FILE **output, char **errmsg) {
     const char *argv[23] = {
         "gufi_query",
@@ -147,14 +150,15 @@ static int gufi_query(const char *indexroot, const char *threads, const gq_sql_t
 
     int argc = 3;
     set_argv(argc, argv, "-n", threads);
-    set_argv(argc, argv, "-I", sql->I.data);
-    set_argv(argc, argv, "-T", sql->T.data);
-    set_argv(argc, argv, "-S", sql->S.data);
-    set_argv(argc, argv, "-E", sql->E.data);
-    set_argv(argc, argv, "-K", sql->K.data);
-    set_argv(argc, argv, "-J", sql->J.data);
-    set_argv(argc, argv, "-G", sql->G.data);
-    set_argv(argc, argv, "-F", sql->F.data);
+    set_argv(argc, argv, "-I", flags->I.data);
+    set_argv(argc, argv, "-T", flags->T.data);
+    set_argv(argc, argv, "-S", flags->S.data);
+    set_argv(argc, argv, "-E", flags->E.data);
+    set_argv(argc, argv, "-K", flags->K.data);
+    set_argv(argc, argv, "-J", flags->J.data);
+    set_argv(argc, argv, "-G", flags->G.data);
+    set_argv(argc, argv, "-F", flags->F.data);
+    set_argv(argc, argv, "-p", flags->p.data);
 
     argv[argc++] = indexroot;
     argv[argc]   = NULL;
@@ -266,7 +270,7 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
 }
 
 /* remove starting/ending quotation marks */
-static void set_sql(refstr_t *refstr, char *value) {
+static void set_refstr(refstr_t *refstr, char *value) {
     refstr->data = value;
     refstr->len = 0;
 
@@ -292,7 +296,7 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
                           char **pzErr,
                           const char *schema,
                           const char *threads,
-                          const gq_sql_t *sql,
+                          const gq_flags_t *flags,
                           const char *indexroot) {
     (void) pAux; (void) pzErr;
     (void) argc; (void) argv;
@@ -304,7 +308,7 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
         if( pNew==0 ) return SQLITE_NOMEM;
         memset(pNew, 0, sizeof(*pNew));
         pNew->threads = threads;
-        pNew->sql = *sql;
+        pNew->flags = *flags;
         pNew->indexroot = indexroot;
         /* sqlite3_vtab_config(db, SQLITE_VTAB_DIRECTONLY); */
     }
@@ -450,30 +454,30 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
     "FROM " name ";"                                  \
 
 /* generate xConnect function for each virtual table */
-#define gufi_vt_xConnect(name, abbrev, t, s, e, vr)                            \
-    static int gufi_vt_ ##abbrev ##Connect(sqlite3 *db,                        \
-                                           void *pAux,                         \
-                                           int argc, const char * const *argv, \
-                                           sqlite3_vtab **ppVtab,              \
-                                           char **pzErr) {                     \
-        /* this is what the virtual table looks like */                        \
-        /* the schema is fixed for this function */                            \
-        const char schema[] =                                                  \
-            name ##_SCHEMA(name, GUFI_VT_ALL_COLUMNS);                         \
-                                                                               \
-        static const char select_from[]    = SELECT_FROM(name);                \
-        static const char select_from_vr[] = SELECT_FROM_VR(name);             \
-                                                                               \
-        /* fixed queries */                                                    \
-        gq_sql_t sql;                                                          \
-        memset(&sql, 0, sizeof(sql));                                          \
-        set_sql(&sql.T, (char *) (t?select_from:NULL));                        \
-        set_sql(&sql.S, (char *) (s?(vr?select_from_vr:select_from):NULL));    \
-        set_sql(&sql.E, (char *) (e?(vr?select_from_vr:select_from):NULL));    \
-                                                                               \
-        return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,             \
-                              schema, NULL, &sql, NULL);                       \
-     }
+#define gufi_vt_xConnect(name, abbrev, t, s, e, vr)                              \
+    static int gufi_vt_ ##abbrev ##Connect(sqlite3 *db,                          \
+                                           void *pAux,                           \
+                                           int argc, const char * const *argv,   \
+                                           sqlite3_vtab **ppVtab,                \
+                                           char **pzErr) {                       \
+        /* this is what the virtual table looks like */                          \
+        /* the schema is fixed for this function */                              \
+        const char schema[] =                                                    \
+            name ##_SCHEMA(name, GUFI_VT_ALL_COLUMNS);                           \
+                                                                                 \
+        static const char select_from[]    = SELECT_FROM(name);                  \
+        static const char select_from_vr[] = SELECT_FROM_VR(name);               \
+                                                                                 \
+        /* fixed queries */                                                      \
+        gq_flags_t flags;                                                        \
+        memset(&flags, 0, sizeof(flags));                                        \
+        set_refstr(&flags.T, (char *) (t?select_from:NULL));                     \
+        set_refstr(&flags.S, (char *) (s?(vr?select_from_vr:select_from):NULL)); \
+        set_refstr(&flags.E, (char *) (e?(vr?select_from_vr:select_from):NULL)); \
+                                                                                 \
+        return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,               \
+                              schema, NULL, &flags, NULL);                       \
+    }
 
 /* generate xConnect for each table/view */
 gufi_vt_xConnect(TREESUMMARY, T,   1, 0, 0, 0)
@@ -508,6 +512,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     J
  *     G
  *     F
+ *     p (source path for use with spath())
  *     index
  *
  * Notes:
@@ -605,10 +610,10 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                               char **pzErr) {
     static const char ONE[] = "1";
     const char *threads = ONE; /* default value */
-    gq_sql_t sql;
+    gq_flags_t flags;
     const char *indexroot = NULL;
 
-    memset(&sql, 0, sizeof(sql));
+    memset(&flags, 0, sizeof(flags));
 
     /* parse args */
     for(int i = 3; i < argc; i++) {
@@ -634,29 +639,31 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                     threads = value;
                     break;
                 case 'I':
-                    set_sql(&sql.I, value);
+                    set_refstr(&flags.I, value);
                     break;
                 case 'T':
-                    set_sql(&sql.T, value);
+                    set_refstr(&flags.T, value);
                     break;
                 case 'S':
-                    set_sql(&sql.S, value);
+                    set_refstr(&flags.S, value);
                     break;
                 case 'E':
-                    set_sql(&sql.E, value);
+                    set_refstr(&flags.E, value);
                     break;
                 case 'K':
-                    set_sql(&sql.K, value);
+                    set_refstr(&flags.K, value);
                     break;
                 case 'J':
-                    set_sql(&sql.J, value);
+                    set_refstr(&flags.J, value);
                     break;
                 case 'G':
-                    set_sql(&sql.G, value);
+                    set_refstr(&flags.G, value);
                     break;
                 case 'F':
-                    set_sql(&sql.F, value);
+                    set_refstr(&flags.F, value);
                     break;
+                case 'p':
+                    set_refstr(&flags.p, value);
                 default:
                     break;
             }
@@ -700,6 +707,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
     struct input in;
     in.process_xattrs = 1;
+    in.source_prefix = flags.p;
     struct work work; /* unused */
     memset(&work, 0, sizeof(work));
     size_t count = 0; /* unused */
@@ -711,24 +719,28 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     size_t *lens = NULL;
 
     /* this should never fail */
-    addqueryfuncs_with_context(tempdb, &work);
+    aqfctx_t ctx = {
+        .in = &in,
+        .work = &work,
+    };
+    addqueryfuncs_with_context(tempdb, &ctx);
 
-    if (sql.T.len) {
+    if (flags.T.len) {
         /* this should never fail */
         create_table_wrapper(SQLITE_MEMORY, tempdb, TREESUMMARY, TREESUMMARY_CREATE);
     }
 
     /* if not aggregating, get types for T, S, or E */
-    if (!sql.K.len) {
+    if (!flags.K.len) {
         int rc = -1; /* default to error */
-        if (sql.T.len && !sql.S.len && !sql.E.len) {
-            rc = get_cols(tempdb, &sql.T, &types, &names, &lens, &cols);
+        if (flags.T.len && !flags.S.len && !flags.E.len) {
+            rc = get_cols(tempdb, &flags.T, &types, &names, &lens, &cols);
         }
-        else if (sql.S.len && !sql.E.len) {
-            rc = get_cols(tempdb, &sql.S, &types, &names, &lens, &cols);
+        else if (flags.S.len && !flags.E.len) {
+            rc = get_cols(tempdb, &flags.S, &types, &names, &lens, &cols);
         }
-        else if (sql.E.len) {
-            rc = get_cols(tempdb, &sql.E, &types, &names, &lens, &cols);
+        else if (flags.E.len) {
+            rc = get_cols(tempdb, &flags.E, &types, &names, &lens, &cols);
         }
         if (rc != 0) {
             goto error;
@@ -738,12 +750,12 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     else {
         /* run -K so -G can pull the final columns */
         char *err = NULL;
-        if (sqlite3_exec(tempdb, sql.K.data, NULL, NULL, &err) != SQLITE_OK) {
+        if (sqlite3_exec(tempdb, flags.K.data, NULL, NULL, &err) != SQLITE_OK) {
             *pzErr = sqlite3_mprintf("-K SQL failed while getting columns types: %s", err);
             sqlite3_free(err);
             goto error;
         }
-        if (get_cols(tempdb, &sql.G, &types, &names, &lens, &cols) != 0) {
+        if (get_cols(tempdb, &flags.G, &types, &names, &lens, &cols) != 0) {
             goto error;
         }
     }
@@ -781,7 +793,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     }
 
     return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
-                          schema, threads, &sql, indexroot);
+                          schema, threads, &flags, indexroot);
   error:
     free(lens);
     if (names) {
@@ -892,7 +904,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
     }
 
     /* kick off gufi_query */
-    const int rc = gufi_query(indexroot, threads, &vtab->sql,
+    const int rc = gufi_query(indexroot, threads, &vtab->flags,
                               &pCur->output, &vtab->base.zErrMsg);
     if (rc != SQLITE_OK) {
         return SQLITE_ERROR;

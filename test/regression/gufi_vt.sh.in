@@ -148,6 +148,13 @@ query_vt() {
     )
     query_vt "${query}"
 
+    echo "# Get source paths"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;\", p=\"source/${SRCDIR}\");"
+        echo -n "SELECT size, srcpath FROM gufi ORDER BY size ASC, srcpath ASC;"
+    )
+    query_vt "${query}"
+
     echo "# ######################################"
     echo "# errors"
 
@@ -185,6 +192,22 @@ query_vt() {
 
     echo "# Bad G"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='CREATE TABLE aggregate(i INT);', G='SELECT * FROM intermediate');"
+
+    echo "# Missing p"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;\");"
+        echo -n "SELECT size, srcpath FROM gufi ORDER BY size ASC, srcpath ASC;"
+    )
+    echo "$ ("
+    echo "    echo \"${LOAD}\""
+    echo "    echo \"${query}\""
+    echo ") | ${SQLITE3}"
+    (
+        echo "${LOAD}"
+        echo "${query}"
+    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}" 2>&1 | sort
+    echo
+
     set -e
 ) | replace | tee "${OUTPUT}"
 

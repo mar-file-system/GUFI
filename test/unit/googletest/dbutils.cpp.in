@@ -191,7 +191,11 @@ TEST(addqueryfuncs, path) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
-    ASSERT_EQ(addqueryfuncs_with_context(db, work), 0);
+
+    aqfctx_t ctx;
+    ctx.in = nullptr;
+    ctx.work = work;
+    ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
     char buf[MAXPATH] = {};
     char *output = buf;
@@ -214,7 +218,11 @@ TEST(addqueryfuncs, epath) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
-    ASSERT_EQ(addqueryfuncs_with_context(db, work), 0);
+
+    aqfctx_t ctx;
+    ctx.in = nullptr;
+    ctx.work = work;
+    ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
     char buf[MAXPATH] = {};
     char *output = buf;
@@ -234,7 +242,12 @@ TEST(addqueryfuncs, fpath) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
-    ASSERT_EQ(addqueryfuncs_with_context(db, work), 0);
+
+    aqfctx_t ctx;
+    ctx.in = nullptr;
+    ctx.work = work;
+    ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
+
     EXPECT_EQ(sqlite3_exec(db, "SELECT fpath();", nullptr, nullptr, nullptr), SQLITE_OK);
     EXPECT_NE(work->fullpath, nullptr);
     EXPECT_GT(work->fullpath_len, (size_t) 0);
@@ -267,8 +280,13 @@ TEST(addqueryfuncs, rpath) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
-    ASSERT_EQ(addqueryfuncs_with_context(db, work), 0);
 
+    aqfctx_t ctx;
+    ctx.in = nullptr;
+    ctx.work = work;
+    ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
+
+    // directory
     for(int rollupscore : {0, 1}) {
         char query[MAXSQL] = {};
         SNPRINTF(query, MAXSQL, "SELECT rpath('%s', %d);", dirname, rollupscore);
@@ -281,6 +299,7 @@ TEST(addqueryfuncs, rpath) {
         EXPECT_STREQ(output, work->name);
     }
 
+    // non-directory
     const char entry[] = "entry";
     char entry_path[MAXPATH];
     SNFORMAT_S(entry_path, sizeof(entry_path), 3,
@@ -298,6 +317,75 @@ TEST(addqueryfuncs, rpath) {
         EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
 
         EXPECT_STREQ(output, entry_path);
+    }
+
+    sqlite3_close(db);
+    free(work);
+}
+
+TEST(addqueryfuncs, spath) {
+    const char dirname[] = "dirname";
+    const char source[]  = "source/prefix";
+
+    struct input in;
+    in.source_prefix.data = source;
+    in.source_prefix.len = strlen(source);
+
+    struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
+    work->orig_root.data = "index_root";
+    work->orig_root.len = strlen(work->orig_root.data);
+    work->root_parent.data = "";
+    work->root_parent.len = 0;
+    work->root_basename_len = work->orig_root.len;
+    work->basename_len = strlen(dirname);
+
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    aqfctx_t ctx;
+    ctx.in = &in;
+    ctx.work = work;
+    ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
+
+    char source_path[MAXPATH];
+    SNFORMAT_S(source_path, sizeof(source_path), 3,
+               in.source_prefix.data, in.source_prefix.len,
+               "/", (std::size_t) 1,
+               dirname, sizeof(dirname) - 1);
+
+    // directory
+    for(int rollupscore : {0, 1}) {
+        char query[MAXSQL] = {};
+        SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d);", dirname, rollupscore);
+
+        // the path returned by the query is the path without the index prefix
+        char buf[MAXPATH] = {};
+        char *output = buf;
+        EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
+
+        EXPECT_STREQ(output, source_path);
+    }
+
+    const char entry[] = "entry;";
+    SNFORMAT_S(source_path, sizeof(source_path), 5,
+               in.source_prefix.data, in.source_prefix.len,
+               "/", (std::size_t) 1,
+               dirname, sizeof(dirname) - 1,
+               "/", (std::size_t) 1,
+               entry, sizeof(entry) - 1);
+
+    // non-directory
+    for(int rollupscore : {0, 1}) {
+        char query[MAXSQL] = {};
+        SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d, '%s');", dirname, rollupscore, entry);
+
+        // the path returned by the query is the path without the index prefix
+        char buf[MAXPATH] = {};
+        char *output = buf;
+        EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
+
+        EXPECT_STREQ(output, source_path);
     }
 
     sqlite3_close(db);
@@ -536,7 +624,10 @@ TEST(addqueryfuncs, starting_point) {
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs_with_context(db, work), 0);
+    aqfctx_t ctx;
+    ctx.in = nullptr;
+    ctx.work = work;
+    ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
     char buf[MAXPATH] = {};
     char *output = buf;
@@ -555,8 +646,12 @@ TEST(addqueryfuncs, level) {
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
+    aqfctx_t ctx;
+    ctx.in = nullptr;
+    ctx.work = work;
+
     for(work->level = 0; work->level < 10; work->level++) {
-        ASSERT_EQ(addqueryfuncs_with_context(db, work), 0);
+        ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
         char buf[MAXPATH] = {};
         char *output = buf;
@@ -580,8 +675,12 @@ TEST(addqueryfuncs, pinode) {
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
+    aqfctx_t ctx;
+    ctx.in = nullptr;
+    ctx.work = work;
+
     for(work->level = 0; work->level < 10; work->level++) {
-        ASSERT_EQ(addqueryfuncs_with_context(db, work), 0);
+        ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
         char buf[MAXPATH] = {};
         char *output = buf;
