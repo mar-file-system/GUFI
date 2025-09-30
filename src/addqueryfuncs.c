@@ -622,16 +622,26 @@ static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
  *     SELECT rpath(sname, sroll)
  *     FROM vrsummary;
  *
- *     SELECT rpath(sname, sroll) || "/" || name
+ *     SELECT rpath(sname, sroll, name)
+ *     FROM vrpentries;
+ *
+ *     equivalent to:
+ *
+ *     SELECT rpath(sname, sroll) || '/' || name
  *     FROM vrpentries;
  */
 static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-    (void) argc;
-
     /* work->name contains the current directory being operated on */
     struct work *work = (struct work *) sqlite3_user_data(context);
     const int rollupscore = sqlite3_value_int(argv[1]);
+
+    const char *entry = NULL;
+    size_t entry_len = 0;
+    if (argc > 2) {
+        entry = (const char *) sqlite3_value_text(argv[2]);
+        entry_len = 1 + strlen(entry); /* add space for slash here to not add extra space unnecessarily when third argument is not set */
+    }
 
     size_t user_dirname_len = 0;
     char *user_dirname = NULL;
@@ -639,16 +649,25 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     const size_t root_len = work->root_parent.len + work->root_basename_len;
 
     if (rollupscore == 0) { /* use work->name */
-        user_dirname_len = work->orig_root.len + work->name_len - root_len;
+        user_dirname_len = work->orig_root.len + work->name_len - root_len + entry_len;
         user_dirname = malloc(user_dirname_len + 1);
 
-        SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                   work->orig_root.data, work->orig_root.len,
-                   work->name + root_len, work->name_len - root_len);
+        if (entry) {
+            SNFORMAT_S(user_dirname, user_dirname_len + 1, 4,
+                       work->orig_root.data, work->orig_root.len,
+                       work->name + root_len, work->name_len - root_len,
+                       "/", (size_t) 1,
+                       entry, entry_len - 1);
+        }
+        else {
+            SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
+                       work->orig_root.data, work->orig_root.len,
+                       work->name + root_len, work->name_len - root_len);
+        }
     }
     else { /* reconstruct full path out of argv[0] */
         refstr_t input;
-        input.data = (char *) sqlite3_value_text(argv[0]);
+        input.data = (const char *) sqlite3_value_text(argv[0]);
         input.len  = strlen(input.data);
 
         /*
@@ -663,11 +682,21 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
         /*
          * replace fullpath prefix with original user input
          */
-        user_dirname_len = work->orig_root.len + fullpath_len - root_len;
+        user_dirname_len = work->orig_root.len + fullpath_len - root_len + entry_len;
         user_dirname = malloc(user_dirname_len + 1);
-        SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                   work->orig_root.data, work->orig_root.len,
-                   fullpath + root_len, fullpath_len - root_len);
+
+        if (entry) {
+            SNFORMAT_S(user_dirname, user_dirname_len + 1, 4,
+                       work->orig_root.data, work->orig_root.len,
+                       fullpath + root_len, fullpath_len - root_len,
+                       "/", (size_t) 1,
+                       entry, entry_len - 1);
+        }
+        else {
+            SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
+                       work->orig_root.data, work->orig_root.len,
+                       fullpath + root_len, fullpath_len - root_len);
+        }
 
         free(fullpath);
     }
@@ -738,7 +767,7 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
                                  work,                              &epath,          NULL, NULL) == SQLITE_OK) &&
         (sqlite3_create_function(db,  "fpath",                      0, SQLITE_UTF8,
                                  work,                              &fpath,          NULL, NULL) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "rpath",                      2, SQLITE_UTF8,
+        (sqlite3_create_function(db,  "rpath",                      -1, SQLITE_UTF8,
                                  work,                              &rpath,          NULL, NULL) == SQLITE_OK) &&
         (sqlite3_create_function(db,  "starting_point",             0,  SQLITE_UTF8,
                                  (void *) &work->orig_root,         &starting_point, NULL, NULL) == SQLITE_OK) &&

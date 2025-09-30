@@ -281,6 +281,25 @@ TEST(addqueryfuncs, rpath) {
         EXPECT_STREQ(output, work->name);
     }
 
+    const char entry[] = "entry";
+    char entry_path[MAXPATH];
+    SNFORMAT_S(entry_path, sizeof(entry_path), 3,
+               work->name, work->name_len,
+               "/", (std::size_t) 1,
+               entry, sizeof(entry) - 1);
+
+    for(int rollupscore : {0, 1}) {
+        char query[MAXSQL] = {};
+        SNPRINTF(query, MAXSQL, "SELECT rpath('%s', %d, '%s');", dirname, rollupscore, entry);
+
+        // the path returned by the query is the path without the index prefix
+        char buf[MAXPATH] = {};
+        char *output = buf;
+        EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
+
+        EXPECT_STREQ(output, entry_path);
+    }
+
     sqlite3_close(db);
     free(work);
 }

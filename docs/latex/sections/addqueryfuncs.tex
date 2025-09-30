@@ -204,18 +204,23 @@ Convenience \href{https://www.sqlite.org/appfunc.html}{user defined functions} a
     \hline
     \texttt{fpath()} & Full path of current directory \\
     \hline
-    \rpath(sname, sroll) & Current directory relative to path passed into executable
-                           taking into account the rolled up name in summary table
-                           and rollup score. Should only be used with the \texttt{sname}
-                           and \texttt{sroll} columns of the \vrpentries, \vrsummary,
-                           \vrxpentries, and \vrxsummary views. \\
-                         & \\
-                         & Usage: \\
-                         & \ \ \ \ \texttt{SELECT rpath(sname, sroll)} \\
-                         & \ \ \ \ \texttt{FROM} \vrsummary /\vrxsummary; \\
-                         & \\
-                         & \ \ \ \ \texttt{SELECT rpath(sname, sroll) || "/" || name} \\
-                         & \ \ \ \ \texttt{FROM} \vrpentries /\vrxpentries; \\
+    \rpath(sname, sroll [, name]) & Current directory relative to path passed into executable
+                                    taking into account the rolled up name in summary table
+                                    and rollup score. Should only be used with the \texttt{sname}
+                                    and \texttt{sroll} columns of the \vrpentries, \vrsummary,
+                                    \vrxpentries, and \vrxsummary views. \\
+                                  & \\
+                                  & Usage: \\
+                                  & \texttt{SELECT rpath(sname, sroll)} \\
+                                  & \texttt{FROM} \vrsummary /\vrxsummary; \\
+                                  & \\
+                                  & \texttt{SELECT rpath(sname, sroll, name)} \\
+                                  & \texttt{FROM} \vrpentries /\vrxpentries; \\
+                                  & \\
+                                  & which is equivalent to: \\
+                                  & \\
+                                  & \texttt{SELECT rpath(sname, sroll) || `/' || name} \\
+                                  & \texttt{FROM} \vrpentries /\vrxpentries; \\
     \hline
     \texttt{level()} & Depth of the current directory from the starting directory \\
     \hline
