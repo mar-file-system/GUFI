@@ -69,7 +69,7 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 /* allocate the array of FILE * and open files */
-FILE **outfiles_init(const char *prefix, const size_t count) {
+FILE **outfiles_init(const refstr_t *prefix, const size_t count) {
     /* Not checking arguments */
     FILE **files = calloc(count, sizeof(FILE *));
     if (!files) {
@@ -77,9 +77,19 @@ FILE **outfiles_init(const char *prefix, const size_t count) {
         return NULL;
     }
 
+    if ((prefix->len == 1) && (prefix->data[0] == '-')) {
+        if (count != 1) {
+            outfiles_fin(files, 0);
+            fprintf(stderr, "Outputting to stdout is only allowed with 1 thread\n");
+            return NULL;
+        }
+        files[0] = stdout;
+        return files;
+    }
+
     for(size_t i = 0; i < count; i++) {
         char outname[MAXPATH];
-        SNPRINTF(outname, MAXPATH, "%s.%zu", prefix, i);
+        SNPRINTF(outname, MAXPATH, "%s.%zu", prefix->data, i);
 
         /* check if the destination path already exists (not an error) */
         struct stat st;

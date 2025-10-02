@@ -186,6 +186,31 @@ prefix/unusual#? directory ,/unusual, name?#
 
 # ######################################
 
+# write to stdout
+$ gufi_dir2trace -d "|" -n 1 -x "prefix" "-" 2>/dev/null | awk -F "|" '{ print $1, $2 }'
+/external/db e
+prefix d
+prefix/.hidden f
+prefix/1KB f
+prefix/1MB f
+prefix/directory d
+prefix/directory/executable f
+prefix/directory/readonly f
+prefix/directory/subdirectory d
+prefix/directory/subdirectory/directory_symlink l
+prefix/directory/subdirectory/repeat_name f
+prefix/directory/writable f
+prefix/empty_directory d
+prefix/external.gufi f
+prefix/file_symlink l
+prefix/leaf_directory d
+prefix/leaf_directory/leaf_file1 f
+prefix/leaf_directory/leaf_file2 f
+prefix/old_file f
+prefix/repeat_name f
+prefix/unusual#? directory , d
+prefix/unusual#? directory ,/unusual, name?# f
+
 # source path is file
 $ gufi_dir2trace -d "|" -n 2 "prefix/1KB" "trace"
 "trace.0" Already exists!
@@ -241,4 +266,8 @@ Could not allocate space for 18446744073709551615 files
 # multiple input directories are not allowed for partial indexing
 $ gufi_dir2trace -n 2 -D "distributed.1" -y 1 "prefix" "prefix" "trace"
 Error: When -D is passed in, only one source directory may be specified
+
+write to stdout with more than 1 thread is not allowed
+$ gufi_dir2trace -d "|" -n 2 -x "prefix" "-"
+Outputting to stdout is only allowed with 1 thread
 

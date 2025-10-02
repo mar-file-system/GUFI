@@ -172,6 +172,17 @@ int linetowork(char *line, const size_t len, const char delim,
 int *open_traces(char **trace_names, size_t trace_count) {
     int *traces = (int *) calloc(trace_count, sizeof(int));
     if (traces) {
+        const size_t len = strlen(trace_names[0]);
+        if ((len == 1) && (trace_names[0][0] == '-')) {
+            if (trace_count != 1) {
+                close_traces(traces, 0);
+                fprintf(stderr, "Reading from stdin is only allowed with 1 thread\n");
+                return NULL;
+            }
+            traces[0] = STDIN_FILENO;
+            return traces;
+        }
+
         for(size_t i = 0; i < trace_count; i++) {
             traces[i] = open(trace_names[i], O_RDONLY);
             if (traces[i] < 0) {
@@ -251,16 +262,16 @@ void row_destroy(struct row **ref) {
     *ref = NULL;
 }
 
-static void scout_end_print(struct ScoutTraceStats *stats) {
-    fprintf(stdout, "Scouts took %.2Lf seconds (%.2Lf seconds aggregated)\n",
+static void scout_end_print(struct TraceStats *stats) {
+    fprintf(stderr, "Scouts took %.2Lf seconds (%.2Lf seconds aggregated)\n",
             sec(nsec(&stats->time)), sec(stats->thread_time));
-    fprintf(stdout, "Dirs:                %zu (%zu empty)\n",
+    fprintf(stderr, "Dirs:                %zu (%zu empty)\n",
             stats->dirs, stats->empty);
-    fprintf(stdout, "Files:               %zu\n",
+    fprintf(stderr, "Files:               %zu\n",
             stats->files);
-    fprintf(stdout, "Total:               %zu\n",
+    fprintf(stderr, "Total:               %zu\n",
             stats->files + stats->dirs);
-    fprintf(stdout, "\n");
+    fprintf(stderr, "\n");
 }
 
 /* Read ahead to figure out where files under directories start */
@@ -298,14 +309,12 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             fprintf(stderr, "Could not get the first line of trace \"%s\"\n", sta->tracename);
             rc = 1;
         }
-        free(line);
         goto done;
     }
 
     /* find a delimiter */
     char *first_delim = memchr(line, sta->delim, len);
     if (!first_delim) {
-        free(line);
         fprintf(stderr, "Could not find the specified delimiter in \"%s\"\n", sta->tracename);
         rc = 1;
         goto done;
@@ -313,7 +322,6 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* make sure the first line is a directory */
     if (first_delim[1] != 'd') {
-        free(line);
         fprintf(stderr, "First line of \"%s\" is not a directory\n", sta->tracename);
         rc = 1;
         goto done;
@@ -342,7 +350,6 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
          * bad line
          */
         if (!first_delim) {
-            free(line);
             row_destroy(&work);
             fprintf(stderr, "Scout encountered bad line ending at \"%s\" offset %jd\n",
                     sta->tracename, (intmax_t) offset);
@@ -391,8 +398,6 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
     }
 
-    free(line);
-
     /* handle the last work item */
     dir_count++;
     /* external dbs do not contribue to entry count, but are needed to loop correctly when processing directory */
@@ -407,6 +412,8 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #endif
 
   done:
+    free(line);
+
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 
     pthread_mutex_lock(sta->stats->mutex);
@@ -556,9 +563,9 @@ static void *fill_scout_args(struct TraceRange *tr, void *args) {
 }
 
 size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
-                        const char delim, const size_t max_parts,
-                        QPTPool_t *ctx, QPTPool_f func,
-                        struct ScoutTraceStats *stats) {
+                      const char delim, const size_t max_parts,
+                      QPTPool_t *ctx, QPTPool_f func,
+                      struct TraceStats *stats) {
     memset(stats, 0, sizeof(*stats));
     clock_gettime(CLOCK_MONOTONIC, &stats->time.start);
     stats->mutex = &print_mutex;

@@ -137,7 +137,7 @@ do_tests() {
     run_sort "${GUFI_STATS} -c total-dircount ${BASENAME}"
 }
 
-"${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
+"${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}" 2>&1
 "${GUFI_QUERY}" \
     -a 1 \
     -w \
@@ -149,7 +149,7 @@ do_tests
 
 rm -r "${SEARCH}"
 
-"${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
+"${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}" 2>&1
 "${GUFI_QUERY}" \
     -a 1 \
     -w \
@@ -162,7 +162,7 @@ do_tests
 rm -rf "${SEARCH}"
 
 "${GENERATETREE}" "${SRCDIR}"
-"${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
+"${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}" 2>&1
 
 echo "# Partial Rollup up to level 1"
 run_no_sort "${GUFI_ROLLUP} -y 1 -D \"${PATH_LIST}\" \"${INDEXROOT}\""

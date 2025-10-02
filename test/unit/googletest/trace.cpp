@@ -301,7 +301,7 @@ TEST(scout_trace, no_cleanup) {
     ASSERT_EQ(write(fd, line, len), (ssize_t) len);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    struct ScoutTraceStats stats = {};
+    struct TraceStats stats = {};
     stats.mutex = &mutex;
     stats.remaining = 2; // run twice to cover both sides of final print condition
 
@@ -414,7 +414,7 @@ TEST(enqueue_traces, bad) {
     char tracename[] = "trace";
     char *tracenameptr = tracename;
     int tracefd = -1;
-    struct ScoutTraceStats stats = {};
+    struct TraceStats stats = {};
 
     EXPECT_EQ(enqueue_traces(&tracenameptr, &tracefd, 1, '|', 10, nullptr, nullptr, &stats), (std::size_t) 0);
 }

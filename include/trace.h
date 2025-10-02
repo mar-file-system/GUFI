@@ -108,7 +108,7 @@ struct TraceRange {
     off_t start, end; /* [start, end) */
 };
 
-struct ScoutTraceStats {
+struct TraceStats {
     pthread_mutex_t *mutex; /* lock for values below */
 
     size_t remaining;
@@ -133,7 +133,7 @@ struct ScoutTraceArgs {
     void (*free)(void *);
 
     /* reference to single set of shared values */
-    struct ScoutTraceStats *stats;
+    struct TraceStats *stats;
 };
 
 int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
@@ -141,7 +141,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
 size_t enqueue_traces(char **traceames, int *tracefds, const size_t trace_count,
                       const char delim, const size_t max_parts,
                       QPTPool_t *ctx, QPTPool_f func,
-                      struct ScoutTraceStats *stats);
+                      struct TraceStats *stats);
 
 #ifdef __cplusplus
 }

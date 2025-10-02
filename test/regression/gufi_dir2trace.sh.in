@@ -162,6 +162,9 @@ run_no_sort "cat ${TRACES[@]} ${FIRST}.* ${SECOND}.* | @AWK@ -F '|' '{ print \$1
 echo "# ######################################"
 echo
 
+echo "# write to stdout"
+run_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 1 -x \"${SRCDIR}\" \"-\" 2>/dev/null | @AWK@ -F \"${DELIM}\" '{ print \$1, \$2 }'"
+
 echo "# source path is file"
 touch "${TRACE}"
 # shellcheck disable=SC2046,SC2086
@@ -188,6 +191,9 @@ run_no_sort "${GUFI_DIR2TRACE} -n 18446744073709551615 \"${SRCDIR}\" \"${TRACE}\
 
 echo "# multiple input directories are not allowed for partial indexing"
 run_no_sort "${GUFI_DIR2TRACE} -n ${THREADS} -D \"${DISTRIBUTED_1}\" -y ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SRCDIR}\" \"${TRACE}\""
+
+echo "write to stdout with more than 1 thread is not allowed"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"-\""
 ) | remove_indexing_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${OUTPUT}"

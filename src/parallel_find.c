@@ -271,7 +271,7 @@ int main(int argc, char *argv[]) {
     process_args_and_maybe_exit("hHvn:f:y:z:t:o:B:", 1, "input_dir...", &pa.in);
     int rc = 0;
 
-    pa.outfiles = (pa.in.output == OUTFILE)?outfiles_init(pa.in.outname.data, pa.in.maxthreads):stdout_init(&pa.in);
+    pa.outfiles = (pa.in.output == OUTFILE)?outfiles_init(&pa.in.outname, pa.in.maxthreads):stdout_init(&pa.in);
     if (!pa.outfiles) {
         rc = 1;
         goto cleanup_exit;

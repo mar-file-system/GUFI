@@ -161,13 +161,13 @@ setup() {
 
 direct_index() {
     # generate index directly from source tree
-    "${GUFI_DIR2INDEX}" -q -x "${SRCDIR}" "${SEARCH}"
+    "${GUFI_DIR2INDEX}" -q -x "${SRCDIR}" "${SEARCH}" > /dev/null 2>&1
 }
 
 indirect_index() {
     # test with index generate with trace files
-    "${GUFI_DIR2TRACE}"   -d "${DELIM}" -q -x "${SRCDIR}"  "${TRACE}"
-    "${GUFI_TRACE2INDEX}" -d "${DELIM}"       "${TRACE}.0" "${SEARCH}"
+    "${GUFI_DIR2TRACE}"   -d "${DELIM}" -q -x "${SRCDIR}"  "${TRACE}"  > /dev/null 2>&1
+    "${GUFI_TRACE2INDEX}" -d "${DELIM}"       "${TRACE}.0" "${SEARCH}" > /dev/null 2>&1
 }
 
 fix_index() {
@@ -271,7 +271,7 @@ rollup() {
 
 (
     setup
-    direct_index 2>&1 >/dev/null; echo "# Create Index"
+    direct_index; echo "# Create Index"
     fix_index
     do_tests
     rollup
@@ -283,7 +283,7 @@ rm "${OUTPUT}"
 
 (
     setup
-    indirect_index 2>&1 >/dev/null; echo "# Create Index"
+    indirect_index; echo "# Create Index"
     fix_index
     do_tests
     rollup

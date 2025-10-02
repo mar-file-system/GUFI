@@ -77,7 +77,7 @@ rm -rf "${SEARCH}"
 
 # generate the index
 # shellcheck disable=SC2016
-out=$("${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}" | @AWK@ '{ print "    " $0 }')
+out=$("${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}" 2>&1 | @AWK@ '{ print "    " $0 }')
 
 src=$(find "${SRCDIR}" | sort)
 
@@ -106,7 +106,7 @@ do
 
     # generate the index
     # shellcheck disable=SC2016
-    out=$("${GUFI_DIR2INDEX}" -y ${level} -x "${SRCDIR}" "${SEARCH}" | @AWK@ '{ print "    " $0 }')
+    out=$("${GUFI_DIR2INDEX}" -y ${level} -x "${SRCDIR}" "${SEARCH}" 2>&1 | @AWK@ '{ print "    " $0 }')
 
     # find and GUFI levels are slightly different
     src=$( (find "${SRCDIR}" -mindepth ${level} -type d; find "${SRCDIR}" -mindepth $((level + 1)) ! -type d) | sort)
@@ -137,7 +137,7 @@ do
 
     # generate the index
     # shellcheck disable=SC2016
-    out=$("${GUFI_DIR2INDEX}" -z ${level} -x "${SRCDIR}" "${SEARCH}" | @AWK@ '{ print "    " $0 }')
+    out=$("${GUFI_DIR2INDEX}" -z ${level} -x "${SRCDIR}" "${SEARCH}" 2>&1 | @AWK@ '{ print "    " $0 }')
 
     src=$( (find "${SRCDIR}" -maxdepth ${level} -type d; find "${SRCDIR}" -maxdepth $((level + 1)) ! -type d) | sort)
     # src=$(find "${SRCDIR}" -maxdepth ${level} | sort)

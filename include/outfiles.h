@@ -65,10 +65,13 @@ OF SUCH DAMAGE.
 #ifndef GUFI_OUTFILES_H
 #define GUFI_OUTFILES_H
 
+#include <stddef.h>
 #include <stdio.h>
 
+#include <str.h>
+
 /* allocate the array of FILE * and open files */
-FILE **outfiles_init(const char *prefix, const size_t count);
+FILE **outfiles_init(const refstr_t *prefix, const size_t count);
 
 /* close all output files */
 int outfiles_fin(FILE **files, const size_t end);

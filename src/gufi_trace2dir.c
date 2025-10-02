@@ -239,7 +239,7 @@ int main(int argc, char * argv[]) {
     }
 
     /* parse the trace files and enqueue work */
-    struct ScoutTraceStats stats;
+    struct TraceStats stats;
     enqueue_traces(&argv[idx], traces, trace_count,
                    pa.in.delim,
                    /* allow for some threads to start processing while reading */

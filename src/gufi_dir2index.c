@@ -538,8 +538,7 @@ int main(int argc, char *argv[]) {
         goto free_xattr;
     }
 
-    fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
-    fflush(stdout);
+    fprintf(stderr, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
 
     pa.total_dirs    = calloc(pa.in.maxthreads, sizeof(uint64_t));
     pa.total_nondirs = calloc(pa.in.maxthreads, sizeof(uint64_t));
@@ -604,11 +603,11 @@ int main(int argc, char *argv[]) {
     free(pa.total_dirs);
     free(pa.total_nondirs);
 
-    fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", total_dirs);
-    fprintf(stdout, "Total Non-Dirs:      %" PRIu64 "\n", total_nondirs);
-    fprintf(stdout, "Time Spent Indexing: %.2Lfs\n",      processtime);
-    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       total_dirs / processtime);
-    fprintf(stdout, "Non-Dirs/Sec:        %.2Lf\n",       total_nondirs / processtime);
+    fprintf(stderr, "Total Dirs:          %" PRIu64 "\n", total_dirs);
+    fprintf(stderr, "Total Non-Dirs:      %" PRIu64 "\n", total_nondirs);
+    fprintf(stderr, "Time Spent Indexing: %.2Lfs\n",      processtime);
+    fprintf(stderr, "Dirs/Sec:            %.2Lf\n",       total_dirs / processtime);
+    fprintf(stderr, "Non-Dirs/Sec:        %.2Lf\n",       total_nondirs / processtime);
 
   free_xattr:
     close_template_db(&pa.xattr);

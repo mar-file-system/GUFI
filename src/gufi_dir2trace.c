@@ -233,7 +233,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    pa.outfiles = outfiles_init(pa.in.nameto.data, pa.in.maxthreads);
+    pa.outfiles = outfiles_init(&pa.in.nameto, pa.in.maxthreads);
     if (!pa.outfiles) {
         input_fini(&pa.in);
         return EXIT_FAILURE;
@@ -249,8 +249,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    fprintf(stdout, "Creating GUFI Traces %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
-    fflush(stdout);
+    fprintf(stderr, "Creating GUFI Traces %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
 
     pa.total_files = calloc(pa.in.maxthreads, sizeof(size_t));
 
@@ -316,11 +315,11 @@ int main(int argc, char *argv[]) {
     free(pa.total_files);
     input_fini(&pa.in);
 
-    fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", thread_count);
-    fprintf(stdout, "Total Files:         %zu\n",         total_files);
-    fprintf(stdout, "Time Spent Indexing: %.2Lfs\n",      processtime);
-    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
-    fprintf(stdout, "Files/Sec:           %.2Lf\n",       total_files / processtime);
+    fprintf(stderr, "Total Dirs:          %" PRIu64 "\n", thread_count);
+    fprintf(stderr, "Total Files:         %zu\n",         total_files);
+    fprintf(stderr, "Time Spent Indexing: %.2Lfs\n",      processtime);
+    fprintf(stderr, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
+    fprintf(stderr, "Files/Sec:           %.2Lf\n",       total_files / processtime);
 
     dump_memory_usage();
 

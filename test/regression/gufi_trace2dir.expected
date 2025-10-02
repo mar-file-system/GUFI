@@ -52,11 +52,11 @@ Could not create directory prefix/old_file
 $ rm -rf "reconstructed/prefix/directory/readonly"
 
 $ gufi_trace2dir -d "|" trace "reconstructed"
-Dupdir failure: "reconstructed/prefix/old_file/dir": Not a directory (20)
 Dirs:                7 (2 empty)
 Files:               14
 Total:               21
 
+Dupdir failure: "reconstructed/prefix/old_file/dir": Not a directory (20)
 
 $ gufi_trace2dir -n 18446744073709551615 trace.0 trace.1 "reconstructed"
 Error: Failed to start thread pool
