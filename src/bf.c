@@ -107,6 +107,7 @@ struct input *input_init(struct input *in) {
         in->maxthreads              = 1;                      // don't default to zero threads
         in->delim                   = fielddelim;
         in->process_sql             = RUN_ON_ROW;
+        in->suspecttime             = time(NULL);
         in->max_level               = -1;                     // default to all the way down
         in->nobody.uid              = 65534;
         in->nobody.gid              = 65534;
@@ -200,7 +201,6 @@ void print_help(const char* prog_name,
       case 'v': printf("  -v                     version"); break;
       case 'x': printf("  -x                     index/query xattrs"); break;
       case 'P': printf("  -P                     print directories as they are encountered"); break;
-      case 'b': printf("  -b                     build GUFI index tree"); break;
       case 'a': printf("  -a <0|1|2>             0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
                        "                         1 - skip T, run S and E whether or not a row was returned (old -a)\n"
                        "                         2 - run T, S, and E whether or not a row was returned"); break;
@@ -214,13 +214,12 @@ void print_help(const char* prog_name,
       case 'S': printf("  -S <SQL_sum>           SQL for summary table"); break;
       case 'E': printf("  -E <SQL_ent>           SQL for entries table"); break;
       case 'F': printf("  -F <SQL_fin>           SQL cleanup"); break;
-      case 'r': printf("  -r                     insert files and links into db (for bfwreaddirplus2db"); break;
-      case 'R': printf("  -R                     insert dires into db (for bfwreaddirplus2db"); break;
+      case 'r': printf("  -r                     insert files and links into db (for gufi_incremental_update)"); break;
+      case 'R': printf("  -R                     insert dires into db (for gufi_incremental_update)"); break;
       case 'Y': printf("  -Y                     default to all directories suspect"); break;
       case 'Z': printf("  -Z                     default to all files/links suspect"); break;
       case 'W': printf("  -W <INSUSPECT>         suspect input file"); break;
       case 'A': printf("  -A <suspectmethod>     suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
-      case 'g': printf("  -g <stridesize>        stride size for striping inodes"); break;
       case 'c': printf("  -c <suspecttime>       time in seconds since epoch for suspect comparision"); break;
       case 'y': printf("  -y <min level>         minimum level to go down"); break;
       case 'z': printf("  -z <max level>         maximum level to go down"); break;
@@ -260,7 +259,6 @@ void print_help(const char* prog_name,
 void show_input(struct input* in, int retval) {
    printf("in.printed_version          = %d\n",            in->printed_version);
    printf("in.printdir                 = %d\n",            in->printdir);
-   printf("in.buildindex               = %d\n",            in->buildindex);
    printf("in.maxthreads               = %zu\n",           in->maxthreads);
    printf("in.delim                    = '%c'\n",          in->delim);
    printf("in.process_sql              = %d\n",            (int) in->process_sql);
@@ -281,7 +279,6 @@ void show_input(struct input* in, int retval) {
    printf("in.suspectfile              = '%d'\n",          in->suspectfile);
    printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
    printf("in.suspecttime              = '%d'\n",          in->suspecttime);
-   printf("in.stride                   = '%d'\n",          in->stride);
    printf("in.min_level                = %zu\n",           in->min_level);
    printf("in.max_level                = %zu\n",           in->max_level);
    printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate.data);
@@ -372,10 +369,6 @@ int parse_cmd_line(int         argc,
          in->printdir = 1;
          break;
 
-      case 'b':               // build index?
-         in->buildindex = 1;
-         break;
-
       case 'a':
          {
              int a = -1;
@@ -431,11 +424,11 @@ int parse_cmd_line(int         argc,
          INSTALL_STR(&in->sql.fin, optarg);
          break;
 
-      case 'r':               // insert files and links into db for bfwreaddirplus2db
+      case 'r':               // insert files and links into db for gufi_incremental_update
          in->insertfl = 1;
          break;
 
-      case 'R':               // insert dirs into db for bfwreaddirplus2db
+      case 'R':               // insert dirs into db for gufi_incremental_update
          in->insertdir = 1;
          break;
 
@@ -454,10 +447,6 @@ int parse_cmd_line(int         argc,
 
       case 'A':
          INSTALL_INT(&in->suspectmethod, optarg, 0, 3, "-A", &retval);
-         break;
-
-      case 'g':
-         INSTALL_INT(&in->stride, optarg, 1, MAXSTRIDE, "-g", &retval);
          break;
 
       case 'c':

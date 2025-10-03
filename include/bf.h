@@ -225,18 +225,16 @@ struct input {
    int  helped;               /* support parsing of per-app sub-options */
    int  printed_version;
    char delim;
-   int  buildindex;
    size_t maxthreads;
    AFlag_t process_sql;       /* what to do if an SQL statement returns/doesn't return 1 row */
-   int  insertdir;                // added for bfwreaddirplus2db
-   int  insertfl;                 // added for bfwreaddirplus2db
-   int  suspectd;                 // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
-   int  suspectfl;                // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
-   refstr_t insuspect;            // added for bfwreaddirplus2db input path for suspects file
-   int  suspectfile;              // added for bfwreaddirplus2db flag for if we are processing suspects file
-   int  suspectmethod;            // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use
-   int  stride;                   // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
-   int  suspecttime;              // added for bfwreaddirplus2db time for suspect comparison in seconds since epoch
+   int  insertdir;                // added for gufi_incremental_update
+   int  insertfl;                 // added for gufi_incremental_update
+   int  suspectd;                 // added for gufi_incremental_update for how to default suspect directories 0 - not supsect 1 - suspect
+   int  suspectfl;                // added for gufi_incremental_update for how to default suspect file/link 0 - not suspect 1 - suspect
+   refstr_t insuspect;            // added for gufi_incremental_update input path for suspects file
+   int  suspectfile;              // added for gufi_incremental_update flag for if we are processing suspects file
+   int  suspectmethod;            // added for gufi_incremental_update flag for if we are processing suspects what method do we use
+   int  suspecttime;              // added for gufi_incremental_update time for suspect comparison in seconds since epoch
    size_t min_level;              // minimum level of recursion to reach before running queries
    size_t max_level;              // maximum level of recursion to run queries on
    int dry_run;
@@ -416,19 +414,22 @@ struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
 
 /* extra data used by entries that does not depend on data from other directories */
 struct entry_data {
-   int           parent_fd;    /* holds an FD that can be used for fstatat(2), etc. */
-   char          type;
-   char          linkname[MAXPATH];
-   long long int offset;
-   struct xattrs xattrs;
-   int           ossint1;
-   int           ossint2;
-   int           ossint3;
-   int           ossint4;
-   char          osstext1[MAXXATTR];
-   char          osstext2[MAXXATTR];
-   char          pinodec[128];
-   int           suspect;  // added for bfwreaddirplus2db for suspect
+    int           parent_fd;    /* holds an FD that can be used for fstatat(2), etc. */
+    char          type;
+    char          linkname[MAXPATH];
+    long long int offset;
+    struct xattrs xattrs;
+    int           ossint1;
+    int           ossint2;
+    int           ossint3;
+    int           ossint4;
+    char          osstext1[MAXXATTR];
+    char          osstext2[MAXXATTR];
+    char          pinodec[128];
+
+    /* gufi_incremental_update */
+    int           suspect;
+    time_t        suspect_time;
 };
 
 extern const char fielddelim;

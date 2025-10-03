@@ -97,7 +97,6 @@ ${TESTS}/runbfwi                ${TREE} ${TARGET}
 ${TESTS}/runbfti                        ${INDEX}
 ${TESTS}/runbfq                         ${INDEX}
 ${TESTS}/runquerydbs                    ${INDEX} 2
-${TESTS}/runbfwreaddirplus2db   ${TREE}
 ${TESTS}/rundfw                         ${INDEX}
 
 # other tests

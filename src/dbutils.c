@@ -83,7 +83,7 @@ const char READDIRPLUS_CREATE[] =
     READDIRPLUS_SCHEMA(READDIRPLUS);
 
 const char READDIRPLUS_INSERT[] =
-    "INSERT INTO " READDIRPLUS " VALUES (@path, @type, @inode, @pinode, @suspect);";
+    "INSERT INTO " READDIRPLUS " VALUES (@path, @type, @inode, @pinode, @depth, @suspect);";
 
 const char ENTRIES_CREATE[] =
     DROP_TABLE(ENTRIES)
@@ -231,11 +231,11 @@ vssql(group, 2);
 LONG_CREATE(SUMMARY);
 LONG_CREATE(VRSUMMARY);
 
-static sqlite3 *attachdb_internal(const char *attach, sqlite3 *db, const char *dbn, const int print_err) {
+static sqlite3 *attachdb_internal(const char *name, const char *attach, sqlite3 *db, const char *dbn, const int print_err) {
     char *err = NULL;
     if (sqlite3_exec(db, attach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
         if (print_err) {
-            sqlite_print_err_and_free(err, stderr, "Cannot attach database as \"%s\": %s\n", dbn, err);
+            sqlite_print_err_and_free(err, stderr, "Cannot attach database \"%s\" as \"%s\": %s\n", name, dbn, err);
         }
         return NULL;
     }
@@ -252,7 +252,7 @@ sqlite3 *attachdb_raw(const char *name, sqlite3 *db, const char *dbn, const int 
     char attach[MAXSQL];
     sqlite3_snprintf(sizeof(attach), attach, "ATTACH %Q AS %Q;", name, dbn);
 
-    return attachdb_internal(attach, db, dbn, print_err);
+    return attachdb_internal(name, attach, db, dbn, print_err);
 }
 
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err) {
@@ -273,14 +273,14 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
     sqlite3_snprintf(sizeof(attach), attach, "ATTACH 'file:%q?mode=r%c" GUFI_SQLITE_VFS_URI "' AS %Q;",
                      name, ow, dbn);
 
-    return attachdb_internal(attach, db, dbn, print_err);
+    return attachdb_internal(name, attach, db, dbn, print_err);
 }
 
 sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql, const int print_err) {
     char *err = NULL;
     if (sqlite3_exec(db, sql, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
         if (print_err) {
-            sqlite_print_err_and_free(err, stderr, "Cannot detach database: %s %s\n", name, err);
+            sqlite_print_err_and_free(err, stderr, "Cannot detach database \"%s\": %s\n", name, err);
         }
         return NULL;
     }
@@ -565,11 +565,10 @@ void insertdbfin(sqlite3_stmt *res)
 sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli)
 {
     const char *tail = NULL;
-    int error = SQLITE_OK;
     sqlite3_stmt *reso = NULL;
 
     // WARNING: passing length-arg that is longer than SQL text
-    error = sqlite3_prepare_v2(db, sqli, MAXSQL, &reso, &tail);
+    const int error = sqlite3_prepare_v2(db, sqli, MAXSQL, &reso, &tail);
     if (error != SQLITE_OK) {
         sqlite_print_err_and_free(NULL, stderr, "SQL error on insertdbprep: error %d %s err %s\n",
                                   error, sqli, sqlite3_errmsg(db));
@@ -1524,4 +1523,16 @@ int get_col_names(sqlite3 *db, const refstr_t *sql, char ***names, size_t **lens
 
     sqlite3_finalize(stmt);
     return 0;
+}
+
+/* SELECT mode, uid, gid FROM <table>; */
+int get_permissions_callback(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
+    struct Permissions *perms = (struct Permissions *) args;
+    return !(
+        (sscanf(data[0], "%" STAT_mode, &perms->mode) == 1) &&
+        (sscanf(data[1], "%" STAT_uid,  &perms->uid)  == 1) &&
+        (sscanf(data[2], "%" STAT_gid,  &perms->gid)  == 1)
+    );
 }

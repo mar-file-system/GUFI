@@ -62,29 +62,35 @@ OF SUCH DAMAGE.
 
 
 
-#define _XOPEN_SOURCE
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <time.h>
+#include "gufi_incremental_update/incremental_update.h"
 
-int main(int argc, char **argv)
-{
-    if (argc < 3) {
-        fprintf(stderr, "Syntax: %s M/D/Y H:M:S\n", argv[0]);
-        return 1;
+int insert_record(struct work *work, struct entry_data *ed,
+                  sqlite3_stmt *res, const size_t offset_name) {
+    char *zname = sqlite3_mprintf("%q", work->name + offset_name); /* remove parents of starting paths */
+    char *ztype = sqlite3_mprintf("%c", ed->type);
+    sqlite3_bind_text (res, 1, zname, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text (res, 2, ztype, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(res, 3, work->statuso.st_ino);
+    sqlite3_bind_int64(res, 4, work->pinode);
+    sqlite3_bind_int64(res, 5, work->level);
+    sqlite3_bind_int64(res, 6, ed->suspect);
+
+    int error = sqlite3_step(res);
+    if (error != SQLITE_DONE) {
+        fprintf(stderr,  "SQL insertdbgor step: %s error %d err %s\n",
+                work->name, error, sqlite3_errstr(error));
     }
 
-    struct tm t;
-    time_t t_of_day;
-    int myear;
+    error = sqlite3_reset(res);
+    if (error != SQLITE_OK) {
+        fprintf(stderr,  "SQL insertdbgor reset: %s error %d err %s\n",
+                work->name, error, sqlite3_errstr(error));
+    }
 
-    sscanf(argv[1],"%d/%d/%d",&t.tm_mon,&t.tm_mday,&myear);
-    sscanf(argv[2],"%d:%d:%d",&t.tm_hour,&t.tm_min,&t.tm_sec);
-    t.tm_year=myear-1900;
-    t.tm_isdst = -1;        // Is DST on? 1 = yes, 0 = no, -1 = unknown
-    t_of_day = mktime(&t);
+    sqlite3_free(ztype);
+    sqlite3_free(zname);
+    sqlite3_reset(res);
+    sqlite3_clear_bindings(res);
 
-    printf("seconds since the Epoch: %ld\n", (long) t_of_day);
-    return 0;
+    return !(error == SQLITE_OK);
 }

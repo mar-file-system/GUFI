@@ -62,24 +62,59 @@ OF SUCH DAMAGE.
 
 
 
-#define _XOPEN_SOURCE
+#include <errno.h>
 #include <stdio.h>
-#include <time.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-int main(int argc, char **argv)
-{
-    if (argc < 2) {
-        fprintf(stderr, "Syntax: %s timestamp", argv[0]);
-        return 1;
+#include "gufi_incremental_update/incremental_update.h"
+
+/*
+ * set up the parking lot directory
+ * returns -1 on error
+ *          0 on parking lot already exists
+ *          1 on new parking lot directory (should remove)
+ */
+int setup_parking_lot(const char *path) {
+    struct stat pl;
+    if (stat(path, &pl) == 0) {
+        if (!S_ISDIR(pl.st_mode)) {
+            fprintf(stderr, "Error: Existing parking lot path \"%s\" is not a directory\n", path);
+            return -1;
+        }
+
+        return 0; /* parking lot already exists - don't remove; ignoring permissions here */
     }
 
-    struct tm  ts;
-    char       buf[80];
+    int err = errno;
+    if (err != ENOENT) {
+        fprintf(stderr, "Error: Could not stat parking lot directory \"%s\": %s (%d)\n",
+            path, strerror(err), err);
+        return -1;
+    }
 
-    strptime(argv[1], "%s", &ts);
+    /* parking lot doesn't exist yet - create it */
 
-    // Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
-    strftime(buf, sizeof(buf), "-fromtime=%m/%d/%Y -fromtime=%H:%M", &ts);
-    printf("%s\n", buf);
+    /* not creating parents */
+    if (mkdir(path, S_IRWXU | S_IRWXG) != 0) {
+        err = errno;
+        fprintf(stderr, "Error: Could not create parking lot directory \"%s\": %s (%d)\n",
+            path, strerror(err), err);
+        return -1;
+    }
+
+    return 1;
+}
+
+int cleanup_parking_lot(const char *path, const int created) {
+    if (created == 1) {
+        if (remove(path) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not remove parking lot directory \"%s\": %s (%d)\n",
+                    path, strerror(err), err);
+            return -1;
+        }
+    }
     return 0;
 }

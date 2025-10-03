@@ -1,3 +1,4 @@
+/*
 This file is part of GUFI, which is part of MarFS, which is released
 under the BSD license.
 
@@ -57,49 +58,97 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
+*/
 
 
 
-bfwreaddirplus2db - breadth first walk of input tree to list the tree, or create an output db of readdirplus
+#include "dbutils.h"
+#include "print.h"
 
-Usage: bfwreaddirplus2db [options] input_dir
-options:
-  -h                 help
-  -H                 show assigned input values (debugging)
-  -o <outfile>       output file one per thread writes path, inode, pinode, type, sortfield to file (sortfield enables sorting for bfwi load from flat file)
-  -n <threads>       number of threads
-  -P <delimiter>     delimiter for output file
-  -O <outputdb>      write a set of output dbs
-  -Y                 default all directories as suspect
-  -Z                 default all files links as suspect
-  -W <insuspectfile> path to input suspect file
-  -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl)
-  -c <suspecttime>   time in seconds since epoch for suspect comparison
-  -g <stridesize>    stride size for striping inodes into separate output db's
-  -t <to_dir>        if this is provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode and this is in conflict with -b
-  -b                 build GUFI index tree but in bfwreaddirplus2db the gufi tree goes into src tree and this flag is in conflict with -t
-  -x                 process xattrs if you are creating gufi dbs of suspect directories
+#include "gufi_incremental_update/aggregate.h"
 
+/* must have shared cache */
+static const char INTERMEDIATE_ATTACH_FORMAT[] = "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
+#define INTERMEDIATE_ATTACH_NAME "intermediate"
 
-This program is largely used for a part of an incremental update of a GUFI tree, see the document for how this works.
+static int create_readdirplus_tables(const char *name, sqlite3 *db, void *args) {
+    (void) args;
 
-Flow:
-if using input suspect file read that in and put into memory trie for lookups
-input directory is put on a queue
-threads are started
-loop assigning work (directories) from queue to threads
-each thread lists the directory readdirplus
-  if using suspect file, see if this inode matches a suspect file or dir or link
-  if using suspect mode involving stat then use that to help determine of a directory is suspect
-  if we are striping the inodes into different outdb's, we have to lock on the output db to place records into proper outdbs
-  if directory put it on the queue print to screen write to outdb
-  if link or file print it to screen write to outdb
-  put dirs and/or files into output db (path, inode, pinode, type, suspect) into output dir
-  if to_dir provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode
-  if writing output file write files, links, and directories to output files on  per thread (can use striping of inodes across files)
-  if building a gufi tree it writes/rewrites the directory db's into the source tree for all suspect directories
-  close directory
-end
-close outdb if needed
+    return (create_table_wrapper(name, db, READDIRPLUS, READDIRPLUS_CREATE) != SQLITE_OK);
+}
 
-...........................................................................
+int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *name, const size_t offset) {
+    /* Not checking arguments */
+
+    /* create per-thread in-memory dbs */
+    aggregate->dbs = calloc(threads, sizeof(aggregate->dbs[0]));
+
+    char dbname[MAXPATH];
+    for(size_t i = 0; i < threads; i++) {
+        SNPRINTF(dbname, MAXPATH, INTERMEDIATE_ATTACH_FORMAT, i + offset);
+
+        aggregate->dbs[i] = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
+                                   1, 1, create_readdirplus_tables, NULL);
+        if (!aggregate->dbs[i]) {
+            fprintf(stderr, "Could not open aggregation database \"%s\"\n", dbname);
+            aggregate_fin(aggregate, i);
+            return 1;
+        }
+
+        addqueryfuncs(aggregate->dbs[i]);
+    }
+
+    /* always open an aggregate db */
+    aggregate->agg = opendb(name, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
+                            1, 1, create_readdirplus_tables, NULL);
+    if (!aggregate->agg) {
+        fprintf(stderr, "Could not open final aggregation database \"%s\"\n", dbname);
+        aggregate_fin(aggregate, threads);
+        return 1;
+    }
+
+    /* don't need addqueryfuncs */
+
+    return 0;
+}
+
+void aggregate_intermediate(Aggregate_t *aggregate, const size_t threads, const size_t offset) {
+    /* Not checking arguments */
+
+    /*
+     * attach intermediate databases to aggregate database
+     * not using attachdb because attachdb modifies the input path, which is not needed here
+     *
+     * failure to attach is not an error - the data is simply not accessible
+     */
+    char dbname[MAXPATH];
+    for(size_t i = 0; i < threads; i++) {
+        SNPRINTF(dbname, MAXPATH, INTERMEDIATE_ATTACH_FORMAT, i + offset);
+
+        if (attachdb_raw(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1)) {
+            char *err = NULL;
+            if ((sqlite3_exec(aggregate->agg, "INSERT INTO " READDIRPLUS " SELECT * FROM " INTERMEDIATE_ATTACH_NAME "." READDIRPLUS, NULL, NULL, &err) != SQLITE_OK)) {
+                sqlite_print_err_and_free(err, stderr, "Error: Cannot aggregate intermediate databases: %s\n", err);
+            }
+        }
+
+        detachdb(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1);
+    }
+}
+
+void aggregate_fin(Aggregate_t *aggregate, const size_t threads) {
+    /* Not checking arguments */
+
+    if (aggregate->agg) {
+        closedb(aggregate->agg);
+    }
+
+    if (aggregate->dbs) {
+        for(size_t i = 0; i < threads; i++) {
+            closedb(aggregate->dbs[i]);
+        }
+
+        free(aggregate->dbs);
+        aggregate->dbs = NULL;
+    }
+}

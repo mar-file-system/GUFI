@@ -75,7 +75,6 @@ foreach(EXAMPLE
     listschemadb
     listtablesdb
     oldbigfiles
-    runtsm
     userfilespacehog
     userfilespacehogusesummary)
   # copy the scropt into the build directory for easy access
