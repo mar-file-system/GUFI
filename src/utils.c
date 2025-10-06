@@ -775,9 +775,12 @@ void dump_memory_usage(void) {
     }
 
     char buf[4096] = { 0 };
-    int rc = read(fd, buf, sizeof buf - 1);
+    const int rc = read(fd, buf, sizeof buf - 1);
+    const int err = errno;
+    close(fd);
     if (rc < 0) {
-        perror("Could not read /proc/self/status");
+        fprintf(stderr, "Error: Could not read /proc/self/status: %s (%d)\n",
+                strerror(err), err);
         return;
     }
 
