@@ -211,9 +211,7 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
 
     if (fchown(dst_db, uid, gid) != 0) {
         const int err = errno;
-        fprintf(stderr, "Error: copy_template fchown: %s (%d)\n", strerror(err), err);
-        close(dst_db);
-        return -1;
+        fprintf(stderr, "Warning: copy_template fchown: %s (%d)\n", strerror(err), err);
     }
 
     close(dst_db);
