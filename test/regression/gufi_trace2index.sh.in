@@ -76,9 +76,10 @@ done
 EMPTY_LAST_DIR_TRACE="empty_last_dir.trace"
 BIG_DIR_TRACE="big.dir.trace"
 BIG_DIR_INDEX="big.dir.index"
+DIFFERENT_OWNERS="different_owners.${TRACE}"
 
 cleanup() {
-    rm -rf "${TRACES[@]}" "${EMPTY_LAST_DIR_TRACE}" "${BIG_DIR_TRACE}" "${BIG_DIR_INDEX}"
+    rm -rf "${TRACES[@]}" "${EMPTY_LAST_DIR_TRACE}" "${BIG_DIR_TRACE}" "${BIG_DIR_INDEX}" "${DIFFERENT_OWNERS}"
 }
 
 cleanup_exit() {
@@ -157,6 +158,17 @@ run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT COUNT(*) FROM entries;\" \"${BIG
 ) > "${EMPTY_LAST_DIR_TRACE}"
 echo "# create index from a trace file whose last item is an empty directory"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${EMPTY_LAST_DIR_TRACE}\" \"${SEARCH}\""
+
+# replace uid and gid with random values
+while IFS= read -r line
+do
+    echo "${line}" | @SED@ "s%$(id -u)${DELIM}$(id -g)%${RANDOM}${DELIM}${RANDOM}%g"
+done < "${TRACE}" > "${DIFFERENT_OWNERS}"
+echo "# Process trace with different owners"
+echo "# Should work when indexed as user and as root"
+rm -rf "${SEARCH}"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${DIFFERENT_OWNERS}\" \"${SEARCH}\"" | @SED@ "\%^Warning.*%d;"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -S \"SELECT rpath(sname, sroll), uid, gid FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), uid, gid FROM vrpentries;\" ${INDEXROOT} | @AWK@ -F \"${DELIM}\" -v OFS=\"${DELIM}\" '{ \$2=\"uid\" ; \$3=\"gid\" ; print }'"
 
 echo "# bad trace path"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"\" \"${SEARCH}\""

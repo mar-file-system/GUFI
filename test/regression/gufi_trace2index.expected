@@ -158,6 +158,39 @@ Total:               21
 Total Dirs:          7
 Total Files:         14
 
+# Process trace with different owners
+# Should work when indexed as user and as root
+$ gufi_trace2index -d "|" -n 4 "different_owners.trace" "search"
+Creating GUFI Index search with 4 threads
+Dirs:                6 (1 empty)
+Files:               14
+Total:               20
+
+Total Dirs:          6
+Total Files:         14
+
+$ gufi_query -d "|" -n 4 -S "SELECT rpath(sname, sroll), uid, gid FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), uid, gid FROM vrpentries;" prefix | awk -F "|" -v OFS="|" '{ $2="uid" ; $3="gid" ; print }'
+prefix/.hidden|uid|gid
+prefix/1KB|uid|gid
+prefix/1MB|uid|gid
+prefix/directory/executable|uid|gid
+prefix/directory/readonly|uid|gid
+prefix/directory/subdirectory/directory_symlink|uid|gid
+prefix/directory/subdirectory/repeat_name|uid|gid
+prefix/directory/subdirectory|uid|gid
+prefix/directory/writable|uid|gid
+prefix/directory|uid|gid
+prefix/empty_directory|uid|gid
+prefix/file_symlink|uid|gid
+prefix/leaf_directory/leaf_file1|uid|gid
+prefix/leaf_directory/leaf_file2|uid|gid
+prefix/leaf_directory|uid|gid
+prefix/old_file|uid|gid
+prefix/repeat_name|uid|gid
+prefix/unusual#? directory ,/unusual, name?#|uid|gid
+prefix/unusual#? directory ,|uid|gid
+prefix|uid|gid
+
 # bad trace path
 $ gufi_trace2index -d "|" -n 4 "" "search"
 Could not open "": No such file or directory (2)
