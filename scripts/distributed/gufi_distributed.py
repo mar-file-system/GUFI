@@ -65,6 +65,7 @@ import argparse
 import os
 import random
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -312,11 +313,11 @@ def new_dir_arg(path):
     return os.path.realpath(path)
 
 # argparse type for executable file (symlinks are allowed)
-def is_exec_file(path):
-    if (os.path.isfile(path) or os.path.islink(path)) and os.access(path, os.X_OK):
-        return os.path.realpath(path)
-
-    raise argparse.ArgumentTypeError('Bad executable file: {0}'.format(path))
+def is_exec_file(name):
+    path = shutil.which(name)
+    if path is None:
+        raise argparse.ArgumentTypeError('Bad executable: {0}'.format(name))
+    return path
 
 # read hostfile and return tuple containing
 # nodes for processing tree distributed at given level
@@ -380,7 +381,7 @@ def parse_args(name, desc):
                         help='File containing one path (without starting prefix) per line')
 
     parser.add_argument('level',
-                        type=gufi_common.get_positive,
+                        type=gufi_common.get_non_negative,
                         help='Level at which work is distributed across nodes')
 
     parser.add_argument('--threads', '-n',       metavar='n',

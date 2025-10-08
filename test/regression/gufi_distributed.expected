@@ -361,7 +361,7 @@ RuntimeError: --output_prefix must be set
 
 # Bad executable
 $ gufi_query_distributed --ssh "ssh" --gufi_query "hostfile" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" 2>&1 | tail -n 1
-gufi_query_distributed: error: argument --gufi_query: Bad executable file: hostfile
+gufi_query_distributed: error: argument --gufi_query: Bad executable: hostfile
 
 # Bad hostfile
 $ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" 2>&1 | tail -n 1

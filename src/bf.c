@@ -631,11 +631,6 @@ int parse_cmd_line(int         argc,
        retval = -(in->min_level > in->max_level);
    }
 
-   if (in->subtree_list.len && (in->min_level == 0)) {
-       fprintf(stderr, "-D must be used with -y level > 0\n");
-       retval = -1;
-   }
-
    if (in->printed_version) {
        return -1;
    }
