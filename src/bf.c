@@ -210,13 +210,6 @@ void print_help(const char* prog_name,
             case FLAG_SQL_SUM_SHORT:                 printf("  -S <SQL_sum>                      SQL for summary table"); break;
             case FLAG_SQL_ENT_SHORT:                 printf("  -E <SQL_ent>                      SQL for entries table"); break;
             case FLAG_SQL_FIN_SHORT:                 printf("  -F <SQL_fin>                      SQL cleanup"); break;
-            case FLAG_INSERT_FILE_LINK_SHORT:        printf("  -r                                insert files and links into db (for gufi_incremental_update)"); break;
-            case FLAG_INSERT_DIR_SHORT:              printf("  -R                                insert dires into db (for gufi_incremental_update)"); break;
-            case FLAG_SUSPECT_DIR_SHORT:             printf("  -Y                                default to all directories suspect"); break;
-            case FLAG_SUSPECT_FILE_LINK_SHORT:       printf("  -Z                                default to all files/links suspect"); break;
-            case FLAG_INSUSPECT_SHORT:               printf("  -W <INSUSPECT>                    suspect input file"); break;
-            case FLAG_SUSPECT_METHOD_SHORT:          printf("  -A <suspectmethod>                suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
-            case FLAG_SUSPECT_TIME_SHORT:            printf("  -c <suspecttime>                  time in seconds since epoch for suspect comparision"); break;
             case FLAG_SQL_INTERM_SHORT:              printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
             case FLAG_SQL_CREATE_AGG_SHORT:          printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
             case FLAG_SQL_AGG_SHORT:                 printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
@@ -239,7 +232,7 @@ void print_help(const char* prog_name,
             case FLAG_ALREADY_PROCESSED_SHORT:       printf("  -l                                if a directory was previously processed, skip descending the subtree"); break;
             case FLAG_FILTER_TYPE_SHORT:             printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
 
-                // no typable short flags
+            /* no typable short flags */
 
             case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <min level>       minimum level to go down"); break;
             case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <max level>       maximum level to go down"); break;
@@ -248,6 +241,13 @@ void print_help(const char* prog_name,
             case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
             case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
             case FLAG_PLUGIN_SHORT:                  printf("      --plugin <library_name>       plugin library for modifying db entries"); break;
+
+            /* gufi_incremental_update */
+            case FLAG_SUSPECT_FILE_SHORT:            printf("      --suspect-file <path>         suspect input file"); break;
+            case FLAG_SUSPECT_METHOD_SHORT:          printf("      --suspect-method <0|1|2|3>    suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
+            case FLAG_SUSPECT_TIME_SHORT:            printf("      --suspect-time <s>            time in seconds since epoch for suspect comparision"); break;
+            case FLAG_SUSPECT_DIR_SHORT:             printf("      --suspect-dir                 default to all directories suspect"); break;
+            case FLAG_SUSPECT_FILE_LINK_SHORT:       printf("      --suspect-fl                  default to all files/links suspect"); break;
             default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
         options++;
@@ -272,14 +272,6 @@ void show_input(struct input* in, int retval) {
     printf("in.sql.sum                  = '%s'\n",          in->sql.sum.data);
     printf("in.sql.ent                  = '%s'\n",          in->sql.ent.data);
     printf("in.sql.fin                  = '%s'\n",          in->sql.fin.data);
-    printf("in.insertdir                = '%d'\n",          in->insertdir);
-    printf("in.insertfl                 = '%d'\n",          in->insertfl);
-    printf("in.suspectd                 = '%d'\n",          in->suspectd);
-    printf("in.suspectfl                = '%d'\n",          in->suspectfl);
-    printf("in.insuspect                = '%s'\n",          in->insuspect.data);
-    printf("in.suspectfile              = '%d'\n",          in->suspectfile);
-    printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
-    printf("in.suspecttime              = '%d'\n",          in->suspecttime);
     printf("in.stride                   = '%d'\n",          in->stride);
     printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate.data);
     printf("in.sql.init_agg             = '%s'\n",          in->sql.init_agg.data);
@@ -307,7 +299,7 @@ void show_input(struct input* in, int retval) {
     printf("in.check_already_processed  = %d\n",            in->check_already_processed);
     printf("in.filter_types             = %d\n",            in->filter_types);
 
-    // no typable short flags
+    /* no typable short flags */
 
     printf("in.min_level                = %zu\n",           in->min_level);
     printf("in.max_level                = %zu\n",           in->max_level);
@@ -315,6 +307,14 @@ void show_input(struct input* in, int retval) {
     printf("in.keep_matime              = %d\n",            in->keep_matime);
     printf("in.skip_count               = '%zu'\n",         in->skip_count);
     printf("in.dry_run                  = %d\n",            in->dry_run);
+
+    /* gufi_incremental_update */
+    printf("in.insuspect                = '%s'\n",          in->insuspect.data);
+    printf("in.suspectfile              = '%d'\n",          in->suspectfile);
+    printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
+    printf("in.suspecttime              = '%d'\n",          in->suspecttime);
+    printf("in.suspectd                 = '%d'\n",          in->suspectd);
+    printf("in.suspectfl                = '%d'\n",          in->suspectfl);
 
     printf("retval                      = %d\n",            retval);
     printf("\n");
@@ -459,35 +459,6 @@ int parse_cmd_line(int                  argc,
                 INSTALL_STR(&in->sql.fin, optarg);
                 break;
 
-            case FLAG_INSERT_FILE_LINK_SHORT:     // insert files and links into db for gufi_incremental_update
-                in->insertfl = 1;
-                break;
-
-            case FLAG_INSERT_DIR_SHORT:          // insert dirs into db for gufi_incremental_update
-                in->insertdir = 1;
-                break;
-
-            case FLAG_SUSPECT_DIR_SHORT:         // default is 0
-                in->suspectd = 1;
-                break;
-
-            case FLAG_SUSPECT_FILE_LINK_SHORT:               // default is 0
-                in->suspectfl = 1;
-                break;
-
-            case FLAG_INSUSPECT_SHORT:               // SQL clean-up
-                INSTALL_STR(&in->insuspect, optarg);
-                in->suspectfile = 1;
-                break;
-
-            case FLAG_SUSPECT_METHOD_SHORT:
-                INSTALL_INT(&in->suspectmethod, optarg, 0, 3, "-A", &retval);
-                break;
-
-            case FLAG_SUSPECT_TIME_SHORT:
-                INSTALL_INT(&in->suspecttime, optarg, 1, 2147483646, "-c", &retval);
-                break;
-
             case FLAG_SQL_INTERM_SHORT:
                 INSTALL_STR(&in->sql.intermediate, optarg);
                 break;
@@ -595,7 +566,7 @@ int parse_cmd_line(int                  argc,
                 }
                 break;
 
-            // no typable short flags
+            /* no typable short flags */
 
             case FLAG_MIN_LEVEL_SHORT:
                 INSTALL_SIZE(&in->min_level, optarg, (size_t) 0, (size_t) -1, "--min-level", &retval);
@@ -640,6 +611,29 @@ int parse_cmd_line(int                  argc,
                 if (load_plugin_library(in, optarg)) {
                     retval = -1;
                 }
+                break;
+
+            /* gufi_incremental_update */
+
+            case FLAG_SUSPECT_FILE_SHORT:
+                INSTALL_STR(&in->insuspect, optarg);
+                in->suspectfile = 1;
+                break;
+
+            case FLAG_SUSPECT_METHOD_SHORT:
+                INSTALL_INT(&in->suspectmethod, optarg, 0, 3, FLAG_SUSPECT_METHOD_LONG, &retval);
+                break;
+
+            case FLAG_SUSPECT_TIME_SHORT:
+                INSTALL_INT(&in->suspecttime, optarg, 1, 2147483646, FLAG_SUSPECT_TIME_LONG, &retval);
+                break;
+
+            case FLAG_SUSPECT_DIR_SHORT:
+                in->suspectd = 1;
+                break;
+
+            case FLAG_SUSPECT_FILE_LINK_SHORT:
+                in->suspectfl = 1;
                 break;
 
             case '?':
