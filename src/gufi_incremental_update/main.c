@@ -148,9 +148,8 @@ int main(int argc, char *argv[]) {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
         /* processing flags */
-        FLAG_INSERT_FILE_LINK, FLAG_INSERT_DIR,
         FLAG_SUSPECT_DIR, FLAG_SUSPECT_FILE_LINK,
-        FLAG_INSUSPECT, FLAG_SUSPECT_METHOD, FLAG_SUSPECT_TIME,
+        FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD, FLAG_SUSPECT_TIME,
         FLAG_INDEX_XATTRS,
 
         /* memory usage flags */

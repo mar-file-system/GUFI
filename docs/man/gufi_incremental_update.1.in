@@ -103,23 +103,19 @@ help
 show assigned input values (debugging)
 .It Fl v
 version
-.It Fl n\ <threads>
+.It Fl n, -threads\ <threads>
 number of threads
-.It Fl d\ <delimiter>
+.It Fl d, -delim\ <delim>
 delimiter for output file
-.It Fl r
-insert files and links into db
-.It Fl R
-insert dires into db
-.It Fl Y
+.It Fl -suspect-dir
 default all directories as suspect
-.It Fl Z
+.It Fl -suspect-fl
 default all files links as suspect
-.It Fl W\ <insuspectfile>
+.It Fl -suspect-file\ <path>
 path to input suspect file, if suspects are generated via another program like a GPFS Inode Scan
 
 Each line of the suspect file contains an inode followed by one of the characters 'd', 'f', or 'l' indicating the type the inode points to
-.It Fl A\ <suspectmethod>
+.It Fl -suspect-method\ <0|1|2|3>
 0: No suspects
 
 1: Given a suspect file, check if any directory, file, or link inode shows up in the suspect file
@@ -128,9 +124,9 @@ Each line of the suspect file contains an inode followed by one of the character
    Directories have their mtime and ctime compared with the suspect time
 
 3: All directories, files, and links have their mtime and ctime compared with the suspect time
-.It Fl c\ <suspecttime>
+.It Fl -suspect-time\ <s>
 time in seconds since epoch for suspect Comparison, (ignored if GUFI index in src tree)
-.It Fl x
+.It Fl x, -xattrs
 process xattrs if you are creating GUFI dbs of suspect directories
 .It Fl e
 compress work items

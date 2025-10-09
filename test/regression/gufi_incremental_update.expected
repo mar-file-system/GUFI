@@ -5,13 +5,11 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-  -r                                insert files and links into db (for gufi_incremental_update)
-  -R                                insert dires into db (for gufi_incremental_update)
-  -Y                                default to all directories suspect
-  -Z                                default to all files/links suspect
-  -W <INSUSPECT>                    suspect input file
-  -A <suspectmethod>                suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl
-  -c <suspecttime>                  time in seconds since epoch for suspect comparision
+      --suspect-dir                 default to all directories suspect
+      --suspect-fl                  default to all files/links suspect
+      --suspect-file <path>         suspect input file
+      --suspect-method <0|1|2|3>    suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl
+      --suspect-time <s>            time in seconds since epoch for suspect comparision
   -x, --index-xattrs                index xattrs
       --compress                    compress work items
 
@@ -55,7 +53,7 @@ Total Dirs:          5
 Total Non-Dirs:      1
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x -R -A 0 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 0 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
     Warning: Could not stat update db.db in parking lot "parking_lot/4": No such file or directory (2)
     Warning: Could not stat update db.db in parking lot "parking_lot/5": No such file or directory (2)
 
@@ -145,7 +143,7 @@ $ cat "suspectfile"
 bad d
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x -R -A 1 -W "suspectfile" "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+$ gufi_incremental_update -x --suspect-method 1 --suspect-file "suspectfile" "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
 $ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
@@ -228,7 +226,7 @@ $ cat "suspectfile"
 bad d
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x -R -A 2 -W "suspectfile" "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+$ gufi_incremental_update -x --suspect-method 2 --suspect-file "suspectfile" "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
 $ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
@@ -306,7 +304,7 @@ Total Dirs:          5
 Total Non-Dirs:      1
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
 $ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
@@ -390,7 +388,7 @@ Total Dirs:          5
 Total Non-Dirs:      1
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 You are putting the index dbs in input directory
 
 # State of updated index created with gufi_dir2index
@@ -445,7 +443,7 @@ Total Dirs:          5
 Total Non-Dirs:      1
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x -R -A 0 -Y "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+$ gufi_incremental_update -x --suspect-method 0 --suspect-dir "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
 $ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
@@ -524,7 +522,7 @@ Total Dirs:          5
 Total Non-Dirs:      1
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x -R -A 3 -Z "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 --suspect-fl "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
 $ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
@@ -613,7 +611,7 @@ Total Dirs:          11
 Total Non-Dirs:      0
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
     Warning: Could not stat update db.db in parking lot "parking_lot/10": No such file or directory (2)
     Warning: Could not stat update db.db in parking lot "parking_lot/8": No such file or directory (2)
 
@@ -697,7 +695,7 @@ $ find -name "parking_lot" 2>/dev/null
 
 $ mkdir "parking_lot"
 
-$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null 2>&1
+$ gufi_incremental_update --suspect-method 3 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null 2>&1
 
 $ find -name "parking_lot" 2>/dev/null
 ./parking_lot
@@ -708,34 +706,34 @@ $ find -name "parking_lot" 2>/dev/null
 # Invalid Inputs                    #
 #####################################
 # non-existent index
-$ gufi_incremental_update -x -R -A 3 "baddir/prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 "baddir/prefix" "prefix" "snapshot" "parking_lot" > /dev/null
 Could not stat index "baddir/prefix": No such file or directory (2)
 
 # non-existent tree
-$ gufi_incremental_update -x -R -A 3 "prefix" "baddir/prefix" "snapshot" "parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 "prefix" "baddir/prefix" "snapshot" "parking_lot" > /dev/null
 Could not stat tree "baddir/prefix": No such file or directory (2)
 
 # non-existent parking lot
-$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "baddir/parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "snapshot" "baddir/parking_lot" > /dev/null
 Error: Could not create parking lot directory "baddir/parking_lot": No such file or directory (2)
 
 # file index
-$ gufi_incremental_update -x -R -A 3 "gufi_incremental_update" "prefix" "snapshot" "parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 "gufi_incremental_update" "prefix" "snapshot" "parking_lot" > /dev/null
 Index path is not a directory "gufi_incremental_update"
 
 # file tree
-$ gufi_incremental_update -x -R -A 3 "prefix" "gufi_incremental_update" "snapshot" "parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 "prefix" "gufi_incremental_update" "snapshot" "parking_lot" > /dev/null
 Tree path is not a directory "gufi_incremental_update"
 
 # file parking lot
-$ gufi_incremental_update -x -R -A 3 "prefix" "prefix" "snapshot" "gufi_incremental_update" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "snapshot" "gufi_incremental_update" > /dev/null
 Error: Existing parking lot path "gufi_incremental_update" is not a directory
 
 # bad suspect file
-$ gufi_incremental_update -x -R -A 3 -W "baddir/suspectfile" "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 --suspect-file "baddir/suspectfile" "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
 Can't open suspect file baddir/suspectfile
 
 # bad thread count
-$ gufi_incremental_update -x -R -A 3 -n 18446744073709551615 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 -n 18446744073709551615 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
 Error: Failed to start thread pool
 

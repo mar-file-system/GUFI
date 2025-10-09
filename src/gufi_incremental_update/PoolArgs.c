@@ -80,7 +80,7 @@ static int setup_suspect_file(struct PoolArgs *pa) {
     pa->suspects.fl.max = 0;
 
     if (pa->in.suspectfile > 0) {
-        FILE *f = fopen(pa->in.insuspect.data, "r");
+        FILE *f = fopen(pa->in.insuspect.data, "r"); /* --suspect-file */
         if(!f) {
             fprintf(stderr, "Can't open suspect file %s\n", pa->in.insuspect.data);
             return 1;

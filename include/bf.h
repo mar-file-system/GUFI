@@ -146,27 +146,6 @@ extern "C" {
 #define FLAG_SQL_FIN_SHORT 'F'
 #define FLAG_SQL_FIN {"", required_argument, NULL, FLAG_SQL_FIN_SHORT}
 
-#define FLAG_INSERT_FILE_LINK_SHORT 'r'
-#define FLAG_INSERT_FILE_LINK {"", no_argument, NULL, FLAG_INSERT_FILE_LINK_SHORT}
-
-#define FLAG_INSERT_DIR_SHORT 'R'
-#define FLAG_INSERT_DIR {"", no_argument, NULL, FLAG_INSERT_DIR_SHORT}
-
-#define FLAG_SUSPECT_DIR_SHORT 'Y'
-#define FLAG_SUSPECT_DIR {"", no_argument, NULL, FLAG_SUSPECT_DIR_SHORT}
-
-#define FLAG_SUSPECT_FILE_LINK_SHORT 'Z'
-#define FLAG_SUSPECT_FILE_LINK {"", no_argument, NULL, FLAG_SUSPECT_FILE_LINK_SHORT}
-
-#define FLAG_INSUSPECT_SHORT 'W'
-#define FLAG_INSUSPECT {"", required_argument, NULL, FLAG_INSUSPECT_SHORT}
-
-#define FLAG_SUSPECT_METHOD_SHORT 'A'
-#define FLAG_SUSPECT_METHOD {"", required_argument, NULL, FLAG_SUSPECT_METHOD_SHORT}
-
-#define FLAG_SUSPECT_TIME_SHORT 'c'
-#define FLAG_SUSPECT_TIME {"", required_argument, NULL, FLAG_SUSPECT_TIME_SHORT}
-
 #define FLAG_READ_WRITE_SHORT 'w'
 #define FLAG_READ_WRITE_LONG "read-write"
 #define FLAG_READ_WRITE {FLAG_READ_WRITE_LONG, no_argument, NULL, FLAG_READ_WRITE_SHORT}
@@ -190,6 +169,7 @@ extern "C" {
 #define FLAG_GROUP_MISC    1000
 #define FLAG_GROUP_MEM     2000
 #define FLAG_GROUP_XATTRS  3000
+#define FLAG_GROUP_INC     4000
 
 /* miscellaneous flags */
 
@@ -280,6 +260,28 @@ extern "C" {
 #define FLAG_SET_XATTRS_SHORT (FLAG_GROUP_XATTRS + 2)
 #define FLAG_SET_XATTRS_LONG "set-xattrs"
 #define FLAG_SET_XATTRS FLAG_XATTRS, {FLAG_SET_XATTRS_LONG, no_argument, NULL, FLAG_SET_XATTRS_SHORT}
+
+/* gufi_incremental_update flags */
+
+#define FLAG_SUSPECT_FILE_SHORT (FLAG_GROUP_INC + 0)
+#define FLAG_SUSPECT_FILE_LONG "suspect-file"
+#define FLAG_SUSPECT_FILE {FLAG_SUSPECT_FILE_LONG, required_argument, NULL, FLAG_SUSPECT_FILE_SHORT}
+
+#define FLAG_SUSPECT_METHOD_SHORT (FLAG_GROUP_INC + 1)
+#define FLAG_SUSPECT_METHOD_LONG "suspect-method"
+#define FLAG_SUSPECT_METHOD {FLAG_SUSPECT_METHOD_LONG, required_argument, NULL, FLAG_SUSPECT_METHOD_SHORT}
+
+#define FLAG_SUSPECT_TIME_SHORT (FLAG_GROUP_INC + 2)
+#define FLAG_SUSPECT_TIME_LONG "suspect-time"
+#define FLAG_SUSPECT_TIME {FLAG_SUSPECT_TIME_LONG, required_argument, NULL, FLAG_SUSPECT_TIME_SHORT}
+
+#define FLAG_SUSPECT_DIR_SHORT (FLAG_GROUP_INC + 3)
+#define FLAG_SUSPECT_DIR_LONG "suspect-dir"
+#define FLAG_SUSPECT_DIR {FLAG_SUSPECT_DIR_LONG, no_argument, NULL, FLAG_SUSPECT_DIR_SHORT}
+
+#define FLAG_SUSPECT_FILE_LINK_SHORT (FLAG_GROUP_INC + 4)
+#define FLAG_SUSPECT_FILE_LINK_LONG "suspect-fl"
+#define FLAG_SUSPECT_FILE_LINK {FLAG_SUSPECT_FILE_LINK_LONG, no_argument, NULL, FLAG_SUSPECT_FILE_LINK_SHORT}
 
 /* required at the end of every flag list */
 #define FLAG_END {NULL, 0, NULL, 0}
@@ -423,8 +425,6 @@ struct input {
     int  buildindex;
     size_t maxthreads;
     AFlag_t process_sql;           /* what to do if an SQL statement returns/doesn't return 1 row */
-    int  insertdir;                /* added for bfwreaddirplus2db */
-    int  insertfl;                 /* added for bfwreaddirplus2db */
     int  suspectd;                 /* added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect */
     int  suspectfl;                /* added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect */
     refstr_t insuspect;            /* added for bfwreaddirplus2db input path for suspects file */
