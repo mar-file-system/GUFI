@@ -10,7 +10,7 @@ options:
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
-  -k, --skip <filename>             file containing directory names to skip
+      --skip-file <filename>        file containing directory names to skip
   -M <bytes>                        target memory footprint
   -s, --swap-prefix <path>          File name prefix for swap files
   -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
@@ -232,7 +232,7 @@ $ gufi_dir2trace -d "|" -n 2 "" "baddir/trace"
 Could not open output file baddir/trace.0
 
 # skip file
-$ gufi_dir2trace -d "|" -n 2 -k "skip" "prefix" "trace"
+$ gufi_dir2trace -d "|" -n 2 --skip-file "skip" "prefix" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
@@ -256,7 +256,7 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # bad skip file
-$ gufi_dir2trace -d "|" -n 2 -k "skip.bad" "prefix" "trace"
+$ gufi_dir2trace -d "|" -n 2 --skip-file "skip.bad" "prefix" "trace"
 Error: Cannot open skip file "skip.bad"
 
 # bad thread count

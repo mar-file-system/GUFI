@@ -94,7 +94,7 @@ echo "# Bad right hand path"
 run_no_sort "${TREEDIFF} \"${SEARCH}\" \"\""
 
 echo "# Bad skip"
-run_sort "${TREEDIFF} -k \"\" \"${SRCDIR}\" \"${INDEXROOT}\""
+run_sort "${TREEDIFF} --skip-file \"\" \"${SRCDIR}\" \"${INDEXROOT}\""
 
 echo "# Bad thread count"
 run_sort "${TREEDIFF} -n 18446744073709551615 \"${SRCDIR}\" \"${INDEXROOT}\""

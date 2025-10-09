@@ -95,11 +95,11 @@ echo "# Insert an external database"
 run_no_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"INSERT INTO external_dbs_rollup (type, pinode, filename) VALUES ('test', '\${inode}', 'test path')\""
 
 echo "# Dry Run (7 xattrs because directory xattrs are not counted in treesummary)"
-remove_extra "${GUFI_TREESUMMARY} -X -d \" \" \"${INDEXROOT}\""
+remove_extra "${GUFI_TREESUMMARY} --dry-run -d \" \" \"${INDEXROOT}\""
 echo
 
 echo "# Traversed paths (5)"
-keep_paths "${GUFI_TREESUMMARY} -P -X -d \"|\" \"${INDEXROOT}\""
+keep_paths "${GUFI_TREESUMMARY} -P --dry-run -d \"|\" \"${INDEXROOT}\""
 echo
 
 echo "# Still no treesummary table"
@@ -124,7 +124,7 @@ echo
 
 echo "# Traversed paths (4 - ${INDEXROOT}/directory/subdirectory is not walked again)"
 #shellcheck disable=SC2016
-keep_paths "${GUFI_TREESUMMARY} -P -X -d \"|\" \"${INDEXROOT}\""
+keep_paths "${GUFI_TREESUMMARY} -P --dry-run -d \"|\" \"${INDEXROOT}\""
 echo
 
 echo "# Generate treesummary table in ${INDEXROOT}"

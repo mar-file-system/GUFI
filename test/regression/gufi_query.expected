@@ -16,7 +16,7 @@ options:
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
   -O, --output-db <out_DB>          output DB
-  -u                                prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
+      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
   -I <SQL_init>                     SQL init
   -F <SQL_fin>                      SQL cleanup
       --min-level <min level>       minimum level to go down
@@ -24,11 +24,11 @@ options:
   -J <SQL_interm>                   SQL for intermediate results
   -K <create aggregate>             SQL to create the final aggregation table
   -G <SQL_aggregate>                SQL for aggregated results
-  -m                                Keep mtime and atime same on the database files
+      --keep-matime                 Keep mtime and atime same on the database files
   -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes
   -w, --read-write                  open the database files in read-write mode instead of read only mode
   -x, --xattrs                      index/query xattrs
-  -k, --skip <filename>             file containing directory names to skip
+      --skip-file <filename>        file containing directory names to skip
   -M <bytes>                        target memory footprint
   -s, --swap-prefix <path>          File name prefix for swap files
   -p, --path <path>                 Source path prefix for %s in SQL
@@ -197,7 +197,7 @@ prefix/directory/executable
 prefix/old_file
 
 # Get all directory and non-directory names not in directory
-$ gufi_query -d " " -n 2 -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -k "skip" "prefix"
+$ gufi_query -d " " -n 2 -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" --skip-file "skip" "prefix"
 prefix
 prefix/.hidden
 prefix/1KB
@@ -280,14 +280,14 @@ prefix/directory/writable
 prefix/empty_directory
 
 # Output TLV columns (no aggregation)
-$ gufi_query -u -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix" | hexlify.py
+$ gufi_query --print-tlv -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix" | hexlify.py
 00000000 2700 0000 0000 0000 0200 0000 0307 0000
 00000001 0000 0000 002e 6869 6464 656e 0102 0000
 00000002 0000 0000 0031 30
 00000027
 
 # Output TLV columns (with aggregation)
-$ gufi_query -u -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix" | hexlify.py
+$ gufi_query --print-tlv -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix" | hexlify.py
 00000000 2d00 0000 0000 0000 0200 0000 030d 0000
 00000001 0000 0000 0073 6561 7263 682f 7072 6566
 00000002 6978 0102 0000 0000 0000 0031 37
@@ -381,7 +381,7 @@ $ gufi_query            -I "CREATE TABLE test(col TEXT)" -S "insert;" -E "insert
 Could not create aggregation table "create;" on file:aggregatedb?mode=memory&cache=shared
 
 # Bad skip file
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -k "skip.bad" "prefix"
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" --skip-file "skip.bad" "prefix"
 Error: Cannot open skip file "skip.bad"
 
 # Bad path
@@ -476,14 +476,14 @@ prefix/repeat_name 0
 prefix/unusual#? directory , 0
 prefix/unusual#? directory ,/unusual, name?# 0
 
-# Set timestamps of one db.db file to epoch, query the index with -m flag, and expect no changes
+# Set timestamps of one db.db file to epoch, query the index with --keep-matime flag, and expect no changes
 $ touch -amt 197001010000.00 "prefix/db.db"
 
 Expect:
     atime: 0
     mtime: 0
 
-$ gufi_query -d " " -m -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix" > /dev/null
+$ gufi_query -d " " --keep-matime -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix" > /dev/null
 
 Got:
     atime: 0
@@ -493,7 +493,7 @@ Got:
 $ ln -sn "directory/subdirectory" "prefix/symlink"
 
 # directory_symlink shows up 2 times and repeat_name shows up 3 times
-$ gufi_query -d " " -m -E "SELECT name FROM vrpentries;" "prefix"
+$ gufi_query -d " " --keep-matime -E "SELECT name FROM vrpentries;" "prefix"
 .hidden
 1KB
 1MB
@@ -515,7 +515,7 @@ writable
 $ ln -sn "subdirectory" "prefix/directory/symlink"
 
 # Symlink at Level 2 is ignored
-$ gufi_query -d " " -m -E "SELECT name FROM vrpentries;" "prefix"
+$ gufi_query -d " " --keep-matime -E "SELECT name FROM vrpentries;" "prefix"
 .hidden
 1KB
 1MB
@@ -532,7 +532,7 @@ unusual, name?#
 writable
 
 # Missing database file
-$ gufi_query -d " " -m -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix" > /dev/null
+$ gufi_query -d " " --keep-matime -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix" > /dev/null
 Could not database file's timestamps "prefix/db.db": No such file or directory (2)
 
 # multiple input directories are not allowed for partial querying

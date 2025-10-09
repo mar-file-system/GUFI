@@ -104,7 +104,7 @@ fi
 
 echo
 echo "-- tree index to screen (no changes to DB)"
-$BFTI -n 2 -P -X  $GUFI
+$BFTI -n 2 -P --dry-run  $GUFI
 
 echo
 echo "-- tree index to db (initialize and populate summary table)"

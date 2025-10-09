@@ -1189,7 +1189,7 @@ def run(argv, config_path):
     ] + stats[args.stat](config, args, build_where(args))
 
     if args.skip:
-        query_cmd += ['-k', args.skip]
+        query_cmd += ['--skip-file', args.skip]
 
     if args.verbose:
         gufi_common.print_query(query_cmd + [prefixed_path])

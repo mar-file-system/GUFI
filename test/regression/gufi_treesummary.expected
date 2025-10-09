@@ -8,7 +8,7 @@ options:
   -P                                print directories as they are encountered
   -n, --threads <threads>           number of threads
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
-  -X, --dry-run                     Dry run
+      --dry-run                     Dry run
 
 GUFI_tree               path to GUFI tree
 
@@ -20,7 +20,7 @@ $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table'
 $ sqlite3 "prefix/directory/subdirectory/db.db" "INSERT INTO external_dbs_rollup (type, pinode, filename) VALUES ('test', '${inode}', 'test path')"
 
 # Dry Run (7 xattrs because directory xattrs are not counted in treesummary)
-$ gufi_treesummary -X -d " " "prefix"
+$ gufi_treesummary --dry-run -d " " "prefix"
 WARNING: Not [re]generating tree-summary table with '-X'
 totals:
 totfiles 12 totlinks 2
@@ -30,7 +30,7 @@ totxattr 7
 totextdbs 1
 
 # Traversed paths (5)
-$ gufi_treesummary -P -X -d "|" "prefix"
+$ gufi_treesummary -P --dry-run -d "|" "prefix"
 WARNING: Not [re]generating tree-summary table with '-X'
 prefix/directory/subdirectory|d
 prefix/directory|d
@@ -70,7 +70,7 @@ prefix/directory
 prefix/leaf_directory
 
 # Traversed paths (4 - prefix/directory/subdirectory is not walked again)
-$ gufi_treesummary -P -X -d "|" "prefix"
+$ gufi_treesummary -P --dry-run -d "|" "prefix"
 WARNING: Not [re]generating tree-summary table with '-X'
 prefix/directory|d
 prefix/empty_directory|d

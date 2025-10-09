@@ -271,7 +271,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 static const int TSUM_CHECK_TYPES[] = { SQLITE_TEXT };
 
                 querydb(&gqw->work, dbname, dbname_len, db,
-                        TSUM_CHECK_QUERY, in->types.prefix?TSUM_CHECK_TYPES:NULL,
+                        TSUM_CHECK_QUERY, in->types.print_tlv?TSUM_CHECK_TYPES:NULL,
                         pa, id, count_rows, &recs);
 
                 /* did not find treesummary table -> ok */

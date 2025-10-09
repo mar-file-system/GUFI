@@ -7,7 +7,7 @@ options:
   -v, --version                     version
   -n, --threads <threads>           number of threads
   -L <count>                        Highest number of files/links in a directory allowed to be rolled up
-  -X, --dry-run                     Dry run
+      --dry-run                     Dry run
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
   -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level

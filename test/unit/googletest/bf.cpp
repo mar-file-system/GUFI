@@ -83,7 +83,6 @@ static const std::string n = "-n"; static const std::string n_arg = "1";
 static const std::string d = "-d"; static const std::string d_arg = "|";
 static const std::string o = "-o"; static const std::string o_arg = "o arg";
 static const std::string O = "-O"; static const std::string O_arg = "O arg";
-static const std::string u = "-u";
 static const std::string I = "-I"; static const std::string I_arg = "I arg";
 static const std::string T = "-T"; static const std::string T_arg = "T arg";
 static const std::string S = "-S"; static const std::string S_arg = "S arg";
@@ -97,19 +96,14 @@ static const std::string W = "-W"; static const std::string W_arg = "W arg";
 static const std::string A = "-A"; static const std::string A_arg = "1";
 static const std::string g = "-g"; static const std::string g_arg = "1";
 static const std::string c = "-c"; static const std::string c_arg = "1";
-static const std::string y = "--min-level"; static const std::string y_arg = "1";
-static const std::string z = "--max-level"; static const std::string z_arg = "1";
 static const std::string J = "-J"; static const std::string J_arg = "J arg";
 static const std::string K = "-K"; static const std::string K_arg = "K arg";
 static const std::string G = "-G"; static const std::string G_arg = "G arg";
-static const std::string m = "-m";
 static const std::string B = "-B"; static const std::string B_arg = "1";
 static const std::string w = "-w";
 static const std::string f = "-f"; static const std::string f_arg = "f arg";
 static const std::string j = "-j";
-static const std::string X = "-X";
 static const std::string L = "-L"; static const std::string L_arg = "1";
-static const std::string k = "-k"; static const std::string k_arg = "k arg";
 static const std::string M = "-M"; static const std::string M_arg = "1";
 static const std::string C = "-C"; static const std::string C_arg = "1";
 #if HAVE_ZLIB
@@ -122,6 +116,13 @@ static const std::string Q = "-Q"; static const std::string Q_arg0 = "extdb";
                                    static const std::string Q_arg3 = "view";
 static const std::string s = "-s"; static const std::string s_arg  = "s_arg";
 static const std::string D = "-D"; static const std::string D_arg  = "D arg";
+
+static const std::string min_level   = "--min-level"; static const std::string min_level_arg = "1";
+static const std::string max_level   = "--max-level"; static const std::string max_level_arg = "1";
+static const std::string print_tlv   = "--print-tlv";
+static const std::string keep_matime = "--keep-matime";
+static const std::string skip_file   = "--skip-file"; static const std::string skip_file_arg = "k arg";
+static const std::string dry_run     = "--dry-run";
 
 static bool operator==(const refstr_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -149,7 +150,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->process_xattrs,                     flags);
     EXPECT_EQ(in->printdir,                           flags);
     EXPECT_EQ(in->buildindex,                         flags);
-    EXPECT_EQ(in->types.prefix,                       flags);
+    EXPECT_EQ(in->types.print_tlv,                    flags);
     EXPECT_EQ(in->insertfl,                           flags);
     EXPECT_EQ(in->insertdir,                          flags);
     EXPECT_EQ(in->suspectd,                           flags);
@@ -293,18 +294,17 @@ TEST(parse_cmd_line, version) {
 }
 
 TEST(parse_cmd_line, debug) {
-    /* flag i is missing */
     const struct option opts[] = {
         FLAG_DEBUG, FLAG_XATTRS, FLAG_PRINTDIR, FLAG_BUILDINDEX,
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
-        FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PREFIX, FLAG_SQL_INIT,
+        FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SQL_INIT,
         FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
         FLAG_INSERT_FILE_LINK, FLAG_INSERT_DIR, FLAG_SUSPECT_DIR,
         FLAG_SUSPECT_FILE_LINK, FLAG_INSUSPECT, FLAG_SUSPECT_METHOD,
         FLAG_STRIDE, FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
         FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
         FLAG_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE_FORMAT,
-        FLAG_DRY_RUN, FLAG_MAX_IN_DIR, FLAG_SKIP, FLAG_TARGET_MEMORY_FOOTPRINT,
+        FLAG_DRY_RUN, FLAG_MAX_IN_DIR, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY_FOOTPRINT,
         FLAG_SUBDIR_LIMIT, FLAG_CHECK_EXTDB_VALID, FLAG_EXTERNAL_ATTACH,
         FLAG_SWAP_PREFIX, FLAG_SUBTREE_LIST,
         #ifdef HAVE_ZLIB
@@ -322,7 +322,7 @@ TEST(parse_cmd_line, debug) {
         a.c_str(), a_arg.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
-        u.c_str(),
+        print_tlv.c_str(),
         I.c_str(), I_arg.c_str(),
         T.c_str(), T_arg.c_str(),
         S.c_str(), S_arg.c_str(),
@@ -336,19 +336,19 @@ TEST(parse_cmd_line, debug) {
         A.c_str(), A_arg.c_str(),
         g.c_str(), g_arg.c_str(),
         c.c_str(), c_arg.c_str(),
-        y.c_str(), y_arg.c_str(),
-        z.c_str(), z_arg.c_str(),
+        min_level.c_str(), min_level_arg.c_str(),
+        max_level.c_str(), max_level_arg.c_str(),
         J.c_str(), J_arg.c_str(),
         K.c_str(), K_arg.c_str(),
         G.c_str(), G_arg.c_str(),
-        m.c_str(),
+        keep_matime.c_str(),
         B.c_str(), B_arg.c_str(),
         w.c_str(),
         f.c_str(), f_arg.c_str(),
         j.c_str(),
-        X.c_str(),
+        dry_run.c_str(),
         L.c_str(), L_arg.c_str(),
-        // k.c_str(), k_arg.c_str(),
+        // skip_file.c_str(), skip_file_arg.c_str(),
         M.c_str(), M_arg.c_str(),
         C.c_str(), C_arg.c_str(),
         #ifdef HAVE_ZLIB
@@ -379,14 +379,15 @@ TEST(parse_cmd_line, debug) {
 
 TEST(parse_cmd_line, flags) {
     const struct option opts[] = {
-        FLAG_XATTRS, FLAG_PRINTDIR, FLAG_BUILDINDEX, FLAG_PREFIX,
+        FLAG_XATTRS, FLAG_PRINTDIR, FLAG_BUILDINDEX, FLAG_PRINT_TLV,
         FLAG_INSERT_FILE_LINK, FLAG_INSERT_DIR, FLAG_SUSPECT_DIR,
         FLAG_SUSPECT_FILE_LINK, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
         FLAG_TERSE_FORMAT, FLAG_DRY_RUN,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
-        FLAG_CHECK_EXTDB_VALID, FLAG_END
+        FLAG_CHECK_EXTDB_VALID,
+        FLAG_END
     };
 
     const char *argv[] = {
@@ -394,15 +395,15 @@ TEST(parse_cmd_line, flags) {
         x.c_str(),
         P.c_str(),
         b.c_str(),
-        u.c_str(),
+        print_tlv.c_str(),
         r.c_str(),
         R.c_str(),
         Y.c_str(),
         Z.c_str(),
-        m.c_str(),
+        keep_matime.c_str(),
         w.c_str(),
         j.c_str(),
-        X.c_str(),
+        dry_run.c_str(),
         #ifdef HAVE_ZLIB
         e.c_str(),
         #endif
@@ -425,9 +426,10 @@ TEST(parse_cmd_line, options) {
         FLAG_SQL_FIN, FLAG_INSUSPECT, FLAG_SUSPECT_METHOD, FLAG_STRIDE,
         FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_BUFFER_SIZE, FLAG_FORMAT,
-        FLAG_MAX_IN_DIR, FLAG_SKIP, FLAG_TARGET_MEMORY_FOOTPRINT,
+        FLAG_MAX_IN_DIR, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY_FOOTPRINT,
         FLAG_SUBDIR_LIMIT, FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX,
-        FLAG_SUBTREE_LIST, FLAG_END
+        FLAG_SUBTREE_LIST,
+        FLAG_END
     };
 
     const char *argv[] = {
@@ -444,15 +446,15 @@ TEST(parse_cmd_line, options) {
         A.c_str(), A_arg.c_str(),
         g.c_str(), g_arg.c_str(),
         c.c_str(), c_arg.c_str(),
-        y.c_str(), y_arg.c_str(),
-        z.c_str(), z_arg.c_str(),
+        min_level.c_str(), min_level_arg.c_str(),
+        max_level.c_str(), max_level_arg.c_str(),
         J.c_str(), J_arg.c_str(),
         K.c_str(), K_arg.c_str(),
         G.c_str(), G_arg.c_str(),
         B.c_str(), B_arg.c_str(),
         f.c_str(), f_arg.c_str(),
         L.c_str(), L_arg.c_str(),
-        // k.c_str(), k_arg.c_str(),
+        // skip_file.c_str(), skip_file_arg.c_str(),
         M.c_str(), M_arg.c_str(),
         C.c_str(), C_arg.c_str(),
         Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),

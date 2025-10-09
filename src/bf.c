@@ -205,7 +205,6 @@ void print_help(const char* prog_name,
             case FLAG_DELIM_SHORT:                   printf("  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
             case FLAG_OUTPUT_FILE_SHORT:             printf("  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)"); break;
             case FLAG_OUTPUT_DB_SHORT:               printf("  -O, --output-db <out_DB>          output DB"); break;
-            case FLAG_PREFIX_SHORT:                  printf("  -u                                prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
             case FLAG_SQL_INIT_SHORT:                printf("  -I <SQL_init>                     SQL init"); break;
             case FLAG_SQL_TSUM_SHORT:                printf("  -T <SQL_tsum>                     SQL for tree-summary table"); break;
             case FLAG_SQL_SUM_SHORT:                 printf("  -S <SQL_sum>                      SQL for summary table"); break;
@@ -222,14 +221,11 @@ void print_help(const char* prog_name,
             case FLAG_SQL_INTERM_SHORT:              printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
             case FLAG_SQL_CREATE_AGG_SHORT:          printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
             case FLAG_SQL_AGG_SHORT:                 printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
-            case FLAG_KEEP_MATIME_SHORT:             printf("  -m                                Keep mtime and atime same on the database files"); break;
             case FLAG_BUFFER_SIZE_SHORT:             printf("  -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes"); break;
             case FLAG_READ_WRITE_SHORT:              printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
             case FLAG_FORMAT_SHORT:                  printf("  -f, --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
             case FLAG_TERSE_FORMAT_SHORT:            printf("  -j, --terse-form                  print the information in terse form"); break; /* output from stat --help */
-            case FLAG_DRY_RUN_SHORT:                 printf("  -X, --dry-run                     Dry run"); break;
             case FLAG_MAX_IN_DIR_SHORT:              printf("  -L <count>                        Highest number of files/links in a directory allowed to be rolled up"); break;
-            case FLAG_SKIP_SHORT:                    printf("  -k, --skip <filename>             file containing directory names to skip"); break;
             case FLAG_TARGET_MEMORY_FOOTPRINT_SHORT: printf("  -M <bytes>                        target memory footprint"); break;
             case FLAG_SUBDIR_LIMIT_SHORT:            printf("  -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
             case FLAG_COMPRESS_SHORT:                printf("  -e                                compress work items"); break;
@@ -242,10 +238,17 @@ void print_help(const char* prog_name,
             case FLAG_PATH_SHORT:                    printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
             case FLAG_SUBTREE_LIST_SHORT:            printf("  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
             case FLAG_ALREADY_PROCESSED_SHORT:       printf("  -l                                if a directory was previously processed, skip descending the subtree"); break;
-            case FLAG_PLUGIN_SHORT:                  printf("  -U <library_name>                 plugin library for modifying db entries"); break;
             case FLAG_FILTER_TYPE_SHORT:             printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
+
+                // no typable short flags
+
             case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <min level>       minimum level to go down"); break;
             case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <max level>       maximum level to go down"); break;
+            case FLAG_PRINT_TLV_SHORT:               printf("      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
+            case FLAG_KEEP_MATIME_SHORT:             printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
+            case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
+            case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
+            case FLAG_PLUGIN_SHORT:                  printf("      --plugin <library_name>       plugin library for modifying db entries"); break;
             default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
         options++;
@@ -262,7 +265,6 @@ void show_input(struct input* in, int retval) {
     printf("in.maxthreads               = %zu\n",           in->maxthreads);
     printf("in.delim                    = '%c'\n",          in->delim);
     printf("in.process_sql              = %d\n",            (int) in->process_sql);
-    printf("in.types.prefix             = %d\n",            in->types.prefix);
     printf("in.process_xattrs           = %d\n",            in->process_xattrs);
     printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
     printf("in.nobody.gid               = %" STAT_gid "\n", in->nobody.gid);
@@ -280,20 +282,15 @@ void show_input(struct input* in, int retval) {
     printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
     printf("in.suspecttime              = '%d'\n",          in->suspecttime);
     printf("in.stride                   = '%d'\n",          in->stride);
-    printf("in.min_level                = %zu\n",           in->min_level);
-    printf("in.max_level                = %zu\n",           in->max_level);
     printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate.data);
     printf("in.sql.init_agg             = '%s'\n",          in->sql.init_agg.data);
     printf("in.sql.agg                  = '%s'\n",          in->sql.agg.data);
-    printf("in.keep_matime              = %d\n",            in->keep_matime);
     printf("in.output_buffer_size       = %zu\n",           in->output_buffer_size);
     printf("in.open_flags               = %d\n",            in->open_flags);
     printf("in.format_set               = %d\n",            in->format_set);
     printf("in.format                   = '%s'\n",          in->format.data);
     printf("in.terse                    = %d\n",            in->terse);
-    printf("in.dry_run                  = %d\n",            in->dry_run);
     printf("in.max_in_dir               = %zu\n",           in->max_in_dir);
-    printf("in.skip_count               = '%zu'\n",         in->skip_count);
     printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
     printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
     printf("in.compress                 = %d\n",            in->compress);
@@ -310,6 +307,15 @@ void show_input(struct input* in, int retval) {
     printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
     printf("in.check_already_processed  = %d\n",            in->check_already_processed);
     printf("in.filter_types             = %d\n",            in->filter_types);
+
+    // no typable short flags
+
+    printf("in.min_level                = %zu\n",           in->min_level);
+    printf("in.max_level                = %zu\n",           in->max_level);
+    printf("in.types.prefix             = %d\n",            in->types.print_tlv);
+    printf("in.keep_matime              = %d\n",            in->keep_matime);
+    printf("in.skip_count               = '%zu'\n",         in->skip_count);
+    printf("in.dry_run                  = %d\n",            in->dry_run);
 
     printf("retval                      = %d\n",            retval);
     printf("\n");
@@ -438,10 +444,6 @@ int parse_cmd_line(int                  argc,
                 INSTALL_STR(&in->outname, optarg);
                 break;
 
-            case FLAG_PREFIX_SHORT:
-                in->types.prefix = 1;
-                break;
-
             case FLAG_SQL_INIT_SHORT:               // SQL initializations
                 INSTALL_STR(&in->sql.init, optarg);
                 break;
@@ -495,14 +497,6 @@ int parse_cmd_line(int                  argc,
                 INSTALL_INT(&in->suspecttime, optarg, 1, 2147483646, "-c", &retval);
                 break;
 
-            case FLAG_MIN_LEVEL_SHORT: /* min-level */
-                INSTALL_SIZE(&in->min_level, optarg, (size_t) 0, (size_t) -1, "--min-level", &retval);
-                break;
-
-            case FLAG_MAX_LEVEL_SHORT: /* max-level */
-                INSTALL_SIZE(&in->max_level, optarg, (size_t) 0, (size_t) -1, "--max-level", &retval);
-                break;
-
             case FLAG_SQL_INTERM_SHORT:
                 INSTALL_STR(&in->sql.intermediate, optarg);
                 break;
@@ -513,10 +507,6 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_SQL_AGG_SHORT:
                 INSTALL_STR(&in->sql.agg, optarg);
-                break;
-
-            case FLAG_KEEP_MATIME_SHORT:
-                in->keep_matime = 1;
                 break;
 
             case FLAG_BUFFER_SIZE_SHORT:
@@ -536,31 +526,8 @@ int parse_cmd_line(int                  argc,
                 in->terse = 1;
                 break;
 
-            case FLAG_DRY_RUN_SHORT:
-                in->dry_run = 1;
-                break;
-
             case FLAG_MAX_IN_DIR_SHORT:
                 INSTALL_SIZE(&in->max_in_dir, optarg, (size_t) 0, (size_t) -1, "-L", &retval);
-                break;
-
-            case FLAG_SKIP_SHORT:
-                {
-                    refstr_t skipfile = {
-                        .data = NULL,
-                        .len = 0,
-                    };
-                    INSTALL_STR(&skipfile, optarg);
-                    const ssize_t added = setup_directory_skip(in->skip, skipfile.data);
-                    if (added < 0) {
-                        retval = -1;
-                        bad_skipfile = 1;
-                        /* cannot return here - expected behavior is to parse remaining options first */
-                    }
-                    else {
-                        in->skip_count += added;
-                    }
-                }
                 break;
 
             case FLAG_TARGET_MEMORY_FOOTPRINT_SHORT:
@@ -616,12 +583,6 @@ int parse_cmd_line(int                  argc,
                 in->check_already_processed = 1;
                 break;
 
-            case FLAG_PLUGIN_SHORT:
-                if (load_plugin_library(in, optarg)) {
-                    retval = -1;
-                }
-                break;
-
             case FLAG_FILTER_TYPE_SHORT:
                 while (*optarg) {
                     switch (*optarg) {
@@ -640,6 +601,53 @@ int parse_cmd_line(int                  argc,
                             break;
                     }
                     ++optarg;
+                }
+                break;
+
+            // no typable short flags
+
+            case FLAG_MIN_LEVEL_SHORT:
+                INSTALL_SIZE(&in->min_level, optarg, (size_t) 0, (size_t) -1, "--min-level", &retval);
+                break;
+
+            case FLAG_MAX_LEVEL_SHORT:
+                INSTALL_SIZE(&in->max_level, optarg, (size_t) 0, (size_t) -1, "--max-level", &retval);
+                break;
+
+            case FLAG_PRINT_TLV_SHORT:
+                in->types.print_tlv = 1;
+                break;
+
+            case FLAG_KEEP_MATIME_SHORT:
+                in->keep_matime = 1;
+                break;
+
+            case FLAG_SKIP_FILE_SHORT:
+                {
+                    refstr_t skipfile = {
+                        .data = NULL,
+                        .len = 0,
+                    };
+                    INSTALL_STR(&skipfile, optarg);
+                    const ssize_t added = setup_directory_skip(in->skip, skipfile.data);
+                    if (added < 0) {
+                        retval = -1;
+                        bad_skipfile = 1;
+                        /* cannot return here - expected behavior is to parse remaining options first */
+                    }
+                    else {
+                        in->skip_count += added;
+                    }
+                }
+                break;
+
+            case FLAG_DRY_RUN_SHORT:
+                in->dry_run = 1;
+                break;
+
+            case FLAG_PLUGIN_SHORT:
+                if (load_plugin_library(in, optarg)) {
+                    retval = -1;
                 }
                 break;
 

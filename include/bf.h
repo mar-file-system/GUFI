@@ -130,9 +130,6 @@ extern "C" {
 #define FLAG_OUTPUT_DB_LONG "output-db"
 #define FLAG_OUTPUT_DB {FLAG_OUTPUT_DB_LONG, required_argument, NULL, FLAG_OUTPUT_DB_SHORT}
 
-#define FLAG_PREFIX_SHORT 'u'
-#define FLAG_PREFIX {"", no_argument, NULL, FLAG_PREFIX_SHORT}
-
 #define FLAG_SQL_INIT_SHORT 'I'
 #define FLAG_SQL_INIT {"", required_argument, NULL, FLAG_SQL_INIT_SHORT}
 
@@ -181,9 +178,6 @@ extern "C" {
 #define FLAG_SQL_AGG_SHORT 'G'
 #define FLAG_SQL_AGG {"", required_argument, NULL, FLAG_SQL_AGG_SHORT}
 
-#define FLAG_KEEP_MATIME_SHORT 'm'
-#define FLAG_KEEP_MATIME {"", no_argument, NULL, FLAG_KEEP_MATIME_SHORT}
-
 #define FLAG_BUFFER_SIZE_SHORT 'B'
 #define FLAG_BUFFER_SIZE_LONG "buffer-size"
 #define FLAG_BUFFER_SIZE {FLAG_BUFFER_SIZE_LONG, required_argument, NULL, FLAG_BUFFER_SIZE_SHORT}
@@ -200,16 +194,8 @@ extern "C" {
 #define FLAG_TERSE_FORMAT_LONG "terse-format"
 #define FLAG_TERSE_FORMAT {FLAG_TERSE_FORMAT_LONG, no_argument, NULL, FLAG_TERSE_FORMAT_SHORT}
 
-#define FLAG_DRY_RUN_SHORT 'X'
-#define FLAG_DRY_RUN_LONG "dry-run"
-#define FLAG_DRY_RUN {FLAG_DRY_RUN_LONG, no_argument, NULL, FLAG_DRY_RUN_SHORT}
-
 #define FLAG_MAX_IN_DIR_SHORT 'L'
 #define FLAG_MAX_IN_DIR {"", required_argument, NULL, FLAG_MAX_IN_DIR_SHORT}
-
-#define FLAG_SKIP_SHORT 'k'
-#define FLAG_SKIP_LONG "skip"
-#define FLAG_SKIP {FLAG_SKIP_LONG, required_argument, NULL, FLAG_SKIP_SHORT}
 
 #define FLAG_TARGET_MEMORY_FOOTPRINT_SHORT 'M'
 #define FLAG_TARGET_MEMORY_FOOTPRINT {"", required_argument, NULL, FLAG_TARGET_MEMORY_FOOTPRINT_SHORT}
@@ -240,9 +226,6 @@ extern "C" {
 #define FLAG_ALREADY_PROCESSED_SHORT 'l'
 #define FLAG_ALREADY_PROCESSED {"", no_argument, NULL, FLAG_ALREADY_PROCESSED_SHORT}
 
-#define FLAG_PLUGIN_SHORT 'U'
-#define FLAG_PLUGIN {"", required_argument, NULL, FLAG_PLUGIN_SHORT}
-
 #define FLAG_FILTER_TYPE_SHORT 't'
 #define FLAG_FILTER_TYPE_LONG "filter-type"
 #define FLAG_FILTER_TYPE {FLAG_FILTER_TYPE_LONG, required_argument, NULL, FLAG_FILTER_TYPE_SHORT}
@@ -254,6 +237,26 @@ extern "C" {
 #define FLAG_MAX_LEVEL_SHORT 1001
 #define FLAG_MAX_LEVEL_LONG "max-level"
 #define FLAG_MAX_LEVEL {FLAG_MAX_LEVEL_LONG, required_argument, NULL, FLAG_MAX_LEVEL_SHORT}
+
+#define FLAG_PRINT_TLV_SHORT 1002
+#define FLAG_PRINT_TLV_LONG "print-tlv"
+#define FLAG_PRINT_TLV {FLAG_PRINT_TLV_LONG, no_argument, NULL, FLAG_PRINT_TLV_SHORT}
+
+#define FLAG_KEEP_MATIME_SHORT 1003
+#define FLAG_KEEP_MATIME_LONG "keep-matime"
+#define FLAG_KEEP_MATIME {FLAG_KEEP_MATIME_LONG, no_argument, NULL, FLAG_KEEP_MATIME_SHORT}
+
+#define FLAG_SKIP_FILE_SHORT 1004
+#define FLAG_SKIP_FILE_LONG "skip-file"
+#define FLAG_SKIP_FILE {FLAG_SKIP_FILE_LONG, required_argument, NULL, FLAG_SKIP_FILE_SHORT}
+
+#define FLAG_DRY_RUN_SHORT 1005
+#define FLAG_DRY_RUN_LONG "dry-run"
+#define FLAG_DRY_RUN {FLAG_DRY_RUN_LONG, no_argument, NULL, FLAG_DRY_RUN_SHORT}
+
+#define FLAG_PLUGIN_SHORT 1006
+#define FLAG_PLUGIN_LONG "plugin"
+#define FLAG_PLUGIN {FLAG_PLUGIN_LONG, required_argument, NULL, FLAG_PLUGIN_SHORT}
 
 #define FLAG_END {NULL, 0, NULL, 0}
 
@@ -379,7 +382,7 @@ struct input {
      * set up by gufi_query but cleaned up by input_fini
      */
     struct {
-        int prefix;
+        int print_tlv;
 
         /* set if not aggregating */
         int *tsum;

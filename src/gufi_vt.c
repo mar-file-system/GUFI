@@ -142,7 +142,7 @@ static int gufi_query(const char *indexroot, const char *threads, const gq_flags
                       FILE **output, char **errmsg) {
     const char *argv[23] = {
         "gufi_query",
-        "-u",
+        "--print-tlv",
         "-x",
     };
 

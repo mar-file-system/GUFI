@@ -84,7 +84,7 @@ TEST(handle_sql, no_aggregation) {
 
     struct input in;
     ASSERT_EQ(input_init(&in), &in);
-    in.types.prefix = 1;
+    in.types.print_tlv = 1;
 
     for(const char *S : {(const char *) nullptr, S_GOOD, S_BAD}) {
         in.sql.sum.data = S?S:nullptr;
@@ -114,7 +114,7 @@ TEST(handle_sql, no_aggregation) {
 TEST(handle_sql, aggregation) {
     struct input in;
     ASSERT_EQ(input_init(&in), &in);
-    in.types.prefix = 1;
+    in.types.print_tlv = 1;
 
     const char I[]      = "CREATE TABLE;";
     const char J[]      = "INSERT INTO";

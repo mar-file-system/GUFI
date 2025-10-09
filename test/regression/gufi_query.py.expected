@@ -16,7 +16,7 @@ options:
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
   -O, --output-db <out_DB>          output DB
-  -u                                prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
+      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
   -I <SQL_init>                     SQL init
   -F <SQL_fin>                      SQL cleanup
       --min-level <min level>       minimum level to go down
@@ -24,11 +24,11 @@ options:
   -J <SQL_interm>                   SQL for intermediate results
   -K <create aggregate>             SQL to create the final aggregation table
   -G <SQL_aggregate>                SQL for aggregated results
-  -m                                Keep mtime and atime same on the database files
+      --keep-matime                 Keep mtime and atime same on the database files
   -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes
   -w, --read-write                  open the database files in read-write mode instead of read only mode
   -x, --xattrs                      index/query xattrs
-  -k, --skip <filename>             file containing directory names to skip
+      --skip-file <filename>        file containing directory names to skip
   -M <bytes>                        target memory footprint
   -s, --swap-prefix <path>          File name prefix for swap files
   -p, --path <path>                 Source path prefix for %s in SQL

@@ -178,13 +178,13 @@ echo "# nonexistant trace directory"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${NEWDIR}/baddir/${TRACE}\"" | @SED@ "s%${NEWDIR}/%%g;"
 
 echo "# skip file"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}\" \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} --skip-file \"${SKIP}\" \"${SRCDIR}\" \"${TRACE}\""
 
 # shellcheck disable=SC2145
 run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}' | @SED@ '\%/external/db%d;'"
 
 echo "# bad skip file"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} --skip-file \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""
 
 echo "# bad thread count"
 run_no_sort "${GUFI_DIR2TRACE} -n 18446744073709551615 \"${SRCDIR}\" \"${TRACE}\""

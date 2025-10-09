@@ -9,11 +9,11 @@ options:
   -x, --xattrs                      index/query xattrs
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
-  -k, --skip <filename>             file containing directory names to skip
+      --skip-file <filename>        file containing directory names to skip
   -M <bytes>                        target memory footprint
   -s, --swap-prefix <path>          File name prefix for swap files
   -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
-  -U <library_name>                 plugin library for modifying db entries
+      --plugin <library_name>       plugin library for modifying db entries
   -e                                compress work items
   -q                                check that external databases are valid before tracking during indexing
   -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level
@@ -378,7 +378,7 @@ Total Dirs:          0
 Total Non-Dirs:      0
 
 # skip file
-$ gufi_dir2index -n 2 -k "skip" "prefix" "search"
+$ gufi_dir2index -n 2 --skip-file "skip" "prefix" "search"
 "search" Already exists!
 Creating GUFI Index search with 2 threads
 Total Dirs:          4
@@ -400,7 +400,7 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # bad skip file
-$ gufi_dir2index -n 2 -k "skip.bad" "prefix" "search"
+$ gufi_dir2index -n 2 --skip-file "skip.bad" "prefix" "search"
 Error: Cannot open skip file "skip.bad"
 
 # bad thread count

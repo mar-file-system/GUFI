@@ -152,7 +152,7 @@ static int gen_types(struct input *in) {
     sqlite3 *db = NULL;
 
     /* generate types if necessary */
-    if ((in->types.prefix == 1) && ((in->output == STDOUT) || (in->output == OUTFILE))) {
+    if ((in->types.print_tlv == 1) && ((in->output == STDOUT) || (in->output == OUTFILE))) {
         /* have to create temporary db since there is no guarantee of a db yet */
         db = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
                     0, 0, create_dbdb_tables, NULL);

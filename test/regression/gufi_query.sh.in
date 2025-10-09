@@ -119,7 +119,7 @@ echo "# Get relative paths of all directories and non-directories descending siz
 run_no_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get all directory and non-directory names not in directory"
-run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -k \"${SKIP}\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" --skip-file \"${SKIP}\" \"${INDEXROOT}\""
 
 echo "# Get all directory and non-directory names and their xattrs"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -S \"SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, xattr_name, xattr_value FROM vrxpentries;\" -x \"${INDEXROOT}\""
@@ -133,10 +133,10 @@ echo "# limit tree traversal to some directories under at level 1 (only prefix/d
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --min-level ${DISTRIBUTED_LEVEL} -D \"${DISTRIBUTED_0}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 
 echo "# Output TLV columns (no aggregation)"
-run_no_sort "${GUFI_QUERY} -u -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | ${HEXLIFY}"
+run_no_sort "${GUFI_QUERY} --print-tlv -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | ${HEXLIFY}"
 
 echo "# Output TLV columns (with aggregation)"
-run_no_sort "${GUFI_QUERY} -u -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | ${HEXLIFY}"
+run_no_sort "${GUFI_QUERY} --print-tlv -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | ${HEXLIFY}"
 
 echo "# run_vt with {s} (source directory) and {i} (index directory)"
 (
@@ -199,7 +199,7 @@ echo "# Bad -K (aggregate, stdout)"
 run_no_sort "${GUFI_QUERY}            -I \"CREATE TABLE test(col TEXT)\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" -G \"query;\" \"${INDEXROOT}\""
 
 echo "# Bad skip file"
-run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -k \"${SKIP}.bad\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" --skip-file \"${SKIP}.bad\" \"${INDEXROOT}\""
 
 echo "# Bad path"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"\""
@@ -248,14 +248,14 @@ run_sort "${GUFI_QUERY} -a 1 -d \" \" -S \"SELECT rpath(sname, sroll), inode FRO
 echo "# Positive check to see if changes have been applied"
 run_sort "${GUFI_QUERY} -a 1 -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode == 0;\" -E \"SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode == 0;\" \"${INDEXROOT}\""
 
-echo "# Set timestamps of one db.db file to epoch, query the index with -m flag, and expect no changes"
+echo "# Set timestamps of one db.db file to epoch, query the index with --keep-matime flag, and expect no changes"
 run_no_sort "touch -amt 197001010000.00 \"${INDEXROOT}/db.db\""
 
 echo "Expect:"
 @STAT@ -c "    atime: %X" "${INDEXROOT}/db.db"
 @STAT@ -c "    mtime: %Y" "${INDEXROOT}/db.db"
 echo
-run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
+run_sort "${GUFI_QUERY} -d \" \" --keep-matime -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
 echo "Got:"
 @STAT@ -c "    atime: %X" "${INDEXROOT}/db.db"
 @STAT@ -c "    mtime: %Y" "${INDEXROOT}/db.db"
@@ -264,18 +264,18 @@ echo
 echo "# Symlink at Level 1"
 run_no_sort "ln -sn \"directory/subdirectory\" \"${INDEXROOT}/symlink\""
 echo "# directory_symlink shows up 2 times and repeat_name shows up 3 times"
-run_sort "${GUFI_QUERY} -d \" \" -m -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" --keep-matime -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 rm -f "${INDEXROOT}/symlink"
 
 echo "# Symlink at Level 2"
 run_no_sort "ln -sn \"subdirectory\" \"${INDEXROOT}/directory/symlink\""
 echo "# Symlink at Level 2 is ignored"
-run_sort "${GUFI_QUERY} -d \" \" -m -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" --keep-matime -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 rm -f "${INDEXROOT}/directory/symlink"
 
 echo "# Missing database file"
 rm "${INDEXROOT}/db.db"
-run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
+run_sort "${GUFI_QUERY} -d \" \" --keep-matime -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
 
 echo "# multiple input directories are not allowed for partial querying"
 run_no_sort "${GUFI_QUERY} -n ${THREADS} -D \"${DISTRIBUTED_0}\" --min-level ${DISTRIBUTED_LEVEL} \"${SEARCH}\" \"${SEARCH}\""
