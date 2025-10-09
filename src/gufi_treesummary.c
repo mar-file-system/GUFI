@@ -130,13 +130,15 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
-    if (lstat_wrapper(passmywork) != 0) {
-        goto out_free;
-    }
 
     DIR *dir = opendir(passmywork->name);
     if (!dir) {
+        fprintf(stderr, "Could not open directory \"%s\"\n", passmywork->name);
         goto out_free;
+    }
+
+    if (lstat_wrapper(passmywork) != 0) {
+        goto close_dir;
     }
 
     if (pa->in.printdir) {
@@ -205,6 +207,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     closedb(db);
+
+  close_dir:
     closedir(dir);
 
   out_free:

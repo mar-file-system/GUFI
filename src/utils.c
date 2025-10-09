@@ -888,7 +888,7 @@ void statx_to_work(struct statx *stx, struct work *work) {
 /* try to call statx if available, otherwise, call lstat */
 int lstat_wrapper(struct work *work) {
     /* don't duplicate work */
-    if (work->stat_called == NOT_STATX_CALLED) {
+    if (work->stat_called != STAT_NOT_CALLED) {
         return 0;
     }
 

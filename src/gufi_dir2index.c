@@ -193,17 +193,17 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     const int process_dir = ((pa->in.min_level <= nda.work->level) &&
                              (nda.work->level <= pa->in.max_level));
 
-    if (lstat_wrapper(nda.work) != 0) {
-        rc = 1;
-        goto cleanup;
-    }
-
     dir = opendir(nda.work->name);
     if (!dir) {
         const int err = errno;
         fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n", nda.work->name, strerror(err), err);
         rc = 1;
         goto cleanup;
+    }
+
+    if (lstat_wrapper(nda.work) != 0) {
+        rc = 1;
+        goto close_dir;
     }
 
     /* offset by work->root_len to remove prefix */
@@ -229,7 +229,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath, err, strerror(err));
             rc = 1;
-            goto cleanup;
+            goto close_dir;
         }
     }
 
@@ -244,7 +244,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         if (!nda.db) {
             rc = 1;
-            goto cleanup;
+            goto close_dir;
         }
 
         /* prepare to insert into the database */
@@ -320,9 +320,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     chmod(nda.topath, nda.work->statuso.st_mode);
     chown(nda.topath, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
 
-  cleanup:
+  close_dir:
     closedir(dir);
 
+  cleanup:
     if (process_dir) {
         pa->total_dirs[id]++;
         pa->total_nondirs[id] += ctrs.nondirs_processed;

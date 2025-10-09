@@ -170,7 +170,7 @@ static int process_summary(void *args, int count, char **data, char **columns) {
     sscanf(data[4], "%" PRId64,     &t); st.st_atime = t;
     sscanf(data[5], "%" PRId64,     &t); st.st_mtime = t;
     char *xattr_names = data[6];
-    sscanf(data[7], "%zu",         &xattr_names_len);
+    sscanf(data[7], "%zu",          &xattr_names_len);
 
     struct xattrs xattrs;
     xattrs_setup(&xattrs);
@@ -218,7 +218,7 @@ static int process_entries(void *args, int count, char **data, char **columns) {
             char *xattr_names = data[9];
             sscanf(data[10], "%zu",         &xattr_names_len);
 
-            int fd = open(entry, O_WRONLY | O_TRUNC | O_CREAT, st.st_mode);
+            const int fd = open(entry, O_WRONLY | O_TRUNC | O_CREAT, st.st_mode);
             if (fd < 0) {
                 const int err = errno;
                 fprintf(stderr, "Error opening file %s: %d\n", entry, err);
@@ -275,7 +275,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     // get source directory info
     if (lstat_wrapper(work) != 0)  {
         rc = 1;
-        goto cleanup;
+        goto close_dir;
     }
 
     // create the destination directory using the source directory
@@ -291,7 +291,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", topath, err, strerror(err));
             rc = 1;
-            goto cleanup;
+            goto close_dir;
         }
     }
 
@@ -307,7 +307,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
     if (!db) {
         rc = 1;
-        goto cleanup;
+        goto close_dir;
     }
 
     size_t ext_xattrs = 0;
@@ -347,13 +347,12 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     chmod(topath, work->statuso.st_mode & 0777);
     chown(topath, work->statuso.st_uid, work->statuso.st_gid);
 
-  cleanup:
-
     closedb(db);
-    db = NULL;
 
+  close_dir:
     closedir(dir);
 
+  cleanup:
     free(work);
 
     return rc;

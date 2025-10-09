@@ -138,7 +138,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (!dir) {
         fprintf(stderr, "Error: Could not open directory \"%s\": %s", work->name, strerror(errno));
         rc = 1;
-        goto free_work;
+        goto cleanup;
     }
 
     sqlite3 *db = NULL;
@@ -231,7 +231,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     closedir(dir);
 
-  free_work:
+  cleanup:
     free(work);
 
     return rc;

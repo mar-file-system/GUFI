@@ -176,15 +176,23 @@ check_language(CXX)
 if (CMAKE_CXX_COMPILER OR DEP_AI)
   enable_language(CXX)
 
-  # GCC prior to 4.9.3 doesn't have full standard support
+  # GCC prior to 11 doesn't have full standard support
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11")
     set(CMAKE_CXX_COMPILER false)
-    message(STATUS "Require GNU C++ version 11 or greater: Not compiling C++ sources")
+    if (DEP_AI)
+      message(FATAL_ERROR "AI capabilities require GNU C++ version 11 or greater")
+    else()
+      message(STATUS "Require GNU C++ version 11 or greater: Not compiling C++ sources")
+    endif()
   elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5")
     set(CMAKE_CXX_COMPILER false)
-    message(STATUS "Require Clang version 5 or greater: not compiling C++ sources")
+    if (DEP_AI)
+      message(FATAL_ERROR "AI capabilities require Clang version 5 or greater")
+    else()
+      message(STATUS "Require Clang version 5 or greater: not compiling C++ sources")
+    endif()
   else()
-    # Require C++11
+    # Require C++17
     set(CMAKE_CXX_STANDARD 17)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_EXTENSIONS OFF)

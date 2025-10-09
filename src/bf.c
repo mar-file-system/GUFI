@@ -185,73 +185,73 @@ static int load_plugin_library(struct input *in, char *plugin_name) {
 void print_help(const char* prog_name,
                 const struct option* options,
                 const char* positional_args_help_str) {
-   /* Not checking arguments */
+    /* Not checking arguments */
 
-   printf("usage: %s [options] %s\n", prog_name, positional_args_help_str);
-   printf("options:\n");
+    printf("usage: %s [options] %s\n", prog_name, positional_args_help_str);
+    printf("options:\n");
 
-   while (options && options->name != NULL) { 
-          switch (options->val) {
-                case FLAG_HELP_SHORT:                    printf("  -h, --help                        help"); break;
-                case FLAG_DEBUG_SHORT:                   printf("  -H, --debug                       show assigned input values (debugging)"); break;
-                case FLAG_VERSION_SHORT:                 printf("  -v, --version                     version"); break;
-                case FLAG_XATTRS_SHORT:                  printf("  -x, --xattrs                      index/query xattrs"); break;
-                case FLAG_PRINTDIR_SHORT:                printf("  -P                                print directories as they are encountered"); break;
-                case FLAG_BUILDINDEX_SHORT:              printf("  -b                                build GUFI index tree"); break;
-                case FLAG_PROCESS_SQL_SHORT:             printf("  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
-                                                                "                                    1 - skip T, run S and E whether or not a row was returned (old -a)\n"
-                                                                "                                    2 - run T, S, and E whether or not a row was returned"); break;
-                case FLAG_THREADS_SHORT:                 printf("  -n, --threads <threads>           number of threads"); break;
-                case FLAG_DELIM_SHORT:                   printf("  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
-                case FLAG_OUTPUT_FILE_SHORT:             printf("  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)"); break;
-                case FLAG_OUTPUT_DB_SHORT:               printf("  -O, --output-db <out_DB>          output DB"); break;
-                case FLAG_PREFIX_SHORT:                  printf("  -u                                prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
-                case FLAG_SQL_INIT_SHORT:                printf("  -I <SQL_init>                     SQL init"); break;
-                case FLAG_SQL_TSUM_SHORT:                printf("  -T <SQL_tsum>                     SQL for tree-summary table"); break;
-                case FLAG_SQL_SUM_SHORT:                 printf("  -S <SQL_sum>                      SQL for summary table"); break;
-                case FLAG_SQL_ENT_SHORT:                 printf("  -E <SQL_ent>                      SQL for entries table"); break;
-                case FLAG_SQL_FIN_SHORT:                 printf("  -F <SQL_fin>                      SQL cleanup"); break;
-                case FLAG_INSERT_FILE_LINK_SHORT:        printf("  -r                                insert files and links into db (for bfwreaddirplus2db"); break;
-                case FLAG_INSERT_DIR_SHORT:              printf("  -R                                insert dires into db (for bfwreaddirplus2db"); break;
-                case FLAG_SUSPECT_DIR_SHORT:             printf("  -Y                                default to all directories suspect"); break;
-                case FLAG_SUSPECT_FILE_LINK_SHORT:       printf("  -Z                                default to all files/links suspect"); break;
-                case FLAG_INSUSPECT_SHORT:               printf("  -W <INSUSPECT>                    suspect input file"); break;
-                case FLAG_SUSPECT_METHOD_SHORT:          printf("  -A <suspectmethod>                suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
-                case FLAG_STRIDE_SHORT:                  printf("  -g <stridesize>                   stride size for striping inodes"); break;
-                case FLAG_SUSPECT_TIME_SHORT:            printf("  -c <suspecttime>                  time in seconds since epoch for suspect comparision"); break;
-                case FLAG_SQL_INTERM_SHORT:              printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
-                case FLAG_SQL_CREATE_AGG_SHORT:          printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
-                case FLAG_SQL_AGG_SHORT:                 printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
-                case FLAG_KEEP_MATIME_SHORT:             printf("  -m                                Keep mtime and atime same on the database files"); break;
-                case FLAG_BUFFER_SIZE_SHORT:             printf("  -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes"); break;
-                case FLAG_READ_WRITE_SHORT:              printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
-                case FLAG_FORMAT_SHORT:                  printf("  -f, --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
-                case FLAG_TERSE_FORMAT_SHORT:            printf("  -j, --terse-form                  print the information in terse form"); break; /* output from stat --help */
-                case FLAG_DRY_RUN_SHORT:                 printf("  -X, --dry-run                     Dry run"); break;
-                case FLAG_MAX_IN_DIR_SHORT:              printf("  -L <count>                        Highest number of files/links in a directory allowed to be rolled up"); break;
-                case FLAG_SKIP_SHORT:                    printf("  -k, --skip <filename>             file containing directory names to skip"); break;
-                case FLAG_TARGET_MEMORY_FOOTPRINT_SHORT: printf("  -M <bytes>                        target memory footprint"); break;
-                case FLAG_SUBDIR_LIMIT_SHORT:            printf("  -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
-                case FLAG_COMPRESS_SHORT:                printf("  -e                                compress work items"); break;
-                case FLAG_CHECK_EXTDB_VALID_SHORT:       printf("  -q                                check that external databases are valid before tracking during indexing"); break;
-                case FLAG_EXTERNAL_ATTACH_SHORT:         printf("  -Q <basename>\n"
-                                                                "     <table>\n"
-                                                                "     <template>.<table>\n"
-                                                                "     <view>                         External database file basename, per-attach table name, template + table name, and the resultant view"); break;
-                case FLAG_SWAP_PREFIX_SHORT:             printf("  -s, --swap-prefix <path>          File name prefix for swap files"); break;
-                case FLAG_PATH_SHORT:                    printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
-                case FLAG_SUBTREE_LIST_SHORT:            printf("  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
-                case FLAG_ALREADY_PROCESSED_SHORT:       printf("  -l                                if a directory was previously processed, skip descending the subtree"); break;
-                case FLAG_PLUGIN_SHORT:                  printf("  -U <library_name>                 plugin library for modifying db entries"); break;
-                case FLAG_FILTER_TYPE_SHORT:             printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
-                case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <min level>       minimum level to go down"); break;
-                case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <max level>       maximum level to go down"); break;
-                default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
-          }
-          options++;
-          printf("\n");
-   }
-   printf("\n");
+    while (options && options->name != NULL) {
+        switch (options->val) {
+            case FLAG_HELP_SHORT:                    printf("  -h, --help                        help"); break;
+            case FLAG_DEBUG_SHORT:                   printf("  -H, --debug                       show assigned input values (debugging)"); break;
+            case FLAG_VERSION_SHORT:                 printf("  -v, --version                     version"); break;
+            case FLAG_XATTRS_SHORT:                  printf("  -x, --xattrs                      index/query xattrs"); break;
+            case FLAG_PRINTDIR_SHORT:                printf("  -P                                print directories as they are encountered"); break;
+            case FLAG_BUILDINDEX_SHORT:              printf("  -b                                build GUFI index tree"); break;
+            case FLAG_PROCESS_SQL_SHORT:             printf("  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
+                                                            "                                    1 - skip T, run S and E whether or not a row was returned (old -a)\n"
+                                                            "                                    2 - run T, S, and E whether or not a row was returned"); break;
+            case FLAG_THREADS_SHORT:                 printf("  -n, --threads <threads>           number of threads"); break;
+            case FLAG_DELIM_SHORT:                   printf("  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
+            case FLAG_OUTPUT_FILE_SHORT:             printf("  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)"); break;
+            case FLAG_OUTPUT_DB_SHORT:               printf("  -O, --output-db <out_DB>          output DB"); break;
+            case FLAG_PREFIX_SHORT:                  printf("  -u                                prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
+            case FLAG_SQL_INIT_SHORT:                printf("  -I <SQL_init>                     SQL init"); break;
+            case FLAG_SQL_TSUM_SHORT:                printf("  -T <SQL_tsum>                     SQL for tree-summary table"); break;
+            case FLAG_SQL_SUM_SHORT:                 printf("  -S <SQL_sum>                      SQL for summary table"); break;
+            case FLAG_SQL_ENT_SHORT:                 printf("  -E <SQL_ent>                      SQL for entries table"); break;
+            case FLAG_SQL_FIN_SHORT:                 printf("  -F <SQL_fin>                      SQL cleanup"); break;
+            case FLAG_INSERT_FILE_LINK_SHORT:        printf("  -r                                insert files and links into db (for bfwreaddirplus2db"); break;
+            case FLAG_INSERT_DIR_SHORT:              printf("  -R                                insert dires into db (for bfwreaddirplus2db"); break;
+            case FLAG_SUSPECT_DIR_SHORT:             printf("  -Y                                default to all directories suspect"); break;
+            case FLAG_SUSPECT_FILE_LINK_SHORT:       printf("  -Z                                default to all files/links suspect"); break;
+            case FLAG_INSUSPECT_SHORT:               printf("  -W <INSUSPECT>                    suspect input file"); break;
+            case FLAG_SUSPECT_METHOD_SHORT:          printf("  -A <suspectmethod>                suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
+            case FLAG_STRIDE_SHORT:                  printf("  -g <stridesize>                   stride size for striping inodes"); break;
+            case FLAG_SUSPECT_TIME_SHORT:            printf("  -c <suspecttime>                  time in seconds since epoch for suspect comparision"); break;
+            case FLAG_SQL_INTERM_SHORT:              printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
+            case FLAG_SQL_CREATE_AGG_SHORT:          printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
+            case FLAG_SQL_AGG_SHORT:                 printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
+            case FLAG_KEEP_MATIME_SHORT:             printf("  -m                                Keep mtime and atime same on the database files"); break;
+            case FLAG_BUFFER_SIZE_SHORT:             printf("  -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes"); break;
+            case FLAG_READ_WRITE_SHORT:              printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
+            case FLAG_FORMAT_SHORT:                  printf("  -f, --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
+            case FLAG_TERSE_FORMAT_SHORT:            printf("  -j, --terse-form                  print the information in terse form"); break; /* output from stat --help */
+            case FLAG_DRY_RUN_SHORT:                 printf("  -X, --dry-run                     Dry run"); break;
+            case FLAG_MAX_IN_DIR_SHORT:              printf("  -L <count>                        Highest number of files/links in a directory allowed to be rolled up"); break;
+            case FLAG_SKIP_SHORT:                    printf("  -k, --skip <filename>             file containing directory names to skip"); break;
+            case FLAG_TARGET_MEMORY_FOOTPRINT_SHORT: printf("  -M <bytes>                        target memory footprint"); break;
+            case FLAG_SUBDIR_LIMIT_SHORT:            printf("  -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
+            case FLAG_COMPRESS_SHORT:                printf("  -e                                compress work items"); break;
+            case FLAG_CHECK_EXTDB_VALID_SHORT:       printf("  -q                                check that external databases are valid before tracking during indexing"); break;
+            case FLAG_EXTERNAL_ATTACH_SHORT:         printf("  -Q <basename>\n"
+                                                            "     <table>\n"
+                                                            "     <template>.<table>\n"
+                                                            "     <view>                         External database file basename, per-attach table name, template + table name, and the resultant view"); break;
+            case FLAG_SWAP_PREFIX_SHORT:             printf("  -s, --swap-prefix <path>          File name prefix for swap files"); break;
+            case FLAG_PATH_SHORT:                    printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
+            case FLAG_SUBTREE_LIST_SHORT:            printf("  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
+            case FLAG_ALREADY_PROCESSED_SHORT:       printf("  -l                                if a directory was previously processed, skip descending the subtree"); break;
+            case FLAG_PLUGIN_SHORT:                  printf("  -U <library_name>                 plugin library for modifying db entries"); break;
+            case FLAG_FILTER_TYPE_SHORT:             printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
+            case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <min level>       minimum level to go down"); break;
+            case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <max level>       maximum level to go down"); break;
+            default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
+        }
+        options++;
+        printf("\n");
+    }
+    printf("\n");
 }
 
 // DEBUGGING
@@ -639,7 +639,7 @@ int parse_cmd_line(int                  argc,
                             retval = -1;
                             break;
                     }
-                    ++optarg; 
+                    ++optarg;
                 }
                 break;
 

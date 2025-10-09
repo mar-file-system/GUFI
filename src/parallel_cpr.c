@@ -230,7 +230,7 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     if (lstat_wrapper(work) != 0) {
-        print_error_and_goto("Could not lstat directory", work->name, cleanup);
+        print_error_and_goto("Could not lstat directory", work->name, close_dir);
     }
 
     const str_t dst = create_dst_name(in, work);
@@ -267,8 +267,10 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   free_dst:
     free(dst.data);
 
-  cleanup:
+  close_dir:
     closedir(dir);
+
+  cleanup:
     free(work);
 
     return rc;

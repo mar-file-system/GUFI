@@ -68,6 +68,7 @@ OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <fstream>
 #include <random>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -1104,6 +1105,21 @@ TEST(set_metadata, bad) {
     EXPECT_EQ(rmdir(dir), 0);
 }
 
+#if defined(DEBUG) && defined(__linux__)
+TEST(dump_memory_usage, not_enough_fds) {
+    struct rlimit orig_fds;
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+
+    struct rlimit fewer_fds = orig_fds;
+    fewer_fds.rlim_cur = 3;
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
+
+    dump_memory_usage();
+
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+}
+#endif
+
 TEST(write_read, size) {
     char filename[] = "XXXXXX";
     int fd = mkstemp(filename);
@@ -1145,7 +1161,7 @@ TEST(lstat_wrapper, bad) {
     EXPECT_EQ(lstat_wrapper(work), 0);
 
     work->stat_called = STATX_CALLED;
-    EXPECT_EQ(lstat_wrapper(work), 1);
+    EXPECT_EQ(lstat_wrapper(work), 0);
 
     free(work);
 }

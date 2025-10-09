@@ -143,7 +143,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     memset(&ed, 0, sizeof(ed));
     if (lstat_wrapper(work) != 0) {
-        goto cleanup;
+        goto close_dir;
     }
 
     const int process_dir = ((pa->in.min_level <= work->level) &&
@@ -177,9 +177,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     descend(ctx, id, pa, in, work, dir, 0,
             processdir, process_dir?process_nondir:NULL, &nda, &ctrs);
 
-  cleanup:
+  close_dir:
     closedir(dir);
 
+  cleanup:
     free(work);
 
     pa->total_files[id] += ctrs.nondirs_processed;

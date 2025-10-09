@@ -388,6 +388,26 @@ TEST(addqueryfuncs, spath) {
         EXPECT_STREQ(output, source_path);
     }
 
+    // missing source prefix
+    char query[MAXSQL] = {};
+    SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d);", dirname, 0);
+
+    char *err = nullptr;
+
+    in.source_prefix.data = nullptr;
+    in.source_prefix.len = strlen(source);
+    EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, nullptr, &err), SQLITE_ERROR);
+    EXPECT_NE(err, nullptr);
+    sqlite3_free(err);
+    err = nullptr;
+
+    in.source_prefix.data = source;
+    in.source_prefix.len = 0;
+    EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, nullptr, &err), SQLITE_ERROR);
+    EXPECT_NE(err, nullptr);
+    sqlite3_free(err);
+    err = nullptr;
+
     sqlite3_close(db);
     free(work);
 }

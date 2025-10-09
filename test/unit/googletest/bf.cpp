@@ -463,7 +463,7 @@ TEST(parse_cmd_line, options) {
     int argc = sizeof(argv) / sizeof(argv[0]);
 
     struct input in;
-    ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
     check_input(&in, false, false, false, true, RUN_TSE);
 
     input_fini(&in);
@@ -484,7 +484,7 @@ TEST(parse_cmd_line, delimiter) {
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
-        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.delim, fielddelim);
 
         input_fini(&in);
@@ -502,7 +502,7 @@ TEST(parse_cmd_line, delimiter) {
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
-        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.delim, dpipe[0]);
 
         input_fini(&in);
@@ -521,7 +521,7 @@ TEST(parse_cmd_line, output_arguments) {
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
-        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output, STDOUT);
 
         input_fini(&in);
@@ -537,7 +537,7 @@ TEST(parse_cmd_line, output_arguments) {
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
-        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output,  OUTFILE);
         EXPECT_EQ(in.outname, o_arg);
 
@@ -554,7 +554,7 @@ TEST(parse_cmd_line, output_arguments) {
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
-        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output,  OUTDB);
         EXPECT_EQ(in.outname, O_arg);
 
@@ -572,7 +572,7 @@ TEST(parse_cmd_line, output_arguments) {
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
-        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output,  OUTDB);
         EXPECT_EQ(in.outname, O_arg);
 
@@ -590,7 +590,7 @@ TEST(parse_cmd_line, output_arguments) {
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
-        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output,  OUTFILE);
         EXPECT_EQ(in.outname, o_arg);
 
@@ -613,7 +613,7 @@ TEST(parse_cmd_line, positional) {
 
     struct input in;
     // 1, since no options were read
-    ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), 1);
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), 1);
 
     check_input(&in, false, false, false, false, RUN_ON_ROW);
 
