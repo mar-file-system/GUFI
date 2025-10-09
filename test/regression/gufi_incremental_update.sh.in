@@ -323,7 +323,7 @@ replace_inodes() {
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 0 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null" | replace_inodes)
+    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 0 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null" | replace_inodes)
     echo "${out}" | head -n 1
     echo "${out}" | tail -n +2 | sort
     echo
@@ -352,7 +352,7 @@ echo
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 1 -W \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null" | replace_inodes
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 1 --suspect-file \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null" | replace_inodes
     check_incremental_update | replace_inodes
     echo "#####################################"
     echo
@@ -373,7 +373,7 @@ echo
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 2 -W \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null" | replace_inodes
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 2 --suspect-file \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null" | replace_inodes
     check_incremental_update | replace_inodes
     echo "#####################################"
     echo
@@ -386,7 +386,7 @@ echo
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
     check_incremental_update | replace_inodes
     echo "#####################################"
     echo
@@ -399,7 +399,7 @@ echo
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${SRCDIR}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${SRCDIR}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
 
     # compare the indexes
     GOOD=$(run_query "${FULL_INDEX}/${BASENAME}" | @SED@ "s%^${FULL_INDEX}/%%g;")
@@ -425,7 +425,7 @@ echo
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 0 -Y \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 0 --suspect-dir \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
     check_incremental_update | replace_inodes
     echo "#####################################"
     echo
@@ -438,7 +438,7 @@ echo
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 -Z \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
+    run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 --suspect-fl \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
     check_incremental_update | replace_inodes
     echo "#####################################"
     echo
@@ -451,7 +451,7 @@ echo
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null " | replace_inodes)
+    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null " | replace_inodes)
     echo "${out}" | head -n 1
     echo "${out}" | tail -n +2 | sort
     echo
@@ -468,7 +468,7 @@ echo "#####################################"
 echo "# existing parking lot"
 run_no_sort "find -name \"${PARKING_LOT}\" 2>/dev/null"
 run_no_sort "mkdir \"${PARKING_LOT}\""
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null 2>&1"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null 2>&1"
 run_no_sort "find -name \"${PARKING_LOT}\" 2>/dev/null"
 echo "#####################################"
 echo
@@ -478,28 +478,28 @@ echo "# Invalid Inputs                    #"
 echo "#####################################"
 
 echo "# non-existent index"
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${BADDIR}/${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${BADDIR}/${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
 
 echo "# non-existent tree"
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${BADDIR}/${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${INDEXROOT}\" \"${BADDIR}/${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
 
 echo "# non-existent parking lot"
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${BADDIR}/${PARKING_LOT}\" > /dev/null"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${BADDIR}/${PARKING_LOT}\" > /dev/null"
 
 echo "# file index"
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${GUFI_INCREMENTAL_UPDATE}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${GUFI_INCREMENTAL_UPDATE}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
 
 echo "# file tree"
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${GUFI_INCREMENTAL_UPDATE}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${INDEXROOT}\" \"${GUFI_INCREMENTAL_UPDATE}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
 
 echo "# file parking lot"
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${GUFI_INCREMENTAL_UPDATE}\" > /dev/null"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${GUFI_INCREMENTAL_UPDATE}\" > /dev/null"
 
 echo "# bad suspect file"
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 -W \"${BADDIR}/suspectfile\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 --suspect-file \"${BADDIR}/suspectfile\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
 
 echo "# bad thread count"
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x -R -A 3 -n 18446744073709551615 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 -n 18446744073709551615 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null"
 ) | @SED@ "s%${BADDIR}%baddir%g;" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_incremental_update.expected "${OUTPUT}"

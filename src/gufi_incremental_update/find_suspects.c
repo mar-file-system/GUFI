@@ -104,7 +104,7 @@ struct NonDirArgs {
 static int process_nondir(struct work *nondir, struct entry_data *ed, void *nondir_args) {
     struct NonDirArgs *nda = (struct NonDirArgs *) nondir_args;
 
-    /* -Z was set */
+    /* --suspect-fl was set */
     ed->suspect |= nda->pa->in.suspectfl;
 
     if (ed->suspect == 0) {
@@ -129,11 +129,6 @@ static int process_nondir(struct work *nondir, struct entry_data *ed, void *nond
                 break;
             /* no default */
         }
-    }
-
-    /* insert this file/link into the snapshot db */
-    if (nda->pa->in.suspectmethod && nda->pa->in.insertfl) {
-        insert_record(nondir, ed, nda->res, nda->pa->tree.parent_len);
     }
 
     return 0;
@@ -166,7 +161,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
     ed.type = 'd';
-    ed.suspect = pa->in.suspectd;
+    ed.suspect = pa->in.suspectd; /* --suspect-dir */
     ed.suspect_time = pa->in.suspecttime;
 
     sqlite3 *db = pa->tree.agg.dbs[id]; /* partial snapshot db */
@@ -210,10 +205,13 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     descend(ctx, id, pa, &pa->in, work, dir, 0,
             processdir, func, &nda, NULL);
 
-    /* insert this directory into the snapshot db */
-    if (pa->in.insertdir) {
-        insert_record(work, &ed, res, pa->tree.parent_len);
-    }
+    /*
+     * if this directory is a suspect, insert it
+     *
+     * if this directory is not a suspect, insert it anyways so that
+     * it is not treated as having been deleted
+     */
+    insert_record(work, &ed, res, pa->tree.parent_len);
 
     sqlite3_finalize(res);
 

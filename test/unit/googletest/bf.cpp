@@ -87,13 +87,6 @@ static const std::string T = "-T"; static const std::string T_arg = "T arg";
 static const std::string S = "-S"; static const std::string S_arg = "S arg";
 static const std::string E = "-E"; static const std::string E_arg = "E arg";
 static const std::string F = "-F"; static const std::string F_arg = "F arg";
-static const std::string r = "-r";
-static const std::string R = "-R";
-static const std::string Y = "-Y";
-static const std::string Z = "-Z";
-static const std::string W = "-W"; static const std::string W_arg = "W arg";
-static const std::string A = "-A"; static const std::string A_arg = "1";
-static const std::string c = "-c"; static const std::string c_arg = "1";
 static const std::string J = "-J"; static const std::string J_arg = "J arg";
 static const std::string K = "-K"; static const std::string K_arg = "K arg";
 static const std::string G = "-G"; static const std::string G_arg = "G arg";
@@ -123,6 +116,12 @@ static const std::string compress           = "--compress";
 #endif
 static const std::string swap_prefix        = "--swap-prefix"; static const std::string swap_prefix_arg  = "swap/prefix";
 
+static const std::string suspect_file       = "--suspect-file";   static const std::string suspect_file_arg = "suspect file arg";
+static const std::string suspect_method     = "--suspect-method"; static const std::string suspect_method_arg = "1";
+static const std::string suspect_time       = "--suspect-time";   static const std::string suspect_time_arg = "1";
+static const std::string suspect_dir        = "--suspect-dir";
+static const std::string suspect_fl         = "--suspect-fl";
+
 static bool operator==(const refstr_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
         return false;
@@ -149,8 +148,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->process_xattrs,                     flags);
     EXPECT_EQ(in->printdir,                           flags);
     EXPECT_EQ(in->types.print_tlv,                    flags);
-    EXPECT_EQ(in->insertfl,                           flags);
-    EXPECT_EQ(in->insertdir,                          flags);
     EXPECT_EQ(in->suspectd,                           flags);
     EXPECT_EQ(in->suspectfl,                          flags);
     EXPECT_EQ(in->keep_matime,                        flags);
@@ -172,7 +169,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->sql.sum,                        S_arg);
         EXPECT_EQ(in->sql.ent,                        E_arg);
         EXPECT_EQ(in->sql.fin,                        F_arg);
-        EXPECT_EQ(in->insuspect.data,                 W_arg.c_str());
+        EXPECT_EQ(in->insuspect.data,                 suspect_file_arg.c_str());
         EXPECT_EQ(in->suspectfile,                    1);
         EXPECT_EQ(in->suspectmethod,                  1);
         EXPECT_EQ(in->suspecttime,                    1);
@@ -293,8 +290,7 @@ TEST(parse_cmd_line, debug) {
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
         FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SQL_INIT,
         FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
-        FLAG_INSERT_FILE_LINK, FLAG_INSERT_DIR, FLAG_SUSPECT_DIR,
-        FLAG_SUSPECT_FILE_LINK, FLAG_INSUSPECT, FLAG_SUSPECT_METHOD,
+        FLAG_SUSPECT_DIR, FLAG_SUSPECT_FILE_LINK, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
         FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
         FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
         FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE,
@@ -321,13 +317,11 @@ TEST(parse_cmd_line, debug) {
         S.c_str(), S_arg.c_str(),
         E.c_str(), E_arg.c_str(),
         F.c_str(), F_arg.c_str(),
-        r.c_str(),
-        R.c_str(),
-        Y.c_str(),
-        Z.c_str(),
-        W.c_str(), W_arg.c_str(),
-        A.c_str(), A_arg.c_str(),
-        c.c_str(), c_arg.c_str(),
+        suspect_dir.c_str(),
+        suspect_fl.c_str(),
+        suspect_file.c_str(), suspect_file_arg.c_str(),
+        suspect_method.c_str(), suspect_method_arg.c_str(),
+        suspect_time.c_str(), suspect_time_arg.c_str(),
         min_level.c_str(), min_level_arg.c_str(),
         max_level.c_str(), max_level_arg.c_str(),
         J.c_str(), J_arg.c_str(),
@@ -372,8 +366,7 @@ TEST(parse_cmd_line, debug) {
 TEST(parse_cmd_line, flags) {
     const struct option opts[] = {
         FLAG_XATTRS, FLAG_PRINTDIR, FLAG_PRINT_TLV,
-        FLAG_INSERT_FILE_LINK, FLAG_INSERT_DIR, FLAG_SUSPECT_DIR,
-        FLAG_SUSPECT_FILE_LINK, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
+        FLAG_SUSPECT_DIR, FLAG_SUSPECT_FILE_LINK, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
         FLAG_TERSE, FLAG_DRY_RUN,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
@@ -387,10 +380,8 @@ TEST(parse_cmd_line, flags) {
         x.c_str(),
         P.c_str(),
         print_tlv.c_str(),
-        r.c_str(),
-        R.c_str(),
-        Y.c_str(),
-        Z.c_str(),
+        suspect_dir.c_str(),
+        suspect_fl.c_str(),
         keep_matime.c_str(),
         w.c_str(),
         terse.c_str(),
@@ -414,7 +405,7 @@ TEST(parse_cmd_line, options) {
     const struct option opts[] = {
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
         FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT,
-        FLAG_SQL_FIN, FLAG_INSUSPECT, FLAG_SUSPECT_METHOD,
+        FLAG_SQL_FIN, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
         FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_OUTPUT_BUFFER_SIZE, FLAG_FORMAT,
         FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY,
@@ -433,9 +424,9 @@ TEST(parse_cmd_line, options) {
         S.c_str(), S_arg.c_str(),
         E.c_str(), E_arg.c_str(),
         F.c_str(), F_arg.c_str(),
-        W.c_str(), W_arg.c_str(),
-        A.c_str(), A_arg.c_str(),
-        c.c_str(), c_arg.c_str(),
+        suspect_file.c_str(), suspect_file_arg.c_str(),
+        suspect_method.c_str(), suspect_method_arg.c_str(),
+        suspect_time.c_str(), suspect_time_arg.c_str(),
         min_level.c_str(), min_level_arg.c_str(),
         max_level.c_str(), max_level_arg.c_str(),
         J.c_str(), J_arg.c_str(),
