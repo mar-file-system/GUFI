@@ -1,0 +1,18 @@
+{% macro form_field(field, value='', help_text='', input_type='text') -%}
+<div class="form-item">
+    <label for="{{ field }}" class="field-label">
+        {{ field }}
+        <span class="info-icon" title="{{ help_text }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#888" viewBox="0 0 16 16">
+                <circle cx="8" cy="8" r="8"/>
+                <text x="8" y="12" text-anchor="middle" font-size="10" fill="#fff">i</text>
+            </svg>
+        </span>
+    </label>
+    {% if input_type == 'checkbox' %}
+        <input type="checkbox" id="{{ field }}" name="{{ field }}" value="true" {% if value|default('')|lower == 'true' %}checked{% endif %}>
+    {% else %}
+        <input type="text" id="{{ field }}" name="{{ field }}" value="{{ value|default('') }}">
+    {% endif %}
+</div>
+{%- endmacro %}

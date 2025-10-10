@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block title %}LS View{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <div class="row-gap">
+        <div class="left-column">
+            {% include "components/info.html" with context %}
+        </div>
+        <div class="right-column">
+            {% include "components/breadcrumb.html" with context %}
+            {% include "components/ls_table.html" with context %}
+        </div>
+    </div>
+
+{% endblock %}
