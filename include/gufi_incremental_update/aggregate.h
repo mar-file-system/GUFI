@@ -1,3 +1,4 @@
+/*
 This file is part of GUFI, which is part of MarFS, which is released
 under the BSD license.
 
@@ -57,7 +58,25 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
+*/
 
 
 
-tsmepoch2time.c convert epoch time to a time usable in a tsm query
+#ifndef GUFI_AGGREGATE_H
+#define GUFI_AGGREGATE_H
+
+#include <stdio.h>
+
+#include "bf.h"
+#include "dbutils.h"
+
+typedef struct Aggregate {
+    sqlite3 **dbs; /* per-thread dbs */
+    sqlite3 *agg;  /* final db */
+} Aggregate_t;
+
+int  aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *name, const size_t offset);
+void aggregate_intermediate(Aggregate_t *aggregate, const size_t threads, const size_t offset);
+void aggregate_fin(Aggregate_t *aggregate, const size_t threads);
+
+#endif

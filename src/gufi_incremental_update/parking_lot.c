@@ -1,3 +1,4 @@
+/*
 This file is part of GUFI, which is part of MarFS, which is released
 under the BSD license.
 
@@ -57,7 +58,63 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
+*/
 
 
 
-tsmtime2epoch.c convert a tsm query time output to epoch time
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include "gufi_incremental_update/incremental_update.h"
+
+/*
+ * set up the parking lot directory
+ * returns -1 on error
+ *          0 on parking lot already exists
+ *          1 on new parking lot directory (should remove)
+ */
+int setup_parking_lot(const char *path) {
+    struct stat pl;
+    if (stat(path, &pl) == 0) {
+        if (!S_ISDIR(pl.st_mode)) {
+            fprintf(stderr, "Error: Existing parking lot path \"%s\" is not a directory\n", path);
+            return -1;
+        }
+
+        return 0; /* parking lot already exists - don't remove; ignoring permissions here */
+    }
+
+    int err = errno;
+    if (err != ENOENT) {
+        fprintf(stderr, "Error: Could not stat parking lot directory \"%s\": %s (%d)\n",
+            path, strerror(err), err);
+        return -1;
+    }
+
+    /* parking lot doesn't exist yet - create it */
+
+    /* not creating parents */
+    if (mkdir(path, S_IRWXU | S_IRWXG) != 0) {
+        err = errno;
+        fprintf(stderr, "Error: Could not create parking lot directory \"%s\": %s (%d)\n",
+            path, strerror(err), err);
+        return -1;
+    }
+
+    return 1;
+}
+
+int cleanup_parking_lot(const char *path, const int created) {
+    if (created == 1) {
+        if (remove(path) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not remove parking lot directory \"%s\": %s (%d)\n",
+                    path, strerror(err), err);
+            return -1;
+        }
+    }
+    return 0;
+}

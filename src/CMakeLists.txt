@@ -151,7 +151,6 @@ endfunction()
 
 # build and install the binaries that need to link with GUFI
 set(C_SOURCES
-  bfwreaddirplus2db.c
   dfw.c
   gufi_dir2index.c
   gufi_dir2trace.c
@@ -269,9 +268,19 @@ build_and_install_one("${SERVER_BIN}" TRUE gufi_find_outliers
   gufi_find_outliers/processdir.c
 )
 
-# build binaries that do not need to link with GUFI
-set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
-build_and_install("${SERVER_BIN}" FALSE ${MISC_SOURCES})
+# build incremental update
+build_and_install_one("${SERVER_BIN}" TRUE gufi_incremental_update
+  gufi_incremental_update/main.c
+
+  gufi_incremental_update/PoolArgs.c
+  gufi_incremental_update/aggregate.c
+  gufi_incremental_update/find_suspects.c
+  gufi_incremental_update/gen_index_snapshot.c
+  gufi_incremental_update/incremental_update.c
+  gufi_incremental_update/insert_record.c
+  gufi_incremental_update/parking_lot.c
+  gufi_incremental_update/reindex_dir.c
+)
 
 # only build bffuse and bfresultfuse if FUSE is found
 if (MY_FUSE_FOUND AND FUSE_BUILD)

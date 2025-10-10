@@ -1,3 +1,4 @@
+/*
 This file is part of GUFI, which is part of MarFS, which is released
 under the BSD license.
 
@@ -57,49 +58,105 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
+*/
 
 
 
-bfwreaddirplus2db - breadth first walk of input tree to list the tree, or create an output db of readdirplus
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
-Usage: bfwreaddirplus2db [options] input_dir
-options:
-  -h                 help
-  -H                 show assigned input values (debugging)
-  -o <outfile>       output file one per thread writes path, inode, pinode, type, sortfield to file (sortfield enables sorting for bfwi load from flat file)
-  -n <threads>       number of threads
-  -P <delimiter>     delimiter for output file
-  -O <outputdb>      write a set of output dbs
-  -Y                 default all directories as suspect
-  -Z                 default all files links as suspect
-  -W <insuspectfile> path to input suspect file
-  -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl)
-  -c <suspecttime>   time in seconds since epoch for suspect comparison
-  -g <stridesize>    stride size for striping inodes into separate output db's
-  -t <to_dir>        if this is provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode and this is in conflict with -b
-  -b                 build GUFI index tree but in bfwreaddirplus2db the gufi tree goes into src tree and this flag is in conflict with -t
-  -x                 process xattrs if you are creating gufi dbs of suspect directories
+#include <trie.h>
 
+#include "gufi_incremental_update/PoolArgs.h"
 
-This program is largely used for a part of an incremental update of a GUFI tree, see the document for how this works.
+static int setup_suspect_file(struct PoolArgs *pa) {
+    pa->suspectdirs.inodes = trie_alloc();
+    pa->suspectdirs.min = (ino_t) -1;
+    pa->suspectdirs.max = 0;
 
-Flow:
-if using input suspect file read that in and put into memory trie for lookups
-input directory is put on a queue
-threads are started
-loop assigning work (directories) from queue to threads
-each thread lists the directory readdirplus
-  if using suspect file, see if this inode matches a suspect file or dir or link
-  if using suspect mode involving stat then use that to help determine of a directory is suspect
-  if we are striping the inodes into different outdb's, we have to lock on the output db to place records into proper outdbs
-  if directory put it on the queue print to screen write to outdb
-  if link or file print it to screen write to outdb
-  put dirs and/or files into output db (path, inode, pinode, type, suspect) into output dir
-  if to_dir provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode
-  if writing output file write files, links, and directories to output files on  per thread (can use striping of inodes across files)
-  if building a gufi tree it writes/rewrites the directory db's into the source tree for all suspect directories
-  close directory
-end
-close outdb if needed
+    pa->suspectfl.inodes = trie_alloc();
+    pa->suspectfl.min = (ino_t) -1;
+    pa->suspectfl.max = 0;
 
-...........................................................................
+    if (pa->in.suspectfile > 0) {
+        FILE *f = fopen(pa->in.insuspect.data, "r"); /* --suspect-file */
+        if(!f) {
+            fprintf(stderr, "Can't open suspect file %s\n", pa->in.insuspect.data);
+            return 1;
+        }
+
+        /* read suspect file and insert inodes into tries depending on type */
+        char inode_str[32];  /* inode in string form */
+        char type;           /* d/f/l */
+        while (fscanf(f, "%s %c", inode_str, &type) == 2) {
+            ino_t inode = 0;
+            if (sscanf(inode_str, "%" STAT_ino, &inode) != 1) {
+                continue;
+            }
+
+            if (type == 'd') {
+                MIN_ASSIGN_LHS(pa->suspectdirs.min, inode);
+                MAX_ASSIGN_LHS(pa->suspectdirs.max, inode);
+
+                trie_insert(pa->suspectdirs.inodes, inode_str, strlen(inode_str), NULL, NULL);
+            }
+            else if ((type == 'f') || (type == 'l')) {
+                MIN_ASSIGN_LHS(pa->suspectfl.min, inode);
+                MAX_ASSIGN_LHS(pa->suspectfl.max, inode);
+
+                trie_insert(pa->suspectfl.inodes, inode_str, strlen(inode_str), NULL, NULL);
+            }
+        }
+
+        fclose(f);
+    }
+
+    return 0;
+}
+
+int PoolArgs_init(struct PoolArgs *pa) {
+    /* use real index path internally */
+    pa->index.data = realpath(pa->orig.index.data, NULL);
+    if (!pa->index.data) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not get realpath of index \"%s\": %s (%d)\n",
+                pa->orig.index.data, strerror(err), err);
+        return 1;
+    }
+    pa->index.len = strlen(pa->index.data);
+    pa->parent_len.index = trailing_match_index(pa->index.data, pa->index.len, "/", 1);
+
+    /* use real tree path internally */
+    pa->tree.data = realpath(pa->orig.tree.data, NULL);
+    if (!pa->tree.data) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not get realpath of tree \"%s\": %s (%d)\n",
+                pa->orig.tree.data, strerror(err), err);
+        return 1;
+    }
+    pa->tree.len = strlen(pa->tree.data);
+    pa->parent_len.tree = trailing_match_index(pa->tree.data, pa->tree.len, "/", 1);
+
+    if (setup_suspect_file(pa) != 0) {
+        return 1;
+    }
+
+    pa->pool = QPTPool_init(pa->in.maxthreads, pa);
+    if (QPTPool_start(pa->pool) != 0) {
+        fprintf(stderr, "Error: Failed to start thread pool\n");
+        return 1;
+    }
+
+    return 0;
+}
+
+void PoolArgs_fini(struct PoolArgs *pa) {
+    QPTPool_stop(pa->pool);
+    QPTPool_destroy(pa->pool);
+    trie_free(pa->suspectfl.inodes);
+    trie_free(pa->suspectdirs.inodes);
+    str_free_existing(&pa->index);
+    str_free_existing(&pa->tree);
+    input_fini(&pa->in);
+}

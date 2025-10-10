@@ -84,7 +84,6 @@ extern "C" {
 #define MAXPATH 4096
 #define MAXSQL 8192
 #define MAXRECS 100000
-#define MAXSTRIDE 1000000000   /* maximum records per stripe */
 #define DBNAME "db.db"
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
 #define GETLINE_DEFAULT_SIZE 750 /* magic number */
@@ -107,9 +106,6 @@ extern "C" {
 
 #define FLAG_PRINTDIR_SHORT 'P'
 #define FLAG_PRINTDIR {"", no_argument, NULL, FLAG_PRINTDIR_SHORT}
-
-#define FLAG_BUILDINDEX_SHORT 'b'
-#define FLAG_BUILDINDEX {"", no_argument, NULL, FLAG_BUILDINDEX_SHORT}
 
 #define FLAG_PROCESS_SQL_SHORT 'a'
 #define FLAG_PROCESS_SQL {"", required_argument, NULL, FLAG_PROCESS_SQL_SHORT}
@@ -144,30 +140,6 @@ extern "C" {
 
 #define FLAG_SQL_FIN_SHORT 'F'
 #define FLAG_SQL_FIN {"", required_argument, NULL, FLAG_SQL_FIN_SHORT}
-
-#define FLAG_INSERT_FILE_LINK_SHORT 'r'
-#define FLAG_INSERT_FILE_LINK {"", no_argument, NULL, FLAG_INSERT_FILE_LINK_SHORT}
-
-#define FLAG_INSERT_DIR_SHORT 'R'
-#define FLAG_INSERT_DIR {"", no_argument, NULL, FLAG_INSERT_DIR_SHORT}
-
-#define FLAG_SUSPECT_DIR_SHORT 'Y'
-#define FLAG_SUSPECT_DIR {"", no_argument, NULL, FLAG_SUSPECT_DIR_SHORT}
-
-#define FLAG_SUSPECT_FILE_LINK_SHORT 'Z'
-#define FLAG_SUSPECT_FILE_LINK {"", no_argument, NULL, FLAG_SUSPECT_FILE_LINK_SHORT}
-
-#define FLAG_INSUSPECT_SHORT 'W'
-#define FLAG_INSUSPECT {"", required_argument, NULL, FLAG_INSUSPECT_SHORT}
-
-#define FLAG_SUSPECT_METHOD_SHORT 'A'
-#define FLAG_SUSPECT_METHOD {"", required_argument, NULL, FLAG_SUSPECT_METHOD_SHORT}
-
-#define FLAG_STRIDE_SHORT 'g'
-#define FLAG_STRIDE {"", required_argument, NULL, FLAG_STRIDE_SHORT}
-
-#define FLAG_SUSPECT_TIME_SHORT 'c'
-#define FLAG_SUSPECT_TIME {"", required_argument, NULL, FLAG_SUSPECT_TIME_SHORT}
 
 #define FLAG_SQL_INTERM_SHORT 'J'
 #define FLAG_SQL_INTERM {"", required_argument, NULL, FLAG_SQL_INTERM_SHORT}
@@ -257,6 +229,26 @@ extern "C" {
 #define FLAG_PLUGIN_SHORT 1006
 #define FLAG_PLUGIN_LONG "plugin"
 #define FLAG_PLUGIN {FLAG_PLUGIN_LONG, required_argument, NULL, FLAG_PLUGIN_SHORT}
+
+#define FLAG_SUSPECT_FILE_SHORT 1007
+#define FLAG_SUSPECT_FILE_LONG "suspect-file"
+#define FLAG_SUSPECT_FILE {FLAG_SUSPECT_FILE_LONG, required_argument, NULL, FLAG_SUSPECT_FILE_SHORT}
+
+#define FLAG_SUSPECT_METHOD_SHORT 1008
+#define FLAG_SUSPECT_METHOD_LONG "suspect-method"
+#define FLAG_SUSPECT_METHOD {FLAG_SUSPECT_METHOD_LONG, required_argument, NULL, FLAG_SUSPECT_METHOD_SHORT}
+
+#define FLAG_SUSPECT_TIME_SHORT 1009
+#define FLAG_SUSPECT_TIME_LONG "suspect-time"
+#define FLAG_SUSPECT_TIME {FLAG_SUSPECT_TIME_LONG, required_argument, NULL, FLAG_SUSPECT_TIME_SHORT}
+
+#define FLAG_SUSPECT_DIR_SHORT 1010
+#define FLAG_SUSPECT_DIR_LONG "suspect-dir"
+#define FLAG_SUSPECT_DIR {FLAG_SUSPECT_DIR_LONG, no_argument, NULL, FLAG_SUSPECT_DIR_SHORT}
+
+#define FLAG_SUSPECT_FILE_LINK_SHORT 1011
+#define FLAG_SUSPECT_FILE_LINK_LONG "suspect-fl"
+#define FLAG_SUSPECT_FILE_LINK {FLAG_SUSPECT_FILE_LINK_LONG, no_argument, NULL, FLAG_SUSPECT_FILE_LINK_SHORT}
 
 #define FLAG_END {NULL, 0, NULL, 0}
 
@@ -400,8 +392,6 @@ struct input {
     int  buildindex;
     size_t maxthreads;
     AFlag_t process_sql;           /* what to do if an SQL statement returns/doesn't return 1 row */
-    int  insertdir;                /* added for bfwreaddirplus2db */
-    int  insertfl;                 /* added for bfwreaddirplus2db */
     int  suspectd;                 /* added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect */
     int  suspectfl;                /* added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect */
     refstr_t insuspect;            /* added for bfwreaddirplus2db input path for suspects file */
@@ -602,7 +592,10 @@ struct entry_data {
     char          osstext1[MAXXATTR];
     char          osstext2[MAXXATTR];
     char          pinodec[128];
-    int           suspect;  // added for bfwreaddirplus2db for suspect
+
+    /* gufi_incremental_update */
+    int           suspect;
+    time_t        suspect_time;
 };
 
 extern const char fielddelim;

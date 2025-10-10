@@ -62,24 +62,93 @@ OF SUCH DAMAGE.
 
 
 
-#define _XOPEN_SOURCE
-#include <stdio.h>
-#include <time.h>
+#include "dbutils.h"
+#include "print.h"
 
-int main(int argc, char **argv)
-{
-    if (argc < 2) {
-        fprintf(stderr, "Syntax: %s timestamp", argv[0]);
+#include "gufi_incremental_update/aggregate.h"
+
+/* must have shared cache */
+static const char INTERMEDIATE_ATTACH_FORMAT[] = "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
+#define INTERMEDIATE_ATTACH_NAME "intermediate"
+
+static int create_readdirplus_tables(const char *name, sqlite3 *db, void *args) {
+    (void) args;
+
+    return (create_table_wrapper(name, db, READDIRPLUS, READDIRPLUS_CREATE) != SQLITE_OK);
+}
+
+int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *name, const size_t offset) {
+    /* Not checking arguments */
+
+    /* create per-thread in-memory dbs */
+    aggregate->dbs = calloc(threads, sizeof(aggregate->dbs[0]));
+
+    char dbname[MAXPATH];
+    for(size_t i = 0; i < threads; i++) {
+        SNPRINTF(dbname, MAXPATH, INTERMEDIATE_ATTACH_FORMAT, i + offset);
+
+        aggregate->dbs[i] = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
+                                   1, 1, create_readdirplus_tables, NULL);
+        if (!aggregate->dbs[i]) {
+            fprintf(stderr, "Could not open aggregation database \"%s\"\n", dbname);
+            aggregate_fin(aggregate, i);
+            return 1;
+        }
+
+        addqueryfuncs(aggregate->dbs[i]);
+    }
+
+    /* always open an aggregate db */
+    aggregate->agg = opendb(name, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
+                            1, 1, create_readdirplus_tables, NULL);
+    if (!aggregate->agg) {
+        fprintf(stderr, "Could not open final aggregation database \"%s\"\n", dbname);
+        aggregate_fin(aggregate, threads);
         return 1;
     }
 
-    struct tm  ts;
-    char       buf[80];
+    /* don't need addqueryfuncs */
 
-    strptime(argv[1], "%s", &ts);
-
-    // Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
-    strftime(buf, sizeof(buf), "-fromtime=%m/%d/%Y -fromtime=%H:%M", &ts);
-    printf("%s\n", buf);
     return 0;
+}
+
+void aggregate_intermediate(Aggregate_t *aggregate, const size_t threads, const size_t offset) {
+    /* Not checking arguments */
+
+    /*
+     * attach intermediate databases to aggregate database
+     * not using attachdb because attachdb modifies the input path, which is not needed here
+     *
+     * failure to attach is not an error - the data is simply not accessible
+     */
+    char dbname[MAXPATH];
+    for(size_t i = 0; i < threads; i++) {
+        SNPRINTF(dbname, MAXPATH, INTERMEDIATE_ATTACH_FORMAT, i + offset);
+
+        if (attachdb_raw(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1)) {
+            char *err = NULL;
+            if ((sqlite3_exec(aggregate->agg, "INSERT INTO " READDIRPLUS " SELECT * FROM " INTERMEDIATE_ATTACH_NAME "." READDIRPLUS, NULL, NULL, &err) != SQLITE_OK)) {
+                sqlite_print_err_and_free(err, stderr, "Error: Cannot aggregate intermediate databases: %s\n", err);
+            }
+        }
+
+        detachdb(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1);
+    }
+}
+
+void aggregate_fin(Aggregate_t *aggregate, const size_t threads) {
+    /* Not checking arguments */
+
+    if (aggregate->agg) {
+        closedb(aggregate->agg);
+    }
+
+    if (aggregate->dbs) {
+        for(size_t i = 0; i < threads; i++) {
+            closedb(aggregate->dbs[i]);
+        }
+
+        free(aggregate->dbs);
+        aggregate->dbs = NULL;
+    }
 }
