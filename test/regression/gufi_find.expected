@@ -550,9 +550,9 @@ GUFI query is
     -I 'CREATE TABLE out (name TEXT, size INT64, type TEXT)' \
     -S 'INSERT INTO out SELECT substr(rpath(sname, sroll), 8), size, type FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
     -E 'INSERT INTO out SELECT substr(rpath(sname, sroll) || '"'"'/'"'"' || name, 8), size, type FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
-    -J 'INSERT INTO aggregate SELECT name, size, type FROM out WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -J 'INSERT INTO aggregate SELECT name, size, type FROM out ORDER BY size DESC, name ASC' \
     -K 'CREATE TABLE aggregate (name TEXT, size INT64, type TEXT)' \
-    -G 'SELECT name FROM aggregate WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -G 'SELECT name FROM aggregate ORDER BY size DESC, name ASC' \
     search
 prefix/1MB
 prefix/1KB
@@ -666,6 +666,10 @@ prefix/old_file
 prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
+
+$ gufi_find -name repeat_name --numresults 2
+prefix/directory/subdirectory/repeat_name
+prefix/repeat_name
 
 $ gufi_query -a 1 -w -E "UPDATE entries SET inode = 0, uid = 0, gid = 0;" "search"
 

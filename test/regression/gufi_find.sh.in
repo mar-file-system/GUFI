@@ -173,6 +173,9 @@ run_sort "${GUFI_FIND} -user  \"${USER_NAME}\"" | @SED@ "s%\"${USER_NAME}\"%${TE
 run_sort "${GUFI_FIND} -gid   \"${GROUP_ID}\""  | @SED@ "s%\"${GROUP_ID}\"%${TEST_GROUP_ID}%g;"
 run_sort "${GUFI_FIND} -group \"${GROUP_NAME}\""| @SED@ "s%\"${GROUP_NAME}\"%${TEST_GROUP_NAME}%g;"
 
+# name + numresults (2 rows)
+run_sort "${GUFI_FIND} -name repeat_name --numresults 2"
+
 # zero some columns to make test easier
 run_no_sort "${GUFI_QUERY} -a 1 -w -E \"UPDATE entries SET inode = 0, uid = 0, gid = 0;\" \"${SEARCH}\""
 

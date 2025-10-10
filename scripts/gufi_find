@@ -865,14 +865,14 @@ def run(argv, config_path):
             args.aggregate_name,
             gufi_common.build_query(['name'] + [name for name, _ in cols],
                                     [args.inmemory_name],
-                                    build_where(args, args.inmemory_name),
+                                    None,
                                     build_group_by(args),
                                     build_order_by(args),
                                     args.numresults))
 
         G = gufi_common.build_query(build_output(args, 'name'),
                                     [args.aggregate_name],
-                                    build_where(args, args.aggregate_name),
+                                    None,
                                     build_group_by(args),
                                     build_order_by(args),
                                     args.numresults)
