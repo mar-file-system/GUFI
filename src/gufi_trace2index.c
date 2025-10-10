@@ -341,7 +341,7 @@ int main(int argc, char *argv[]) {
 
     input_fini(&pa.in);
 
-    dump_memory_usage();
+    dump_memory_usage(stdout);
 
     return rc;
 }

@@ -135,7 +135,7 @@ int main(int argc, char * argv[]) {
 
     input_fini(&in);
 
-    dump_memory_usage();
+    dump_memory_usage(stderr);
 
     return rc?EXIT_FAILURE:EXIT_SUCCESS;
 }

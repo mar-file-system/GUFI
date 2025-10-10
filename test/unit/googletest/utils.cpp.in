@@ -1114,7 +1114,7 @@ TEST(dump_memory_usage, not_enough_fds) {
     fewer_fds.rlim_cur = 3;
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
 
-    dump_memory_usage();
+    dump_memory_usage(stderr);
 
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
 }
@@ -1239,4 +1239,29 @@ TEST(parse_subtree, list) {
                                    [](QPTPool_t *, const std::size_t, void *, void *) -> int {
                                        return 0;
                                    }), (ssize_t) -1);
+}
+
+TEST(write_with_resize, good) {
+    std::size_t size = 2;
+    char *buf = (char *) malloc(size);
+    std::size_t offset = 0;
+
+    // no resize
+    EXPECT_EQ(write_with_resize(&buf, &size, &offset, "%c", 'a'), 0);
+    EXPECT_EQ(size,   (std::size_t) 2);
+    EXPECT_EQ(offset, (std::size_t) 1);
+
+    // resize
+    EXPECT_EQ(write_with_resize(&buf, &size, &offset, "%d", 1234), 0);
+    EXPECT_EQ(size,   (std::size_t) 7);
+    EXPECT_EQ(offset, (std::size_t) 5);
+
+    // no resize
+    EXPECT_EQ(write_with_resize(&buf, &size, &offset, "%c", 'a'), 0);
+    EXPECT_EQ(size,   (std::size_t) 7);
+    EXPECT_EQ(offset, (std::size_t) 6);
+
+    EXPECT_STREQ(buf, "a1234a");
+
+    free(buf);
 }

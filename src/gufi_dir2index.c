@@ -626,7 +626,7 @@ int main(int argc, char *argv[]) {
   cleanup:
     input_fini(&pa.in);
 
-    dump_memory_usage();
+    dump_memory_usage(stderr);
 
     return rc;
 }

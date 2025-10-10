@@ -78,12 +78,9 @@ FILE **outfiles_init(const refstr_t *prefix, const size_t count) {
     }
 
     if ((prefix->len == 1) && (prefix->data[0] == '-')) {
-        if (count != 1) {
-            outfiles_fin(files, 0);
-            fprintf(stderr, "Outputting to stdout is only allowed with 1 thread\n");
-            return NULL;
+        for(size_t i = 0; i < count; i++) {
+            files[i] = stdout;
         }
-        files[0] = stdout;
         return files;
     }
 
@@ -119,7 +116,9 @@ int outfiles_fin(FILE **files, const size_t end) {
     /* Not checking arguments */
     for(size_t i = 0; i < end; i++) {
         fflush(files[i]);
-        fclose(files[i]);
+        if (files[i] != stdout) {
+            fclose(files[i]);
+        }
     }
     free(files);
     return 0;

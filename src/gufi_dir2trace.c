@@ -87,13 +87,23 @@ OF SUCH DAMAGE.
 struct PoolArgs {
     struct input in;
     FILE **outfiles;
+    pthread_mutex_t *mutex; /* for writing to stdout */
 
     size_t *total_files;
 };
 
 struct NondirArgs {
     struct input *in;
+
+    /* trace file */
     FILE *fp;
+
+    /* stdout */
+    struct {
+        char *buf;
+        size_t size;
+        size_t offset;
+    } pipe;
 };
 
 static int process_external(struct input *in, void *args,
@@ -111,7 +121,13 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         return 1;
     }
 
-    worktofile(nda->fp, nda->in->delim, entry->root_parent.len, entry, ed);
+    if (nda->fp == stdout) {
+        worktobuffer(&nda->pipe.buf, &nda->pipe.size, &nda->pipe.offset,
+                     nda->in->delim, entry->root_parent.len, entry, ed);
+    }
+    else {
+        worktofile(nda->fp, nda->in->delim, entry->root_parent.len, entry, ed);
+    }
 
     if (strncmp(entry->name + entry->name_len - entry->basename_len,
                 EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
@@ -131,6 +147,15 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct work *work = NULL;
     struct entry_data ed;
     int rc = 0;
+    struct NondirArgs nda = {
+        .in = in,
+        .fp = pa->outfiles[id],
+        .pipe = {
+            .buf = NULL,
+            .size = 0,
+            .offset = 0,
+        },
+    };
     struct descend_counters ctrs = {0};
 
     decompress_work(&work, data);
@@ -162,20 +187,35 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     ed.type = 'd';
 
     /* write start of stanza */
-    worktofile(pa->outfiles[id], in->delim, work->root_parent.len, work, &ed);
+    if (nda.fp == stdout) {
+        static const size_t WRITE_TO_STDOUT_SIZE = 1; /* magic number */
+        nda.pipe.buf = malloc(WRITE_TO_STDOUT_SIZE);
+        nda.pipe.size = WRITE_TO_STDOUT_SIZE;
+        nda.pipe.offset = 0;
+        worktobuffer(&nda.pipe.buf, &nda.pipe.size, &nda.pipe.offset,
+                     in->delim, work->root_parent.len, work, &ed);
+    }
+    else {
+        worktofile(pa->outfiles[id], in->delim, work->root_parent.len, work, &ed);
+    }
 
     if (in->process_xattrs) {
         xattrs_cleanup(&ed.xattrs);
     }
 
-    struct NondirArgs nda = {
-        .in = in,
-        .fp = pa->outfiles[id],
-    };
-
   descend_tree:
     descend(ctx, id, pa, in, work, dir, 0,
             processdir, process_dir?process_nondir:NULL, &nda, &ctrs);
+
+    if (process_dir) {
+        if (nda.fp == stdout) {
+            pthread_mutex_lock(pa->mutex);
+            fwrite(nda.pipe.buf, sizeof(char), nda.pipe.offset, stdout);
+            fflush(stdout);
+            pthread_mutex_unlock(pa->mutex);
+            free(nda.pipe.buf);
+        }
+    }
 
   close_dir:
     closedir(dir);
@@ -261,6 +301,9 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Creating GUFI Traces %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
 
+    pthread_mutex_t stdout_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pa.mutex = &stdout_mutex;
+
     pa.total_files = calloc(pa.in.maxthreads, sizeof(size_t));
 
     struct start_end after_init;
@@ -331,7 +374,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
     fprintf(stderr, "Files/Sec:           %.2Lf\n",       total_files / processtime);
 
-    dump_memory_usage();
+    dump_memory_usage(stderr);
 
     return EXIT_SUCCESS;
 }

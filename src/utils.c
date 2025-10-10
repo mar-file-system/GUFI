@@ -766,7 +766,7 @@ void set_metadata(const char *path, struct stat *st,
     }
 }
 
-void dump_memory_usage(void) {
+void dump_memory_usage(FILE *out) {
     #if defined(DEBUG) && defined(__linux__)
     int fd = open("/proc/self/status", O_RDONLY);
     if (fd < 0) {
@@ -790,8 +790,11 @@ void dump_memory_usage(void) {
     while (p && strncmp(p, field, strlen(field)))
         p = strtok(NULL, "\n");
 
-    if (p)
-        printf("%s\n", p);
+    if (p) {
+        fprintf(out, "%s\n", p);
+    }
+    #else
+    (void) out;
     #endif
 }
 
@@ -1031,4 +1034,41 @@ ssize_t process_subtree_list(struct input *in, struct work *root,
     free(root);
 
     return enqueue_count;
+}
+
+int write_with_resize(char **buf, size_t *size, size_t *offset,
+                      const char *fmt, ...) {
+    va_list args;
+
+    va_start(args, fmt);
+    const int written = vsnprintf(*buf + *offset, *size - *offset, fmt, args);
+    va_end(args);
+
+    /* not enough space */
+    if ((size_t) written >= (*size - *offset)) {
+        const size_t new_size = max(*size * 2, *size + written) + 1;
+        void *ptr = realloc(*buf, new_size);
+        if (!ptr) {
+            const int err = errno;
+            fprintf(stderr, "Error: Failed to reallocate space for stanza: %s (%d)\n",
+                    strerror(err), err);
+            return 1;
+        }
+
+
+        *buf = ptr;
+        *size = new_size;
+
+        /* try again */
+        va_start(args, fmt);
+        const int write_again = vsnprintf(*buf + *offset, *size - *offset, fmt, args);
+        va_end(args);
+
+        *offset += write_again;
+    }
+    else {
+        *offset += written;
+    }
+
+    return 0;
 }

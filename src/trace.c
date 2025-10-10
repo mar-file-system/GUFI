@@ -121,6 +121,44 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
     return count;
 }
 
+int worktobuffer(char **buf, size_t *size, size_t *offset,
+                 const char delim, const size_t prefix_len,
+                 struct work *work, struct entry_data *ed) {
+    if (!buf || !*buf || !size || !offset || !work || !ed) {
+        return -1;
+    }
+
+    const size_t orig_offset = *offset;
+
+    write_with_resize(buf, size, offset, "%s%c",               work->name + prefix_len,  delim);
+    write_with_resize(buf, size, offset, "%c%c",               ed->type,                 delim);
+    write_with_resize(buf, size, offset, "%" STAT_ino    "%c", work->statuso.st_ino,     delim);
+    write_with_resize(buf, size, offset, "%" STAT_mode   "%c", work->statuso.st_mode,    delim);
+    write_with_resize(buf, size, offset, "%" STAT_nlink  "%c", work->statuso.st_nlink,   delim);
+    write_with_resize(buf, size, offset, "%" STAT_uid    "%c", work->statuso.st_uid,     delim);
+    write_with_resize(buf, size, offset, "%" STAT_gid    "%c", work->statuso.st_gid,     delim);
+    write_with_resize(buf, size, offset, "%" STAT_size   "%c", work->statuso.st_size,    delim);
+    write_with_resize(buf, size, offset, "%" STAT_bsize  "%c", work->statuso.st_blksize, delim);
+    write_with_resize(buf, size, offset, "%" STAT_blocks "%c", work->statuso.st_blocks,  delim);
+    write_with_resize(buf, size, offset, "%ld%c",              work->statuso.st_atime,   delim);
+    write_with_resize(buf, size, offset, "%ld%c",              work->statuso.st_mtime,   delim);
+    write_with_resize(buf, size, offset, "%ld%c",              work->statuso.st_ctime,   delim);
+    write_with_resize(buf, size, offset, "%s%c",               ed->linkname,             delim);
+    /* xattrs_to_file(file, &ed->xattrs, XATTRDELIM); */
+    write_with_resize(buf, size, offset, "%c",                                           delim);
+    write_with_resize(buf, size, offset, "%ld%c",              work->crtime,             delim);
+    write_with_resize(buf, size, offset, "%d%c",               ed->ossint1,              delim);
+    write_with_resize(buf, size, offset, "%d%c",               ed->ossint2,              delim);
+    write_with_resize(buf, size, offset, "%d%c",               ed->ossint3,              delim);
+    write_with_resize(buf, size, offset, "%d%c",               ed->ossint4,              delim);
+    write_with_resize(buf, size, offset, "%s%c",               ed->osstext1,             delim);
+    write_with_resize(buf, size, offset, "%s%c",               ed->osstext2,             delim);
+    write_with_resize(buf, size, offset, "%lld%c",             work->pinode,             delim);
+    write_with_resize(buf, size, offset, "\n");
+
+    return *offset - orig_offset;
+}
+
 int linetowork(char *line, const size_t len, const char delim,
                struct work **work, struct entry_data *ed) {
     if (!line || !work || !ed) {

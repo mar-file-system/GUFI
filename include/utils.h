@@ -147,7 +147,7 @@ size_t present_user_path(const char *path, size_t path_len,
 /* set metadata on given path */
 void set_metadata(const char *path, struct stat *st, struct xattrs *xattrs);
 
-void dump_memory_usage(void);
+void dump_memory_usage(FILE *out);
 
 /* write as much as possible up to size bytes */
 ssize_t write_size(const int fd, const void *data, const size_t size);
@@ -179,6 +179,10 @@ int doing_partial_walk(struct input *in, const size_t root_count);
  */
 ssize_t process_subtree_list(struct input *in, struct work *root,
                              QPTPool_t *ctx, QPTPool_f func);
+
+/* write to a buffer that is automatically resized */
+int write_with_resize(char **buf, size_t *size, size_t *offset,
+                      const char *fmt, ...);
 
 #ifdef __cplusplus
 }

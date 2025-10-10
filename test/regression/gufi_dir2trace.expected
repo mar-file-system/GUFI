@@ -187,7 +187,7 @@ prefix/unusual#? directory ,/unusual, name?#
 # ######################################
 
 # write to stdout
-$ gufi_dir2trace -d "|" -n 1 -x "prefix" "-" 2>/dev/null | awk -F "|" '{ print $1, $2 }'
+$ gufi_dir2trace -d "|" -n 2 -x "prefix" "-" 2>/dev/null | awk -F "|" '{ print $1, $2 }'
 /external/db e
 prefix d
 prefix/.hidden f
@@ -266,8 +266,4 @@ Could not allocate space for 18446744073709551615 files
 # multiple input directories are not allowed for partial indexing
 $ gufi_dir2trace -n 2 -D "distributed.1" --min-level 1 "prefix" "prefix" "trace"
 Error: When -D is passed in, only one source directory may be specified
-
-write to stdout with more than 1 thread is not allowed
-$ gufi_dir2trace -d "|" -n 2 -x "prefix" "-"
-Outputting to stdout is only allowed with 1 thread
 
