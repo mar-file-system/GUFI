@@ -642,6 +642,82 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
     return read;
 }
 
+ssize_t getline_fd_stream(char **lineptr, size_t *n, int fd, const size_t default_size) {
+    if (!lineptr || !n || (fd < 0) || (default_size < 1)) {
+        return -EINVAL;
+    }
+
+    size_t r = 0;
+    ssize_t rc = 0;
+
+    if (!*n) {
+        *n = default_size;
+    }
+
+    if (!*lineptr) {
+        void *new_alloc = realloc(*lineptr, *n);
+        if (!new_alloc) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not realloc input address: %s (%d)\n", strerror(err), err);
+            return -ENOMEM;
+        }
+
+        *lineptr = new_alloc;
+    }
+
+    int found = 0;
+    while (!found) {
+        if (r >= *n) {
+            *n *= 2;
+            void *new_alloc = realloc(*lineptr, *n);
+            if (!new_alloc) {
+                const int err = errno;
+                fprintf(stderr, "Error: Could not realloc buffer: %s (%d)\n", strerror(err), err);
+                return -ENOMEM;
+            }
+
+            *lineptr = new_alloc;
+        }
+
+        char *start = *lineptr + r;
+        rc = read(fd, start, 1);
+        if (rc < 1) {
+            break;
+        }
+
+        r++;
+
+        if (*start == '\n') {
+            *start = '\0';
+            r--; /* don't count newline in length */
+            found = 1;
+        }
+    }
+
+    if (rc < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not read: %s (%d)\n", strerror(err), err);
+        return -err;
+    }
+    else if (rc == 0) {
+        /* EOF */
+        if ((r == 0) && (found == 0)) {
+            return -EIO;
+        }
+    }
+
+    /*
+     * no need to possibly reallocate for NULL terminator
+     *  - if buffer has newline, simply replace newline
+     *  - if buffer does not have newline, must have hit EOF,
+     *    and loop would have cycled back after reading and
+     *    reallocated with more space before breaking
+     */
+    (*lineptr)[r] = '\0';
+
+    return r;
+}
+
 #if defined(__linux__)
 
 #include <sys/sendfile.h>
@@ -1054,7 +1130,6 @@ int write_with_resize(char **buf, size_t *size, size_t *offset,
                     strerror(err), err);
             return 1;
         }
-
 
         *buf = ptr;
         *size = new_size;

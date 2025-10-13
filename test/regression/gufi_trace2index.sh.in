@@ -133,6 +133,42 @@ echo "GUFI Index:"
 echo "${index_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
 
+rm -rf "${SEARCH}"
+
+echo "# read from stdin"
+run_no_sort "cat \"${TRACE}\" | ${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"-\" \"${SEARCH}\""
+
+echo "# compare contents"
+src_contents=$(find "${SRCDIR}" | sort)
+index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | replace | sort)
+
+echo "Source Directory:"
+# shellcheck disable=SC2016
+echo "${src_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
+echo
+echo "GUFI Index:"
+# shellcheck disable=SC2016
+echo "${index_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
+echo
+
+rm -rf "${SEARCH}"
+
+echo "# pipe directly from dir2trace"
+run_no_sort "${GUFI_DIR2TRACE} -n ${THREADS} \"${SRCDIR}\" \"-\" 2>/dev/null | ${GUFI_TRACE2INDEX} -n ${THREADS} \"-\" \"${SEARCH}\""
+
+echo "# compare contents"
+src_contents=$(find "${SRCDIR}" | sort)
+index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | replace | sort)
+
+echo "Source Directory:"
+# shellcheck disable=SC2016
+echo "${src_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
+echo
+echo "GUFI Index:"
+# shellcheck disable=SC2016
+echo "${index_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
+echo
+
 # ###########################################################
 # big directory (see gufi_trace2index.c)
 (

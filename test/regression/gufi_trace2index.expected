@@ -135,6 +135,116 @@ GUFI Index:
     prefix/unusual#? directory ,
     prefix/unusual#? directory ,/unusual, name?#
 
+# read from stdin
+$ cat "trace" | gufi_trace2index -d "|" -n 4 "-" "search"
+Creating GUFI Index search with 4 threads
+Dirs:                6 (1 empty)
+Files:               14
+Total:               20
+
+Total Dirs:          6
+Total Files:         14
+
+# compare contents
+Source Directory:
+    prefix
+    prefix/.hidden
+    prefix/1KB
+    prefix/1MB
+    prefix/directory
+    prefix/directory/executable
+    prefix/directory/readonly
+    prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable
+    prefix/empty_directory
+    prefix/file_symlink
+    prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2
+    prefix/old_file
+    prefix/repeat_name
+    prefix/unusual#? directory ,
+    prefix/unusual#? directory ,/unusual, name?#
+
+GUFI Index:
+    prefix
+    prefix/.hidden
+    prefix/1KB
+    prefix/1MB
+    prefix/directory
+    prefix/directory/executable
+    prefix/directory/readonly
+    prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable
+    prefix/empty_directory
+    prefix/file_symlink
+    prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2
+    prefix/old_file
+    prefix/repeat_name
+    prefix/unusual#? directory ,
+    prefix/unusual#? directory ,/unusual, name?#
+
+# pipe directly from dir2trace
+$ gufi_dir2trace -n 4 "prefix" "-" 2>/dev/null | gufi_trace2index -n 4 "-" "search"
+Creating GUFI Index search with 4 threads
+Dirs:                6 (1 empty)
+Files:               14
+Total:               20
+
+Total Dirs:          6
+Total Files:         14
+
+# compare contents
+Source Directory:
+    prefix
+    prefix/.hidden
+    prefix/1KB
+    prefix/1MB
+    prefix/directory
+    prefix/directory/executable
+    prefix/directory/readonly
+    prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable
+    prefix/empty_directory
+    prefix/file_symlink
+    prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2
+    prefix/old_file
+    prefix/repeat_name
+    prefix/unusual#? directory ,
+    prefix/unusual#? directory ,/unusual, name?#
+
+GUFI Index:
+    prefix
+    prefix/.hidden
+    prefix/1KB
+    prefix/1MB
+    prefix/directory
+    prefix/directory/executable
+    prefix/directory/readonly
+    prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable
+    prefix/empty_directory
+    prefix/file_symlink
+    prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2
+    prefix/old_file
+    prefix/repeat_name
+    prefix/unusual#? directory ,
+    prefix/unusual#? directory ,/unusual, name?#
+
 # create index with a directory containing a lot of files 
 $ gufi_trace2index -d "|" big.dir.trace "big.dir.index"
 Creating GUFI Index big.dir.index with 1 threads

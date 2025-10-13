@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #endif
 
 #include <cstdio>
+#include <unistd.h>
 
 #include "config.h"
 #include "trace.h"
@@ -281,7 +282,7 @@ TEST(open_traces, too_many) {
     EXPECT_EQ(open_traces(nullptr, (size_t) -1), nullptr);
 }
 
-TEST(scout_trace, no_cleanup) {
+TEST(scout, trace) {
     struct entry_data src_ed;
     struct work *src = get_work(&src_ed);
     src_ed.type = 'd';
@@ -417,4 +418,62 @@ TEST(enqueue_traces, bad) {
     struct TraceStats stats = {};
 
     EXPECT_EQ(enqueue_traces(&tracenameptr, &tracefd, 1, '|', 10, nullptr, nullptr, &stats), (std::size_t) 0);
+}
+
+TEST(scout, stream) {
+    struct entry_data src_ed;
+    struct work *src = get_work(&src_ed);
+    src_ed.type = 'd';
+
+    // write the known struct to a string using an alternative write function
+    char line[4096];
+    const int rc = to_string(line, sizeof(line), src, &src_ed);
+    free(src);
+    ASSERT_GT(rc, -1);
+    const size_t len = strlen(line);
+    ASSERT_EQ(rc, (int) len);
+
+    // write trace to pipe
+    int fds[2];
+    ASSERT_EQ(pipe(fds),0);
+    ASSERT_EQ(write(fds[1], line, len), (ssize_t) len);
+    EXPECT_EQ(close(fds[1]), 0);
+
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    struct TraceStats stats = {};
+    stats.mutex = &mutex;
+
+    /* malloc sta because normally free branch is not triggered */
+    struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) malloc(sizeof(*sta));
+    sta->delim      = delim;
+    sta->tracename  = "-";
+    sta->tr.fd      = fds[0];
+    sta->tr.start   = 0;
+    sta->tr.end     = len;
+    sta->processdir = [] (QPTPool_t *, const size_t, void *data, void *) {
+        struct row *row = (struct row *) data;
+        row_destroy(&row);
+        return 0;
+    };
+    sta->free       = free;
+    sta->stats      = &stats;
+
+    QPTPool_t *pool = QPTPool_init(1, nullptr);
+    ASSERT_NE(pool, nullptr);
+    ASSERT_EQ(QPTPool_start(pool), 0);
+
+    EXPECT_NE(QPTPool_enqueue(pool, 0, scout_stream, sta), QPTPool_enqueue_ERROR);
+
+    QPTPool_stop(pool);
+    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 2);
+    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 2);
+    QPTPool_destroy(pool);
+
+    /* stats.remaining not modified */
+    EXPECT_GT(stats.thread_time,(uint64_t) 0);
+    EXPECT_EQ(stats.files,      (size_t)   0);
+    EXPECT_EQ(stats.dirs,       (size_t)   1);
+    EXPECT_EQ(stats.empty,      (size_t)   1);
+
+    EXPECT_EQ(close(fds[0]), 0);
 }

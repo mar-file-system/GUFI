@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "debug.h"
 #include "external.h"
 #include "template_db.h"
 #include "trace.h"
@@ -84,14 +85,70 @@ struct PoolArgs {
     struct template_db xattr;
 };
 
+struct NonDirArgs {
+    struct PoolArgs *pa;
+
+    char *topath;
+    size_t topath_len;
+
+    struct sum summary;
+
+    sll_t xattr_db_list;
+    sqlite3_stmt *entries_res;      /* entries */
+    sqlite3_stmt *xattrs_res;       /* xattrs within db.db */
+    sqlite3_stmt *xattr_files_res;  /* per-user and per-group db file names */
+
+    size_t count;
+};
+
+static void process_nondir(sqlite3 *db, char *line, const size_t len,
+                           struct NonDirArgs *nda) {
+    struct work *row = NULL;
+    struct entry_data row_ed;
+
+    linetowork(line, len, nda->pa->in.delim, &row, &row_ed);
+
+    if (row_ed.type == 'e') {
+        /* insert right here (instead of bulk inserting) since this is likely to be very rare */
+        external_insert(db, EXTERNAL_TYPE_USER_DB_NAME, row->statuso.st_ino, row->name);
+    }
+    else {
+        /* update summary table */
+        sumit(&nda->summary, row, &row_ed);
+
+        /* don't record pinode */
+        row->pinode = 0;
+
+        /* add row to bulk insert */
+        insertdbgo(row, &row_ed, nda->entries_res);
+        insertdbgo_xattrs(&nda->pa->in, &row->statuso, row, &row_ed,
+                          &nda->xattr_db_list, &nda->pa->xattr,
+                          nda->topath, nda->topath_len,
+                          nda->xattrs_res, nda->xattr_files_res);
+
+        xattrs_cleanup(&row_ed.xattrs);
+
+        nda->count++;
+        if (nda->count > 100000) {
+            stopdb(db);
+            startdb(db);
+            nda->count = 0;
+        }
+    }
+
+    free(row);
+}
+
 /* process the work under one directory (no recursion) */
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* Not checking arguments */
 
     (void) ctx; (void) id;
 
-    struct PoolArgs *pa = (struct PoolArgs *) args;
-    struct input *in = &pa->in;
+    struct NonDirArgs nda;
+    nda.pa = (struct PoolArgs *) args;
+
+    struct input *in = &nda.pa->in;
     struct row *w = (struct row *) data;
     const int trace = w->trace;
 
@@ -103,121 +160,93 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     linetowork(w->line, w->len, in->delim, &dir, &ed);
 
     /* create the directory */
-    const size_t topath_len = in->nameto.len + 1 + w->first_delim;
+    nda.topath_len = in->nameto.len + 1 + w->first_delim;
 
     /*
      * allocate space for "/db.db" in topath
      *
      * extra buffer is not needed and save on memcpy-ing
      */
-    const size_t topath_size = topath_len + 1 + DBNAME_LEN + 1;
-    char *topath = malloc(topath_size);
-    SNFORMAT_S(topath, topath_size, 4,
+    const size_t topath_size = nda.topath_len + 1 + DBNAME_LEN + 1;
+    nda.topath = malloc(topath_size);
+    SNFORMAT_S(nda.topath, topath_size, 4,
                in->nameto.data, in->nameto.len,
                "/", (size_t) 1,
                w->line, w->first_delim,
                "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     /* have to dupdir here because directories can show up in any order */
-    if (dupdir(topath, &dir->statuso)) {
+    if (dupdir(nda.topath, &dir->statuso)) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
-                topath, strerror(err), err);
-        free(topath);
+                nda.topath, strerror(err), err);
+        free(nda.topath);
         row_destroy(&w);
         return 1;
     }
 
     /* restore "/db.db" (no need to remove afterwards) */
-    topath[topath_len] = '/';
+    nda.topath[nda.topath_len] = '/';
 
-    sqlite3 *db = template_to_db(&pa->db, topath, dir->statuso.st_uid, dir->statuso.st_gid);
+    sqlite3 *db = template_to_db(&nda.pa->db, nda.topath, dir->statuso.st_uid, dir->statuso.st_gid);
 
     if (db) {
-        struct sum summary;
-        zeroit(&summary);
-
-        sll_t xattr_db_list;
-        sll_init(&xattr_db_list);
+        zeroit(&nda.summary);
+        sll_init(&nda.xattr_db_list);
 
         /* INSERT statement bindings into db.db */
-        sqlite3_stmt *entries_res     = insertdbprep(db, ENTRIES_INSERT);           /* entries */
-        sqlite3_stmt *xattrs_res      = insertdbprep(db, XATTRS_PWD_INSERT);        /* xattrs within db.db */
-        sqlite3_stmt *xattr_files_res = insertdbprep(db, EXTERNAL_DBS_PWD_INSERT);  /* per-user and per-group db file names */
+        nda.entries_res     = insertdbprep(db, ENTRIES_INSERT);           /* entries */
+        nda.xattrs_res      = insertdbprep(db, XATTRS_PWD_INSERT);        /* xattrs within db.db */
+        nda.xattr_files_res = insertdbprep(db, EXTERNAL_DBS_PWD_INSERT);  /* per-user and per-group db file names */
 
         startdb(db);
 
-        size_t row_count = 0;
-        char *line = NULL;
-        size_t size = 0;
-        for(size_t i = 0; i < w->entries; i++) {
-            const ssize_t len = getline_fd(&line, &size, trace, &w->offset, GETLINE_DEFAULT_SIZE);
-            if (len < 1) {
-                break;
+        nda.count = 0;
+        if (trace == STDIN_FILENO) {
+            sll_loop(&w->entry_lines, node) {
+                str_t *str = (str_t *) sll_node_data(node);
+                process_nondir(db, str->data, str->len, &nda);
+                /* str is freed with row */
             }
-
-            struct work *row;
-            struct entry_data row_ed;
-
-            linetowork(line, len, in->delim, &row, &row_ed);
-
-            if (row_ed.type == 'e') {
-                /* insert right here (instead of bulk inserting) since this is likely to be very rare */
-                external_insert(db, EXTERNAL_TYPE_USER_DB_NAME, row->statuso.st_ino, row->name);
-            }
-            else {
-                /* update summary table */
-                sumit(&summary, row, &row_ed);
-
-                /* don't record pinode */
-                row->pinode = 0;
-
-                /* add row to bulk insert */
-                insertdbgo(row, &row_ed, entries_res);
-                insertdbgo_xattrs(in, &row->statuso, row, &row_ed,
-                                  &xattr_db_list, &pa->xattr,
-                                  topath, topath_len,
-                                  xattrs_res, xattr_files_res);
-
-                xattrs_cleanup(&row_ed.xattrs);
-
-                row_count++;
-                if (row_count > 100000) {
-                    stopdb(db);
-                    startdb(db);
-                    row_count = 0;
-                }
-            }
-
-            free(row);
         }
+        else {
+            char *line = NULL;
+            size_t size = 0;
+            for(size_t i = 0; i < w->entries; i++) {
+                const ssize_t len = getline_fd(&line, &size, trace, &w->offset, GETLINE_DEFAULT_SIZE);
+                if (len < 1) {
+                    break;
+                }
 
-        free(line); /* reuse line and only alloc+free once */
+                process_nondir(db, line, size, &nda);
+            }
+            free(line); /* reuse line and only alloc+free once */
+        }
 
         stopdb(db);
 
         /* write out per-user and per-group xattrs */
-        sll_destroy(&xattr_db_list, destroy_xattr_db);
+        sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
 
         /* write out the current directory's xattrs */
-        insertdbgo_xattrs_avail(dir, &ed, xattrs_res);
+        insertdbgo_xattrs_avail(dir, &ed, nda.xattrs_res);
 
         /* write out data going into db.db */
-        insertdbfin(xattr_files_res); /* per-user and per-group xattr db file names */
-        insertdbfin(xattrs_res);
-        insertdbfin(entries_res);
+        insertdbfin(nda.xattr_files_res); /* per-user and per-group xattr db file names */
+        insertdbfin(nda.xattrs_res);
+        insertdbfin(nda.entries_res);
 
         /* find the basename of this path */
         w->line[w->first_delim] = '\x00';
         const size_t basename_start = trailing_match_index(w->line, w->first_delim, "/", 1);
 
-        insertsumdb(db, w->line + basename_start, dir, &ed, &summary);
+        insertsumdb(db, w->line + basename_start, dir, &ed, &nda.summary);
         xattrs_cleanup(&ed.xattrs);
 
         closedb(db); /* don't set to nullptr */
     }
 
-    free(topath);
+    free(nda.topath);
     row_destroy(&w);
     free(dir);
 
@@ -307,13 +336,33 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
 
     /* parse the trace files and enqueue work */
-    struct TraceStats stats;
-    enqueue_traces(&argv[idx], traces, trace_count,
-                   pa.in.delim,
-                   /* allow for some threads to start processing while reading */
-                   (pa.in.maxthreads / 2) + !!(pa.in.maxthreads & 1),
-                   pool, processdir,
-                   &stats);
+    struct TraceStats stats = {0};
+    stats.mutex = &print_mutex; /* debug.h */
+    if (traces[0] == STDIN_FILENO) {
+        struct ScoutTraceArgs sta = {
+            .delim = pa.in.delim,
+            .tracename = "-",
+            .tr = {
+                .fd = STDIN_FILENO,
+                .start = 0,
+                .end = (off_t) -1,
+            },
+            .processdir = processdir,
+            .free = NULL,
+            .stats = &stats,
+        };
+
+        /* one scout thread */
+        QPTPool_enqueue(pool, 0, scout_stream, &sta);
+    }
+    else {
+        enqueue_traces(&argv[idx], traces, trace_count,
+                       pa.in.delim,
+                       /* allow for some threads to start processing while reading */
+                       (pa.in.maxthreads / 2) + !!(pa.in.maxthreads & 1),
+                       pool, processdir,
+                       &stats);
+    }
 
     QPTPool_stop(pool);
 
@@ -326,11 +375,11 @@ int main(int argc, char *argv[]) {
     /* set top level permissions */
     chmod(pa.in.nameto.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-    fprintf(stdout, "Total Dirs:          %zu\n",    stats.dirs);
-    fprintf(stdout, "Total Files:         %zu\n",    stats.files);
-    fprintf(stdout, "Time Spent Indexing: %.2Lfs\n", processtime);
-    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",  stats.dirs / processtime);
-    fprintf(stdout, "Files/Sec:           %.2Lf\n",  stats.files / processtime);
+    fprintf(stderr, "Total Dirs:          %zu\n",    stats.dirs);
+    fprintf(stderr, "Total Files:         %zu\n",    stats.files);
+    fprintf(stderr, "Time Spent Indexing: %.2Lfs\n", processtime);
+    fprintf(stderr, "Dirs/Sec:            %.2Lf\n",  stats.dirs / processtime);
+    fprintf(stderr, "Files/Sec:           %.2Lf\n",  stats.files / processtime);
 
   free_xattr:
     close_template_db(&pa.xattr);
@@ -341,7 +390,7 @@ int main(int argc, char *argv[]) {
 
     input_fini(&pa.in);
 
-    dump_memory_usage(stdout);
+    dump_memory_usage(stderr);
 
     return rc;
 }

@@ -77,6 +77,10 @@ void str_free(str_t *str) {
     free(str);
 }
 
+void str_free_void(void *ptr) {
+    str_free(ptr);
+}
+
 str_t *str_alloc_existing(str_t *str, const size_t len) {
     str->data = malloc(len + 1);
     str->data[len] = '\0'; /* no source data to copy - only null terminate */

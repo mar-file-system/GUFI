@@ -135,6 +135,9 @@ char *split(char *src, const char *delim, const size_t delim_len, const char *en
 
 ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_t default_size);
 
+/* getline_fd for unseekable streams */
+ssize_t getline_fd_stream(char **lineptr, size_t *n, int fd, const size_t default_size);
+
 ssize_t copyfd(int src_fd, off_t src_off,
                int dst_fd, off_t dst_off,
                size_t size);

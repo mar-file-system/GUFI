@@ -86,6 +86,7 @@ typedef struct {
  */
 str_t *str_alloc(const size_t len);
 void str_free(str_t *str);
+void str_free_void(void *ptr); /* convenience signature */
 
 /*
  * str_t allocation (not data) user controlled

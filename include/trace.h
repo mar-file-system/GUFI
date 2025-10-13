@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 
 #include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
 #include "bf.h"
 #include "debug.h"
 
@@ -101,7 +102,8 @@ struct row {
     char *line;
     size_t len;
     off_t offset;
-    size_t entries;
+    size_t entries;      /* count */
+    sll_t entry_lines;   /* only used if reading from stdin */
 };
 
 struct row *row_init(const int trace, const size_t first_delim, char *line,
@@ -147,6 +149,8 @@ size_t enqueue_traces(char **traceames, int *tracefds, const size_t trace_count,
                       const char delim, const size_t max_parts,
                       QPTPool_t *ctx, QPTPool_f func,
                       struct TraceStats *stats);
+
+int scout_stream(QPTPool_t *ctx, const size_t id, void *data, void *args);
 
 #ifdef __cplusplus
 }

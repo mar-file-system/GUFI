@@ -168,6 +168,8 @@ ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, 
 
 /* GUFI trace functions */
 int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char delim);
+int xattrs_to_buffer(char **buf, size_t *size, size_t *offset,
+                     const struct xattrs *xattrs, const char delim);
 int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const char delim);
 
 #ifdef __cplusplus

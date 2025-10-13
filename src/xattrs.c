@@ -272,6 +272,27 @@ int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char delim) {
     return written;
 }
 
+/*
+ * serialize xattrs
+ *
+ * <name>\x1F<value>\x1F ...
+ */
+int xattrs_to_buffer(char **buf, size_t *size, size_t *offset,
+                     const struct xattrs *xattrs, const char delim) {
+    if (!xattrs->pairs) {
+        return 0;
+    }
+
+    int written = 0;
+    for(size_t i = 0; i < xattrs->count; i++) {
+        struct xattr *xattr = &xattrs->pairs[i];
+        write_with_resize(buf, size, offset, "%s%c", xattr->name, delim);
+        write_with_resize(buf, size, offset, "%s%c", xattr->value, delim);
+    }
+
+    return written;
+}
+
 /* parse serialized xattrs */
 int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const char delim) {
     /* Not checking arguments */
