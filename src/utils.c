@@ -562,87 +562,7 @@ char *split(char *src, const char *delim, const size_t delim_len, const char *en
 }
 
 /* should work similarly to getline(3) */
-ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_t default_size) {
-    if (!lineptr || !n || (fd < 0) || !offset || (default_size < 1)) {
-        return -EINVAL;
-    }
-
-    size_t read = 0;
-    ssize_t rc = 0;
-
-    if (!*n) {
-        *n = default_size;
-    }
-
-    if (!*lineptr) {
-        void *new_alloc = realloc(*lineptr, *n);
-        if (!new_alloc) {
-            const int err = errno;
-            fprintf(stderr, "Error: Could not realloc input address: %s (%d)\n", strerror(err), err);
-            return -ENOMEM;
-        }
-
-        *lineptr = new_alloc;
-    }
-
-    int found = 0;
-    while (!found) {
-        if (read >= *n) {
-            *n *= 2;
-            void *new_alloc = realloc(*lineptr, *n);
-            if (!new_alloc) {
-                const int err = errno;
-                fprintf(stderr, "Error: Could not realloc buffer: %s (%d)\n", strerror(err), err);
-                return -ENOMEM;
-            }
-
-            *lineptr = new_alloc;
-        }
-
-        char *start = *lineptr + read;
-        rc = pread(fd, start, *n - read, *offset + read);
-        if (rc < 1) {
-            break;
-        }
-
-        char *newline = memchr(start, '\n', rc);
-        if (newline) {
-            *newline = '\0';
-            read += newline - start;
-            found = 1;
-        }
-        else {
-            read += rc;
-        }
-    }
-
-    if (rc < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not pread: %s (%d)\n", strerror(err), err);
-        return -err;
-    }
-    else if (rc == 0) {
-        /* EOF */
-        if ((read == 0) && (found == 0)) {
-            return -EIO;
-        }
-    }
-
-    /*
-     * no need to possibly reallocate for NULL terminator
-     *  - if buffer has newline, simply replace newline
-     *  - if buffer does not have newline, must have hit EOF,
-     *    and loop would have cycled back after reading and
-     *    reallocated with more space before breaking
-     */
-    (*lineptr)[read] = '\0';
-
-    *offset += read + found; /* remove newlne if it was read */
-
-    return read;
-}
-
-ssize_t getline_fd_stream(char **lineptr, size_t *n, int fd, const size_t default_size) {
+static ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_t default_size) {
     if (!lineptr || !n || (fd < 0) || (default_size < 1)) {
         return -EINVAL;
     }
@@ -680,23 +600,30 @@ ssize_t getline_fd_stream(char **lineptr, size_t *n, int fd, const size_t defaul
         }
 
         char *start = *lineptr + r;
-        rc = read(fd, start, 1);
+        if (offset) {
+            rc = pread(fd, start, *n - r, *offset + r);
+        }
+        else {
+            rc = read(fd, start, 1);
+        }
         if (rc < 1) {
             break;
         }
 
-        r++;
-
-        if (*start == '\n') {
-            *start = '\0';
-            r--; /* don't count newline in length */
+        char *newline = memchr(start, '\n', rc);
+        if (newline) {
+            *newline = '\0';
+            r += newline - start;
             found = 1;
+        }
+        else {
+            r += rc;
         }
     }
 
     if (rc < 0) {
         const int err = errno;
-        fprintf(stderr, "Error: Could not read: %s (%d)\n", strerror(err), err);
+        fprintf(stderr, "Error: Could not %s: %s (%d)\n", offset?"pread":"read", strerror(err), err);
         return -err;
     }
     else if (rc == 0) {
@@ -715,7 +642,23 @@ ssize_t getline_fd_stream(char **lineptr, size_t *n, int fd, const size_t defaul
      */
     (*lineptr)[r] = '\0';
 
+    if (offset) {
+        *offset += r + found; /* remove newlne if it was read */
+    }
+
     return r;
+}
+
+ssize_t getline_fd_seekable(char **lineptr, size_t *n, int fd, off_t *offset, const size_t default_size) {
+    if (!offset) {
+        return -EINVAL;
+    }
+
+    return getline_fd(lineptr, n, fd, offset, default_size);
+}
+
+ssize_t getline_fd_stream(char **lineptr, size_t *n, int fd, const size_t default_size) {
+    return getline_fd(lineptr, n, fd, NULL, default_size);
 }
 
 #if defined(__linux__)

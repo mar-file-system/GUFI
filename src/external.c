@@ -226,7 +226,7 @@ size_t external_read_file(struct input *in,
     char *line = NULL;
     size_t len = 0;
     off_t offset = 0;
-    while (getline_fd(&line, &len, extdb_list, &offset, 512) > 0) {
+    while (getline_fd_seekable(&line, &len, extdb_list, &offset, 512) > 0) {
         char extdb_path_stack[MAXPATH];
         char *extdb_path = line;
 

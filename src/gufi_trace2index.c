@@ -213,7 +213,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             char *line = NULL;
             size_t size = 0;
             for(size_t i = 0; i < w->entries; i++) {
-                const ssize_t len = getline_fd(&line, &size, trace, &w->offset, GETLINE_DEFAULT_SIZE);
+                const ssize_t len = getline_fd_seekable(&line, &size, trace, &w->offset, GETLINE_DEFAULT_SIZE);
                 if (len < 1) {
                     break;
                 }

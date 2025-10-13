@@ -133,9 +133,10 @@ ssize_t setup_directory_skip(trie_t *skip, const char *filename);
 /* strstr/strtok replacement */
 char *split(char *src, const char *delim, const size_t delim_len, const char *end);
 
-ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_t default_size);
+/* getline_fd for seekable file descriptors */
+ssize_t getline_fd_seekable(char **lineptr, size_t *n, int fd, off_t *offset, const size_t default_size);
 
-/* getline_fd for unseekable streams */
+/* getline_fd for unseekable file descriptors */
 ssize_t getline_fd_stream(char **lineptr, size_t *n, int fd, const size_t default_size);
 
 ssize_t copyfd(int src_fd, off_t src_off,

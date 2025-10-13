@@ -347,7 +347,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* bad read (error) or empty trace (not an error) */
     if ((offset < sta->tr.end) &&
-        (len = getline_fd(&line, &size, sta->tr.fd, &offset, GETLINE_DEFAULT_SIZE)) < 1) {
+        (len = getline_fd_seekable(&line, &size, sta->tr.fd, &offset, GETLINE_DEFAULT_SIZE)) < 1) {
         if (offset != 0) {
             fprintf(stderr, "Could not get the first line of trace \"%s\"\n", sta->tracename);
             rc = 1;
@@ -379,7 +379,7 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     size = 0;
     len = 0;
     while ((offset < sta->tr.end) &&
-           (len = getline_fd(&line, &size, sta->tr.fd, &offset, GETLINE_DEFAULT_SIZE)) > -1) {
+           (len = getline_fd_seekable(&line, &size, sta->tr.fd, &offset, GETLINE_DEFAULT_SIZE)) > -1) {
         /* empty line */
         if (len == 0) {
             continue;
@@ -505,12 +505,12 @@ int find_stanza_end(const int fd, off_t *end, void *args) {
      *
      * errors are ignored
      */
-    getline_fd(&line, &size, fd, end, GETLINE_DEFAULT_SIZE);
+    getline_fd_seekable(&line, &size, fd, end, GETLINE_DEFAULT_SIZE);
 
     while (1) {
         const off_t before_read = *end;
 
-        len = getline_fd(&line, &size, fd, end, GETLINE_DEFAULT_SIZE);
+        len = getline_fd_seekable(&line, &size, fd, end, GETLINE_DEFAULT_SIZE);
 
         if (len < 1) {
             free(line);

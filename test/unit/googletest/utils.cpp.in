@@ -903,9 +903,9 @@ TEST(split, delims) {
     EXPECT_EQ(next, nullptr);
 }
 
-TEST(getline, fd) {
-    const size_t default_size = 1024;
-    const size_t LINE_LEN = 1025;
+TEST(getline_fd, seekable) {
+    const std::size_t default_size = 1024;
+    const std::size_t LINE_LEN = 1025;
     char LINE[LINE_LEN] = "";
 
     memset(LINE, 'X', LINE_LEN);
@@ -922,40 +922,51 @@ TEST(getline, fd) {
     // line 2
     EXPECT_EQ(write(fd, "\n", 1),        (ssize_t) 1);
 
+    // line 3
+    EXPECT_EQ(write(fd, " ", 1),         (ssize_t) 1);
+
     char *line = nullptr;
-    size_t size = 0; // size of buffer, not length of string
+    std::size_t size = 0; // size of buffer, not length of string
     off_t offset = 0;
 
     // read line
-    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) LINE_LEN);
+    EXPECT_EQ(getline_fd_seekable(&line, &size, fd, &offset, default_size), (ssize_t) LINE_LEN);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
+    EXPECT_NE(size,   (std::size_t) 0);
     EXPECT_EQ(offset, (off_t) (LINE_LEN + 1));
     free(line);
     line = nullptr;
 
     // empty line
-    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_EQ(getline_fd_seekable(&line, &size, fd, &offset, default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
+    EXPECT_NE(size,   (std::size_t) 0);
     EXPECT_EQ(offset, (off_t) (LINE_LEN + 2));
     free(line);
     line = nullptr;
 
-    // end of file
-    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) -EIO);
+    // line until end of file
+    EXPECT_EQ(getline_fd_seekable(&line, &size, fd, &offset, default_size), (ssize_t) 1);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
-    EXPECT_EQ(offset, (off_t) (LINE_LEN + 2));
+    EXPECT_NE(size,   (std::size_t) 0);
+    EXPECT_EQ(offset, (off_t) (LINE_LEN + 3));
+    free(line);
+    line = nullptr;
+
+    // end of file
+    EXPECT_EQ(getline_fd_seekable(&line, &size, fd, &offset, default_size), (ssize_t) -EIO);
+    EXPECT_NE(line,   nullptr);
+    EXPECT_NE(size,   (std::size_t) 0);
+    EXPECT_EQ(offset, (off_t) (LINE_LEN + 3));
     free(line);
     line = nullptr;
 
     /* past end of file */
     const off_t past = LINE_LEN * 5;
     offset = past;
-    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) -EIO);
+    EXPECT_EQ(getline_fd_seekable(&line, &size, fd, &offset, default_size), (ssize_t) -EIO);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
+    EXPECT_NE(size,   (std::size_t) 0);
     EXPECT_EQ(offset, past);
     free(line);
     line = nullptr;
@@ -964,37 +975,37 @@ TEST(getline, fd) {
 
     /* closed valid file */
     offset = 0;
-    EXPECT_LT(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_LT(getline_fd_seekable(&line, &size, fd, &offset, default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
+    EXPECT_NE(size,   (std::size_t) 0);
     EXPECT_EQ(offset, (off_t) 0);
     free(line);
     line = nullptr;
 
     /* read from stdout */
-    EXPECT_LT(getline_fd(&line, &size, STDOUT_FILENO, &offset, default_size), (ssize_t) 0);
+    EXPECT_LT(getline_fd_seekable(&line, &size, STDOUT_FILENO, &offset, default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
+    EXPECT_NE(size,   (std::size_t) 0);
     EXPECT_EQ(offset, (off_t) 0);
     free(line);
     line = nullptr;
 
     /* bad inputs */
-    EXPECT_EQ(getline_fd(nullptr, &size,   fd, &offset, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   nullptr, fd, &offset, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   &size,   -1, &offset, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   &size,   fd, nullptr, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   &size,   fd, &offset, 0),            -EINVAL);
+    EXPECT_EQ(getline_fd_seekable(nullptr, &size,   fd, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd_seekable(&line,   nullptr, fd, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd_seekable(&line,   &size,   -1, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd_seekable(&line,   &size,   fd, nullptr, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd_seekable(&line,   &size,   fd, &offset, 0),            -EINVAL);
 
     /* initial alloc is too big */
-    size = (size_t) -1;
-    EXPECT_EQ(getline_fd(&line,   &size,   fd, &offset, default_size), -ENOMEM);
+    size = (std::size_t) -1;
+    EXPECT_EQ(getline_fd_seekable(&line,   &size,   fd, &offset, default_size), -ENOMEM);
     EXPECT_EQ(line, nullptr);
 }
 
-TEST(getline, fd_stream) {
-    const size_t default_size = 1024;
-    const size_t LINE_LEN = 1025;
+TEST(getline_fd, stream) {
+    const std::size_t default_size = 1024;
+    const std::size_t LINE_LEN = 1025;
     char LINE[LINE_LEN] = "";
 
     memset(LINE, 'X', LINE_LEN);
@@ -1009,29 +1020,39 @@ TEST(getline, fd_stream) {
     // line 2
     EXPECT_EQ(write(fds[1], "\n", 1),        (ssize_t) 1);
 
+    // line 3
+    EXPECT_EQ(write(fds[1], " ", 1),         (ssize_t) 1);
+
     ASSERT_EQ(close(fds[1]), 0); // fds[1] must be closed in order to read EOF
 
     char *line = nullptr;
-    size_t size = 0; // size of buffer, not length of string
+    std::size_t size = 0; // size of buffer, not length of string
 
     // read line
     EXPECT_EQ(getline_fd_stream(&line, &size, fds[0], default_size), (ssize_t) LINE_LEN);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
+    EXPECT_NE(size,   (std::size_t) 0);
     free(line);
     line = nullptr;
 
     // empty line
     EXPECT_EQ(getline_fd_stream(&line, &size, fds[0], default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
+    EXPECT_NE(size,   (std::size_t) 0);
+    free(line);
+    line = nullptr;
+
+    // line until end of file
+    EXPECT_EQ(getline_fd_stream(&line, &size, fds[0], default_size), (ssize_t) 1);
+    EXPECT_NE(line,   nullptr);
+    EXPECT_NE(size,   (std::size_t) 0);
     free(line);
     line = nullptr;
 
     // end of file
     EXPECT_EQ(getline_fd_stream(&line, &size, fds[0], default_size), (ssize_t) -EIO);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
+    EXPECT_NE(size,   (std::size_t) 0);
     free(line);
     line = nullptr;
 
@@ -1040,7 +1061,7 @@ TEST(getline, fd_stream) {
     /* closed valid file */
     EXPECT_LT(getline_fd_stream(&line, &size, fds[0], default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_NE(size,   (size_t) 0);
+    EXPECT_NE(size,   (std::size_t) 0);
     free(line);
     line = nullptr;
 
@@ -1051,7 +1072,7 @@ TEST(getline, fd_stream) {
     EXPECT_EQ(getline_fd_stream(&line,   &size,   fds[0], 0),            -EINVAL);
 
     /* initial alloc is too big */
-    size = (size_t) -1;
+    size = (std::size_t) -1;
     EXPECT_EQ(getline_fd_stream(&line,   &size,   fds[0], default_size), -ENOMEM);
     EXPECT_EQ(line, nullptr);
 }

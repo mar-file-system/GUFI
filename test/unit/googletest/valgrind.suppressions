@@ -4,7 +4,8 @@
    malloc(size)
    fun:malloc
    fun:getline_fd
-   fun:_ZN15getline_fd_Test8TestBodyEv
+   fun:getline_fd_seekable
+   fun:_ZN24getline_fd_seekable_Test8TestBodyEv
    fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
    fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
    fun:_ZN7testing4Test3RunEv
@@ -23,7 +24,8 @@
    realloc(size)
    fun:realloc
    fun:getline_fd
-   fun:_ZN15getline_fd_Test8TestBodyEv
+   fun:getline_fd_seekable
+   fun:_ZN24getline_fd_seekable_Test8TestBodyEv
    fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
    fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
    fun:_ZN7testing4Test3RunEv
@@ -32,13 +34,13 @@
    fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
    fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
    fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
 }
 {
    <insert_a_suppression_name_here>
    Memcheck:FishyValue
    malloc(size)
    fun:malloc
+   fun:getline_fd
    fun:getline_fd_stream
    fun:_ZN22getline_fd_stream_Test8TestBodyEv
    fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
@@ -58,6 +60,7 @@
    Memcheck:FishyValue
    realloc(size)
    fun:realloc
+   fun:getline_fd
    fun:getline_fd_stream
    fun:_ZN22getline_fd_stream_Test8TestBodyEv
    fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
@@ -68,7 +71,6 @@
    fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
    fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
    fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
 }
 {
    <insert_a_suppression_name_here>
