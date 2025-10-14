@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 #include "SinglyLinkedList.h"
 #include "bf.h"
 #include "print.h"
+#include "str.h"
 #include "trie.h"
 #include "utils.h"
 
@@ -83,6 +84,9 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
+    refstr_t lhs;
+    refstr_t rhs;
+
     struct OutputBuffers obufs;
 };
 
@@ -356,8 +360,8 @@ int main(int argc, char *argv[]) {
     if (idx < 0)
         return 1;
     else {
-        INSTALL_STR(&pa.in.name,   argv[argc - 2]);
-        INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
+        INSTALL_STR(&pa.lhs, argv[argc - 2]);
+        INSTALL_STR(&pa.rhs, argv[argc - 1]);
     }
 
     int rc = 0;
@@ -378,8 +382,8 @@ int main(int argc, char *argv[]) {
 
     struct ComparePaths *cp = malloc(sizeof(*cp));
     cp->level = 0;
-    str_copy_construct(&cp->lhs, pa.in.name.data,   pa.in.name.len);
-    str_copy_construct(&cp->rhs, pa.in.nameto.data, pa.in.nameto.len);
+    str_copy_construct(&cp->lhs, pa.lhs.data, pa.lhs.len);
+    str_copy_construct(&cp->rhs, pa.rhs.data, pa.rhs.len);
 
     QPTPool_enqueue(pool, 0, processdir, cp);
 

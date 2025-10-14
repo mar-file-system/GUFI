@@ -71,14 +71,20 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "str.h"
 #include "utils.h"
 
-static str_t create_dst_name(struct input *in, struct work *work) {
+struct PoolArgs {
+    struct input in;
+    refstr_t dst;
+};
+
+static str_t create_dst_name(const refstr_t *dst_root, struct work *work) {
     str_t dst;
-    str_alloc_existing(&dst, in->nameto.len + 1 + work->name_len - work->root_parent.len);
+    str_alloc_existing(&dst, dst_root->len + 1 + work->name_len - work->root_parent.len);
 
     SNFORMAT_S(dst.data, dst.len + 1, 3,
-               in->nameto.data, in->nameto.len,
+               dst_root->data, dst_root->len,
                "/", (size_t) 1,
                work->name + work->root_parent.len, work->name_len - work->root_parent.len);
 
@@ -118,7 +124,7 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     (void) ctx;
     (void) id;
 
-    struct input *in = (struct input *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) args;
     struct work_data *wd = (struct work_data *) data;
     struct work *work = &wd->work;
     struct entry_data *ed = &wd->ed;
@@ -139,7 +145,7 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         print_error_and_goto("Could not open file", work->name, cleanup);
     }
 
-    const str_t dst = create_dst_name(in, work);
+    const str_t dst = create_dst_name(&pa->dst, work);
 
     const int dst_fd = open(dst.data, O_CREAT | O_WRONLY | O_TRUNC, st->st_mode);
     if (dst_fd < 0) {
@@ -166,12 +172,12 @@ static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return rc;
 }
 
-static int cpr_link(struct work *work, struct entry_data *ed, struct input *in) {
+static int cpr_link(struct work *work, struct entry_data *ed, const refstr_t *dir_path) {
     int rc = 0;
 
     /* need to give users ability to force overwriting of links */
 
-    const str_t dst = create_dst_name(in, work);
+    const str_t dst = create_dst_name(dir_path, work);
 
     if (symlink(ed->linkname, dst.data) != 0) {
         print_error_and_goto("Could not create link", dst.data, cleanup);
@@ -186,7 +192,7 @@ static int cpr_link(struct work *work, struct entry_data *ed, struct input *in) 
 struct QPTPool_vals {
     QPTPool_t *ctx;
     size_t id;
-    struct input *in;
+    struct PoolArgs *pa;
 };
 
 static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir_args) {
@@ -200,7 +206,7 @@ static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir
         xattrs_setup(&wd->ed.xattrs);
         memcpy(&wd->ed, ed, sizeof(*ed));
 
-        if (args->in->process_xattrs) {
+        if (args->pa->in.process_xattrs) {
             wd->ed.xattrs.pairs = NULL;
             xattrs_alloc(&wd->ed.xattrs);
             memcpy(wd->ed.xattrs.pairs, ed->xattrs.pairs, ed->xattrs.count * sizeof(struct xattr));
@@ -211,7 +217,7 @@ static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir
     }
     else if (S_ISLNK(work->statuso.st_mode)) {
         /* copy right here since symlinks should not take much time to copy */
-        cpr_link(work, ed, args->in);
+        cpr_link(work, ed, &args->pa->dst);
     }
 
     return 0;
@@ -219,7 +225,7 @@ static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir
 
 /* set up the copied directory and enqueue per-file copy threads */
 static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct input *in = (struct input *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) args;
     struct work *work = (struct work *) data;
 
     int rc = 0;
@@ -233,7 +239,7 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         print_error_and_goto("Could not lstat directory", work->name, close_dir);
     }
 
-    const str_t dst = create_dst_name(in, work);
+    const str_t dst = create_dst_name(&pa->dst, work);
 
     /* ensure parent directory exists before processing children */
     if (mkdir(dst.data, work->statuso.st_mode & 0777) != 0) {
@@ -249,14 +255,14 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct QPTPool_vals qptp_vals = {
         .ctx = ctx,
         .id = id,
-        .in = in,
+        .pa = pa,
     };
 
     /* process children */
-    descend(ctx, id, args, in, work, dir, 0,
+    descend(ctx, id, args, &pa->in, work, dir, 0,
             cpr_dir,enqueue_nondir, &qptp_vals, NULL);
 
-    if (in->process_xattrs) {
+    if (pa->in.process_xattrs) {
         struct xattrs xattrs;
         xattrs_setup(&xattrs);
         xattrs_get(work->name, &xattrs);
@@ -299,38 +305,38 @@ int main(int argc, char * argv[]) {
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_XATTRS, FLAG_END
     };
-    struct input in;
-    process_args_and_maybe_exit(options, 2, "src... dst", &in);
+    struct PoolArgs pa;
+    process_args_and_maybe_exit(options, 2, "src... dst", &pa.in);
 
     /* parse positional args, following the options */
     /* does not have to be canonicalized */
-    INSTALL_STR(&in.nameto, argv[argc - 1]);
+    INSTALL_STR(&pa.dst, argv[argc - 1]);
 
-    int rc = setup(&in.nameto);
+    int rc = setup(&pa.dst);
     if (rc != 0) {
         fprintf(stderr, "Error: Cannot copy to \"%s\": %s (%d)\n",
-                in.nameto.data, strerror(rc), rc);
-        input_fini(&in);
+                pa.dst.data, strerror(rc), rc);
+        input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
     /* get realpath after set up to ensure the path exists */
-    const char *dst = in.nameto.data;
+    const char *dst = pa.dst.data;
     const char *real_dst = realpath(dst, NULL);
     if (!real_dst) {
         const int err = errno;
         fprintf(stderr, "Error: Cannot get realpath of \"%s\": %s (%d)\n",
                 dst, strerror(err), err);
-        input_fini(&in);
+        input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
-    QPTPool_t *pool = QPTPool_init(in.maxthreads, &in);
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa);
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
         free((char *) real_dst);
-        input_fini(&in);
+        input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
@@ -385,7 +391,7 @@ int main(int argc, char * argv[]) {
                 ed.linkname[link_len] = '\0';
 
                 /* copy right here instead of enqueuing */
-                cpr_link(work, &ed, &in);
+                cpr_link(work, &ed, &pa.dst);
             }
 
             free(work);
@@ -398,7 +404,7 @@ int main(int argc, char * argv[]) {
 
             xattrs_setup(&wd->ed.xattrs);
 
-            if (in.process_xattrs) {
+            if (pa.in.process_xattrs) {
                 xattrs_get(work->name, &wd->ed.xattrs);
             }
 
@@ -420,7 +426,7 @@ int main(int argc, char * argv[]) {
 
     free((char *) real_dst);
 
-    input_fini(&in);
+    input_fini(&pa.in);
 
     return ((rc == 0) && (threads_started == threads_completed))?EXIT_SUCCESS:EXIT_FAILURE;
 }

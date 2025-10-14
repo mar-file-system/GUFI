@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "debug.h"
 #include "external.h"
+#include "str.h"
 #include "template_db.h"
 #include "trace.h"
 #include "utils.h"
@@ -81,6 +82,8 @@ OF SUCH DAMAGE.
 /* global to pool - passed around in "args" argument */
 struct PoolArgs {
     struct input in;
+    refstr_t index_parent; /* actual index is placed at <index parent>/<path in trace> */
+
     struct template_db db;
     struct template_db xattr;
 };
@@ -160,7 +163,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     linetowork(w->line, w->len, in->delim, &dir, &ed);
 
     /* create the directory */
-    nda.topath_len = in->nameto.len + 1 + w->first_delim;
+    nda.topath_len = nda.pa->index_parent.len + 1 + w->first_delim;
 
     /*
      * allocate space for "/db.db" in topath
@@ -170,7 +173,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     const size_t topath_size = nda.topath_len + 1 + DBNAME_LEN + 1;
     nda.topath = malloc(topath_size);
     SNFORMAT_S(nda.topath, topath_size, 4,
-               in->nameto.data, in->nameto.len,
+               nda.pa->index_parent.data, nda.pa->index_parent.len,
                "/", (size_t) 1,
                w->line, w->first_delim,
                "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
@@ -273,7 +276,7 @@ int main(int argc, char *argv[]) {
     process_args_and_maybe_exit(options, 2, "trace_file... output_dir", &pa.in);
 
     /* parse positional args, following the options */
-    INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
+    INSTALL_STR(&pa.index_parent, argv[argc - 1]);
 
     /* open trace files for threads to jump around in */
     /* open the trace files here to not repeatedly open in threads */
@@ -299,8 +302,8 @@ int main(int argc, char *argv[]) {
     st.st_uid = geteuid();
     st.st_gid = getegid();
 
-    if (dupdir(pa.in.nameto.data, &st)) {
-        fprintf(stderr, "Could not create directory %s\n", pa.in.nameto.data);
+    if (dupdir(pa.index_parent.data, &st)) {
+        fprintf(stderr, "Could not create directory %s\n", pa.index_parent.data);
         rc = EXIT_FAILURE;
         goto free_traces;
     }
@@ -310,7 +313,7 @@ int main(int argc, char *argv[]) {
      * "${dst}/db.db"; index is placed in "${dst}/$(basename ${src}))"
      * so that when querying "${dst}", no error is printed
      */
-    if (create_empty_dbdb(&pa.db, &pa.in.nameto, geteuid(), getegid()) != 0) {
+    if (create_empty_dbdb(&pa.db, &pa.index_parent, geteuid(), getegid()) != 0) {
         rc = EXIT_FAILURE;
         goto free_traces;
     }
@@ -332,7 +335,7 @@ int main(int argc, char *argv[]) {
         goto free_xattr;
     }
 
-    fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
+    fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.index_parent.data, pa.in.maxthreads);
     fflush(stdout);
 
     /* parse the trace files and enqueue work */
@@ -373,7 +376,7 @@ int main(int argc, char *argv[]) {
     QPTPool_destroy(pool);
 
     /* set top level permissions */
-    chmod(pa.in.nameto.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    chmod(pa.index_parent.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     fprintf(stderr, "Total Dirs:          %zu\n",    stats.dirs);
     fprintf(stderr, "Total Files:         %zu\n",    stats.files);

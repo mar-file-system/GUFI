@@ -74,21 +74,22 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "str.h"
 #include "trace.h"
 #include "utils.h"
 #include "xattrs.h"
 
 struct PoolArgs {
     struct input in;
-    size_t src_dirname_len;
+    refstr_t tree_parent; /* actual tree is placed at <tree parent>/<path in trace> */
 };
 
 /* TODO: possible optimization - pass in and modify parent name by adding entry's name to save on some copying */
-static int process_entries(struct input *in,
+static int process_entries(refstr_t *tree_parent,
                            struct work *entry, struct entry_data *ed) {
     char path[MAXPATH];
     SNFORMAT_S(path, sizeof(path), 3,
-               in->nameto.data, in->nameto.len,
+               tree_parent->data, tree_parent->len,
                "/", (size_t) 1,
                entry->name, entry->name_len);
 
@@ -145,7 +146,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* create the directory */
     char topath[MAXPATH];
     SNFORMAT_S(topath, MAXPATH, 3,
-               in->nameto.data, in->nameto.len,
+               pa->tree_parent.data, pa->tree_parent.len,
                "/", (size_t) 1,
                w->line, w->first_delim);
 
@@ -179,7 +180,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             continue;
         }
 
-        process_entries(in, row, &row_ed);
+        process_entries(&pa->tree_parent, row, &row_ed);
         xattrs_cleanup(&row_ed.xattrs);
         free(row);
     }
@@ -208,7 +209,7 @@ int main(int argc, char * argv[]) {
     process_args_and_maybe_exit(options, 2, "trace_file... output_dir", &pa.in);
 
     // parse positional args, following the options
-    INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
+    INSTALL_STR(&pa.tree_parent, argv[argc - 1]);
 
     /* open trace files for threads to jump around in */
     /* open the trace files here to not repeatedly open in threads */
@@ -227,8 +228,8 @@ int main(int argc, char * argv[]) {
     st.st_uid = geteuid();
     st.st_gid = getegid();
 
-    if (dupdir(pa.in.nameto.data, &st)) {
-        fprintf(stderr, "Could not create directory %s\n", pa.in.nameto.data);
+    if (dupdir(pa.tree_parent.data, &st)) {
+        fprintf(stderr, "Could not create directory %s\n", pa.tree_parent.data);
         rc = EXIT_FAILURE;
         goto free_traces;
     }

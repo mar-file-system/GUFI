@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "debug.h"
 #include "dbutils.h"
+#include "str.h"
 #include "trie.h"
 #include "utils.h"
 #include "xattrs.h"
@@ -89,6 +90,9 @@ struct ThreadArgs {
 
 struct PoolArgs {
     struct input in;
+    refstr_t name;
+    refstr_t nameto;
+
     ino_t glsuspectflmin;
     ino_t glsuspectflmax;
     ino_t glsuspectdmin;
@@ -155,7 +159,7 @@ static int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3_stmt *
     return !!error;
 }
 
-static int reprocessdir(struct input *in, void *passv, DIR *dir) {
+static int reprocessdir(struct PoolArgs *pa, void *passv, DIR *dir) {
     struct work *passmywork = passv;
     if ((passmywork->stat_called != STAT_NOT_CALLED) && (lstat(passmywork->name, &passmywork->statuso) != 0)) {
         return 1;
@@ -165,25 +169,25 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
     memset(&ed, 0, sizeof(ed));
 
     /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
-    if (in->process_xattrs) {
+    if (pa->in.process_xattrs) {
         xattrs_setup(&ed.xattrs);
         xattrs_get(passmywork->name, &ed.xattrs);
     }
 
     /* open the gufi db for this directory into the parking lot directory the name as the inode of the dir */
     char dbpath[MAXPATH];
-    if (in->buildindex == 1) {
+    if (pa->in.buildindex == 1) {
         SNPRINTF(dbpath, MAXPATH, "%s/%s", passmywork->name, DBNAME);
     } else {
-        SNPRINTF(dbpath, MAXPATH, "%s/%" STAT_ino, in->nameto.data, passmywork->statuso.st_ino);
+        SNPRINTF(dbpath, MAXPATH, "%s/%" STAT_ino, pa->nameto.data, passmywork->statuso.st_ino);
     }
 
     /*
      * if we are building a gufi in the src tree and the suspect mode
      * is not zero then we need to wipe it out first
      */
-    if (in->buildindex == 1) {
-        if (in->suspectmethod > 0) {
+    if (pa->in.buildindex == 1) {
+        if (pa->in.suspectmethod > 0) {
             truncate(dbpath, 0);
         }
     }
@@ -214,7 +218,7 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
             ((len == 2) && !strncmp(entry->d_name, "..", 2)))
             continue;
 
-        if (in->buildindex == 1) {
+        if (pa->in.buildindex == 1) {
             if ((len == DBNAME_LEN) && !strncmp(entry->d_name, DBNAME, DBNAME_LEN))
                 continue;
         }
@@ -228,7 +232,7 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
 
         try_skip_lstat(entry->d_type, qwork);
         xattrs_setup(&qwork_ed.xattrs);
-        if (in->process_xattrs) {
+        if (pa->in.process_xattrs) {
             xattrs_get(qwork->name, &qwork_ed.xattrs);
         }
 
@@ -510,7 +514,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (ed.suspect == 1) {
         if (pa->gltodirmode == 1) {
             /* we may not have stat on the directory we may be told its suspect somehow not stating it */
-            if (reprocessdir(in, passmywork, dir)) {
+            if (reprocessdir(pa, passmywork, dir)) {
                 fprintf(stderr, "problem producing gufi db for suspect directory\n");
             }
         }
@@ -611,7 +615,7 @@ static int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
         }
     }
 
-    struct work *mywork = new_work_with_name(NULL, 0, pa->in.name.data, pa->in.name.len);
+    struct work *mywork = new_work_with_name(NULL, 0, pa->name.data, pa->name.len);
 
     QPTPool_enqueue(ctx, 0, processdir, mywork);
 
@@ -641,10 +645,10 @@ static int processfin(struct PoolArgs *pa) {
     return 0;
 }
 
-static int validate_inputs(struct input *in) {
-    if (in->buildindex) {
+static int validate_inputs(struct PoolArgs *pa) {
+    if (pa->in.buildindex) {
         fprintf(stderr, "You are putting the index dbs in input directory\n");
-        in->nameto = in->name;
+        pa->nameto = pa->name;
     }
 
     return 0;
@@ -679,26 +683,26 @@ int main(int argc, char *argv[]) {
         return -!pa.in.helped;
     }
     else {
-        INSTALL_STR(&pa.in.name, argv[idx++]);
+        INSTALL_STR(&pa.name, argv[idx++]);
 
         if (idx < argc) {
-            INSTALL_STR(&pa.in.nameto, argv[idx++]);
+            INSTALL_STR(&pa.nameto, argv[idx++]);
         }
     }
 
-    if (validate_inputs(&pa.in)) {
+    if (validate_inputs(&pa)) {
         input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
     /* check the output directory for the gufi dbs for suspect dirs if provided */
     pa.gltodirmode = 0;
-    if (pa.in.nameto.len > 0) {
+    if (pa.nameto.len > 0) {
         pa.gltodirmode = 1;
         /* make sure the directory to put the gufi dbs into exists and we can write to it */
         struct stat st;
-        if (lstat(pa.in.nameto.data, &st) != 0) {
-            fprintf(stdout, "directory to place gufi dbs problem for %s\n", pa.in.nameto.data);
+        if (lstat(pa.nameto.data, &st) != 0) {
+            fprintf(stdout, "directory to place gufi dbs problem for %s\n", pa.nameto.data);
             input_fini(&pa.in);
             return EXIT_FAILURE;
         }

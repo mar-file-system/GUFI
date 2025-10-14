@@ -330,9 +330,8 @@ enum filter_type {
     FILTER_TYPE_LINK = 4
 };
 
+/* flags only - positional argument handling is found in individual programs */
 struct input {
-    refstr_t  name;
-    refstr_t  nameto;
     int process_xattrs;
     struct {
         uid_t uid;

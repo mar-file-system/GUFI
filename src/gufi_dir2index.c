@@ -79,10 +79,12 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "external.h"
 #include "template_db.h"
+#include "str.h"
 #include "utils.h"
 
 struct PoolArgs {
     struct input in;
+    refstr_t index_parent; /* actual index is placed at <index parent>/$(basename <src>) */
 
     struct template_db db;
     struct template_db xattr;
@@ -93,6 +95,7 @@ struct PoolArgs {
 
 struct NonDirArgs {
     struct input *in;
+    refstr_t *index_parent;
 
     /* thread args */
     struct template_db *temp_db;
@@ -207,7 +210,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* offset by work->root_len to remove prefix */
-    nda.topath_len = nda.in->nameto.len + 1 + nda.work->name_len - nda.work->root_parent.len;
+    nda.topath_len = pa->index_parent.len + 1 + nda.work->name_len - nda.work->root_parent.len;
 
     /*
      * allocate space for "/db.db" in nda.topath
@@ -218,7 +221,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     nda.topath = malloc(topath_size);
     SNFORMAT_S(nda.topath, topath_size, 4,
-               nda.in->nameto.data, nda.in->nameto.len,
+               pa->index_parent.data, pa->index_parent.len,
                "/", (size_t) 1,
                nda.work->name + nda.work->root_parent.len, nda.work->name_len - nda.work->root_parent.len,
                "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
@@ -341,11 +344,11 @@ static int process_subtree_root(QPTPool_t *ctx, const size_t id, void *data, voi
     struct PoolArgs *pa = (struct PoolArgs *) args;
 
     /* offset by root_parent.len to remove prefix */
-    const size_t topath_len = pa->in.nameto.len + 1 + subtree_root->name_len - subtree_root->root_parent.len;
+    const size_t topath_len = pa->index_parent.len + 1 + subtree_root->name_len - subtree_root->root_parent.len;
 
     char *topath = malloc(topath_len + 1);
     SNFORMAT_S(topath, topath_len + 1, 3,
-               pa->in.nameto.data, pa->in.nameto.len,
+               pa->index_parent.data, pa->index_parent.len,
                "/", (size_t) 1,
                subtree_root->name + subtree_root->root_parent.len, subtree_root->name_len - subtree_root->root_parent.len);
 
@@ -411,15 +414,15 @@ static int process_subtree_root(QPTPool_t *ctx, const size_t id, void *data, voi
  * note that the provided directories go into
  * individual directories underneath this one
  */
-static int setup_dst(const char *nameto) {
+static int setup_dst(const char *index_parent) {
     /* check if the destination path already exists (not an error) */
     struct stat dst_st;
-    if (lstat(nameto, &dst_st) == 0) {
-        fprintf(stderr, "\"%s\" Already exists!\n", nameto);
+    if (lstat(index_parent, &dst_st) == 0) {
+        fprintf(stderr, "\"%s\" Already exists!\n", index_parent);
 
         /* if the destination path is not a directory (error) */
         if (!S_ISDIR(dst_st.st_mode)) {
-            fprintf(stderr, "Destination path is not a directory \"%s\"\n", nameto);
+            fprintf(stderr, "Destination path is not a directory \"%s\"\n", index_parent);
             return -1;
         }
 
@@ -431,15 +434,15 @@ static int setup_dst(const char *nameto) {
     st.st_uid = geteuid();
     st.st_gid = getegid();
 
-    if (dupdir(nameto, &st)) {
-        fprintf(stderr, "Could not create %s\n", nameto);
+    if (dupdir(index_parent, &st)) {
+        fprintf(stderr, "Could not create %s\n", index_parent);
         return -1;
     }
 
     return 0;
 }
 
-static int validate_source(struct input *in, const char *path, struct work **work) {
+static int validate_source(refstr_t *index_parent, const char *path, struct work **work) {
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) != 0) {
@@ -463,7 +466,7 @@ static int validate_source(struct input *in, const char *path, struct work **wor
     char expathout[MAXPATH];
     char expathtst[MAXPATH];
 
-    SNPRINTF(expathtst, MAXPATH,"%s/%s", in->nameto.data, new_work->root_parent.data + new_work->root_parent.len);
+    SNPRINTF(expathtst, MAXPATH,"%s/%s", index_parent->data, new_work->root_parent.data + new_work->root_parent.len);
     realpath(expathtst, expathout);
     realpath(new_work->root_parent.data, expathin);
 
@@ -497,7 +500,7 @@ int main(int argc, char *argv[]) {
 
     /* parse positional args, following the options */
     /* does not have to be canonicalized */
-    INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
+    INSTALL_STR(&pa.index_parent, argv[argc - 1]);
 
     int rc = EXIT_SUCCESS;
 
@@ -510,7 +513,7 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    if (setup_dst(pa.in.nameto.data) != 0) {
+    if (setup_dst(pa.index_parent.data) != 0) {
         rc = EXIT_FAILURE;
         goto cleanup;
     }
@@ -527,7 +530,7 @@ int main(int argc, char *argv[]) {
      * "${dst}/db.db"; index is placed in "${dst}/$(basename ${src}))"
      * so that when querying "${dst}", no error is printed
      */
-    if (create_empty_dbdb(&pa.db, &pa.in.nameto, geteuid(), getegid()) != 0) {
+    if (create_empty_dbdb(&pa.db, &pa.index_parent, geteuid(), getegid()) != 0) {
         rc = EXIT_FAILURE;
         goto free_db;
     }
@@ -548,7 +551,7 @@ int main(int argc, char *argv[]) {
         goto free_xattr;
     }
 
-    fprintf(stderr, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
+    fprintf(stderr, "Creating GUFI Index %s with %zu threads\n", pa.index_parent.data, pa.in.maxthreads);
 
     pa.total_dirs    = calloc(pa.in.maxthreads, sizeof(uint64_t));
     pa.total_nondirs = calloc(pa.in.maxthreads, sizeof(uint64_t));
@@ -569,7 +572,7 @@ int main(int argc, char *argv[]) {
 
         /* get first work item by validating source path */
         struct work *root;
-        if (validate_source(&pa.in, roots[i], &root) != 0) {
+        if (validate_source(&pa.index_parent, roots[i], &root) != 0) {
             continue;
         }
 

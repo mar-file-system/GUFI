@@ -79,6 +79,7 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #include "external.h"
 #include "outfiles.h"
+#include "str.h"
 #include "trace.h"
 #include "trie.h"
 #include "utils.h"
@@ -86,6 +87,8 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
+    refstr_t trace_prefix;
+
     FILE **outfiles;
     pthread_mutex_t *mutex; /* for writing to stdout */
 
@@ -272,7 +275,7 @@ int main(int argc, char *argv[]) {
     process_args_and_maybe_exit(options, 2, "input_dir... output_prefix", &pa.in);
 
     /* parse positional args, following the options */
-    INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
+    INSTALL_STR(&pa.trace_prefix, argv[argc - 1]);
 
     const size_t root_count = argc - idx - 1;
 
@@ -283,7 +286,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    pa.outfiles = outfiles_init(&pa.in.nameto, pa.in.maxthreads);
+    pa.outfiles = outfiles_init(&pa.trace_prefix, pa.in.maxthreads);
     if (!pa.outfiles) {
         input_fini(&pa.in);
         return EXIT_FAILURE;
@@ -299,7 +302,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    fprintf(stderr, "Creating GUFI Traces %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
+    fprintf(stderr, "Creating GUFI Traces %s with %zu threads\n", pa.trace_prefix.data, pa.in.maxthreads);
 
     pthread_mutex_t stdout_mutex = PTHREAD_MUTEX_INITIALIZER;
     pa.mutex = &stdout_mutex;

@@ -72,10 +72,11 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <utime.h>
 
-#include "bf.h"
-#include "utils.h"
-#include "dbutils.h"
 #include "QueuePerThreadPool.h"
+#include "bf.h"
+#include "dbutils.h"
+#include "str.h"
+#include "utils.h"
 
 static int printits(struct input *in, struct work *pwork, struct entry_data *ed, FILE *out) {
   fprintf(out, "%s%c",              pwork->name,               in->delim);
@@ -121,6 +122,7 @@ static int printits(struct input *in, struct work *pwork, struct entry_data *ed,
 
 struct PoolArgs {
     struct input in;
+    refstr_t index;
     struct sum *sums; /* per thread summary data */
 };
 
@@ -230,7 +232,7 @@ static int compute_treesummary(struct PoolArgs *pa) {
 
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, sizeof(dbname), 2,
-               pa->in.name.data, pa->in.name.len,
+               pa->index.data, pa->index.len,
                "/" DBNAME, DBNAME_LEN + 1);
 
     struct stat st;
@@ -239,7 +241,7 @@ static int compute_treesummary(struct PoolArgs *pa) {
     if (!pa->in.dry_run) {
         sqlite3 *tdb = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, create_treesummary_tables, &pa->in);
         if (tdb) {
-            inserttreesumdb(pa->in.name.data, tdb, &sumout, 0, 0, 0);
+            inserttreesumdb(pa->index.data, tdb, &sumout, 0, 0, 0);
         }
         else {
             rc = 1;
@@ -317,7 +319,7 @@ int main(int argc, char *argv[]) {
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 1, "GUFI_tree", &pa.in);
 
-    INSTALL_STR(&pa.in.name, argv[idx++]);
+    INSTALL_STR(&pa.index, argv[idx++]);
 
     /* not an error, but you might want to know ... */
     if (pa.in.dry_run) {
@@ -337,7 +339,7 @@ int main(int argc, char *argv[]) {
         zeroit(&pa.sums[i]);
     }
 
-    struct work *root = new_work_with_name(NULL, 0, pa.in.name.data, pa.in.name.len);
+    struct work *root = new_work_with_name(NULL, 0, pa.index.data, pa.index.len);
     root->name_len = trailing_non_match_index(root->name, root->name_len, "/", 1);
 
     QPTPool_enqueue(pool, 0, processdir, root);

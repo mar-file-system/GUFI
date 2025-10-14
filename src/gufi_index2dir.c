@@ -75,12 +75,16 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "external.h"
+#include "str.h"
 #include "utils.h"
 #include "xattrs.h"
 
 struct PoolArgs {
     struct input in;
-    size_t src_dirname_len;
+    refstr_t index;
+    refstr_t dir;
+
+    size_t index_dirname_len;
 };
 
 static const char SELECT_SUMMARY[] =
@@ -281,9 +285,9 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     // create the destination directory using the source directory
     char topath[MAXPATH];
     const size_t topath_len = SNFORMAT_S(topath, MAXPATH, 3,
-                                         pa->in.nameto.data, pa->in.nameto.len,
+                                         pa->dir.data, pa->dir.len,
                                          "/", (size_t) 1,
-                                         work->name + pa->src_dirname_len, work->name_len - pa->src_dirname_len);
+                                         work->name + pa->index_dirname_len, work->name_len - pa->index_dirname_len);
 
     rc = mkdir(topath, work->statuso.st_mode); /* don't need recursion because parent is guaranteed to exist */
     if (rc < 0) {
@@ -363,9 +367,9 @@ struct work *validate_inputs(struct PoolArgs *pa) {
     char expathout[MAXPATH];
     char expathtst[MAXPATH];
 
-    SNPRINTF(expathtst, MAXPATH, "%s/%s", pa->in.nameto.data, pa->in.name.data);
+    SNPRINTF(expathtst, MAXPATH, "%s/%s", pa->dir.data, pa->index.data);
     realpath(expathtst, expathout);
-    realpath(pa->in.name.data, expathin);
+    realpath(pa->index.data, expathin);
 
     if (!strcmp(expathin, expathout)) {
         fprintf(stderr,"You are putting the tree in the index directory\n");
@@ -373,30 +377,30 @@ struct work *validate_inputs(struct PoolArgs *pa) {
 
     // get input path metadata
     struct stat src_st;
-    if (lstat(pa->in.name.data, &src_st) != 0) {
-        fprintf(stderr, "Could not stat source directory \"%s\"\n", pa->in.name.data);
+    if (lstat(pa->index.data, &src_st) != 0) {
+        fprintf(stderr, "Could not stat source directory \"%s\"\n", pa->index.data);
         return NULL;
     }
 
     // check that the source path is a directory
     if (!S_ISDIR(src_st.st_mode)) {
-        fprintf(stderr, "Source path is not a directory \"%s\"\n", pa->in.name.data);
+        fprintf(stderr, "Source path is not a directory \"%s\"\n", pa->index.data);
         return NULL;
     }
 
-    if (!pa->in.nameto.len) {
+    if (!pa->dir.len) {
         fprintf(stderr, "No output path specified\n");
         return NULL;
     }
 
     // check if the destination path already exists (not an error)
     struct stat dst_st;
-    if (lstat(pa->in.nameto.data, &dst_st) == 0) {
-        fprintf(stderr, "\"%s\" Already exists!\n", pa->in.nameto.data);
+    if (lstat(pa->dir.data, &dst_st) == 0) {
+        fprintf(stderr, "\"%s\" Already exists!\n", pa->dir.data);
 
         // if the destination path is not a directory (error)
         if (!S_ISDIR(dst_st.st_mode)) {
-            fprintf(stderr, "Destination path is not a directory \"%s\"\n", pa->in.nameto.data);
+            fprintf(stderr, "Destination path is not a directory \"%s\"\n", pa->dir.data);
             return NULL;
         }
     }
@@ -406,20 +410,20 @@ struct work *validate_inputs(struct PoolArgs *pa) {
     // this allows for the threads to not have to recursively create directories
     char dst_path[MAXPATH];
     SNFORMAT_S(dst_path, MAXPATH, 3,
-               pa->in.nameto.data, pa->in.nameto.len,
+               pa->dir.data, pa->dir.len,
                "/", (size_t) 1,
-               pa->in.name.data + pa->src_dirname_len, pa->in.name.len - pa->src_dirname_len);
+               pa->index.data + pa->index_dirname_len, pa->index.len - pa->index_dirname_len);
     if (dupdir(dst_path, &src_st)) {
-        fprintf(stderr, "Could not create %s under %s\n", pa->in.name.data, pa->in.nameto.data);
+        fprintf(stderr, "Could not create %s under %s\n", pa->index.data, pa->dir.data);
         return NULL;
     }
 
-    return new_work_with_name(NULL, 0, pa->in.name.data, pa->in.name.len);
+    return new_work_with_name(NULL, 0, pa->index.data, pa->index.len);
 }
 
 void sub_help(void) {
-   printf("input_dir         walk this GUFI index to produce a tree\n");
-   printf("output_dir        reconstruct the tree under here\n");
+   printf("GUFI_tree         walk this GUFI index to produce a tree\n");
+   printf("dir               reconstruct the tree under here\n");
    printf("\n");
 }
 
@@ -428,16 +432,16 @@ int main(int argc, char * argv[]) {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_XATTRS, FLAG_END
     };
     struct PoolArgs pa;
-    process_args_and_maybe_exit(options, 2, "input_dir output_dir", &pa.in);
+    process_args_and_maybe_exit(options, 2, "GUFI_tree dir", &pa.in);
 
-    INSTALL_STR(&pa.in.name,   argv[idx++]);
-    INSTALL_STR(&pa.in.nameto, argv[idx++]);
+    INSTALL_STR(&pa.index, argv[idx++]);
+    INSTALL_STR(&pa.dir,   argv[idx++]);
 
-    pa.in.name.len   = trailing_non_match_index(pa.in.name.data,   pa.in.name.len   - 1, "/", 1) + 1;
-    pa.in.nameto.len = trailing_non_match_index(pa.in.nameto.data, pa.in.nameto.len - 1, "/", 1) + 1;
+    pa.index.len = trailing_non_match_index(pa.index.data, pa.index.len - 1, "/", 1) + 1;
+    pa.dir.len   = trailing_non_match_index(pa.dir.data,   pa.dir.len   - 1, "/", 1) + 1;
 
-    pa.src_dirname_len = dirname_len(pa.in.name.data,
-                                     pa.in.name.len - (pa.in.name.data[pa.in.name.len - 1] == '/'));
+    pa.index_dirname_len = dirname_len(pa.index.data,
+                                       pa.index.len - (pa.index.data[pa.index.len - 1] == '/'));
 
     // get first work item by validating inputs
     struct work *root = validate_inputs(&pa);

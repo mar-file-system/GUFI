@@ -1,6 +1,6 @@
 # gufi_index2dir help
 $ gufi_index2dir
-usage: gufi_index2dir [options] input_dir output_dir
+usage: gufi_index2dir [options] GUFI_tree dir
 options:
   -h, --help                        help
   -H, --debug                       show assigned input values (debugging)
@@ -8,8 +8,8 @@ options:
   -n, --threads <threads>           number of threads
   -x, --xattrs                      index/query xattrs
 
-input_dir         walk this GUFI index to produce a tree
-output_dir        reconstruct the tree under here
+GUFI_tree         walk this GUFI index to produce a tree
+dir               reconstruct the tree under here
 
 
 $ gufi_index2dir -n 2 -x "prefix" "reconstructed"

@@ -211,8 +211,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
 
         EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);
         EXPECT_EQ(in->delim,                          fielddelim);
-        EXPECT_EQ(in->nameto,                         empty);
-        EXPECT_EQ(in->name,                           empty);
         EXPECT_EQ(in->output,                         STDOUT);
         EXPECT_EQ(in->outname,                        empty);
         EXPECT_EQ(in->sql.init,                       empty);
