@@ -112,7 +112,7 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"
 echo "# generate the index"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\""
 
-echo "# every database should have the same schema"
+echo "# every database should have the same schema except at the top"
 find "${SEARCH}" -type f -print0 | sort -z | while IFS= read -r -d '' path
 do
     echo "${path}"

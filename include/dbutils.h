@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 
 #include "SinglyLinkedList.h"
 #include "addqueryfuncs.h"
+#include "str.h"
 #include "template_db.h"
 #include "utils.h"
 #include "xattrs.h"
@@ -91,6 +92,23 @@ extern "C" {
 
 #define DROP_TABLE(name) "DROP TABLE IF EXISTS " name ";"
 #define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " name ";"
+
+/* information stored at common index parent */
+#define TOP_INFO "info"
+#define TOP_INFO_SCHEMA(name)                           \
+    "CREATE TABLE IF NOT EXISTS " name "("              \
+    "id INTEGER PRIMARY KEY, "                          \
+    "start INT64, " /* indexing start time */           \
+    "end INT64, "   /* indexing end time */             \
+                                                        \
+    /* optional */                                      \
+                                                        \
+    "name TEXT, "   /* subdirectory in index */         \
+    "orig TEXT, "   /* original path */                 \
+    "notes TEXT"    /* user notes */                    \
+    ");"
+extern const char TOP_INFO_CREATE[];
+extern const char TOP_INFO_INSERT[];
 
 #define READDIRPLUS      "readdirplus"
 #define READDIRPLUS_SCHEMA(name)                    \
@@ -355,6 +373,12 @@ int sqlite3_runvt_init(
     const sqlite3_api_routines *pApi);
 
 /* ******************************************************************* */
+
+/* insert information into the db.db at the top of the index */
+void insert_top_info(const refstr_t *top,
+                     const time_t start, const time_t end,
+                     int count, char **index_paths, char **origs,
+                     const refstr_t *notes);
 
 #ifdef __cplusplus
 }
