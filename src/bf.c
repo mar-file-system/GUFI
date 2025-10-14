@@ -235,6 +235,7 @@ void print_help(const char* prog_name,
             case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
             case FLAG_ROLLUP_LIMIT_SHORT:            printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
             case FLAG_DONT_REPROCESS_SHORT:          printf("      --dont-reprocess              if a directory was previously processed, skip descending the subtree"); break;
+            case FLAG_TOP_NOTES_SHORT:               printf("      --notes <text>                human readable text to attach to information recorded about this run"); break;
 
             /* memory usage flags */
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:      printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
@@ -308,6 +309,7 @@ void show_input(struct input* in, int retval) {
     printf("in.terse                    = %d\n",            in->terse);
     printf("in.rollup_entries_limit     = %zu\n",           in->rollup_entries_limit);
     printf("in.dont_reprocess           = %d\n",            in->dont_reprocess);
+    printf("in.top_notes                = '%s'\n",          in->top_notes.data);
 
     /* memory usage flags */
 
@@ -601,6 +603,10 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_DONT_REPROCESS_SHORT:
                 in->dont_reprocess = 1;
+                break;
+
+            case FLAG_TOP_NOTES_SHORT:
+                INSTALL_STR(&in->top_notes, optarg);
                 break;
 
             /* memory usage flags */

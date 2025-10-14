@@ -221,6 +221,10 @@ extern "C" {
 #define FLAG_DONT_REPROCESS_LONG "dont-reprocess"
 #define FLAG_DONT_REPROCESS {FLAG_DONT_REPROCESS_LONG, no_argument, NULL, FLAG_DONT_REPROCESS_SHORT}
 
+#define FLAG_TOP_NOTES_SHORT (FLAG_GROUP_MISC + 12)
+#define FLAG_TOP_NOTES_LONG "notes"
+#define FLAG_TOP_NOTES {FLAG_TOP_NOTES_LONG, required_argument, NULL, FLAG_TOP_NOTES_SHORT}
+
 /* memory utilization flags */
 
 #define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
@@ -505,6 +509,9 @@ struct input {
 
     /* only used by parallel_find */
     int filter_types;
+
+    /* text to attach to information about indexing run */
+    refstr_t top_notes;
 };
 
 struct input *input_init(struct input *in);

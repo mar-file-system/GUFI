@@ -78,6 +78,13 @@ OF SUCH DAMAGE.
 #include "histogram.h"
 #include "trie.h"
 
+const char TOP_INFO_CREATE[] =
+    /* do not drop old data */
+    TOP_INFO_SCHEMA(TOP_INFO);
+
+const char TOP_INFO_INSERT[] =
+    "INSERT INTO " TOP_INFO " VALUES (NULL, @start, @end, @name, @orig, @notes);";
+
 const char READDIRPLUS_CREATE[] =
     DROP_TABLE(READDIRPLUS)
     READDIRPLUS_SCHEMA(READDIRPLUS);
@@ -1535,4 +1542,70 @@ int get_permissions_callback(void *args, int count, char **data, char **columns)
         (sscanf(data[1], "%" STAT_uid,  &perms->uid)  == 1) &&
         (sscanf(data[2], "%" STAT_gid,  &perms->gid)  == 1)
     );
+}
+
+static int create_top_info_table(const char *name, sqlite3 *db, void *args) {
+    (void) args;
+    return (create_table_wrapper(name, db, TOP_INFO, TOP_INFO_CREATE) != SQLITE_OK);
+}
+
+void insert_top_info(const refstr_t *top,
+                     const time_t start, const time_t end,
+                     int count, char **index_paths, char **origs,
+                     const refstr_t *notes) {
+    char top_dbname[MAXPATH];
+    SNFORMAT_S(top_dbname, sizeof(top_dbname), 3,
+               top->data, top->len,
+               "/", (size_t) 1,
+               DBNAME, DBNAME_LEN);
+
+
+    sqlite3 *db = opendb(top_dbname, SQLITE_OPEN_READWRITE, 1, 0, create_top_info_table, NULL);
+    if (!db) {
+        return;
+    }
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(db, TOP_INFO_INSERT, -1, &stmt, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Error: Could not prepare top info insert statement: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    int rc = 0;
+    for(int i = 0; i < count; i++) {
+        sqlite3_bind_int64(stmt, 1, start);
+        sqlite3_bind_int64(stmt, 2, end);
+
+        if (index_paths && index_paths[i]) {
+            sqlite3_bind_text(stmt, 3, index_paths[i], -1, SQLITE_STATIC);
+        }
+
+        if (origs && origs[i]) {
+            sqlite3_bind_text(stmt, 4, origs[i], -1, SQLITE_STATIC);
+        }
+
+        if (notes && notes->data && notes->len) {
+            sqlite3_bind_text(stmt, 5, notes->data, notes->len, SQLITE_STATIC);
+        }
+
+        int err = sqlite3_step(stmt);
+        if (err != SQLITE_DONE) {
+            sqlite_print_err_and_free(NULL, stderr, "insert top info step: error %d err %s\n",
+                                      err, sqlite3_errstr(err));
+            rc = 1;
+        }
+
+        err = sqlite3_reset(stmt);
+        if (err != SQLITE_OK) {
+            sqlite_print_err_and_free(NULL, stderr, "insert top info reset: error %d err %s\n",
+                                      err, sqlite3_errstr(err));
+            rc = 1;
+        }
+    }
+
+    closedb(db);
+
+    if (rc) {
+        fprintf(stderr, "Warning: Could not insert information at top of index\n");
+    }
 }

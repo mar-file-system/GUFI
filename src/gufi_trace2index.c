@@ -256,6 +256,74 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return !db;
 }
 
+/* since the original paths were not stored, need to find indexes created by this run and insert them into the top db.db */
+static void find_created(const refstr_t *top, const time_t start, const time_t end, const refstr_t *notes) {
+    DIR *dir = opendir(top->data);
+    if (!dir) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not open top directory \"%s\": %s (%d)\n",
+                top->data, strerror(err), err);
+        return;
+    }
+
+    /* get total number of items in this directory */
+    size_t tot_entries = 0;
+    while (readdir(dir)) {
+        tot_entries++;
+    }
+
+    rewinddir(dir);
+
+    char **index_paths = calloc(tot_entries, sizeof(char *)); /* overallocate */
+    size_t count = 0; /* actual count */
+
+    struct dirent *entry = NULL;
+    while ((entry = readdir(dir))) {
+        const size_t len = strlen(entry->d_name);
+
+        if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
+            ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0)) ||
+            ((len == DBNAME_LEN) && (strncmp(entry->d_name, DBNAME, DBNAME_LEN) == 0))) {
+            continue;
+        }
+
+        char path[MAXPATH];
+        SNFORMAT_S(path, sizeof(path), 3,
+                   top->data, top->len,
+                   "/", (size_t) 1,
+                   entry->d_name, len);
+
+        struct stat st;
+        if (lstat(path, &st) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Unable to stat \"%s\" to determine if it is a new index: %s (%d)\n",
+                    path, strerror(err), err);
+            continue;
+        }
+
+        if (!S_ISDIR(st.st_mode)) {
+            continue;
+        }
+
+        /* this directory was probably created by this run */
+        if (((start <= st.st_mtime) && (st.st_mtime <= end)) ||
+            ((start <= st.st_ctime) && (st.st_ctime <= end))) {
+            index_paths[count] = calloc(len + 1, sizeof(char));
+            memcpy(index_paths[count], entry->d_name, len);
+            count++;
+        }
+    }
+
+    closedir(dir);
+
+    insert_top_info(top, start, end, count, index_paths, NULL, notes);
+
+    for(size_t i = 0; i < count; i++) {
+        free(index_paths[i]);
+    }
+    free(index_paths);
+}
+
 static void sub_help(void) {
    printf("trace_file...     parse one or more trace files to produce the GUFI tree\n");
    printf("output_dir        build GUFI tree here\n");
@@ -263,16 +331,14 @@ static void sub_help(void) {
 }
 
 int main(int argc, char *argv[]) {
-    /* have to call clock_gettime explicitly to get start time and epoch */
-    struct start_end main_func;
-    clock_gettime(CLOCK_MONOTONIC, &main_func.start);
-    epoch = since_epoch(&main_func.start);
-
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
         /* input flags */
         FLAG_DELIM,
+
+        /* miscellaneous flags */
+        FLAG_TOP_NOTES,
 
         /* memory usage flags  */
         FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX,
@@ -346,6 +412,11 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.index_parent.data, pa.in.maxthreads);
     fflush(stdout);
 
+    struct start_end after_init;
+    clock_gettime(CLOCK_MONOTONIC, &after_init.start);
+
+    const time_t start = time(NULL); /* time since epoch */
+
     /* parse the trace files and enqueue work */
     struct TraceStats stats = {0};
     stats.mutex = &print_mutex; /* debug.h */
@@ -377,11 +448,15 @@ int main(int argc, char *argv[]) {
 
     QPTPool_stop(pool);
 
-    clock_gettime(CLOCK_MONOTONIC, &main_func.end);
-    const long double processtime = sec(nsec(&main_func));
+    const time_t end = time(NULL); /* time since epoch */
+
+    clock_gettime(CLOCK_MONOTONIC, &after_init.end);
+    const long double processtime = sec(nsec(&after_init));
 
     /* don't count as part of processtime */
     QPTPool_destroy(pool);
+
+    find_created(&pa.index_parent, start, end, &pa.in.top_notes);
 
     /* set top level permissions */
     chmod(pa.index_parent.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

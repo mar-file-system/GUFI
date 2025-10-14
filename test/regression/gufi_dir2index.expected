@@ -13,6 +13,7 @@ options:
       --skip-file <filename>        file containing directory names to skip
   -q                                check that external databases are valid before tracking during indexing
       --plugin <library_name>       plugin library for modifying db entries
+      --notes <text>                human readable text to attach to information recorded about this run
       --target-memory <bytes>       target memory utilization (soft limit)
       --swap-prefix <path>          File name prefix for swap files
       --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially

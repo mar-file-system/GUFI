@@ -7,6 +7,7 @@ options:
   -v, --version                     version
   -n, --threads <threads>           number of threads
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
+      --notes <text>                human readable text to attach to information recorded about this run
       --target-memory <bytes>       target memory utilization (soft limit)
       --swap-prefix <path>          File name prefix for swap files
 
@@ -33,14 +34,14 @@ Total:               20
 Total Dirs:          6
 Total Files:         14
 
-# every database should have the same schema
+# every database should have the same schema except at the top
 search/db.db
-entries              summary              vsummarygroup      
-external_dbs         summarylong          vsummaryuser       
-external_dbs_pwd     vrpentries           xattrs_avail       
-external_dbs_rollup  vrsummary            xattrs_pwd         
+entries              pentries_rollup      vsummarydir        
+external_dbs         summary              vsummarygroup      
+external_dbs_pwd     summarylong          vsummaryuser       
+external_dbs_rollup  vrpentries           xattrs_avail       
+info                 vrsummary            xattrs_pwd         
 pentries             vrsummarylong        xattrs_rollup      
-pentries_rollup      vsummarydir        
 
 search/prefix/db.db
 entries              summary              vsummarygroup      

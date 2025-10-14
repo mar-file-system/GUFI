@@ -494,7 +494,7 @@ int main(int argc, char *argv[]) {
         FLAG_INDEX_XATTRS, FLAG_SKIP_FILE,
 
         /* miscellaneous flags */
-        FLAG_CHECK_EXTDB_VALID, FLAG_PLUGIN,
+        FLAG_CHECK_EXTDB_VALID, FLAG_PLUGIN, FLAG_TOP_NOTES,
 
         /* memory usage flags */
         FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX, FLAG_SUBDIR_LIMIT,
@@ -569,6 +569,8 @@ int main(int argc, char *argv[]) {
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
 
+    const time_t start = time(NULL); /* time since epoch */
+
     char **roots = calloc(root_count, sizeof(char *));
     for(size_t i = 0; idx < (argc - 1);) {
         /* force all input paths to be canonical */
@@ -604,12 +606,16 @@ int main(int argc, char *argv[]) {
     }
     QPTPool_stop(pool);
 
+    const time_t end = time(NULL); /* time since epoch */
+
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     const long double processtime = sec(nsec(&after_init));
 
     /* don't count as part of processtime */
 
     QPTPool_destroy(pool);
+
+    insert_top_info(&pa.index_parent, start, end, root_count, &argv[argc - root_count - 1], roots, &pa.in.top_notes);
 
     for(size_t i = 0; i < root_count; i++) {
         free(roots[i]);
