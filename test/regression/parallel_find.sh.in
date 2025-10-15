@@ -124,13 +124,13 @@ echo "# get links and files"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -t lf \"${SRCDIR}\""
 
 echo "# remove starting path with newline"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"%P\\n\" \"${SRCDIR}\""
+run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%P\\n\" \"${SRCDIR}\""
 
 echo "# print escape characters"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"[\\t\\]\\r\\n\" \"${SRCDIR}\" | head -n 1"
+run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"[\\t\\]\\r\\n\" \"${SRCDIR}\" | head -n 1"
 
 echo "# print non-format characters"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"Path: %p\\n\" \"${SRCDIR}\""
+run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"Path: %p\\n\" \"${SRCDIR}\""
 
 echo "# level higher than the level of the tree"
 run_sort "${PARALLEL_FIND} -n ${THREADS} --min-level 10 \"${SRCDIR}\""
@@ -142,7 +142,7 @@ echo "# multiple starting paths"
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/directory/\" \"${SRCDIR}/directory/subdirectory\""
 
 echo "# keep full path with newline"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -f \"%p\\n\" \"${SRCDIR}\""
+run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%p\\n\" \"${SRCDIR}\""
 
 echo "# write to output files"
 run_no_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTFILE_PREFIX}\" \"${SRCDIR}\""
@@ -153,7 +153,7 @@ echo "# write to same output files"
 run_no_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTFILE_PREFIX}\" \"${SRCDIR}\""
 
 echo "# small output buffer"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -B 16 \"${SRCDIR}\""
+run_sort "${PARALLEL_FIND} -n ${THREADS} --output-buffer-size 16 \"${SRCDIR}\""
 
 # errors
 
@@ -170,13 +170,13 @@ echo "# mix of supported and unsupported types"
 run_no_sort "${PARALLEL_FIND} -n ${THREADS} -t lfs \"${SRCDIR}\" > /dev/null"
 
 echo "# unknown escape character"
-run_no_sort "${PARALLEL_FIND} -n ${THREADS} -f \"\\d\\n\" \"${SRCDIR}\" | head -n 1"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} --format \"\\d\\n\" \"${SRCDIR}\" | head -n 1"
 
 echo "# unknown format specifier"
-run_no_sort "${PARALLEL_FIND} -n ${THREADS} -f \"%Q\\n\" \"${SRCDIR}\" | head -n 1"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%Q\\n\" \"${SRCDIR}\" | head -n 1"
 
 echo "# bad format"
-run_no_sort "${PARALLEL_FIND} -n ${THREADS} -f \"%\" \"${SRCDIR}\" 2>&1 | head -n 1"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%\" \"${SRCDIR}\" 2>&1 | head -n 1"
 
 echo "# bad output file (missing parent directories)"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${PARENT}/non/existant/path/${OUTFILE_PREFIX}\" \"${SRCDIR}\"" | @SED@ "s%${PARENT}/%%g"
@@ -186,7 +186,7 @@ mkdir "${OUTPUTDIR}"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTPUTDIR_PREFIX}\" \"${SRCDIR}\""
 
 echo "# bad output buffer size"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -B 18446744073709551615 \"${SRCDIR}\""
+run_sort "${PARALLEL_FIND} -n ${THREADS} --output-buffer-size 18446744073709551615 \"${SRCDIR}\""
 
 echo "# bad thread count"
 run_no_sort "${PARALLEL_FIND} -n 18446744073709551615 \"${SRCDIR}\""

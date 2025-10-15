@@ -248,9 +248,9 @@ def run(argv, config_path):
         # create the query command
         query_cmd = [
             config.query,
-            '-n', str(config.threads),
-            '-B', str(config.outputbuffer),
-            '-d', args.delim
+            '--threads', str(config.threads),
+            '--output-buffer-size', str(config.outputbuffer),
+            '--delim', args.delim
         ] + getfattr(args, config.indexroot, dirname, nondir)
 
         if args.verbose:

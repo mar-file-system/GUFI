@@ -12,9 +12,9 @@ prefix/unusual#? directory , 2
 $ gufi_stats --verbose depth "prefix"
 GUFI query is
    gufi_query \
-    -n 1 \
-    -B 4096 \
-    -d ' ' \
+    --threads 1 \
+    --output-buffer-size 4096 \
+    --delim ' ' \
     -I 'CREATE TABLE out(name TEXT)' \
     -S 'INSERT INTO out SELECT substr(rpath(sname, sroll), 8) FROM vrsummary ' \
     -J 'INSERT INTO aggregate SELECT * FROM out ' \

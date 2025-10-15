@@ -264,7 +264,7 @@ static void sub_help(void) {
 int main(int argc, char *argv[]) {
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_XATTRS, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
-        FLAG_DELIM, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY_FOOTPRINT, FLAG_SWAP_PREFIX, FLAG_SUBDIR_LIMIT,
+        FLAG_DELIM, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX, FLAG_SUBDIR_LIMIT,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -292,7 +292,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    const uint64_t queue_limit = get_queue_limit(pa.in.target_memory_footprint, pa.in.maxthreads);
+    const uint64_t queue_limit = get_queue_limit(pa.in.target_memory, pa.in.maxthreads);
     QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2);
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");

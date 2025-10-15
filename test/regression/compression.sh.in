@@ -83,22 +83,22 @@ trap cleanup_exit EXIT
 cleanup
 
 remove_e() {
-    @SED@ 's%-e%  %g;'
+    @SED@ 's%--compress%          %g;'
 }
 
-# calling gufi_query with and without -e should result in the same output
+# calling gufi_query with and without --compress should result in the same output
 compare_output() {
     INDEX="$1"
-    ORIG=$(run_sort "\"${GUFI_QUERY}\" -d \" \"    -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
-    COMP=$(run_sort "\"${GUFI_QUERY}\" -d \" \" -e -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
+    ORIG=$(run_sort "\"${GUFI_QUERY}\" -d \" \"            -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
+    COMP=$(run_sort "\"${GUFI_QUERY}\" -d \" \" --compress -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
     run_no_sort "@DIFF@ <(echo '${ORIG}') <(echo '${COMP}' | remove_e)"
 }
 
 (
     # generate with compression
-    run_no_sort "\"${GUFI_DIR2INDEX}\"   -x -e \"${SRCDIR}\" \"${D2I}\""
-    run_no_sort "\"${GUFI_DIR2TRACE}\"   -x -e \"${SRCDIR}\" \"${TRACE}\""
-    run_no_sort "\"${GUFI_TRACE2INDEX}\"       \"${TRACE}.0\" \"${T2I}\""
+    run_no_sort "\"${GUFI_DIR2INDEX}\"   -x --compress \"${SRCDIR}\" \"${D2I}\""
+    run_no_sort "\"${GUFI_DIR2TRACE}\"   -x --compress \"${SRCDIR}\" \"${TRACE}\""
+    run_no_sort "\"${GUFI_TRACE2INDEX}\"               \"${TRACE}.0\" \"${T2I}\""
 
     clean_index "${D2I}/${BASENAME}" 1
     clean_index "${T2I}/${BASENAME}" 1

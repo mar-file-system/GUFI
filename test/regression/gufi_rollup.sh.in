@@ -156,7 +156,7 @@ rm -r "${SEARCH}"
     -S "UPDATE summary SET uid = 0, gid = 0, minuid = 0, maxuid = 0, mingid = 0, maxgid = 0;" \
     -E "UPDATE entries SET uid = 0, gid = 0;" \
     "${SEARCH}"
-"${GUFI_ROLLUP}" -L 3 "${SEARCH}"
+"${GUFI_ROLLUP}" --limit 3 "${SEARCH}"
 do_tests
 
 rm -rf "${SEARCH}"
@@ -165,7 +165,7 @@ rm -rf "${SEARCH}"
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}" 2>&1
 
 echo "# Partial Rollup up to level 1"
-run_no_sort "${GUFI_ROLLUP} --min-level 1 -D \"${PATH_LIST}\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_ROLLUP} --min-level 1 --subtree-list \"${PATH_LIST}\" \"${INDEXROOT}\""
 
 echo "# Check which directories have been rolled up"
 run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""

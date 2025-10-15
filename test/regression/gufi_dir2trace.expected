@@ -11,12 +11,12 @@ options:
       --max-level <max level>       maximum level to go down
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
       --skip-file <filename>        file containing directory names to skip
-  -M <bytes>                        target memory footprint
-  -s, --swap-prefix <path>          File name prefix for swap files
-  -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
-  -e                                compress work items
+      --target-memory  <bytes>      target memory utilization (soft limit)
+      --swap-prefix <path>          File name prefix for swap files
+      --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
+      --compress                    compress work items
   -q                                check that external databases are valid before tracking during indexing
-  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level
+      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
 
 input_dir...         walk one or more trees to produce trace file
 output_prefix        prefix of output files (<prefix>.<tid>)
@@ -100,7 +100,7 @@ $ cat "distributed.0"
 directory
 empty_directory
 
-$ gufi_dir2trace -d "|" -n 2 -D "distributed.0" --min-level 1 "prefix" "trace"
+$ gufi_dir2trace -d "|" -n 2 --subtree-list "distributed.0" --min-level 1 "prefix" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
@@ -125,7 +125,7 @@ $ cat "distributed.1"
 leaf_directory
 unusual#? directory ,
 
-$ gufi_dir2trace -d "|" -n 2 -D "distributed.1" --min-level 1 "prefix" "trace"
+$ gufi_dir2trace -d "|" -n 2 --subtree-list "distributed.1" --min-level 1 "prefix" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
@@ -143,12 +143,12 @@ prefix/unusual#? directory ,/unusual, name?#
 
 # ######################################
 # combine partial indexing
-$ gufi_dir2trace -d "|" -n 2 -D "distributed.0" --min-level 1 "prefix" "first"
+$ gufi_dir2trace -d "|" -n 2 --subtree-list "distributed.0" --min-level 1 "prefix" "first"
 Creating GUFI Traces first with 2 threads
 Total Dirs:          3
 Total Files:         5
 
-$ gufi_dir2trace -d "|" -n 2 -D "distributed.1" --min-level 1 "prefix" "second"
+$ gufi_dir2trace -d "|" -n 2 --subtree-list "distributed.1" --min-level 1 "prefix" "second"
 Creating GUFI Traces second with 2 threads
 Total Dirs:          2
 Total Files:         3
@@ -264,6 +264,6 @@ $ gufi_dir2trace -n 18446744073709551615 "prefix" "trace"
 Could not allocate space for 18446744073709551615 files
 
 # multiple input directories are not allowed for partial indexing
-$ gufi_dir2trace -n 2 -D "distributed.1" --min-level 1 "prefix" "prefix" "trace"
+$ gufi_dir2trace -n 2 --subtree-list "distributed.1" --min-level 1 "prefix" "prefix" "trace"
 Error: When -D is passed in, only one source directory may be specified
 

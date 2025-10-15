@@ -178,33 +178,9 @@ extern "C" {
 #define FLAG_SQL_AGG_SHORT 'G'
 #define FLAG_SQL_AGG {"", required_argument, NULL, FLAG_SQL_AGG_SHORT}
 
-#define FLAG_BUFFER_SIZE_SHORT 'B'
-#define FLAG_BUFFER_SIZE_LONG "buffer-size"
-#define FLAG_BUFFER_SIZE {FLAG_BUFFER_SIZE_LONG, required_argument, NULL, FLAG_BUFFER_SIZE_SHORT}
-
 #define FLAG_READ_WRITE_SHORT 'w'
 #define FLAG_READ_WRITE_LONG "read-write"
 #define FLAG_READ_WRITE {FLAG_READ_WRITE_LONG, no_argument, NULL, FLAG_READ_WRITE_SHORT}
-
-#define FLAG_FORMAT_SHORT 'f'
-#define FLAG_FORMAT_LONG "format"
-#define FLAG_FORMAT {FLAG_FORMAT_LONG, required_argument, NULL, FLAG_FORMAT_SHORT}
-
-#define FLAG_TERSE_FORMAT_SHORT 'j'
-#define FLAG_TERSE_FORMAT_LONG "terse-format"
-#define FLAG_TERSE_FORMAT {FLAG_TERSE_FORMAT_LONG, no_argument, NULL, FLAG_TERSE_FORMAT_SHORT}
-
-#define FLAG_MAX_IN_DIR_SHORT 'L'
-#define FLAG_MAX_IN_DIR {"", required_argument, NULL, FLAG_MAX_IN_DIR_SHORT}
-
-#define FLAG_TARGET_MEMORY_FOOTPRINT_SHORT 'M'
-#define FLAG_TARGET_MEMORY_FOOTPRINT {"", required_argument, NULL, FLAG_TARGET_MEMORY_FOOTPRINT_SHORT}
-
-#define FLAG_SUBDIR_LIMIT_SHORT 'C'
-#define FLAG_SUBDIR_LIMIT {"", required_argument, NULL, FLAG_SUBDIR_LIMIT_SHORT}
-
-#define FLAG_COMPRESS_SHORT 'e'
-#define FLAG_COMPRESS {"", no_argument, NULL, FLAG_COMPRESS_SHORT}
 
 #define FLAG_CHECK_EXTDB_VALID_SHORT 'q'
 #define FLAG_CHECK_EXTDB_VALID {"", no_argument, NULL, FLAG_CHECK_EXTDB_VALID_SHORT}
@@ -212,16 +188,9 @@ extern "C" {
 #define FLAG_EXTERNAL_ATTACH_SHORT 'Q'
 #define FLAG_EXTERNAL_ATTACH {"", required_argument, NULL, FLAG_EXTERNAL_ATTACH_SHORT}
 
-#define FLAG_SWAP_PREFIX_SHORT 's'
-#define FLAG_SWAP_PREFIX_LONG "swap-prefix"
-#define FLAG_SWAP_PREFIX {FLAG_SWAP_PREFIX_LONG, required_argument, NULL, FLAG_SWAP_PREFIX_SHORT}
-
 #define FLAG_PATH_SHORT 'p'
 #define FLAG_PATH_LONG "path"
 #define FLAG_PATH {FLAG_PATH_LONG, required_argument, NULL, FLAG_PATH_SHORT}
-
-#define FLAG_SUBTREE_LIST_SHORT 'D'
-#define FLAG_SUBTREE_LIST {"", required_argument, NULL, FLAG_SUBTREE_LIST_SHORT}
 
 #define FLAG_ALREADY_PROCESSED_SHORT 'l'
 #define FLAG_ALREADY_PROCESSED {"", no_argument, NULL, FLAG_ALREADY_PROCESSED_SHORT}
@@ -230,34 +199,80 @@ extern "C" {
 #define FLAG_FILTER_TYPE_LONG "filter-type"
 #define FLAG_FILTER_TYPE {FLAG_FILTER_TYPE_LONG, required_argument, NULL, FLAG_FILTER_TYPE_SHORT}
 
-#define FLAG_MIN_LEVEL_SHORT 1000
+/* no typable short flags */
+
+#define FLAG_GROUP_MISC 1000
+#define FLAG_GROUP_MEM  2000
+
+/* miscellaneous flags */
+
+#define FLAG_MIN_LEVEL_SHORT (FLAG_GROUP_MISC + 0)
 #define FLAG_MIN_LEVEL_LONG "min-level"
 #define FLAG_MIN_LEVEL {FLAG_MIN_LEVEL_LONG, required_argument, NULL, FLAG_MIN_LEVEL_SHORT}
 
-#define FLAG_MAX_LEVEL_SHORT 1001
+#define FLAG_MAX_LEVEL_SHORT (FLAG_GROUP_MISC + 1)
 #define FLAG_MAX_LEVEL_LONG "max-level"
 #define FLAG_MAX_LEVEL {FLAG_MAX_LEVEL_LONG, required_argument, NULL, FLAG_MAX_LEVEL_SHORT}
 
-#define FLAG_PRINT_TLV_SHORT 1002
+#define FLAG_PRINT_TLV_SHORT (FLAG_GROUP_MISC + 2)
 #define FLAG_PRINT_TLV_LONG "print-tlv"
 #define FLAG_PRINT_TLV {FLAG_PRINT_TLV_LONG, no_argument, NULL, FLAG_PRINT_TLV_SHORT}
 
-#define FLAG_KEEP_MATIME_SHORT 1003
+#define FLAG_KEEP_MATIME_SHORT (FLAG_GROUP_MISC + 3)
 #define FLAG_KEEP_MATIME_LONG "keep-matime"
 #define FLAG_KEEP_MATIME {FLAG_KEEP_MATIME_LONG, no_argument, NULL, FLAG_KEEP_MATIME_SHORT}
 
-#define FLAG_SKIP_FILE_SHORT 1004
+#define FLAG_SKIP_FILE_SHORT (FLAG_GROUP_MISC + 4)
 #define FLAG_SKIP_FILE_LONG "skip-file"
 #define FLAG_SKIP_FILE {FLAG_SKIP_FILE_LONG, required_argument, NULL, FLAG_SKIP_FILE_SHORT}
 
-#define FLAG_DRY_RUN_SHORT 1005
+#define FLAG_DRY_RUN_SHORT (FLAG_GROUP_MISC + 5)
 #define FLAG_DRY_RUN_LONG "dry-run"
 #define FLAG_DRY_RUN {FLAG_DRY_RUN_LONG, no_argument, NULL, FLAG_DRY_RUN_SHORT}
 
-#define FLAG_PLUGIN_SHORT 1006
+#define FLAG_PLUGIN_SHORT (FLAG_GROUP_MISC + 6)
 #define FLAG_PLUGIN_LONG "plugin"
 #define FLAG_PLUGIN {FLAG_PLUGIN_LONG, required_argument, NULL, FLAG_PLUGIN_SHORT}
 
+#define FLAG_SUBTREE_LIST_SHORT (FLAG_GROUP_MISC + 7)
+#define FLAG_SUBTREE_LIST_LONG "subtree-list"
+#define FLAG_SUBTREE_LIST {FLAG_SUBTREE_LIST_LONG, required_argument, NULL, FLAG_SUBTREE_LIST_SHORT}
+
+#define FLAG_FORMAT_SHORT (FLAG_GROUP_MISC + 8)
+#define FLAG_FORMAT_LONG "format"
+#define FLAG_FORMAT {FLAG_FORMAT_LONG, required_argument, NULL, FLAG_FORMAT_SHORT}
+
+#define FLAG_TERSE_SHORT (FLAG_GROUP_MISC + 9)
+#define FLAG_TERSE_LONG "terse"
+#define FLAG_TERSE {FLAG_TERSE_LONG, no_argument, NULL, FLAG_TERSE_SHORT}
+
+#define FLAG_ROLLUP_LIMIT_SHORT (FLAG_GROUP_MISC + 10)
+#define FLAG_ROLLUP_LIMIT_LONG "limit"
+#define FLAG_ROLLUP_LIMIT {FLAG_ROLLUP_LIMIT_LONG, required_argument, NULL, FLAG_ROLLUP_LIMIT_SHORT}
+
+/* memory utilization flags */
+
+#define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
+#define FLAG_OUTPUT_BUFFER_SIZE_LONG "output-buffer-size"
+#define FLAG_OUTPUT_BUFFER_SIZE {FLAG_OUTPUT_BUFFER_SIZE_LONG, required_argument, NULL, FLAG_OUTPUT_BUFFER_SIZE_SHORT}
+
+#define FLAG_TARGET_MEMORY_SHORT (FLAG_GROUP_MEM + 1)
+#define FLAG_TARGET_MEMORY_LONG "target-memory"
+#define FLAG_TARGET_MEMORY {FLAG_TARGET_MEMORY_LONG, required_argument, NULL, FLAG_TARGET_MEMORY_SHORT}
+
+#define FLAG_SUBDIR_LIMIT_SHORT (FLAG_GROUP_MEM + 2)
+#define FLAG_SUBDIR_LIMIT_LONG "subdir-limit"
+#define FLAG_SUBDIR_LIMIT {FLAG_SUBDIR_LIMIT_LONG, required_argument, NULL, FLAG_SUBDIR_LIMIT_SHORT}
+
+#define FLAG_COMPRESS_SHORT (FLAG_GROUP_MEM + 3)
+#define FLAG_COMPRESS_LONG "compress"
+#define FLAG_COMPRESS {FLAG_COMPRESS_LONG, no_argument, NULL, FLAG_COMPRESS_SHORT}
+
+#define FLAG_SWAP_PREFIX_SHORT (FLAG_GROUP_MEM + 4)
+#define FLAG_SWAP_PREFIX_LONG "swap-prefix"
+#define FLAG_SWAP_PREFIX {FLAG_SWAP_PREFIX_LONG, required_argument, NULL, FLAG_SWAP_PREFIX_SHORT}
+
+/* required at the end of every flag list */
 #define FLAG_END {NULL, 0, NULL, 0}
 
 struct sum {
@@ -428,14 +443,14 @@ struct input {
     refstr_t format;
 
     /* only used by rollup */
-    size_t max_in_dir;
+    size_t rollup_limit;
 
     /* trie containing directory basenames to skip during tree traversal */
     trie_t *skip;
     size_t skip_count;
 
-    /* attempt to drain QPTPool work items until this memory footprint is reached */
-    uint64_t target_memory_footprint;
+    /* attempt to drain QPTPool work items until this memory usage is reached */
+    uint64_t target_memory;
 
     /*
      * If a directory has more than this many subdirectories,

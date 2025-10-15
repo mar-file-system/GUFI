@@ -5,9 +5,9 @@ $ gufi_getfattr .
 $ gufi_getfattr --verbose .
 GUFI query is
    gufi_query \
-    -n 1 \
-    -B 4096 \
-    -d ' ' \
+    --threads 1 \
+    --output-buffer-size 4096 \
+    --delim ' ' \
     -x \
     -a 1 \
     -S 'SELECT substr(rpath(sname, sroll), 8), xattr_name FROM vrxsummary WHERE ((name REGEXP '"'"'^search$'"'"')) AND (isroot == 1) AND (xattr_name REGEXP '"'"'^user\.'"'"')' \

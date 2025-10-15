@@ -270,7 +270,7 @@ int main(int argc, char *argv[]) {
 
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
-        FLAG_DELIM, FLAG_TARGET_MEMORY_FOOTPRINT, FLAG_SWAP_PREFIX, FLAG_END
+        FLAG_DELIM, FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX, FLAG_END
     };
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 2, "trace_file... output_dir", &pa.in);
@@ -325,7 +325,7 @@ int main(int argc, char *argv[]) {
         goto free_db;
     }
 
-    const uint64_t queue_limit = get_queue_limit(pa.in.target_memory_footprint, pa.in.maxthreads);
+    const uint64_t queue_limit = get_queue_limit(pa.in.target_memory, pa.in.maxthreads);
     QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2);
 
     if (QPTPool_start(pool) != 0) {

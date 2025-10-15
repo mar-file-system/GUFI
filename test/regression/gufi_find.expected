@@ -543,10 +543,10 @@ prefix/old_file
 $ gufi_find --verbose --largest -type f
 GUFI query is
    gufi_query \
-    -n 1 \
-    -B 4096 \
+    --threads 1 \
+    --output-buffer-size 4096 \
     -a 1 \
-    -d ' ' \
+    --delim ' ' \
     -I 'CREATE TABLE out (name TEXT, size INT64, type TEXT)' \
     -S 'INSERT INTO out SELECT substr(rpath(sname, sroll), 8), size, type FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
     -E 'INSERT INTO out SELECT substr(rpath(sname, sroll) || '"'"'/'"'"' || name, 8), size, type FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \

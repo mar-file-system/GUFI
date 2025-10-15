@@ -284,7 +284,7 @@ def run(argv, config_path):
         # create the base command
         query_cmd = [
             config.query,
-            '-n', str(config.threads)
+            '--threads', str(config.threads)
         ]
 
         if not args.recursive:
@@ -364,11 +364,11 @@ def run(argv, config_path):
             '-J', J,
             '-G', G,
             '-a', '1',
-            '-B', str(config.outputbuffer)
+            '--output-buffer-size', str(config.outputbuffer)
         ]
 
         if args.delim:
-            query_cmd += ['-d', args.delim]
+            query_cmd += ['--delim', args.delim]
 
         if args.skip:
             query_cmd += ['--skip-file', args.skip]

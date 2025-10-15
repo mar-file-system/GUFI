@@ -130,10 +130,10 @@ def run(argv, config_path):
     stat_cmd = [config.stat]
 
     if args.format is not None:
-        stat_cmd += ['-f', args.format]
+        stat_cmd += ['--format', args.format]
 
     if args.terse is True:
-        stat_cmd += ['-j']
+        stat_cmd += ['--terse']
 
     paths = []
     for path in args.paths:

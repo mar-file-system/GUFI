@@ -7,8 +7,8 @@ options:
   -v, --version                     version
   -n, --threads <threads>           number of threads
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
-  -M <bytes>                        target memory footprint
-  -s, --swap-prefix <path>          File name prefix for swap files
+      --target-memory  <bytes>      target memory utilization (soft limit)
+      --swap-prefix <path>          File name prefix for swap files
 
 trace_file...     parse one or more trace files to produce the GUFI tree
 output_dir        build GUFI tree here

@@ -67,16 +67,16 @@ import gufi_distributed
 def subtree_cmd(args, filename, _idx, _target):
     return [
         args.gufi_treesummary_all,
-        '-n', str(args.threads),
+        '--thread', str(args.threads),
         '--min-level', str(args.level),
-        '-D', filename,
+        '--subtree-list', filename,
         args.GUFI_tree
     ]
 
 def top_cmd(args, _target):
     return [
         args.gufi_treesummary_all,
-        '-n', str(args.threads),
+        '--threads', str(args.threads),
         '--max-level', str(args.level - 1),
         args.GUFI_tree
     ]

@@ -230,7 +230,7 @@ static void print_stats(char **paths, const int path_count,
     }
     fprintf(stdout, "\n");
     fprintf(stdout, "Thread Pool Size: %12zu\n",  in->maxthreads);
-    fprintf(stdout, "Files/Links Limit: %11zu\n", in->max_in_dir);
+    fprintf(stdout, "Files/Links Limit: %11zu\n", in->rollup_limit);
     fprintf(stdout, "\n");
 
     /* per-thread stats together */
@@ -543,7 +543,7 @@ static int can_rollup(struct input *in,
     get_nondirs(rollup->data.name, dst, &ds->subnondir_count);
 
     /* the current directory has too many immediate files/links, don't roll up */
-    if (in->max_in_dir && (ds->subnondir_count > in->max_in_dir)) {
+    if (in->rollup_limit && (ds->subnondir_count > in->rollup_limit)) {
         ds->too_many_before = ds->subnondir_count;
         goto end_can_rollup;
     }
@@ -585,7 +585,7 @@ static int can_rollup(struct input *in,
      */
     if (legal) {
         const size_t total_pentries = ds->subnondir_count + total_child_entries;
-        if (in->max_in_dir && (total_pentries > in->max_in_dir)) {
+        if (in->rollup_limit && (total_pentries > in->rollup_limit)) {
             ds->too_many_after = total_pentries;
             legal = 0;
         }
@@ -927,7 +927,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &runtime.start);
 
     const struct option options[] = {
-        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_MAX_IN_DIR,
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_ROLLUP_LIMIT,
         FLAG_DRY_RUN, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,FLAG_SUBTREE_LIST,
         FLAG_ALREADY_PROCESSED, FLAG_END
     };

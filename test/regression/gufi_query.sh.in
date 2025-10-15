@@ -130,7 +130,7 @@ run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --min-level ${DISTRIBUTED_LEVEL} 
 partial_indexing_setup
 run_no_sort "cat \"${DISTRIBUTED_0}\""
 echo "# limit tree traversal to some directories under at level 1 (only prefix/directory and prefix/empty_directory)"
-run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --min-level ${DISTRIBUTED_LEVEL} -D \"${DISTRIBUTED_0}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --min-level ${DISTRIBUTED_LEVEL} --subtree-list \"${DISTRIBUTED_0}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 
 echo "# Output TLV columns (no aggregation)"
 run_no_sort "${GUFI_QUERY} --print-tlv -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | ${HEXLIFY}"
@@ -278,7 +278,7 @@ rm "${INDEXROOT}/db.db"
 run_sort "${GUFI_QUERY} -d \" \" --keep-matime -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
 
 echo "# multiple input directories are not allowed for partial querying"
-run_no_sort "${GUFI_QUERY} -n ${THREADS} -D \"${DISTRIBUTED_0}\" --min-level ${DISTRIBUTED_LEVEL} \"${SEARCH}\" \"${SEARCH}\""
+run_no_sort "${GUFI_QUERY} -n ${THREADS} --subtree-list \"${DISTRIBUTED_0}\" --min-level ${DISTRIBUTED_LEVEL} \"${SEARCH}\" \"${SEARCH}\""
 ) 2>&1 | tee "${OUTPUT}"
 
 echo "# Print terse debug timestamps (not part of expected results)"

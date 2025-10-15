@@ -12,7 +12,7 @@ options:
                                     1 - skip T, run S and E whether or not a row was returned (old -a)
                                     2 - run T, S, and E whether or not a row was returned
   -n, --threads <threads>           number of threads
-  -j, --terse-form                  print the information in terse form
+      --terse                       print the information in terse form
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
   -O, --output-db <out_DB>          output DB
@@ -25,19 +25,19 @@ options:
   -K <create aggregate>             SQL to create the final aggregation table
   -G <SQL_aggregate>                SQL for aggregated results
       --keep-matime                 Keep mtime and atime same on the database files
-  -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes
+      --output-buffer-size <bytes>  size of each thread's output buffer in bytes
   -w, --read-write                  open the database files in read-write mode instead of read only mode
   -x, --xattrs                      index/query xattrs
       --skip-file <filename>        file containing directory names to skip
-  -M <bytes>                        target memory footprint
-  -s, --swap-prefix <path>          File name prefix for swap files
+      --target-memory  <bytes>      target memory utilization (soft limit)
+      --swap-prefix <path>          File name prefix for swap files
   -p, --path <path>                 Source path prefix for %s in SQL
-  -e                                compress work items
+      --compress                    compress work items
   -Q <basename>
      <table>
      <template>.<table>
      <view>                         External database file basename, per-attach table name, template + table name, and the resultant view
-  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level
+      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
 
 GUFI_tree        find GUFI tree here
 

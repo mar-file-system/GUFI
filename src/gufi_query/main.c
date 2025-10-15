@@ -159,10 +159,10 @@ int main(int argc, char *argv[])
     /* control which options are parsed for each program. */
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT,
-        FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_TERSE_FORMAT, FLAG_OUTPUT_FILE, FLAG_DELIM,
+        FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_TERSE, FLAG_OUTPUT_FILE, FLAG_DELIM,
         FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SQL_INIT, FLAG_SQL_FIN, FLAG_MIN_LEVEL,
         FLAG_MAX_LEVEL, FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
-        FLAG_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_XATTRS, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY_FOOTPRINT,
+        FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_XATTRS, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY,
         FLAG_SWAP_PREFIX, FLAG_PATH,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    const uint64_t queue_limit = get_queue_limit(in.target_memory_footprint, in.maxthreads);
+    const uint64_t queue_limit = get_queue_limit(in.target_memory, in.maxthreads);
     QPTPool_t *pool = QPTPool_init_with_props(in.maxthreads, &pa, NULL, NULL, queue_limit, in.swap_prefix.data, 1, 2);
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");

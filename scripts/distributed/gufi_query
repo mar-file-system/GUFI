@@ -80,10 +80,10 @@ def add_sql(args):
 def subtree_cmd(args, filename, idx, target):
     cmd = [
         args.gufi_query,
-        '-n', str(args.threads),
-        '-d', str(args.delim),
+        '--threads', str(args.threads),
+        '--delim', str(args.delim),
         '--min-level', str(args.level),
-        '-D', filename,
+        '--subtree-list', filename,
     ]
 
     if args.distributor == 'ssh':
@@ -96,8 +96,8 @@ def subtree_cmd(args, filename, idx, target):
 def top_cmd(args, target):
     cmd = [
         args.gufi_query,
-        '-n', str(args.threads),
-        '-d', str(args.delim),
+        '--threads', str(args.threads),
+        '--delim', str(args.delim),
         '--max-level', str(args.level - 1),
     ]
 

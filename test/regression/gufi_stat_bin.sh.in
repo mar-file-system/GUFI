@@ -107,7 +107,7 @@ echo "# first two columns of terse format"
 for entry in "${fixed_size[@]}"
 do
     # shellcheck disable=SC2016
-    "${GUFI_STAT_BIN}" -j "${INDEXROOT}/${entry}" | @AWK@ '{ print $1 " " $2 }'
+    "${GUFI_STAT_BIN}" --terse "${INDEXROOT}/${entry}" | @AWK@ '{ print $1 " " $2 }'
 done | sort
 echo
 
@@ -115,26 +115,26 @@ echo "# custom print format"
 (
     for entry in "${fixed_size[@]}"
     do
-        "${GUFI_STAT_BIN}" -f '%-60N %60n %+60N %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT_BIN}" --format '%-60N %60n %+60N %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
     done
 
     for entry in "${variable_size[@]}"
     do
-        "${GUFI_STAT_BIN}" -f '%-60N %60n %+60N %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT_BIN}" --format '%-60N %60n %+60N %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
     done
 ) | sort
 echo
 
 echo "# bad print format specifier"
-run_no_sort "${GUFI_STAT_BIN}" -f '%e'   "${INDEXROOT}"; echo
-run_no_sort "${GUFI_STAT_BIN}" -f '%-60' "${INDEXROOT}"
-run_no_sort "${GUFI_STAT_BIN}" -f '%+'   "${INDEXROOT}"
-run_no_sort "${GUFI_STAT_BIN}" -f '%'    "${INDEXROOT}"
+run_no_sort "${GUFI_STAT_BIN}" --format '%e'   "${INDEXROOT}"; echo
+run_no_sort "${GUFI_STAT_BIN}" --format '%-60' "${INDEXROOT}"
+run_no_sort "${GUFI_STAT_BIN}" --format '%+'   "${INDEXROOT}"
+run_no_sort "${GUFI_STAT_BIN}" --format '%'    "${INDEXROOT}"
 
 # shellcheck disable=SC2016
 for entry in "${symlinks[@]}"
 do
-    "${GUFI_STAT_BIN}" -f '%N %n %a %A %b %B %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+    "${GUFI_STAT_BIN}" --format '%N %n %a %A %b %B %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
 done | @AWK@ '{ $7="--"; $8="--"; print $0 }'
 echo
 
@@ -145,12 +145,12 @@ for c in "${nonprintable[@]}"
 do
     printf "\\%c -> " "${c}"
     # shellcheck disable=SC2016
-    "${GUFI_STAT_BIN}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | @AWK@ '{ print $2 }'
+    "${GUFI_STAT_BIN}" --format "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | @AWK@ '{ print $2 }'
 done
 
 # do this separately to not deal with "\\${c}\n" -> "\\\\n"
 printf "\\\\\\\\ -> "
-"${GUFI_STAT_BIN}" -f "\\\\\n" "${INDEXROOT}/old_file"
+"${GUFI_STAT_BIN}" --format "\\\\\n" "${INDEXROOT}/old_file"
 
 printable=(
     # special characters
@@ -175,7 +175,7 @@ printable=(
 for c in "${printable[@]}"
 do
     echo -n "\\${c} -> "
-    "${GUFI_STAT_BIN}" -f "\\${c}\n" "${INDEXROOT}/old_file" 2>&1
+    "${GUFI_STAT_BIN}" --format "\\${c}\n" "${INDEXROOT}/old_file" 2>&1
 done
 echo
 
@@ -183,7 +183,7 @@ echo "# insert an entry with a bad type"
 run_no_sort "${SQLITE3} ${INDEXROOT}/db.db \"INSERT INTO entries (name, type, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, linkname, xattr_names) VALUES ('bad type', '?', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '');\""
 
 echo "# pull entry with bad columns"
-run_no_sort "${GUFI_STAT_BIN} -f \"%n [%F]\" ${INDEXROOT}/bad\ type"
+run_no_sort "${GUFI_STAT_BIN} --format \"%n [%F]\" ${INDEXROOT}/bad\ type"
 
 echo "# existing non-directory path"
 run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/db.db"

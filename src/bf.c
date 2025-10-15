@@ -221,26 +221,19 @@ void print_help(const char* prog_name,
             case FLAG_SQL_INTERM_SHORT:              printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
             case FLAG_SQL_CREATE_AGG_SHORT:          printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
             case FLAG_SQL_AGG_SHORT:                 printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
-            case FLAG_BUFFER_SIZE_SHORT:             printf("  -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes"); break;
             case FLAG_READ_WRITE_SHORT:              printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
-            case FLAG_FORMAT_SHORT:                  printf("  -f, --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
-            case FLAG_TERSE_FORMAT_SHORT:            printf("  -j, --terse-form                  print the information in terse form"); break; /* output from stat --help */
-            case FLAG_MAX_IN_DIR_SHORT:              printf("  -L <count>                        Highest number of files/links in a directory allowed to be rolled up"); break;
-            case FLAG_TARGET_MEMORY_FOOTPRINT_SHORT: printf("  -M <bytes>                        target memory footprint"); break;
-            case FLAG_SUBDIR_LIMIT_SHORT:            printf("  -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
-            case FLAG_COMPRESS_SHORT:                printf("  -e                                compress work items"); break;
             case FLAG_CHECK_EXTDB_VALID_SHORT:       printf("  -q                                check that external databases are valid before tracking during indexing"); break;
             case FLAG_EXTERNAL_ATTACH_SHORT:         printf("  -Q <basename>\n"
                                                             "     <table>\n"
                                                             "     <template>.<table>\n"
                                                             "     <view>                         External database file basename, per-attach table name, template + table name, and the resultant view"); break;
-            case FLAG_SWAP_PREFIX_SHORT:             printf("  -s, --swap-prefix <path>          File name prefix for swap files"); break;
             case FLAG_PATH_SHORT:                    printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
-            case FLAG_SUBTREE_LIST_SHORT:            printf("  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
             case FLAG_ALREADY_PROCESSED_SHORT:       printf("  -l                                if a directory was previously processed, skip descending the subtree"); break;
             case FLAG_FILTER_TYPE_SHORT:             printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
+            case FLAG_FORMAT_SHORT:                  printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
+            case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
 
-                // no typable short flags
+            /* no typable short flags */
 
             case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <min level>       minimum level to go down"); break;
             case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <max level>       maximum level to go down"); break;
@@ -249,6 +242,16 @@ void print_help(const char* prog_name,
             case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
             case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
             case FLAG_PLUGIN_SHORT:                  printf("      --plugin <library_name>       plugin library for modifying db entries"); break;
+            case FLAG_SUBTREE_LIST_SHORT:            printf("      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
+            case FLAG_ROLLUP_LIMIT_SHORT:            printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
+
+            /* memory usage flags */
+            case FLAG_OUTPUT_BUFFER_SIZE_SHORT:      printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
+            case FLAG_TARGET_MEMORY_SHORT:           printf("      --target-memory  <bytes>      target memory utilization (soft limit)"); break;
+            case FLAG_SUBDIR_LIMIT_SHORT:            printf("      --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially"); break;
+            case FLAG_COMPRESS_SHORT:                printf("      --compress                    compress work items"); break;
+            case FLAG_SWAP_PREFIX_SHORT:             printf("      --swap-prefix <path>          File name prefix for swap files"); break;
+
             default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
         options++;
@@ -290,8 +293,8 @@ void show_input(struct input* in, int retval) {
     printf("in.format_set               = %d\n",            in->format_set);
     printf("in.format                   = '%s'\n",          in->format.data);
     printf("in.terse                    = %d\n",            in->terse);
-    printf("in.max_in_dir               = %zu\n",           in->max_in_dir);
-    printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
+    printf("in.rollup_limit             = %zu\n",           in->rollup_limit);
+    printf("in.target_memory            = %" PRIu64 "\n",   in->target_memory);
     printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
     printf("in.compress                 = %d\n",            in->compress);
     printf("in.check_extdb_valid        = %d\n",            in->check_extdb_valid);
@@ -509,37 +512,8 @@ int parse_cmd_line(int                  argc,
                 INSTALL_STR(&in->sql.agg, optarg);
                 break;
 
-            case FLAG_BUFFER_SIZE_SHORT:
-                INSTALL_SIZE(&in->output_buffer_size, optarg, (size_t) 0, (size_t) -1, "-B", &retval);
-                break;
-
             case FLAG_READ_WRITE_SHORT:
                 in->open_flags = SQLITE_OPEN_READWRITE;
-                break;
-
-            case FLAG_FORMAT_SHORT:
-                INSTALL_STR(&in->format, optarg);
-                in->format_set = 1;
-                break;
-
-            case FLAG_TERSE_FORMAT_SHORT:
-                in->terse = 1;
-                break;
-
-            case FLAG_MAX_IN_DIR_SHORT:
-                INSTALL_SIZE(&in->max_in_dir, optarg, (size_t) 0, (size_t) -1, "-L", &retval);
-                break;
-
-            case FLAG_TARGET_MEMORY_FOOTPRINT_SHORT:
-                INSTALL_UINT64(&in->target_memory_footprint, optarg, (uint64_t) 0, (uint64_t) -1, "-M", &retval);
-                break;
-
-            case FLAG_SUBDIR_LIMIT_SHORT:
-                INSTALL_SIZE(&in->subdir_limit, optarg, (size_t) 0, (size_t) -1, "-C", &retval);
-                break;
-
-            case FLAG_COMPRESS_SHORT:
-                in->compress = 1;
                 break;
 
             case FLAG_CHECK_EXTDB_VALID_SHORT:
@@ -567,16 +541,8 @@ int parse_cmd_line(int                  argc,
                 }
                 break;
 
-            case FLAG_SWAP_PREFIX_SHORT:
-                INSTALL_STR(&in->swap_prefix, optarg);
-                break;
-
             case FLAG_PATH_SHORT:
                 INSTALL_STR(&in->source_prefix, optarg);
-                break;
-
-            case FLAG_SUBTREE_LIST_SHORT:
-                INSTALL_STR(&in->subtree_list, optarg);
                 break;
 
             case FLAG_ALREADY_PROCESSED_SHORT:
@@ -649,6 +615,47 @@ int parse_cmd_line(int                  argc,
                 if (load_plugin_library(in, optarg)) {
                     retval = -1;
                 }
+                break;
+
+            case FLAG_SUBTREE_LIST_SHORT:
+                INSTALL_STR(&in->subtree_list, optarg);
+                break;
+
+            case FLAG_FORMAT_SHORT:
+                INSTALL_STR(&in->format, optarg);
+                in->format_set = 1;
+                break;
+
+            case FLAG_TERSE_SHORT:
+                in->terse = 1;
+                break;
+
+            case FLAG_ROLLUP_LIMIT_SHORT:
+                INSTALL_SIZE(&in->rollup_limit, optarg, (size_t) 0, (size_t) -1,
+                             "--" FLAG_ROLLUP_LIMIT_LONG, &retval);
+                break;
+
+            case FLAG_OUTPUT_BUFFER_SIZE_SHORT:
+                INSTALL_SIZE(&in->output_buffer_size, optarg, (size_t) 0, (size_t) -1,
+                             "--" FLAG_OUTPUT_BUFFER_SIZE_LONG, &retval);
+                break;
+
+            case FLAG_TARGET_MEMORY_SHORT:
+                INSTALL_UINT64(&in->target_memory, optarg, (uint64_t) 0, (uint64_t) -1,
+                               "--" FLAG_TARGET_MEMORY_LONG, &retval);
+                break;
+
+            case FLAG_SUBDIR_LIMIT_SHORT:
+                INSTALL_SIZE(&in->subdir_limit, optarg, (size_t) 0, (size_t) -1,
+                             "--" FLAG_SUBDIR_LIMIT_LONG, &retval);
+                break;
+
+            case FLAG_COMPRESS_SHORT:
+                in->compress = 1;
+                break;
+
+            case FLAG_SWAP_PREFIX_SHORT:
+                INSTALL_STR(&in->swap_prefix, optarg);
                 break;
 
             case '?':

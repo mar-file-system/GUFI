@@ -10,13 +10,13 @@ options:
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
       --skip-file <filename>        file containing directory names to skip
-  -M <bytes>                        target memory footprint
-  -s, --swap-prefix <path>          File name prefix for swap files
-  -C <count>                        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
+      --target-memory  <bytes>      target memory utilization (soft limit)
+      --swap-prefix <path>          File name prefix for swap files
+      --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
       --plugin <library_name>       plugin library for modifying db entries
-  -e                                compress work items
+      --compress                    compress work items
   -q                                check that external databases are valid before tracking during indexing
-  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level
+      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
 
 input_dir...      walk one or more trees to produce GUFI tree
 output_dir        build GUFI tree here
@@ -272,7 +272,7 @@ $ cat "distributed.0"
 directory
 empty_directory
 
-$ gufi_dir2index -n 2 -D "distributed.0" --min-level 1 "prefix" "search"
+$ gufi_dir2index -n 2 --subtree-list "distributed.0" --min-level 1 "prefix" "search"
 Creating GUFI Index search with 2 threads
 Total Dirs:          3
 Total Non-Dirs:      5
@@ -298,7 +298,7 @@ $ cat "distributed.1"
 leaf_directory
 unusual#? directory ,
 
-$ gufi_dir2index -n 2 -D "distributed.1" --min-level 1 "prefix" "search"
+$ gufi_dir2index -n 2 --subtree-list "distributed.1" --min-level 1 "prefix" "search"
 Creating GUFI Index search with 2 threads
 Total Dirs:          2
 Total Non-Dirs:      3
@@ -317,12 +317,12 @@ prefix/unusual#? directory ,/unusual, name?#
 # combine partial indexing
 $ rm -r "search"
 
-$ gufi_dir2index -n 2 -D "distributed.0" --min-level 1 "prefix" "search"
+$ gufi_dir2index -n 2 --subtree-list "distributed.0" --min-level 1 "prefix" "search"
 Creating GUFI Index search with 2 threads
 Total Dirs:          3
 Total Non-Dirs:      5
 
-$ gufi_dir2index -n 2 -D "distributed.1" --min-level 1 "prefix" "search"
+$ gufi_dir2index -n 2 --subtree-list "distributed.1" --min-level 1 "prefix" "search"
 "search" Already exists!
 Creating GUFI Index search with 2 threads
 Total Dirs:          2
@@ -409,6 +409,6 @@ $ gufi_dir2index -n 18446744073709551615 "prefix" "search"
 Error: Failed to start thread pool
 
 # multiple input directories are not allowed for partial indexing
-$ gufi_dir2index -n 2 -D "distributed.1" --min-level 1 "prefix" "prefix" "search"
+$ gufi_dir2index -n 2 --subtree-list "distributed.1" --min-level 1 "prefix" "prefix" "search"
 Error: When -D is passed in, only one source directory may be specified
 

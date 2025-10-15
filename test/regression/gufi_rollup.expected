@@ -6,11 +6,11 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-  -L <count>                        Highest number of files/links in a directory allowed to be rolled up
+      --limit <count>               Highest number of files/links in a directory allowed to be rolled up
       --dry-run                     Dry run
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
-  -D <filename>                     File containing paths at single level to index (not including starting path). Must also use --min-level
+      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
   -l                                if a directory was previously processed, skip descending the subtree
 
 GUFI_tree         GUFI tree to roll up
@@ -1485,7 +1485,7 @@ Creating GUFI Index search with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      14
 # Partial Rollup up to level 1
-$ gufi_rollup --min-level 1 -D "path_list" "prefix"
+$ gufi_rollup --min-level 1 --subtree-list "path_list" "prefix"
 Roots:
     prefix
 

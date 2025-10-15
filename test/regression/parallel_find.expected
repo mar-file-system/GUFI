@@ -5,12 +5,12 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-  -f, --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
+      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
   -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
-  -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes
+      --output-buffer-size <bytes>  size of each thread's output buffer in bytes
 
 input_dir...      walk one or more trees to search files
 
@@ -22,12 +22,12 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-  -f, --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
+      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
   -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
-  -B, --buffer-size <buffer size>   size of each thread's output buffer in bytes
+      --output-buffer-size <bytes>  size of each thread's output buffer in bytes
 
 input_dir...      walk one or more trees to search files
 
@@ -128,7 +128,7 @@ prefix/repeat_name
 prefix/unusual#? directory ,/unusual, name?#
 
 # remove starting path with newline
-$ parallel_find -n 2 -f "%P\n" "prefix"
+$ parallel_find -n 2 --format "%P\n" "prefix"
 
 .hidden
 1KB
@@ -151,11 +151,11 @@ unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
 # print escape characters
-$ parallel_find -n 2 -f "[\t\]\r\n" "prefix" | head -n 1
+$ parallel_find -n 2 --format "[\t\]\r\n" "prefix" | head -n 1
 [	\]
 
 # print non-format characters
-$ parallel_find -n 2 -f "Path: %p\n" "prefix"
+$ parallel_find -n 2 --format "Path: %p\n" "prefix"
 Path: prefix
 Path: prefix/.hidden
 Path: prefix/1KB
@@ -217,7 +217,7 @@ prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/repeat_name
 
 # keep full path with newline
-$ parallel_find -n 2 -f "%p\n" "prefix"
+$ parallel_find -n 2 --format "%p\n" "prefix"
 prefix
 prefix/.hidden
 prefix/1KB
@@ -270,7 +270,7 @@ $ parallel_find -n 2 -o "parallel_find_output" "prefix"
 "parallel_find_output.1" Already exists!
 
 # small output buffer
-$ parallel_find -n 2 -B 16 "prefix"
+$ parallel_find -n 2 --output-buffer-size 16 "prefix"
 prefix
 prefix/.hidden
 prefix/1KB
@@ -309,15 +309,15 @@ $ parallel_find -n 2 -t lfs "prefix" > /dev/null
 s is not a valid option
 
 # unknown escape character
-$ parallel_find -n 2 -f "\d\n" "prefix" | head -n 1
+$ parallel_find -n 2 --format "\d\n" "prefix" | head -n 1
 \d
 
 # unknown format specifier
-$ parallel_find -n 2 -f "%Q\n" "prefix" | head -n 1
+$ parallel_find -n 2 --format "%Q\n" "prefix" | head -n 1
 %Q
 
 # bad format
-$ parallel_find -n 2 -f "%" "prefix" 2>&1 | head -n 1
+$ parallel_find -n 2 --format "%" "prefix" 2>&1 | head -n 1
 Error: bad format sequence at end
 
 # bad output file (missing parent directories)
@@ -330,7 +330,7 @@ $ parallel_find -n 2 -o "parallel_find_outputdir" "prefix"
 Destination path is not a file "parallel_find_outputdir.0"
 
 # bad output buffer size
-$ parallel_find -n 2 -B 18446744073709551615 "prefix"
+$ parallel_find -n 2 --output-buffer-size 18446744073709551615 "prefix"
 Error: Could not initialize 2 output buffers
 
 # bad thread count

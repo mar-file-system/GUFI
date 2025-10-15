@@ -4,8 +4,8 @@ options:
   -h, --help                        help
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
-  -f, --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
-  -j, --terse-form                  print the information in terse form
+      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
+      --terse                       print the information in terse form
 
 path                 path to stat
 
@@ -56,16 +56,16 @@ prefix/unusual#? directory
 'prefix/unusual#? directory ,/unusual, name?#'                 prefix/unusual#? directory ,/unusual, name?#        'prefix/unusual#? directory ,/unusual, name?#' 664 -rw-rw-r-- ? ? 81b4 regular file   15 - 0 1970-01-01 00:00:15 +0000 15 1970-01-01 00:00:15 +0000 15
 
 # bad print format specifier
-$ gufi_stat_bin -f %e prefix
+$ gufi_stat_bin --format %e prefix
 ?
 
-$ gufi_stat_bin -f %-60 prefix
+$ gufi_stat_bin --format %-60 prefix
 gufi_stat: bad format sequence: "%-60"
 
-$ gufi_stat_bin -f %+ prefix
+$ gufi_stat_bin --format %+ prefix
 gufi_stat: bad format sequence: "%+"
 
-$ gufi_stat_bin -f % prefix
+$ gufi_stat_bin --format % prefix
 gufi_stat: bad format sequence: "%"
 
 'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' prefix/directory/subdirectory/directory_symlink 777 lrwxrwxrwx -- -- ? ? a1ff symbolic link 'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' - 0 1970-01-01 00:00:04 +0000 4 1970-01-01 00:00:04 +0000 4
@@ -111,7 +111,7 @@ gufi_stat: bad format sequence: "%"
 $ sqlite3 prefix/db.db "INSERT INTO entries (name, type, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, linkname, xattr_names) VALUES ('bad type', '?', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '');"
 
 # pull entry with bad columns
-$ gufi_stat_bin -f "%n [%F]" prefix/bad\ type
+$ gufi_stat_bin --format "%n [%F]" prefix/bad\ type
 prefix/bad type []
 # existing non-directory path
 $ gufi_stat_bin prefix/db.db

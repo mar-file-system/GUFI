@@ -67,10 +67,10 @@ import gufi_distributed
 def subtree_cmd(args, filename, idx, _target):
     return [
         args.gufi_dir2trace,
-        '-d', args.delim,
-        '-n', str(args.threads),
+        '--delim', args.delim,
+        '--threads', str(args.threads),
         '--min-level', str(args.level),
-        '-D', filename,
+        '--subtree-list', filename,
         args.input_dir,
         '{0}.{1}'.format(args.output_prefix, idx),
     ]
@@ -78,8 +78,8 @@ def subtree_cmd(args, filename, idx, _target):
 def top_cmd(args, _target):
     return [
         args.gufi_dir2trace,
-        '-d', args.delim,
-        '-n', str(args.threads),
+        '--delim', args.delim,
+        '--threads', str(args.threads),
         '--max-level', str(args.level - 1),
         args.input_dir,
         args.output_prefix,

@@ -269,7 +269,8 @@ static FILE **stdout_init(struct input *in) {
 int main(int argc, char *argv[]) {
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_FORMAT, FLAG_MIN_LEVEL,
-        FLAG_MAX_LEVEL, FLAG_FILTER_TYPE, FLAG_OUTPUT_FILE, FLAG_BUFFER_SIZE, FLAG_END
+        FLAG_MAX_LEVEL, FLAG_FILTER_TYPE, FLAG_OUTPUT_FILE, FLAG_OUTPUT_BUFFER_SIZE,
+        FLAG_END
     };
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 1, "input_dir...", &pa.in);
