@@ -96,10 +96,11 @@ generate_hostfile() {
 # pre-create output file lists in parent scope to have them available for use
 
 # names of files containing paths for "nodes" to process
+PATH_LIST="path_list"
 groups=()
 for jobid in {0..4}
 do
-    groups+=("path_list.${jobid}")
+    groups+=("${PATH_LIST}.${jobid}")
 done
 
 # names of "slurm" output files
@@ -153,7 +154,7 @@ remove_distributed_output() {
 cleanup() {
     # shellcheck disable=SC2207
     traces=($(trace_files))
-    rm -rf "${SEARCH2}" "${HOSTFILE}" "${groups[@]}" "${slurm_files[@]}" "slurm.fake-5.out" "${ssh_files[@]}" "${traces[@]}"
+    rm -rf "${SEARCH2}" "${HOSTFILE}" "${PATH_LIST}" "${groups[@]}" "${slurm_files[@]}" "slurm.fake-5.out" "${ssh_files[@]}" "${traces[@]}"
 }
 
 cleanup_exit() {
@@ -292,6 +293,36 @@ run_no_sort "${GUFI_UNROLLUP_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_unrollup 
 echo "# Query the unrolled up index"
 run_sort "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -T \"SELECT name, isroot, rollupscore FROM summary;\" \"${INDEXROOT2}\""
 
+rm -rf "${SEARCH}2"
+echo "#####################################"
+echo
+echo "#####################################"
+echo "# Index with an existing path list"
+
+echo "# Generate path list"
+run_no_sort "${FIND_SH} \"${SRCDIR}\" ${DISTRIBUTED_LEVEL} > \"${PATH_LIST}\""
+
+echo "# Index Source Tree"
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-paths \"${PATH_LIST}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
+
+echo "# Query Index"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" --output_prefix \"output\""
+
+echo "# combine output files"
+# shellcheck disable=SC2145
+run_sort "cat ${ssh_files[@]}" | @SED@ "s%${INDEXROOT2}%prefix2%g;"
+
+echo "# Diff original index results against the combined results"
+# shellcheck disable=SC2145,SC2153
+run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${ssh_files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+
+echo "# Diff original index results against querying the new index from a single node"
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+echo "#####################################"
+echo
+echo "#####################################"
+echo "# Errors"
+
 echo "# Bad source path"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-group-files \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${HOSTFILE}\" \"${SEARCH2}\" 2>&1 | tail -n 1"
 
@@ -307,9 +338,12 @@ run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${HO
 ) > "${HOSTFILE}"
 
 echo "# Bad hostfile"
-run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" 2>&1 | tail -n 1"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" 2>&1 | tail -n 1"
 
 generate_hostfile
+
+echo "# Cannot use existing path list and group files at the same time "
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --use-existing-paths \"${PATH_LIST}\" --use-existing-group-files \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>&1 | tail -n 1"
 
 echo "#####################################"
 ) 2>&1 | remove_distributed_output | tee "${OUTPUT}"

@@ -158,6 +158,10 @@ DISTRIBUTORS = {
 #     find -H "${root}" -mindepth "${level}" -maxdepth "${level}" -type d -printf "%P\n"
 # (or equivalent) to get list of directories at given level without ${root}
 def dirs_at_level(args, root):
+    if args.use_existing_paths:
+        with open(args.use_existing_paths, 'r') as paths:
+            return [path.strip() for path in paths.readlines()]
+
     start = clock()
 
     cmd = [args.find, root, str(args.level), str(args.threads)]
@@ -355,9 +359,15 @@ def parse_args(name, desc):
                         default='path_list',
                         help='Prefix for file containing paths to be processed by one node')
 
-    parser.add_argument('--use-existing-group-files',
-                        action='store_true',
-                        help='Use existing group files (up to the number of targets) instead of running find')
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument('--use-existing-paths',   metavar='filename',
+                       type=str,
+                       help='Distribute existing single list of paths to group files instead of running find')
+
+    group.add_argument('--use-existing-group-files',
+                       action='store_true',
+                       help='Use existing group files (up to the number of targets) instead of running find')
 
     parser.add_argument('--sort',
                         choices=SORT_DIRS.keys(),

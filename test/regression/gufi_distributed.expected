@@ -351,6 +351,75 @@ prefix|1|0
 subdirectory|1|0
 unusual#? directory ,|1|0
 
+#####################################
+
+#####################################
+# Index with an existing path list
+# Generate path list
+$ find.sh "prefix" 1 > "path_list"
+
+# Index Source Tree
+$ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" --use-existing-paths "path_list" "find.sh" ssh "hostfile" 1 "prefix" "search2" 2>/dev/null
+Splitting 4 paths into 5 groups of max size 1
+    Range 0: 1 path on localhost
+        directory directory
+    Range 1: 1 path on 127.0.0.1
+        empty_directory empty_directory
+    Range 2: 1 path on localhost
+        leaf_directory leaf_directory
+    Range 3: 1 path on 127.0.0.1
+        unusual#? directory , unusual#? directory ,
+    Process upper directories on 127.0.0.1
+Waiting for ssh jobs to complete
+
+# Query Index
+$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" --output_prefix "output"
+Splitting 4 paths into 5 groups of max size 1
+    Range 0: 1 path on localhost
+        directory directory
+    Range 1: 1 path on 127.0.0.1
+        empty_directory empty_directory
+    Range 2: 1 path on localhost
+        leaf_directory leaf_directory
+    Range 3: 1 path on 127.0.0.1
+        unusual#? directory , unusual#? directory ,
+    Process upper directories on 127.0.0.1
+Waiting for ssh jobs to complete
+cat "output.*" to get complete results
+
+# combine output files
+$ cat output.localhost.0.0 output.127.0.0.1.1.0 output.localhost.2.0 output.127.0.0.1.3.0 output.127.0.0.1.top.0 output.localhost.0.1 output.127.0.0.1.1.1 output.localhost.2.1 output.127.0.0.1.3.1 output.127.0.0.1.top.1
+prefix2/.hidden|10
+prefix2/1KB|1024
+prefix2/1MB|1048576
+prefix2/directory/executable|1
+prefix2/directory/readonly|2
+prefix2/directory/subdirectory/directory_symlink|4
+prefix2/directory/subdirectory/repeat_name|5
+prefix2/directory/subdirectory|6
+prefix2/directory/writable|3
+prefix2/directory|7
+prefix2/empty_directory|8
+prefix2/file_symlink|9
+prefix2/leaf_directory/leaf_file1|11
+prefix2/leaf_directory/leaf_file2|12
+prefix2/leaf_directory|13
+prefix2/old_file|0
+prefix2/repeat_name|14
+prefix2/unusual#? directory ,/unusual, name?#|15
+prefix2/unusual#? directory ,|16
+prefix2|17
+
+# Diff original index results against the combined results
+$ diff <("gufi_query" -d "|" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" "prefix" | sort) <(cat output.localhost.0.0 output.127.0.0.1.1.0 output.localhost.2.0 output.127.0.0.1.3.0 output.127.0.0.1.top.0 output.localhost.0.1 output.127.0.0.1.1.1 output.localhost.2.1 output.127.0.0.1.3.1 output.127.0.0.1.top.1 | sort | sed 's/search2\/prefix/search\/prefix/g')
+
+# Diff original index results against querying the new index from a single node
+$ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort) <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search2/prefix" | sort | sed 's/search2\/prefix/search\/prefix/g')
+
+#####################################
+
+#####################################
+# Errors
 # Bad source path
 $ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" --use-existing-group-files "find.sh" ssh "hostfile" 1 "hostfile" "search2" 2>&1 | tail -n 1
 gufi_dir2index_distributed: error: argument input_dir: Bad directory: hostfile
@@ -364,7 +433,11 @@ $ gufi_query_distributed --ssh "ssh" --gufi_query "hostfile" --threads 2 --delim
 gufi_query_distributed: error: argument --gufi_query: Bad executable: hostfile
 
 # Bad hostfile
-$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" 2>&1 | tail -n 1
+$ gufi_query_distributed "find.sh" ssh "hostfile" 1 "search2/prefix" 2>&1 | tail -n 1
 RuntimeError: Need at least 2 nodes in node list
+
+# Cannot use existing path list and group files at the same time 
+$ gufi_dir2index_distributed --use-existing-paths "path_list" --use-existing-group-files "find.sh" ssh "hostfile" 1 "prefix" "search2" 2>&1 | tail -n 1
+gufi_dir2index_distributed: error: argument --use-existing-group-files: not allowed with argument --use-existing-paths
 
 #####################################
