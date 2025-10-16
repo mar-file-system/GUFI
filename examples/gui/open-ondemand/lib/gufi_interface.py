@@ -58,9 +58,13 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-import subprocess
+
+
 from dataclasses import dataclass
 from typing import List
+
+import subprocess
+import time
 
 """ This dataclass is used to represent a file or directory entry as returned by gufi_ls. """
 @dataclass
@@ -84,27 +88,24 @@ def run_gufi_ls(path, options: List[str] = None) -> List[Node]:
             parts = line.split()
             if len(parts) < 9:
                 continue
-            permissionString = parts[0]
+            permissionString, links, user, group, size, last_mod_month, last_mod_day, last_mod_time, *name = parts
             file_type = permissionString[0]
+            if file_type == '-':
+                file_type = 'f'
             permissions = permissionString[1:]
-            links = parts[1]
-            user = parts[2]
-            group = parts[3]
-            size = parts[4]
-            last_mod_month = parts[5]
-            last_mod_day = parts[6]
-            last_mod_time = parts[7]
-            name = ' '.join(parts[8:])
+            name = ' '.join(name)
             nodes.append(Node(file_type, permissions, links, user, group, size, last_mod_day, last_mod_month, last_mod_time, name))
         return nodes
 
     if options is None:
         options = ['-l', '-a']
-    cmd = ['/usr/local/bin/gufi_ls'] + options + [path]
+    cmd = ['gufi_ls'] + options + [path]
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                check=True, text=True)
         return parse_ls_stdout(result.stdout)
-    except Exception:
+    except Exception as e:
+        print(f"Failed to run gufi_ls with command: {' '.join(cmd)}: {e}")
         return []
 
 gufi_find_help_text = {
@@ -135,86 +136,70 @@ gufi_find_help_text = {
         'maxdepth': 'Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.',
         'mindepth': 'Do not apply any tests or actions at levels less than levels (a non-negative integer). mindepth 1 means process all files except the command line arguments.',
         'size_percent': 'Modifier to the size flag. Expects 2 values that define the min and max percentage from the size.',
-        # man says num_results when it's actually numresults, doesn't seem to work with other paramters, 'num_results': 'First n results.', 
-        #'doesn't seem to work 'smallest': 'Top n smallest files.',
-        # doesn't seem to work 'largest': 'Top n largest files.'
+        'num-results': 'first n results',
+        'smallest': 'smallest results',
+        'largest': 'largest results',
     }
 
-
-
 def run_gufi_find(path_prefix: str = "", args: dict = None):
-    
     cmd_args = []
     if path_prefix:
         cmd_args += ['-P', path_prefix]
 
-    double_dash = {'num_results', 'smallest', 'largest'}
+    double_dash = {'num-results'}
+    sort_output_flags = {'smallest', 'largest'}
     boolean_flags = {'empty', 'executable', 'readable', 'writable'}
-    
 
     # validate args and add to cmd_args
     for k, v in args.items():
         if k not in gufi_find_help_text:
             raise ValueError(f"Invalid gufi_find argument: {k}")
         if v not in ["None", None, '', False]:
-            if k in boolean_flags:
-                cmd_args.append(f'--{k}')
-            elif k in double_dash:
-                cmd_args.append(f'--{k}')
-                cmd_args.append(str(v))
+            if k in double_dash:
+                cmd_args += [f'--{k}', str(v)]
+            elif k in sort_output_flags:
+                cmd_args += [f'--{k}']
+            elif k in boolean_flags:
+                cmd_args += [f'-{k}']
             else:
-                cmd_args.append(f'-{k}')
-                cmd_args.append(str(v))
+                cmd_args += [f'-{k}', str(v)]
 
-    cmd = ['/usr/local/bin/gufi_find'] + cmd_args 
-    # Note this doesn't work as expecte with num results+ ['--numresults', '100']
-
+    cmd = ['gufi_find'] + cmd_args
     try:
-        print(cmd)
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, check=True)
         lines = result.stdout.strip().split('\n') if result.stdout else []
         return lines
-    except Exception:
-        print(f"Failed to run gufi_find with command: {' '.join(cmd)}")
+    except Exception as e:
+        print(f"Failed to run gufi_find with command: {' '.join(cmd)}: {e}")
         return []
 
-def parse_stat_stdout(stdout):
-    
-    info = {}
-    lines = stdout.splitlines()
-    info['File'] = lines[0].split('File: ')[1]
-
-    second_line_split = lines[1].split()
-    info['Size'] = second_line_split[1]
-    info['Blocks'] = second_line_split[3]
-    info['IO Block'] = second_line_split[6]
-    info['File type'] = second_line_split[7]
-
-    third_line_split = lines[2].split()
-    info['Device'] = third_line_split[1]
-    info['Inode'] = third_line_split[5]
-    info['Links'] = third_line_split[7]
-    
-   
-    fourth_line_split = lines[3].split()
-  
-    info['Access'] = fourth_line_split[1]
-    info['Uid'] = fourth_line_split[4].rstrip(')')
-    info['Gid'] = fourth_line_split[7].rstrip(')')
-
-    info['Modify'] = lines[6].split('Modify: ')[1]
-    info['Change'] = lines[7].split('Change: ')[1]
-    info['Birth'] = lines[8].split('Birth: ')[1] if 'Birth: ' in lines[8] else 'N/A'
-
-
-    return info
-
 def run_gufi_stat(path):
-    cmd = ['/usr/local/bin/gufi_stat', path]
+    cmd = ['gufi_stat', '--format', '%n %s %b %o %F %D %i %h %a/%A %u %g %X %Y %Z %W\n', path]
     try:
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-        x = parse_stat_stdout(result.stdout)
-        return x
-    except Exception:
-        return None
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, check=True)
+        line = result.stdout.split()
 
+        to_localtime = lambda time_str: time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime(int(time_str)))
+
+        return {
+            'File':      line[0],
+            'Size':      line[1],
+            'Blocks':    line[2],
+            'IO Block':  line[3],
+            'File type': line[4],
+            'Device':    line[5],
+            'Inode':     line[6],
+            'Links':     line[7],
+            'Mode':      line[8],
+            'Uid':       line[9],
+            'Gid':       line[10],
+            'Access':    to_localtime(line[11]),
+            'Modify':    to_localtime(line[12]),
+            'Change':    to_localtime(line[13]),
+            'Birth':     to_localtime(line[14]),
+        }
+    except Exception as e:
+        print(f"Failed to run gufi_stat with command: {' '.join(cmd)}: {e}")
+        return None

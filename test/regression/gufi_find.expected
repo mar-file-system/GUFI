@@ -505,7 +505,7 @@ $ gufi_find -printf '%z %z \z' -maxdepth 2 -type d
 %z %z \z
 %z %z \z
 
-$ gufi_find --numresults 5
+$ gufi_find --num-results 5
 prefix
 prefix/.hidden
 prefix/1KB
@@ -667,7 +667,7 @@ prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
-$ gufi_find -name repeat_name --numresults 2
+$ gufi_find -name repeat_name --num-results 2
 prefix/directory/subdirectory/repeat_name
 prefix/repeat_name
 

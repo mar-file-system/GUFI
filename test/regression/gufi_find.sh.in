@@ -158,7 +158,7 @@ run_sort "${GUFI_FIND} -fprint ${FPRINT} && cat ${FPRINT}"
 run_no_sort "${GUFI_FIND} -printf '%z %z \\z' -maxdepth 2 -type d"
 
 # GUFI specific flags
-run_no_sort "${GUFI_FIND} --numresults 5"
+run_no_sort "${GUFI_FIND} --num-results 5"
 run_no_sort "${GUFI_FIND} --smallest -type f"
 run_no_sort "${GUFI_FIND} --largest  -type f"
 
@@ -174,7 +174,7 @@ run_sort "${GUFI_FIND} -gid   \"${GROUP_ID}\""  | @SED@ "s%\"${GROUP_ID}\"%${TES
 run_sort "${GUFI_FIND} -group \"${GROUP_NAME}\""| @SED@ "s%\"${GROUP_NAME}\"%${TEST_GROUP_NAME}%g;"
 
 # name + numresults (2 rows)
-run_sort "${GUFI_FIND} -name repeat_name --numresults 2"
+run_sort "${GUFI_FIND} -name repeat_name --num-results 2"
 
 # zero some columns to make test easier
 run_no_sort "${GUFI_QUERY} -a 1 -w -E \"UPDATE entries SET inode = 0, uid = 0, gid = 0;\" \"${SEARCH}\""

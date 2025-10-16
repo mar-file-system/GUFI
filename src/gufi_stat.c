@@ -78,7 +78,7 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 /* query to extract data fom databases - this determines the indexing in the print callback */
-static const char QUERY_PREFIX[] = "SELECT type, size, blocks, blksize, inode, nlink, mode, uid, gid, atime, mtime, ctime, linkname, xattr_names FROM";
+static const char QUERY_PREFIX[] = "SELECT type, size, blocks, blksize, inode, nlink, mode, uid, gid, atime, mtime, ctime, linkname, xattr_names, crtime FROM"; /* crtime is last to keep order with schema */
 
 /* user/group name */
 static const char UNKNOWN[] = "UNKNOWN";
@@ -129,6 +129,11 @@ static int print_callback(void * args, int count, char **data, char **columns) {
     struct tm ctm;
     localtime_r(&ctime, &ctm);
     char ctime_str[MAXPATH];
+
+    time_t crtime = atoi(data[14]);
+    struct tm crtm;
+    localtime_r(&crtime, &crtm);
+    char crtime_str[MAXPATH];
 
     while (*f) {
         if (*f == '\\') {        /* handle escape sequences */
@@ -373,10 +378,22 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     }
                     break;
                 case 'w': /* time of file birth, human-readable; - if unknown */
-                    fprintf(out, line, "-");
+                    if (crtime) {
+                        strftime(crtime_str, MAXPATH, "%F %T %z", &crtm);
+                        fprintf(out, line, crtime_str);
+                    }
+                    else {
+                        fprintf(out, line, "-");
+                    }
                     break;
                 case 'W': /* time of file birth, seconds since Epoch; 0 if unknown */
-                    fprintf(out, line, "0");
+                    if (crtime) {
+                        SNPRINTF(crtime_str, MAXPATH, "%llu", (long long unsigned int) mktime(&crtm));
+                        fprintf(out, line, crtime_str);
+                    }
+                    else {
+                        fprintf(out, line, "0");
+                    }
                     break;
                 case 'x': /* time of last access, human-readable */
                     strftime(atime_str, MAXPATH, "%F %T %z", &atm);

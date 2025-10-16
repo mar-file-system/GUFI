@@ -58,6 +58,8 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+
+
 entries_columns = {
     # Columns in the vrpentries view
     "type": {
@@ -145,4 +147,3 @@ entries_columns = {
         "description": "storage system specific string"
     }
 }
-

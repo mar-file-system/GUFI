@@ -27,14 +27,14 @@ prefix/repeat_name 14
 prefix/unusual#? directory
 
 $ gufi_stat --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "prefix/.hidden"
-'prefix/.hidden' prefix/.hidden 664 -rw-rw-r-- ? ? 81b4 regular file   10 - 0 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10
+'prefix/.hidden' prefix/.hidden 664 -rw-rw-r-- ? ? 81b4 regular file   10 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10
 
 $ gufi_stat --verbose --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "prefix/.hidden"
 GUFI query is
    gufi_stat_bin \
     --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' \
     prefix/.hidden
-'prefix/.hidden' prefix/.hidden 664 -rw-rw-r-- ? ? 81b4 regular file   10 - 0 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10
+'prefix/.hidden' prefix/.hidden 664 -rw-rw-r-- ? ? 81b4 regular file   10 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10
 
 $ gufi_stat --terse "prefix/.hidden"
 prefix/.hidden 10 0 81b4 1001 1001 ? 10 1 0 0 10 10 10 0 0

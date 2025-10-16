@@ -150,7 +150,7 @@ Output file prefix (Creates file <output>.tid)
 delimiter separating output columns
 .It Fl -size%\ n\ n
 Modifier to the size flag. Expects 2 values that define the min and max percentage from the size.
-.It Fl -num_results\ n
+.It Fl -num-results\ n
 first n results
 .It Fl -smallest\ n
 top n smallest files

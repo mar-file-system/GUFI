@@ -60,6 +60,8 @@
 # OF SUCH DAMAGE.
 -->
 
+
+
 {% block head %}
 
 <style>
@@ -82,8 +84,8 @@
 {% from 'components/form_field.html' import form_field %}
 {% block content %}
 <div class="form-container">
-        <h2>Find Query Form</h2>
-    <form method="get" action="{{ url_for('render_find_view')}}">
+            <h2>Find Query Form</h2>
+            <form method="get" action="{{ url_for('render_find_view')}}">
             <div id="name-pattern-fields" class="form-group form-row">
                 {% for field in ['name','path'] %}
                     {{ form_field(field, values[field] if values and field in values else '', help_text[field] if help_text and field in help_text else '') }}
@@ -150,6 +152,19 @@
                         </label>
                         <input type="text" id="{{ field }}" name="{{ field }}" value="{{ values[field]|default('') }}">
                     </div>
+                {% endfor %}
+            </div>
+
+            <h3>Results</h3>
+            <div id="results-pattern-fields" class="form-group form-row">
+                {% for field in ['num-results'] %}
+                    {{ form_field(field, values[field] if values and field in values else '', help_text[field] if help_text and field in help_text else '') }}
+                {% endfor %}
+            </div>
+            {% set bool_fields = ['smallest','largest'] %}
+            <div class="form-group form-row">
+                {% for field in bool_fields %}
+                    {{ form_field(field, values[field] if values and field in values else '', help_text[field] if help_text and field in help_text else '', 'checkbox') }}
                 {% endfor %}
             </div>
 

@@ -58,7 +58,9 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-name: GUFI 
+
+
+name: GUFI
 description: Grand Unified File Index
 icon: fa://hdd-o
 category: Files

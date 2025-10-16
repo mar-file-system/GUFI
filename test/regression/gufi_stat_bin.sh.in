@@ -115,12 +115,12 @@ echo "# custom print format"
 (
     for entry in "${fixed_size[@]}"
     do
-        "${GUFI_STAT_BIN}" --format '%-60N %60n %+60N %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT_BIN}" --format '%-60N %60n %+60N %a %A %d %D %f %F %m %s %w %W %x %X %y %Y %z %Z\n' "${INDEXROOT}/${entry}"
     done
 
     for entry in "${variable_size[@]}"
     do
-        "${GUFI_STAT_BIN}" --format '%-60N %60n %+60N %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT_BIN}" --format '%-60N %60n %+60N %a %A %d %D %f %F %m %N %w %W %x %X %y %Y %z %Z\n' "${INDEXROOT}/${entry}"
     done
 ) | sort
 echo
@@ -134,7 +134,7 @@ run_no_sort "${GUFI_STAT_BIN}" --format '%'    "${INDEXROOT}"
 # shellcheck disable=SC2016
 for entry in "${symlinks[@]}"
 do
-    "${GUFI_STAT_BIN}" --format '%N %n %a %A %b %B %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+    "${GUFI_STAT_BIN}" --format '%N %n %a %A %b %B %d %D %f %F %m %N %w %W %x %X %y %Y %z %Z\n' "${INDEXROOT}/${entry}"
 done | @AWK@ '{ $7="--"; $8="--"; print $0 }'
 echo
 
@@ -180,7 +180,7 @@ done
 echo
 
 echo "# insert an entry with a bad type"
-run_no_sort "${SQLITE3} ${INDEXROOT}/db.db \"INSERT INTO entries (name, type, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, linkname, xattr_names) VALUES ('bad type', '?', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '');\""
+run_no_sort "${SQLITE3} ${INDEXROOT}/db.db \"INSERT INTO entries (name, type, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, linkname, xattr_names, crtime) VALUES ('bad type', '?', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0);\""
 
 echo "# pull entry with bad columns"
 run_no_sort "${GUFI_STAT_BIN} --format \"%n [%F]\" ${INDEXROOT}/bad\ type"

@@ -60,6 +60,8 @@
 # OF SUCH DAMAGE.
 -->
 
+
+
 {% block content %}
     <h2>Find Results</h2>
     {% if results %}
@@ -68,7 +70,6 @@
             <li><a href="{{url_for('render_ls_view')}}/{{ filename }}">{{ filename }}</a></li>
         {% endfor %}
         </ul>
-        <p> NOTE: Currently does not limit number of results  </p>
     {% else %}
         <p>No results found.</p>
     {% endif %}

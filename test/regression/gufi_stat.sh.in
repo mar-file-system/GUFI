@@ -104,7 +104,7 @@ run_no_sort "${GUFI_STAT} --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y
 
 run_no_sort "${GUFI_STAT} --verbose --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' \"${BASENAME}/${fixed_size[0]}\""
 
-run_no_sort "${GUFI_STAT} --terse \"${BASENAME}/${fixed_size[0]}\"" | @AWK@ "FNR == 2 { \$3=0; \$5=${TEST_USER_ID}; \$6=${TEST_GROUP_ID}; \$16=0; } 1"
+run_no_sort "${GUFI_STAT} --terse \"${BASENAME}/${fixed_size[0]}\"" | @AWK@ "FNR == 2 { \$3=0; \$5=${TEST_USER_ID}; \$6=${TEST_GROUP_ID}; \$15=0; \$16=0; } 1"
 
 run_no_sort "${GUFI_STAT} ${BASENAME}/bad/directory"
 run_no_sort "${GUFI_STAT} ${BASENAME}/badfile"

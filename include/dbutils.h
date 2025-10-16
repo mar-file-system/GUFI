@@ -120,7 +120,7 @@ extern const char ENTRIES_INSERT[];
     "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, "       \
     "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "   \
     "atime INT64, mtime INT64, ctime INT64, "                           \
-    "linkname TEXT, xattr_names BLOB, "                                 \
+    "linkname TEXT, xattr_names BLOB, crtime INT64, "                   \
     "totfiles INT64, totlinks INT64, "                                  \
     "minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, "          \
     "minsize INT64, maxsize INT64, totzero INT64, "                     \

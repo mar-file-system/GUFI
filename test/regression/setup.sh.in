@@ -405,8 +405,8 @@ clean_index() {
     "${GUFI_QUERY}" \
         -a 1 \
         -w \
-        -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \
-        -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \
+        -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime, crtime = mtime;" \
+        -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime, crtime = mtime;" \
         "${INDEX}"
 
     # set symlink permissions to 777 since they don't matter but are different depending on system

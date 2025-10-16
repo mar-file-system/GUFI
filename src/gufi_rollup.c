@@ -583,7 +583,8 @@ static const char rollup_subdir[] =
     /* copy subdir/db.db tables into current db.db */
     "INSERT INTO " PENTRIES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." PENTRIES ";"
     "INSERT INTO " SUMMARY " "
-    "SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattr_names, sub.totfiles, sub.totlinks, "
+    "SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattr_names, sub.crtime, "
+    "sub.totfiles, sub.totlinks, "
     "sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, "
     "sub.minsize, sub.maxsize, sub.totzero, "
     "sub.totltk, sub.totmtk, "

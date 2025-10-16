@@ -96,7 +96,7 @@ delimiter separating output columns
 the maximum number of levels to search
 .It Fl -mindepth d
 the minimum number of levels to search
-.It Fl -num_results n
+.It Fl -num-results n
 first n results
 .It Fl -select cols
 comma separated columns

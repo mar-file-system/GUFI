@@ -114,8 +114,6 @@ sort by modification time, newest first
 do not sort; list entries in directory order
 .It Fl -delim\ c
 delimiter separating output columns
-.It Fl -num_results\ n
-first n results
 .It Fl -output\ OUTPUT
 Output file prefix (Creates file <output>.tid)
 .It Fl -output-buffer bytes

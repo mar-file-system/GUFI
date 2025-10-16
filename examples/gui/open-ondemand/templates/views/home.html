@@ -59,6 +59,9 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 -->
+
+
+
 {% extends "layout.html" %}
 {% block title %}Home{% endblock %}
 {% block head %}
@@ -71,6 +74,6 @@
         <ul style="list-style-type: none">
             <li><a href="{{ url_for('render_ls_view',subpath='') }}">Browse Files</a></li>
             <li><a href="{{ url_for('render_find_view',subpath='') }}">Search Files</a></li>
-        </ul>  
+        </ul>
     </div>
-{% endblock %}             
+{% endblock %}

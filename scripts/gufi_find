@@ -128,7 +128,7 @@ def parse_size(size):
     return comp, int(math.ceil(float(actual_size))) * FILESIZE[unit]
 
 def need_aggregation(args):
-    return bool(args.numresults or args.smallest or args.largest)
+    return bool(args.num_results or args.smallest or args.largest)
 
 def build_aggregation_columns(args):
     # name column is implicit
@@ -491,9 +491,10 @@ def help(parser): # pylint: disable=redefined-builtin
     expr.remove('verbose')
 
     # print these separately
-    gufi_specific = ['numresults', 'largest', 'smallest']
+    gufi_specific = ['num_results', 'largest', 'smallest']
     for flag in gufi_specific:
         expr.remove(flag)
+    gufi_specific[0] = 'num-results'
 
     expr = [expr[i:i + 5] for i in range(0, len(expr), 5)]
 
@@ -733,7 +734,7 @@ def build_expression_parser():
                        help='print format on the standard output, similar to GNU find')
 
     # GUFI specific arguments
-    parser.add_argument('--numresults',
+    parser.add_argument('--num-results',
                         metavar='n',
                         type=gufi_common.get_non_negative,
                         help='first n results')
@@ -846,7 +847,7 @@ def run(argv, config_path):
                                     build_where(args, gufi_common.VRSUMMARY),
                                     build_group_by(args),
                                     build_order_by(args),
-                                    args.numresults))
+                                    args.num_results))
 
         E = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
@@ -855,7 +856,7 @@ def run(argv, config_path):
                                     build_where(args, gufi_common.VRPENTRIES),
                                     build_group_by(args),
                                     build_order_by(args),
-                                    args.numresults))
+                                    args.num_results))
 
         K = 'CREATE TABLE {0} ({1})'.format(
             args.aggregate_name,
@@ -868,14 +869,14 @@ def run(argv, config_path):
                                     None,
                                     build_group_by(args),
                                     build_order_by(args),
-                                    args.numresults))
+                                    args.num_results))
 
         G = gufi_common.build_query(build_output(args, 'name'),
                                     [args.aggregate_name],
                                     None,
                                     build_group_by(args),
                                     build_order_by(args),
-                                    args.numresults)
+                                    args.num_results)
 
         query_cmd += [
             '-I', I,
@@ -891,14 +892,14 @@ def run(argv, config_path):
                                     build_where(args, gufi_common.VRSUMMARY),
                                     build_group_by(args),
                                     build_order_by(args),
-                                    args.numresults)
+                                    args.num_results)
 
         E = gufi_common.build_query(build_output(args, VRPENTRIES_NAME),
                                     [gufi_common.VRPENTRIES],
                                     build_where(args, gufi_common.VRPENTRIES),
                                     build_group_by(args),
                                     build_order_by(args),
-                                    args.numresults)
+                                    args.num_results)
         query_cmd += [
             '-S', S,
             '-E', E

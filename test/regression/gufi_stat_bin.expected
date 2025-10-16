@@ -39,21 +39,21 @@ prefix/repeat_name 14
 prefix/unusual#? directory
 
 # custom print format
-'prefix/.hidden'                                                                             prefix/.hidden                                      'prefix/.hidden' 664 -rw-rw-r-- ? ? 81b4 regular file   10 - 0 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10
-'prefix/1KB'                                                                                     prefix/1KB                                          'prefix/1KB' 664 -rw-rw-r-- ? ? 81b4 regular file   1024 - 0 1970-01-01 00:17:04 +0000 1024 1970-01-01 00:17:04 +0000 1024
-'prefix/1MB'                                                                                     prefix/1MB                                          'prefix/1MB' 664 -rw-rw-r-- ? ? 81b4 regular file   1048576 - 0 1970-01-13 03:16:16 +0000 1048576 1970-01-13 03:16:16 +0000 1048576
-'prefix/directory'                                                                         prefix/directory                                    'prefix/directory' 775 drwxrwxr-x ? ? 41fd directory   'prefix/directory' - 0 1970-01-01 00:00:07 +0000 7 1970-01-01 00:00:07 +0000 7
-'prefix/directory/executable'                                                   prefix/directory/executable                         'prefix/directory/executable' 777 -rwxrwxrwx ? ? 81ff regular file   1 - 0 1970-01-01 00:00:01 +0000 1 1970-01-01 00:00:01 +0000 1
-'prefix/directory/readonly'                                                       prefix/directory/readonly                           'prefix/directory/readonly' 444 -r--r--r-- ? ? 8124 regular file   2 - 0 1970-01-01 00:00:02 +0000 2 1970-01-01 00:00:02 +0000 2
-'prefix/directory/subdirectory'                                               prefix/directory/subdirectory                       'prefix/directory/subdirectory' 775 drwxrwxr-x ? ? 41fd directory   'prefix/directory/subdirectory' - 0 1970-01-01 00:00:06 +0000 6 1970-01-01 00:00:06 +0000 6
-'prefix/directory/subdirectory/repeat_name'                       prefix/directory/subdirectory/repeat_name           'prefix/directory/subdirectory/repeat_name' 664 -rw-rw-r-- ? ? 81b4 regular file   5 - 0 1970-01-01 00:00:05 +0000 5 1970-01-01 00:00:05 +0000 5
-'prefix/directory/writable'                                                       prefix/directory/writable                           'prefix/directory/writable' 666 -rw-rw-rw- ? ? 81b6 regular file   3 - 0 1970-01-01 00:00:03 +0000 3 1970-01-01 00:00:03 +0000 3
-'prefix/leaf_directory'                                                               prefix/leaf_directory                               'prefix/leaf_directory' 775 drwxrwxr-x ? ? 41fd directory   'prefix/leaf_directory' - 0 1970-01-01 00:00:13 +0000 13 1970-01-01 00:00:13 +0000 13
-'prefix/leaf_directory/leaf_file1'                                         prefix/leaf_directory/leaf_file1                    'prefix/leaf_directory/leaf_file1' 664 -rw-rw-r-- ? ? 81b4 regular file   11 - 0 1970-01-01 00:00:11 +0000 11 1970-01-01 00:00:11 +0000 11
-'prefix/leaf_directory/leaf_file2'                                         prefix/leaf_directory/leaf_file2                    'prefix/leaf_directory/leaf_file2' 664 -rw-rw-r-- ? ? 81b4 regular file   12 - 0 1970-01-01 00:00:12 +0000 12 1970-01-01 00:00:12 +0000 12
-'prefix/old_file'                                                                           prefix/old_file                                     'prefix/old_file' 664 -rw-rw-r-- ? ? 81b4 regular file   0 - 0 1970-01-01 00:00:00 +0000 0 1970-01-01 00:00:00 +0000 0
-'prefix/repeat_name'                                                                     prefix/repeat_name                                  'prefix/repeat_name' 664 -rw-rw-r-- ? ? 81b4 regular file   14 - 0 1970-01-01 00:00:14 +0000 14 1970-01-01 00:00:14 +0000 14
-'prefix/unusual#? directory ,/unusual, name?#'                 prefix/unusual#? directory ,/unusual, name?#        'prefix/unusual#? directory ,/unusual, name?#' 664 -rw-rw-r-- ? ? 81b4 regular file   15 - 0 1970-01-01 00:00:15 +0000 15 1970-01-01 00:00:15 +0000 15
+'prefix/.hidden'                                                                             prefix/.hidden                                      'prefix/.hidden' 664 -rw-rw-r-- ? ? 81b4 regular file   10 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10
+'prefix/1KB'                                                                                     prefix/1KB                                          'prefix/1KB' 664 -rw-rw-r-- ? ? 81b4 regular file   1024 1970-01-01 00:17:04 +0000 1024 1970-01-01 00:17:04 +0000 1024 1970-01-01 00:17:04 +0000 1024 1970-01-01 00:17:04 +0000 1024
+'prefix/1MB'                                                                                     prefix/1MB                                          'prefix/1MB' 664 -rw-rw-r-- ? ? 81b4 regular file   1048576 1970-01-13 03:16:16 +0000 1048576 1970-01-13 03:16:16 +0000 1048576 1970-01-13 03:16:16 +0000 1048576 1970-01-13 03:16:16 +0000 1048576
+'prefix/directory'                                                                         prefix/directory                                    'prefix/directory' 775 drwxrwxr-x ? ? 41fd directory   'prefix/directory' 1970-01-01 00:00:07 +0000 7 1970-01-01 00:00:07 +0000 7 1970-01-01 00:00:07 +0000 7 1970-01-01 00:00:07 +0000 7
+'prefix/directory/executable'                                                   prefix/directory/executable                         'prefix/directory/executable' 777 -rwxrwxrwx ? ? 81ff regular file   1 1970-01-01 00:00:01 +0000 1 1970-01-01 00:00:01 +0000 1 1970-01-01 00:00:01 +0000 1 1970-01-01 00:00:01 +0000 1
+'prefix/directory/readonly'                                                       prefix/directory/readonly                           'prefix/directory/readonly' 444 -r--r--r-- ? ? 8124 regular file   2 1970-01-01 00:00:02 +0000 2 1970-01-01 00:00:02 +0000 2 1970-01-01 00:00:02 +0000 2 1970-01-01 00:00:02 +0000 2
+'prefix/directory/subdirectory'                                               prefix/directory/subdirectory                       'prefix/directory/subdirectory' 775 drwxrwxr-x ? ? 41fd directory   'prefix/directory/subdirectory' 1970-01-01 00:00:06 +0000 6 1970-01-01 00:00:06 +0000 6 1970-01-01 00:00:06 +0000 6 1970-01-01 00:00:06 +0000 6
+'prefix/directory/subdirectory/repeat_name'                       prefix/directory/subdirectory/repeat_name           'prefix/directory/subdirectory/repeat_name' 664 -rw-rw-r-- ? ? 81b4 regular file   5 1970-01-01 00:00:05 +0000 5 1970-01-01 00:00:05 +0000 5 1970-01-01 00:00:05 +0000 5 1970-01-01 00:00:05 +0000 5
+'prefix/directory/writable'                                                       prefix/directory/writable                           'prefix/directory/writable' 666 -rw-rw-rw- ? ? 81b6 regular file   3 1970-01-01 00:00:03 +0000 3 1970-01-01 00:00:03 +0000 3 1970-01-01 00:00:03 +0000 3 1970-01-01 00:00:03 +0000 3
+'prefix/leaf_directory'                                                               prefix/leaf_directory                               'prefix/leaf_directory' 775 drwxrwxr-x ? ? 41fd directory   'prefix/leaf_directory' 1970-01-01 00:00:13 +0000 13 1970-01-01 00:00:13 +0000 13 1970-01-01 00:00:13 +0000 13 1970-01-01 00:00:13 +0000 13
+'prefix/leaf_directory/leaf_file1'                                         prefix/leaf_directory/leaf_file1                    'prefix/leaf_directory/leaf_file1' 664 -rw-rw-r-- ? ? 81b4 regular file   11 1970-01-01 00:00:11 +0000 11 1970-01-01 00:00:11 +0000 11 1970-01-01 00:00:11 +0000 11 1970-01-01 00:00:11 +0000 11
+'prefix/leaf_directory/leaf_file2'                                         prefix/leaf_directory/leaf_file2                    'prefix/leaf_directory/leaf_file2' 664 -rw-rw-r-- ? ? 81b4 regular file   12 1970-01-01 00:00:12 +0000 12 1970-01-01 00:00:12 +0000 12 1970-01-01 00:00:12 +0000 12 1970-01-01 00:00:12 +0000 12
+'prefix/old_file'                                                                           prefix/old_file                                     'prefix/old_file' 664 -rw-rw-r-- ? ? 81b4 regular file   0 - 0 1970-01-01 00:00:00 +0000 0 1970-01-01 00:00:00 +0000 0 1970-01-01 00:00:00 +0000 0
+'prefix/repeat_name'                                                                     prefix/repeat_name                                  'prefix/repeat_name' 664 -rw-rw-r-- ? ? 81b4 regular file   14 1970-01-01 00:00:14 +0000 14 1970-01-01 00:00:14 +0000 14 1970-01-01 00:00:14 +0000 14 1970-01-01 00:00:14 +0000 14
+'prefix/unusual#? directory ,/unusual, name?#'                 prefix/unusual#? directory ,/unusual, name?#        'prefix/unusual#? directory ,/unusual, name?#' 664 -rw-rw-r-- ? ? 81b4 regular file   15 1970-01-01 00:00:15 +0000 15 1970-01-01 00:00:15 +0000 15 1970-01-01 00:00:15 +0000 15 1970-01-01 00:00:15 +0000 15
 
 # bad print format specifier
 $ gufi_stat_bin --format %e prefix
@@ -68,8 +68,8 @@ gufi_stat: bad format sequence: "%+"
 $ gufi_stat_bin --format % prefix
 gufi_stat: bad format sequence: "%"
 
-'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' prefix/directory/subdirectory/directory_symlink 777 lrwxrwxrwx -- -- ? ? a1ff symbolic link 'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' - 0 1970-01-01 00:00:04 +0000 4 1970-01-01 00:00:04 +0000 4
-'prefix/file_symlink' -> 'prefix/1KB' prefix/file_symlink 777 lrwxrwxrwx -- -- ? ? a1ff symbolic link 'prefix/file_symlink' -> 'prefix/1KB' - 0 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9
+'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' prefix/directory/subdirectory/directory_symlink 777 lrwxrwxrwx -- -- ? ? a1ff symbolic link 'prefix/directory/subdirectory/directory_symlink' -> 'prefix/directory/subdirectory' 1970-01-01 00:00:04 +0000 4 1970-01-01 00:00:04 +0000 4 1970-01-01 00:00:04 +0000 4 1970-01-01 00:00:04 +0000 4
+'prefix/file_symlink' -> 'prefix/1KB' prefix/file_symlink 777 lrwxrwxrwx -- -- ? ? a1ff symbolic link 'prefix/file_symlink' -> 'prefix/1KB' 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9
 
 # escape character parsing
 \a -> 07
@@ -108,7 +108,7 @@ gufi_stat: bad format sequence: "%"
 \yabcd -> \yabcd
 
 # insert an entry with a bad type
-$ sqlite3 prefix/db.db "INSERT INTO entries (name, type, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, linkname, xattr_names) VALUES ('bad type', '?', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '');"
+$ sqlite3 prefix/db.db "INSERT INTO entries (name, type, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, linkname, xattr_names, crtime) VALUES ('bad type', '?', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0);"
 
 # pull entry with bad columns
 $ gufi_stat_bin --format "%n [%F]" prefix/bad\ type
