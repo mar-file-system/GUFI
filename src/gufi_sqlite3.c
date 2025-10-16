@@ -85,8 +85,14 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     const struct option options[] = {
-        FLAG_HELP, FLAG_VERSION, FLAG_DELIM, FLAG_END
+        FLAG_HELP, FLAG_VERSION,
+
+        /* output flags */
+        FLAG_DELIM,
+
+        FLAG_END
     };
+
     struct input in;
     process_args_and_maybe_exit(options, 0, "[db [SQL]...]", &in);
 

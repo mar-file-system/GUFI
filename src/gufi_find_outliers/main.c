@@ -92,8 +92,14 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     const struct option flags[] = {
-        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_DELIM, FLAG_OUTPUT_DB, FLAG_END
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
+
+        /* output flags */
+        FLAG_DELIM, FLAG_OUTPUT_DB,
+
+        FLAG_END
     };
+
     struct PoolArgs pa;
     process_args_and_maybe_exit(flags, 2, "input_dir data ...", &pa.in);
 

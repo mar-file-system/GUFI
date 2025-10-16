@@ -118,8 +118,11 @@ static void sub_help(void) {
 
 int main(int argc, char * argv[]) {
     const struct option options[] = {
-        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_END
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
+
+        FLAG_END
     };
+
     struct input in;
     process_args_and_maybe_exit(options, 1, "directory ...", &in);
 

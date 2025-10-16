@@ -9,7 +9,7 @@ options:
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
       --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
-  -l                                if a directory was previously processed, skip descending the subtree
+      --dont-reprocess              if a directory was previously processed, skip descending the subtree
 
 GUFI_tree                path to GUFI tree
 
@@ -54,7 +54,7 @@ prefix/unusual#? directory , 0 1 0 1 0
 
 
 # Generate treesummary tables if they don't already exist
-$ gufi_treesummary_all -l "prefix"
+$ gufi_treesummary_all --dont-reprocess "prefix"
 
 # Missing db.db
 $ gufi_treesummary_all "search"

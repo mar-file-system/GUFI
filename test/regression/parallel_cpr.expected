@@ -5,7 +5,7 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-  -x, --xattrs                      index/query xattrs
+  -x, --set-xattrs                  set xattrs
 
 src...     directory to copy
 dst        directory to place sources under

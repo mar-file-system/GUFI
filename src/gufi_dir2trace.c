@@ -263,14 +263,27 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     const struct option options[] = {
-        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_XATTRS, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
-        FLAG_DELIM, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX, FLAG_SUBDIR_LIMIT,
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
+
+        /* tree walk flags */
+        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST,
+        FLAG_QUERY_XATTRS, FLAG_SKIP_FILE,
+
+        /* miscellaneous flags */
+        FLAG_CHECK_EXTDB_VALID,
+
+        /* output flags */
+        FLAG_DELIM,
+
+        /* memory usage flags */
+        FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX, FLAG_SUBDIR_LIMIT,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
-        FLAG_CHECK_EXTDB_VALID, FLAG_SUBTREE_LIST,
+
         FLAG_END
     };
+
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 2, "input_dir... output_prefix", &pa.in);
 

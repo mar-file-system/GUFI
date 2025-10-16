@@ -6,8 +6,8 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
+  -x, --set-xattrs                  set xattrs
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
-  -x, --xattrs                      index/query xattrs
 
 input_dir         walk this GUFI index to produce a tree
 output_dir        reconstruct the tree under here

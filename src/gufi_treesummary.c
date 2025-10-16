@@ -313,9 +313,14 @@ int main(int argc, char *argv[]) {
      * control which options are parsed for each program.
      */
     const struct option options[] = {
-        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_PRINTDIR,
-        FLAG_THREADS, FLAG_DELIM, FLAG_DRY_RUN, FLAG_END
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
+
+        /* processing flags */
+        FLAG_PRINTDIR, FLAG_DELIM, FLAG_DRY_RUN,
+
+        FLAG_END
     };
+
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 1, "GUFI_tree", &pa.in);
 

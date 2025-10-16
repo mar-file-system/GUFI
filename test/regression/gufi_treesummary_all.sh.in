@@ -116,7 +116,7 @@ run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdi
 echo
 
 echo "# Generate treesummary tables if they don't already exist"
-run_no_sort "${GUFI_TREESUMMARY_ALL} -l \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
+run_no_sort "${GUFI_TREESUMMARY_ALL} --dont-reprocess \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
 
 rm -rf "${SEARCH}/db.db"
 

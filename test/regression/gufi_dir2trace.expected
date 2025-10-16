@@ -6,17 +6,17 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-  -x, --xattrs                      index/query xattrs
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
-  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
+      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
+  -x, --query-xattrs                query xattrs
       --skip-file <filename>        file containing directory names to skip
-      --target-memory  <bytes>      target memory utilization (soft limit)
+  -q                                check that external databases are valid before tracking during indexing
+  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
+      --target-memory <bytes>       target memory utilization (soft limit)
       --swap-prefix <path>          File name prefix for swap files
       --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
       --compress                    compress work items
-  -q                                check that external databases are valid before tracking during indexing
-      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
 
 input_dir...         walk one or more trees to produce trace file
 output_prefix        prefix of output files (<prefix>.<tid>)

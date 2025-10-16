@@ -141,13 +141,18 @@ int main(int argc, char *argv[]) {
      * control which options are parsed for each program.
      */
     const struct option options[] = {
-        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_MIN_LEVEL,
-        FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST, FLAG_ALREADY_PROCESSED, FLAG_END
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
+
+        /* processing/tree walk flags */
+        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST, FLAG_DONT_REPROCESS,
+
+        FLAG_END
     };
+
     struct input in;
     process_args_and_maybe_exit(options, 1, "GUFI_tree", &in);
 
-    BU_descend_f desc = in.check_already_processed?treesummary_descend:NULL;
+    BU_descend_f desc = in.dont_reprocess?treesummary_descend:NULL;
 
     const int rc = parallel_bottomup(argv + idx, argc - idx,
                                      in.min_level, in.max_level,

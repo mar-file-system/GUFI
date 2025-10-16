@@ -282,7 +282,7 @@ run_no_sort "${GUFI_QUERY} -n ${THREADS} --subtree-list \"${DISTRIBUTED_0}\" --m
 ) 2>&1 | tee "${OUTPUT}"
 
 echo "# Print terse debug timestamps (not part of expected results)"
-run_sort "${GUFI_QUERY} -d \" \" -j -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" --terse -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.expected "${OUTPUT}"
 rm "${OUTPUT}"

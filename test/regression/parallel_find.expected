@@ -5,10 +5,10 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
   -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')
+      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
       --output-buffer-size <bytes>  size of each thread's output buffer in bytes
 
@@ -22,10 +22,10 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
   -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')
+      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
       --output-buffer-size <bytes>  size of each thread's output buffer in bytes
 

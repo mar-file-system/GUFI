@@ -187,7 +187,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->sql.agg,                        G_arg);
         EXPECT_EQ(in->output_buffer_size,             (std::size_t) 1);
         EXPECT_EQ(in->format,                         format_arg);
-        EXPECT_EQ(in->rollup_limit,                   (std::size_t) 1);
+        EXPECT_EQ(in->rollup_entries_limit,           (std::size_t) 1);
         EXPECT_NE(in->skip,                           nullptr);
         EXPECT_EQ(in->target_memory,                  (std::size_t) 1);
         EXPECT_EQ(in->subdir_limit,                   (std::size_t) 1);
@@ -231,7 +231,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->sql.agg,                        empty);
         EXPECT_EQ(in->output_buffer_size,             (std::size_t) 4096);
         EXPECT_EQ(in->format,                         empty);
-        EXPECT_EQ(in->rollup_limit,                   (std::size_t) 0);
+        EXPECT_EQ(in->rollup_entries_limit,           (std::size_t) 0);
         EXPECT_NE(in->skip,                           nullptr);
         EXPECT_EQ(in->target_memory,                  (std::size_t) 0);
         EXPECT_EQ(in->subdir_limit,                   (std::size_t) 0);

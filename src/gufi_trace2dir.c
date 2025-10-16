@@ -203,8 +203,17 @@ void sub_help(void) {
 
 int main(int argc, char * argv[]) {
     const struct option options[] = {
-        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_DELIM, FLAG_XATTRS, FLAG_END
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
+
+        /* tree walk flags */
+        FLAG_SET_XATTRS,
+
+        /* input flags */
+        FLAG_DELIM,
+
+        FLAG_END
     };
+
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 2, "trace_file... output_dir", &pa.in);
 

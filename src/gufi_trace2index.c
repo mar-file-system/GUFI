@@ -270,8 +270,16 @@ int main(int argc, char *argv[]) {
 
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
-        FLAG_DELIM, FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX, FLAG_END
+
+        /* input flags */
+        FLAG_DELIM,
+
+        /* memory usage flags  */
+        FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX,
+
+        FLAG_END
     };
+
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 2, "trace_file... output_dir", &pa.in);
 

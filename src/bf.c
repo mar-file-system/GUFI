@@ -195,7 +195,6 @@ void print_help(const char* prog_name,
             case FLAG_HELP_SHORT:                    printf("  -h, --help                        help"); break;
             case FLAG_DEBUG_SHORT:                   printf("  -H, --debug                       show assigned input values (debugging)"); break;
             case FLAG_VERSION_SHORT:                 printf("  -v, --version                     version"); break;
-            case FLAG_XATTRS_SHORT:                  printf("  -x, --xattrs                      index/query xattrs"); break;
             case FLAG_PRINTDIR_SHORT:                printf("  -P                                print directories as they are encountered"); break;
             case FLAG_BUILDINDEX_SHORT:              printf("  -b                                build GUFI index tree"); break;
             case FLAG_PROCESS_SQL_SHORT:             printf("  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
@@ -209,6 +208,9 @@ void print_help(const char* prog_name,
             case FLAG_SQL_TSUM_SHORT:                printf("  -T <SQL_tsum>                     SQL for tree-summary table"); break;
             case FLAG_SQL_SUM_SHORT:                 printf("  -S <SQL_sum>                      SQL for summary table"); break;
             case FLAG_SQL_ENT_SHORT:                 printf("  -E <SQL_ent>                      SQL for entries table"); break;
+            case FLAG_SQL_INTERM_SHORT:              printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
+            case FLAG_SQL_CREATE_AGG_SHORT:          printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
+            case FLAG_SQL_AGG_SHORT:                 printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
             case FLAG_SQL_FIN_SHORT:                 printf("  -F <SQL_fin>                      SQL cleanup"); break;
             case FLAG_INSERT_FILE_LINK_SHORT:        printf("  -r                                insert files and links into db (for bfwreaddirplus2db"); break;
             case FLAG_INSERT_DIR_SHORT:              printf("  -R                                insert dires into db (for bfwreaddirplus2db"); break;
@@ -218,9 +220,6 @@ void print_help(const char* prog_name,
             case FLAG_SUSPECT_METHOD_SHORT:          printf("  -A <suspectmethod>                suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
             case FLAG_STRIDE_SHORT:                  printf("  -g <stridesize>                   stride size for striping inodes"); break;
             case FLAG_SUSPECT_TIME_SHORT:            printf("  -c <suspecttime>                  time in seconds since epoch for suspect comparision"); break;
-            case FLAG_SQL_INTERM_SHORT:              printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
-            case FLAG_SQL_CREATE_AGG_SHORT:          printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
-            case FLAG_SQL_AGG_SHORT:                 printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
             case FLAG_READ_WRITE_SHORT:              printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
             case FLAG_CHECK_EXTDB_VALID_SHORT:       printf("  -q                                check that external databases are valid before tracking during indexing"); break;
             case FLAG_EXTERNAL_ATTACH_SHORT:         printf("  -Q <basename>\n"
@@ -228,10 +227,7 @@ void print_help(const char* prog_name,
                                                             "     <template>.<table>\n"
                                                             "     <view>                         External database file basename, per-attach table name, template + table name, and the resultant view"); break;
             case FLAG_PATH_SHORT:                    printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
-            case FLAG_ALREADY_PROCESSED_SHORT:       printf("  -l                                if a directory was previously processed, skip descending the subtree"); break;
             case FLAG_FILTER_TYPE_SHORT:             printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
-            case FLAG_FORMAT_SHORT:                  printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
-            case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
 
             /* no typable short flags */
 
@@ -243,14 +239,23 @@ void print_help(const char* prog_name,
             case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
             case FLAG_PLUGIN_SHORT:                  printf("      --plugin <library_name>       plugin library for modifying db entries"); break;
             case FLAG_SUBTREE_LIST_SHORT:            printf("      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
+            case FLAG_FORMAT_SHORT:                  printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
+            case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
             case FLAG_ROLLUP_LIMIT_SHORT:            printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
+            case FLAG_DONT_REPROCESS_SHORT:          printf("      --dont-reprocess              if a directory was previously processed, skip descending the subtree"); break;
 
             /* memory usage flags */
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:      printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
-            case FLAG_TARGET_MEMORY_SHORT:           printf("      --target-memory  <bytes>      target memory utilization (soft limit)"); break;
+            case FLAG_TARGET_MEMORY_SHORT:           printf("      --target-memory <bytes>       target memory utilization (soft limit)"); break;
             case FLAG_SUBDIR_LIMIT_SHORT:            printf("      --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially"); break;
             case FLAG_COMPRESS_SHORT:                printf("      --compress                    compress work items"); break;
             case FLAG_SWAP_PREFIX_SHORT:             printf("      --swap-prefix <path>          File name prefix for swap files"); break;
+
+            /* xattr flags */
+            case FLAG_XATTRS_SHORT:                  options++; continue;
+            case FLAG_INDEX_XATTRS_SHORT:            printf("  -x, --index-xattrs                index xattrs"); break;
+            case FLAG_QUERY_XATTRS_SHORT:            printf("  -x, --query-xattrs                query xattrs"); break;
+            case FLAG_SET_XATTRS_SHORT:              printf("  -x, --set-xattrs                  set xattrs"); break;
 
             default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
@@ -268,13 +273,15 @@ void show_input(struct input* in, int retval) {
     printf("in.maxthreads               = %zu\n",           in->maxthreads);
     printf("in.delim                    = '%c'\n",          in->delim);
     printf("in.process_sql              = %d\n",            (int) in->process_sql);
-    printf("in.process_xattrs           = %d\n",            in->process_xattrs);
     printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
     printf("in.nobody.gid               = %" STAT_gid "\n", in->nobody.gid);
     printf("in.sql.init                 = '%s'\n",          in->sql.init.data);
     printf("in.sql.tsum                 = '%s'\n",          in->sql.tsum.data);
     printf("in.sql.sum                  = '%s'\n",          in->sql.sum.data);
     printf("in.sql.ent                  = '%s'\n",          in->sql.ent.data);
+    printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate.data);
+    printf("in.sql.init_agg             = '%s'\n",          in->sql.init_agg.data);
+    printf("in.sql.agg                  = '%s'\n",          in->sql.agg.data);
     printf("in.sql.fin                  = '%s'\n",          in->sql.fin.data);
     printf("in.insertdir                = '%d'\n",          in->insertdir);
     printf("in.insertfl                 = '%d'\n",          in->insertfl);
@@ -285,18 +292,7 @@ void show_input(struct input* in, int retval) {
     printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
     printf("in.suspecttime              = '%d'\n",          in->suspecttime);
     printf("in.stride                   = '%d'\n",          in->stride);
-    printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate.data);
-    printf("in.sql.init_agg             = '%s'\n",          in->sql.init_agg.data);
-    printf("in.sql.agg                  = '%s'\n",          in->sql.agg.data);
-    printf("in.output_buffer_size       = %zu\n",           in->output_buffer_size);
     printf("in.open_flags               = %d\n",            in->open_flags);
-    printf("in.format_set               = %d\n",            in->format_set);
-    printf("in.format                   = '%s'\n",          in->format.data);
-    printf("in.terse                    = %d\n",            in->terse);
-    printf("in.rollup_limit             = %zu\n",           in->rollup_limit);
-    printf("in.target_memory            = %" PRIu64 "\n",   in->target_memory);
-    printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
-    printf("in.compress                 = %d\n",            in->compress);
     printf("in.check_extdb_valid        = %d\n",            in->check_extdb_valid);
     size_t i = 0;
     sll_loop(&in->external_attach, node) {
@@ -305,10 +301,7 @@ void show_input(struct input* in, int retval) {
                i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
     }
     printf("\n");
-    printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
     printf("in.source_prefix            = '%s'\n",          in->source_prefix.data);
-    printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
-    printf("in.check_already_processed  = %d\n",            in->check_already_processed);
     printf("in.filter_types             = %d\n",            in->filter_types);
 
     // no typable short flags
@@ -317,8 +310,26 @@ void show_input(struct input* in, int retval) {
     printf("in.max_level                = %zu\n",           in->max_level);
     printf("in.types.prefix             = %d\n",            in->types.print_tlv);
     printf("in.keep_matime              = %d\n",            in->keep_matime);
-    printf("in.skip_count               = '%zu'\n",         in->skip_count);
+    printf("in.skip_count               = %zu\n",           in->skip_count);
     printf("in.dry_run                  = %d\n",            in->dry_run);
+    printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
+    printf("in.format_set               = %d\n",            in->format_set);
+    printf("in.format                   = '%s'\n",          in->format.data);
+    printf("in.terse                    = %d\n",            in->terse);
+    printf("in.rollup_entries_limit     = %zu\n",           in->rollup_entries_limit);
+    printf("in.dont_reprocess           = %d\n",            in->dont_reprocess);
+
+    /* memory usage flags */
+
+    printf("in.output_buffer_size       = %zu\n",           in->output_buffer_size);
+    printf("in.target_memory            = %" PRIu64 "\n",   in->target_memory);
+    printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
+    printf("in.compress                 = %d\n",            in->compress);
+    printf("in.swap_prefix              = '%s'\n",          in->swap_prefix.data);
+
+    /* xattr flags */
+
+    printf("in.process_xattrs           = %d\n",            in->process_xattrs);
 
     printf("retval                      = %d\n",            retval);
     printf("\n");
@@ -404,10 +415,6 @@ int parse_cmd_line(int                  argc,
                 in->printed_version = 1;
                 break;
 
-            case FLAG_XATTRS_SHORT:               // enable xattr processing
-                in->process_xattrs = 1;
-                break;
-
             case FLAG_PRINTDIR_SHORT:               // print dirs?
                 in->printdir = 1;
                 break;
@@ -463,6 +470,18 @@ int parse_cmd_line(int                  argc,
                 INSTALL_STR(&in->sql.ent, optarg);
                 break;
 
+            case FLAG_SQL_INTERM_SHORT:
+                INSTALL_STR(&in->sql.intermediate, optarg);
+                break;
+
+            case FLAG_SQL_CREATE_AGG_SHORT:
+                INSTALL_STR(&in->sql.init_agg, optarg);
+                break;
+
+            case FLAG_SQL_AGG_SHORT:
+                INSTALL_STR(&in->sql.agg, optarg);
+                break;
+
             case FLAG_SQL_FIN_SHORT:               // SQL clean-up
                 INSTALL_STR(&in->sql.fin, optarg);
                 break;
@@ -500,18 +519,6 @@ int parse_cmd_line(int                  argc,
                 INSTALL_INT(&in->suspecttime, optarg, 1, 2147483646, "-c", &retval);
                 break;
 
-            case FLAG_SQL_INTERM_SHORT:
-                INSTALL_STR(&in->sql.intermediate, optarg);
-                break;
-
-            case FLAG_SQL_CREATE_AGG_SHORT:
-                INSTALL_STR(&in->sql.init_agg, optarg);
-                break;
-
-            case FLAG_SQL_AGG_SHORT:
-                INSTALL_STR(&in->sql.agg, optarg);
-                break;
-
             case FLAG_READ_WRITE_SHORT:
                 in->open_flags = SQLITE_OPEN_READWRITE;
                 break;
@@ -545,10 +552,6 @@ int parse_cmd_line(int                  argc,
                 INSTALL_STR(&in->source_prefix, optarg);
                 break;
 
-            case FLAG_ALREADY_PROCESSED_SHORT:
-                in->check_already_processed = 1;
-                break;
-
             case FLAG_FILTER_TYPE_SHORT:
                 while (*optarg) {
                     switch (*optarg) {
@@ -570,7 +573,7 @@ int parse_cmd_line(int                  argc,
                 }
                 break;
 
-            // no typable short flags
+            /* no typable short flags */
 
             case FLAG_MIN_LEVEL_SHORT:
                 INSTALL_SIZE(&in->min_level, optarg, (size_t) 0, (size_t) -1, "--min-level", &retval);
@@ -631,9 +634,15 @@ int parse_cmd_line(int                  argc,
                 break;
 
             case FLAG_ROLLUP_LIMIT_SHORT:
-                INSTALL_SIZE(&in->rollup_limit, optarg, (size_t) 0, (size_t) -1,
+                INSTALL_SIZE(&in->rollup_entries_limit, optarg, (size_t) 0, (size_t) -1,
                              "--" FLAG_ROLLUP_LIMIT_LONG, &retval);
                 break;
+
+            case FLAG_DONT_REPROCESS_SHORT:
+                in->dont_reprocess = 1;
+                break;
+
+            /* memory usage flags */
 
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:
                 INSTALL_SIZE(&in->output_buffer_size, optarg, (size_t) 0, (size_t) -1,
@@ -656,6 +665,15 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_SWAP_PREFIX_SHORT:
                 INSTALL_STR(&in->swap_prefix, optarg);
+                break;
+
+            /* xattr flags */
+
+            case FLAG_XATTRS_SHORT:
+            case FLAG_INDEX_XATTRS_SHORT:
+            case FLAG_QUERY_XATTRS_SHORT:
+            case FLAG_SET_XATTRS_SHORT:
+                in->process_xattrs = 1; /* all xattr flags point to the same variable */
                 break;
 
             case '?':

@@ -101,10 +101,6 @@ extern "C" {
 #define FLAG_VERSION_LONG "version"
 #define FLAG_VERSION {FLAG_VERSION_LONG, no_argument, NULL, FLAG_VERSION_SHORT}
 
-#define FLAG_XATTRS_SHORT 'x'
-#define FLAG_XATTRS_LONG "xattrs"
-#define FLAG_XATTRS {FLAG_XATTRS_LONG, no_argument, NULL, FLAG_XATTRS_SHORT}
-
 #define FLAG_PRINTDIR_SHORT 'P'
 #define FLAG_PRINTDIR {"", no_argument, NULL, FLAG_PRINTDIR_SHORT}
 
@@ -142,6 +138,15 @@ extern "C" {
 #define FLAG_SQL_ENT_SHORT 'E'
 #define FLAG_SQL_ENT {"", required_argument, NULL, FLAG_SQL_ENT_SHORT}
 
+#define FLAG_SQL_INTERM_SHORT 'J'
+#define FLAG_SQL_INTERM {"", required_argument, NULL, FLAG_SQL_INTERM_SHORT}
+
+#define FLAG_SQL_CREATE_AGG_SHORT 'K'
+#define FLAG_SQL_CREATE_AGG {"", required_argument, NULL, FLAG_SQL_CREATE_AGG_SHORT}
+
+#define FLAG_SQL_AGG_SHORT 'G'
+#define FLAG_SQL_AGG {"", required_argument, NULL, FLAG_SQL_AGG_SHORT}
+
 #define FLAG_SQL_FIN_SHORT 'F'
 #define FLAG_SQL_FIN {"", required_argument, NULL, FLAG_SQL_FIN_SHORT}
 
@@ -169,15 +174,6 @@ extern "C" {
 #define FLAG_SUSPECT_TIME_SHORT 'c'
 #define FLAG_SUSPECT_TIME {"", required_argument, NULL, FLAG_SUSPECT_TIME_SHORT}
 
-#define FLAG_SQL_INTERM_SHORT 'J'
-#define FLAG_SQL_INTERM {"", required_argument, NULL, FLAG_SQL_INTERM_SHORT}
-
-#define FLAG_SQL_CREATE_AGG_SHORT 'K'
-#define FLAG_SQL_CREATE_AGG {"", required_argument, NULL, FLAG_SQL_CREATE_AGG_SHORT}
-
-#define FLAG_SQL_AGG_SHORT 'G'
-#define FLAG_SQL_AGG {"", required_argument, NULL, FLAG_SQL_AGG_SHORT}
-
 #define FLAG_READ_WRITE_SHORT 'w'
 #define FLAG_READ_WRITE_LONG "read-write"
 #define FLAG_READ_WRITE {FLAG_READ_WRITE_LONG, no_argument, NULL, FLAG_READ_WRITE_SHORT}
@@ -192,17 +188,15 @@ extern "C" {
 #define FLAG_PATH_LONG "path"
 #define FLAG_PATH {FLAG_PATH_LONG, required_argument, NULL, FLAG_PATH_SHORT}
 
-#define FLAG_ALREADY_PROCESSED_SHORT 'l'
-#define FLAG_ALREADY_PROCESSED {"", no_argument, NULL, FLAG_ALREADY_PROCESSED_SHORT}
-
 #define FLAG_FILTER_TYPE_SHORT 't'
 #define FLAG_FILTER_TYPE_LONG "filter-type"
 #define FLAG_FILTER_TYPE {FLAG_FILTER_TYPE_LONG, required_argument, NULL, FLAG_FILTER_TYPE_SHORT}
 
 /* no typable short flags */
 
-#define FLAG_GROUP_MISC 1000
-#define FLAG_GROUP_MEM  2000
+#define FLAG_GROUP_MISC    1000
+#define FLAG_GROUP_MEM     2000
+#define FLAG_GROUP_XATTRS  3000
 
 /* miscellaneous flags */
 
@@ -250,6 +244,10 @@ extern "C" {
 #define FLAG_ROLLUP_LIMIT_LONG "limit"
 #define FLAG_ROLLUP_LIMIT {FLAG_ROLLUP_LIMIT_LONG, required_argument, NULL, FLAG_ROLLUP_LIMIT_SHORT}
 
+#define FLAG_DONT_REPROCESS_SHORT (FLAG_GROUP_MISC + 11)
+#define FLAG_DONT_REPROCESS_LONG "dont-reprocess"
+#define FLAG_DONT_REPROCESS {FLAG_DONT_REPROCESS_LONG, no_argument, NULL, FLAG_DONT_REPROCESS_SHORT}
+
 /* memory utilization flags */
 
 #define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
@@ -271,6 +269,24 @@ extern "C" {
 #define FLAG_SWAP_PREFIX_SHORT (FLAG_GROUP_MEM + 4)
 #define FLAG_SWAP_PREFIX_LONG "swap-prefix"
 #define FLAG_SWAP_PREFIX {FLAG_SWAP_PREFIX_LONG, required_argument, NULL, FLAG_SWAP_PREFIX_SHORT}
+
+/* xattr flags */
+
+/* -x is short for multiple long flags */
+#define FLAG_XATTRS_SHORT 'x'
+#define FLAG_XATTRS {"", no_argument, NULL, FLAG_XATTRS_SHORT}
+
+#define FLAG_INDEX_XATTRS_SHORT (FLAG_GROUP_XATTRS + 0)
+#define FLAG_INDEX_XATTRS_LONG "index-xattrs"
+#define FLAG_INDEX_XATTRS FLAG_XATTRS, {FLAG_INDEX_XATTRS_LONG, no_argument, NULL, FLAG_INDEX_XATTRS_SHORT}
+
+#define FLAG_QUERY_XATTRS_SHORT (FLAG_GROUP_XATTRS + 1)
+#define FLAG_QUERY_XATTRS_LONG "query-xattrs"
+#define FLAG_QUERY_XATTRS FLAG_XATTRS, {FLAG_QUERY_XATTRS_LONG, no_argument, NULL, FLAG_QUERY_XATTRS_SHORT}
+
+#define FLAG_SET_XATTRS_SHORT (FLAG_GROUP_XATTRS + 2)
+#define FLAG_SET_XATTRS_LONG "set-xattrs"
+#define FLAG_SET_XATTRS FLAG_XATTRS, {FLAG_SET_XATTRS_LONG, no_argument, NULL, FLAG_SET_XATTRS_SHORT}
 
 /* required at the end of every flag list */
 #define FLAG_END {NULL, 0, NULL, 0}
@@ -443,7 +459,7 @@ struct input {
     refstr_t format;
 
     /* only used by rollup */
-    size_t rollup_limit;
+    size_t rollup_entries_limit;
 
     /* trie containing directory basenames to skip during tree traversal */
     trie_t *skip;
@@ -484,7 +500,7 @@ struct input {
      *
      * used by BottomUp programs
      */
-    int check_already_processed;
+    int dont_reprocess;
 
     /*
      * Holds pointers to plugin functions for running custom user code to manipulate the databases.

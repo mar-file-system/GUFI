@@ -78,7 +78,7 @@ def top_cmd(args, _target):
         args.gufi_rollup,
         '--threads', str(args.threads),
         '--max-level', str(args.level), # no -1: need to get rollupscore from subtree roots
-        '-l',
+        '--dont-reprocess',
         args.GUFI_tree
     ]
 

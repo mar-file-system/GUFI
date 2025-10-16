@@ -177,7 +177,7 @@ echo "# Check which directories have been rolled up"
 run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""
 
 echo "# Complete rollup using existing data"
-run_no_sort "${GUFI_ROLLUP} -l \"${INDEXROOT}\""
+run_no_sort "${GUFI_ROLLUP} --dont-reprocess \"${INDEXROOT}\""
 
 echo "# Check which directories have been rolled up"
 run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""

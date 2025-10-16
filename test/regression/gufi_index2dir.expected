@@ -6,7 +6,7 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-  -x, --xattrs                      index/query xattrs
+  -x, --set-xattrs                  set xattrs
 
 GUFI_tree         walk this GUFI index to produce a tree
 dir               reconstruct the tree under here

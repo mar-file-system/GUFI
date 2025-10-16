@@ -499,7 +499,12 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     const struct option options[] = {
-        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_FORMAT, FLAG_TERSE, FLAG_END
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION,
+
+        /* output flags */
+        FLAG_FORMAT, FLAG_TERSE,
+
+        FLAG_END
     };
     struct input in;
     process_args_and_maybe_exit(options, 1, "path ...", &in);

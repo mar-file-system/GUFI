@@ -6,12 +6,12 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-      --limit <count>               Highest number of files/links in a directory allowed to be rolled up
-      --dry-run                     Dry run
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
       --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
-  -l                                if a directory was previously processed, skip descending the subtree
+      --limit <count>               Highest number of files/links in a directory allowed to be rolled up
+      --dry-run                     Dry run
+      --dont-reprocess              if a directory was previously processed, skip descending the subtree
 
 GUFI_tree         GUFI tree to roll up
 
@@ -1575,7 +1575,7 @@ prefix/unusual#? directory ,|1
 prefix|0
 
 # Complete rollup using existing data
-$ gufi_rollup -l "prefix"
+$ gufi_rollup --dont-reprocess "prefix"
 Roots:
     prefix
 

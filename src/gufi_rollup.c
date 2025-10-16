@@ -230,7 +230,7 @@ static void print_stats(char **paths, const int path_count,
     }
     fprintf(stdout, "\n");
     fprintf(stdout, "Thread Pool Size: %12zu\n",  in->maxthreads);
-    fprintf(stdout, "Files/Links Limit: %11zu\n", in->rollup_limit);
+    fprintf(stdout, "Files/Links Limit: %11zu\n", in->rollup_entries_limit);
     fprintf(stdout, "\n");
 
     /* per-thread stats together */
@@ -543,7 +543,7 @@ static int can_rollup(struct input *in,
     get_nondirs(rollup->data.name, dst, &ds->subnondir_count);
 
     /* the current directory has too many immediate files/links, don't roll up */
-    if (in->rollup_limit && (ds->subnondir_count > in->rollup_limit)) {
+    if (in->rollup_entries_limit && (ds->subnondir_count > in->rollup_entries_limit)) {
         ds->too_many_before = ds->subnondir_count;
         goto end_can_rollup;
     }
@@ -585,7 +585,7 @@ static int can_rollup(struct input *in,
      */
     if (legal) {
         const size_t total_pentries = ds->subnondir_count + total_child_entries;
-        if (in->rollup_limit && (total_pentries > in->rollup_limit)) {
+        if (in->rollup_entries_limit && (total_pentries > in->rollup_entries_limit)) {
             ds->too_many_after = total_pentries;
             legal = 0;
         }
@@ -853,7 +853,7 @@ static int rollup_ascend(void *args) {
     /* can attempt to roll up */
     if (dst) {
         /* if completing partial rollup and this directory is already rolled up, skip */
-        if (!in->check_already_processed || !dir->rolledup) {
+        if (!in->dont_reprocess || !dir->rolledup) {
             /* check if rollup is allowed */
             ds->score = can_rollup(in, dir, ds, dst);
 
@@ -923,14 +923,20 @@ static void sub_help(void) {
 }
 
 int main(int argc, char *argv[]) {
+    const struct option options[] = {
+        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
+
+        /* processing/tree walk flags */
+        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST,
+        FLAG_ROLLUP_LIMIT, FLAG_DRY_RUN,
+        FLAG_DONT_REPROCESS,
+
+        FLAG_END
+    };
+
     struct start_end runtime;
     clock_gettime(CLOCK_MONOTONIC, &runtime.start);
 
-    const struct option options[] = {
-        FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS, FLAG_ROLLUP_LIMIT,
-        FLAG_DRY_RUN, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,FLAG_SUBTREE_LIST,
-        FLAG_ALREADY_PROCESSED, FLAG_END
-    };
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 1, "GUFI_tree ...", &pa.in);
 
@@ -958,7 +964,7 @@ int main(int argc, char *argv[]) {
     argv += idx;
     argc -= idx;
 
-    BU_descend_f desc = pa.in.check_already_processed?rollup_descend:NULL;
+    BU_descend_f desc = pa.in.dont_reprocess?rollup_descend:NULL;
 
     const int rc = parallel_bottomup(argv, argc,
                                      pa.in.min_level, pa.in.max_level,

@@ -6,17 +6,17 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-  -x, --xattrs                      index/query xattrs
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
+      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
+  -x, --index-xattrs                index xattrs
       --skip-file <filename>        file containing directory names to skip
-      --target-memory  <bytes>      target memory utilization (soft limit)
+  -q                                check that external databases are valid before tracking during indexing
+      --plugin <library_name>       plugin library for modifying db entries
+      --target-memory <bytes>       target memory utilization (soft limit)
       --swap-prefix <path>          File name prefix for swap files
       --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
-      --plugin <library_name>       plugin library for modifying db entries
       --compress                    compress work items
-  -q                                check that external databases are valid before tracking during indexing
-      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
 
 input_dir...      walk one or more trees to produce GUFI tree
 output_dir        build GUFI tree here
