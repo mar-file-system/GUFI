@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index b11db35..a6ef2d8 100644
+index b11db35..14818f8 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -79,12 +79,17 @@ endif
+@@ -79,18 +79,20 @@ endif
  else
  BUILT_LOADABLE_PATH=$(BUILD_DIR)/lembed0.$(LOADABLE_EXTENSION)
  endif
@@ -18,5 +18,13 @@ index b11db35..a6ef2d8 100644
 +	ls $(BUILD_DIR)
 +	cp $(BUILT_STATIC_PATH) $@
  
- sqlite-lembed.h: sqlite-lembed.h.tmpl VERSION
- 	VERSION=$(shell cat VERSION) \
+-sqlite-lembed.h: sqlite-lembed.h.tmpl VERSION
+-	VERSION=$(shell cat VERSION) \
+-	DATE=$(shell date -r VERSION +'%FT%TZ%z') \
+-	SOURCE=$(shell git log -n 1 --pretty=format:%H -- VERSION) \
+-	envsubst < $< > $@
++sqlite-lembed.h: sqlite-lembed.h.tmpl
++	cp $< $@
+ 
+ MODELS_DIR=$(prefix)/.models
+ 
