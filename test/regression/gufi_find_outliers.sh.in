@@ -97,6 +97,13 @@ run() {
         # index tree
         run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SEARCH}\""
 
+        # change timestamps
+        "${GUFI_QUERY}" \
+            --read-write \
+            -S "UPDATE summary SET mtime = atime, ctime = atime;" \
+            -E "UPDATE entry   SET mtime = atime, ctime = atime;" \
+            "${SEARCH}"
+
         # need treesummary table in all directories
         run_no_sort "${GUFI_TREESUMMARY_ALL} -n ${THREADS} \"${SEARCH}\""
 
