@@ -109,7 +109,7 @@ jobs:
       run:  ctest || true
 
     - name: Delete files not reported for coverage
-      run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bffuse.*" -o -name "bfresultfuse.*" -o -name "dfw.*" -o -name "gufi_find_outliers.*" -o -path "*/test/*" -o -path "*/gufi_find_outliers.dir/*" -o \( -path "*/gufi_vt.dir/*" -a -not -name "gufi_vt.*" \) -o -path "*/contrib/stats/*" \) -delete
+      run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bffuse.*" -o -name "bfresultfuse.*" -o -name "dfw.*" -o -path "*/test/*" -o \( -path "*/gufi_vt.dir/*" -a -not -name "gufi_vt.*" \) -o -path "*/contrib/stats/*" \) -delete
 
     - name: Generate Python Coverage Report
       run:  |

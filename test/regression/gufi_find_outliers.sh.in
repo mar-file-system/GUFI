@@ -140,7 +140,7 @@ not_enough_subdirs() {
 #
 multiple_dirs_no_outliers() {
     local now
-    now="$(date +%s)"
+    now=10
 
     local prefix
     prefix="${1:-${SRCDIR}}"
@@ -171,7 +171,7 @@ multiple_dirs_no_outliers() {
 #
 one_atime() {
     local now
-    now="$(date +%s)"
+    now=10
 
     local prefix="${1:-${SRCDIR}}"
     local ts="${2:-${now}}"
@@ -203,7 +203,7 @@ one_atime() {
 #
 two_atime() {
     local now
-    now="$(date +%s)"
+    now=10
 
     local prefix
     prefix="${1:-${SRCDIR}}"
@@ -246,7 +246,7 @@ two_atime() {
 #
 level_2() {
     local now
-    now="$(date +%s)"
+    now=10
 
     local prefix
     prefix="${1:-${SRCDIR}}"
@@ -283,7 +283,7 @@ level_2() {
 #
 summary_outlier() {
     local now
-    now="$(date +%s)"
+    now=10
 
     local prefix
     prefix="${1:-${SRCDIR}}"
@@ -311,7 +311,7 @@ echo "# #####################################"
 echo "# write output to database"
 (
     level_2 "${SRCDIR}"
-    "${GUFI_DIR2INDEX}" -n ${THREADS} "${SRCDIR}" "${SEARCH}" 2>&1 > /dev/null
+    "${GUFI_DIR2INDEX}" -n ${THREADS} "${SRCDIR}" "${SEARCH}" > /dev/null 2>&1
     "${GUFI_TREESUMMARY_ALL}" -n ${THREADS} "${SEARCH}"
 
     run_no_sort "${GUFI_FIND_OUTLIERS} -d \"${DELIM}\" -n ${THREADS} -O \"${OUTDB}\" \"${INDEXROOT}\" totatime"

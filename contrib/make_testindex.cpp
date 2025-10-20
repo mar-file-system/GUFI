@@ -984,6 +984,8 @@ class LoopedThread {
 };
 
 int main(int argc, char *argv[]) {
+    sqlite3_initialize();
+
     Settings settings;
 
     // parse arguments
@@ -1137,6 +1139,8 @@ int main(int argc, char *argv[]) {
     for(std::size_t i = 0; i < file_count_histogram.size(); i++) {
         std::cout << "        " << settings.file_count[i] << ": " << file_count_histogram[i] << std::endl;
     }
+
+    sqlite3_shutdown();
 
     return 0;
 }

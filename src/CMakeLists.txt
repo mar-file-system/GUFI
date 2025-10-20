@@ -238,10 +238,16 @@ if (APPLE OR DARWIN)
   set_target_properties(gufi_vt PROPERTIES SUFFIX ".${EXT}")
 endif()
 
+# libsqlite3 needs to be linked in order to get sqlite3_initialize
+# and sqlite3_shutdown
+#
 # libsqlite3-pcre needs to be installed manually (since it does not
 # have a package) in order for gufi_vt to be usable if using rpm
 # installed files
-target_link_libraries(gufi_vt "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}")
+target_link_libraries(gufi_vt
+  "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
+  "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
+)
 add_dependencies(gufi_vt install_dependencies)
 install(TARGETS gufi_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
 

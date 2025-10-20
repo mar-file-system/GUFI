@@ -102,6 +102,7 @@ static const struct plugin_operations null_plugin_ops = {
 };
 
 struct input *input_init(struct input *in) {
+    sqlite3_initialize(); /* explicitly initialize here, in a fuction that is run serially once in main */
     if (in) {
         memset(in, 0, sizeof(*in));
         in->maxthreads              = 1;                      // don't default to zero threads
@@ -155,6 +156,7 @@ void input_fini(struct input *in) {
             dlclose(in->plugin_handle);
         }
     }
+    sqlite3_shutdown();
 }
 
 /*

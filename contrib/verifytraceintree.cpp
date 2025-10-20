@@ -454,6 +454,8 @@ int main(int argc, char *argv[]) {
     std::atomic_bool correct(false);
     struct CheckStanzaArgs csa(threads, correct, delim, GUFI_tree);
 
+    sqlite3_initialize();
+
     QPTPool_t *ctx = QPTPool_init(threads, &csa);
     QPTPool_start(ctx);
 
@@ -462,6 +464,8 @@ int main(int argc, char *argv[]) {
 
     QPTPool_stop(ctx);
     QPTPool_destroy(ctx);
+
+    sqlite3_shutdown();
 
     std::cout << argv[1] << " " << (correct?"Pass":"Fail")  << std::endl;
 
