@@ -97,6 +97,13 @@ run() {
         # index tree
         run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SEARCH}\""
 
+        # change timestamps
+        "${GUFI_QUERY}" \
+            --read-write \
+            -S "UPDATE summary SET mtime = atime, ctime = atime;" \
+            -E "UPDATE entry   SET mtime = atime, ctime = atime;" \
+            "${SEARCH}"
+
         # need treesummary table in all directories
         run_no_sort "${GUFI_TREESUMMARY_ALL} -n ${THREADS} \"${SEARCH}\""
 
@@ -312,6 +319,14 @@ echo "# write output to database"
 (
     level_2 "${SRCDIR}"
     "${GUFI_DIR2INDEX}" -n ${THREADS} "${SRCDIR}" "${SEARCH}" > /dev/null 2>&1
+
+    # change timestamps
+    "${GUFI_QUERY}" \
+        --read-write \
+        -S "UPDATE summary SET mtime = atime, ctime = atime;" \
+        -E "UPDATE entry   SET mtime = atime, ctime = atime;" \
+        "${SEARCH}"
+
     "${GUFI_TREESUMMARY_ALL}" -n ${THREADS} "${SEARCH}"
 
     run_no_sort "${GUFI_FIND_OUTLIERS} -d \"${DELIM}\" -n ${THREADS} -O \"${OUTDB}\" \"${INDEXROOT}\" totatime"
