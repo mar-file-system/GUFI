@@ -167,7 +167,8 @@ static int gen_types(struct input *in) {
             .in = in,
             .work = &work,
         };
-        if (addqueryfuncs_with_context(db, &ctx) != 0) {
+        if ((addqueryfuncs(db) != 0) ||
+            (addqueryfuncs_with_context(db, &ctx) != 0)) {
             goto error;
         }
 

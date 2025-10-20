@@ -155,6 +155,13 @@ query_vt() {
     )
     query_vt "${query}"
 
+    echo "# Run custom UDFs"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT strop('echo str') AS str, intop('echo 1') AS num FROM vrsummary;\");"
+        echo -n "SELECT str, num FROM gufi;"
+    )
+    query_vt "${query}"
+
     echo "# ######################################"
     echo "# errors"
 

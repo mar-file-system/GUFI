@@ -723,6 +723,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         .in = &in,
         .work = &work,
     };
+    addqueryfuncs(tempdb);
     addqueryfuncs_with_context(tempdb, &ctx);
 
     if (flags.T.len) {

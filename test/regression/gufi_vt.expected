@@ -331,6 +331,18 @@ $ (
 1024|source/prefix/1KB
 1048576|source/prefix/1MB
 
+# Run custom UDFs
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", S="SELECT strop('echo str') AS str, intop('echo 1') AS num FROM vrsummary;");SELECT str, num FROM gufi;"
+) | sqlite3
+str|1
+str|1
+str|1
+str|1
+str|1
+str|1
+
 # ######################################
 # errors
 # Missing indexroot (error)
