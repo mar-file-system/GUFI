@@ -1,3 +1,24 @@
+diff --git a/Makefile b/Makefile
+index 43e1d98..a9c1c75 100644
+--- a/Makefile
++++ b/Makefile
+@@ -149,14 +149,8 @@ $(TARGET_CLI): sqlite-vec.h $(LIBS_DIR)/sqlite-vec.a $(LIBS_DIR)/shell.a $(LIBS_
+ 	examples/sqlite3-cli/core_init.c $(LIBS_DIR)/shell.a $(LIBS_DIR)/sqlite3.a $(LIBS_DIR)/sqlite-vec.a -o $@
+ 
+ 
+-sqlite-vec.h: sqlite-vec.h.tmpl VERSION
+-	VERSION=$(shell cat VERSION) \
+-	DATE=$(shell date -r VERSION +'%FT%TZ%z') \
+-	SOURCE=$(shell git log -n 1 --pretty=format:%H -- VERSION) \
+-	VERSION_MAJOR=$$(echo $$VERSION | cut -d. -f1) \
+-	VERSION_MINOR=$$(echo $$VERSION | cut -d. -f2) \
+-	VERSION_PATCH=$$(echo $$VERSION | cut -d. -f3 | cut -d- -f1) \
+-	envsubst < $< > $@
++sqlite-vec.h: sqlite-vec.h.tmpl
++	cp $< $@
+ 
+ clean:
+ 	rm -rf dist
 diff --git a/sqlite-vec.c b/sqlite-vec.c
 index 3cc802f..09331dc 100644
 --- a/sqlite-vec.c
@@ -21,3 +42,20 @@ index 3cc802f..09331dc 100644
  typedef int8_t i8;
  typedef uint8_t u8;
  typedef int16_t i16;
+diff --git a/sqlite-vec.h.tmpl b/sqlite-vec.h.tmpl
+index f49f62f..699a2f7 100644
+--- a/sqlite-vec.h.tmpl
++++ b/sqlite-vec.h.tmpl
+@@ -23,9 +23,9 @@
+ #define SQLITE_VEC_SOURCE "${SOURCE}"
+ 
+ 
+-#define SQLITE_VEC_VERSION_MAJOR ${VERSION_MAJOR}
+-#define SQLITE_VEC_VERSION_MINOR ${VERSION_MINOR}
+-#define SQLITE_VEC_VERSION_PATCH ${VERSION_PATCH}
++#define SQLITE_VEC_VERSION_MAJOR 0
++#define SQLITE_VEC_VERSION_MINOR 0
++#define SQLITE_VEC_VERSION_PATCH 0
+ 
+ #ifdef __cplusplus
+ extern "C" {

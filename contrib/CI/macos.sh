@@ -67,11 +67,15 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
 # Install GNU version of tools
-for tool in coreutils diffutils findutils gnu-sed grep
+for tool in coreutils findutils gnu-sed gpatch grep
 do
     brew install "${tool}"
     echo "$(brew --prefix ${tool})/libexec/gnubin" >> "${GITHUB_PATH}"
 done
+
+# diff is not installed in libexec/gnubin
+brew install diffutils
+echo "$(brew --prefix diffutils)/bin" >> "${GITHUB_PATH}"
 
 # install required packages
 brew install autoconf cmake gettext llvm libomp pcre2 pkgconf python
