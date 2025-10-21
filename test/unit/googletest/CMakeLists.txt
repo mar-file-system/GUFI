@@ -73,6 +73,7 @@ if (CMAKE_CXX_COMPILER)
     PoolArgs.cpp
     QueuePerThreadPool.cpp
     SinglyLinkedList.cpp
+    addqueryfuncs.cpp
     bf.cpp
     compress.cpp
     debug.cpp

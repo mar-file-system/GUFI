@@ -109,9 +109,14 @@ int serialize_bucket(sqlite3_context *context,
     return 0;
 }
 
-log_hist_t *log_hist_init(log_hist_t *hist, const size_t base, const size_t count) {
+static log_hist_t *log_hist_init(sqlite3_context *context, log_hist_t *hist,
+                                 const size_t base, const size_t count) {
     if (base < 2) {
-        fprintf(stderr, "Error: Bad log histogram base: %zu\n", base);
+        if (context) {
+            char buf[1024];
+            const size_t len = SNPRINTF(buf, sizeof(buf), "Error: Bad log histogram base: %zu\n", base);
+            sqlite3_result_error(context, buf, len);
+        }
         return NULL;
     }
 
@@ -125,10 +130,8 @@ log_hist_t *log_hist_init(log_hist_t *hist, const size_t base, const size_t coun
     return hist;
 }
 
-int log_hist_insert(log_hist_t *hist, const uint64_t value) {
-    if (hist->base == 0) {
-        return -1;
-    }
+static int log_hist_insert(log_hist_t *hist, const uint64_t value) {
+    /* not checking base - bad histograms should not reach here */
 
     if (value < 1) {
         hist->lt++;
@@ -153,8 +156,7 @@ static void log_hist_step(sqlite3_context *context, int argc, sqlite3_value **ar
     log_hist_t *hist = (log_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (hist->base == 0) {
         const size_t base = sqlite3_value_int(argv[1]);
-        if (!log_hist_init(hist, base, sqlite3_value_int(argv[2]))) {
-            sqlite3_result_error_code(context, SQLITE_MISUSE);
+        if (!log_hist_init(context, hist, base, sqlite3_value_int(argv[2]))) {
             return;
         }
     }
@@ -200,7 +202,7 @@ static ssize_t serialize_log_bucket(char *curr, const size_t avail, void *key, v
     return snprintf(curr, avail, "%zu:%zu;", exp, hist->buckets[exp]);
 }
 
-static char *log_hist_serialize_internal(log_hist_t *hist, sqlite3_context *context) {
+static char *log_hist_serialize(log_hist_t *hist, sqlite3_context *context) {
     size_t size = DEFAULT_HIST_ALLOC;
     char *serialized = malloc(size);
 
@@ -228,18 +230,10 @@ static char *log_hist_serialize_internal(log_hist_t *hist, sqlite3_context *cont
     return serialized;
 }
 
-char *log_hist_serialize(log_hist_t *hist) {
-    if (!hist) {
-        return NULL;
-    }
-
-    return log_hist_serialize_internal(hist, NULL);
-}
-
 static void log_hist_final(sqlite3_context *context) {
     log_hist_t *hist = (log_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
 
-    char *serialized = log_hist_serialize_internal(hist, context);
+    char *serialized = log_hist_serialize(hist, context);
     if (serialized) {
         sqlite3_result_text(context, serialized, -1, free);
     }
@@ -277,7 +271,7 @@ log_hist_t *log_hist_parse(const char *str) {
     return hist;
 }
 
-int log_hist_combine_inplace(log_hist_t *lhs, log_hist_t *rhs) {
+static int log_hist_combine_inplace(log_hist_t *lhs, log_hist_t *rhs) {
     /* inserted 0 values */
     if (rhs->base == 0) {
         return 0;
@@ -286,7 +280,7 @@ int log_hist_combine_inplace(log_hist_t *lhs, log_hist_t *rhs) {
     /* handle lhs unset before lhs == rhs, which would be true */
     if (lhs->base == 0) {
         free(lhs->buckets); /* in case multple rhs' have no data */
-        log_hist_init(lhs, rhs->base, rhs->count);
+        log_hist_init(NULL, lhs, rhs->base, rhs->count);
     }
     else if (lhs->base != rhs->base) {
         fprintf(stderr, "Error: Cannot combine log histograms with different bases: %zu vs %zu\n",

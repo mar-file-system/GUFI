@@ -134,7 +134,7 @@ TEST(xattrs, get) {
 
 TEST(xattrs, get_names) {
     const char EXPECTED_STR[MAXXATTR] = "user.key1\x1Fuser.key2\x1F";
-    const size_t EXPECTED_STR_LEN = 20;
+    const std::size_t EXPECTED_STR_LEN = 20;
 
     EXPECT_EQ(EXPECTED_XATTRS.name_len + EXPECTED_XATTRS.count, EXPECTED_STR_LEN);
 
@@ -150,7 +150,7 @@ TEST(xattrs, get_names) {
 
 TEST(xattrs, to_file) {
     const char EXPECTED_STR[MAXXATTR] = "user.key1\x1Fvalue1\x1Fuser.key2\x1Fvalue2\x1F";
-    const size_t EXPECTED_STR_LEN = 34;
+    const std::size_t EXPECTED_STR_LEN = 34;
 
     char line[MAXXATTR];
     FILE *file = fmemopen(line, MAXXATTR, "wb");
@@ -169,7 +169,7 @@ TEST(xattrs, to_file) {
 
 TEST(xattrs, from_line) {
     char line[MAXXATTR];
-    const size_t line_len = snprintf(line, MAXXATTR, "user.key1\x1Fvalue1\x1Fuser.key2\x1Fvalue2\x1F");
+    const std::size_t line_len = snprintf(line, MAXXATTR, "user.key1\x1Fvalue1\x1Fuser.key2\x1Fvalue2\x1F");
     EXPECT_EQ(line_len, EXPECTED_XATTRS.len + 2 * EXPECTED_XATTRS.count);
 
     struct xattrs xattrs;

@@ -771,7 +771,7 @@ TEST(trailing_match_index, paths) {
     const char nulls[]   = "";
 
     const char match[] = "\b\t/";
-    const size_t match_len = strlen(match);
+    const std::size_t match_len = strlen(match);
 
     EXPECT_EQ(trailing_match_index(root,    strlen(root),    match, match_len), (size_t) 1);
     EXPECT_EQ(trailing_match_index(dir,     strlen(dir),     match, match_len), (size_t) 7);
@@ -790,7 +790,7 @@ TEST(trailing_non_match_index, paths) {
     const char nulls[]   = "";
 
     const char match[] = "\b\t/";
-    const size_t match_len = strlen(match);
+    const std::size_t match_len = strlen(match);
 
     EXPECT_EQ(trailing_non_match_index(root,    strlen(root),    match, match_len), (size_t) 0);
     EXPECT_EQ(trailing_non_match_index(dir,     strlen(dir),     match, match_len), (size_t) 6);
@@ -857,7 +857,7 @@ TEST(setup_directory_skip, bad) {
 TEST(split, delims) {
     const char delims[] = "\xfe\xff";
     char line[MAXPATH];
-    const size_t line_len = SNFORMAT_S(line, MAXPATH, 6,
+    const std::size_t line_len = SNFORMAT_S(line, MAXPATH, 6,
                                        "a", 1,
                                        delims, 1,
                                        "b", 1,
@@ -1093,7 +1093,7 @@ TEST(copyfd, good) {
         srcbuf[i] = dist(gen);
     }
 
-    size_t remaining = size;
+    std::size_t remaining = size;
     while (remaining) {
         const ssize_t w = write(src, srcbuf + size - remaining, remaining);
         ASSERT_GT(w, (ssize_t) 0);
@@ -1282,17 +1282,17 @@ TEST(parse_subtree, list) {
 
     // bad path
     char bad[sizeof(SUBDIR) + 11 + 1] = {0};
-    const size_t bad_len = snprintf(bad, sizeof(bad), "%s/utils.cpp/\n", SUBDIR + sizeof(ROOT));
+    const std::size_t bad_len = snprintf(bad, sizeof(bad), "%s/utils.cpp/\n", SUBDIR + sizeof(ROOT));
     EXPECT_EQ(write(fd, bad, bad_len), (ssize_t) bad_len);
 
     // file path
     char file[sizeof(SUBDIR) + 10 + 1] = {0};
-    const size_t file_len = snprintf(file, sizeof(file), "%s/utils.cpp\n", SUBDIR + sizeof(ROOT));
+    const std::size_t file_len = snprintf(file, sizeof(file), "%s/utils.cpp\n", SUBDIR + sizeof(ROOT));
     EXPECT_EQ(write(fd, file, file_len), (ssize_t) file_len);
 
     // subdirectory
     char line[sizeof(SUBDIR) + 1] = {0};
-    const size_t len = snprintf(line, sizeof(line), "%s\n", SUBDIR + sizeof(ROOT));
+    const std::size_t len = snprintf(line, sizeof(line), "%s\n", SUBDIR + sizeof(ROOT));
     EXPECT_EQ(write(fd, line, len), (ssize_t) len);
 
     EXPECT_EQ(close(fd), 0);

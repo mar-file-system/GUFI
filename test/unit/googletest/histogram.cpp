@@ -102,8 +102,8 @@ extern "C" {
 #endif
 int serialize_bucket(sqlite3_context *context,
                      char **buf, char **curr,
-                     size_t *size,
-                     ssize_t (*serialize)(char *curr, const size_t avail,
+                     std::size_t *size,
+                     ssize_t (*serialize)(char *curr, const std::size_t avail,
                                           void *key, void *data),
                      void *key, void *data);
 #ifdef __cplusplus
@@ -115,13 +115,13 @@ static void test_hist_step(sqlite3_context *context, int, sqlite3_value **argv) 
     *r = sqlite3_value_int(argv[0]);
 }
 
-static ssize_t serialize_test_bucket(char *, const size_t, void *key, void *) {
+static ssize_t serialize_test_bucket(char *, const std::size_t, void *key, void *) {
     int *r = (int *) sqlite3_aggregate_context((sqlite3_context *) key, sizeof(*r));
     return 1 + *r;
 }
 
 static void test_hist_final(sqlite3_context *context) {
-    size_t size = 2;
+    std::size_t size = 2;
     char *serialized = (char *) malloc(size);
     char *curr = serialized;
 
@@ -192,10 +192,6 @@ TEST(histogram, log) {
         sqlite3 *db = nullptr;
         setup_db(&db);
 
-        // bad base
-        EXPECT_NE(sqlite3_exec(db, "SELECT log_hist(value, 1, 3);",
-                               nullptr, nullptr, nullptr), SQLITE_OK);
-
         char create[MAXSQL];
         snprintf(create, sizeof(create), "CREATE TABLE test (value INT);");
         ASSERT_EQ(sqlite3_exec(db, create, nullptr, nullptr, nullptr), SQLITE_OK);
@@ -227,13 +223,13 @@ TEST(histogram, log) {
         sqlite3 *db = nullptr;
         setup_db(&db);
 
-        ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hist (str TEXT);",
+        ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hist (str TEXT, keep INT);",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(str, 2, 2) FROM hist;",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(str, 2, 2), 1 FROM hist;",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(1, 2, 2);",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(1, 2, 2), 1;",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(2, 2, 2);",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(2, 2, 2), 1;",
                                nullptr, nullptr, nullptr), SQLITE_OK);
 
         char *hist_str = nullptr;
@@ -255,8 +251,18 @@ TEST(histogram, log) {
         free(hist_str);
         hist_str = nullptr;
 
+        // cannot combine histograms with different bases
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(2, 4, 2), 0;",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        EXPECT_NE(sqlite3_exec(db, "SELECT log_hist_combine(str) FROM hist;",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_EQ(hist_str, nullptr);
+
+        ASSERT_EQ(sqlite3_exec(db, "DELETE FROM hist WHERE keep == 0;",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+
         // cannot combine histograms with different bucket counts
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(2, 2, 4);",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hist SELECT log_hist(2, 2, 4), 0;",
                                nullptr, nullptr, nullptr), SQLITE_OK);
         EXPECT_NE(sqlite3_exec(db, "SELECT log_hist_combine(str) FROM hist;",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
@@ -271,6 +277,20 @@ TEST(histogram, log) {
         EXPECT_NE(sqlite3_exec(db, "SELECT log_hist_combine('a');",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         EXPECT_EQ(hist_str, nullptr);
+
+        sqlite3_close(db);
+    }
+
+    // bad base
+    {
+        sqlite3 *db = nullptr;
+        setup_db(&db);
+
+        ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE test (value INT);", nullptr, nullptr, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO  test  VALUES (0);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+        EXPECT_NE(sqlite3_exec(db, "SELECT log_hist(value, 1, 3) FROM test;",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
 
         sqlite3_close(db);
     }

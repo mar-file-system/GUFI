@@ -683,6 +683,10 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                 threads = value;
             }
         }
+        else {
+            *pzErr = sqlite3_mprintf("Unknown key: %s", key);
+            return SQLITE_CONSTRAINT;
+        }
     }
 
     if (!indexroot) {

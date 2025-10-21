@@ -191,10 +191,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* write start of stanza */
     if (nda.fp == stdout) {
-        static const size_t WRITE_TO_STDOUT_SIZE = 1; /* magic number */
-        nda.pipe.buf = malloc(WRITE_TO_STDOUT_SIZE);
-        nda.pipe.size = WRITE_TO_STDOUT_SIZE;
-        nda.pipe.offset = 0;
         worktobuffer(&nda.pipe.buf, &nda.pipe.size, &nda.pipe.offset,
                      in->delim, work->root_parent.len, work, &ed);
     }

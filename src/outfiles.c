@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "bf.h"
 #include "outfiles.h"
@@ -77,7 +78,7 @@ FILE **outfiles_init(const refstr_t *prefix, const size_t count) {
         return NULL;
     }
 
-    if ((prefix->len == 1) && (prefix->data[0] == '-')) {
+    if (strncmp("-", prefix->data, prefix->len + 1) == 0) {
         for(size_t i = 0; i < count; i++) {
             files[i] = stdout;
         }

@@ -124,7 +124,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
 int worktobuffer(char **buf, size_t *size, size_t *offset,
                  const char delim, const size_t prefix_len,
                  struct work *work, struct entry_data *ed) {
-    if (!buf || !*buf || !size || !offset || !work || !ed) {
+    if (!buf || !size || !offset || !work || !ed) {
         return -1;
     }
 
@@ -210,8 +210,7 @@ int linetowork(char *line, const size_t len, const char delim,
 int *open_traces(char **trace_names, size_t trace_count) {
     int *traces = (int *) calloc(trace_count, sizeof(int));
     if (traces) {
-        const size_t len = strlen(trace_names[0]);
-        if ((len == 1) && (trace_names[0][0] == '-')) {
+        if (strncmp("-", trace_names[0], strlen(trace_names[0]) + 1) == 0) {
             for(size_t i = 0; i < trace_count; i++) {
                 traces[i] = STDIN_FILENO;
             }
@@ -343,6 +342,8 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (offset > sta->tr.end) {
         fprintf(stderr, "Bad offset: %jd (end: %jd)\n", (intmax_t) offset, (intmax_t) sta->tr.end);
+        rc = 1;
+        goto done;
     }
 
     /* bad read (error) or empty trace (not an error) */

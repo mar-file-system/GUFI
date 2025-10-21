@@ -550,9 +550,7 @@ static int can_rollup(struct input *in,
 
     /* get permissions of the current directory */
     struct Permissions perms = {0};
-    const int exec_rc = sqlite3_exec(dst, PERM_SQL, get_permissions_callback, &perms, &err);
-
-    if (exec_rc != SQLITE_OK) {
+    if (sqlite3_exec(dst, PERM_SQL, get_permissions_callback, &perms, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Could not get permissions of current directory \"%s\": %s\n", rollup->data.name, err);
         legal = 0;
         goto end_can_rollup;
@@ -686,8 +684,7 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
              "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM %s." XATTRS_AVAIL ";",
              attachname);
     char *err = NULL;
-    int rc = sqlite3_exec(xattr_db, insert, NULL, NULL, &err);
-    if (rc != SQLITE_OK) {
+    if (sqlite3_exec(xattr_db, insert, NULL, NULL, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Failed to copy \"%s\" xattrs into " XATTRS_ROLLUP " of %s: %s\n", child_xattr_db_name, xattr_db_name, err);
     }
 
@@ -711,7 +708,6 @@ static int do_rollup(struct RollUp *rollup,
 
     int rc = 0;
     char *err = NULL;
-    int exec_rc = SQLITE_OK;
 
     /*
      * clear out old rollup data
@@ -733,9 +729,7 @@ static int do_rollup(struct RollUp *rollup,
         .len  = rollup->data.name_len,
     };
 
-    exec_rc = sqlite3_exec(dst, setup, xattrs_rollup_cleanup, &name, &err);
-
-    if (exec_rc != SQLITE_OK) {
+    if (sqlite3_exec(dst, setup, xattrs_rollup_cleanup, &name, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Failed to set up database for rollup: \"%s\": %s\n", rollup->data.name, err);
         rc = -1;
         goto end_rollup;
@@ -766,8 +760,7 @@ static int do_rollup(struct RollUp *rollup,
                 .count      = &xattr_count,
             };
 
-            exec_rc = sqlite3_exec(dst, rollup_subdir, rollup_external_xattrs, &ca, &err);
-            if (exec_rc != SQLITE_OK) {
+            if (sqlite3_exec(dst, rollup_subdir, rollup_external_xattrs, &ca, &err) != SQLITE_OK) {
                 sqlite_print_err_and_free(err, stderr, "Error: Failed to copy subdir \"%s\" into current database: %s\n", child->name, err);
             }
         }

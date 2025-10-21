@@ -74,9 +74,9 @@ OF SUCH DAMAGE.
 #include "gufi_query/query_user_strs.h"
 #include "trie.h"
 
-static const char   FORMAT[]        = "A{A}B{BC}C{DEF}D";
-static const size_t FORMAT_START[]  = {1, 5, 10};
-static const size_t FORMAT_END[]    = {3, 8, 14};
+static const char        FORMAT[]        = "A{A}B{BC}C{DEF}D";
+static const std::size_t FORMAT_START[]  = {1, 5, 10};
+static const std::size_t FORMAT_END[]    = {3, 8, 14};
 
 TEST(query_user_str, no_replace) {
     refstr_t sql;

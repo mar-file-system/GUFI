@@ -67,8 +67,8 @@ OF SUCH DAMAGE.
 #include "trie.h"
 
 const char str[] = "0123";
-const size_t str_len = strlen(str);
-const size_t sub_len = str_len / 2;
+const std::size_t str_len = strlen(str);
+const std::size_t sub_len = str_len / 2;
 
 TEST(trie, alloc_free) {
     trie_t *root = trie_alloc();

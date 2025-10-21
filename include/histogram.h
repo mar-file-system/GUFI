@@ -99,15 +99,12 @@ int addhistfuncs(sqlite3 *db);
  *
  * The histogram contains buckets of the range [0, count). Each bucket
  * holds counts for values from [base^i, base^(i+1)). There are also
- * underflow and overflow values for handling 0 values and values that
+ * underflow and overflow buckets for handling 0 values and values that
  * are larger than the expected range.
  *
  * The returned string only contains buckets with counts greater than
- * 0. The underflow and overflow counts are always returned even if
+ * 0. The underflow and overflow buckets are always returned even if
  * the counts are 0.
- *
- * This is not generic because if 0 values are inserted into the
- * histogram, a "base" value would not get set.
  */
 typedef struct log_hist {
     size_t base;     /* this is also used to check for initialization */
@@ -118,11 +115,7 @@ typedef struct log_hist {
     size_t ge;       /* value >= base^count */
 } log_hist_t;
 
-log_hist_t *log_hist_init(log_hist_t *hist, const size_t base, const size_t count);
-int log_hist_insert(log_hist_t *hist, const uint64_t value);
-char *log_hist_serialize(log_hist_t *hist);
 log_hist_t *log_hist_parse(const char *str);
-int log_hist_combine_inplace(log_hist_t *lhs, log_hist_t *rhs);
 void log_hist_free(log_hist_t *hist);
 /* ********************************************* */
 

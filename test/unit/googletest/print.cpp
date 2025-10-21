@@ -259,7 +259,7 @@ static void print_parallel_tlv_actual(const bool use_len) {
         curr++;
 
         // length
-        const size_t len = * (size_t *) curr;
+        const std::size_t len = * (size_t *) curr;
         curr += sizeof(size_t);
 
         // value

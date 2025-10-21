@@ -73,7 +73,7 @@ typedef struct {
     char data[TEST_DATA_LEN];
 } data_t;
 
-static const size_t DATA_LEN = sizeof(data_t);
+static const std::size_t DATA_LEN = sizeof(data_t);
 
 TEST(compress, off) {
     data_t *src = (data_t *) calloc(1, sizeof(*src));

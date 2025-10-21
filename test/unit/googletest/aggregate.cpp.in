@@ -94,7 +94,7 @@ TEST(gufi_query, aggregate) {
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    const size_t row_count = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
+    const std::size_t row_count = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
 
     struct input in;
     input_init(&in);
@@ -172,7 +172,7 @@ TEST(gufi_query, aggregate) {
 
     // let cleanup flush buffers
     char sum_str[1024];
-    const size_t sum_str_len = snprintf(sum_str, sizeof(sum_str), "%" PRIu64, sum);
+    const std::size_t sum_str_len = snprintf(sum_str, sizeof(sum_str), "%" PRIu64, sum);
     EXPECT_EQ(memcmp(db_sum_str, sum_str, sum_str_len), 0);
 }
 

@@ -157,8 +157,22 @@ query_vt() {
 
     echo "# Run custom UDFs"
     query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT strop('echo str') AS str, intop('echo 1') AS num FROM vrsummary;\");"
-        echo -n "SELECT str, num FROM gufi;"
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT strop('echo str') AS str, intop('echo 1') AS num, blobop('printf blob; printf 1') AS blob FROM vrsummary;\");"
+        echo -n "SELECT str, num, blob FROM gufi;"
+    )
+    query_vt "${query}"
+
+    echo "# Get Row IDs"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT);\", S=\"INSERT INTO intermediate SELECT rpath(sname, sroll) FROM vrsummary;\", K=\"CREATE TABLE aggregate(fullpath TEXT);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY fullpath ASC;\");"
+        echo -n "SELECT rowid, * FROM gufi;"
+    )
+    query_vt "${query}"
+
+    echo "# Treesummary Table (parsed, but not actually used)"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT);\", T='SELECT 1;', S=\"INSERT INTO intermediate SELECT rpath(sname, sroll) FROM vrsummary;\", K=\"CREATE TABLE aggregate(fullpath TEXT);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY fullpath ASC;\");"
+        echo -n "SELECT * FROM gufi;"
     )
     query_vt "${query}"
 
@@ -188,6 +202,12 @@ query_vt() {
     echo "# Zero thread count (error)"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=0);"
 
+    echo "# Bad thread count (error)"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=a);"
+
+    echo "# Zero thread count (error)"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=0);"
+
     echo "# Bad E"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='');"
 
@@ -214,6 +234,16 @@ query_vt() {
         echo "${query}"
     ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}" 2>&1 | sort
     echo
+
+    echo "# Bad 5 character key (only 'index' is recognized)"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', abcde='');"
+
+    echo "# Bad 7 character key (only 'threads' is recognized)"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', abcdefg='');"
+
+    echo "# Bad key length"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', ab='');"
+
 
     set -e
 ) | replace | tee "${OUTPUT}"

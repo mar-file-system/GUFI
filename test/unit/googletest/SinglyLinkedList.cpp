@@ -105,7 +105,7 @@ TEST(SinglyLinkedList, push) {
 }
 
 TEST(SinglyLinkedList, pop) {
-    const size_t count = 5;
+    const std::size_t count = 5;
 
     sll_t sll;
     EXPECT_EQ(&sll, sll_init(&sll));
@@ -451,7 +451,7 @@ TEST(SinglyLinkedList, loop) {
     }
 
     // check values
-    size_t i = 0;
+    std::size_t i = 0;
     for(sll_node_t *node = sll_head_node(&sll); node; node = sll_next_node(node)) {
         EXPECT_EQ(values[i], * (int *) sll_node_data(node));
         i++;

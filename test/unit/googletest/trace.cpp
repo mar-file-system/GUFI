@@ -96,7 +96,7 @@ static struct xattrs EXPECTED_XATTRS = {
 
 static const char EXPECTED_XATTRS_STR[] = "xattr.key0\x1fxattr.val0\x1f"
                                           "xattr.key1\x1fxattr.val1\x1f";
-static const size_t EXPECTED_XATTRS_STR_LEN = sizeof(EXPECTED_XATTRS_STR) - 1;
+static const std::size_t EXPECTED_XATTRS_STR_LEN = sizeof(EXPECTED_XATTRS_STR) - 1;
 
 static struct work *get_work(struct entry_data *ed) {
     struct work *new_work        = new_work_with_name(nullptr, 0, "name", 4);
@@ -129,7 +129,7 @@ static struct work *get_work(struct entry_data *ed) {
     return new_work;
 }
 
-static int to_string(char *line, const size_t size, struct work *work, struct entry_data *ed) {
+static int to_string(char *line, const std::size_t size, struct work *work, struct entry_data *ed) {
     const int part1 = snprintf(line, size,
                                "%s%c"
                                "%c%c"
@@ -223,6 +223,40 @@ TEST(trace, worktofile) {
     free(work);
 }
 
+TEST(trace, worktobuffer) {
+    struct entry_data ed;
+    struct work *work = get_work(&ed);
+
+    // write a known struct to a file
+    char *buf = NULL;
+    std::size_t size = 0;
+    std::size_t offset = 0;
+
+    const int written = worktobuffer(&buf, &size, &offset, delim, 0, work, &ed);
+    ASSERT_GT(written, 0);
+    ASSERT_NE(buf,     nullptr);
+    EXPECT_GT(size,    (std::size_t) 0);
+    EXPECT_GT(offset,  (std::size_t) 0);
+
+    // generate the string to compare with
+    char line[4096];
+    const int rc = to_string(line, sizeof(line), work, &ed);
+
+    ASSERT_GT(rc, -1);
+    ASSERT_LT(rc, (int) sizeof(line));
+
+    EXPECT_STREQ(buf, line);
+
+    EXPECT_EQ(worktobuffer(nullptr, &size,   &offset, delim, 0, work,    &ed),     -1);
+    EXPECT_EQ(worktobuffer(&buf,    nullptr, &offset, delim, 0, work,    &ed),     -1);
+    EXPECT_EQ(worktobuffer(&buf,    &size,   nullptr, delim, 0, work,    &ed),     -1);
+    EXPECT_EQ(worktobuffer(&buf,    &size,   &offset, delim, 0, nullptr, &ed),     -1);
+    EXPECT_EQ(worktobuffer(&buf,    &size,   &offset, delim, 0, work,    nullptr), -1);
+
+    free(buf);
+    free(work);
+}
+
 #define COMPARE(src, src_ed, dst, dst_ed)                               \
     EXPECT_STREQ(dst->name,              src->name);                    \
     EXPECT_EQ(dst_ed.type,               src_ed.type);                  \
@@ -292,7 +326,7 @@ TEST(scout, trace) {
     const int rc = to_string(line, sizeof(line), src, &src_ed);
     free(src);
     ASSERT_GT(rc, -1);
-    const size_t len = strlen(line);
+    const std::size_t len = strlen(line);
     ASSERT_EQ(rc, (int) len);
 
     // write trace to file
@@ -312,7 +346,7 @@ TEST(scout, trace) {
     sta.tr.fd      = fd;
     sta.tr.start   = 0;
     sta.tr.end     = len;
-    sta.processdir = [] (QPTPool_t *, const size_t, void *data, void *) {
+    sta.processdir = [] (QPTPool_t *, const std::size_t, void *data, void *) {
         struct row *row = (struct row *) data;
         row_destroy(&row);
         return 0;
@@ -341,7 +375,7 @@ TEST(scout, trace) {
     // enqueue stuck thread
     pthread_mutex_lock(&args.mutex);
     QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
-                         [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                         [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
                              Args *args = (Args *) data;
 
                              // alert the main thread that this thread has started
@@ -370,7 +404,7 @@ TEST(scout, trace) {
 
     // enqueue item into WAIT queue
     QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
-                         [](QPTPool_t *, const size_t, void *, void *) -> int {
+                         [](QPTPool_t *, const std::size_t, void *, void *) -> int {
                              // no-op
                              return 0;
                          }, nullptr
@@ -430,7 +464,7 @@ TEST(scout, stream) {
     const int rc = to_string(line, sizeof(line), src, &src_ed);
     free(src);
     ASSERT_GT(rc, -1);
-    const size_t len = strlen(line);
+    const std::size_t len = strlen(line);
     ASSERT_EQ(rc, (int) len);
 
     // write trace to pipe
@@ -450,7 +484,7 @@ TEST(scout, stream) {
     sta->tr.fd      = fds[0];
     sta->tr.start   = 0;
     sta->tr.end     = len;
-    sta->processdir = [] (QPTPool_t *, const size_t, void *data, void *) {
+    sta->processdir = [] (QPTPool_t *, const std::size_t, void *data, void *) {
         struct row *row = (struct row *) data;
         row_destroy(&row);
         return 0;

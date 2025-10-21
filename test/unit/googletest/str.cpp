@@ -67,7 +67,7 @@ OF SUCH DAMAGE.
 #include "str.h"
 
 static str_t *str_alloc_existing_fill(str_t *str, const char *buf) {
-    const size_t len = strlen(buf);
+    const std::size_t len = strlen(buf);
     str_alloc_existing(str, len);
     memcpy(str->data, buf, len);
     return str;

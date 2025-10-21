@@ -80,7 +80,7 @@ extern "C" {
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; // not const
 static const char DBNAME_FORMAT[] = "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
-static const size_t OB_SIZE = 4096;
+static const std::size_t OB_SIZE = 4096;
 static const std::string TABLE_NAME = "test_table";
 
 void setup_input(struct input *in, OutputMethod om, bool aggregate) {
@@ -156,7 +156,7 @@ void poolargs_stdout(bool aggregate) {
 
         // the per-thread database files are in memory
         char dbname[MAXPATH];
-        const size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
+        const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
 
@@ -197,7 +197,7 @@ TEST(PoolArgs, OUTFILE) {
 
         // the per-thread database files are in memory
         char dbname[MAXPATH];
-        const size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
+        const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
 
@@ -238,7 +238,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
 
         // the per-thread database files are in memory
         char dbname[MAXPATH];
-        const size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
+        const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
 
@@ -281,7 +281,7 @@ TEST(PoolArgs, OUTDB) {
 
         // the per-thread database files are in the filesystem
         char dbname[MAXPATH];
-        const size_t dbname_len = snprintf(dbname, sizeof(dbname), "%s.%zu", in.outname.data, i);
+        const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), "%s.%zu", in.outname.data, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
 
@@ -318,7 +318,7 @@ TEST(PoolArgs, OUTDB_aggregate) {
 
         // the per-thread database files are in memory
         char dbname[MAXPATH];
-        const size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
+        const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
 

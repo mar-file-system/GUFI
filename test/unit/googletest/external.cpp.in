@@ -79,9 +79,9 @@ extern "C" {
 }
 #endif
 
-static size_t bad_filename(char **dst, const size_t dst_size,
-                           const char *, const size_t,
-                           void *) {
+static std::size_t bad_filename(char **dst, const std::size_t dst_size,
+                                const char *, const std::size_t,
+                                void *) {
     return SNPRINTF(*dst, dst_size, ".");
 }
 

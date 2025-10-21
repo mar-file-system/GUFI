@@ -112,7 +112,7 @@ TEST(QueuePerThreadPool, no_start_stop) {
 }
 
 /* C Standard 6.10.3/C++ Standard 16.3 Macro replacement */
-static void *qptpool_init_with_props(const size_t threads = -1,
+static void *qptpool_init_with_props(const std::size_t threads = -1,
                                      const uint64_t queue_limit = 0) {
     return QPTPool_init_with_props(threads, nullptr, nullptr, nullptr, queue_limit, "", 0, 0);
 }
@@ -334,7 +334,7 @@ TEST(QueuePerThreadPool, generic_alloc_and_deserialize_error) {
     EXPECT_EQ(remove(temp), 0);
 }
 
-static int test_serialize_address(const int fd, QPTPool_f func, void *work, size_t *size) {
+static int test_serialize_address(const int fd, QPTPool_f func, void *work, std::size_t *size) {
     if (write_size(fd, (void *) (uintptr_t) &func, sizeof(func)) != sizeof(func)) {
         return 1;
     }
@@ -800,7 +800,7 @@ const char SWAPPED[] = "swapped";
  * this function has to exist after the work item has
  * been swapped so it cannot be a temporary lambda
  */
-static int swapped_function(QPTPool *, const size_t, void *data, void *) {
+static int swapped_function(QPTPool *, const std::size_t, void *data, void *) {
     char *buf = (char *) data;
     memcpy(buf, SWAPPED, sizeof(SWAPPED));
     return 0;

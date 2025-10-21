@@ -334,14 +334,38 @@ $ (
 # Run custom UDFs
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", S="SELECT strop('echo str') AS str, intop('echo 1') AS num FROM vrsummary;");SELECT str, num FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", S="SELECT strop('echo str') AS str, intop('echo 1') AS num, blobop('printf blob; printf 1') AS blob FROM vrsummary;");SELECT str, num, blob FROM gufi;"
 ) | sqlite3
-str|1
-str|1
-str|1
-str|1
-str|1
-str|1
+str|1|blob1
+str|1|blob1
+str|1|blob1
+str|1|blob1
+str|1|blob1
+str|1|blob1
+
+# Get Row IDs
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE intermediate (fullpath TEXT);", S="INSERT INTO intermediate SELECT rpath(sname, sroll) FROM vrsummary;", K="CREATE TABLE aggregate(fullpath TEXT);", J="INSERT INTO aggregate SELECT * FROM intermediate;", G="SELECT * FROM aggregate ORDER BY fullpath ASC;");SELECT rowid, * FROM gufi;"
+) | sqlite3
+0|prefix
+1|prefix/directory
+2|prefix/directory/subdirectory
+3|prefix/empty_directory
+4|prefix/leaf_directory
+5|prefix/unusual#? directory ,
+
+# Treesummary Table (parsed, but not actually used)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE intermediate (fullpath TEXT);", T='SELECT 1;', S="INSERT INTO intermediate SELECT rpath(sname, sroll) FROM vrsummary;", K="CREATE TABLE aggregate(fullpath TEXT);", J="INSERT INTO aggregate SELECT * FROM intermediate;", G="SELECT * FROM aggregate ORDER BY fullpath ASC;");SELECT * FROM gufi;"
+) | sqlite3
+prefix
+prefix/directory
+prefix/directory/subdirectory
+prefix/empty_directory
+prefix/leaf_directory
+prefix/unusual#? directory ,
 
 # ######################################
 # errors
@@ -394,6 +418,20 @@ $ (
 ) | sqlite3
 Runtime error near line 2: Bad thread count: 0 (21)
 
+# Bad thread count (error)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=a);"
+) | sqlite3
+Runtime error near line 2: Bad thread count: a (21)
+
+# Zero thread count (error)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=0);"
+) | sqlite3
+Runtime error near line 2: Bad thread count: 0 (21)
+
 # Bad E
 $ (
     echo ".load gufi_vt"
@@ -434,4 +472,25 @@ Error: spath() requires source path (-p): prefix/directory/db.db: "SELECT spath(
 Error: spath() requires source path (-p): prefix/directory/subdirectory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 Error: spath() requires source path (-p): prefix/leaf_directory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 Error: spath() requires source path (-p): prefix/unusual%23%3f directory ,/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
+
+# Bad 5 character key (only 'index' is recognized)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', abcde='');"
+) | sqlite3
+Runtime error near line 2: vtable constructor failed: gufi
+
+# Bad 7 character key (only 'threads' is recognized)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', abcdefg='');"
+) | sqlite3
+Runtime error near line 2: vtable constructor failed: gufi
+
+# Bad key length
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', ab='');"
+) | sqlite3
+Runtime error near line 2: Unknown key: ab (19)
 
