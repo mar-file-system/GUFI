@@ -127,55 +127,48 @@ prefix/old_file
 prefix/repeat_name
 prefix/unusual#? directory ,/unusual, name?#
 
-# remove starting path with newline
-$ parallel_find -n 2 --format "%P\n" "prefix"
-
-.hidden
-1KB
-1MB
-directory
-directory/executable
-directory/readonly
-directory/subdirectory
-directory/subdirectory/directory_symlink
-directory/subdirectory/repeat_name
-directory/writable
-empty_directory
-file_symlink
-leaf_directory
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-old_file
-repeat_name
-unusual#? directory ,
-unusual#? directory ,/unusual, name?#
-
 # print escape characters
-$ parallel_find -n 2 --format "[\t\]\r\n" "prefix" | head -n 1
-[	\]
+$ parallel_find -n 2 --format '\a\b\f\t\v\\\r\n\cshould not show\n' "prefix" | head -n 1 | hexlify.py
+00000000 0708 0c09 0b5c 0d0a
+00000008
 
-# print non-format characters
-$ parallel_find -n 2 --format "Path: %p\n" "prefix"
-Path: prefix
-Path: prefix/.hidden
-Path: prefix/1KB
-Path: prefix/1MB
-Path: prefix/directory
-Path: prefix/directory/executable
-Path: prefix/directory/readonly
-Path: prefix/directory/subdirectory
-Path: prefix/directory/subdirectory/directory_symlink
-Path: prefix/directory/subdirectory/repeat_name
-Path: prefix/directory/writable
-Path: prefix/empty_directory
-Path: prefix/file_symlink
-Path: prefix/leaf_directory
-Path: prefix/leaf_directory/leaf_file1
-Path: prefix/leaf_directory/leaf_file2
-Path: prefix/old_file
-Path: prefix/repeat_name
-Path: prefix/unusual#? directory ,
-Path: prefix/unusual#? directory ,/unusual, name?#
+# print numeric % directives
+$ parallel_find -n 2 --format "%% %a %b %c %D %i %n %t\n" "prefix" | head -n 1 | sed 's%\b[0-9]\+\b%0%g;'
+% 0 0 0 0 0 0 0
+
+# print uid % directives
+$ parallel_find -n 2 --format "%u %U\n" "prefix" | head -n 1
+user 1001
+
+# print gid % directives
+$ parallel_find -n 2 --format "%g %G\n" "prefix" | head -n 1
+group 1001
+
+# print path % directives for non-symlinks
+$ parallel_find -n 2 -t fd --format "%H %d %h %f %p %P %m %M %y\n" "prefix"
+prefix 0  prefix prefix  775 drwxrwxr-x d
+prefix 1 prefix/ .hidden prefix/.hidden .hidden 664 -rw-rw-r-- f
+prefix 1 prefix/ 1KB prefix/1KB 1KB 664 -rw-rw-r-- f
+prefix 1 prefix/ 1MB prefix/1MB 1MB 664 -rw-rw-r-- f
+prefix 1 prefix/ directory prefix/directory directory 775 drwxrwxr-x d
+prefix 1 prefix/ empty_directory prefix/empty_directory empty_directory 775 drwxrwxr-x d
+prefix 1 prefix/ leaf_directory prefix/leaf_directory leaf_directory 775 drwxrwxr-x d
+prefix 1 prefix/ old_file prefix/old_file old_file 664 -rw-rw-r-- f
+prefix 1 prefix/ repeat_name prefix/repeat_name repeat_name 664 -rw-rw-r-- f
+prefix 1 prefix/ unusual#? directory , prefix/unusual#? directory , unusual#? directory , 775 drwxrwxr-x d
+prefix 2 prefix/directory/ executable prefix/directory/executable directory/executable 777 -rwxrwxrwx f
+prefix 2 prefix/directory/ readonly prefix/directory/readonly directory/readonly 444 -r--r--r-- f
+prefix 2 prefix/directory/ subdirectory prefix/directory/subdirectory directory/subdirectory 775 drwxrwxr-x d
+prefix 2 prefix/directory/ writable prefix/directory/writable directory/writable 666 -rw-rw-rw- f
+prefix 2 prefix/leaf_directory/ leaf_file1 prefix/leaf_directory/leaf_file1 leaf_directory/leaf_file1 664 -rw-rw-r-- f
+prefix 2 prefix/leaf_directory/ leaf_file2 prefix/leaf_directory/leaf_file2 leaf_directory/leaf_file2 664 -rw-rw-r-- f
+prefix 2 prefix/unusual#? directory ,/ unusual, name?# prefix/unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 664 -rw-rw-r-- f
+prefix 3 prefix/directory/subdirectory/ repeat_name prefix/directory/subdirectory/repeat_name directory/subdirectory/repeat_name 664 -rw-rw-r-- f
+
+# print path % directives for symlinks
+$ parallel_find -n 2 -t l --format "%p %l %m %M\n" "prefix" | awk '{ $3=777; $4="lrwxrwxrwx"; print }'
+prefix/directory/subdirectory/directory_symlink prefix/directory/subdirectory 777 lrwxrwxrwx
+prefix/file_symlink prefix/1KB 777 lrwxrwxrwx
 
 # level higher than the level of the tree
 $ parallel_find -n 2 --min-level 10 "prefix"
@@ -215,29 +208,6 @@ prefix/directory//writable
 prefix/directory/subdirectory
 prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/repeat_name
-
-# keep full path with newline
-$ parallel_find -n 2 --format "%p\n" "prefix"
-prefix
-prefix/.hidden
-prefix/1KB
-prefix/1MB
-prefix/directory
-prefix/directory/executable
-prefix/directory/readonly
-prefix/directory/subdirectory
-prefix/directory/subdirectory/directory_symlink
-prefix/directory/subdirectory/repeat_name
-prefix/directory/writable
-prefix/empty_directory
-prefix/file_symlink
-prefix/leaf_directory
-prefix/leaf_directory/leaf_file1
-prefix/leaf_directory/leaf_file2
-prefix/old_file
-prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
 
 # write to output files
 $ parallel_find -n 2 -o "parallel_find_output" "prefix"

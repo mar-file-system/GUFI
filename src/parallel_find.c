@@ -64,13 +64,15 @@ OF SUCH DAMAGE.
 
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <pthread.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "OutputBuffers.h"
 #include "QueuePerThreadPool.h"
@@ -79,6 +81,9 @@ OF SUCH DAMAGE.
 #include "outfiles.h"
 #include "print.h"
 #include "utils.h"
+
+/* default format used by GNU find */
+static const char DEFAULT_FORMAT[] = "%p\n";
 
 struct PoolArgs {
     struct input in;
@@ -97,24 +102,43 @@ struct QPTPool_vals {
     struct PoolArgs *pa;
 };
 
-static int format_output(const char *format, const char *path, struct PrintArgs *print_args,
-                         size_t root_len) {
+static int format_output(struct work *work, struct entry_data *ed,
+                         const char *format, struct PrintArgs *print_args) {
     char output[4096];
     char *out = output;
+    int c = 0; /* \c */
 
-    while (*format && (out < output + sizeof(output) - 1)) {
+    while (*format && (out < output + sizeof(output) - 1) && !c) {
         if (*format == '\\') {
             format++; /* Skip the backslash */
             unsigned char escape = 0;
             switch (*format) {
+                case 'a':
+                    escape = '\a';
+                    break;
+                case 'b':
+                    escape = '\b';
+                    break;
+                case 'c':
+                    c = 1;
+                    break;
+                case 'f':
+                    escape = '\f';
+                    break;
                 case 'n':
                     escape = '\n';
+                    break;
+                case 'r':
+                    escape = '\r';
                     break;
                 case 't':
                     escape = '\t';
                     break;
-                case 'r':
-                    escape = '\r';
+                case 'v':
+                    escape = '\v';
+                    break;
+                case '0':
+                    escape = '\0';
                     break;
                 case '\\':
                     escape = '\\';
@@ -137,14 +161,108 @@ static int format_output(const char *format, const char *path, struct PrintArgs 
             const size_t rem = sizeof(output) - (out - output);
 
             switch (*format) {
-                case 'P': /* Starting-point removed from path */
-                    out += SNPRINTF(out, rem, "%s", path + root_len);
+                case '%':
+                    out += SNPRINTF(out, rem, "%%");
+                    break;
+                case 'a': //
+                    out += SNPRINTF(out, rem, "%ld", work->statuso.st_atime);
+                    break;
+                /* case 'A': */
+                case 'b':
+                    out += SNPRINTF(out, rem, "%ld", work->statuso.st_blocks);
+                    break;
+                case 'c':
+                    out += SNPRINTF(out, rem, "%ld", work->statuso.st_ctime);
+                    break;
+                /* case 'C': */
+                case 'd':
+                    out += SNPRINTF(out, rem, "%zu", work->level);
+                    break;
+                case 'D':
+                    out += SNPRINTF(out, rem, "%ld", work->statuso.st_dev);
+                    break;
+                case 'f': /* basename(work->name) */
+                    out += SNPRINTF(out, rem, "%s", work->name + work->name_len - work->basename_len);
+                    break;
+                /* case 'F': */
+                case 'g':
+                    {
+                        struct group *group = getgrgid(work->statuso.st_gid);
+                        if (group) {
+                            out += SNPRINTF(out, rem, "%s", group->gr_name);
+                        }
+                        else {
+                            out += SNPRINTF(out, rem, "%" STAT_gid, work->statuso.st_gid);
+                        }
+                    }
+                    break;
+                case 'G':
+                    out += SNPRINTF(out, rem, "%" STAT_gid, work->statuso.st_gid);
+                    break;
+                case 'h': /* dirname(work->name) */
+                    {
+                        const size_t offset = work->name_len - work->basename_len;
+                        const char orig = work->name[offset];
+                        work->name[offset] = '\0';
+                        out += SNPRINTF(out, rem, "%s", work->name);
+                        work->name[offset] = orig;
+                    }
+                    break;
+                case 'H':
+                    out += SNPRINTF(out, rem, "%s", work->orig_root.data);
+                    break;
+                case 'i':
+                    out += SNPRINTF(out, rem, "%" STAT_ino, work->statuso.st_ino);
+                    break;
+                /* case 'k': */
+                case 'l':
+                    out += SNPRINTF(out, rem, "%s", ed->linkname);
+                    break;
+                case 'm':
+                    out += SNPRINTF(out, rem, "%03o", work->statuso.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO));
+                    break;
+                case 'M':
+                    {
+                        char buf[11];
+                        modetostr(buf, sizeof(buf), work->statuso.st_mode);
+                        out += SNPRINTF(out, rem, "%s", buf);
+                    }
+                    break;
+                case 'n':
+                    out += SNPRINTF(out, rem, "%" STAT_nlink, work->statuso.st_nlink);
                     break;
                 case 'p':
-                    out += SNPRINTF(out, rem, "%s", path);
+                    out += SNPRINTF(out, rem, "%s", work->name);
                     break;
+                case 'P': /* Starting-point removed from path */
+                    out += SNPRINTF(out, rem, "%s", work->name + work->orig_root.len);
+                    break;
+                /* case 'S': */
+                case 't':
+                    out += SNPRINTF(out, rem, "%ld", work->statuso.st_mtime);
+                    break;
+                /* case 'T': */
+                case 'u':
+                    {
+                        struct passwd *passwd = getpwuid(work->statuso.st_uid);
+                        if (passwd) {
+                            out += SNPRINTF(out, rem, "%s", passwd->pw_name);
+                        }
+                        else {
+                            out += SNPRINTF(out, rem, "%" STAT_uid, work->statuso.st_uid);
+                        }
+                    }
+                    break;
+                case 'U':
+                    out += SNPRINTF(out, rem, "%" STAT_uid, work->statuso.st_uid);
+                    break;
+                case 'y':
+                    out += SNPRINTF(out, rem, "%c", ed->type);
+                    break;
+                /* case 'Y': */
+                /* case 'Z': */
                 default:
-                    out += SNPRINTF(out, rem, "%%%c\n", *format);
+                    out += SNPRINTF(out, rem, "%%%c", *format);
                     break;
             }
         }
@@ -159,11 +277,11 @@ static int format_output(const char *format, const char *path, struct PrintArgs 
 
     char *buf[] = {output};
     print_parallel(print_args, 1, buf, NULL);
+
     return 0;
 }
 
 static int process_output(struct work *work, struct entry_data *ed, void *nondir_args) {
-    (void) ed;
     struct QPTPool_vals *args = (struct QPTPool_vals *) nondir_args;
 
     /*
@@ -188,7 +306,11 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
     */
 
     if (work->level < args->pa->in.min_level) { /* work->level > max_level is handled by descend */
-       return 0;
+        return 0; /* not an error */
+    }
+
+    if (lstat_wrapper(work) != 0) {
+        return 1; /* error (not handled anywhere) */
     }
 
     const size_t user_types = args->pa->in.filter_types;
@@ -201,27 +323,26 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
 
     struct PrintArgs print = {
         .output_buffer = &args->pa->obufs.buffers[args->id],
-        .delim = '\0',
+        .delim = '\0', /* not used */
         .mutex = args->pa->obufs.mutex,
         .outfile = args->pa->outfiles[args->id],
         .types = NULL,
-        .suppress_newline = args->pa->in.format_set,
+        .suppress_newline = 1,
     };
 
-    if (args->pa->in.format_set) {
-        format_output(args->pa->in.format.data, work->name, &print, work->orig_root.len);
-    } else {
-        print_parallel(&print, 1, &(work->name), NULL);
-    }
+    format_output(work, ed, args->pa->in.format.data, &print);
 
     return 0;
 }
 
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct work *work = (struct work *) data;
     struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct work *work = (struct work *) data;
 
     int rc = 0;
+
+    struct entry_data ed;
+    ed.type = 'd';
 
     struct QPTPool_vals qptp_vals = {
         .ctx = ctx,
@@ -229,7 +350,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         .pa = pa,
     };
 
-    process_output(work, NULL, &qptp_vals);
+    process_output(work, &ed, &qptp_vals);
 
     DIR *dir = opendir(work->name);
     if (!dir) {
@@ -246,24 +367,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     closedir(dir);
     free(work);
     return rc;
-}
-
-/* allocate the array of FILE * and open files */
-static FILE **stdout_init(struct input *in) {
-    /* Not checking arguments */
-    FILE **files = calloc(in->maxthreads, sizeof(*files));
-    if (!files) {
-        fprintf(stderr, "Could not allocate space for %zu files\n", in->maxthreads);
-        return NULL;
-    }
-
-    if (in->output == STDOUT) {
-        for(size_t i = 0; i < in->maxthreads; i++) {
-            files[i] = stdout;
-        }
-    }
-
-    return files;
 }
 
 int main(int argc, char *argv[]) {
@@ -284,9 +387,20 @@ int main(int argc, char *argv[]) {
 
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 1, "input_dir...", &pa.in);
+
     int rc = 0;
 
-    pa.outfiles = (pa.in.output == OUTFILE)?outfiles_init(&pa.in.outname, pa.in.maxthreads):stdout_init(&pa.in);
+    if (!pa.in.format_set) {
+        pa.in.format.data = DEFAULT_FORMAT;
+        pa.in.format.len = sizeof(DEFAULT_FORMAT) - 1;
+    }
+
+    const refstr_t STDOUT_NAME = {
+        .data = "-",
+        .len = 1,
+    };
+
+    pa.outfiles = outfiles_init((pa.in.output == STDOUT)?&STDOUT_NAME:&pa.in.outname, pa.in.maxthreads);
     if (!pa.outfiles) {
         rc = 1;
         goto cleanup_exit;
@@ -323,7 +437,7 @@ int main(int argc, char *argv[]) {
         work->orig_root.data = path;
         work->orig_root.len = path_len + 1;  /* add 1 to remove the slash added from descend */
 
-        /* input path that are links are followed */
+        /* input path that are links are followed (find -H) */
         if (stat(path, &work->statuso) != 0) {
             const int err = errno;
             fprintf(stderr, "Error: Cannot stat \"%s\": %s (%d)\n",

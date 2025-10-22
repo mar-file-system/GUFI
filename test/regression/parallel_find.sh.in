@@ -123,14 +123,22 @@ run_sort "${PARALLEL_FIND} -n ${THREADS} -t l \"${SRCDIR}\""
 echo "# get links and files"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -t lf \"${SRCDIR}\""
 
-echo "# remove starting path with newline"
-run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%P\\n\" \"${SRCDIR}\""
-
 echo "# print escape characters"
-run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"[\\t\\]\\r\\n\" \"${SRCDIR}\" | head -n 1"
+run_sort "${PARALLEL_FIND} -n ${THREADS} --format '\\a\\b\\f\\t\\v\\\\\\r\\n\\cshould not show\n' \"${SRCDIR}\" | head -n 1 | ${HEXLIFY}"
 
-echo "# print non-format characters"
-run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"Path: %p\\n\" \"${SRCDIR}\""
+echo "# print numeric % directives"
+run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%% %a %b %c %D %i %n %t\n\" \"${SRCDIR}\" | head -n 1 | @SED@ 's%\b[0-9]\+\b%0%g;'"
+
+echo "# print uid % directives"
+run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%u %U\n\" \"${SRCDIR}\" | head -n 1" | @SED@ "s%${USER_NAME}%${TEST_USER_NAME}%g; s%${USER_ID}%${TEST_USER_ID}%g;"
+
+echo "# print gid % directives"
+run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%g %G\n\" \"${SRCDIR}\" | head -n 1" | @SED@ "s%${GROUP_NAME}%${TEST_GROUP_NAME}%g; s%${GROUP_ID}%${TEST_GROUP_ID}%g;"
+
+echo "# print path % directives for non-symlinks"
+run_sort "${PARALLEL_FIND} -n ${THREADS} -t fd --format \"%H %d %h %f %p %P %m %M %y\n\" \"${SRCDIR}\""
+echo "# print path % directives for symlinks"
+run_sort "${PARALLEL_FIND} -n ${THREADS} -t l --format \"%p %l %m %M\n\" \"${SRCDIR}\" | @AWK@ '{ \$3=777; \$4=\"lrwxrwxrwx\"; print }'"
 
 echo "# level higher than the level of the tree"
 run_sort "${PARALLEL_FIND} -n ${THREADS} --min-level 10 \"${SRCDIR}\""
@@ -140,9 +148,6 @@ run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}////\""
 
 echo "# multiple starting paths"
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/directory/\" \"${SRCDIR}/directory/subdirectory\""
-
-echo "# keep full path with newline"
-run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%p\\n\" \"${SRCDIR}\""
 
 echo "# write to output files"
 run_no_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTFILE_PREFIX}\" \"${SRCDIR}\""
