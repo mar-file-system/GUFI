@@ -196,6 +196,7 @@ VERIFYTRACEINTREE="${BINARY_DIR}/contrib/verifytraceintree"
 
 # distributed
 FIND_SH="${BINARY_DIR}/scripts/distributed/find.sh"
+PARALLEL_FIND_SH="${BINARY_DIR}/scripts/distributed/parallel_find.sh"
 SSH_FAKE="${BINARY_DIR}/test/regression/ssh.fake"
 GUFI_DIR2INDEX_DISTRIBUTED="${BINARY_DIR}/scripts/distributed/gufi_dir2index"
 GUFI_DIR2TRACE_DISTRIBUTED="${BINARY_DIR}/scripts/distributed/gufi_dir2trace"
@@ -286,6 +287,7 @@ replace() {
     s%${VERIFYTRACEINTREE}%verifytraceintree%g;
 
     s%${FIND_SH}%find.sh%g;
+    s%${PARALLEL_FIND_SH}%parallel_find.sh%g;
     s%${SSH_FAKE}%ssh%g;
     s%${GUFI_DIR2INDEX_DISTRIBUTED}%gufi_dir2index_distributed%g;
     s%${GUFI_DIR2TRACE_DISTRIBUTED}%gufi_dir2trace_distributed%g;

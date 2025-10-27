@@ -67,4 +67,4 @@ root="$1"
 level="$2"
 threads="$3"
 
-parallel_find -n "${threads}" --min-level "${level}" --max-level "${level}" -t d -f "%P\n" "${root}"
+parallel_find -n "${threads}" --min-level "${level}" --max-level "${level}" -t d --format "%P\n" "${root}"
