@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
@@ -90,11 +91,6 @@ struct PoolArgs {
     struct OutputBuffers obufs;
     FILE **outfiles;
 };
-
-void sub_help(void) {
-   printf("input_dir...      walk one or more trees to search files\n");
-   printf("\n");
-}
 
 struct QPTPool_vals {
     QPTPool_t *ctx;
@@ -164,7 +160,7 @@ static int format_output(struct work *work, struct entry_data *ed,
                 case '%':
                     out += SNPRINTF(out, rem, "%%");
                     break;
-                case 'a': //
+                case 'a':
                     out += SNPRINTF(out, rem, "%ld", work->statuso.st_atime);
                     break;
                 /* case 'A': */
@@ -315,9 +311,9 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
 
     const size_t user_types = args->pa->in.filter_types;
     const struct stat *st = &work->statuso;
-    if (!((S_ISREG(st->st_mode) && (user_types & FILTER_TYPE_FILE)) ||
-          (S_ISDIR(st->st_mode) && (user_types & FILTER_TYPE_DIR))  ||
-          (S_ISLNK(st->st_mode) && (user_types & FILTER_TYPE_LINK)))) {
+    if (!(((user_types & FILTER_TYPE_DIR)  && S_ISDIR(st->st_mode))  ||
+          ((user_types & FILTER_TYPE_FILE) && S_ISREG(st->st_mode))  ||
+          ((user_types & FILTER_TYPE_LINK) && S_ISLNK(st->st_mode)))) {
         return 0;
     }
 
@@ -367,6 +363,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     closedir(dir);
     free(work);
     return rc;
+}
+
+static void sub_help(void) {
+   printf("input_dir...      walk one or more trees to search files\n");
+   printf("\n");
 }
 
 int main(int argc, char *argv[]) {

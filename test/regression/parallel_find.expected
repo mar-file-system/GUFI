@@ -74,8 +74,8 @@ prefix/directory/subdirectory/directory_symlink/repeat_name
 $ parallel_find -n 2 "prefix/file_symlink"
 prefix/file_symlink
 
-# mix of files, dirs, links
-$ parallel_find -n 2 "prefix/directory/subdirectory/directory_symlink" "prefix/1MB" "prefix/"
+# mix of dirs, files, and links
+$ parallel_find -n 2 "prefix/" "prefix/1MB" "prefix/directory/subdirectory/directory_symlink"
 prefix/
 prefix//.hidden
 prefix//1KB

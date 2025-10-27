@@ -111,8 +111,8 @@ run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/directory/subdirectory/dire
 echo "# link to a file without slash at the end"
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/file_symlink\""
 
-echo "# mix of files, dirs, links"
-run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/directory/subdirectory/directory_symlink\" \"${SRCDIR}/1MB\" \"${SRCDIR}/\""
+echo "# mix of dirs, files, and links"
+run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/\" \"${SRCDIR}/1MB\" \"${SRCDIR}/directory/subdirectory/directory_symlink\""
 
 echo "# only get directories at level 2"
 run_sort "${PARALLEL_FIND} -n ${THREADS} -t d --min-level 2 --max-level 2 \"${SRCDIR}\""
