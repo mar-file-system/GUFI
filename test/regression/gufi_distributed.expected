@@ -435,6 +435,13 @@ $ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT r
 #####################################
 
 #####################################
+# Check find debug print
+$ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" "find.sh" ssh "hostfile" 1 "prefix" "search2" 2>/dev/null | grep 'directory paths'
+find returned 4 directory paths 
+
+#####################################
+
+#####################################
 # Errors
 # Bad source path
 $ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" --use-existing-group-files "parallel_find.sh" ssh "hostfile" 1 "hostfile" "search2" 2>&1 | tail -n 1

@@ -170,15 +170,18 @@ def dirs_at_level(args, root):
                             cwd=os.getcwd())
     dirs, _ = proc.communicate() # block until find finishes
 
+    # this counts as part of processing time
+    cleaned = [path.decode() for path in dirs.split(b'\n') if len(path) > 0]
+
     end = clock()
 
-    print('{0} returned {1} directory paths in {2} seconds'.format(args.find, len(dirs), clock_diff(start, end)))
+    print('{0} returned {1} directory paths in {2} seconds'.format(args.find, len(cleaned), clock_diff(start, end)))
 
     if proc.returncode:
         sys.stderr.write('Warning: {0} returned error code {1}\n'.format(args.find, proc.returncode))
         # do not exit - find might fail on active filesystems
 
-    return [path.decode() for path in dirs.split(b'\n') if len(path) > 0]
+    return cleaned
 
 # Step 2
 # Sort the directories and split them into groups of paths for processing

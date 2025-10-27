@@ -330,6 +330,11 @@ run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsumma
 echo "#####################################"
 echo
 echo "#####################################"
+echo "# Check find debug print"
+run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null | @GREP@ 'directory paths'" | @SED@ "s%^.*find\.sh returned%find returned%g; s%in .* seconds%%g;"
+echo "#####################################"
+echo
+echo "#####################################"
 echo "# Errors"
 
 echo "# Bad source path"
