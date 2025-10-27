@@ -61,7 +61,6 @@
 
 
 
-import gufi_common
 import gufi_distributed
 
 def subtree_cmd(args, filename, _idx, _target):

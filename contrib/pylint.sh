@@ -71,13 +71,14 @@ export PYTHONPATH="${BUILD}/contrib:${BUILD}/scripts:${BUILD}/test:${PYTHONPATH}
 PATHS=(
     "${BUILD}/contrib"
     "${BUILD}/scripts"
+    "${BUILD}/scripts/distributed"
     "${BUILD}/test"
 )
 
 # shellcheck disable=SC2044
 while IFS= read -r -d $'\0' path
 do
-    if [[ "$(head -n 1 ${path} | strings)" =~ ^#!/usr/bin/env\ python(2|3).*$ ]]
+    if [[ "$(head -n 1 ${path} | strings)" =~ ^#!.*python3.*$ ]]
     then
         echo "${path}"
         pylint --disable=too-many-lines,line-too-long,missing-docstring,consider-using-f-string,invalid-name -- "${path}"

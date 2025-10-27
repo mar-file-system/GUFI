@@ -159,7 +159,7 @@ DISTRIBUTORS = {
 # (or equivalent) to get list of directories at given level without ${root}
 def dirs_at_level(args, root):
     if args.use_existing_paths:
-        with open(args.use_existing_paths, 'r') as paths:
+        with open(args.use_existing_paths, 'r', encoding='utf-8') as paths:
             return [path.strip() for path in paths.readlines()]
 
     start = clock()
