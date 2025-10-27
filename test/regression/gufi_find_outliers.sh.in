@@ -80,6 +80,17 @@ trap cleanup_exit EXIT
 
 cleanup
 
+# some directories don't have rows in entries, so need to fall back to directory atime
+UPDATE_S=$(
+    echo "UPDATE summary SET "
+    echo "mtime = atime, ctime = atime, "
+    echo "minmtime = COALESCE((SELECT min(atime) FROM entries), atime), "
+    echo "maxmtime = COALESCE((SELECT max(atime) FROM entries), atime), "
+    echo "minctime = COALESCE((SELECT min(atime) FROM entries), atime), "
+    echo "maxctime = COALESCE((SELECT max(atime) FROM entries), atime)"
+    echo ";"
+)
+
 run() {
     col="$1"
     message="$2"
@@ -100,8 +111,9 @@ run() {
         # change timestamps
         "${GUFI_QUERY}" \
             --read-write \
-            -S "UPDATE summary SET mtime = atime, ctime = atime;" \
-            -E "UPDATE entry   SET mtime = atime, ctime = atime;" \
+            -a 1 \
+            -S "${UPDATE_S}" \
+            -E "UPDATE entries SET mtime = atime, ctime = atime;" \
             "${SEARCH}"
 
         # need treesummary table in all directories
@@ -323,8 +335,9 @@ echo "# write output to database"
     # change timestamps
     "${GUFI_QUERY}" \
         --read-write \
-        -S "UPDATE summary SET mtime = atime, ctime = atime;" \
-        -E "UPDATE entry   SET mtime = atime, ctime = atime;" \
+        -a 1 \
+        -S "${UPDATE_S}" \
+        -E "UPDATE entries SET mtime = atime, ctime = atime;" \
         "${SEARCH}"
 
     "${GUFI_TREESUMMARY_ALL}" -n ${THREADS} "${SEARCH}"
