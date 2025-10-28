@@ -1,0 +1,129 @@
+# gufi_top_info help
+$ gufi_top_info
+usage: gufi_top_info [options] GUFI_root op [op args]
+options:
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+
+GUFI_root        root of the GUFI tree (not index root)
+op:
+    add/insert [key value]...
+    set/modify rowid [key value]...
+    del/delete/remove [rowid ...]
+    show rowid [key]...
+    dump
+
+The keys are the SQL column names of the table:
+
+CREATE TABLE IF NOT EXISTS info(
+    name TEXT,
+    start FLOAT,
+    end FLOAT,
+    duration FLOAT,
+    threads INT64,
+    src TEXT,
+    system TEXT,
+    OS TEXT,
+    cpu TEXT,
+    memory INT64,
+    fstype TEXT,
+    storage TEXT,
+    notes TEXT
+);
+
+
+# Add a row
+$ gufi_top_info "search" add name test1 start 1 end 1 threads 2 system regression
+Inserted row 1
+
+# Add another row
+$ gufi_top_info "search" add name test2 start 2 end 2 threads 2 system regression
+Inserted row 2
+
+# Ignore ordering when adding row
+$ gufi_top_info "search" add rowid 10 name test10 start 10 end 10 threads 2 system regression
+Inserted row 10
+
+# Update row
+$ gufi_top_info "search" set 10 CPU cpu
+UPDATE info SET CPU = 'cpu' WHERE rowid == 10;
+
+# Show keys for row 1
+$ gufi_top_info "search" show 1 name start end
+test1,1.0,1.0
+
+# Show keys for row 2
+$ gufi_top_info "search" show 2 name start end
+test2,2.0,2.0
+
+# Show keys for row 10
+$ gufi_top_info "search" show 10 name start end
+test10,10.0,10.0
+
+# Delete row 2
+$ gufi_top_info "search" delete 2
+
+# Empty add
+$ gufi_top_info "search" insert
+
+# Empty set
+$ gufi_top_info "search" modify 0
+
+# Empty delete
+$ gufi_top_info "search" remove
+
+# Dump database
+$ gufi_top_info "search" dump
+name,start,end,duration,threads,src,system,OS,cpu,memory,fstype,storage,notes
+test1,1.0,1.0,,2,,regression,,,,,,
+test10,10.0,10.0,,2,,regression,,cpu,,,,
+
+# Modify non-existant row
+$ gufi_top_info "search" set 2 CPU cpu
+UPDATE info SET CPU = 'cpu' WHERE rowid == 2;
+
+$ gufi_top_info "search" dump
+name,start,end,duration,threads,src,system,OS,cpu,memory,fstype,storage,notes
+test1,1.0,1.0,,2,,regression,,,,,,
+test10,10.0,10.0,,2,,regression,,cpu,,,,
+
+#####################################
+# Invalid Inputs                    #
+#####################################
+# Non-existent path
+$ gufi_top_info "prefix/non-existent" op
+Cannot open database: prefix/non-existent/db.db unable to open database file rc 14
+
+# Path is not parent of indexes
+$ gufi_top_info "prefix" op
+Error: Not at the top: directory "prefix" has contents in the summary table
+
+# Bad op
+$ gufi_top_info "search" op
+Error: Unknown op: op
+
+# Bad key
+$ gufi_top_info "search" add bad_key value
+Error: Failed to insert new row: table info has no column named bad_key
+
+# Missing add value
+$ gufi_top_info "search" add name
+Error: add requires key-value pairs
+
+# Missing set id
+$ gufi_top_info "search" set
+Error: set requires a id followed by key-value pairs
+
+# Missing set value
+$ gufi_top_info "search" set 0 name
+Error: set requires a id followed by key-value pairs
+
+# Missing show id
+$ gufi_top_info "search" show
+Error: show requires a id followed by keys
+
+# Cannot overwrite existing row - must used update
+$ gufi_top_info "search" add rowid 10
+Error: Failed to insert new row: UNIQUE constraint failed: info.rowid
+

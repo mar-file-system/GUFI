@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+
+OUTPUT="gufi_top_info.out"
+
+# no need for cleanup - info.db is placed into ${SEARCH}
+
+DEL=2
+ROWID=10
+
+(
+echo "# ${GUFI_TOP_INFO} help" | replace
+run_no_sort "${GUFI_TOP_INFO}"
+
+echo "# Add a row"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" add name test1 start 1 end 1 threads ${THREADS} system regression"
+
+echo "# Add another row"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" add name test2 start 2 end 2 threads ${THREADS} system regression"
+
+echo "# Ignore ordering when adding row"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" add rowid ${ROWID} name test${ROWID} start ${ROWID} end ${ROWID} threads ${THREADS} system regression"
+
+echo "# Update row"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" set ${ROWID} CPU cpu"
+
+echo "# Show keys for row 1"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" show 1 name start end"
+
+echo "# Show keys for row 2"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" show 2 name start end"
+
+echo "# Show keys for row ${ROWID}"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" show ${ROWID} name start end"
+
+echo "# Delete row ${DEL}"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" delete ${DEL}"
+
+echo "# Empty add"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" insert"
+
+echo "# Empty set"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" modify 0"
+
+echo "# Empty delete"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" remove"
+
+echo "# Dump database"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" dump"
+
+echo "# Modify non-existant row"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" set ${DEL} CPU cpu"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" dump"
+
+echo "#####################################"
+echo "# Invalid Inputs                    #"
+echo "#####################################"
+
+echo "# Non-existent path"
+run_no_sort "${GUFI_TOP_INFO} \"${INDEXROOT}/non-existent\" op"
+
+echo "# Path is not parent of indexes"
+run_no_sort "${GUFI_TOP_INFO} \"${INDEXROOT}\" op"
+
+echo "# Bad op"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" op"
+
+echo "# Bad key"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" add bad_key value"
+
+echo "# Missing add value"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" add name"
+
+echo "# Missing set id"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" set"
+
+echo "# Missing set value"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" set 0 name"
+
+echo "# Missing show id"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" show"
+
+echo "# Cannot overwrite existing row - must used update"
+run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" add rowid ${ROWID}"
+) | replace | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_top_info.expected "${OUTPUT}"
+rm "${OUTPUT}"

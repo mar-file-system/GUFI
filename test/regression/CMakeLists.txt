@@ -88,6 +88,7 @@ set(BINARIES
   gufi_query
   gufi_sqlite3
   gufi_stat_bin
+  gufi_top_info
   gufi_trace2dir
   gufi_trace2index
   gufi_treesummary

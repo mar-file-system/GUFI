@@ -171,6 +171,7 @@ GUFI_SQLITE3="${BINARY_DIR}/src/gufi_sqlite3"
 GUFI_STAT="${GUFI_TOOL} stat"
 GUFI_STATS="${GUFI_TOOL} stats"
 GUFI_STAT_BIN="${BINARY_DIR}/src/gufi_stat_bin"
+GUFI_TOP_INFO="${BINARY_DIR}/src/gufi_top_info"
 GUFI_TRACE2DIR="${BINARY_DIR}/src/gufi_trace2dir"
 GUFI_TRACE2INDEX="${BINARY_DIR}/src/gufi_trace2index"
 GUFI_TREESUMMARY="${BINARY_DIR}/src/gufi_treesummary"
@@ -262,6 +263,7 @@ replace() {
     s%${GUFI_STAT}%gufi_stat%g;
     s%${GUFI_STATS}%gufi_stats%g;
     s%${GUFI_STAT_BIN}%gufi_stat_bin%g
+    s%${GUFI_TOP_INFO}%gufi_top_info%g
     s%${GUFI_TEST_PLUGIN}%gufi_test_plugin%g;
     s%${GUFI_TRACE2DIR}%gufi_trace2dir%g;
     s%${GUFI_TRACE2INDEX}%gufi_trace2index%g;
@@ -448,7 +450,7 @@ then
     "${GENERATETREE}" "${SRCDIR}"
 
     # generate the index
-    "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}" > /dev/null
+    "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}" > /dev/null 2>&1
 
     clean_index "${INDEXROOT}" 1
 fi
