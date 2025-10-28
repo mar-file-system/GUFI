@@ -76,15 +76,23 @@ OF SUCH DAMAGE.
 int setup_parking_lot(const char *path);
 int cleanup_parking_lot(const char *path, const int created);
 
+/* table for containing snapshot information */
+#define SNAPSHOT      "snapshot"
+#define SNAPSHOT_SCHEMA(name)                    \
+    "CREATE TABLE " name "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, depth INT64, suspect INT64);"
+extern const char SNAPSHOT_CREATE[];
+extern const char SNAPSHOT_INSERT[];
+
+int create_snapshot_table(const char *name, sqlite3 *db, void *args);
+
 /*
- * insert records into the per-thread readdirplus table/db
- *
- * these will be merged into one at the end
+ * insert row into per-thread snapshot tables
+ * each set will be merged at the end of its respective operations
  *
  * used by gen_index_snapshot and find_suspects
  */
-int insert_record(struct work *work, struct entry_data *ed,
-                  sqlite3_stmt *res, const size_t offset_name);
+int insert_snapshot_row(struct work *work, struct entry_data *ed,
+                        sqlite3_stmt *res, const size_t offset_name);
 
 /* *********************************************************** */
 /* walk the old index and generate a readdirplus table in <snapshot>.index */

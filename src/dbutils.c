@@ -78,13 +78,6 @@ OF SUCH DAMAGE.
 #include "histogram.h"
 #include "trie.h"
 
-const char READDIRPLUS_CREATE[] =
-    DROP_TABLE(READDIRPLUS)
-    READDIRPLUS_SCHEMA(READDIRPLUS);
-
-const char READDIRPLUS_INSERT[] =
-    "INSERT INTO " READDIRPLUS " VALUES (@path, @type, @inode, @pinode, @depth, @suspect);";
-
 const char ENTRIES_CREATE[] =
     DROP_TABLE(ENTRIES)
     ENTRIES_SCHEMA(ENTRIES, "");

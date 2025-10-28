@@ -267,10 +267,10 @@ run_query() {
 
 check_incremental_update() {
     echo "# Snapshot of original index"
-    run_sort "${SQLITE3} \"${INDEX_SNAPSHOT}\" \"SELECT * FROM readdirplus;\""
+    run_sort "${SQLITE3} \"${INDEX_SNAPSHOT}\" \"SELECT * FROM snapshot;\""
 
     echo "# Snapshot of tree in current state"
-    run_sort "${SQLITE3} \"${TREE_SNAPSHOT}\" \"SELECT * FROM readdirplus;\""
+    run_sort "${SQLITE3} \"${TREE_SNAPSHOT}\" \"SELECT * FROM snapshot;\""
 
     echo "# Diff of snapshots"
     run_sort "${SQLITE3} \"${DIFF}\" \"SELECT * FROM diff;\""

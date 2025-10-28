@@ -58,7 +58,7 @@ $ gufi_incremental_update -x --suspect-method 0 "prefix" "prefix" "snapshot" "pa
     Warning: Could not stat update db.db in parking lot "parking_lot/5": No such file or directory (2)
 
 # Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|0
 prefix/delete|d|2|0|1|0
 prefix/no-change|d|3|0|1|0
@@ -66,7 +66,7 @@ prefix/rename|d|4|0|1|0
 prefix|d|0|0|0|0
 
 # Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|0
 prefix/created|d|5|0|1|0
 prefix/no-change|d|3|0|1|0
@@ -146,7 +146,7 @@ bad d
 $ gufi_incremental_update -x --suspect-method 1 --suspect-file "suspectfile" "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|0
 prefix/delete|d|2|0|1|0
 prefix/no-change|d|3|0|1|0
@@ -154,7 +154,7 @@ prefix/rename|d|4|0|1|0
 prefix|d|0|0|0|0
 
 # Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|1
 prefix/created|d|5|0|1|1
 prefix/no-change|d|3|0|1|0
@@ -229,7 +229,7 @@ bad d
 $ gufi_incremental_update -x --suspect-method 2 --suspect-file "suspectfile" "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|0
 prefix/delete|d|2|0|1|0
 prefix/no-change|d|3|0|1|0
@@ -237,7 +237,7 @@ prefix/rename|d|4|0|1|0
 prefix|d|0|0|0|0
 
 # Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|1
 prefix/created|d|5|0|1|1
 prefix/no-change|d|3|0|1|0
@@ -307,7 +307,7 @@ Total Non-Dirs:      1
 $ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|0
 prefix/delete|d|2|0|1|0
 prefix/no-change|d|3|0|1|0
@@ -315,7 +315,7 @@ prefix/rename|d|4|0|1|0
 prefix|d|0|0|0|0
 
 # Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|1
 prefix/created|d|5|0|1|1
 prefix/no-change|d|3|0|1|0
@@ -446,7 +446,7 @@ Total Non-Dirs:      1
 $ gufi_incremental_update -x --suspect-method 0 --suspect-dir "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|0
 prefix/delete|d|2|0|1|0
 prefix/no-change|d|3|0|1|0
@@ -454,7 +454,7 @@ prefix/rename|d|4|0|1|0
 prefix|d|0|0|0|0
 
 # Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|1
 prefix/created|d|5|0|1|1
 prefix/no-change|d|3|0|1|1
@@ -525,7 +525,7 @@ Total Non-Dirs:      1
 $ gufi_incremental_update -x --suspect-method 3 --suspect-fl "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
 
 # Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|0
 prefix/delete|d|2|0|1|0
 prefix/no-change|d|3|0|1|0
@@ -533,7 +533,7 @@ prefix/rename|d|4|0|1|0
 prefix|d|0|0|0|0
 
 # Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
 prefix/change|d|1|0|1|1
 prefix/created|d|5|0|1|1
 prefix/no-change|d|3|0|1|0
@@ -620,7 +620,7 @@ $ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "snapshot" "pa
 # databases to copy in
 
 # Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
 prefix/A/B/D|d|3|2|3|0
 prefix/A/B/E|d|4|2|3|0
 prefix/A/B|d|2|1|2|0
@@ -634,7 +634,7 @@ prefix/A|d|1|0|1|0
 prefix|d|0|0|0|0
 
 # Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM readdirplus;"
+$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
 prefix/A/B/D/C|d|11|3|4|1
 prefix/A/B/D|d|3|2|3|0
 prefix/A/B/E/F/G/H/renamed_I/J|d|10|9|8|0

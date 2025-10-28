@@ -165,7 +165,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     ed.suspect_time = pa->in.suspecttime;
 
     sqlite3 *db = pa->tree.agg.dbs[id]; /* partial snapshot db */
-    sqlite3_stmt *res = insertdbprep(db, READDIRPLUS_INSERT);
+    sqlite3_stmt *res = insertdbprep(db, SNAPSHOT_INSERT);
 
     if (ed.suspect == 0) {
         switch (pa->in.suspectmethod) {
@@ -211,7 +211,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
      * if this directory is not a suspect, insert it anyways so that
      * it is not treated as having been deleted
      */
-    insert_record(work, &ed, res, pa->tree.parent_len);
+    insert_snapshot_row(work, &ed, res, pa->tree.parent_len);
 
     sqlite3_finalize(res);
 

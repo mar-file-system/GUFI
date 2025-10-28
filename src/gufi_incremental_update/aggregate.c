@@ -66,16 +66,11 @@ OF SUCH DAMAGE.
 #include "print.h"
 
 #include "gufi_incremental_update/aggregate.h"
+#include "gufi_incremental_update/incremental_update.h"
 
 /* must have shared cache */
 static const char INTERMEDIATE_ATTACH_FORMAT[] = "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
 #define INTERMEDIATE_ATTACH_NAME "intermediate"
-
-static int create_readdirplus_tables(const char *name, sqlite3 *db, void *args) {
-    (void) args;
-
-    return (create_table_wrapper(name, db, READDIRPLUS, READDIRPLUS_CREATE) != SQLITE_OK);
-}
 
 int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *name, const size_t offset) {
     /* Not checking arguments */
@@ -88,7 +83,7 @@ int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *nam
         SNPRINTF(dbname, MAXPATH, INTERMEDIATE_ATTACH_FORMAT, i + offset);
 
         aggregate->dbs[i] = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
-                                   1, 1, create_readdirplus_tables, NULL);
+                                   1, 1, create_snapshot_table, NULL);
         if (!aggregate->dbs[i]) {
             fprintf(stderr, "Could not open aggregation database \"%s\"\n", dbname);
             aggregate_fin(aggregate, i);
@@ -100,7 +95,7 @@ int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *nam
 
     /* always open an aggregate db */
     aggregate->agg = opendb(name, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
-                            1, 1, create_readdirplus_tables, NULL);
+                            1, 1, create_snapshot_table, NULL);
     if (!aggregate->agg) {
         fprintf(stderr, "Could not open final aggregation database \"%s\"\n", dbname);
         aggregate_fin(aggregate, threads);
@@ -127,7 +122,7 @@ void aggregate_intermediate(Aggregate_t *aggregate, const size_t threads, const 
 
         if (attachdb_raw(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1)) {
             char *err = NULL;
-            if ((sqlite3_exec(aggregate->agg, "INSERT INTO " READDIRPLUS " SELECT * FROM " INTERMEDIATE_ATTACH_NAME "." READDIRPLUS, NULL, NULL, &err) != SQLITE_OK)) {
+            if ((sqlite3_exec(aggregate->agg, "INSERT INTO " SNAPSHOT " SELECT * FROM " INTERMEDIATE_ATTACH_NAME "." SNAPSHOT, NULL, NULL, &err) != SQLITE_OK)) {
                 sqlite_print_err_and_free(err, stderr, "Error: Cannot aggregate intermediate databases: %s\n", err);
             }
         }

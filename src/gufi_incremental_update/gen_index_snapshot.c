@@ -151,8 +151,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* insert this directory into the index snapshot db */
-    sqlite3_stmt *res = insertdbprep(db, READDIRPLUS_INSERT);
-    insert_record(work, &ed, res, pa->index.parent_len);
+    sqlite3_stmt *res = insertdbprep(db, SNAPSHOT_INSERT);
+    insert_snapshot_row(work, &ed, res, pa->index.parent_len);
     sqlite3_finalize(res);
 
   detach_db:

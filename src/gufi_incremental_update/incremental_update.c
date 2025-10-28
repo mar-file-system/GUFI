@@ -108,8 +108,8 @@ static const char UNCHANGED_RENAMED_DELETED_CREATE[] =
     "       " TREE  ".pinode  AS " TREE  "pinode, "
     "       " TREE  ".depth   AS " TREE  "depth, "
     "       " TREE  ".suspect AS " TREE  "suspect "
-    "FROM " INDEX_ATTACH "." READDIRPLUS " AS " INDEX " "
-    "LEFT OUTER JOIN " TREE_ATTACH "." READDIRPLUS " AS " TREE " ON " INDEX ".inode == " TREE ".inode "
+    "FROM " INDEX_ATTACH "." SNAPSHOT " AS " INDEX " "
+    "LEFT OUTER JOIN " TREE_ATTACH "." SNAPSHOT " AS " TREE " ON " INDEX ".inode == " TREE ".inode "
     ";";
 
 #define CREATED "created"
@@ -136,8 +136,8 @@ const char CREATED_CREATE[] =
     "       " TREE  ".pinode  AS " TREE  "pinode, "
     "       " TREE  ".depth   AS " TREE  "depth, "
     "       " TREE  ".suspect AS " TREE  "suspect "
-    "FROM " TREE_ATTACH "." READDIRPLUS " AS " TREE " "
-    "LEFT OUTER JOIN " INDEX_ATTACH "." READDIRPLUS " AS " INDEX " ON " TREE ".inode == " INDEX ".inode "
+    "FROM " TREE_ATTACH "." SNAPSHOT " AS " TREE " "
+    "LEFT OUTER JOIN " INDEX_ATTACH "." SNAPSHOT " AS " INDEX " ON " TREE ".inode == " INDEX ".inode "
     "WHERE " INDEX ".inode IS NULL " /* remove all unchanged/renames, leaving only new directories */
     ";";
 

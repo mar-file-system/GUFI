@@ -283,9 +283,9 @@ build_and_install_one("${SERVER_BIN}" TRUE gufi_incremental_update
   gufi_incremental_update/find_suspects.c
   gufi_incremental_update/gen_index_snapshot.c
   gufi_incremental_update/incremental_update.c
-  gufi_incremental_update/insert_record.c
   gufi_incremental_update/parking_lot.c
   gufi_incremental_update/reindex_dir.c
+  gufi_incremental_update/snapshot.c
 )
 
 # only build bffuse and bfresultfuse if FUSE is found

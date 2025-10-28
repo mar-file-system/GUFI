@@ -92,12 +92,6 @@ extern "C" {
 #define DROP_TABLE(name) "DROP TABLE IF EXISTS " name ";"
 #define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " name ";"
 
-#define READDIRPLUS      "readdirplus"
-#define READDIRPLUS_SCHEMA(name)                    \
-    "CREATE TABLE " name "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, depth INT64, suspect INT64);"
-extern const char READDIRPLUS_CREATE[];
-extern const char READDIRPLUS_INSERT[];
-
 /* contains all file and link metadata for the current directory */
 /* prefer pentries over entries */
 #define ENTRIES           "entries"

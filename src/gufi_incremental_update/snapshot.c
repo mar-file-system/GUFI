@@ -64,8 +64,21 @@ OF SUCH DAMAGE.
 
 #include "gufi_incremental_update/incremental_update.h"
 
-int insert_record(struct work *work, struct entry_data *ed,
-                  sqlite3_stmt *res, const size_t offset_name) {
+const char SNAPSHOT_CREATE[] =
+    DROP_TABLE(SNAPSHOT)
+    SNAPSHOT_SCHEMA(SNAPSHOT);
+
+const char SNAPSHOT_INSERT[] =
+    "INSERT INTO " SNAPSHOT " VALUES (@path, @type, @inode, @pinode, @depth, @suspect);";
+
+int create_snapshot_table(const char *name, sqlite3 *db, void *args) {
+    (void) args;
+
+    return (create_table_wrapper(name, db, SNAPSHOT, SNAPSHOT_CREATE) != SQLITE_OK);
+}
+
+int insert_snapshot_row(struct work *work, struct entry_data *ed,
+                        sqlite3_stmt *res, const size_t offset_name) {
     char *zname = sqlite3_mprintf("%q", work->name + offset_name); /* remove parents of starting paths */
     char *ztype = sqlite3_mprintf("%c", ed->type);
     sqlite3_bind_text (res, 1, zname, -1, SQLITE_TRANSIENT);
