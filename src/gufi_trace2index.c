@@ -263,11 +263,6 @@ static void sub_help(void) {
 }
 
 int main(int argc, char *argv[]) {
-    /* have to call clock_gettime explicitly to get start time and epoch */
-    struct start_end main_func;
-    clock_gettime(CLOCK_MONOTONIC, &main_func.start);
-    epoch = since_epoch(&main_func.start);
-
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
@@ -341,6 +336,12 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.index_parent.data, pa.in.maxthreads);
     fflush(stdout);
 
+    struct start_end rt;
+    clock_gettime(CLOCK_REALTIME, &rt.start);
+
+    struct start_end after_init;
+    clock_gettime(CLOCK_MONOTONIC, &after_init.start);
+
     /* parse the trace files and enqueue work */
     struct TraceStats stats = {0};
     stats.mutex = &print_mutex; /* debug.h */
@@ -372,8 +373,9 @@ int main(int argc, char *argv[]) {
 
     QPTPool_stop(pool);
 
-    clock_gettime(CLOCK_MONOTONIC, &main_func.end);
-    const long double processtime = sec(nsec(&main_func));
+    clock_gettime(CLOCK_MONOTONIC, &after_init.end);
+    clock_gettime(CLOCK_REALTIME, &rt.end);
+    const long double processtime = sec(nsec(&after_init));
 
     /* don't count as part of processtime */
     QPTPool_destroy(pool);
@@ -383,6 +385,8 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Total Dirs:          %zu\n",    stats.dirs);
     fprintf(stderr, "Total Files:         %zu\n",    stats.files);
+    fprintf(stderr, "Start Time:          %.6Lf\n",  sec(since_epoch(&rt.start)));
+    fprintf(stderr, "End Time:            %.6Lf\n",  sec(since_epoch(&rt.end)));
     fprintf(stderr, "Time Spent Indexing: %.2Lfs\n", processtime);
     fprintf(stderr, "Dirs/Sec:            %.2Lf\n",  stats.dirs / processtime);
     fprintf(stderr, "Files/Sec:           %.2Lf\n",  stats.files / processtime);

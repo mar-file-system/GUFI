@@ -563,6 +563,9 @@ int main(int argc, char *argv[]) {
     pa.total_dirs    = calloc(pa.in.maxthreads, sizeof(uint64_t));
     pa.total_nondirs = calloc(pa.in.maxthreads, sizeof(uint64_t));
 
+    struct start_end rt;
+    clock_gettime(CLOCK_REALTIME, &rt.start);
+
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
 
@@ -591,6 +594,7 @@ int main(int argc, char *argv[]) {
     QPTPool_stop(pool);
 
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
+    clock_gettime(CLOCK_REALTIME, &rt.end);
     const long double processtime = sec(nsec(&after_init));
 
     /* don't count as part of processtime */
@@ -609,6 +613,8 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Total Dirs:          %" PRIu64 "\n", total_dirs);
     fprintf(stderr, "Total Non-Dirs:      %" PRIu64 "\n", total_nondirs);
+    fprintf(stderr, "Start Time:          %.6Lf\n",       sec(since_epoch(&rt.start)));
+    fprintf(stderr, "End Time:            %.6Lf\n",       sec(since_epoch(&rt.end)));
     fprintf(stderr, "Time Spent Indexing: %.2Lfs\n",      processtime);
     fprintf(stderr, "Dirs/Sec:            %.2Lf\n",       total_dirs / processtime);
     fprintf(stderr, "Non-Dirs/Sec:        %.2Lf\n",       total_nondirs / processtime);
