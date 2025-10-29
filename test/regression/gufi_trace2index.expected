@@ -11,7 +11,7 @@ options:
       --swap-prefix <path>          File name prefix for swap files
 
 trace_file...     parse one or more trace files to produce the GUFI tree
-output_dir        build GUFI tree here
+GUFI_tree_parent  build GUFI tree under here
 
 
 # generate the tree

@@ -388,7 +388,7 @@ $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries('baddir') ORDER BY name ASC, size ASC;"
 ) | sqlite3
-Could not get realpath of "baddir": No such file or directory (2)
+Could not stat directory "baddir": No such file or directory (2)
 
 # Empty string thread count (error)
 $ (

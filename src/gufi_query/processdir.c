@@ -125,7 +125,7 @@ static inline int save_matime(gqw_t *gqw,
                           &gqw->work.root_parent, gqw->work.root_basename_len, &gqw->work.orig_root,
                           buf, sizeof(buf));
 
-        fprintf(stderr, "Could not database file's timestamps \"%s\": %s (%d)\n",
+        fprintf(stderr, "Could not set database file's timestamps \"%s\": %s (%d)\n",
                 buf, strerror(err), err);
 
         return 1;

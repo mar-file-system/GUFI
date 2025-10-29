@@ -18,7 +18,7 @@ options:
       --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
       --compress                    compress work items
 
-input_dir...         walk one or more trees to produce trace file
+tree...              walk one or more trees to produce trace file
 output_prefix        prefix of output files (<prefix>.<tid>)
 
 
@@ -223,7 +223,7 @@ Total Files:         0
 # empty source path
 $ gufi_dir2trace -d "|" -n 2 "" "trace"
 Creating GUFI Traces trace with 2 threads
-Could not resolve path "": No such file or directory (2)
+Could not stat source directory "": No such file or directory (2)
 Total Dirs:          0
 Total Files:         0
 

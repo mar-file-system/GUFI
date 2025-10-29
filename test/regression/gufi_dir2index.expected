@@ -18,8 +18,8 @@ options:
       --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
       --compress                    compress work items
 
-input_dir...      walk one or more trees to produce GUFI tree
-output_dir        build GUFI tree here
+tree...           walk one or more trees to produce GUFI tree
+GUFI_tree_parent  build GUFI tree under here
 
 
 Index Everything:
@@ -373,7 +373,7 @@ Total Non-Dirs:      0
 # empty source path
 $ gufi_dir2index -n 2 "" "trace"
 Creating GUFI Index trace with 2 threads
-Could not resolve path "": No such file or directory (2)
+Could not stat source directory "": No such file or directory (2)
 Total Dirs:          0
 Total Non-Dirs:      0
 

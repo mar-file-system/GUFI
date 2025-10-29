@@ -446,7 +446,8 @@ static int validate_source(refstr_t *index_parent, const char *path, struct work
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) != 0) {
-        fprintf(stderr, "Could not stat source directory \"%s\"\n", path);
+        const int err = errno;
+        fprintf(stderr, "Could not stat source directory \"%s\": %s (%d)\n", path, strerror(err), err);
         return 1;
     }
 
@@ -480,8 +481,8 @@ static int validate_source(refstr_t *index_parent, const char *path, struct work
 }
 
 static void sub_help(void) {
-   printf("input_dir...      walk one or more trees to produce GUFI tree\n");
-   printf("output_dir        build GUFI tree here\n");
+   printf("tree...           walk one or more trees to produce GUFI tree\n");
+   printf("GUFI_tree_parent  build GUFI tree under here\n");
    printf("\n");
 }
 
@@ -514,7 +515,8 @@ int main(int argc, char *argv[]) {
 
     int rc = EXIT_SUCCESS;
 
-    const size_t root_count = argc - idx - 1;
+    argc--; /* index parent is no longer needed */
+    const size_t root_count = argc - idx;
 
     if ((pa.in.min_level && pa.in.subtree_list.len) &&
         (root_count > 1)) {
@@ -569,20 +571,10 @@ int main(int argc, char *argv[]) {
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
 
-    char **roots = calloc(root_count, sizeof(char *));
-    for(size_t i = 0; idx < (argc - 1);) {
-        /* force all input paths to be canonical */
-        roots[i] = realpath(argv[idx++], NULL);
-        if (!roots[i]) {
-            const int err = errno;
-            fprintf(stderr, "Could not resolve path \"%s\": %s (%d)\n",
-                    argv[idx - 1], strerror(err), err);
-            continue;
-        }
-
+    for(int i = idx; i < argc; i++) {
         /* get first work item by validating source path */
-        struct work *root;
-        if (validate_source(&pa.index_parent, roots[i], &root) != 0) {
+        struct work *root = NULL;
+        if (validate_source(&pa.index_parent, argv[i], &root) != 0) {
             continue;
         }
 
@@ -600,7 +592,6 @@ int main(int argc, char *argv[]) {
             struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
             QPTPool_enqueue(pool, 0, processdir, copy);
         }
-        i++;
     }
     QPTPool_stop(pool);
 
@@ -610,11 +601,6 @@ int main(int argc, char *argv[]) {
     /* don't count as part of processtime */
 
     QPTPool_destroy(pool);
-
-    for(size_t i = 0; i < root_count; i++) {
-        free(roots[i]);
-    }
-    free(roots);
 
     uint64_t total_dirs = 0;
     uint64_t total_nondirs = 0;

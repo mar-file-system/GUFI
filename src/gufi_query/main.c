@@ -230,27 +230,17 @@ int main(int argc, char *argv[])
     }
 
     /* enqueue input paths */
-    char **realpaths = calloc(root_count, sizeof(char *));
     for(int i = idx; i < argc; i++) {
-        size_t argvi_len = strlen(argv[i]);
-        if (!argvi_len) {
+        size_t len = strlen(argv[i]);
+        if (!len) {
             continue;
         }
 
         /* remove trailing slashes (+ 1 to keep at least 1 character) */
-        argvi_len = trailing_non_match_index(argv[i] + 1, argvi_len - 1, "/", 1) + 1;
-
-        realpaths[i - idx] = realpath(argv[i], NULL);
-        char *root_name = realpaths[i - idx];
-        if (!root_name) {
-            const int err = errno;
-            fprintf(stderr, "Could not get realpath of \"%s\": %s (%d)\n",
-                    argv[i], strerror(err), err);
-            continue;
-        }
+        len = trailing_non_match_index(argv[i] + 1, len - 1, "/", 1) + 1;
 
         struct stat st;
-        if (lstat(root_name, &st) != 0) {
+        if (stat(argv[i], &st) != 0) { /* levels 0, 1, and 2 can be symlinks */
             const int err = errno;
             fprintf(stderr, "Could not stat directory \"%s\": %s (%d)\n",
                     argv[i], strerror(err), err);
@@ -263,21 +253,19 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        const size_t root_name_len = strlen(root_name);
-
         /*
          * get sqlite3 name (copied into root instead of written
          * directly into root because root doesn't exist yet)
          */
-        size_t rp_len = root_name_len; /* discarded */
+        size_t rp_len = len; /* discarded */
         char sqlite3_name[MAXPATH];
         const size_t sqlite3_name_len = sqlite_uri_path(sqlite3_name, sizeof(sqlite3_name),
-                                                        root_name, &rp_len);
+                                                        argv[i], &rp_len);
 
-        gqw_t *root = calloc(1, sizeof(*root) + root_name_len + 1 + sqlite3_name_len + 1);
+        gqw_t *root = calloc(1, sizeof(*root) + len + 1 + sqlite3_name_len + 1);
         root->work.name = (char *) &root[1];
-        root->work.name_len = SNFORMAT_S(root->work.name, root_name_len + 1, 1,
-                                         root_name, root_name_len);
+        root->work.name_len = SNFORMAT_S(root->work.name, len + 1, 1,
+                                         argv[i], len);
 
         /* set modified path name for SQLite3 */
         root->sqlite3_name = ((char *) root->work.name) + root->work.name_len + 1;
@@ -286,13 +274,12 @@ int main(int argc, char *argv[])
 
         /* keep original user input */
         root->work.orig_root.data = argv[i];
-        root->work.orig_root.len = argvi_len;
+        root->work.orig_root.len = len;
 
         /* parent of input path */
-        root->work.root_parent.data = realpaths[i - idx];
-        root->work.root_parent.len  = trailing_match_index(root->work.root_parent.data, root->work.name_len, "/", 1);
+        root->work.root_parent.data = argv[i];
+        root->work.root_parent.len = dirname_len(argv[i], len);
 
-        ((char *) root->work.root_parent.data)[root->work.root_parent.len] = '\0';
         root->work.basename_len = root->work.name_len - root->work.root_parent.len;
 
         root->work.root_basename_len = root->work.basename_len;
@@ -308,11 +295,6 @@ int main(int argc, char *argv[])
 
     QPTPool_stop(pool);
     QPTPool_destroy(pool);
-
-    for(int i = idx; i < argc; i++) {
-        free(realpaths[i - idx]);
-    }
-    free(realpaths);
 
     if (in.sql.init_agg.len) {
         /* aggregate the intermediate results */
