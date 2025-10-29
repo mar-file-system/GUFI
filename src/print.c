@@ -245,10 +245,16 @@ int print_uncached(void *args, int count, char **data, char **columns) {
     }
 
     for(int i = 0; i < count; i++ ) {
-        fprintf(print->outfile, "%s%c", data[i], print->delim);
+        if (data[i]) {
+            fprintf(print->outfile, "%s", data[i]);
+        }
+        fprintf(print->outfile, "%c", print->delim);
     }
 
-    fprintf(print->outfile, "%s\n", data[count]);
+    if (data[count]) {
+        fprintf(print->outfile, "%s", data[count]);
+    }
+    fprintf(print->outfile, "\n");
 
     if (print->mutex) {
         pthread_mutex_unlock(print->mutex);

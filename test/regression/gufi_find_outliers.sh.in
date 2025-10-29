@@ -84,10 +84,12 @@ cleanup
 UPDATE_S=$(
     echo "UPDATE summary SET "
     echo "mtime = atime, ctime = atime, "
-    echo "minmtime = COALESCE((SELECT min(atime) FROM entries), atime), "
-    echo "maxmtime = COALESCE((SELECT max(atime) FROM entries), atime), "
-    echo "minctime = COALESCE((SELECT min(atime) FROM entries), atime), "
-    echo "maxctime = COALESCE((SELECT max(atime) FROM entries), atime)"
+    echo "minmtime  = COALESCE((SELECT min(atime) FROM entries), atime), "
+    echo "maxmtime  = COALESCE((SELECT max(atime) FROM entries), atime), "
+    echo "minctime  = COALESCE((SELECT min(atime) FROM entries), atime), "
+    echo "maxctime  = COALESCE((SELECT max(atime) FROM entries), atime), "
+    echo "mincrtime = COALESCE((SELECT min(atime) FROM entries), atime), "
+    echo "maxcrtime = COALESCE((SELECT max(atime) FROM entries), atime)"
     echo ";"
 )
 

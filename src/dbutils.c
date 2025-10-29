@@ -1513,12 +1513,6 @@ int get_col_names(sqlite3 *db, const refstr_t *sql, char ***names, size_t **lens
     *lens = malloc(*cols * sizeof(size_t));
     for(int i = 0; i < *cols; i++) {
         const char *name = sqlite3_column_name(stmt, i);
-        if (!name) {
-            (*names)[i] = NULL;
-            (*lens)[i] = 0;
-            continue;
-        }
-
         const size_t name_len = strlen(name);
 
         (*names)[i] = malloc(name_len + 1);
