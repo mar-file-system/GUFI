@@ -288,14 +288,16 @@ def distribute_work(args, root, schedule_subtree_func,
 
         print('Waiting for {0} jobs to complete'.format(args.distributor))
 
-        # start processing the top levels
-        top_proc = schedule_top(args, schedule_top_func)
+        if args.level > 0:
+            # start processing the top levels
+            top_proc = schedule_top(args, schedule_top_func)
 
-        # wait for the the top level processing to complete
-        jobids += DISTRIBUTORS[args.distributor][1](args, [top_proc])
+            # wait for the the top level processing to complete
+            jobids += DISTRIBUTORS[args.distributor][1](args, [top_proc])
     else:
-        # start processing the top levels
-        procs += [schedule_top(args, schedule_top_func)]
+        if args.level > 0:
+            # start processing the top levels
+            procs += [schedule_top(args, schedule_top_func)]
 
         print('Waiting for {0} jobs to complete'.format(args.distributor))
 
