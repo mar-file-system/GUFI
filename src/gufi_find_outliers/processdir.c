@@ -110,14 +110,15 @@ OF SUCH DAMAGE.
  *     some outliers
  *     no outliers
  */
-int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+int processdir(QPTPool_ctx_t *ctx, void *data) {
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     OutlierWork_t *ow = (OutlierWork_t *) data;
+    const size_t id = QPTPool_get_id(ctx);
 
     int rc = 0;
 
     sll_t subdirs;
-    get_subdirs(ow, &subdirs, &pa->opendbs[id], ctx, id);
+    get_subdirs(ow, &subdirs, &pa->opendbs[id], ctx);
 
     const uint64_t n = sll_get_size(&subdirs);
 
@@ -209,7 +210,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                                                            sub_outlier,
                                                            &dd->t, &dd->s);
 
-                QPTPool_enqueue(ctx, id, processdir, new_ow);
+                QPTPool_enqueue(ctx, processdir, new_ow);
             }
         }
 

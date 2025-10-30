@@ -215,10 +215,10 @@ static size_t gen_urd_name(struct PoolArgs *pa, char *name, const size_t name_si
                       URD_DB_EXT, sizeof(URD_DB_EXT) - 1);
 }
 
-static int get_urd(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    (void) ctx; (void) id; (void) data;
+static int get_urd(QPTPool_ctx_t *ctx, void *data) {
+    (void) data;
 
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
     char dbname[MAXPATH];
     gen_urd_name(pa, dbname, sizeof(dbname));
@@ -264,10 +264,10 @@ static size_t gen_created_name(struct PoolArgs *pa, char *name, const size_t nam
                       CREATED_DB_EXT, sizeof(CREATED_DB_EXT) - 1);
 }
 
-static int get_created(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    (void) ctx; (void) id; (void) data;
+static int get_created(QPTPool_ctx_t *ctx, void *data) {
+    (void) data;
 
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
     char dbname[MAXPATH];
     gen_created_name(pa, dbname, sizeof(dbname));
@@ -308,10 +308,10 @@ static int get_created(QPTPool_t *ctx, const size_t id, void *data, void *args) 
 #define DIFF_SNAPSHOT_EXT "diff"
 static int get_diff(struct PoolArgs *pa, char *diff_dbname, const size_t diff_dbname_size) {
     /* get matches in parallel */
-    QPTPool_wait(pa->pool);
-    QPTPool_enqueue(pa->pool, 0, get_urd,     NULL);
-    QPTPool_enqueue(pa->pool, 0, get_created, NULL);
-    QPTPool_wait(pa->pool);
+    QPTPool_wait(pa->ctx);
+    QPTPool_enqueue(pa->ctx, get_urd,     NULL);
+    QPTPool_enqueue(pa->ctx, get_created, NULL);
+    QPTPool_wait(pa->ctx);
 
     int rc = 0;
 
@@ -508,10 +508,9 @@ struct UpdateDir {
 };
 
 /* update a single directory by moving the <parking lot>/<dir inode> database file into the correct path */
-static int apply_update(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    (void ) ctx; (void) id;
+static int apply_update(QPTPool_ctx_t *ctx, void *data) {
 
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct UpdateDir *ud = (struct UpdateDir *) data;
 
     char path[MAXPATH];
@@ -613,7 +612,7 @@ static int apply_updates_callback(void *args, int count, char **data, char **col
     str_alloc_existing(&ud->treeinode, strlen(treeinode));
     memcpy(ud->treeinode.data, treeinode, ud->treeinode.len);
 
-    QPTPool_enqueue(pa->pool, 0, apply_update, ud);
+    QPTPool_enqueue(pa->ctx, apply_update, ud);
 
     return 0;
 }
@@ -630,7 +629,7 @@ static int apply_updates(struct PoolArgs *pa, sqlite3 *db) {
         return 1;
     }
 
-    QPTPool_wait(pa->pool);
+    QPTPool_wait(pa->ctx);
 
     return 0;
 }

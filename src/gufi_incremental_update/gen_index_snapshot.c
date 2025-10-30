@@ -96,12 +96,13 @@ static int update_work(void *args, int count, char **data, char **columns) {
 }
 
 /* place directory data into per-thread database (merged later) */
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
     int rc = 0;
 
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    const size_t id = QPTPool_get_id(ctx);
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct work *work = NULL;
     DIR *dir = NULL;
 
@@ -122,7 +123,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* push more work first */
-    descend(ctx, id, pa, &pa->in, work, dir, 0,
+    descend(ctx, &pa->in, work, dir, 0,
             processdir, NULL, NULL, NULL);
 
     struct entry_data ed;
@@ -181,7 +182,7 @@ int gen_index_snapshot(struct PoolArgs *pa, struct work *work) {
     fflush(stdout);
 
     /* walk the old index and get snapshot of directories */
-    QPTPool_enqueue(pa->pool, 0, processdir, work);
+    QPTPool_enqueue(pa->ctx, processdir, work);
 
     return 0;
 }

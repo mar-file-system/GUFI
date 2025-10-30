@@ -96,21 +96,21 @@ TEST(descend, builddir) {
     DIR *dir = opendir(work->name);
     ASSERT_NE(dir, nullptr);
 
-    QPTPool_t *pool = QPTPool_init(1, nullptr);
-    ASSERT_NE(pool, nullptr);
-    EXPECT_EQ(QPTPool_start(pool), 0);
+    QPTPool_ctx_t *ctx = QPTPool_init(1, nullptr);
+    ASSERT_NE(ctx, nullptr);
+    EXPECT_EQ(QPTPool_start(ctx), 0);
 
     struct descend_counters ctrs;
 
     // bad work; rest of inputs don't matter
-    EXPECT_EQ(descend(nullptr, 0, nullptr, nullptr, nullptr, nullptr,
+    EXPECT_EQ(descend(nullptr, nullptr, nullptr, nullptr,
                       0, nullptr, nullptr, nullptr, nullptr), 1);
 
     // work->level > in->max_level - not descending
     {
         in.max_level = 0;
         work->level = 1;
-        EXPECT_EQ(descend(nullptr, 0, nullptr, &in, work, dir,
+        EXPECT_EQ(descend(nullptr, &in, work, dir,
                           0, nullptr, nullptr, nullptr, &ctrs), 0);
 
         EXPECT_EQ(ctrs.dirs,              (std::size_t) 0);
@@ -124,8 +124,8 @@ TEST(descend, builddir) {
         rewinddir(dir);
         in.max_level = 1;
         work->level = 0;
-        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, dir, 0,
-                          [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
+        EXPECT_EQ(descend(ctx, &in, work, dir, 0,
+                          [](QPTPool_ctx_t *, void *data) -> int {
                               free(data);
                               return 0;
                           },
@@ -141,8 +141,8 @@ TEST(descend, builddir) {
     // good descend with skip_db
     {
         rewinddir(dir);
-        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, dir, 1,
-                          [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
+        EXPECT_EQ(descend(ctx, &in, work, dir, 1,
+                          [](QPTPool_ctx_t *, void *data) -> int {
                               free(data);
                               return 0;
                           },
@@ -158,8 +158,8 @@ TEST(descend, builddir) {
     {
         rewinddir(dir);
         in.subdir_limit = 1;
-        EXPECT_EQ(descend(pool, 0, nullptr, &in, work, dir, 0,
-                          [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
+        EXPECT_EQ(descend(ctx, &in, work, dir, 0,
+                          [](QPTPool_ctx_t *, void *data) -> int {
                               free(data);
                               return 0;
                           },
@@ -171,8 +171,8 @@ TEST(descend, builddir) {
         EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
     }
 
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
 
     EXPECT_EQ(closedir(dir),    0);
     free(work);
@@ -199,15 +199,15 @@ TEST(descend, swap) {
     args.cond = PTHREAD_COND_INITIALIZER;
     args.running = false;
 
-    QPTPool_t *pool = QPTPool_init(1, nullptr);
-    ASSERT_NE(pool, nullptr);
-    EXPECT_EQ(QPTPool_set_queue_limit(pool, 1), 0); // if the WAIT queue already has 1 item, swap out the new item
-    EXPECT_EQ(QPTPool_start(pool), 0);
+    QPTPool_ctx_t *ctx = QPTPool_init(1, nullptr);
+    ASSERT_NE(ctx, nullptr);
+    EXPECT_EQ(QPTPool_set_queue_limit(ctx, 1), 0); // if the WAIT queue already has 1 item, swap out the new item
+    EXPECT_EQ(QPTPool_start(ctx), 0);
 
     // enqueue stuck thread
     pthread_mutex_lock(&args.mutex);
-    QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
-                         [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
+    QPTPool_enqueue_here(ctx, 0, QPTPool_enqueue_WAIT,
+                         [](QPTPool_ctx_t *, void *data) -> int {
                              Args *args = (Args *) data;
 
                              // alert the main thread that this thread has started
@@ -233,8 +233,8 @@ TEST(descend, swap) {
     pthread_mutex_unlock(&args.mutex);
 
     // enqueue item into WAIT queue
-    QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
-                         [](QPTPool_t *, const std::size_t, void *, void *) -> int {
+    QPTPool_enqueue_here(ctx, 0, QPTPool_enqueue_WAIT,
+                         [](QPTPool_ctx_t *, void *) -> int {
                              // no-op
                              return 0;
                          }, nullptr,
@@ -248,8 +248,8 @@ TEST(descend, swap) {
 
     struct descend_counters ctrs;
 
-    EXPECT_EQ(descend(pool, 0, nullptr, &in, work, dir, 0,
-                      [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
+    EXPECT_EQ(descend(ctx, &in, work, dir, 0,
+                      [](QPTPool_ctx_t *, void *data) -> int {
                           free(data);
                           return 0;
                       },
@@ -262,8 +262,8 @@ TEST(descend, swap) {
     pthread_cond_broadcast(&args.cond);
     pthread_mutex_unlock(&args.mutex);
 
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
 
     EXPECT_EQ(closedir(dir), 0);
     free(work);

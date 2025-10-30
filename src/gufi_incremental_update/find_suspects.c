@@ -146,12 +146,13 @@ static int process_nondir(struct work *nondir, struct entry_data *ed, void *nond
  * walk the source filesystem tree to get a list of all directories
  * if a directory is suspected to have been modified, reindex that one directory
  */
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
     int rc = 0;
 
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    const size_t id = QPTPool_get_id(ctx);
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct work *work = NULL;
     DIR *dir = NULL;
 
@@ -206,7 +207,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* only process files/links if checking for file/link suspects or comparing timestamps */
     process_nondir_f func = (pa->in.suspectmethod > 1)?process_nondir:NULL;
-    descend(ctx, id, pa, &pa->in, work, dir, 0,
+    descend(ctx, &pa->in, work, dir, 0,
             processdir, func, &nda, NULL);
 
     /*
@@ -262,7 +263,7 @@ int find_suspects(struct PoolArgs *pa, struct work *work) {
      * get per-thread treewalk records
      * put per-directory update dbs into parking lot
      */
-    QPTPool_enqueue(pa->pool, 0, processdir, work);
+    QPTPool_enqueue(pa->ctx, processdir, work);
 
     return 0;
 }

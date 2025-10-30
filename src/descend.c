@@ -120,7 +120,7 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work) {
  * was allocated on the stack and only copied to a dynamically
  * allocated space when the entry was a directory.
  */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
+int descend(QPTPool_ctx_t *ctx,
             struct input *in, struct work *work,
             DIR *dir, const int skip_db,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
@@ -192,10 +192,10 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                     if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
                         struct work *copy = compress_struct(in->compress, child, struct_work_size(child));
                         #ifdef QPTPOOL_SWAP
-                        QPTPool_enqueue_swappable(ctx, id, processdir, copy,
+                        QPTPool_enqueue_swappable(ctx, processdir, copy,
                                                   work_serialize_and_free, QPTPool_generic_alloc_and_deserialize);
                         #else
-                        QPTPool_enqueue(ctx, id, processdir, copy);
+                        QPTPool_enqueue(ctx, processdir, copy);
                         #endif
                     }
                     else {
@@ -214,7 +214,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                          * Return value should probably be used.
                          */
                         child->recursion_level = recursion_level;
-                        processdir(ctx, id, child, args);
+                        processdir(ctx, child);
                         ctrs.dirs_insitu++;
                     }
 

@@ -95,7 +95,7 @@ struct PoolArgs {
     refstr_t parking_lot;  /* directory to place update db.dbs and directories */
     struct template_db db; /* (optimization) db.db with empty tables for copying when creating update db.dbs */
 
-    QPTPool_t *pool;
+    QPTPool_ctx_t *ctx;
 
     struct GenSnapshot index;
     struct GenSnapshot tree;

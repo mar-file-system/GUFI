@@ -262,9 +262,9 @@ static int process_entries(void *args, int count, char **data, char **columns) {
     return 0;
 }
 
-static int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+static int processdir(struct QPTPool_ctx * ctx, void * data) {
     struct work *work = (struct work *) data;
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
     sqlite3 *db = NULL;
     int rc = 0;
@@ -299,7 +299,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
         }
     }
 
-    descend(ctx, id, args, &pa->in, work, dir, 1,
+    descend(ctx, &pa->in, work, dir, 1,
             processdir, NULL, NULL, NULL);
 
     /* open the index db.db */
@@ -458,17 +458,17 @@ int main(int argc, char * argv[]) {
 
     int rc = EXIT_SUCCESS;
 
-    struct QPTPool *pool = QPTPool_init(pa.in.maxthreads, &pa);
-    if (QPTPool_start(pool) != 0) {
+    struct QPTPool_ctx *ctx = QPTPool_init(pa.in.maxthreads, &pa);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         rc = EXIT_FAILURE;
         goto cleanup;
     }
 
-    QPTPool_enqueue(pool, 0, processdir, root);
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_enqueue(ctx, processdir, root);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
 
   cleanup:
     input_fini(&pa.in);

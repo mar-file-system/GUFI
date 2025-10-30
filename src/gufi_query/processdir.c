@@ -175,14 +175,15 @@ static int collect_dir_inodes(void *args, int count, char **data, char **columns
 }
 
 
-int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
     DIR *dir = NULL;
     sqlite3 *db = NULL;
     struct utimbuf dbtime;
 
-    PoolArgs_t *pa = (PoolArgs_t *) args;
+    PoolArgs_t *pa = (PoolArgs_t *) QPTPool_get_args_internal(ctx);
+    const size_t id = QPTPool_get_id(ctx);
     struct input *in = pa->in;
     ThreadArgs_t *ta = &(pa->ta[id]);
 
@@ -347,7 +348,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                     create_extdb_views_noiter(db);
 
                     /* run queries */
-                    process_queries(pa, ctx, id,
+                    process_queries(pa, ctx,
                                     dir, gqw, db, ta->user_strs,
                                     dbname, dbname_len,
                                     1, &subdirs_walked_count);
@@ -382,7 +383,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                         create_extdb_views_iter(db, dir_inode);
 
                         /* run queries */
-                        process_queries(pa, ctx, id,
+                        process_queries(pa, ctx,
                                         dir, gqw, db, ta->user_strs,
                                         dbname, dbname_len,
                                         desc, &subdirs_walked_count);
@@ -404,7 +405,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 /* external databases views were created in PoolArgs_init */
 
                 /* run queries */
-                process_queries(pa, ctx, id,
+                process_queries(pa, ctx,
                                 dir, gqw, db, ta->user_strs,
                                 dbname, dbname_len,
                                 1, &subdirs_walked_count);
@@ -427,7 +428,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
     else {
         /* if the database was not opened or not deep enough, still have to descend */
-        process_queries(pa, ctx, id,
+        process_queries(pa, ctx,
                         dir, gqw, db, ta->user_strs,
                         dbname, dbname_len,
                         1, &subdirs_walked_count);

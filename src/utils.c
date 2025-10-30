@@ -995,7 +995,7 @@ int doing_partial_walk(struct input *in, const size_t root_count) {
  * run starting at --min-level instead of walking to --min-level first
  */
 ssize_t process_path_list(struct input *in, struct work *root,
-                          QPTPool_t *ctx, QPTPool_f func) {
+                          QPTPool_ctx_t *ctx, QPTPool_f func) {
     FILE *file = fopen(in->path_list.data, "r");
     if (!file) {
         const int err = errno;
@@ -1048,7 +1048,7 @@ ssize_t process_path_list(struct input *in, struct work *root,
         /* go directly to --min-level */
         subtree_root->level = in->min_level;
 
-        QPTPool_enqueue(ctx, 0, func, subtree_root);
+        QPTPool_enqueue(ctx, func, subtree_root);
 
         enqueue_count++;
     }

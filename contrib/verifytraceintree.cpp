@@ -143,8 +143,9 @@ struct CheckStanzaArgs {
     std::vector <std::istream *> traces;
 };
 
-static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
-    struct CheckStanzaArgs *csa = static_cast <struct CheckStanzaArgs *> (args);
+static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
+    const size_t id = QPTPool_get_id(ctx);
+    struct CheckStanzaArgs *csa = static_cast <struct CheckStanzaArgs *> (QPTPool_get_args_internal(ctx));
     std::istream &trace = *(csa->traces[id]);
 
     struct StanzaStart *sa = static_cast <struct StanzaStart *> (data);
@@ -337,8 +338,8 @@ static std::string::size_type parsefirst(const char delim, struct StanzaStart *w
     return (work->first_delim = work->line.find(delim));
 }
 
-static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct CheckStanzaArgs *csa = static_cast <struct CheckStanzaArgs *> (args);
+static int scout_function(QPTPool_ctx_t *ctx, void *data) {
+    struct CheckStanzaArgs *csa = static_cast <struct CheckStanzaArgs *> (QPTPool_get_args_internal(ctx));
     csa->correct = false;
 
     char *filename = static_cast <char *> (data);
@@ -410,7 +411,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
             empty += !curr->entries;
             next->offset = file.tellg();
 
-            QPTPool_enqueue(ctx, id, check_stanza, curr);
+            QPTPool_enqueue(ctx, check_stanza, curr);
 
             curr = next;
         }
@@ -423,7 +424,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
 
     // insert the last work item
     if (csa->correct) {
-        QPTPool_enqueue(ctx, id, check_stanza, curr);
+        QPTPool_enqueue(ctx, check_stanza, curr);
     }
 
     std::cerr << "Dirs:  " << dir_count << " (" << empty << " empty)" << std::endl
@@ -456,11 +457,11 @@ int main(int argc, char *argv[]) {
 
     sqlite3_initialize();
 
-    QPTPool_t *ctx = QPTPool_init(threads, &csa);
+    QPTPool_ctx_t *ctx = QPTPool_init(threads, &csa);
     QPTPool_start(ctx);
 
     // start scouting function to push work onto queues
-    QPTPool_enqueue(ctx, 0, scout_function, trace);
+    QPTPool_enqueue(ctx, scout_function, trace);
 
     QPTPool_stop(ctx);
     QPTPool_destroy(ctx);

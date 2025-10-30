@@ -122,8 +122,8 @@ struct dir {
     size_t current_level;
 };
 
-static int generate_level(QPTPool_t * ctx, const size_t id, void * data, void * args) {
-    struct settings * settings = (struct settings *) args;
+static int generate_level(QPTPool_ctx_t * ctx, void * data) {
+    struct settings * settings = (struct settings *) QPTPool_get_args_internal(ctx);
     struct dir * dir = (struct dir *) data;
 
     if (dir->current_level >= settings->max_level) {
@@ -152,7 +152,7 @@ static int generate_level(QPTPool_t * ctx, const size_t id, void * data, void * 
         subdir->current_level = dir->current_level + 1;
 
         // recurse down by placing subdirectories onto queue
-        QPTPool_enqueue(ctx, id, generate_level, subdir);
+        QPTPool_enqueue(ctx, generate_level, subdir);
     }
 
     // create the files in this directory
@@ -235,18 +235,17 @@ int main(int argc, char * argv[]) {
         return 1;
     }
 
-    // start up threads and push root into the queue for processing
-    QPTPool_t *pool = QPTPool_init(threads, &settings);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init(threads, &settings);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         free(root);
         return -1;
     }
 
-    QPTPool_enqueue(pool, 0, generate_level, root);
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_enqueue(ctx, generate_level, root);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
 
     clock_gettime(CLOCK_MONOTONIC, &generation.end);
 

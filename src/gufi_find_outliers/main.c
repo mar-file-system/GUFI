@@ -116,10 +116,10 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init(pa.in.maxthreads, &pa);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         rc = EXIT_FAILURE;
         goto cleanup_dbs;
     }
@@ -203,11 +203,11 @@ int main(int argc, char *argv[]) {
                                                         * siblings, we do not know that)
                                                         */
                                                    &root_stats, &root_stats);
-            QPTPool_enqueue(pool, i % pa.in.maxthreads, processdir, ow);
+            QPTPool_enqueue(ctx, processdir, ow);
         }
     }
 
-    QPTPool_stop(pool);
+    QPTPool_stop(ctx);
 
     /* write results to stdout or a single database file */
     size_t rows = 0;
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     const long double processtime = sec(nsec(&after_init));
 
-    const uint64_t thread_count = QPTPool_threads_completed(pool);
+    const uint64_t thread_count = QPTPool_threads_completed(ctx);
 
     size_t opendbs = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
     sll_destroy(&queries, (void (*)(void *)) str_free);
     free(pa.opendbs);
     trie_free(col_funcs);
-    QPTPool_destroy(pool);
+    QPTPool_destroy(ctx);
 
   cleanup_dbs:
     intermediate_dbs_fini(&pa);

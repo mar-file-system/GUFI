@@ -129,8 +129,8 @@ static int deep_enough(struct input *in, struct Unrollup *work) {
     return (in->min_level <= work->level);
 }
 
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct input *in = (struct input *) args;
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
+    struct input *in = (struct input *) QPTPool_get_args_internal(ctx);
     struct Unrollup *work = (struct Unrollup *) data;
     int rc = 0;
 
@@ -204,7 +204,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 /* was rolled up, child can skip roll up check */
                 subdir->rolledup = rolledup;
 
-                QPTPool_enqueue(ctx, id, processdir, subdir);
+                QPTPool_enqueue(ctx, processdir, subdir);
             }
         }
     }
@@ -238,7 +238,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 }
 
 static int enqueue_subtree_roots(struct input *in, struct Unrollup *root,
-                                 QPTPool_t *ctx, QPTPool_f func) {
+                                 QPTPool_ctx_t *ctx, QPTPool_f func) {
     FILE *file = fopen(in->path_list.data, "r");
     if (!file) {
         const int err = errno;
@@ -259,7 +259,7 @@ static int enqueue_subtree_roots(struct input *in, struct Unrollup *root,
                                                         in->min_level);
 
         if (subtree_root) {
-            QPTPool_enqueue(ctx, 0, func, subtree_root);
+            QPTPool_enqueue(ctx, func, subtree_root);
         }
     }
 
@@ -290,10 +290,10 @@ int main(int argc, char *argv[]) {
 
     const int root_count = argc - idx;
 
-    QPTPool_t *pool = QPTPool_init(in.maxthreads, &in);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init(in.maxthreads, &in);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         input_fini(&in);
         return EXIT_FAILURE;
     }
@@ -309,17 +309,17 @@ int main(int argc, char *argv[]) {
 
         if (root) {
             if (doing_partial_walk(&in, root_count)) {
-                enqueue_subtree_roots(&in, root, pool, processdir);
+                enqueue_subtree_roots(&in, root, ctx, processdir);
             }
             else {
                 /* push the path onto the queue */
-                QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
+                QPTPool_enqueue(ctx, processdir, root);
             }
         }
     }
 
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
     input_fini(&in);
 
     return EXIT_SUCCESS;

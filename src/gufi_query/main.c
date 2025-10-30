@@ -85,7 +85,7 @@ OF SUCH DAMAGE.
  * attach directory paths directly to the root path and
  * run starting at --min-level instead of walking to --min-level first
  */
-int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
+int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_ctx_t *ctx) {
     FILE *file = fopen(in->path_list.data, "r");
     if (!file) {
         const int err = errno;
@@ -160,7 +160,7 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
         /* go directly to --min-level */
         subtree_root->work.level = in->min_level;
 
-        QPTPool_enqueue(ctx, 0, processdir, subtree_root);
+        QPTPool_enqueue(ctx, processdir, subtree_root);
     }
 
     free(line);
@@ -309,10 +309,10 @@ int main(int argc, char *argv[])
     }
 
     const uint64_t queue_limit = get_queue_limit(in.target_memory, in.maxthreads);
-    QPTPool_t *pool = QPTPool_init_with_props(in.maxthreads, &pa, NULL, NULL, queue_limit, in.swap_prefix.data, 1, 2);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init_with_props(in.maxthreads, &pa, NULL, NULL, queue_limit, in.swap_prefix.data, 1, 2);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         aggregate_fin(&aggregate, &in);
         PoolArgs_fin(&pa, in.maxthreads);
         return EXIT_FAILURE;
@@ -320,15 +320,15 @@ int main(int argc, char *argv[])
 
     if (doing_partial_walk(&in, root_count)) {
         if (root_count == 0) {
-            gqw_process_path_list(&in, NULL, pool);
+            gqw_process_path_list(&in, NULL, ctx);
         }
         else if (root_count == 1) {
             gqw_t *work = NULL;
             if (validate_source(&in, argv[idx], &work) == 0) {
-                gqw_process_path_list(&in, work, pool);
+                gqw_process_path_list(&in, work, ctx);
             }
             else {
-                QPTPool_destroy(pool);
+                QPTPool_destroy(ctx);
                 aggregate_fin(&aggregate, &in);
                 PoolArgs_fin(&pa, in.maxthreads);
                 return EXIT_FAILURE;
@@ -344,12 +344,12 @@ int main(int argc, char *argv[])
             }
 
             /* push the path onto the queue (no compression) */
-            QPTPool_enqueue(pool, i % in.maxthreads, processdir, work);
+            QPTPool_enqueue(ctx, processdir, work);
         }
     }
 
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
 
     if (in.sql.init_agg.len) {
         /* aggregate the intermediate results */

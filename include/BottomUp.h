@@ -132,18 +132,18 @@ typedef int (*BU_ascend_f) (void *user_struct);
  * QPTPool arg argument available to them because it will have been
  * assigned to an opaque value by BottomUp.
  */
-QPTPool_t *parallel_bottomup_init(const size_t thread_count,
-                                  const size_t user_struct_size,
-                                  const size_t min_level, const size_t max_level,
-                                  BU_descend_f descend, BU_ascend_f ascend,
-                                  const int track_non_dirs,
-                                  const int generate_alt_name);
+QPTPool_ctx_t *parallel_bottomup_init(const size_t thread_count,
+                                      const size_t user_struct_size,
+                                      const size_t min_level, const size_t max_level,
+                                      BU_descend_f descend, BU_ascend_f ascend,
+                                      const int track_non_dirs,
+                                      const int generate_alt_name);
 
-int parallel_bottomup_enqueue(QPTPool_t *pool,
+int parallel_bottomup_enqueue(QPTPool_ctx_t *ctx,
                               const char *path, const size_t len,
                               void *extra_args);
 
-int parallel_bottomup_fini(QPTPool_t *pool);
+int parallel_bottomup_fini(QPTPool_ctx_t *ctx);
 /* ****************************************************************** */
 
 /*
