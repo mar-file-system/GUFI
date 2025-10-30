@@ -143,13 +143,11 @@ static void process_nondir(sqlite3 *db, char *line, const size_t len,
 }
 
 /* process the work under one directory (no recursion) */
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
-    (void) ctx; (void) id;
-
     struct NonDirArgs nda;
-    nda.pa = (struct PoolArgs *) args;
+    nda.pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
     struct input *in = &nda.pa->in;
     struct row *w = (struct row *) data;
@@ -324,11 +322,11 @@ int main(int argc, char *argv[]) {
     }
 
     const uint64_t queue_limit = get_queue_limit(pa.in.target_memory, pa.in.maxthreads);
-    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2);
+    QPTPool_ctx_t *ctx = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2);
 
-    if (QPTPool_start(pool) != 0) {
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         rc = -1;
         goto free_xattr;
     }
@@ -360,25 +358,25 @@ int main(int argc, char *argv[]) {
         };
 
         /* one scout thread */
-        QPTPool_enqueue(pool, 0, scout_stream, &sta);
+        QPTPool_enqueue(ctx, scout_stream, &sta);
     }
     else {
         enqueue_traces(&argv[idx], traces, trace_count,
                        pa.in.delim,
                        /* allow for some threads to start processing while reading */
                        (pa.in.maxthreads / 2) + !!(pa.in.maxthreads & 1),
-                       pool, processdir,
+                       ctx, processdir,
                        &stats);
     }
 
-    QPTPool_stop(pool);
+    QPTPool_stop(ctx);
 
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     clock_gettime(CLOCK_REALTIME, &rt.end);
     const long double processtime = sec(nsec(&after_init));
 
     /* don't count as part of processtime */
-    QPTPool_destroy(pool);
+    QPTPool_destroy(ctx);
 
     /* set top level permissions */
     chmod(pa.index_parent.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

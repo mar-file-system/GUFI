@@ -123,8 +123,8 @@ int PoolArgs_init(struct PoolArgs *pa) {
         return 1;
     }
 
-    pa->pool = QPTPool_init(pa->in.maxthreads, pa);
-    if (QPTPool_start(pa->pool) != 0) {
+    pa->ctx = QPTPool_init(pa->in.maxthreads, pa);
+    if (QPTPool_start(pa->ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         return 1;
     }
@@ -133,8 +133,8 @@ int PoolArgs_init(struct PoolArgs *pa) {
 }
 
 void PoolArgs_fini(struct PoolArgs *pa) {
-    QPTPool_stop(pa->pool);
-    QPTPool_destroy(pa->pool);
+    QPTPool_stop(pa->ctx);
+    QPTPool_destroy(pa->ctx);
     trie_free(pa->suspects.fl.inodes);
     trie_free(pa->suspects.dir.inodes);
     input_fini(&pa->in);

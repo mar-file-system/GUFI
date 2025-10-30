@@ -74,6 +74,6 @@ OF SUCH DAMAGE.
 
 /* go down only one level */
 void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
-                 QPTPool_t *pool, const size_t id);
+                 QPTPool_ctx_t *ctx);
 
 #endif

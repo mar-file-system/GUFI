@@ -74,7 +74,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/gqw.h"
 
-int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
+int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
                     DIR *dir, gqw_t *gqw, sqlite3 *db, trie_t *user_strs,
                     const char *dbname, const size_t dbname_len,
                     const int descend, size_t *subdirs_walked_count);

@@ -313,14 +313,12 @@ static void scout_end_print(struct TraceStats *stats) {
 }
 
 /* Read ahead to figure out where files under directories start */
-int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+int scout_trace(QPTPool_ctx_t *ctx, void *data) {
     struct start_end scouting;
     clock_gettime(CLOCK_MONOTONIC, &scouting.start);
 
     /* skip argument checking */
     struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) data;
-
-    (void) id; (void) args;
 
     int rc = 0;
 
@@ -415,10 +413,10 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             /* put the previous work on the queue */
             #ifdef QPTPOOL_SWAP
-            QPTPool_enqueue_swappable(ctx, id, sta->processdir, work,
+            QPTPool_enqueue_swappable(ctx, sta->processdir, work,
                                       row_serialize_and_free, row_alloc_and_deserialize);
             #else
-            QPTPool_enqueue(ctx, id, sta->processdir, work);
+            QPTPool_enqueue(ctx, sta->processdir, work);
             #endif
 
             /* put the current line into a new work item */
@@ -450,10 +448,10 @@ int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     work->entries += external;
 
     #ifdef QPTPOOL_SWAP
-    QPTPool_enqueue_swappable(ctx, id, sta->processdir, work,
+    QPTPool_enqueue_swappable(ctx, sta->processdir, work,
                               row_serialize_and_free, row_alloc_and_deserialize);
     #else
-    QPTPool_enqueue(ctx, id, sta->processdir, work);
+    QPTPool_enqueue(ctx, sta->processdir, work);
     #endif
 
   done:
@@ -609,7 +607,7 @@ static void *fill_scout_args(struct TraceRange *tr, void *args) {
 
 size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
                       const char delim, const size_t max_parts,
-                      QPTPool_t *ctx, QPTPool_f func,
+                      QPTPool_ctx_t *ctx, QPTPool_f func,
                       struct TraceStats *stats) {
     memset(stats, 0, sizeof(*stats));
     clock_gettime(CLOCK_MONOTONIC, &stats->time.start);
@@ -658,7 +656,7 @@ size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count
     /* now that remaining is stable, enqueue chunks */
     sll_loop(&chunks, node) {
         void *chunk = sll_node_data(node);
-        QPTPool_enqueue(ctx, 0, scout_trace, chunk);
+        QPTPool_enqueue(ctx, scout_trace, chunk);
     }
 
     sll_destroy(&chunks, NULL);
@@ -666,14 +664,12 @@ size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count
     return chunk_count;
 }
 
-int scout_stream(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+int scout_stream(QPTPool_ctx_t *ctx, void *data) {
     struct start_end scouting;
     clock_gettime(CLOCK_MONOTONIC, &scouting.start);
 
     /* skip argument checking */
     struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) data;
-
-    (void) id; (void) args;
 
     int rc = 0;
 
@@ -757,10 +753,10 @@ int scout_stream(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             /* put the previous work on the queue */
             #ifdef QPTPOOL_SWAP
-            QPTPool_enqueue_swappable(ctx, id, sta->processdir, work,
+            QPTPool_enqueue_swappable(ctx, sta->processdir, work,
                                       row_serialize_and_free, row_alloc_and_deserialize);
             #else
-            QPTPool_enqueue(ctx, id, sta->processdir, work);
+            QPTPool_enqueue(ctx, sta->processdir, work);
             #endif
 
             /* put the current line into a new work item */
@@ -797,10 +793,10 @@ int scout_stream(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     work->entries += external;
 
     #ifdef QPTPOOL_SWAP
-    QPTPool_enqueue_swappable(ctx, id, sta->processdir, work,
+    QPTPool_enqueue_swappable(ctx, sta->processdir, work,
                               row_serialize_and_free, row_alloc_and_deserialize);
     #else
-    QPTPool_enqueue(ctx, id, sta->processdir, work);
+    QPTPool_enqueue(ctx, sta->processdir, work);
     #endif
 
   done:

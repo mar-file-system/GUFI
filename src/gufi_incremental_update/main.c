@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
         rc = (find_suspects(&pa, tree) == 0)?EXIT_SUCCESS:EXIT_FAILURE;
     }
 
-    QPTPool_wait(pa.pool);
+    QPTPool_wait(pa.ctx);
 
     /* aggregate index results into one file */
     if (pa.same == 0) {

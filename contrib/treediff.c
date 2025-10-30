@@ -160,9 +160,9 @@ struct ComparePaths {
         goto label;                                 \
     } while (0)
 
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct ComparePaths *cp = (struct ComparePaths *) data;
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
     int rc = 0;
 
@@ -240,6 +240,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* ********************************************** */
     const size_t next_level = cp->level + 1;
+    const size_t id = QPTPool_get_id(ctx);
 
     struct PrintArgs print = {
         .output_buffer = &pa->obufs.buffers[id],
@@ -294,7 +295,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                        "/", (size_t) 1,
                        rsubdir[ridx]->data, rsubdir[ridx]->len);
 
-            QPTPool_enqueue(ctx, id, processdir, match);
+            QPTPool_enqueue(ctx, processdir, match);
 
             str_free_existing(rsubdir[ridx]);
             str_free_existing(lsubdir[lidx]);
@@ -374,8 +375,8 @@ int main(int argc, char *argv[]) {
         goto done;
     }
 
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init(pa.in.maxthreads, &pa);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         rc = 1;
         goto cleanup_qptp;
@@ -386,11 +387,11 @@ int main(int argc, char *argv[]) {
     str_copy_construct(&cp->lhs, pa.lhs.data, pa.lhs.len);
     str_copy_construct(&cp->rhs, pa.rhs.data, pa.rhs.len);
 
-    QPTPool_enqueue(pool, 0, processdir, cp);
+    QPTPool_enqueue(ctx, processdir, cp);
 
   cleanup_qptp:
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
 
     OutputBuffers_flush_to_single(&pa.obufs, stdout);
     OutputBuffers_destroy(&pa.obufs);

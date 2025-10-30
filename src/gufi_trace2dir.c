@@ -126,12 +126,10 @@ static int process_entries(refstr_t *tree_parent,
 }
 
 /* process the work under one directory (no recursion) */
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
-    (void) ctx; (void) id;
-
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct input *in = &pa->in;
     struct row *w = (struct row *) data;
     const int trace = w->trace;
@@ -238,10 +236,10 @@ int main(int argc, char * argv[]) {
         goto free_traces;
     }
 
-    struct QPTPool *pool = QPTPool_init(pa.in.maxthreads, &pa);
-    if (QPTPool_start(pool) != 0) {
+    struct QPTPool_ctx *ctx = QPTPool_init(pa.in.maxthreads, &pa);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         rc = EXIT_FAILURE;
         goto free_traces;
     }
@@ -252,11 +250,11 @@ int main(int argc, char * argv[]) {
                    pa.in.delim,
                    /* allow for some threads to start processing while reading */
                    (pa.in.maxthreads / 2) + !!(pa.in.maxthreads & 1),
-                   pool, processdir,
+                   ctx, processdir,
                    &stats);
 
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
 
   free_traces:
     close_traces(traces, trace_count);

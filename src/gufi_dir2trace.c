@@ -142,10 +142,11 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
 
 /* process the work under one directory (no recursion) */
 /* deletes work */
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    const size_t id = QPTPool_get_id(ctx);
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct input *in = &pa->in;
     struct work *work = NULL;
     struct entry_data ed;
@@ -203,7 +204,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
   descend_tree:
-    descend(ctx, id, pa, in, work, dir, 1,
+    descend(ctx, in, work, dir, 1,
             processdir, process_dir?process_nondir:NULL, &nda, &ctrs);
 
     if (process_dir) {
@@ -307,10 +308,10 @@ int main(int argc, char *argv[]) {
     }
 
     const uint64_t queue_limit = get_queue_limit(pa.in.target_memory, pa.in.maxthreads);
-    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         rc = EXIT_FAILURE;
         goto free_outfiles;
     }
@@ -330,12 +331,12 @@ int main(int argc, char *argv[]) {
 
     if (doing_partial_walk(&pa.in, root_count)) {
         if (root_count == 0) {
-            process_path_list(&pa.in, NULL, pool, processdir);
+            process_path_list(&pa.in, NULL, ctx, processdir);
         }
         else if (root_count == 1) {
             struct work *root = NULL;
             if (validate_source(argv[idx], &root) == 0) {
-                process_path_list(&pa.in, root, pool, processdir);
+                process_path_list(&pa.in, root, ctx, processdir);
             }
             else {
                 rc = EXIT_FAILURE;
@@ -351,10 +352,10 @@ int main(int argc, char *argv[]) {
             }
 
             struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
-            QPTPool_enqueue(pool, 0, processdir, copy);
+            QPTPool_enqueue(ctx, processdir, copy);
         }
     }
-    QPTPool_stop(pool);
+    QPTPool_stop(ctx);
 
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     clock_gettime(CLOCK_REALTIME, &rt.end);
@@ -362,9 +363,9 @@ int main(int argc, char *argv[]) {
 
     /* don't count as part of processtime */
 
-    const uint64_t thread_count = QPTPool_threads_completed(pool);
+    const uint64_t thread_count = QPTPool_threads_completed(ctx);
 
-    QPTPool_destroy(pool);
+    QPTPool_destroy(ctx);
 
     size_t total_files = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {

@@ -120,11 +120,9 @@ struct work_data {
 
 /* copy a single file in a single thread */
 /* TODO: if file is too big, split up copy */
-static int cpr_file(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    (void) ctx;
-    (void) id;
+static int cpr_file(QPTPool_ctx_t *ctx, void *data) {
 
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct work_data *wd = (struct work_data *) data;
     struct work *work = &wd->work;
     struct entry_data *ed = &wd->ed;
@@ -189,14 +187,13 @@ static int cpr_link(struct work *work, struct entry_data *ed, const refstr_t *di
     return rc;
 }
 
-struct QPTPool_vals {
-    QPTPool_t *ctx;
-    size_t id;
+struct enqueue_nondir_args {
+    QPTPool_ctx_t *ctx;
     struct PoolArgs *pa;
 };
 
 static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir_args) {
-    struct QPTPool_vals *args = (struct QPTPool_vals *) nondir_args;
+    struct enqueue_nondir_args *args = (struct enqueue_nondir_args *) nondir_args;
 
     if (S_ISREG(work->statuso.st_mode)) {
         struct work_data *wd = calloc(1, sizeof(*wd) + work->name_len + 1);
@@ -213,7 +210,7 @@ static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir
         }
 
         /* enqueue files instead of copying them right here because they might be enormous */
-        QPTPool_enqueue(args->ctx, args->id, cpr_file, wd);
+        QPTPool_enqueue(args->ctx, cpr_file, wd);
     }
     else if (S_ISLNK(work->statuso.st_mode)) {
         /* copy right here since symlinks should not take much time to copy */
@@ -224,8 +221,8 @@ static int enqueue_nondir(struct work *work, struct entry_data *ed, void *nondir
 }
 
 /* set up the copied directory and enqueue per-file copy threads */
-static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct work *work = (struct work *) data;
 
     int rc = 0;
@@ -252,15 +249,14 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         print_error_and_goto("Could not chown directory", dst.data, free_dst);
     }
 
-    struct QPTPool_vals qptp_vals = {
-        .ctx = ctx,
-        .id = id,
+    struct enqueue_nondir_args nondir_args = {
+        .ctx = ctx, 
         .pa = pa,
     };
 
     /* process children */
-    descend(ctx, id, args, &pa->in, work, dir, 0,
-            cpr_dir,enqueue_nondir, &qptp_vals, NULL);
+    descend(ctx, &pa->in, work, dir, 0,
+            cpr_dir,enqueue_nondir, &nondir_args, NULL);
 
     if (pa->in.process_xattrs) {
         struct xattrs xattrs;
@@ -330,10 +326,10 @@ int main(int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
 
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init(pa.in.maxthreads, &pa);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         free((char *) real_dst);
         input_fini(&pa.in);
         return EXIT_FAILURE;
@@ -373,7 +369,7 @@ int main(int argc, char * argv[]) {
                 continue;
             }
 
-            QPTPool_enqueue(pool, 0, cpr_dir, work);
+            QPTPool_enqueue(ctx, cpr_dir, work);
         }
         else if (S_ISLNK(st.st_mode)) {
             struct entry_data ed;
@@ -407,7 +403,7 @@ int main(int argc, char * argv[]) {
                 xattrs_get(work->name, &wd->ed.xattrs);
             }
 
-            QPTPool_enqueue(pool, 0, cpr_file, wd);
+            QPTPool_enqueue(ctx, cpr_file, wd);
 
             free(work);
         }
@@ -418,10 +414,10 @@ int main(int argc, char * argv[]) {
         }
     }
 
-    QPTPool_stop(pool);
-    const uint64_t threads_started   = QPTPool_threads_started(pool);
-    const uint64_t threads_completed = QPTPool_threads_completed(pool);
-    QPTPool_destroy(pool);
+    QPTPool_stop(ctx);
+    const uint64_t threads_started   = QPTPool_threads_started(ctx);
+    const uint64_t threads_completed = QPTPool_threads_completed(ctx);
+    QPTPool_destroy(ctx);
 
     free((char *) real_dst);
 

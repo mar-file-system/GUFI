@@ -122,7 +122,7 @@ static int is_subdir(const char *path, struct dirent *entry) {
 
 /* go down only one level */
 void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
-                 QPTPool_t *pool, const size_t id) {
+                 QPTPool_ctx_t *ctx) {
     DIR *dir = opendir(ow->path.data);
     if (!dir) {
         const int err = errno;
@@ -180,7 +180,7 @@ void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
                                                        ow->handler, ow->query,
                                                        0,
                                                        &ts, &ts);
-            QPTPool_enqueue(pool, id, processdir, new_ow);
+            QPTPool_enqueue(ctx, processdir, new_ow);
 
             free(dbname);
             DirData_free(dd);

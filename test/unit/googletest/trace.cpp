@@ -346,7 +346,7 @@ TEST(scout, trace) {
     sta.tr.fd      = fd;
     sta.tr.start   = 0;
     sta.tr.end     = len;
-    sta.processdir = [] (QPTPool_t *, const std::size_t, void *data, void *) {
+    sta.processdir = [] (QPTPool_ctx_t *, void *data) {
         struct row *row = (struct row *) data;
         row_destroy(&row);
         return 0;
@@ -354,12 +354,12 @@ TEST(scout, trace) {
     sta.free       = nullptr;
     sta.stats      = &stats;
 
-    QPTPool_t *pool = QPTPool_init(1, nullptr);
-    ASSERT_NE(pool, nullptr);
+    QPTPool_ctx_t *ctx = QPTPool_init(1, nullptr);
+    ASSERT_NE(ctx, nullptr);
     #ifdef QPTPOOL_SWAP
-    EXPECT_EQ(QPTPool_set_queue_limit(pool, 1), 0); // if the WAIT queue already has 1 item, swap out the new item
+    EXPECT_EQ(QPTPool_set_queue_limit(ctx, 1), 0); // if the WAIT queue already has 1 item, swap out the new item
     #endif
-    ASSERT_EQ(QPTPool_start(pool), 0);
+    ASSERT_EQ(QPTPool_start(ctx), 0);
 
     struct Args {
         pthread_mutex_t mutex;
@@ -374,8 +374,8 @@ TEST(scout, trace) {
 
     // enqueue stuck thread
     pthread_mutex_lock(&args.mutex);
-    QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
-                         [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
+    QPTPool_enqueue_here(ctx, 0, QPTPool_enqueue_WAIT,
+                         [](QPTPool_ctx_t *, void *data) -> int {
                              Args *args = (Args *) data;
 
                              // alert the main thread that this thread has started
@@ -403,8 +403,8 @@ TEST(scout, trace) {
     pthread_mutex_unlock(&args.mutex);
 
     // enqueue item into WAIT queue
-    QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
-                         [](QPTPool_t *, const std::size_t, void *, void *) -> int {
+    QPTPool_enqueue_here(ctx, 0, QPTPool_enqueue_WAIT,
+                         [](QPTPool_ctx_t *, void *) -> int {
                              // no-op
                              return 0;
                          }, nullptr
@@ -415,7 +415,7 @@ TEST(scout, trace) {
 
     // not enqueuing scout_trace
     // struct (on stack) is not cleaned up, so should not throw
-    EXPECT_EQ(scout_trace(pool, 0, &sta, nullptr), 0);
+    EXPECT_EQ(scout_trace(ctx, &sta), 0);
 
     // allow the first thread to complete
     pthread_mutex_lock(&args.mutex);
@@ -423,17 +423,17 @@ TEST(scout, trace) {
     pthread_cond_broadcast(&args.cond);
     pthread_mutex_unlock(&args.mutex);
 
-    EXPECT_EQ(scout_trace(pool, 0, &sta, nullptr), 0);
+    EXPECT_EQ(scout_trace(ctx, &sta), 0);
 
-    QPTPool_stop(pool);
+    QPTPool_stop(ctx);
     #ifdef QPTPOOL_SWAP
-    EXPECT_GT(QPTPool_threads_started(pool),   (uint64_t) 4);
-    EXPECT_GT(QPTPool_threads_completed(pool), (uint64_t) 4);
+    EXPECT_GT(QPTPool_threads_started(ctx),   (uint64_t) 4);
+    EXPECT_GT(QPTPool_threads_completed(ctx), (uint64_t) 4);
     #else
-    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 4);
-    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 4);
+    EXPECT_EQ(QPTPool_threads_started(ctx),   (uint64_t) 4);
+    EXPECT_EQ(QPTPool_threads_completed(ctx), (uint64_t) 4);
     #endif
-    QPTPool_destroy(pool);
+    QPTPool_destroy(ctx);
 
     EXPECT_EQ(stats.remaining,  (size_t)   0);
     EXPECT_GT(stats.thread_time,(uint64_t) 0);
@@ -484,7 +484,7 @@ TEST(scout, stream) {
     sta->tr.fd      = fds[0];
     sta->tr.start   = 0;
     sta->tr.end     = len;
-    sta->processdir = [] (QPTPool_t *, const std::size_t, void *data, void *) {
+    sta->processdir = [] (QPTPool_ctx_t *, void *data) {
         struct row *row = (struct row *) data;
         row_destroy(&row);
         return 0;
@@ -492,16 +492,16 @@ TEST(scout, stream) {
     sta->free       = free;
     sta->stats      = &stats;
 
-    QPTPool_t *pool = QPTPool_init(1, nullptr);
-    ASSERT_NE(pool, nullptr);
-    ASSERT_EQ(QPTPool_start(pool), 0);
+    QPTPool_ctx_t *ctx = QPTPool_init(1, nullptr);
+    ASSERT_NE(ctx, nullptr);
+    ASSERT_EQ(QPTPool_start(ctx), 0);
 
-    EXPECT_NE(QPTPool_enqueue(pool, 0, scout_stream, sta), QPTPool_enqueue_ERROR);
+    EXPECT_NE(QPTPool_enqueue(ctx, scout_stream, sta), QPTPool_enqueue_ERROR);
 
-    QPTPool_stop(pool);
-    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 2);
-    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 2);
-    QPTPool_destroy(pool);
+    QPTPool_stop(ctx);
+    EXPECT_EQ(QPTPool_threads_started(ctx),   (uint64_t) 2);
+    EXPECT_EQ(QPTPool_threads_completed(ctx), (uint64_t) 2);
+    QPTPool_destroy(ctx);
 
     /* stats.remaining not modified */
     EXPECT_GT(stats.thread_time,(uint64_t) 0);

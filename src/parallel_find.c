@@ -92,8 +92,8 @@ struct PoolArgs {
     FILE **outfiles;
 };
 
-struct QPTPool_vals {
-    QPTPool_t *ctx;
+struct enqueue_nondir_args {
+    QPTPool_ctx_t *ctx;
     size_t id;
     struct PoolArgs *pa;
 };
@@ -278,7 +278,7 @@ static int format_output(struct work *work, struct entry_data *ed,
 }
 
 static int process_output(struct work *work, struct entry_data *ed, void *nondir_args) {
-    struct QPTPool_vals *args = (struct QPTPool_vals *) nondir_args;
+    struct enqueue_nondir_args *args = (struct enqueue_nondir_args *) nondir_args;
 
     /*
     When this function is called in processdir, descend is not called yet
@@ -290,13 +290,13 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
     ├── dir1/ --- level 1
     │   └── file1.txt --- level 1
 
-    parallel_find -n --min-level 1 --max-level 1
+    parallel_find -n 2 --min-level 1 --max-level 1
     The expected output is:
     root_dir/dir1
     root_dir/dir1/file1.txt
 
     But if the level is not checked here, the output will be:
-    root_dir/       <- first time print_to_screen is called in processdir before descend is called
+    root_dir/       <- first time process_output is called in processdir before descend is called
     root_dir/dir1
     root_dir/dir1/file1.txt
     */
@@ -332,8 +332,8 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
     return 0;
 }
 
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct work *work = (struct work *) data;
 
     int rc = 0;
@@ -341,13 +341,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct entry_data ed;
     ed.type = 'd';
 
-    struct QPTPool_vals qptp_vals = {
+    // TODO: update this name
+    struct enqueue_nondir_args nondir_args = {
         .ctx = ctx,
-        .id = id,
+        .id = QPTPool_get_id(ctx),
         .pa = pa,
     };
 
-    process_output(work, &ed, &qptp_vals);
+    process_output(work, &ed, &nondir_args);
 
     DIR *dir = opendir(work->name);
     if (!dir) {
@@ -355,10 +356,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         rc = 1;
     }
     else {
-        descend(ctx, id, args, &pa->in,
+        descend(ctx, &pa->in,
                 work, dir, 0, processdir,
                 process_output,
-                &qptp_vals, NULL);
+                &nondir_args, NULL);
     }
 
     closedir(dir);
@@ -418,8 +419,8 @@ int main(int argc, char *argv[]) {
     }
 
     /* create a queue per thread pool */
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init(pa.in.maxthreads, &pa);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         rc = 1;
         goto cleanup_qptp;
@@ -450,8 +451,8 @@ int main(int argc, char *argv[]) {
         }
 
         if (S_ISREG(work->statuso.st_mode)) {
-            struct QPTPool_vals qptp_vals = {
-                .ctx = pool,
+            struct enqueue_nondir_args qptp_vals = {
+                .ctx = ctx,
                 .id = 0,
                 .pa = &pa,
             };
@@ -459,7 +460,7 @@ int main(int argc, char *argv[]) {
             free(work);
         }
         else if (S_ISDIR(work->statuso.st_mode)) {
-            QPTPool_enqueue(pool, 0, processdir, work);
+            QPTPool_enqueue(ctx, processdir, work);
         }
         else {
             fprintf(stderr, "Error: Unsupported type for \"%s\"\n", work->name);
@@ -468,13 +469,13 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    QPTPool_stop(pool);
+    QPTPool_stop(ctx);
 
-    const uint64_t threads_started   = QPTPool_threads_started(pool);
-    const uint64_t threads_completed = QPTPool_threads_completed(pool);
+    const uint64_t threads_started   = QPTPool_threads_started(ctx);
+    const uint64_t threads_completed = QPTPool_threads_completed(ctx);
 
   cleanup_qptp:
-    QPTPool_destroy(pool);
+    QPTPool_destroy(ctx);
 
     OutputBuffers_flush_to_multiple(&pa.obufs, pa.outfiles);
     OutputBuffers_destroy(&pa.obufs);

@@ -143,14 +143,14 @@ struct ScoutTraceArgs {
     struct TraceStats *stats;
 };
 
-int scout_trace(QPTPool_t *ctx, const size_t id, void *data, void *args);
+int scout_trace(QPTPool_ctx_t *ctx, void *data);
 
 size_t enqueue_traces(char **traceames, int *tracefds, const size_t trace_count,
                       const char delim, const size_t max_parts,
-                      QPTPool_t *ctx, QPTPool_f func,
+                      QPTPool_ctx_t *ctx, QPTPool_f func,
                       struct TraceStats *stats);
 
-int scout_stream(QPTPool_t *ctx, const size_t id, void *data, void *args);
+int scout_stream(QPTPool_ctx_t *ctx, void *data);
 
 #ifdef __cplusplus
 }

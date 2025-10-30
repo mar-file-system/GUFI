@@ -126,8 +126,8 @@ struct PoolArgs {
     struct sum *sums; /* per thread summary data */
 };
 
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct work *passmywork = (struct work *) data;
 
     struct entry_data ed;
@@ -155,6 +155,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
     if (db) {
+        const size_t id = QPTPool_get_id(ctx);
         struct sum sum;
         zeroit(&sum);
 
@@ -194,7 +195,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                  * already has a treesummary table, the existing data is
                  * not used to generate the new treesummary table
                  */
-                descend(ctx, id, pa, &pa->in, passmywork, dir, 0,
+                descend(ctx, &pa->in, passmywork, dir, 0,
                         processdir, NULL, NULL, NULL);
 
                 /* add summary data from this directory */
@@ -331,10 +332,10 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "WARNING: Not [re]generating tree-summary table with '-X'\n");
     }
 
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init(pa.in.maxthreads, &pa);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         input_fini(&pa.in);
         return EXIT_FAILURE;
     }
@@ -347,9 +348,9 @@ int main(int argc, char *argv[]) {
     struct work *root = new_work_with_name(NULL, 0, pa.index.data, pa.index.len);
     root->name_len = trailing_non_match_index(root->name, root->name_len, "/", 1);
 
-    QPTPool_enqueue(pool, 0, processdir, root);
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_enqueue(ctx, processdir, root);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
 
     compute_treesummary(&pa);
     free(pa.sums);

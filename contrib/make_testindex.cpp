@@ -631,7 +631,7 @@ std::size_t random_from_bucket(const std::size_t seed,
 }
 
 template <typename DirGenerator, typename DBGenerator, typename BucketDistribution>
-int generatedir(QPTPool_t * ctx, const size_t id, void * data, void *) {
+int generatedir(QPTPool_ctx_t * ctx, void * data) {
     ThreadArgs *arg = (ThreadArgs *) data;
     if (!arg) {
         return 1;
@@ -724,7 +724,7 @@ int generatedir(QPTPool_t * ctx, const size_t id, void * data, void *) {
         sub_args->gid = arg->uid;
         sub_args->seed = gen();
 
-        QPTPool_enqueue(ctx, id, generatedir <DirGenerator, DBGenerator, BucketDistribution>, sub_args);
+        QPTPool_enqueue(ctx, generatedir <DirGenerator, DBGenerator, BucketDistribution>, sub_args);
     }
 
     return 0;
@@ -1028,10 +1028,10 @@ int main(int argc, char *argv[]) {
     }
 
     // start up thread pool
-    QPTPool_t *pool = QPTPool_init(settings.threads, nullptr);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init(settings.threads, nullptr);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         return -1;
     }
 
@@ -1089,10 +1089,10 @@ int main(int argc, char *argv[]) {
         args->gid = settings.gid + offset;
         args->seed = gen();
 
-        QPTPool_enqueue(pool, offset % settings.threads, generatedir <std::knuth_b, std::minstd_rand, std::normal_distribution <double> >, args);
+        QPTPool_enqueue(ctx, generatedir <std::knuth_b, std::minstd_rand, std::normal_distribution <double> >, args);
     }
 
-    QPTPool_stop(pool);
+    QPTPool_stop(ctx);
 
     struct timespec end = {};
     clock_gettime(CLOCK_MONOTONIC, &end);
@@ -1101,7 +1101,7 @@ int main(int argc, char *argv[]) {
     timed_stats.stop();
     progress.stop();
 
-    QPTPool_destroy(pool);
+    QPTPool_destroy(ctx);
 
     // print stats
     std::cout << std::endl

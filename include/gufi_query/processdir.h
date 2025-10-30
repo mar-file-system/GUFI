@@ -69,6 +69,6 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 
-int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args);
+int processdir(QPTPool_ctx_t *ctx, void *data);
 
 #endif

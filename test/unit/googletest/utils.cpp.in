@@ -1302,23 +1302,23 @@ TEST(parse_path, list) {
     struct work *root = new_work_with_name(ROOT, strlen(ROOT), nullptr, 0);
     ASSERT_NE(root, nullptr);
 
-    QPTPool_t *pool = QPTPool_init(1, nullptr);
-    ASSERT_NE(pool, nullptr);
-    ASSERT_EQ(QPTPool_start(pool), 0);
+    QPTPool_ctx_t *ctx = QPTPool_init(1, nullptr);
+    ASSERT_NE(ctx, nullptr);
+    ASSERT_EQ(QPTPool_start(ctx), 0);
 
-    EXPECT_EQ(process_path_list(&in, root, pool,
-                                [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
+    EXPECT_EQ(process_path_list(&in, root, ctx,
+                                [](QPTPool_ctx_t *, void *data) -> int {
                                     free(data);
                                     return 0;
                                 }), (ssize_t) 1);
 
-    QPTPool_stop(pool);
-    QPTPool_destroy(pool);
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
     EXPECT_EQ(remove(list), 0);
 
     // bad path list file
-    EXPECT_EQ(process_path_list(&in, root, pool,
-                                [](QPTPool_t *, const std::size_t, void *, void *) -> int {
+    EXPECT_EQ(process_path_list(&in, root, ctx,
+                                [](QPTPool_ctx_t *, void *) -> int {
                                     return 0;
                                 }), (ssize_t) -1);
 }

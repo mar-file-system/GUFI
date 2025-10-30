@@ -86,8 +86,7 @@ static int gqw_serialize_and_free(const int fd, QPTPool_f func, void *work, size
 #endif
 
 /* Push the subdirectories in the current directory onto the queue */
-static size_t descend2(QPTPool_t *ctx,
-                       const size_t id,
+static size_t descend2(QPTPool_ctx_t *ctx,
                        struct input *in,
                        gqw_t *gqw,
                        DIR *dir,
@@ -147,11 +146,11 @@ static size_t descend2(QPTPool_t *ctx,
 
                 /* push the subdirectory into the queue for processing */
                 #ifdef QPTPOOL_SWAP
-                QPTPool_enqueue_swappable(ctx, id, func, clone,
+                QPTPool_enqueue_swappable(ctx, func, clone,
                                           gqw_serialize_and_free,
                                           QPTPool_generic_alloc_and_deserialize);
                 #else
-                QPTPool_enqueue(ctx, id, func, clone);
+                QPTPool_enqueue(ctx, func, clone);
                 #endif
 
                 pushed++;
@@ -192,11 +191,12 @@ static void subdirs(sqlite3_context *context, int argc, sqlite3_value **argv) {
  * OR  mode:
  *     whether or not -S returns anything, run -E
  */
-int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
+int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
                     DIR *dir, gqw_t *gqw, sqlite3 *db, trie_t *user_strs,
                     const char *dbname, const size_t dbname_len,
                     const int descend, size_t *subdirs_walked_count) {
     struct input *in = pa->in;
+    const int id = QPTPool_get_id(ctx);
 
     if (descend) {
         /* get the rollup score
@@ -211,7 +211,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_t *ctx, const int id,
         /* push subdirectories into the queue */
         if (rollupscore == 0) {
             *subdirs_walked_count =
-                descend2(ctx, id, in, gqw, dir, in->skip, processdir);
+                descend2(ctx, in, gqw, dir, in->skip, processdir);
         }
     }
 

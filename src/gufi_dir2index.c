@@ -172,12 +172,12 @@ out:
     return rc;
 }
 
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
     int rc = 0;
 
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
     struct NonDirArgs nda;
     nda.in         = &pa->in;
@@ -278,7 +278,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     struct descend_counters ctrs;
-    descend(ctx, id, pa, nda.in, nda.work, dir, 1,
+    descend(ctx, nda.in, nda.work, dir, 1,
             processdir, process_dir?process_nondir:NULL, &nda, &ctrs);
 
     if (process_dir) {
@@ -328,6 +328,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
   cleanup:
     if (process_dir) {
+        const size_t id = QPTPool_get_id(ctx);
         pa->total_dirs[id]++;
         pa->total_nondirs[id] += ctrs.nondirs_processed;
     }
@@ -339,9 +340,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 }
 
 /* set up parent for a single subtree root in the index and enqueue subtree root as normal work */
-static int process_subtree_root(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
     struct work *subtree_root = (struct work *) data;
-    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
     /* offset by root_parent.len to remove prefix */
     const size_t topath_len = pa->index_parent.len + 1 + subtree_root->name_len - subtree_root->root_parent.len;
@@ -403,7 +404,7 @@ static int process_subtree_root(QPTPool_t *ctx, const size_t id, void *data, voi
     free(topath);
 
     struct work *copy = compress_struct(pa->in.compress, subtree_root, struct_work_size(subtree_root));
-    QPTPool_enqueue(ctx, id, processdir, copy);
+    QPTPool_enqueue(ctx, processdir, copy);
 
     return 0;
 }
@@ -550,10 +551,9 @@ int main(int argc, char *argv[]) {
     }
 
     const uint64_t queue_limit = get_queue_limit(pa.in.target_memory, pa.in.maxthreads);
-    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
         rc = EXIT_FAILURE;
         goto free_xattr;
     }
@@ -571,12 +571,12 @@ int main(int argc, char *argv[]) {
 
     if (doing_partial_walk(&pa.in, root_count)) {
         if (root_count == 0) {
-            process_path_list(&pa.in, NULL, pool, process_subtree_root);
+            process_path_list(&pa.in, NULL, ctx, process_subtree_root);
         }
         else if (root_count == 1) {
             struct work *root = NULL;
             if (validate_source(&pa.index_parent, argv[idx], &root) == 0) {
-                process_path_list(&pa.in, root, pool, process_subtree_root);
+                process_path_list(&pa.in, root, ctx, process_subtree_root);
             }
             else {
                 rc = EXIT_FAILURE;
@@ -593,7 +593,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
-                QPTPool_enqueue(pool, 0, processdir, copy);
+                QPTPool_enqueue(ctx, processdir, copy);
             }
         }
         else {
@@ -601,7 +601,7 @@ int main(int argc, char *argv[]) {
             rc = EXIT_FAILURE;
         }
     }
-    QPTPool_stop(pool);
+    QPTPool_stop(ctx);
 
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     clock_gettime(CLOCK_REALTIME, &rt.end);
@@ -609,7 +609,7 @@ int main(int argc, char *argv[]) {
 
     /* don't count as part of processtime */
 
-    QPTPool_destroy(pool);
+    QPTPool_destroy(ctx);
 
     uint64_t total_dirs = 0;
     uint64_t total_nondirs = 0;

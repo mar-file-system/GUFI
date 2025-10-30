@@ -90,7 +90,7 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work);
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function
  */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
+int descend(QPTPool_ctx_t *ctx,
             struct input *in, struct work *work,
             DIR *dir, const int skip_db,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,

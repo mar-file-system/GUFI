@@ -115,7 +115,7 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
 \begin{enumerate}
 \item Create a thread pool:
 
-  \texttt{QPTPool\_t *pool = QPTPool\_init(nthreads, args);}
+  \texttt{QPTPool\_ctx\_t *ctx = QPTPool\_init(nthreads, args);}
 
   \texttt{nthreads} sets the number of threads in this thread
   pool.
@@ -159,12 +159,12 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
 
 \item Start the thread pool:
 
-  \texttt{QPTPool\_start(pool);}
+  \texttt{QPTPool\_start(ctx);}
 
 \item Add work:
 
   \begin{itemize}
-    \item \texttt{QPTPool\_enqueue(pool, id, function, work);}
+    \item \texttt{QPTPool\_enqueue(ctx, function, work);}
 
     The function passed into \texttt{QPTPool\_enqueue} must match the
     signature found in \texttt{QueuePerThreadPool.h}. The
@@ -178,7 +178,7 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
 
     Work enqueued with \texttt{QPTPool\_enqueue} will not be swapped.
 
-    \item \texttt{QPTPool\_enqueue\_swappable(pool, id, func, work, serialize, deserialize);}
+    \item \texttt{QPTPool\_enqueue\_swappable(ctx, func, work, serialize, deserialize);}
 
     Work passed into \texttt{QPTPool\_enqueue\_swappable} may end up
     in the wait queue or be swapped to a filesystem.
@@ -188,7 +188,7 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
     \texttt{threads[id]->next\_queue} will be where the new work item
     is enqueued.
 
-    \item \texttt{QPTPool\_enqueue\_here(pool, id, queue, func, work, serialize, deserialize);}
+    \item \texttt{QPTPool\_enqueue\_here(ctx, id, queue, func, work, serialize, deserialize);}
 
     If the queue argument is set to \texttt{QPTPool\_enqueue\_WAIT},
     the work will be explicitly placed into the selected queue at
@@ -202,24 +202,24 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
 \item Wait for work to be completed (optional):
 
   \begin{itemize}
-    \item \texttt{QPTPool\_wait\_mem\_lte(pool, count);}
+    \item \texttt{QPTPool\_wait\_mem\_lte(ctx, count);}
 
       This function waits until the amount of in-memory work to be
       done is less than or equal to \texttt{count}.
 
-    \item \texttt{QPTPool\_wait\_mem(pool);}
+  \item \texttt{QPTPool\_wait\_mem(ctx);}
 
       This function waits until all in-memory work to be done. This
-      function is just \texttt{QPTPool\_wait\_mem\_lte(pool, 0);}
+      function is just \texttt{QPTPool\_wait\_mem\_lte(ctx, 0);}
 
-    \item \texttt{QPTPool\_wait(pool);}
+    \item \texttt{QPTPool\_wait(ctx);}
 
       This function waits until all in-memory and swapped work is done.
   \end{itemize}
 
 \item Wait for all work to be completed (threads are joined):
 
-  \texttt{QPTPool\_stop(pool);}
+  \texttt{QPTPool\_stop(ctx);}
 
   This function exists to allow for the collection of statistics
   before the context is destroyed. Note that \texttt{QPTPool\_wait} is
@@ -228,5 +228,5 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
 
 \item Destroy the pool context:
 
-  \texttt{QPTPool\_destroy(pool);}
+  \texttt{QPTPool\_destroy(ctx);}
 \end{enumerate}

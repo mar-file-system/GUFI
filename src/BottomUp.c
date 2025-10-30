@@ -197,8 +197,8 @@ static int new_alt_pathname(struct BottomUp *work, const char *dirname, size_t d
     return 0;
 }
 
-static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct UserArgs *ua = (struct UserArgs *) args;
+static int ascend_to_top(QPTPool_ctx_t *ctx, void *data) {
+    struct UserArgs *ua = (struct UserArgs *) QPTPool_get_args_internal(ctx);
     struct BottomUp *bu = (struct BottomUp *) data;
 
     pthread_mutex_lock(&bu->refs.mutex);
@@ -217,7 +217,7 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
     /* no subdirectories still need processing, so can process current directory */
 
     /* keep track of which thread was used to go back up */
-    bu->tid.up = id;
+    bu->tid.up = QPTPool_get_id(ctx);
 
     /* call user ascend function */
     int asc_rc = 0;
@@ -235,7 +235,7 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
 
     if (bu->parent) {
         /* push parent to decrement their reference counters */
-        QPTPool_enqueue(ctx, id, ascend_to_top, bu->parent);
+        QPTPool_enqueue(ctx, ascend_to_top, bu->parent);
     }
     else {
         /* reached root */
@@ -273,12 +273,12 @@ static struct BottomUp *track(struct BottomUp *src,
     return copy;
 }
 
-static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    struct UserArgs *ua = (struct UserArgs *) args;
+static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
+    struct UserArgs *ua = (struct UserArgs *) QPTPool_get_args_internal(ctx);
     struct BottomUp *bu = (struct BottomUp *) data;
 
     /* keep track of which thread was used to walk downwards */
-    bu->tid.down = id;
+    bu->tid.down = QPTPool_get_id(ctx);
 
     DIR *dir = opendir(bu->name);
 
@@ -288,7 +288,7 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         sll_destroy(&bu->subdirs, bottomup_destroy);
         sll_destroy(&bu->subnondirs, bottomup_destroy);
         if (bu->parent) {
-            QPTPool_enqueue(ctx, id, ascend_to_top, bu->parent); /* reduce parent counter */
+            QPTPool_enqueue(ctx, ascend_to_top, bu->parent); /* reduce parent counter */
         }
         else {
             bottomup_destroy(bu);
@@ -410,7 +410,7 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
                 child->extra_args = bu->extra_args;
 
                 /* keep going down */
-                QPTPool_enqueue(ctx, id, descend_to_bottom, child);
+                QPTPool_enqueue(ctx, descend_to_bottom, child);
             }
             pthread_mutex_unlock(&bu->refs.mutex);
         }
@@ -418,7 +418,7 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
             bu->refs.remaining = 0;
 
             /* start working upwards */
-            QPTPool_enqueue(ctx, id, ascend_to_top, bu);
+            QPTPool_enqueue(ctx, ascend_to_top, bu);
         }
     }
     else {
@@ -432,12 +432,12 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
     return desc_rc;
 }
 
-QPTPool_t *parallel_bottomup_init(const size_t thread_count,
-                                  const size_t user_struct_size,
-                                  const size_t min_level, const size_t max_level,
-                                  BU_descend_f descend, BU_ascend_f ascend,
-                                  const int track_non_dirs,
-                                  const int generate_alt_name) {
+QPTPool_ctx_t *parallel_bottomup_init(const size_t thread_count,
+                                      const size_t user_struct_size,
+                                      const size_t min_level, const size_t max_level,
+                                      BU_descend_f descend, BU_ascend_f ascend,
+                                      const int track_non_dirs,
+                                      const int generate_alt_name) {
     if (user_struct_size < sizeof(struct BottomUp)) {
         fprintf(stderr, "Error: Provided user struct size is smaller than a struct BottomUp\n");
         return NULL;
@@ -458,30 +458,30 @@ QPTPool_t *parallel_bottomup_init(const size_t thread_count,
     trie_insert(ua->skip, ".",  1, NULL, NULL);
     trie_insert(ua->skip, "..", 2, NULL, NULL);
 
-    QPTPool_t *pool = QPTPool_init_with_props(thread_count, ua, NULL, NULL, 0, "", 1, 2);
-    if (QPTPool_start(pool) != 0) {
+    QPTPool_ctx_t *ctx = QPTPool_init_with_props(thread_count, ua, NULL, NULL, 0, "", 1, 2);
+    if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
+        QPTPool_destroy(ctx);
         trie_free(ua->skip);
         free(ua);
         return NULL;
     }
 
-    return pool;
+    return ctx;
 }
 
-int parallel_bottomup_enqueue(QPTPool_t *pool,
+int parallel_bottomup_enqueue(QPTPool_ctx_t *ctx,
                               const char *path, const size_t len,
                               void *extra_args) {
-    if (!pool) {
+    if (!ctx) {
         return -1;
     }
 
     size_t thread_count = 0;
-    QPTPool_get_nthreads(pool, &thread_count);
+    QPTPool_get_nthreads(ctx, &thread_count);
 
     struct UserArgs *ua = NULL;
-    QPTPool_get_args(pool, (void **) &ua);
+    QPTPool_get_args(ctx, (void **) &ua);
 
     struct BottomUp *root = (struct BottomUp *) calloc(ua->user_struct_size, 1);
     new_pathname(root, path, len, NULL, 0);
@@ -498,16 +498,16 @@ int parallel_bottomup_enqueue(QPTPool_t *pool,
     root->extra_args = extra_args;
     root->level = 0;
 
-    QPTPool_enqueue(pool, 0, descend_to_bottom, root);
+    QPTPool_enqueue(ctx, descend_to_bottom, root);
     return 0;
 }
 
-static int parallel_bottomup_enqueue_subdirs(QPTPool_t *pool,
+static int parallel_bottomup_enqueue_subdirs(QPTPool_ctx_t *ctx,
                                              const char *path, const size_t len,
                                              const size_t min_level, const refstr_t *path_list,
                                              void *extra_args) {
     struct UserArgs *ua = NULL;
-    QPTPool_get_args(pool, (void **) &ua);
+    QPTPool_get_args(ctx, (void **) &ua);
 
     FILE *file = fopen(path_list->data, "r");
     if (!file) {
@@ -539,7 +539,7 @@ static int parallel_bottomup_enqueue_subdirs(QPTPool_t *pool,
         root->extra_args = extra_args;
         root->level = min_level;
 
-        QPTPool_enqueue(pool, 0, descend_to_bottom, root);
+        QPTPool_enqueue(ctx, descend_to_bottom, root);
     }
 
     free(line);
@@ -548,21 +548,21 @@ static int parallel_bottomup_enqueue_subdirs(QPTPool_t *pool,
     return 0;
 }
 
-int parallel_bottomup_fini(QPTPool_t *pool) {
-    if (!pool) {
+int parallel_bottomup_fini(QPTPool_ctx_t *ctx) {
+    if (!ctx) {
         return -1;
     }
 
     size_t thread_count = 0;
-    QPTPool_get_nthreads(pool, &thread_count);
+    QPTPool_get_nthreads(ctx, &thread_count);
 
     struct UserArgs *ua = NULL;
-    QPTPool_get_args(pool, (void **) &ua);
+    QPTPool_get_args(ctx, (void **) &ua);
 
-    QPTPool_stop(pool);
+    QPTPool_stop(ctx);
 
-    const size_t threads_started = QPTPool_threads_started(pool);
-    const size_t threads_completed = QPTPool_threads_completed(pool);
+    const size_t threads_started = QPTPool_threads_started(ctx);
+    const size_t threads_completed = QPTPool_threads_completed(ctx);
 
     trie_free(ua->skip);
     free(ua);
@@ -572,7 +572,7 @@ int parallel_bottomup_fini(QPTPool_t *pool) {
             threads_started, threads_completed);
     #endif
 
-    QPTPool_destroy(pool);
+    QPTPool_destroy(ctx);
 
     return -(threads_started != threads_completed);
 }
@@ -593,28 +593,28 @@ int parallel_bottomup(char **root_names, const size_t root_count,
         }
     }
 
-    QPTPool_t *pool = parallel_bottomup_init(thread_count, user_struct_size,
-                                             min_level, max_level,
-                                             descend, ascend,
-                                             track_non_dirs, generate_alt_name);
-    if (!pool) {
+    QPTPool_ctx_t *ctx = parallel_bottomup_init(thread_count, user_struct_size,
+                                                min_level, max_level,
+                                                descend, ascend,
+                                                track_non_dirs, generate_alt_name);
+    if (!ctx) {
         return -1;
     }
 
     struct UserArgs *ua = NULL;
-    QPTPool_get_args(pool, (void **) &ua);
+    QPTPool_get_args(ctx, (void **) &ua);
 
     /* enqueue all root directories */
     size_t good_roots = 0;
     if (min_level && path_list->data && path_list->len) {
-        good_roots += !parallel_bottomup_enqueue_subdirs(pool, root_names[0], strlen(root_names[0]),
+        good_roots += !parallel_bottomup_enqueue_subdirs(ctx, root_names[0], strlen(root_names[0]),
                                                          min_level, path_list, extra_args);
     }
     else {
         for(size_t i = 0; i < root_count; i++) {
-            good_roots += !parallel_bottomup_enqueue(pool, root_names[i], strlen(root_names[i]), extra_args);
+            good_roots += !parallel_bottomup_enqueue(ctx, root_names[i], strlen(root_names[i]), extra_args);
         }
     }
 
-    return -(parallel_bottomup_fini(pool) || (root_count != good_roots));
+    return -(parallel_bottomup_fini(ctx) || (root_count != good_roots));
 }
