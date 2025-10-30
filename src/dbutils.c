@@ -1197,7 +1197,7 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
                        const char *src, size_t *src_len) {
     struct convert {
         char src;
-        char *dst;
+        const char *dst;
         size_t dst_len;
     };
 
@@ -1238,7 +1238,7 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
     return d;
 }
 
-void sqlite_print_err_and_free(char *err, FILE *stream, char *format, ...) {
+void sqlite_print_err_and_free(char *err, FILE *stream, const char *format, ...) {
     va_list args;
     va_start(args, format);
     vfprintf(stream, format, args);

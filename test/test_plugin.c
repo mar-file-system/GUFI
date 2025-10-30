@@ -93,7 +93,8 @@ static void cleanup_state(struct state *p) {
 static void *db_init(sqlite3 *db) {
     struct state *state = new_state();
 
-    char *text = "CREATE TABLE plugin_test_files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT);"
+    const char *text =
+        "CREATE TABLE plugin_test_files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT);"
         "CREATE TABLE plugin_test_directories (id INTEGER PRIMARY KEY AUTOINCREMENT, dirname TEXT);"
         "CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));";
     char *error;
