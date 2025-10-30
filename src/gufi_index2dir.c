@@ -413,7 +413,7 @@ struct work *validate_inputs(struct PoolArgs *pa) {
                pa->dir.data, pa->dir.len,
                "/", (size_t) 1,
                pa->index.data + pa->index_dirname_len, pa->index.len - pa->index_dirname_len);
-    if (dupdir(dst_path, &src_st)) {
+    if (dupdir(dst_path, src_st.st_mode, src_st.st_uid, src_st.st_gid)) {
         fprintf(stderr, "Could not create %s under %s\n", pa->index.data, pa->dir.data);
         return NULL;
     }

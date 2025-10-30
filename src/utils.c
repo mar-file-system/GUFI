@@ -290,7 +290,7 @@ int tsumit(struct sum *sumin, struct sum *smout) {
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
 //
-int mkpath(char *path, mode_t mode, uid_t uid, gid_t gid) {
+int mkpath(const char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
     for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
         if (mkdir(path, mode) == -1) {
@@ -309,23 +309,16 @@ int mkpath(char *path, mode_t mode, uid_t uid, gid_t gid) {
     return mkdir(path,mode);
 }
 
-int dupdir(const char *path, struct stat *stat) {
-    /* if dupdir is called, doing a memory copy will not be relatively heavyweight */
-    const size_t path_len = strlen(path);
-    char copy[MAXPATH];
-    SNFORMAT_S(copy, sizeof(copy), 1,
-               path, path_len);
-    copy[path_len] = '\0';
-
+int dupdir(const char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
     // the writer must be able to create the index files into this directory so or in S_IWRITE
-    if (mkdir(copy, stat->st_mode) != 0) {
+    if (mkdir(path, mode) != 0) {
         const int err = errno;
         if (err == ENOENT) {
-            mkpath(copy, stat->st_mode, stat->st_uid, stat->st_gid);
+            mkpath(path, mode, uid, gid);
         }
         else if (err == EEXIST) {
             struct stat st;
-            if ((lstat(copy, &st) != 0) || !S_ISDIR(st.st_mode)) {
+            if ((lstat(path, &st) != 0) || !S_ISDIR(st.st_mode)) {
                 return err;
             }
         }
@@ -333,8 +326,8 @@ int dupdir(const char *path, struct stat *stat) {
             return err;
         }
     }
-    chmod(copy, stat->st_mode);
-    chown(copy, stat->st_uid, stat->st_gid);
+    chmod(path, mode);
+    chown(path, uid, gid);
     // we dont need to set xattrs/time on the gufi directory those are in the db
     // the gufi directory structure is there only to walk, not to provide
     // information, the information is in the db

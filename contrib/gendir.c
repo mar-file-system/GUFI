@@ -229,12 +229,7 @@ int main(int argc, char * argv[]) {
     }
     memcpy(root->name, argv[1], strlen(argv[1]));
 
-    struct stat top_st;
-    memset(&top_st, 0, sizeof(struct stat));
-    top_st.st_mode = DIR_PERMS;
-    top_st.st_uid = geteuid();
-    top_st.st_uid = getegid();
-    if (dupdir(root->name, &top_st) != 0) {
+    if (dupdir(root->name, DIR_PERMS, geteuid(), getegid()) != 0) {
         fprintf(stderr, "mkdir failed for %s: %d %s\n", root->name, errno, strerror(errno));
         free(root);
         return 1;

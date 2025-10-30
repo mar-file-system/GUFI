@@ -151,7 +151,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                w->line, w->first_delim);
 
     /* have to dupdir here because directories can show up in any order */
-    if (dupdir(topath, &dir->statuso)) {
+    if (dupdir(topath, dir->statuso.st_mode, dir->statuso.st_uid, dir->statuso.st_gid)) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
@@ -232,12 +232,7 @@ int main(int argc, char * argv[]) {
 
     int rc = EXIT_SUCCESS;
 
-    struct stat st;
-    st.st_mode = S_IRWXU | S_IRWXG | S_IRWXO;
-    st.st_uid = geteuid();
-    st.st_gid = getegid();
-
-    if (dupdir(pa.tree_parent.data, &st)) {
+    if (dupdir(pa.tree_parent.data, S_IRWXU | S_IRWXG | S_IRWXO, geteuid(), getegid())) {
         fprintf(stderr, "Could not create directory %s\n", pa.tree_parent.data);
         rc = EXIT_FAILURE;
         goto free_traces;

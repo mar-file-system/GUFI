@@ -490,8 +490,8 @@ TEST(dupdir, parentfirst) {
     rmdir(child);
     rmdir(parent);
 
-    ASSERT_EQ(dupdir(parent, &orig_parent_stat), 0);
-    ASSERT_EQ(dupdir(child,  &orig_child_stat),  0);
+    ASSERT_EQ(dupdir(parent, orig_parent_stat.st_mode, orig_parent_stat.st_uid, orig_parent_stat.st_gid), 0);
+    ASSERT_EQ(dupdir(child,  orig_child_stat.st_mode,  orig_child_stat.st_uid,  orig_child_stat.st_gid),  0);
 
     struct stat parent_stat;
     struct stat child_stat;
@@ -536,7 +536,7 @@ TEST(dupdir, childtfirst) {
 
     const mode_t prev_umask = umask(0);
 
-    ASSERT_EQ(dupdir(child,  &orig_child_stat),  0);
+    ASSERT_EQ(dupdir(child,  orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid), 0);
 
     // parent path should have the same permissions as the child path
     {
@@ -555,7 +555,7 @@ TEST(dupdir, childtfirst) {
 
     }
 
-    ASSERT_EQ(dupdir(parent, &orig_parent_stat), 0);
+    ASSERT_EQ(dupdir(parent, orig_parent_stat.st_mode, orig_parent_stat.st_uid, orig_parent_stat.st_gid), 0);
 
     struct stat parent_stat;
     struct stat child_stat;
@@ -585,13 +585,9 @@ TEST(dupdir, fileasdir) {
 
     char child[MAXPATH];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
-    struct stat child_stat;
-    child_stat.st_mode = S_IRWXU; // 700
-    child_stat.st_uid = geteuid();
-    child_stat.st_gid = getegid();
 
-    EXPECT_NE(dupdir(parent, &child_stat), 0);
-    EXPECT_NE(dupdir(child,  &child_stat), 0);
+    EXPECT_NE(dupdir(parent, S_IRWXU, geteuid(), getegid()), 0);
+    EXPECT_NE(dupdir(child,  S_IRWXU, geteuid(), getegid()), 0);
     EXPECT_EQ(remove(parent), 0);
 }
 

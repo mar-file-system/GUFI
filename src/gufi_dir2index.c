@@ -429,12 +429,7 @@ static int setup_dst(const char *index_parent) {
         return 0;
     }
 
-    struct stat st;
-    st.st_mode = S_IRWXU | S_IRWXG | S_IRWXO;
-    st.st_uid = geteuid();
-    st.st_gid = getegid();
-
-    if (dupdir(index_parent, &st)) {
+    if (dupdir(index_parent, S_IRWXU | S_IRWXG | S_IRWXO, geteuid(), getegid())) {
         fprintf(stderr, "Could not create %s\n", index_parent);
         return -1;
     }

@@ -283,16 +283,9 @@ static int cpr_dir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 }
 
 static int setup(const refstr_t *dst) {
-    struct stat st;
-    st.st_mode = umask(0);
-    st.st_uid = geteuid();
-    st.st_gid = getegid();
-
-    umask(st.st_mode); /* reset umask */
-
-    st.st_mode = ~st.st_mode & 0777;
-
-    return dupdir(dst->data, &st);
+    const mode_t old_umask = umask(0);
+    umask(old_umask); /* reset umask */
+    return dupdir(dst->data, ~old_umask & 0777, geteuid(), getegid());
 }
 
 static void sub_help(void) {
