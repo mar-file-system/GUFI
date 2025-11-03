@@ -176,13 +176,17 @@ int lstat_wrapper(struct work *work);
 /* used by gufi_dir2index and gufi_dir2trace */
 int fstatat_wrapper(struct work *entry, struct entry_data *ed);
 
+/* make sure --path-list is followed by at most 1 root directory argument */
+int bad_partial_walk(struct input *in, const size_t root_count);
+
+/* check if --path-list is set (root_count is not strictly necessary) */
 int doing_partial_walk(struct input *in, const size_t root_count);
 
 /*
  * attach directory paths directly to the root path and
  * run starting at --min-level instead of walking to --min-level first
  *
- * min_level == 0 is allowed in some cases; if min_level == 0, root is ignored
+ * if min_level == 0, root is ignored
  *
  * used by gufi_dir2index and gufi_dir2trace
  */

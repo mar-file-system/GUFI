@@ -264,5 +264,5 @@ Could not allocate space for 18446744073709551615 files
 
 # multiple input directories are not allowed for partial indexing
 $ gufi_dir2trace -n 2 --path-list "distributed.1" --min-level 1 "prefix" "prefix" "trace"
-Error: When -D is passed in, only one source directory may be specified
+Error: When -D is passed in, only one root directory may be specified
 

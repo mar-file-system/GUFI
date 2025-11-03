@@ -973,9 +973,21 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
     return 0;
 }
 
+/* not the same as !doing_partial_walk */
+int bad_partial_walk(struct input *in, const size_t root_count) {
+    if ((in->path_list.data && in->path_list.len) &&
+        (root_count > 1)) {
+        fprintf(stderr, "Error: When -D is passed in, only one root directory may be specified\n");
+        return 1;
+    }
+    return 0;
+}
+
 int doing_partial_walk(struct input *in, const size_t root_count) {
-    return ((root_count == 1) &&
-            (in->min_level && in->path_list.len));
+    (void) root_count;
+    return ((in->path_list.data && in->path_list.len) /* && */
+            /* (root_count < 2) */
+        );
 }
 
 /*
@@ -1005,7 +1017,9 @@ ssize_t process_path_list(struct input *in, struct work *root,
             continue;
         }
 
-        struct work *subtree_root = new_work_with_name(in->min_level?root->name:NULL, in->min_level?root->name_len:0,
+        /* if min-level == 0, do not prefix root */
+        struct work *subtree_root = new_work_with_name(in->min_level?root->name:NULL,
+                                                       in->min_level?root->name_len:0,
                                                        line, len);
 
         /* directory symlinks are not allowed under the root */

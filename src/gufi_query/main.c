@@ -100,8 +100,10 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
     while ((got = getline(&line, &n, file)) != -1) {
         /* remove trailing CRLF */
         const size_t len = trailing_non_match_index(line, got, "\r\n", 2);
-        const size_t name_size = root->work.name_len + 1 + len + 1;
-        const size_t max_sqlite3_name_size = root->sqlite3_name_len + 1 + 3 * len + 1;
+
+        /* if min_level > 0, prepend indexroot; else only use line from path_list */
+        const size_t name_size = (in->min_level?(root->work.name_len + 1):0) + len + 1;
+        const size_t max_sqlite3_name_size = (in->min_level?(root->sqlite3_name_len + 1):0) + 3 * len + 1;
 
         const size_t gqw_size = (sizeof(*root) +
                                  name_size +
@@ -109,12 +111,18 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
 
         /* oversized allocation */
         gqw_t *subtree_root = calloc(1, gqw_size);
-
         subtree_root->work.name = (char *) &subtree_root[1];
-        subtree_root->work.name_len = SNFORMAT_S(subtree_root->work.name, name_size, 3,
-                                                 root->work.name, root->work.name_len,
-                                                 "/", (size_t) 1,
-                                                 line, len);
+
+        if (in->min_level) {
+            subtree_root->work.name_len = SNFORMAT_S(subtree_root->work.name, name_size, 3,
+                                                     root->work.name, root->work.name_len,
+                                                     "/", (size_t) 1,
+                                                     line, len);
+        }
+        else {
+            subtree_root->work.name_len = SNFORMAT_S(subtree_root->work.name, name_size, 1,
+                                                     line, len);
+        }
 
         /* set modified path name for SQLite3 */
         size_t rp_len = subtree_root->work.name_len; /* discarded */
@@ -142,6 +150,65 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
     free(line);
     fclose(file);
     free(root);
+
+    return 0;
+}
+
+static int validate_source(const char *path, gqw_t **gqw) {
+    size_t len = strlen(path);
+    if (!len) {
+        return 1;
+    }
+
+    /* remove trailing slashes (+ 1 to keep at least 1 character) */
+    len = trailing_non_match_index(path + 1, len - 1, "/", 1) + 1;
+
+    struct stat st;
+    if (stat(path, &st) != 0) { /* levels 0, 1, and 2 can be symlinks */
+        const int err = errno;
+        fprintf(stderr, "Could not stat directory \"%s\": %s (%d)\n",
+                path, strerror(err), err);
+        return 1;
+    }
+
+    if (!S_ISDIR(st.st_mode)) {
+        fprintf(stderr,"input-dir '%s' is not a directory\n",
+                path);
+        return 1;
+    }
+
+    /*
+     * get sqlite3 name (copied into new_work instead of written
+     * directly into new_work because new_work doesn't exist yet)
+     */
+    size_t rp_len = len; /* discarded */
+    char sqlite3_name[MAXPATH];
+    const size_t sqlite3_name_len = sqlite_uri_path(sqlite3_name, sizeof(sqlite3_name),
+                                                    path, &rp_len);
+
+    gqw_t *new_work = calloc(1, sizeof(*new_work) + len + 1 + sqlite3_name_len + 1);
+    new_work->work.name = (char *) &new_work[1];
+    new_work->work.name_len = SNFORMAT_S(new_work->work.name, len + 1, 1,
+                                     path, len);
+
+    /* set modified path name for SQLite3 */
+    new_work->sqlite3_name = ((char *) new_work->work.name) + new_work->work.name_len + 1;
+    new_work->sqlite3_name_len = SNFORMAT_S(new_work->sqlite3_name, sqlite3_name_len + 1, 1,
+                                        sqlite3_name, sqlite3_name_len);
+
+    /* keep original user input */
+    new_work->work.orig_root.data = path;
+    new_work->work.orig_root.len = len;
+
+    /* parent of input path */
+    new_work->work.root_parent.data = path;
+    new_work->work.root_parent.len = dirname_len(path, len);
+
+    new_work->work.basename_len = new_work->work.name_len - new_work->work.root_parent.len;
+
+    new_work->work.root_basename_len = new_work->work.basename_len;
+
+    *gqw = new_work;
 
     return 0;
 }
@@ -188,7 +255,7 @@ int main(int argc, char *argv[])
     };
 
     struct input in;
-    process_args_and_maybe_exit(options, 1, "GUFI_tree ...", &in);
+    process_args_and_maybe_exit(options, 0, "GUFI_tree...", &in);
 
     if (handle_sql(&in) != 0) {
         input_fini(&in);
@@ -197,9 +264,7 @@ int main(int argc, char *argv[])
 
     const size_t root_count = argc - idx;
 
-    if ((in.min_level && in.path_list.len) &&
-        (root_count > 1)) {
-        fprintf(stderr, "Error: When -D is passed in, only one root directory may be specified\n");
+    if (bad_partial_walk(&in, root_count)){
         input_fini(&in);
         return EXIT_FAILURE;
     }
@@ -232,65 +297,17 @@ int main(int argc, char *argv[])
 
     /* enqueue input paths */
     for(int i = idx; i < argc; i++) {
-        size_t len = strlen(argv[i]);
-        if (!len) {
+        gqw_t *work = NULL;
+        if (validate_source(argv[i], &work) != 0) {
             continue;
         }
-
-        /* remove trailing slashes (+ 1 to keep at least 1 character) */
-        len = trailing_non_match_index(argv[i] + 1, len - 1, "/", 1) + 1;
-
-        struct stat st;
-        if (stat(argv[i], &st) != 0) { /* levels 0, 1, and 2 can be symlinks */
-            const int err = errno;
-            fprintf(stderr, "Could not stat directory \"%s\": %s (%d)\n",
-                    argv[i], strerror(err), err);
-            continue;
-        }
-
-        if (!S_ISDIR(st.st_mode)) {
-            fprintf(stderr,"input-dir '%s' is not a directory\n",
-                    argv[i]);
-            continue;
-        }
-
-        /*
-         * get sqlite3 name (copied into root instead of written
-         * directly into root because root doesn't exist yet)
-         */
-        size_t rp_len = len; /* discarded */
-        char sqlite3_name[MAXPATH];
-        const size_t sqlite3_name_len = sqlite_uri_path(sqlite3_name, sizeof(sqlite3_name),
-                                                        argv[i], &rp_len);
-
-        gqw_t *root = calloc(1, sizeof(*root) + len + 1 + sqlite3_name_len + 1);
-        root->work.name = (char *) &root[1];
-        root->work.name_len = SNFORMAT_S(root->work.name, len + 1, 1,
-                                         argv[i], len);
-
-        /* set modified path name for SQLite3 */
-        root->sqlite3_name = ((char *) root->work.name) + root->work.name_len + 1;
-        root->sqlite3_name_len = SNFORMAT_S(root->sqlite3_name, sqlite3_name_len + 1, 1,
-                                            sqlite3_name, sqlite3_name_len);
-
-        /* keep original user input */
-        root->work.orig_root.data = argv[i];
-        root->work.orig_root.len = len;
-
-        /* parent of input path */
-        root->work.root_parent.data = argv[i];
-        root->work.root_parent.len = dirname_len(argv[i], len);
-
-        root->work.basename_len = root->work.name_len - root->work.root_parent.len;
-
-        root->work.root_basename_len = root->work.basename_len;
 
         if (doing_partial_walk(&in, root_count)) {
-            gqw_process_path_list(&in, root, pool);
+            gqw_process_path_list(&in, work, pool);
         }
         else {
             /* push the path onto the queue (no compression) */
-            QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
+            QPTPool_enqueue(pool, i % in.maxthreads, processdir, work);
         }
     }
 

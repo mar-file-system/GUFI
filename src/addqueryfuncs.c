@@ -583,14 +583,18 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
-    size_t user_dirname_len = work->orig_root.len + work->name_len - work->root_parent.len - work->root_basename_len;
-    char *user_dirname = malloc(user_dirname_len + 1);
+    if (work->orig_root.data && work->orig_root.len) {
+        const size_t user_dirname_len = work->orig_root.len + work->name_len - work->root_parent.len - work->root_basename_len;
+        char *user_dirname = malloc(user_dirname_len + 1);
 
-    SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-               work->orig_root.data, work->orig_root.len,
-               work->name + work->root_parent.len + work->root_basename_len, work->name_len - work->root_parent.len - work->root_basename_len);
-
-    sqlite3_result_text(context, user_dirname, user_dirname_len, free);
+        SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
+                   work->orig_root.data, work->orig_root.len,
+                   work->name + work->root_parent.len + work->root_basename_len, work->name_len - work->root_parent.len - work->root_basename_len);
+        sqlite3_result_text(context, user_dirname, user_dirname_len, free);
+    }
+    else {
+        sqlite3_result_text(context, work->name, work->name_len - work->basename_len - 1, free);
+    }
 }
 
 /* return the basename of the directory you are currently in */

@@ -1,5 +1,5 @@
 $ gufi_query.py --help
-usage: gufi_query [options] GUFI_tree ...
+usage: gufi_query [options] GUFI_tree...
 options:
   -h, --help                        help
   -H, --debug                       show assigned input values (debugging)

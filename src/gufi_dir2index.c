@@ -457,6 +457,8 @@ static int validate_source(refstr_t *index_parent, const char *path, struct work
     new_work->root_parent.data = path;
     new_work->root_parent.len = dirname_len(path, new_work->name_len);
     new_work->level = 0;
+    new_work->basename_len = new_work->name_len - new_work->root_parent.len;
+    new_work->root_basename_len = new_work->basename_len;
 
     char expathin[MAXPATH];
     char expathout[MAXPATH];
@@ -502,7 +504,7 @@ int main(int argc, char *argv[]) {
     };
 
     struct PoolArgs pa;
-    process_args_and_maybe_exit(options, 2, "input_dir... output_dir", &pa.in);
+    process_args_and_maybe_exit(options, 1, "input_dir... output_dir", &pa.in);
 
     /* parse positional args, following the options */
     /* does not have to be canonicalized */
@@ -513,9 +515,7 @@ int main(int argc, char *argv[]) {
     argc--; /* index parent is no longer needed */
     const size_t root_count = argc - idx;
 
-    if ((pa.in.min_level && pa.in.path_list.len) &&
-        (root_count > 1)) {
-        fprintf(stderr, "Error: When -D is passed in, only one source directory may be specified\n");
+    if (bad_partial_walk(&pa.in, root_count)){
         rc = EXIT_FAILURE;
         goto cleanup;
     }
@@ -569,26 +569,36 @@ int main(int argc, char *argv[]) {
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
 
-    for(int i = idx; i < argc; i++) {
-        /* get first work item by validating source path */
-        struct work *root = NULL;
-        if (validate_source(&pa.index_parent, argv[i], &root) != 0) {
-            continue;
+    if (doing_partial_walk(&pa.in, root_count)) {
+        if (root_count == 0) {
+            process_path_list(&pa.in, NULL, pool, process_subtree_root);
         }
+        else if (root_count == 1) {
+            struct work *root = NULL;
+            if (validate_source(&pa.index_parent, argv[idx], &root) == 0) {
+                process_path_list(&pa.in, root, pool, process_subtree_root);
+            }
+            else {
+                rc = EXIT_FAILURE;
+            }
+        }
+    }
+    else {
+        if (root_count) {
+            for(int i = idx; i < argc; i++) {
+                /* get first work item by validating source path */
+                struct work *root = NULL;
+                if (validate_source(&pa.index_parent, argv[i], &root) != 0) {
+                    continue;
+                }
 
-        /*
-         * manually get basename of provided path since
-         * there is no source for the basenames
-         */
-        root->basename_len = root->name_len - root->root_parent.len;
-        root->root_basename_len = root->basename_len;
-
-        if (doing_partial_walk(&pa.in, root_count)) {
-            process_path_list(&pa.in, root, pool, process_subtree_root);
+                struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
+                QPTPool_enqueue(pool, 0, processdir, copy);
+            }
         }
         else {
-            struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
-            QPTPool_enqueue(pool, 0, processdir, copy);
+            fprintf(stderr, "Error: At least one root is needed\n");
+            rc = EXIT_FAILURE;
         }
     }
     QPTPool_stop(pool);
@@ -611,18 +621,22 @@ int main(int argc, char *argv[]) {
     free(pa.total_dirs);
     free(pa.total_nondirs);
 
-    fprintf(stderr, "Total Dirs:          %" PRIu64 "\n", total_dirs);
-    fprintf(stderr, "Total Non-Dirs:      %" PRIu64 "\n", total_nondirs);
-    fprintf(stderr, "Start Time:          %.6Lf\n",       sec(since_epoch(&rt.start)));
-    fprintf(stderr, "End Time:            %.6Lf\n",       sec(since_epoch(&rt.end)));
-    fprintf(stderr, "Time Spent Indexing: %.2Lfs\n",      processtime);
-    fprintf(stderr, "Dirs/Sec:            %.2Lf\n",       total_dirs / processtime);
-    fprintf(stderr, "Non-Dirs/Sec:        %.2Lf\n",       total_nondirs / processtime);
+    if (rc == EXIT_SUCCESS) {
+        fprintf(stderr, "Total Dirs:          %" PRIu64 "\n", total_dirs);
+        fprintf(stderr, "Total Non-Dirs:      %" PRIu64 "\n", total_nondirs);
+        fprintf(stderr, "Start Time:          %.6Lf\n",       sec(since_epoch(&rt.start)));
+        fprintf(stderr, "End Time:            %.6Lf\n",       sec(since_epoch(&rt.end)));
+        fprintf(stderr, "Time Spent Indexing: %.2Lfs\n",      processtime);
+        fprintf(stderr, "Dirs/Sec:            %.2Lf\n",       total_dirs / processtime);
+        fprintf(stderr, "Non-Dirs/Sec:        %.2Lf\n",       total_nondirs / processtime);
+    }
 
   free_xattr:
     close_template_db(&pa.xattr);
+
   free_db:
     close_template_db(&pa.db);
+
   cleanup:
     input_fini(&pa.in);
 

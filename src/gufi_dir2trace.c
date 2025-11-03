@@ -246,6 +246,9 @@ static int validate_source(const char *path, struct work **work) {
 
     new_work->root_parent.data = path;
     new_work->root_parent.len = dirname_len(path, new_work->name_len);
+    new_work->level = 0;
+    new_work->basename_len = new_work->name_len - new_work->root_parent.len;
+    new_work->root_basename_len = new_work->basename_len;
 
     *work = new_work;
 
@@ -282,25 +285,25 @@ int main(int argc, char *argv[]) {
     };
 
     struct PoolArgs pa;
-    process_args_and_maybe_exit(options, 2, "input_dir... output_prefix", &pa.in);
+    process_args_and_maybe_exit(options, 1, "input_dir... output_prefix", &pa.in);
 
     /* parse positional args, following the options */
     INSTALL_STR(&pa.trace_prefix, argv[argc - 1]);
 
+    int rc = EXIT_SUCCESS;
+
     argc--; /* trace prefix is no longer needed */
     const size_t root_count = argc - idx;
 
-    if ((pa.in.min_level && pa.in.path_list.len) &&
-        (root_count > 1)) {
-        fprintf(stderr, "Error: When -D is passed in, only one source directory may be specified\n");
-        input_fini(&pa.in);
-        return EXIT_FAILURE;
+    if (bad_partial_walk(&pa.in, root_count)){
+        rc = EXIT_FAILURE;
+        goto cleanup;
     }
 
     pa.outfiles = outfiles_init(&pa.trace_prefix, pa.in.maxthreads);
     if (!pa.outfiles) {
-        input_fini(&pa.in);
-        return EXIT_FAILURE;
+        rc = EXIT_FAILURE;
+        goto cleanup;
     }
 
     const uint64_t queue_limit = get_queue_limit(pa.in.target_memory, pa.in.maxthreads);
@@ -308,9 +311,8 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
-        outfiles_fin(pa.outfiles, pa.in.maxthreads);
-        input_fini(&pa.in);
-        return EXIT_FAILURE;
+        rc = EXIT_FAILURE;
+        goto free_outfiles;
     }
 
     fprintf(stderr, "Creating GUFI Traces %s with %zu threads\n", pa.trace_prefix.data, pa.in.maxthreads);
@@ -326,24 +328,28 @@ int main(int argc, char *argv[]) {
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
 
-    for(int i = idx; i < argc; i++) {
-        /* get first work item by validating source path */
-        struct work *root = NULL;
-        if (validate_source(argv[i], &root) != 0) {
-            continue;
+    if (doing_partial_walk(&pa.in, root_count)) {
+        if (root_count == 0) {
+            process_path_list(&pa.in, NULL, pool, processdir);
         }
-
-        /*
-         * manually get basename of provided path since
-         * there is no source for the basenames
-         */
-        root->basename_len = root->name_len - root->root_parent.len;
-        root->root_basename_len = root->basename_len;
-
-        if (doing_partial_walk(&pa.in, root_count)) {
-            process_path_list(&pa.in, root, pool, processdir);
+        else if (root_count == 1) {
+            struct work *root = NULL;
+            if (validate_source(argv[idx], &root) == 0) {
+                process_path_list(&pa.in, root, pool, processdir);
+            }
+            else {
+                rc = EXIT_FAILURE;
+            }
         }
-        else {
+    }
+    else {
+        for(int i = idx; i < argc; i++) {
+            /* get first work item by validating source path */
+            struct work *root = NULL;
+            if (validate_source(argv[i], &root) != 0) {
+                continue;
+            }
+
             struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));
             QPTPool_enqueue(pool, 0, processdir, copy);
         }
@@ -360,23 +366,28 @@ int main(int argc, char *argv[]) {
 
     QPTPool_destroy(pool);
 
-    outfiles_fin(pa.outfiles, pa.in.maxthreads);
-
     size_t total_files = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
         total_files += pa.total_files[i];
     }
 
     free(pa.total_files);
-    input_fini(&pa.in);
 
-    fprintf(stderr, "Total Dirs:          %" PRIu64 "\n", thread_count);
-    fprintf(stderr, "Total Files:         %zu\n",         total_files);
-    fprintf(stderr, "Start Time:          %.6Lf\n",       sec(since_epoch(&rt.start)));
-    fprintf(stderr, "End Time:            %.6Lf\n",       sec(since_epoch(&rt.end)));
-    fprintf(stderr, "Time Spent Indexing: %.2Lfs\n",      processtime);
-    fprintf(stderr, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
-    fprintf(stderr, "Files/Sec:           %.2Lf\n",       total_files / processtime);
+    if (rc == EXIT_SUCCESS) {
+        fprintf(stderr, "Total Dirs:          %" PRIu64 "\n", thread_count);
+        fprintf(stderr, "Total Files:         %zu\n",         total_files);
+        fprintf(stderr, "Start Time:          %.6Lf\n",       sec(since_epoch(&rt.start)));
+        fprintf(stderr, "End Time:            %.6Lf\n",       sec(since_epoch(&rt.end)));
+        fprintf(stderr, "Time Spent Indexing: %.2Lfs\n",      processtime);
+        fprintf(stderr, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
+        fprintf(stderr, "Files/Sec:           %.2Lf\n",       total_files / processtime);
+    }
+
+  free_outfiles:
+    outfiles_fin(pa.outfiles, pa.in.maxthreads);
+
+  cleanup:
+    input_fini(&pa.in);
 
     dump_memory_usage(stderr);
 

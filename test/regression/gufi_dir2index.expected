@@ -409,5 +409,5 @@ Error: Failed to start thread pool
 
 # multiple input directories are not allowed for partial indexing
 $ gufi_dir2index -n 2 --path-list "distributed.1" --min-level 1 "prefix" "prefix" "search"
-Error: When -D is passed in, only one source directory may be specified
+Error: When -D is passed in, only one root directory may be specified
 
