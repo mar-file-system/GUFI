@@ -84,12 +84,8 @@ def run(args):
         config.server,
         '-p', str(config.port),
         '--',
-        # sanitize the command segments
-        #
-        # then combine args into one string and send over
-        # as a single string so that it doesn't get parsed
-        # on the client side
-        '\'{0}\''.format(' '.join(sanitize(arg) for arg in ['gufi_@TOOL@'] + args))
+        # sanitize the command segments and send everything over as one argument to ssh
+        ' '.join(sanitize(arg) for arg in ['gufi_@TOOL@'] + args)
      ]
 
     # run the command
