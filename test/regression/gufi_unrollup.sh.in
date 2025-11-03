@@ -143,7 +143,7 @@ query
 rollup
 
 echo "# partial unroll up"
-run_no_sort "${GUFI_UNROLLUP} --min-level 2 --subtree-list \"${PATH_LIST}\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_UNROLLUP} --min-level 2 --path-list \"${PATH_LIST}\" \"${INDEXROOT}\""
 
 query
 # ###########################################

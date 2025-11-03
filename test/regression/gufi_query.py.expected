@@ -18,7 +18,7 @@ options:
                                     2 - run T, S, and E whether or not a row was returned
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
-      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
+      --path-list <filename>        File containing paths at single level to index (not including starting path). Must also use --min-level
   -p, --path <path>                 Source path prefix for %s in SQL
   -x, --query-xattrs                query xattrs
   -Q <basename>

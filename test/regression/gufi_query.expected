@@ -18,7 +18,7 @@ options:
                                     2 - run T, S, and E whether or not a row was returned
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
-      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
+      --path-list <filename>        File containing paths at single level to index (not including starting path). Must also use --min-level
   -p, --path <path>                 Source path prefix for %s in SQL
   -x, --query-xattrs                query xattrs
   -Q <basename>
@@ -270,7 +270,7 @@ directory
 empty_directory
 
 # limit tree traversal to some directories under at level 1 (only prefix/directory and prefix/empty_directory)
-$ gufi_query -d " " -n 2 --min-level 1 --subtree-list "distributed.0" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+$ gufi_query -d " " -n 2 --min-level 1 --path-list "distributed.0" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
 prefix/directory
 prefix/directory/executable
 prefix/directory/readonly
@@ -537,6 +537,6 @@ $ gufi_query -d " " --keep-matime -S "SELECT name FROM vrsummary;" -E "SELECT na
 Could not set database file's timestamps "prefix/db.db": No such file or directory (2)
 
 # multiple input directories are not allowed for partial querying
-$ gufi_query -n 2 --subtree-list "distributed.0" --min-level 1 "search" "search"
+$ gufi_query -n 2 --path-list "distributed.0" --min-level 1 "search" "search"
 Error: When -D is passed in, only one root directory may be specified
 

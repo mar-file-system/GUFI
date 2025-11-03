@@ -975,20 +975,20 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
 
 int doing_partial_walk(struct input *in, const size_t root_count) {
     return ((root_count == 1) &&
-            (in->min_level && in->subtree_list.len));
+            (in->min_level && in->path_list.len));
 }
 
 /*
  * attach directory paths directly to the root path and
  * run starting at --min-level instead of walking to --min-level first
  */
-ssize_t process_subtree_list(struct input *in, struct work *root,
-                             QPTPool_t *ctx, QPTPool_f func) {
-    FILE *file = fopen(in->subtree_list.data, "r");
+ssize_t process_path_list(struct input *in, struct work *root,
+                          QPTPool_t *ctx, QPTPool_f func) {
+    FILE *file = fopen(in->path_list.data, "r");
     if (!file) {
         const int err = errno;
         fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
-                in->subtree_list.data, strerror(err), err);
+                in->path_list.data, strerror(err), err);
         return -1;
     }
 
@@ -1005,7 +1005,8 @@ ssize_t process_subtree_list(struct input *in, struct work *root,
             continue;
         }
 
-        struct work *subtree_root = new_work_with_name(root->name, root->name_len, line, len);
+        struct work *subtree_root = new_work_with_name(in->min_level?root->name:NULL, in->min_level?root->name_len:0,
+                                                       line, len);
 
         /* directory symlinks are not allowed under the root */
         if (lstat_wrapper(subtree_root) != 0) {

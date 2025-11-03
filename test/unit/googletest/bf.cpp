@@ -103,7 +103,7 @@ static const std::string print_tlv          = "--print-tlv";
 static const std::string keep_matime        = "--keep-matime";
 static const std::string skip_file          = "--skip-file"; static const std::string skip_file_arg = "file name";
 static const std::string dry_run            = "--dry-run";
-static const std::string subtree_list       = "--subtree-list"; static const std::string subtree_list_arg  = "file name";
+static const std::string path_list          = "--path-list"; static const std::string path_list_arg = "file name";
 static const std::string format             = "--format"; static const std::string format_arg = "f arg";
 static const std::string terse              = "--terse";
 static const std::string rollup_limit       = "--limit"; static const std::string rollup_limit_arg = "1";
@@ -197,8 +197,8 @@ static void check_input(struct input *in, const bool helped, const bool version,
 
         EXPECT_EQ(in->swap_prefix.data,               swap_prefix_arg);
 
-        EXPECT_NE(in->subtree_list.data,              nullptr);
-        EXPECT_EQ(in->subtree_list.len,               subtree_list_arg.size());
+        EXPECT_NE(in->path_list.data,                 nullptr);
+        EXPECT_EQ(in->path_list.len,                  path_list_arg.size());
     }
     else {
         const std::string empty = "";
@@ -229,8 +229,8 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->subdir_limit,                   (std::size_t) 0);
         EXPECT_EQ(sll_get_size(&in->external_attach), (std::size_t) 0);
         EXPECT_NE(in->swap_prefix.data,               nullptr); /* default exists */
-        EXPECT_EQ(in->subtree_list.data,              nullptr);
-        EXPECT_EQ(in->subtree_list.len,               (std::size_t) 0);
+        EXPECT_EQ(in->path_list.data,                 nullptr);
+        EXPECT_EQ(in->path_list.len,                  (std::size_t) 0);
     }
 }
 
@@ -296,7 +296,7 @@ TEST(parse_cmd_line, debug) {
         FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE,
         FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY,
         FLAG_SUBDIR_LIMIT, FLAG_CHECK_EXTDB_VALID, FLAG_EXTERNAL_ATTACH,
-        FLAG_SWAP_PREFIX, FLAG_SUBTREE_LIST,
+        FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -343,7 +343,7 @@ TEST(parse_cmd_line, debug) {
         q.c_str(),
         Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
         swap_prefix.c_str(), swap_prefix_arg.c_str(),
-        subtree_list.c_str(), subtree_list_arg.c_str(),
+        path_list.c_str(), path_list_arg.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
@@ -410,7 +410,7 @@ TEST(parse_cmd_line, options) {
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_OUTPUT_BUFFER_SIZE, FLAG_FORMAT,
         FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY,
         FLAG_SUBDIR_LIMIT, FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX,
-        FLAG_SUBTREE_LIST,
+        FLAG_PATH_LIST,
         FLAG_END
     };
 
@@ -440,7 +440,7 @@ TEST(parse_cmd_line, options) {
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
         Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
         swap_prefix.c_str(), swap_prefix_arg.c_str(),
-        subtree_list.c_str(), subtree_list_arg.c_str(),
+        path_list.c_str(), path_list_arg.c_str(),
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);

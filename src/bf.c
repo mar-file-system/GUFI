@@ -234,7 +234,7 @@ void print_help(const char* prog_name,
             case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
             case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
             case FLAG_PLUGIN_SHORT:                  printf("      --plugin <library_name>       plugin library for modifying db entries"); break;
-            case FLAG_SUBTREE_LIST_SHORT:            printf("      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
+            case FLAG_PATH_LIST_SHORT:               printf("      --path-list <filename>        File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
             case FLAG_FORMAT_SHORT:                  printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
             case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
             case FLAG_ROLLUP_LIMIT_SHORT:            printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
@@ -308,7 +308,7 @@ void show_input(struct input* in, int retval) {
     printf("in.keep_matime              = %d\n",            in->keep_matime);
     printf("in.skip_count               = %zu\n",           in->skip_count);
     printf("in.dry_run                  = %d\n",            in->dry_run);
-    printf("in.subtree_list             = '%s'\n",          in->subtree_list.data);
+    printf("in.path_list                = '%s'\n",          in->path_list.data);
     printf("in.format_set               = %d\n",            in->format_set);
     printf("in.format                   = '%s'\n",          in->format.data);
     printf("in.terse                    = %d\n",            in->terse);
@@ -589,8 +589,8 @@ int parse_cmd_line(int                  argc,
                 }
                 break;
 
-            case FLAG_SUBTREE_LIST_SHORT:
-                INSTALL_STR(&in->subtree_list, optarg);
+            case FLAG_PATH_LIST_SHORT:
+                INSTALL_STR(&in->path_list, optarg);
                 break;
 
             case FLAG_FORMAT_SHORT:

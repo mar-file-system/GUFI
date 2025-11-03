@@ -83,7 +83,7 @@ def subtree_cmd(args, filename, idx, target):
         '--threads', str(args.threads),
         '--delim', str(args.delim),
         '--min-level', str(args.level),
-        '--subtree-list', filename,
+        '--path-list', filename,
     ]
 
     if args.distributor == 'ssh':

@@ -68,7 +68,7 @@ def subtree_cmd(args, filename, _idx, _target):
         args.gufi_unrollup,
         '--threads', str(args.threads),
         '--min-level', str(args.level),
-        '--subtree-list', filename,
+        '--path-list', filename,
         args.GUFI_tree
     ]
 

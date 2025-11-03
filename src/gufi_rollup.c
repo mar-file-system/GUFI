@@ -905,7 +905,7 @@ int main(int argc, char *argv[]) {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
         /* processing/tree walk flags */
-        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST,
+        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST,
         FLAG_ROLLUP_LIMIT, FLAG_DRY_RUN,
         FLAG_DONT_REPROCESS,
 
@@ -946,7 +946,7 @@ int main(int argc, char *argv[]) {
 
     const int rc = parallel_bottomup(argv, argc,
                                      pa.in.min_level, pa.in.max_level,
-                                     &pa.in.subtree_list,
+                                     &pa.in.path_list,
                                      pa.in.maxthreads,
                                      sizeof(struct RollUp),
                                      desc, rollup_ascend,

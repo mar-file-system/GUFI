@@ -504,16 +504,16 @@ int parallel_bottomup_enqueue(QPTPool_t *pool,
 
 static int parallel_bottomup_enqueue_subdirs(QPTPool_t *pool,
                                              const char *path, const size_t len,
-                                             const size_t min_level, const refstr_t *subtree_list,
+                                             const size_t min_level, const refstr_t *path_list,
                                              void *extra_args) {
     struct UserArgs *ua = NULL;
     QPTPool_get_args(pool, (void **) &ua);
 
-    FILE *file = fopen(subtree_list->data, "r");
+    FILE *file = fopen(path_list->data, "r");
     if (!file) {
         const int err = errno;
         fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
-                subtree_list->data, strerror(err), err);
+                path_list->data, strerror(err), err);
         return -1;
     }
 
@@ -579,14 +579,14 @@ int parallel_bottomup_fini(QPTPool_t *pool) {
 
 int parallel_bottomup(char **root_names, const size_t root_count,
                       const size_t min_level, const size_t max_level,
-                      const refstr_t *subtree_list,
+                      const refstr_t *path_list,
                       const size_t thread_count,
                       const size_t user_struct_size,
                       BU_descend_f descend, BU_ascend_f ascend,
                       const int track_non_dirs,
                       const int generate_alt_name,
                       void *extra_args) {
-    if (min_level && subtree_list->data && subtree_list->len) {
+    if (min_level && path_list->data && path_list->len) {
         if (root_count > 1) {
             fprintf(stderr, "Error: Only one root may be provided when a --min-level and -D are both provided\n");
             return -1;
@@ -606,9 +606,9 @@ int parallel_bottomup(char **root_names, const size_t root_count,
 
     /* enqueue all root directories */
     size_t good_roots = 0;
-    if (min_level && subtree_list->data && subtree_list->len) {
+    if (min_level && path_list->data && path_list->len) {
         good_roots += !parallel_bottomup_enqueue_subdirs(pool, root_names[0], strlen(root_names[0]),
-                                                         min_level, subtree_list, extra_args);
+                                                         min_level, path_list, extra_args);
     }
     else {
         for(size_t i = 0; i < root_count; i++) {

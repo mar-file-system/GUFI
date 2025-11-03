@@ -182,10 +182,12 @@ int doing_partial_walk(struct input *in, const size_t root_count);
  * attach directory paths directly to the root path and
  * run starting at --min-level instead of walking to --min-level first
  *
+ * min_level == 0 is allowed in some cases; if min_level == 0, root is ignored
+ *
  * used by gufi_dir2index and gufi_dir2trace
  */
-ssize_t process_subtree_list(struct input *in, struct work *root,
-                             QPTPool_t *ctx, QPTPool_f func);
+ssize_t process_path_list(struct input *in, struct work *root,
+                          QPTPool_t *ctx, QPTPool_f func);
 
 /* write to a buffer that is automatically resized */
 int write_with_resize(char **buf, size_t *size, size_t *offset,

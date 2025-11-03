@@ -7,7 +7,7 @@ options:
   -n, --threads <threads>           number of threads
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
-      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
+      --path-list <filename>        File containing paths at single level to index (not including starting path). Must also use --min-level
       --dont-reprocess              if a directory was previously processed, skip descending the subtree
 
 GUFI_tree                path to GUFI tree
@@ -18,7 +18,7 @@ $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table'
 
 
 # Generate treesummary tables in some directories at level 1
-$ gufi_treesummary_all --min-level 1 --subtree-list "path_list" "prefix"
+$ gufi_treesummary_all --min-level 1 --path-list "path_list" "prefix"
 
 # Query treesummary tables
 $ gufi_query -d " " -T "SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;" "prefix"
@@ -59,7 +59,7 @@ $ gufi_treesummary_all --dont-reprocess "prefix"
 $ gufi_treesummary_all "search"
 Cannot open database: search/db.db unable to open database file rc 14
 
-# Multiple paths with --min-level and --subtree-list
-$ gufi_treesummary_all --min-level 1 --subtree-list path_list "search" "search"
+# Multiple paths with --min-level and --path-list
+$ gufi_treesummary_all --min-level 1 --path-list path_list "search" "search"
 Error: Only one root may be provided when a --min-level and -D are both provided
 

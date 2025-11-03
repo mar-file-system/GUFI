@@ -85,12 +85,12 @@ OF SUCH DAMAGE.
  * attach directory paths directly to the root path and
  * run starting at --min-level instead of walking to --min-level first
  */
-int gqw_process_subtree_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
-    FILE *file = fopen(in->subtree_list.data, "r");
+int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
+    FILE *file = fopen(in->path_list.data, "r");
     if (!file) {
         const int err = errno;
         fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
-                in->subtree_list.data, strerror(err), err);
+                in->path_list.data, strerror(err), err);
         return 1;
     }
 
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 
         /* SQL processing/tree walk flags */
         FLAG_PROCESS_SQL,
-        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST,
+        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST,
         FLAG_PATH, FLAG_XATTRS, FLAG_QUERY_XATTRS, FLAG_EXTERNAL_ATTACH,
 
         /* miscellaneous flags */
@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 
     const size_t root_count = argc - idx;
 
-    if ((in.min_level && in.subtree_list.len) &&
+    if ((in.min_level && in.path_list.len) &&
         (root_count > 1)) {
         fprintf(stderr, "Error: When -D is passed in, only one root directory may be specified\n");
         input_fini(&in);
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
         root->work.root_basename_len = root->work.basename_len;
 
         if (doing_partial_walk(&in, root_count)) {
-            gqw_process_subtree_list(&in, root, pool);
+            gqw_process_path_list(&in, root, pool);
         }
         else {
             /* push the path onto the queue (no compression) */

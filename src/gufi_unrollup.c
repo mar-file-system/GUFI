@@ -239,11 +239,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
 static int enqueue_subtree_roots(struct input *in, struct Unrollup *root,
                                  QPTPool_t *ctx, QPTPool_f func) {
-    FILE *file = fopen(in->subtree_list.data, "r");
+    FILE *file = fopen(in->path_list.data, "r");
     if (!file) {
         const int err = errno;
         fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",
-                in->subtree_list.data, strerror(err), err);
+                in->path_list.data, strerror(err), err);
         return 1;
     }
 
@@ -280,7 +280,7 @@ int main(int argc, char *argv[]) {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
         /* tree walk flags */
-        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST,
+        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST,
 
         FLAG_END
     };

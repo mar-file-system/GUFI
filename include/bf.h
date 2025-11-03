@@ -201,9 +201,9 @@ extern "C" {
 #define FLAG_PLUGIN_LONG "plugin"
 #define FLAG_PLUGIN {FLAG_PLUGIN_LONG, required_argument, NULL, FLAG_PLUGIN_SHORT}
 
-#define FLAG_SUBTREE_LIST_SHORT (FLAG_GROUP_MISC + 7)
-#define FLAG_SUBTREE_LIST_LONG "subtree-list"
-#define FLAG_SUBTREE_LIST {FLAG_SUBTREE_LIST_LONG, required_argument, NULL, FLAG_SUBTREE_LIST_SHORT}
+#define FLAG_PATH_LIST_SHORT (FLAG_GROUP_MISC + 7)
+#define FLAG_PATH_LIST_LONG "path-list"
+#define FLAG_PATH_LIST {FLAG_PATH_LIST_LONG, required_argument, NULL, FLAG_PATH_LIST_SHORT}
 
 #define FLAG_FORMAT_SHORT (FLAG_GROUP_MISC + 8)
 #define FLAG_FORMAT_LONG "format"
@@ -493,8 +493,8 @@ struct input {
     /* prefix of swap files */
     refstr_t swap_prefix;
 
-    /* directory paths to process at -y level > 0 */
-    refstr_t subtree_list;
+    /* directory paths to process (normally at -y level > 0, but level == 0 is allowed) */
+    refstr_t path_list;
 
     /*
      * if a directory has already been

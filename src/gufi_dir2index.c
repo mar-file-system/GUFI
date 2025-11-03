@@ -486,7 +486,7 @@ int main(int argc, char *argv[]) {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
         /* tree walk flags */
-        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SUBTREE_LIST,
+        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST,
         FLAG_INDEX_XATTRS, FLAG_SKIP_FILE,
 
         /* miscellaneous flags */
@@ -513,7 +513,7 @@ int main(int argc, char *argv[]) {
     argc--; /* index parent is no longer needed */
     const size_t root_count = argc - idx;
 
-    if ((pa.in.min_level && pa.in.subtree_list.len) &&
+    if ((pa.in.min_level && pa.in.path_list.len) &&
         (root_count > 1)) {
         fprintf(stderr, "Error: When -D is passed in, only one source directory may be specified\n");
         rc = EXIT_FAILURE;
@@ -584,7 +584,7 @@ int main(int argc, char *argv[]) {
         root->root_basename_len = root->basename_len;
 
         if (doing_partial_walk(&pa.in, root_count)) {
-            process_subtree_list(&pa.in, root, pool, process_subtree_root);
+            process_path_list(&pa.in, root, pool, process_subtree_root);
         }
         else {
             struct work *copy = compress_struct(pa.in.compress, root, struct_work_size(root));

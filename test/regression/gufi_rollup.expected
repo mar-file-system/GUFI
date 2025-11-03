@@ -7,7 +7,7 @@ options:
   -n, --threads <threads>           number of threads
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
-      --subtree-list <filename>     File containing paths at single level to index (not including starting path). Must also use --min-level
+      --path-list <filename>        File containing paths at single level to index (not including starting path). Must also use --min-level
       --limit <count>               Highest number of files/links in a directory allowed to be rolled up
       --dry-run                     Dry run
       --dont-reprocess              if a directory was previously processed, skip descending the subtree
@@ -1484,7 +1484,7 @@ Creating GUFI Index search with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      14
 # Partial Rollup up to level 1
-$ gufi_rollup --min-level 1 --subtree-list "path_list" "prefix"
+$ gufi_rollup --min-level 1 --path-list "path_list" "prefix"
 Roots:
     prefix
 
