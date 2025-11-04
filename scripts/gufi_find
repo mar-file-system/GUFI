@@ -491,7 +491,7 @@ def help(parser): # pylint: disable=redefined-builtin
     expr.remove('verbose')
 
     # print these separately
-    gufi_specific = ['num_results', 'largest', 'smallest']
+    gufi_specific = ['num_results', 'largest', 'smallest', 'compress']
     for flag in gufi_specific:
         expr.remove(flag)
     gufi_specific[0] = 'num-results'
@@ -753,6 +753,10 @@ def build_expression_parser():
                        action='store_true',
                        help='largest results')
 
+    parser.add_argument('--compress',
+                        action='store_true',
+                        help='try to reduce memory usage by compressing with zlib (if available)')
+
     gufi_common.add_common_flags(parser)
 
     return parser
@@ -838,6 +842,9 @@ def run(argv, config_path):
         query_cmd += ['--suppress-newline']
     elif args.fprint is not None:
         pass
+
+    if args.compress is True:
+        query_cmd += ['--compress']
 
     # constants only used here
     INDEXROOT_LEN = len(config.indexroot) + 2                                        # pylint: disable=invalid-name
