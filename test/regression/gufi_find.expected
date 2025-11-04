@@ -437,12 +437,37 @@ prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
+$ gufi_find -print
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+$ gufi_find -print0 | hexlify.py | grep -o -e " 00[0-9a-f][0-9a-f] " -e " [0-9a-f][0-9a-f]00 " -e " 00" | wc -l
+20
+
 $ gufi_find -printf ''
 
-$ gufi_find -printf '\141 \142 \143' | head -n 1
-abc
+$ gufi_find -printf '\141 \142 \143\n' | head -n 1
+a b c
 
-$ gufi_find -printf '[\a][ \b][\f][\n][\r][\t][\v][\\\\]' -maxdepth 2 -type d
+$ gufi_find -printf '[\a][ \b][\f][\n][\r][\t][\v][\\\\]\n' -maxdepth 2 -type d
 [][ ][][
 ][][	][][\\]
 [][ ][][
@@ -454,7 +479,7 @@ $ gufi_find -printf '[\a][ \b][\f][\n][\r][\t][\v][\\\\]' -maxdepth 2 -type d
 [][ ][][
 ][][	][][\\]
 
-$ gufi_find -printf '%-22f %+22f'
+$ gufi_find -printf '%-22f %+22f\n'
 .hidden                               .hidden
 1KB                                       1KB
 1MB                                       1MB
@@ -498,7 +523,7 @@ prefix/repeat_name
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
-$ gufi_find -printf '%z %z \z' -maxdepth 2 -type d
+$ gufi_find -printf '%z %z \z\n' -maxdepth 2 -type d
 %z %z \z
 %z %z \z
 %z %z \z
@@ -549,7 +574,7 @@ GUFI query is
     --delim ' ' \
     -I 'CREATE TABLE out (name TEXT, size INT64, type TEXT)' \
     -S 'INSERT INTO out SELECT substr(rpath(sname, sroll), 8), size, type FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
-    -E 'INSERT INTO out SELECT substr(rpath(sname, sroll) || '"'"'/'"'"' || name, 8), size, type FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -E 'INSERT INTO out SELECT substr(rpath(sname, sroll, name), 8), size, type FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
     -J 'INSERT INTO aggregate SELECT name, size, type FROM out ORDER BY size DESC, name ASC' \
     -K 'CREATE TABLE aggregate (name TEXT, size INT64, type TEXT)' \
     -G 'SELECT name FROM aggregate ORDER BY size DESC, name ASC' \
@@ -674,7 +699,7 @@ prefix/repeat_name
 $ gufi_query -a 1 -w -E "UPDATE entries SET inode = 0, uid = 0, gid = 0;" "search"
 
 
-$ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y" -type f
+$ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y\n" -type f
 % 0 0 0 2 0 0 0 - old_file 0 prefix/old_file 0 664 -rw-rw-r-- 1 prefix/old_file old_file 0 0 0 f
 % 1 0 1 3 0 0 0 - executable 0 prefix/directory/executable 0 777 -rwxrwxrwx 1 prefix/directory/executable directory/executable 1 1 0 f
 % 2 0 2 3 0 0 0 - readonly 0 prefix/directory/readonly 0 444 -r--r--r-- 1 prefix/directory/readonly directory/readonly 2 2 0 f

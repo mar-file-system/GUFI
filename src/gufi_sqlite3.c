@@ -127,6 +127,7 @@ int main(int argc, char *argv[]) {
     PrintArgs_t pa = {
         .output_buffer = &ob,
         .delim = in.delim,
+        .newline = '\n',
         .mutex = NULL,
         .outfile = stdout,
         .rows = 0,

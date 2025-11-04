@@ -320,6 +320,7 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
     struct PrintArgs print = {
         .output_buffer = &args->pa->obufs.buffers[args->id],
         .delim = '\0', /* not used */
+        .newline = '\n',
         .mutex = args->pa->obufs.mutex,
         .outfile = args->pa->outfiles[args->id],
         .types = NULL,

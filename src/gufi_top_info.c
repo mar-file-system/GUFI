@@ -294,6 +294,7 @@ static int show(sqlite3 *db, int argc, char **argv) {
         struct PrintArgs print = {
             .output_buffer = NULL,
             .delim = ',', /* dump csv */
+            .newline = '\n',
             .mutex = NULL,
             .outfile = stdout,
             .types = NULL,
@@ -334,6 +335,7 @@ static int dump(sqlite3 *db, int argc, char **argv) {
     struct PrintArgs print = {
         .output_buffer = NULL,
         .delim = ',', /* dump csv */
+        .newline = '\n',
         .mutex = NULL,
         .outfile = stdout,
         .types = NULL,

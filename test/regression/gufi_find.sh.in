@@ -140,22 +140,26 @@ run_sort "${GUFI_FIND} -type f"
 run_sort "${GUFI_FIND} -type l"
 run_sort "${GUFI_FIND} -writable"
 
+run_sort "${GUFI_FIND} -print"
+
+run_no_sort "${GUFI_FIND} -print0 | ${HEXLIFY} | @GREP@ -o -e \" 00[0-9a-f][0-9a-f] \" -e \" [0-9a-f][0-9a-f]00 \" -e \" 00\" | wc -l"
+
 run_no_sort "${GUFI_FIND} -printf ''"
 
 # numerical escape characters
-run_no_sort "${GUFI_FIND} -printf '\141 \142 \143' | head -n 1"
+run_no_sort "${GUFI_FIND} -printf '\141 \142 \143\n' | head -n 1"
 
 # print escape characters
-run_no_sort "${GUFI_FIND} -printf '[\\a][ \\b][\f][\\n][\\r][\\t][\v][\\\\\\\\]' -maxdepth 2 -type d"
+run_no_sort "${GUFI_FIND} -printf '[\\a][ \\b][\f][\\n][\\r][\\t][\v][\\\\\\\\]\n' -maxdepth 2 -type d"
 
 # spacing
-run_sort "${GUFI_FIND} -printf '%-22f %+22f'"
+run_sort "${GUFI_FIND} -printf '%-22f %+22f\n'"
 
 # print results to file
 run_sort "${GUFI_FIND} -fprint ${FPRINT} && cat ${FPRINT}"
 
 # bad escapes and directives
-run_no_sort "${GUFI_FIND} -printf '%z %z \\z' -maxdepth 2 -type d"
+run_no_sort "${GUFI_FIND} -printf '%z %z \\z\n' -maxdepth 2 -type d"
 
 # GUFI specific flags
 run_no_sort "${GUFI_FIND} --num-results 5"
@@ -181,7 +185,7 @@ run_no_sort "${GUFI_QUERY} -a 1 -w -E \"UPDATE entries SET inode = 0, uid = 0, g
 
 # %H and %l still need fixing
 # shellcheck disable=SC2016
-run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y\" -type f" | @AWK@ '{ if ((NR > 1) && (NF > 8)) { $3=0; $6=0; $7=0; $8=0; } print }' | sort -n -k 2; echo
+run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y\n\" -type f" | @AWK@ '{ if ((NR > 1) && (NF > 8)) { $3=0; $6=0; $7=0; $8=0; } print }' | sort -n -k 2; echo
 
 # path must come before expressions
 run_no_sort "${GUFI_FIND} -empty path_after_expression 2>&1 | @GREP@ \"RuntimeError:\""

@@ -244,6 +244,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct PrintArgs print = {
         .output_buffer = &pa->obufs.buffers[id],
         .delim = '/',
+        .newline = '\n',
         .mutex = pa->obufs.mutex,
         .outfile = stdout,
         .rows = 0,

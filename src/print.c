@@ -156,7 +156,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         }
 
         if (!types && !print->suppress_newline) {
-            fwrite("\n", sizeof(char), 1, print->outfile);
+            fwrite(&print->newline, sizeof(char), 1, print->outfile);
         }
 
         ob->count++;
@@ -218,7 +218,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
 
         if (!types && !print->suppress_newline) {
             /* replace final delimiter with newline */
-            buf[filled] = '\n';
+            buf[filled] = print->newline;
             filled++;
        }
 
@@ -254,7 +254,9 @@ int print_uncached(void *args, int count, char **data, char **columns) {
     if (data[count]) {
         fprintf(print->outfile, "%s", data[count]);
     }
-    fprintf(print->outfile, "\n");
+    if (!print->suppress_newline) {
+        fprintf(print->outfile, "%c", print->newline);
+    }
 
     if (print->mutex) {
         pthread_mutex_unlock(print->mutex);

@@ -79,11 +79,12 @@ void querydb(struct work *work,
     PrintArgs_t args = {
         .output_buffer = &ta->output_buffer,
         .delim = pa->in->delim,
+        .newline = pa->in->newline,
         .mutex = pa->stdout_mutex,
         .outfile = ta->outfile,
         .rows = 0,
         .types = types,
-        .suppress_newline = 0
+        .suppress_newline = pa->in->suppress_newline,
     };
 
     char *err = NULL;

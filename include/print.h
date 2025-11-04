@@ -79,6 +79,7 @@ extern "C" {
 typedef struct PrintArgs {
     struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */
     char delim;
+    char newline;                         /* line terminator (usually '\n') */
     pthread_mutex_t *mutex;               /* mutex for printing to stdout */
     FILE *outfile;
     size_t rows;                          /* number of rows returned by the query */

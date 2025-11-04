@@ -121,6 +121,7 @@ void test_common(PoolArgs *pa) {
         PrintArgs print;
         print.output_buffer = ob;
         print.delim = ' ';
+        print.newline = '\n';
         print.mutex = nullptr;
         print.outfile = file;
         print.rows = 0;

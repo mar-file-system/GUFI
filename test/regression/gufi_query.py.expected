@@ -30,6 +30,8 @@ options:
       --keep-matime                 Keep mtime and atime same on the database files
       --skip-file <filename>        file containing directory names to skip
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
+      --newline <c>                 character used to separate lines (default: '\n') [use 0 for NULL character]
+      --suppress-newline            do not print the line separator
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
   -O, --output-db <out_DB>          output DB
       --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length

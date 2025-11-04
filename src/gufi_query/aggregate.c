@@ -161,6 +161,7 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
         PrintArgs_t pa = {
             .output_buffer = &aggregate->ob,
             .delim = in->delim,
+            .newline = '\n',
             .mutex = NULL,
             .outfile = aggregate->outfile,
             .rows = 0,

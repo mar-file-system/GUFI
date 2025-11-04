@@ -87,6 +87,7 @@ apk add \
     findutils \
     gettext-envsubst \
     git \
+    grep \
     make \
     patch \
     pkgconf \

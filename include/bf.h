@@ -221,6 +221,14 @@ extern "C" {
 #define FLAG_DONT_REPROCESS_LONG "dont-reprocess"
 #define FLAG_DONT_REPROCESS {FLAG_DONT_REPROCESS_LONG, no_argument, NULL, FLAG_DONT_REPROCESS_SHORT}
 
+#define FLAG_NEWLINE_SHORT (FLAG_GROUP_MISC + 12)
+#define FLAG_NEWLINE_LONG "newline"
+#define FLAG_NEWLINE {FLAG_NEWLINE_LONG, required_argument, NULL, FLAG_NEWLINE_SHORT}
+
+#define FLAG_SUPPRESS_NEWLINE_SHORT (FLAG_GROUP_MISC + 13)
+#define FLAG_SUPPRESS_NEWLINE_LONG "suppress-newline"
+#define FLAG_SUPPRESS_NEWLINE {FLAG_SUPPRESS_NEWLINE_LONG, no_argument, NULL, FLAG_SUPPRESS_NEWLINE_SHORT}
+
 /* memory utilization flags */
 
 #define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
@@ -422,6 +430,8 @@ struct input {
     int  helped;                   /* support parsing of per-app sub-options */
     int  printed_version;
     char delim;
+    char newline;
+    int suppress_newline;
     int  buildindex;
     size_t maxthreads;
     AFlag_t process_sql;           /* what to do if an SQL statement returns/doesn't return 1 row */

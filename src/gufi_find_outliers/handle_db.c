@@ -190,6 +190,7 @@ void write_results(struct PoolArgs *pa, size_t *rows) {
         PrintArgs_t print = {
             .delim = pa->in.delim,
             .outfile = stdout,
+            .newline = '\n',
             .rows = 0,
         };
 

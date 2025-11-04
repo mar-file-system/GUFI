@@ -91,6 +91,7 @@ __declspec(dllimport)
 extern int optind, opterr, optopt;
 
 const char fielddelim = '\x1E';     /* ASCII Record Separator */
+const char linesep = '\n';
 
 static const char DEFAULT_SWAP_PREFIX[] = "";
 
@@ -107,6 +108,7 @@ struct input *input_init(struct input *in) {
         memset(in, 0, sizeof(*in));
         in->maxthreads              = 1;                      // don't default to zero threads
         in->delim                   = fielddelim;
+        in->newline                 = linesep;
         in->process_sql             = RUN_ON_ROW;
         in->suspecttime             = time(NULL);
         in->max_level               = -1;                     // default to all the way down
@@ -237,6 +239,8 @@ void print_help(const char* prog_name,
             case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
             case FLAG_ROLLUP_LIMIT_SHORT:            printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
             case FLAG_DONT_REPROCESS_SHORT:          printf("      --dont-reprocess              if a directory was previously processed, skip descending the subtree"); break;
+            case FLAG_NEWLINE_SHORT:                 printf("      --newline <c>                 character used to separate lines (default: '\\n') [use 0 for NULL character]"); break;
+            case FLAG_SUPPRESS_NEWLINE_SHORT:        printf("      --suppress-newline            do not print the line separator"); break;
 
             /* memory usage flags */
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:      printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
@@ -310,6 +314,8 @@ void show_input(struct input* in, int retval) {
     printf("in.terse                    = %d\n",            in->terse);
     printf("in.rollup_entries_limit     = %zu\n",           in->rollup_entries_limit);
     printf("in.dont_reprocess           = %d\n",            in->dont_reprocess);
+    printf("in.newline                  = '%c'\n",          in->newline);
+    printf("in.suppress_newline         = %d\n",            in->suppress_newline);
 
     /* memory usage flags */
 
@@ -603,6 +609,19 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_DONT_REPROCESS_SHORT:
                 in->dont_reprocess = 1;
+                break;
+
+            case FLAG_NEWLINE_SHORT:
+                if (optarg[0] == '0') {
+                    in->newline = '\0';
+                }
+                else {
+                    in->newline = optarg[0];
+                }
+                break;
+
+            case FLAG_SUPPRESS_NEWLINE_SHORT:
+                in->suppress_newline = 1;
                 break;
 
             /* memory usage flags */

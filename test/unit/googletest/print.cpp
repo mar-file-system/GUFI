@@ -101,6 +101,7 @@ static void print_parallel_mutex_actual(pthread_mutex_t *mutex) {
     PrintArgs pa;
     pa.output_buffer = &ob;
     pa.delim = SEP[0];
+    pa.newline = '\n';
     pa.mutex = mutex;
     pa.outfile = file;
     pa.rows = 0;
@@ -231,6 +232,7 @@ static void print_parallel_tlv_actual(const bool use_len) {
     PrintArgs pa;
     pa.output_buffer = &ob;
     pa.delim = '|';                 // ignored
+    pa.newline = '\n';
     pa.mutex = nullptr;
     pa.outfile = file;
     pa.rows = 0;
@@ -289,6 +291,7 @@ static void print_uncached_test(const char **data, const std::size_t count,
     PrintArgs pa;
     pa.output_buffer = nullptr;
     pa.delim = '|';
+    pa.newline = '\n';
     pa.mutex = lock?&mutex:nullptr;
     pa.outfile = file;
     pa.rows = 0;

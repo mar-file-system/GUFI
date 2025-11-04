@@ -214,10 +214,10 @@ def build_where(args, table, root_uid=0, root_gid=0):
     # matches on whole path
     if args.iregex is not None:
         if table in gufi_common.SUMMARY_NAMES:
-            where += [' OR '.join(['((rpath(sname, sroll)) REGEXP \'(?i){0}\')'.format(iregex)
+            where += [' OR '.join(['(rpath(sname, sroll) REGEXP \'(?i){0}\')'.format(iregex)
                                    for iregex in args.iregex])]
         elif table in gufi_common.ENTRIES_NAMES:
-            where += [' OR '.join(['((rpath(sname, sroll) || \'/\' || name) REGEXP \'(?i){0}\')'.format(iregex)
+            where += [' OR '.join(['(rpath(sname, sroll, name) REGEXP \'(?i){0}\')'.format(iregex)
                                    for iregex in args.iregex])]
 
     # if args.iwholename is not None:
@@ -352,7 +352,7 @@ def parse_escape(fmt, i):
         ret = '\\'
     elif ret.isdigit():
         ret = chr(int(fmt[i:i + 3], 8))
-        i += 3
+        i += 2 # + 1 when returning
     else:
         ret = '\\{0}'.format(ret)
 
@@ -728,6 +728,12 @@ def build_expression_parser():
     query.add_argument('-ls',
                        action='store_true',
                        help='list current file ls -dils format')
+    query.add_argument('-print',
+                       action='store_true',
+                       help='print the full name on the standard output, followed by a newline, similar to GNU find')
+    query.add_argument('-print0',
+                       action='store_true',
+                       help='print the full name on the standard output, followed by a null character, similar to GNU find')
     query.add_argument('-printf',
                        metavar='format',
                        type=str,
@@ -824,10 +830,19 @@ def run(argv, config_path):
         '--delim', ' ',
     ]
 
+    if args.print is True:
+        query_cmd += ['--newline', '\n']
+    elif args.print0 is True:
+        query_cmd += ['--newline', '0']
+    elif args.printf is not None:
+        query_cmd += ['--suppress-newline']
+    elif args.fprint is not None:
+        pass
+
     # constants only used here
-    INDEXROOT_LEN = len(config.indexroot) + 2                                                   # pylint: disable=invalid-name
-    VRSUMMARY_NAME  = 'substr(rpath(sname, sroll), {0})'.format(INDEXROOT_LEN)                  # pylint: disable=invalid-name
-    VRPENTRIES_NAME = 'substr(rpath(sname, sroll) || \'/\' || name, {0})'.format(INDEXROOT_LEN) # pylint: disable=invalid-name
+    INDEXROOT_LEN = len(config.indexroot) + 2                                        # pylint: disable=invalid-name
+    VRSUMMARY_NAME  = 'substr(rpath(sname, sroll), {0})'.format(INDEXROOT_LEN)       # pylint: disable=invalid-name
+    VRPENTRIES_NAME = 'substr(rpath(sname, sroll, name), {0})'.format(INDEXROOT_LEN) # pylint: disable=invalid-name
 
     # pylint: disable=invalid-name
     if need_aggregation(args):
