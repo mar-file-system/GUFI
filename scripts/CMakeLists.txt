@@ -74,18 +74,21 @@ foreach(TOOL ${TOOLS})
   set(USER_TOOL "gufi_${TOOL}")
   configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${SERVER_BIN}" COMPONENT Server)
+  # always install the actual tools
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}"
+    DESTINATION "${SERVER_BIN}"
+    COMPONENT Server)
 
   if (CLIENT)
     # client files WILL NOT overwrite server files in build directory
     set(CLIENT_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_${TOOL}")
     configure_file("gufi_client" "${CLIENT_TOOL}" @ONLY)
 
-    # client files WILL NOT overwrite server files when installing
     install(PROGRAMS "${CLIENT_TOOL}"
       DESTINATION "${CLIENT_BIN}"
-      COMPONENT Client # this is always needed for make package
-      RENAME "${USER_TOOL}")
+      COMPONENT Client  # this is always needed for make package
+      RENAME "${USER_TOOL}"
+      EXCLUDE_FROM_ALL) # do not overwrite the tool with the client script when running 'make install'
   endif()
 endforeach()
 
@@ -93,43 +96,57 @@ endforeach()
 set(TOOL "query.py")
 set(USER_TOOL "gufi_${TOOL}")
 configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${SERVER_BIN}" COMPONENT Server)
+
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}"
+  DESTINATION "${SERVER_BIN}"
+  COMPONENT Server)
 
 if (CLIENT)
   set(CLIENT_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_query")
   configure_file("gufi_client" "${CLIENT_TOOL}" @ONLY)
+
   install(PROGRAMS "${CLIENT_TOOL}"
     DESTINATION "${CLIENT_BIN}"
-    COMPONENT Client # this is always needed for make package
-    RENAME "gufi_query")
+    COMPONENT Client    # this is always needed for make package
+    RENAME "gufi_query" # this is different from above
+    EXCLUDE_FROM_ALL)   # do not overwrite the gufi_query binary if running 'make install'
 endif()
 
 # gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
 configure_file(gufi_jail gufi_jail @ONLY)
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail" DESTINATION "${SERVER_BIN}" COMPONENT Server)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail"
+  DESTINATION "${SERVER_BIN}"
+  COMPONENT Server)
 
 # not prefixed with gufi_ and no client tool
 configure_file(querydbs querydbs @ONLY)
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs" DESTINATION "${SERVER_BIN}" COMPONENT Server)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs"
+  DESTINATION "${SERVER_BIN}"
+  COMPONENT Server)
 
-# python libraries installed into bin for convenience (server and client)
+# python libraries installed into lib (server and client)
 set(LIBRARIES
-  gufi_config.py                # also executable
-  gufi_common.py                # library only
+  gufi_common.py # library only
+  gufi_config.py # also executable
 )
 
 foreach(LIBRARY ${LIBRARIES})
   set(CONFIG_FILE "${SERVER_CONFIG}")
   configure_file("${LIBRARY}" "${LIBRARY}" @ONLY)
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}" DESTINATION "${SERVER_LIB}" COMPONENT Server)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}"
+    DESTINATION "${SERVER_LIB}"
+    COMPONENT Server)
 
-  # when running make install, client files will not overwrite server files
   if (CLIENT)
+    # if SERVER_CONFIG and CLIENT_CONFIG are not the same, need to copy correct version into the RPM
     set(CONFIG_FILE "${CLIENT_CONFIG}")
     configure_file("${LIBRARY}" "client_${LIBRARY}" @ONLY)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/client_${LIBRARY}" DESTINATION "${CLIENT_LIB}" COMPONENT Client
-      RENAME "${LIBRARY}")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/client_${LIBRARY}"
+      DESTINATION "${CLIENT_LIB}"
+      COMPONENT Client
+      RENAME "${LIBRARY}"
+      EXCLUDE_FROM_ALL)  # do not install libraries a second time if running 'make install'
   endif()
 endforeach()
 
