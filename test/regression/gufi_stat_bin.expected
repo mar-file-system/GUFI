@@ -1,4 +1,4 @@
-$ gufi_stat_bin -h
+$ gufi_stat_bin --help
 usage: gufi_stat_bin [options] path ...
 options:
   -h, --help                        help

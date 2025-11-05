@@ -1,5 +1,4 @@
-# gufi_treesummary help
-$ gufi_treesummary
+$ gufi_treesummary --help
 usage: gufi_treesummary [options] GUFI_tree
 options:
   -h, --help                        help

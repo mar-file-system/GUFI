@@ -92,7 +92,6 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-echo "# ${VERIFYTRACEINTREE} help" | replace
 run_no_sort "${VERIFYTRACEINTREE}"
 
 echo "# generate the tree"

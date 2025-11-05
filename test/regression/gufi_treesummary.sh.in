@@ -84,8 +84,7 @@ query() {
 }
 
 (
-echo "# ${GUFI_TREESUMMARY} help" | replace
-run_no_sort "${GUFI_TREESUMMARY}"
+run_no_sort "${GUFI_TREESUMMARY} --help"
 
 echo "# Start with no treesummary tables"
 query

@@ -1,4 +1,4 @@
-$ gufi_find_outliers -h
+$ gufi_find_outliers --help
 usage: gufi_find_outliers [options] input_dir data ...
 options:
   -h, --help                        help

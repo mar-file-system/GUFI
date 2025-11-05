@@ -1,4 +1,4 @@
-$ parallel_rmr -h
+$ parallel_rmr --help
 usage: parallel_rmr [options] directory ...
 options:
   -h, --help                        help

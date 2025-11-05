@@ -93,7 +93,7 @@ cleanup
 "${GENERATETREE}" "${SRCDIR}"
 
 (
-run_no_sort "${PARALLEL_FIND} -h"
+run_no_sort "${PARALLEL_FIND} --help"
 
 run_no_sort "${PARALLEL_FIND}"
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}\""

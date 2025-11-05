@@ -90,7 +90,7 @@ then
 fi
 
 (
-run_no_sort "${PARALLEL_CPR} -h"
+run_no_sort "${PARALLEL_CPR} --help"
 
 "${GENERATETREE}" "${SRCDIR}"
 

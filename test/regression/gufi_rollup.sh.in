@@ -88,8 +88,7 @@ cleanup
 ) > "${PATH_LIST}"
 
 (
-echo "# ${GUFI_ROLLUP} help" | replace
-run_no_sort "${GUFI_ROLLUP}"
+run_no_sort "${GUFI_ROLLUP} --help"
 
 do_tests() {
     run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${SEARCH}\" | wc -l | @AWK@ '{ print \$1 }'"

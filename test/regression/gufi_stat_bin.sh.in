@@ -67,7 +67,7 @@ set -e
 OUTPUT="gufi_stat_bin.out"
 
 (
-run_no_sort "${GUFI_STAT_BIN} -h"
+run_no_sort "${GUFI_STAT_BIN} --help"
 
 # entries in the index with a fixed size
 fixed_size=(

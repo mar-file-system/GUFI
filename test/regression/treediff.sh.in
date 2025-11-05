@@ -67,7 +67,7 @@ set -e
 OUTPUT="treediff.out"
 
 (
-run_no_sort "${TREEDIFF} -h"
+run_no_sort "${TREEDIFF} --help"
 
 echo "# Compare against the same tree"
 run_sort "${TREEDIFF} \"${SEARCH}\" \"${SEARCH}\""

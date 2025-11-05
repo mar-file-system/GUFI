@@ -92,8 +92,7 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-echo "# ${GUFI_TRACE2INDEX} help" | replace
-run_no_sort "${GUFI_TRACE2INDEX}"
+run_no_sort "${GUFI_TRACE2INDEX} --help"
 
 echo "# generate the tree"
 run_no_sort "${GENERATETREE} ${SRCDIR}"

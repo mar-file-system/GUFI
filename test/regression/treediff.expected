@@ -1,4 +1,4 @@
-$ treediff -h
+$ treediff --help
 usage: treediff [options] lhs rhs
 options:
   -h, --help                        help

@@ -1,5 +1,4 @@
-# gufi_query.py help
-$ gufi_query.py -h
+$ gufi_query.py --help
 usage: gufi_query [options] GUFI_tree ...
 options:
   -h, --help                        help

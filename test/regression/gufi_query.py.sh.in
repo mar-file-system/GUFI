@@ -67,8 +67,7 @@ set -e
 OUTPUT="gufi_query.py.out"
 
 (
-echo "# ${GUFI_QUERY_PY} help" | replace
-run_no_sort "${GUFI_QUERY_PY} -h"
+run_no_sort "${GUFI_QUERY_PY} --help"
 
 echo "# Walk without returning results"
 run_sort "${GUFI_QUERY_PY}"

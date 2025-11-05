@@ -1,5 +1,4 @@
-# gufi_dir2trace help
-$ gufi_dir2trace
+$ gufi_dir2trace --help
 usage: gufi_dir2trace [options] input_dir... output_prefix
 options:
   -h, --help                        help

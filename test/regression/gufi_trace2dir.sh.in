@@ -82,8 +82,7 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-echo "# ${GUFI_TRACE2DIR} help" | replace
-run_no_sort "${GUFI_TRACE2DIR}"
+run_no_sort "${GUFI_TRACE2DIR} --help"
 
 run_no_sort "${GUFI_DIR2TRACE} -n ${THREADS} -d \"${DELIM}\" -x \"${SRCDIR}\" \"${TRACE}\""
 

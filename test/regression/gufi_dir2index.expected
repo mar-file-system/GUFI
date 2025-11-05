@@ -1,5 +1,4 @@
-# gufi_dir2index help
-$ gufi_dir2index
+$ gufi_dir2index --help
 usage: gufi_dir2index [options] input_dir... output_dir
 options:
   -h, --help                        help

@@ -72,8 +72,7 @@ DEL=2
 ROWID=10
 
 (
-echo "# ${GUFI_TOP_INFO} help" | replace
-run_no_sort "${GUFI_TOP_INFO}"
+run_no_sort "${GUFI_TOP_INFO} --help"
 
 echo "# Add a row"
 run_no_sort "${GUFI_TOP_INFO} \"${SEARCH}\" add name test1 start 1 end 1 threads ${THREADS} system regression"

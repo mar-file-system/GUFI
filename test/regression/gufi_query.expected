@@ -1,5 +1,4 @@
-# gufi_query help
-$ gufi_query
+$ gufi_query --help
 usage: gufi_query [options] GUFI_tree ...
 options:
   -h, --help                        help

@@ -84,7 +84,6 @@ cleanup
 
 OUTPUT="querydbs.out"
 
-echo "# ${QUERYDBS} help" | replace
 run_no_sort "${QUERYDBS} --help"
 
 (

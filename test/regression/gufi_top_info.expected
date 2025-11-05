@@ -1,5 +1,4 @@
-# gufi_top_info help
-$ gufi_top_info
+$ gufi_top_info --help
 usage: gufi_top_info [options] GUFI_root op [op args]
 options:
   -h, --help                        help

@@ -1,5 +1,4 @@
-# gufi_sqlite3 help
-$ gufi_sqlite3 -h
+$ gufi_sqlite3 --help
 usage: gufi_sqlite3 [options] [db [SQL]...]
 options:
   -h, --help                        help

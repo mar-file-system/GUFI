@@ -82,8 +82,7 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-echo "# ${GUFI_INDEX2DIR} help" | replace
-run_no_sort "${GUFI_INDEX2DIR}"
+run_no_sort "${GUFI_INDEX2DIR} --help"
 
 run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} -x \"${INDEXROOT}\" \"${DST}\""
 

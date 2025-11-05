@@ -1,5 +1,4 @@
-# gufi_trace2dir help
-$ gufi_trace2dir
+$ gufi_trace2dir --help
 usage: gufi_trace2dir [options] trace_file... output_dir
 options:
   -h, --help                        help

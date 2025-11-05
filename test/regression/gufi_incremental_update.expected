@@ -21,6 +21,29 @@ parking_lot       directory to place update db.dbs and moved directories
 GUFI_tree and tree may be the same path
 
 
+$ gufi_incremental_update --help
+usage: gufi_incremental_update [options] GUFI_tree tree snapshotdb parking_lot
+options:
+  -h, --help                        help
+  -H, --debug                       show assigned input values (debugging)
+  -v, --version                     version
+  -n, --threads <threads>           number of threads
+      --suspect-dir                 default to all directories suspect
+      --suspect-fl                  default to all files/links suspect
+      --suspect-file <path>         suspect input file
+      --suspect-method <0|1|2|3>    suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl
+      --suspect-time <s>            time in seconds since epoch for suspect comparision
+  -x, --index-xattrs                index xattrs
+      --compress                    compress work items
+
+GUFI_tree         GUFI tree
+tree              source tree
+snapshotdb        database file containing records of all directories
+parking_lot       directory to place update db.dbs and moved directories
+
+GUFI_tree and tree may be the same path
+
+
 #####################################
 # suspect mode 0
 # create source tree

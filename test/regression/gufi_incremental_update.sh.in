@@ -317,6 +317,8 @@ replace_inodes() {
 }
 
 (
+    run_no_sort "${GUFI_INCREMENTAL_UPDATE} --help"
+
     echo "#####################################"
     echo "# suspect mode 0"
     setup_index_and_update_simple_tree "${SEARCH}"

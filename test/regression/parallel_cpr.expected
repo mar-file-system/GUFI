@@ -1,4 +1,4 @@
-$ parallel_cpr -h
+$ parallel_cpr --help
 usage: parallel_cpr [options] src... dst
 options:
   -h, --help                        help

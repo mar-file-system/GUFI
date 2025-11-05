@@ -82,8 +82,7 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-echo "# ${GUFI_SQLITE3} help" | replace
-run_no_sort "${GUFI_SQLITE3} -h"
+run_no_sort "${GUFI_SQLITE3} --help"
 
 echo "# new db file + argv"
 run_no_sort "${GUFI_SQLITE3} \"${DBNAME}\"" \

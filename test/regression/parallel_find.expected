@@ -1,4 +1,4 @@
-$ parallel_find -h
+$ parallel_find --help
 usage: parallel_find [options] input_dir...
 options:
   -h, --help                        help

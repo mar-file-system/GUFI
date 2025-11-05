@@ -1,5 +1,4 @@
-# gufi_unrollup help
-$ gufi_unrollup
+$ gufi_unrollup --help
 usage: gufi_unrollup [options] GUFI_tree ...
 options:
   -h, --help                        help

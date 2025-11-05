@@ -85,8 +85,7 @@ cleanup
 (
 touch "${INDEXROOT}/file" # ignored when walking index
 
-echo "# ${GUFI_QUERY} help" | replace
-run_no_sort "${GUFI_QUERY}"
+run_no_sort "${GUFI_QUERY} --help"
 
 echo "# Walk without returning results"
 run_sort "${GUFI_QUERY} \"${INDEXROOT}\""

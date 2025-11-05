@@ -86,8 +86,7 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-echo "# ${GUFI_DIR2TRACE} help" | replace
-run_no_sort "${GUFI_DIR2TRACE}"
+run_no_sort "${GUFI_DIR2TRACE} --help"
 
 # generate the tree
 @CMAKE_CURRENT_BINARY_DIR@/generatetree.sh "${SRCDIR}"

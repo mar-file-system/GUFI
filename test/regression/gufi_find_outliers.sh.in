@@ -318,7 +318,7 @@ summary_outlier() {
 }
 
 (
-run_no_sort "${GUFI_FIND_OUTLIERS} -h"
+run_no_sort "${GUFI_FIND_OUTLIERS} --help"
 
 run ALL      "no subdirectories"                       empty_tree
 run ALL      "one subdirectory"                        not_enough_subdirs
