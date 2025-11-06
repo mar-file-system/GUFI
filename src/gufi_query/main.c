@@ -130,16 +130,18 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
         subtree_root->sqlite3_name_len = sqlite_uri_path(subtree_root->sqlite3_name, max_sqlite3_name_size,
                                                          subtree_root->work.name, &rp_len);
 
-        /* keep original user input */
-        subtree_root->work.orig_root = root->work.orig_root;
-
-        /* parent of the input path, not the subtree root */
-        subtree_root->work.root_parent = root->work.root_parent;
-
         /* remove trailing slashes (+ 1 to keep at least 1 character) */
         subtree_root->work.basename_len = subtree_root->work.name_len - (trailing_match_index(subtree_root->work.name + 1, subtree_root->work.name_len - 1, "/", 1) + 1);
 
-        subtree_root->work.root_basename_len = root->work.basename_len;
+        if (in->min_level) {
+            /* keep original user input */
+            subtree_root->work.orig_root = root->work.orig_root;
+
+            /* parent of the input path, not the subtree root */
+            subtree_root->work.root_parent = root->work.root_parent;
+
+            subtree_root->work.root_basename_len = root->work.basename_len;
+        }
 
         /* go directly to --min-level */
         subtree_root->work.level = in->min_level;
@@ -264,7 +266,7 @@ int main(int argc, char *argv[])
 
     const size_t root_count = argc - idx;
 
-    if (bad_partial_walk(&in, root_count)){
+    if (bad_partial_walk(&in, root_count)) {
         input_fini(&in);
         return EXIT_FAILURE;
     }
@@ -295,17 +297,31 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    /* enqueue input paths */
-    for(int i = idx; i < argc; i++) {
-        gqw_t *work = NULL;
-        if (validate_source(argv[i], &work) != 0) {
-            continue;
+    if (doing_partial_walk(&in, root_count)) {
+        if (root_count == 0) {
+            gqw_process_path_list(&in, NULL, pool);
         }
+        else if (root_count == 1) {
+            gqw_t *work = NULL;
+            if (validate_source(argv[idx], &work) == 0) {
+                gqw_process_path_list(&in, work, pool);
+            }
+            else {
+                QPTPool_destroy(pool);
+                aggregate_fin(&aggregate, &in);
+                PoolArgs_fin(&pa, in.maxthreads);
+                return EXIT_FAILURE;
+            }
+        }
+    }
+    else {
+        /* enqueue input paths */
+        for(int i = idx; i < argc; i++) {
+            gqw_t *work = NULL;
+            if (validate_source(argv[i], &work) != 0) {
+                continue;
+            }
 
-        if (doing_partial_walk(&in, root_count)) {
-            gqw_process_path_list(&in, work, pool);
-        }
-        else {
             /* push the path onto the queue (no compression) */
             QPTPool_enqueue(pool, i % in.maxthreads, processdir, work);
         }

@@ -128,7 +128,7 @@ run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --min-level ${DISTRIBUTED_LEVEL} 
 
 partial_indexing_setup
 run_no_sort "cat \"${DISTRIBUTED_0}\""
-echo "# limit tree traversal to some directories under at level 1 (only prefix/directory and prefix/empty_directory)"
+echo "# limit tree traversal to some directories under level 1 (only prefix/directory and prefix/empty_directory)"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --min-level ${DISTRIBUTED_LEVEL} --path-list \"${DISTRIBUTED_0}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
 
 echo "# Output TLV columns (no aggregation)"

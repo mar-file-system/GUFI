@@ -367,21 +367,112 @@ prefix/empty_directory
 prefix/leaf_directory
 prefix/unusual#? directory ,
 
+# Get gufi_vt from remote
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;", verbose=0, remote_cmd="ssh", remote_arg="remote");SELECT fullpath FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/file_symlink
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,/unusual, name?#
+
+# Get gufi_vt from remote with min_level = 1
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, level() AS level FROM vrpentries;", VERBOSE=1, min_level=1, remote_cmd="ssh", remote_arg="remote");SELECT level, fullpath FROM gufi ORDER BY level ASC, fullpath ASC;"
+) | sqlite3
+Each line is one argv[i]:
+    ssh \
+        remote \
+        gufi_query --print-tlv -x --threads 1 --min-level "1" -E "SELECT rpath(sname, sroll, name) AS fullpath, level() AS level FROM vrpentries;" prefix
+1|prefix/directory/executable
+1|prefix/directory/readonly
+1|prefix/directory/writable
+1|prefix/leaf_directory/leaf_file1
+1|prefix/leaf_directory/leaf_file2
+1|prefix/unusual#? directory ,/unusual, name?#
+2|prefix/directory/subdirectory/directory_symlink
+2|prefix/directory/subdirectory/repeat_name
+
+# Get gufi_vt from remote with a path list
+$ echo "prefix/directory" > "path_list"
+
+$ cat "path_list"
+prefix/directory
+
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, level() AS level FROM vrpentries;", path_list="path_list", remote_cmd="ssh", remote_arg="remote");SELECT level, fullpath FROM gufi ORDER BY level ASC, fullpath ASC;"
+) | sqlite3
+0|prefix/directory/executable
+0|prefix/directory/readonly
+0|prefix/directory/writable
+1|prefix/directory/subdirectory/directory_symlink
+1|prefix/directory/subdirectory/repeat_name
+
+# Get gufi_vt_* from remote with a path list and min_level = 2
+$ find.sh "prefix" 2 2 > "path_list"
+
+$ cat "path_list"
+directory/subdirectory
+
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT level, rpath || '/' || name FROM gufi_vt_pentries('prefix', 2, 2, 'path_list', 1, 'ssh', 'remote');"
+) | sqlite3
+Each line is one argv[i]:
+    ssh \
+        remote \
+        gufi_query --print-tlv -x --threads 2 --min-level "2" --path-list "path_list" -E "SELECT path(), epath(), fpath(), path(), level(), * FROM pentries;" prefix
+2|prefix/directory/subdirectory/directory_symlink
+2|prefix/directory/subdirectory/repeat_name
+
+# Remote aggregate
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE intermediate (fullpath TEXT, size INT64);", E="INSERT INTO intermediate SELECT path() || '/' || name, size FROM pentries;", K="CREATE TABLE aggregate(fullpath TEXT, size INT64);", J="INSERT INTO aggregate SELECT * FROM intermediate;", G="SELECT * FROM aggregate;", remote_cmd="ssh", remote_arg="remote");SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+) | sqlite3
+0|prefix/old_file
+1|prefix/directory/executable
+2|prefix/directory/readonly
+3|prefix/directory/writable
+4|prefix/directory/subdirectory/directory_symlink
+5|prefix/directory/subdirectory/repeat_name
+9|prefix/file_symlink
+10|prefix/.hidden
+11|prefix/leaf_directory/leaf_file1
+12|prefix/leaf_directory/leaf_file2
+14|prefix/repeat_name
+15|prefix/unusual#? directory ,/unusual, name?#
+1024|prefix/1KB
+1048576|prefix/1MB
+
 # ######################################
 # errors
-# Missing indexroot (error)
+# Missing indexroot
 $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries();"
 ) | sqlite3
 Parse error near line 2: no query solution
 
-# Missing indexroot (error)
+# Missing indexroot
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt();"
 ) | sqlite3
-Runtime error near line 2: Missing indexroot (19)
+Runtime error near line 2: Missing indexroot or path_list (19)
 
 # Bad indexroot
 $ (
@@ -390,42 +481,56 @@ $ (
 ) | sqlite3
 Could not stat directory "baddir": No such file or directory (2)
 
-# Empty string thread count (error)
+# Empty string thread count
 $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries('prefix', '') ORDER BY name ASC, size ASC;"
 ) | sqlite3
 Runtime error near line 2: Bad thread count: '' (19)
 
-# Zero thread count (error)
+# Zero thread count
 $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries('prefix', 0) ORDER BY name ASC, size ASC;"
 ) | sqlite3
 Runtime error near line 2: Bad thread count: '0' (19)
 
-# Bad thread count (error)
+# Bad min_level
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 'a') ORDER BY name ASC, size ASC;"
+) | sqlite3
+Runtime error near line 2: Bad min_level: 'a' (19)
+
+# Bad verbose (path_list == NULL is not an error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 0, NULL, 'a') ORDER BY name ASC, size ASC;"
+) | sqlite3
+Runtime error near line 2: Bad verbose value: 'a' (19)
+
+# Bad n
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=a);"
 ) | sqlite3
 Runtime error near line 2: Bad thread count: a (21)
 
-# Zero thread count (error)
+# Zero n
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=0);"
 ) | sqlite3
 Runtime error near line 2: Bad thread count: 0 (21)
 
-# Bad thread count (error)
+# Bad thread count
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=a);"
 ) | sqlite3
 Runtime error near line 2: Bad thread count: a (21)
 
-# Zero thread count (error)
+# Zero thread count
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=0);"
@@ -478,14 +583,14 @@ $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', abcde='');"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+Runtime error near line 2: Unknown key: abcde (19)
 
 # Bad 7 character key (only 'threads' is recognized)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', abcdefg='');"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+Runtime error near line 2: Unknown key: abcdefg (19)
 
 # Bad key length
 $ (

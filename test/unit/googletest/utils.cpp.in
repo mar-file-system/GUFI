@@ -1307,10 +1307,10 @@ TEST(parse_path, list) {
     ASSERT_EQ(QPTPool_start(pool), 0);
 
     EXPECT_EQ(process_path_list(&in, root, pool,
-                                   [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
-                                       free(data);
-                                       return 0;
-                                   }), (ssize_t) 1);
+                                [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
+                                    free(data);
+                                    return 0;
+                                }), (ssize_t) 1);
 
     QPTPool_stop(pool);
     QPTPool_destroy(pool);
@@ -1318,9 +1318,9 @@ TEST(parse_path, list) {
 
     // bad path list file
     EXPECT_EQ(process_path_list(&in, root, pool,
-                                   [](QPTPool_t *, const std::size_t, void *, void *) -> int {
-                                       return 0;
-                                   }), (ssize_t) -1);
+                                [](QPTPool_t *, const std::size_t, void *, void *) -> int {
+                                    return 0;
+                                }), (ssize_t) -1);
 }
 
 TEST(write_with_resize, good) {

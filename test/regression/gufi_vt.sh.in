@@ -66,10 +66,11 @@ set -e
 
 OUTPUT="gufi_vt.out"
 
+PATH_LIST="path_list"
 BADDIR=$(mktemp -d "${INDEXROOT}.XXXXXX")
 
 cleanup() {
-    rm -rf "${BADDIR}"
+    rm -rf "${PATH_LIST}" "${BADDIR}"
 }
 
 cleanup_exit() {
@@ -176,36 +177,81 @@ query_vt() {
     )
     query_vt "${query}"
 
+    echo "# Get gufi_vt from remote"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\", verbose=0, remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+        echo -n "SELECT fullpath FROM gufi ORDER BY fullpath ASC;"
+    )
+    query_vt "${query}"
+
+    echo "# Get gufi_vt from remote with min_level = 1"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, level() AS level FROM vrpentries;\", VERBOSE=1, min_level=1, remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+        echo -n "SELECT level, fullpath FROM gufi ORDER BY level ASC, fullpath ASC;"
+    )
+    query_vt "${query}"
+
+    echo "# Get gufi_vt from remote with a path list"
+    # can't use find.sh because full path is needed
+    run_no_sort "echo \"${INDEXROOT}/directory\" > \"${PATH_LIST}\""
+    run_sort "cat \"${PATH_LIST}\""
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, level() AS level FROM vrpentries;\", path_list=\"${PATH_LIST}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+        echo -n "SELECT level, fullpath FROM gufi ORDER BY level ASC, fullpath ASC;"
+    )
+    query_vt "${query}"
+
+    echo "# Get gufi_vt_* from remote with a path list and min_level = 2"
+    run_no_sort "${FIND_SH} \"${INDEXROOT}\" 2 ${THREADS} > \"${PATH_LIST}\""
+    run_sort "cat \"${PATH_LIST}\""
+    query=$(
+        echo -n "SELECT level, rpath || '/' || name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 2, '${PATH_LIST}', 1, '${SSH_FAKE}', 'remote');"
+    )
+    query_vt "${query}"
+
+    echo "# Remote aggregate"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT, size INT64);\", E=\"INSERT INTO intermediate SELECT path() || '/' || name, size FROM pentries;\", K=\"CREATE TABLE aggregate(fullpath TEXT, size INT64);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate;\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+    )
+    query_vt "${query}"
+
     echo "# ######################################"
     echo "# errors"
 
     set +e
-    echo "# Missing indexroot (error)"
+    echo "# Missing indexroot"
     query_vt "SELECT name FROM gufi_vt_pentries();"
 
-    echo "# Missing indexroot (error)"
+    echo "# Missing indexroot"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt();"
 
     echo "# Bad indexroot"
     rm -rf "${BADDIR}"
     query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | @SED@ "s%${BADDIR}%baddir%g;"
 
-    echo "# Empty string thread count (error)"
+    echo "# Empty string thread count"
     query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;"
 
-    echo "# Zero thread count (error)"
+    echo "# Zero thread count"
     query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
 
-    echo "# Bad thread count (error)"
+    echo "# Bad min_level"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 'a') ORDER BY name ASC, size ASC;"
+
+    echo "# Bad verbose (path_list == NULL is not an error)"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 0, NULL, 'a') ORDER BY name ASC, size ASC;"
+
+    echo "# Bad n"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=a);"
 
-    echo "# Zero thread count (error)"
+    echo "# Zero n"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=0);"
 
-    echo "# Bad thread count (error)"
+    echo "# Bad thread count"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=a);"
 
-    echo "# Zero thread count (error)"
+    echo "# Zero thread count"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=0);"
 
     echo "# Bad E"

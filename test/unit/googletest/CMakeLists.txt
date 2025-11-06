@@ -79,6 +79,7 @@ if (CMAKE_CXX_COMPILER)
     debug.cpp
     handle_sql.cpp
     histogram.cpp
+    popen_argv.cpp
     print.cpp
     query_user_str.cpp
     str.cpp

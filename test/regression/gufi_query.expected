@@ -269,7 +269,7 @@ $ cat "distributed.0"
 directory
 empty_directory
 
-# limit tree traversal to some directories under at level 1 (only prefix/directory and prefix/empty_directory)
+# limit tree traversal to some directories under level 1 (only prefix/directory and prefix/empty_directory)
 $ gufi_query -d " " -n 2 --min-level 1 --path-list "distributed.0" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
 prefix/directory
 prefix/directory/executable
