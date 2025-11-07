@@ -9,6 +9,7 @@ options:
       --max-level <max level>       maximum level to go down
       --path-list <filename>        File containing paths at single level to index (not including starting path). Must also use --min-level
       --dont-reprocess              if a directory was previously processed, skip descending the subtree
+      --suspect-time <s>            time in seconds since epoch for suspect comparision
 
 GUFI_tree                path to GUFI tree
 
@@ -54,6 +55,37 @@ prefix/unusual#? directory , 0 1 0 1 0
 
 # Generate treesummary tables if they don't already exist
 $ gufi_treesummary_all --dont-reprocess "prefix"
+
+# Create a fresh tree without treesummary tables
+$ gufi_dir2index -n 2 "prefix" "search"
+Creating GUFI Index search with 2 threads
+Total Dirs:          6
+Total Non-Dirs:      14
+
+# Use --suspect-time with a future timestamp on the new index
+$ gufi_treesummary_all --suspect-time 2147483646 "search"
+
+# treesumary table was not created
+$ sqlite3 "search/db.db" ".tables"
+entries              summary              vsummarygroup
+external_dbs         summarylong          vsummaryuser
+external_dbs_pwd     vrpentries           xattrs_avail
+external_dbs_rollup  vrsummary            xattrs_pwd
+pentries             vrsummarylong        xattrs_rollup
+pentries_rollup      vsummarydir
+
+# Use --suspect-time with a past timestamp
+$ gufi_treesummary_all --suspect-time 0 "search"
+
+# treesumary table was created
+$ sqlite3 "search/db.db" ".tables"
+entries              summarylong          vsummaryuser
+external_dbs         treesummary          vtsummarydir
+external_dbs_pwd     vrpentries           vtsummarygroup
+external_dbs_rollup  vrsummary            vtsummaryuser
+pentries             vrsummarylong        xattrs_avail
+pentries_rollup      vsummarydir          xattrs_pwd
+summary              vsummarygroup        xattrs_rollup
 
 # Missing db.db
 $ gufi_treesummary_all "search"
