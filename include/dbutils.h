@@ -170,7 +170,8 @@ extern const char VRPENTRIES_CREATE[];
 #define TREESUMMARY_SCHEMA(name, extra_cols)                                              \
     "CREATE TABLE " name "(" extra_cols                                                   \
     "inode TEXT, pinode TEXT, "                                                           \
-    "totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, " \
+    "totsubdirs INT64, "                                                                  \
+    "maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, "                   \
     "totfiles INT64, totlinks INT64, "                                                    \
     "minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, "                            \
     "minsize INT64, maxsize INT64, totzero INT64, "                                       \

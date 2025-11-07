@@ -429,7 +429,7 @@ directory/subdirectory
 
 $ (
     echo ".load gufi_vt"
-    echo "SELECT level, rpath || '/' || name FROM gufi_vt_pentries('prefix', 2, 2, 'path_list', 1, 'ssh', 'remote');"
+    echo "SELECT level, path || '/' || name FROM gufi_vt_pentries('prefix', 2, 2, 'path_list', 1, 'ssh', 'remote');"
 ) | sqlite3
 Each line is one argv[i]:
     ssh \

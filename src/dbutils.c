@@ -1290,6 +1290,16 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
             break;
     }
 
+    char *err = NULL;
+
+    /* delete any old treesummary rows that exist for this directory */
+    if (sqlite3_exec(db, "DELETE FROM " TREESUMMARY " WHERE inode == (SELECT inode FROM " SUMMARY " WHERE isroot == 1);",
+                     NULL, NULL, &err) != SQLITE_OK) {
+        sqlite_print_err_and_free(err, stderr, "Error: Failed to delete old treesummary for \"%s\": %s\n",
+                                  dirname, err);
+        return 1;
+    }
+
     if (rollupscore != 0) {
         /*
          * this directory has been rolled up, so all information is
@@ -1297,21 +1307,18 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
          * further down
          *
          * don't bother copying it out of sqlite only to put it back in
-         *
-         * this ignores all treesummary tables since all summary
-         * table rows are immediately available
-         *   - cannot use treesummary rows that were copied upwards
-         *     because leaf directories will not have rows, resulting
-         *     in no treesummary rows when joining with current
-         *     directory's summary data
-         *
-         * -1 because a directory is not a subdirectory of itself
          */
         static const char TREESUMMARY_ROLLUP_COMPUTE_INSERT[] =
+            /*
+             * ignore all treesummary tables and recompute from
+             * summary tables since all summary tables are immediately
+             * available
+             */
             "INSERT INTO " TREESUMMARY " SELECT (SELECT "
             "inode FROM " SUMMARY " WHERE isroot == 1), "
             "(SELECT pinode FROM " SUMMARY " WHERE isroot == 1), "
-            "COUNT(*) - 1, MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), "
+            "COUNT(*) - 1, " /* a directory is not a subdirectory of itself */
+            "MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), "
             "MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), "
             "MIN(minsize), MAX(maxsize), TOTAL(totzero), "
             "TOTAL(totltk), TOTAL(totmtk), "
@@ -1328,11 +1335,12 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
             "MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), "
             "MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), "
             "MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), "
-            "(SELECT COUNT(*) FROM " EXTERNAL_DBS "), rectype, uid, gid "
+            "(SELECT COUNT(*) FROM " EXTERNAL_DBS "), rectype, "
+            "(SELECT uid FROM " SUMMARY " WHERE isroot == 1), "
+            "(SELECT gid FROM " SUMMARY " WHERE isroot == 1) "
             "FROM " SUMMARY
             ";";
 
-        char *err = NULL;
         if (sqlite3_exec(db, TREESUMMARY_ROLLUP_COMPUTE_INSERT, NULL, NULL, &err) != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr, "Error: Failed to compute treesummary for \"%s\": %s\n",
                                       dirname, err);
@@ -1347,11 +1355,14 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
      * directories to get information
      *
      * every child is either
-     *     - a leaf, and thus all the data is available in the summary table, or
+     *     - a leaf, and thus all the data is available in the summary
+     *       table to use to create the treesummary table, or
+     *
      *     - has a treesummary table because BottomUp is comming back up
      *
      * reopen child dbs to collect data
-     *     - not super efficient, but should not happen too often
+     *     - not super efficient
+     *     - doing in-place update results in a massive query
      */
     struct sum tsum;
     zeroit(&tsum);
@@ -1370,11 +1381,9 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
             continue;
         }
 
-        char *err = NULL;
         int trecs = 0;
         if (sqlite3_exec(child_db, TREESUMMARY_EXISTS,
-            treesummary_exists_callback,
-            &trecs, &err) == SQLITE_OK) {
+            treesummary_exists_callback, &trecs, &err) == SQLITE_OK) {
             zeroit(&sum);
 
             querytsdb(dirname, &sum, child_db, !(trecs < 1));
@@ -1384,6 +1393,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
         }
         else {
             sqlite_print_err_and_free(err, stderr, "Warning: Failed to check for existance of treesummary table in child \"%s\": %s\n", subdir->name, err);
+            err = NULL;
         }
 
         closedb(child_db);

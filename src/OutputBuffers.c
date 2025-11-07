@@ -146,6 +146,8 @@ size_t OutputBuffers_flush_to_single(struct OutputBuffers *obufs, FILE *out) {
         octets += OutputBuffer_flush(&obufs->buffers[i], out);
     }
 
+    fflush(out);
+
     if (obufs->mutex) {
         pthread_mutex_unlock(obufs->mutex);
     }
@@ -163,6 +165,7 @@ size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out) 
     size_t octets = 0;
     for(size_t i = 0; i < obufs->count; i++) {
         const size_t written = OutputBuffer_flush(&obufs->buffers[i], out[i]);
+        fflush(out[i]);
         if ((written < obufs->buffers[i].filled) &&
             obufs->buffers[i].filled) {
             continue;

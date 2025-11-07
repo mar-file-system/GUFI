@@ -205,7 +205,7 @@ query_vt() {
     run_no_sort "${FIND_SH} \"${INDEXROOT}\" 2 ${THREADS} > \"${PATH_LIST}\""
     run_sort "cat \"${PATH_LIST}\""
     query=$(
-        echo -n "SELECT level, rpath || '/' || name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 2, '${PATH_LIST}', 1, '${SSH_FAKE}', 'remote');"
+        echo -n "SELECT level, path || '/' || name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 2, '${PATH_LIST}', 1, '${SSH_FAKE}', 'remote');"
     )
     query_vt "${query}"
 

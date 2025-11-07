@@ -77,13 +77,13 @@ struct popen_argv_ret {
 popen_argv_t *popen_argv(const char **argv) {
     int fds[2];
     if (pipe(fds) != 0) {
-        /* caller should check errno */
         return NULL;
     }
 
     const pid_t pid = fork();
     if (pid == -1) {
-        /* caller should check errno */
+        close(fds[1]);
+        close(fds[0]);
         return NULL;
     }
 
@@ -127,26 +127,15 @@ int popen_argv_fd(popen_argv_t *ret) {
 }
 
 int popen_argv_close(popen_argv_t *ret) {
-    int rc = 0;
+    int rc = -1;
 
     int status = 0;
-    if (waitpid(ret->pid, &status, 0) != 0) {
-        rc = -1;
-        goto cleanup;
-    }
-
-    if (WIFEXITED(status)) {
-        rc = WEXITSTATUS(status);
-        if (rc != 0) {
-            goto cleanup;
+    if (waitpid(ret->pid, &status, 0) == 0) {
+        if (WIFEXITED(status)) {
+            rc = WEXITSTATUS(status);
         }
     }
-    else {
-        rc = -1;
-        goto cleanup;
-    }
 
-  cleanup:
     close(ret->fd);
     free(ret);
 
