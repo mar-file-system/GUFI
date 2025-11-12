@@ -60,36 +60,56 @@
 
 
 
-.Dd Aug 15, 2025
+.Dd Nov 12, 2025
 .Dt gufi_dir2trace
 .Os Linux
 .Sh NAME
 .Nm gufi_dir2trace
-.Nd generates a trace file from a source directory
+.Nd generate trace files from a source tree
 .Sh SYNOPSIS
 .Nm
 .Op options
-input_dir
+tree...
+output_prefix
 
 .Sh DESCRIPTION
-Generate a trace file by walking the source directory breadth first. By default, all metadata from the input_dir is written to stdout. When out_fname is specified, the metadata is written to per-thread files that should be concatenated for processing by gufi_trace2index.
+Generate per-thread trace files by walking the source directory breadth first. These files may be used by
+.Xr gufi_trace2index 1 directly or concatenated and then used by
+.Xr gufi_trace2index 1 . Alternatively, output_prefix may be "-", causing the trace output to be written to stdout, which may be consumed by
+.Xr gufi_trace2index 1 with a trace name of "-".
 
 .Sh OPTIONS
 .Bl -tag -width -indent
-.It Fl h
+.It Fl h, -help
 help
 .It Fl H
 show assigned input values (debugging)
-.It Fl n\ <threads>
+.It Fl v, -version
+version
+.It Fl n, -threads\ <threads>
 number of threads
-.It Fl x
-pull xattrs from source file-sys into GUFI
-.It Fl d\ <delim>
+.It Fl -min-level\ <min level>
+minmum level to go down
+.It Fl -max-level\ <max level>
+maximum level to go down
+.It Fl -path-list\ <filename>
+File containing paths at single level to index (not including starting path). Must also use --min-level
+.It Fl x, -index-xattrs
+index xattrs
+.It Fl -skip-file\ <filename>
+file containing directory names to skip
+.It Fl q
+check that external databases are valid before tracking during indexing
+.It Fl d, -delim\ <delim>
 delimiter (one char)  [use 'x' for 0x1E]
-.It Fl o\ <out_fname>
-output file (one-per-thread, with thread-id suffix), implies -e 1
-.It input_dir
-walk this tree to produce a trace file.
+.It Fl -target-memory\ <bytes>
+target memory utilization (soft limit)
+.It Fl -swap-prefix\ <path>
+File name prefix for swap files
+.It Fl -subdir-limit\ <count>
+Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
+.It Fl -compress
+compress work items
 .El
 
 .Sh EXIT STATUS
@@ -107,16 +127,15 @@ walk this tree to produce a trace file.
 .Nm
 was once part of the executable "bfwi".
 
-.\" .Sh BUGS
-
-.Sh EXAMPLE
+\# .Sh BUGS
+\# .Sh EXAMPLE
 
 .Sh FLOW
  threads are started
  input directory is put on a queue
  loop assigning work (directories) from queue to threads
    Open the directory
-   Create the corresponding directory in the GUFI index
+   Create the corresponding directory in the GUFI tree
    Create and open an empty database file
    for each entry in the source directory
      Subdirectories are pushed onto the queue

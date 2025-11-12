@@ -61,19 +61,18 @@
 
 
 .Dd Nov 12, 2025
-.Dt gufi_dir2index
+.Dt gufi_treesummary_all
 .Os Linux
 .Sh NAME
-.Nm gufi_dir2index
-.Nd directly generate a GUFI tree from a source tree
+.Nm gufi_treesummary_all
+.Nd Generate treesummary tables across all directories in a GUFI tree
 .Sh SYNOPSIS
 .Nm
 .Op options
-input_dir...
-GUFI_tree_parent
+GUFI_tree
 
 .Sh DESCRIPTION
-Generate a GUFI tree by walking the source directory.
+Walk to the bottom of a GUFI tree and compute treesumary tables for each directory while ascending.
 
 .Sh OPTIONS
 .Bl -tag -width -indent
@@ -86,25 +85,15 @@ version
 .It Fl n, -threads\ <threads>
 number of threads
 .It Fl -min-level\ <min level>
-minmum level to go down
+minimum level to go down
 .It Fl -max-level\ <max level>
 maximum level to go down
-.It -path-list\ <filename>
+.It Fl -path-list\ <filename>
 File containing paths at single level to index (not including starting path). Must also use --min-level
-.It Fl x, -index-xattrs
-index xattrs
-.It Fl -skip-file\ <filename>
-file containing directory names to skip
-.It Fl q
-check that external databases are valid before tracking during indexing
-.It Fl -plugin\ <library_name>
-plugin library for modifying db entries
-.It Fl -target-memory\ <bytes>
-target memory utilization (soft limit)
-.It Fl -subdir-limit\ <count>
-Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
-.It Fl -compress
-compress work items
+.It Fl -dont-reprocess
+if a directory was previously processed, skip descending the subtree
+.It Fl -suspect-time\ <s>
+time in seconds since epoch for suspect comparision
 .El
 
 .Sh EXIT STATUS
@@ -115,33 +104,10 @@ compress work items
 .Pp
 .Sh FILES
 .Bl -tag -width -compact
-.It gufi_dir2index
+.It gufi_treesummary_all
 .El
-
-
-.Sh NOTES
-.Nm
-was once part of the executable "bfwi".
 
 \# .Sh BUGS
 \# .Sh EXAMPLE
-
-.Sh FLOW
- threads are started
- input directory is put on a queue
- loop assigning work (directories) from queue to threads
-   Open the directory
-   Create the corresponding directory in the GUFI tree
-   Create and open an empty database file
-   for each entry in the source directory
-     Subdirectories are pushed onto the queue
-     Non directories are staged for insertion into the database
-   Execute the insertions
-   Close the database file
-   Change the permissions and owners of the database file
-   Close the directory
- end
-
 .Sh SEE ALSO
-.Xr gufi_dir2trace 1 ,
-.Xr gufi_trace2index 1
+.Xr gufi_treesummary 1

@@ -61,50 +61,47 @@
 
 
 .Dd Nov 12, 2025
-.Dt gufi_dir2index
+.Dt gufi_du
 .Os Linux
 .Sh NAME
-.Nm gufi_dir2index
-.Nd directly generate a GUFI tree from a source tree
+.Nm gufi_du
+.Nd estimate file space usage
 .Sh SYNOPSIS
 .Nm
 .Op options
-input_dir...
-GUFI_tree_parent
+[paths ...]
 
 .Sh DESCRIPTION
-Generate a GUFI tree by walking the source directory.
+.Nm
+is a wrapper around
+.Xr gufi_query 1 , which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
+.Xr gufi_query 1 are predefined pieces that are deterministically combined.
+
+The input arguments and output are intended to be reminicent of GNU
+.Xr du 1 .
 
 .Sh OPTIONS
 .Bl -tag -width -indent
 .It Fl h, -help
-help
-.It Fl H
-show assigned input values (debugging)
-.It Fl v, -version
-version
-.It Fl n, -threads\ <threads>
-number of threads
-.It Fl -min-level\ <min level>
-minmum level to go down
-.It Fl -max-level\ <max level>
-maximum level to go down
-.It -path-list\ <filename>
-File containing paths at single level to index (not including starting path). Must also use --min-level
-.It Fl x, -index-xattrs
-index xattrs
-.It Fl -skip-file\ <filename>
-file containing directory names to skip
-.It Fl q
-check that external databases are valid before tracking during indexing
-.It Fl -plugin\ <library_name>
-plugin library for modifying db entries
-.It Fl -target-memory\ <bytes>
-target memory utilization (soft limit)
-.It Fl -subdir-limit\ <count>
-Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
-.It Fl -compress
-compress work items
+show this help message and exit
+.It Fl -version, v
+show program's version number and exit
+.It Fl -aparent-size
+print apparent sizes, rather than disk usage; although the apparent size is usually
+smaller, it may be larger due to holes in ('sparse') files, internal fragmentation,
+indirect blocks, and the like
+.It Fl B, -block-size\ <SIZE>
+scale sizes by SIZE before printing them
+.It Fl c, -total
+produce a grand total
+.It Fl -inodes
+list inode usage information instead of block usage
+.It Fl S, -separate-dirs
+for directories do not include size of subdirectories
+.It Fl s, -summarize
+display only a total for each argument
+.It Fl -verbose, -V
+Show the gufi_query being executed
 .El
 
 .Sh EXIT STATUS
@@ -115,33 +112,13 @@ compress work items
 .Pp
 .Sh FILES
 .Bl -tag -width -compact
-.It gufi_dir2index
+.It gufi_du
 .El
 
-
-.Sh NOTES
-.Nm
-was once part of the executable "bfwi".
-
-\# .Sh BUGS
+\# \# .Sh BUGS
 \# .Sh EXAMPLE
-
-.Sh FLOW
- threads are started
- input directory is put on a queue
- loop assigning work (directories) from queue to threads
-   Open the directory
-   Create the corresponding directory in the GUFI tree
-   Create and open an empty database file
-   for each entry in the source directory
-     Subdirectories are pushed onto the queue
-     Non directories are staged for insertion into the database
-   Execute the insertions
-   Close the database file
-   Change the permissions and owners of the database file
-   Close the directory
- end
-
 .Sh SEE ALSO
-.Xr gufi_dir2trace 1 ,
-.Xr gufi_trace2index 1
+.Xr gufi_find 1 ,
+.Xr gufi_query 1 ,
+.Xr gufi_ls 1 ,
+.Xr gufi_stats 1

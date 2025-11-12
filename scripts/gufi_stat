@@ -76,6 +76,15 @@ def parse_args():
     # parse the arguments
     parser = argparse.ArgumentParser('gufi_stat', description='GUFI version of stat', add_help=False)
 
+    # override help to not use -h
+    parser.add_argument('--help',
+                        action='help',
+                        help='display this help and exit')
+
+    parser.add_argument('--version',
+                        action='version',
+                        version=gufi_common.VERSION)
+
     # parser.add_argument('-L', '--dereference'
     #                     action='set_true',
     #                     help='follow links')
@@ -98,15 +107,6 @@ def parse_args():
                         action='store_true',
                         help='print the information in terse form')
 
-    # override help to not use -h
-    parser.add_argument('--help',
-                        action='help',
-                        help='display this help and exit')
-
-    parser.add_argument('--version',
-                        action='version',
-                        version=gufi_common.VERSION)
-
     parser.add_argument('paths',
                         metavar='FILE',
                         nargs='+')
@@ -114,7 +114,7 @@ def parse_args():
     # the other scripts call gufi_common.add_common_flags but this one doesn't so we have to copy the verbose add_argument stanza here
     parser.add_argument('--verbose', '-V',
                         action='store_true',
-                        help='Show the gufi_query being executed')
+                        help='Show the query being executed')
 
     return parser
 

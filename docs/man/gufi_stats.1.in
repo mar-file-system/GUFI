@@ -60,12 +60,12 @@
 
 
 
-.Dd Aug 15, 2025
+.Dd Nov 12, 2025
 .Dt gufi_stats
 .Os Linux
 .Sh NAME
 .Nm gufi_stats
-.Nd Calculate handy statistics of a directory within a GUFI index
+.Nd Calculate handy statistics of a directory within a GUFI tree
 .Sh SYNOPSIS
 .Nm
 .Op options
@@ -75,12 +75,9 @@ statistic
 .Sh DESCRIPTION
 .Nm
 calculates statistics of a directory within a GUFI index through several ways. Most statistics are calulated by wrapping
-.Xr gufi_query 1 ,
-which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
-.Xr gufi_query 1
-are predefined pieces that are deterministically combined. However, a few are not calculated through
-.Xr gufi_query 1 ,
-and are instead calculated through serial methods using Python.
+.Xr gufi_query 1 , which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
+.Xr gufi_query 1 are predefined pieces that are deterministically combined. However, a few are not calculated through
+.Xr gufi_query 1 , and are instead calculated through serial methods using Python.
 
 .Sh OPTIONS
 .Bl -tag -width -indent
@@ -88,24 +85,26 @@ and are instead calculated through serial methods using Python.
 show this help message and exit
 .It Fl -version, v
 show program's version number and exit
-.It Fl -order order
+.It Fl -recursive, r
+run command recursively
+.It Fl -cumulative, c
+return cumulative values
+.It Fl -order\ order
 sort output (if applicable)
-.It Fl -delim c
-delimiter separating output columns
-.It Fl -maxdepth d
-the maximum number of levels to search
-.It Fl -mindepth d
-the minimum number of levels to search
-.It Fl -num-results n
+.It Fl -num-results\ n
 first n results
-.It Fl -select cols
-comma separated columns
-.It Fl -uid u, --user u
+.It Fl -uid, --user\ u
 restrict to user
-.It Fl -output OUTPUT
-Output file prefix (Creates file <output>.tid)
-.It Fl -output-buffer bytes
-Size of each thread's output buffer
+.It Fl -delim\ c
+delimiter separating output columns
+.It Fl -in-memory-name\ name
+Name of in-memory database when aggregation is performed
+.It Fl -aggregate-name\ name
+Name of final database when aggregation is performed
+.It Fl -skip-file\ filename
+Name of file containing directory basenames to skip
+.It -verbose, V
+Show the gufi_query being executed
 .El
 
 .Sh STATISTIC
@@ -148,6 +147,7 @@ Total number of leaf directories under the provided path
 \# .Sh EXAMPLE
 
 .Sh SEE ALSO
+.Xr gufi_du 1,
 .Xr gufi_query 1 ,
 .Xr gufi_find 1 ,
 .Xr gufi_ls 1

@@ -60,7 +60,7 @@
 
 
 
-.Dd Aug 15, 2025
+.Dd Nov 12, 2025
 .Dt gufi_stat
 .Os Linux
 .Sh NAME
@@ -69,19 +69,22 @@
 .Sh SYNOPSIS
 .Nm
 .Op options
-path
+FILE [FILE ...]
 .Sh DESCRIPTION
 Display file status.
 
 .Sh OPTIONS
 .Bl -tag -width -indent
-.It Fl h
+.It Fl -help
 help
-.It Fl H
-show assigned input values (debugging)
-.It path
-path to stat
-.El
+.It Fl -version
+show program's version number and exit
+.It Fl c, -format FORMAT
+use the specified FORMAT instead of the default; output a newline after each use of FORMAT
+.It t, -terse
+print the information in terse form
+.It -verbose, V
+Show the query being executed
 
 .Sh EXIT STATUS
 .Bl -tag -width -indent

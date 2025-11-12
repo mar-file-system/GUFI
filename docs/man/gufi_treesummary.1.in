@@ -60,7 +60,7 @@
 
 
 
-.Dd Aug 15, 2025
+.Dd Nov 12, 2025
 .Dt gufi_treesummary
 .Os Linux
 .Sh NAME
@@ -76,18 +76,20 @@ Walks breadth first below the input directory path and summarizes all directorie
 
 .Sh OPTIONS
 .Bl -tag -width -indent
-.It Fl h
+.It Fl h, -help
 help
 .It Fl H
 show assigned input values (debugging)
+.It Fl v, -version
+version
+.It Fl n, -threads\ <threads>
+number of threads
 .It Fl P
 print directories as they are encountered
-.It Fl n\ <threads>
-number of threads
-.It Fl s
-generate tree-summary table (in top-level DB)
-.It GUFI_tree
-path to GUFI tree
+.It Fl d, -delim\ <delim>
+delimiter (one char)  [use 'x' for 0x1E]
+.It Fl -dry-run
+Dry run
 .El
 
 .Sh EXIT STATUS
@@ -101,15 +103,7 @@ path to GUFI tree
 .It gufi_treesummary
 .El
 
-.Sh NOTES
-.Nm
-attempts to save the mtime and atime of the database before adding the tree summary table and then attempts to set the atime and mtime of the database back to its saved value, as if you put your GUFI inside your source tree, you want to keep the mtime of the database the same as when it was last updated by a full or incremental update for comparison on incrementals.
-
-.Nm
-has a feature that it will use tree summaries below to create a new higher level tree summary for efficiency. This means you need to replace the lowest tree summary first and so on up the tree in order for
-.Nm
-to produce correct tree summaries should you choose to put tree summaries at multiple levels in the tree.
-
+\# .Sh NOTES
 \# .Sh BUGS
 \# .Sh EXAMPLE
 
@@ -125,4 +119,4 @@ to produce correct tree summaries should you choose to put tree summaries at mul
  open/create and write tree summary record into treesummary table that summarizes all the directories below it
 
 .Sh SEE ALSO
-.Xr gufi_query 1
+.Xr gufi_treesummary_all

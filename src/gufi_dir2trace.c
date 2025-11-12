@@ -267,7 +267,7 @@ int main(int argc, char *argv[]) {
 
         /* tree walk flags */
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST,
-        FLAG_QUERY_XATTRS, FLAG_SKIP_FILE,
+        FLAG_INDEX_XATTRS, FLAG_SKIP_FILE,
 
         /* miscellaneous flags */
         FLAG_CHECK_EXTDB_VALID,

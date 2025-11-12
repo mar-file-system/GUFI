@@ -719,12 +719,12 @@ def build_expression_parser():
     #                     help='(SELinux only) Security context of the file matches glob pattern.')
 
     # GNU find actions
-    parser.add_argument('-fprint',
-                        metavar='file',
-                        type=str,
-                        help='Output result to file')
-
     query = parser.add_mutually_exclusive_group()
+    query.add_argument('-fprint',
+                       metavar='file',
+                       type=str,
+                       help='Output result to file')
+
     query.add_argument('-ls',
                        action='store_true',
                        help='list current file ls -dils format')

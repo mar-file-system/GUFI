@@ -61,6 +61,7 @@
 
 
 set(SERVER_CLIENT_MAN_PAGES
+  gufi_du.1
   gufi_find.1
   gufi_ls.1
   gufi_query.1
@@ -72,8 +73,10 @@ set(SERVER_MAN_PAGES
   gufi_dir2index.1
   gufi_dir2trace.1
   gufi_incremental_update.1
+  gufi_sqlite3.1
   gufi_trace2index.1
   gufi_treesummary.1
+  gufi_treesummary_all.1
   querydbs.1
 )
 
@@ -100,7 +103,8 @@ if (CLIENT)
     install(FILES "${MAN_PAGE_DST}"
       DESTINATION "${CLIENT_MAN}/man${SECTION}"
       COMPONENT Client
-      RENAME "${MAN_PAGE}")
+      RENAME "${MAN_PAGE}"
+      EXCLUDE_FROM_ALL)  # do not install man pages a second time if running 'make install'
   endforeach()
 endif()
 

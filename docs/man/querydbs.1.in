@@ -60,41 +60,34 @@
 
 
 
-.Dd Aug 15, 2025
+.Dd Nov 12, 2025
 .Dt querydbs
 .Os Linux
 .Sh NAME
 .Nm querydbs
-.Nd Query a set of database files
+.Nd Query a set of database files with a common schema
 .Sh SYNOPSIS
 .Nm
 .Op options
 table_name
 SQL
-DB_name
-[DB_name ...]
+db
+[db ...]
 
 .Sh DESCRIPTION
-Run an SQL query against output databases from gufi_query. Given output database file names, the program will union the tables from each of the database files into a view named v<table_name>.
+Run an SQL query against output databases from
+.Xr gufi_query 1 . Given output database file names, the program will union the tables from each of the database files into a view named v<table_name>.
 
 .Sh OPTIONS
 .Bl -tag -width -indent
-.It Fl h
+.It Fl h, -help
 help
-.It Fl H
-show assigned input values (debugging)
-.It Fl N
-print column-names (header) for DB results
-.It Fl V
-print column-names (header) for DB results
 .It Fl d\ <delim>
-print column-names (header) for DB results
-.It table_name
-name of table in database file to attach; also used for view table name: 'v<table_name>'
-.It SQL
-arbitrary SQL on each DB (unified into single view)
-.It DB_name
-path of source database file(s) to add to view
+delimiter
+.It Fl -attach-prefix
+name when attaching dbs
+.It Fl -verbose, V
+Show the equivalent shell command passing raw SQL into gufi_sqlite3
 .El
 
 .Sh EXIT STATUS
@@ -113,4 +106,4 @@ path of source database file(s) to add to view
 \# .Sh FLOW
 
 .Sh SEE ALSO
-.Xr gufi_query 1
+.Xr gufi_sqlite3 1

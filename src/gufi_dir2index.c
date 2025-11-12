@@ -504,7 +504,7 @@ int main(int argc, char *argv[]) {
     };
 
     struct PoolArgs pa;
-    process_args_and_maybe_exit(options, 1, "input_dir... output_dir", &pa.in);
+    process_args_and_maybe_exit(options, 1, "tree... GUFI_tree_parent", &pa.in);
 
     /* parse positional args, following the options */
     /* does not have to be canonicalized */

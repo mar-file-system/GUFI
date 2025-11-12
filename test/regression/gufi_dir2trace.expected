@@ -8,7 +8,7 @@ options:
       --min-level <min level>       minimum level to go down
       --max-level <max level>       maximum level to go down
       --path-list <filename>        File containing paths at single level to index (not including starting path). Must also use --min-level
-  -x, --query-xattrs                query xattrs
+  -x, --index-xattrs                index xattrs
       --skip-file <filename>        file containing directory names to skip
   -q                                check that external databases are valid before tracking during indexing
   -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]

@@ -1,5 +1,5 @@
 $ gufi_dir2index --help
-usage: gufi_dir2index [options] input_dir... output_dir
+usage: gufi_dir2index [options] tree... GUFI_tree_parent
 options:
   -h, --help                        help
   -H, --debug                       show assigned input values (debugging)

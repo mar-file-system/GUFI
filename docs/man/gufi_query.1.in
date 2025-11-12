@@ -60,7 +60,7 @@
 
 
 
-.Dd Aug 15, 2025
+.Dd Nov 12, 2025
 .Dt gufi_query
 .Os Linux
 .Sh NAME
@@ -75,6 +75,7 @@ GUFI_tree
 .Nm
 performs queries on the contents of a GUFI index in a parallel manner. Users supply their own SQL queries to run on the entries table, directory table, and, if generated, the tree summary table. Output usually writes to stdout, but can be redirected to per-thread files or per-thread databases.
 
+.Xr gufi_du 1 ,
 .Xr gufi_find 1 ,
 .Xr gufi_ls 1 ,
 and
@@ -88,46 +89,77 @@ is meant to be a Swiss Army knife utility for advanced GUFI users. Databases can
 
 .Sh OPTIONS
 .Bl -tag -width -indent
-.It Fl h
+.It Fl h, -help
 help
 .It Fl H
 show assigned input values (debugging)
+.It Fl -v, -version
+version
+.It Fl n, -threads\ <threads>
+number of threads
+.It Fl I\ <SQL_init>
+SQL init
 .It Fl T\ <SQL_tsum>
 SQL for tree-summary table
 .It Fl S\ <SQL_sum>
 SQL for summary table
 .It Fl E\ <SQL_ent>
 SQL for entries table
-.It Fl a
-AND/OR (SQL query combination)
-.It Fl n\ <threads>
-number of threads
-.It Fl o\ <out_fname>
-output file (one-per-thread, with thread-id suffix), implies e 1
-.It Fl d\ <delim>
-delimiter (one char)  [use 'x' for 0x1E]
-.It Fl O\ <out_DB>
-output DB, implies e 1
-.It Fl I\ <SQL_init>
-SQL init
-.It Fl F\ <SQL_fin>
-SQL cleanup
-.It Fl y\ <min\ level>
-minimum level to go down
-.It Fl z\ <max\ level>
-maximum level to go down
-.It Fl G\ <SQL_aggregate>
-SQL for aggregated results
 .It Fl J\ <SQL_interm>
 SQL for intermediate results
-.It Fl e\ <0\ or\ 1>
-0 for aggregate, 1 for print without aggregating (implied by o and O)
-.It Fl m
-Keep mtime and atime same on the database files
-.It Fl B\ <buffer\ size>
-size of each thread's output buffer in bytes
-.It Fl w
+.It Fl K\ <create aggregate>
+SQL to create the final aggregation table
+.It Fl G\ <SQL_aggregate>
+SQL for aggregated results
+.It Fl F\ <SQL_fin>
+SQL cleanup
+.It Fl a\ <0|1|2>
+0 - if returned row, run next SQL, else stop (continue descent) (default)
+
+1 - skip T, run S and E whether or not a row was returned (old -a)
+
+2 - run T, S, and E whether or not a row was returned
+.It Fl -min-level\ <min\ level>
+minimum level to go down
+.It Fl -max-level\ <max\ level>
+maximum level to go down
+.It Fl -path-list\ <filename>
+File containing paths at single level to index (not including starting path). Must also use --min-level
+.It Fl p, -path\ <path>
+Source path prefix for %s in SQL
+.It Fl x, -query-xattrs
+query xattrs
+.It Fl Q\ <basename>\ <table>\ <template.table>\ <view>
+External database file basename, per-attach table name, template + table name, and the resultant view
+.It Fl w, -read-write
 open the database files in read-write mode instead of read only mode
+.It Fl -keep-matime
+Keep mtime and atime same on the database files
+.It Fl -skip-file\ <filename>
+file containing directory names to skip
+.It Fl d, -delim\ <delim>
+delimiter (one char)  [use 'x' for 0x1E]
+.It Fl -newline\ <c>
+character used to separate lines (default: '\n') [use 0 for NULL character]
+.It Fl --suppress-newline
+do not print the line separator
+.It Fl o, -output-file\ <out_fname>
+output file (one-per-thread, with thread-id suffix)
+.It Fl O, -output-db\ <out_DB>
+output DB
+.It Fl -print-tlv
+prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
+.It Fl -terse
+print the information in terse form
+.It Fl -output-buffer-size\ <bytes>
+size of each thread's output buffer in bytes
+.It Fl -target-memory\ <bytes>
+target memory utilization (soft limit)
+.It Fl -swap-prefix\ <path>
+File name prefix for swap files
+.It Fl -compress
+compress work items
+
 .El
 
 .Sh EXIT STATUS
@@ -155,6 +187,7 @@ Databases are by default opened in read-only mode, so although the SQL queries a
 is the command that should be used to perform advanced operations on a GUFI index. The GUFI index is traversed breadth first. Queries can be performed on the tree-summary, the directory-summary, and/or the directory contents tables. POSIX permission are obeyed, as the original directory permissions were replicated in the GUFI index. Users supply SQL statements for querying the tree, summary, and entries tables, and select AND/OR logic between tree/directory/entry queries. The output can be directed to three different places: stdout, a per-thread file, or a per-thread database file. If an output database prefix was specified, SQL_init can be provided to run a SQL statement on each output thread’s database before starting the walk. This can be used to create the database into which output from queries are placed. Similarly, SQL_fin runs a SQL statement per thread on the output database after the walk.
 
 .Sh SEE ALSO
+.Xr gufi_du 1 ,
 .Xr gufi_find 1 ,
 .Xr gufi_ls 1 ,
 .Xr gufi_stats 1

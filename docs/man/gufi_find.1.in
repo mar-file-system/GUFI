@@ -60,7 +60,7 @@
 
 
 
-.Dd Aug 15, 2025
+.Dd Nov 12, 2025
 .Dt gufi_find
 .Os Linux
 .Sh NAME
@@ -75,10 +75,8 @@
 .Sh DESCRIPTION
 .Nm
 is a wrapper around
-.Xr gufi_query 1 ,
-which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
-.Xr gufi_query 1
-are predefined pieces that are deterministically combined.
+.Xr gufi_query 1 , which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
+.Xr gufi_query 1 are predefined pieces that are deterministically combined.
 
 The input arguments and output are intended to be reminicent of GNU
 .Xr find 1 .
@@ -145,7 +143,13 @@ Descend at most levels (a non-negative integer) levels of directories below the 
 .It Fl mindepth\ levels
 Do not apply any tests or actions at levels less than levels (a non-negative integer). mindepth 1 means process all files except the command line arguments.
 .It Fl fprint\ file
-Output file prefix (Creates file <output>.tid)
+Output file prefix
+.It Fl ls
+list current file ls -dils format
+.It Fl print
+print the full name on the standard output, followed by a newline, similar to GNU find
+.It Fl print0
+print the full name on the standard output, followed by a null character, similar to GNU find
 .It Fl -delim\ c
 delimiter separating output columns
 .It Fl -size%\ n\ n
@@ -156,8 +160,8 @@ first n results
 top n smallest files
 .It Fl -largest\ n
 top n largest files
-.It Fl -output-buffer\ bytes
-Size of each thread's output buffer
+.It Fl -compress
+try to reduce memory usage by compressing with zlib (if available)
 .El
 
 .Sh EXIT STATUS
@@ -176,6 +180,7 @@ Size of each thread's output buffer
 \# .Sh EXAMPLE
 
 .Sh SEE ALSO
+.Xr gufi_du 1 ,
 .Xr gufi_query 1 ,
 .Xr gufi_ls 1 ,
 .Xr gufi_stats 1
