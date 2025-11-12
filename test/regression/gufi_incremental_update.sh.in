@@ -320,7 +320,7 @@ replace_inodes() {
     run_no_sort "${GUFI_INCREMENTAL_UPDATE} --help"
 
     echo "#####################################"
-    echo "# suspect mode 0"
+    echo "# suspect method 0"
     setup_index_and_update_simple_tree "${SEARCH}"
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
@@ -338,7 +338,7 @@ echo
 
 (
     echo "#####################################"
-    echo "# suspect mode 1 (check suspect file for inodes of all directories, files, and links)"
+    echo "# suspect method 1 (check suspect file for inodes of all directories, files, and links)"
     setup_index_and_update_simple_tree "${SEARCH}"
 
     (
@@ -362,28 +362,7 @@ echo
 
 (
     echo "#####################################"
-    echo "# suspect mode 2 (check suspect file for inodes of files and links)"
-    setup_index_and_update_simple_tree "${SEARCH}"
-
-    (
-        echo "${NEW_FILE_INODE} f"
-        echo "0   t"               # good inode, bad type, different spacing
-        echo "bad d"               # bad inode, good type
-    ) > "${SUSPECT_FILE}"
-    echo "# suspect file"
-    run_no_sort "cat \"${SUSPECT_FILE}\"" | replace_inodes
-
-    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
-    echo "# Update the original index via incremental update"
-    run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 2 --suspect-file \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null" | replace_inodes
-    check_incremental_update | replace_inodes
-    echo "#####################################"
-    echo
-)
-
-(
-    echo "#####################################"
-    echo "# suspect mode 3"
+    echo "# suspect method 3"
     setup_index_and_update_simple_tree "${SEARCH}"
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
@@ -396,7 +375,7 @@ echo
 
 (
     echo "#####################################"
-    echo "# suspect mode 3, in-place update"
+    echo "# suspect method 3, in-place update"
     setup_index_and_update_simple_tree "${SRCDIR}/.."
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
@@ -422,38 +401,12 @@ echo
 
 (
     echo "#####################################"
-    echo "# treat all directories as suspect"
-    setup_index_and_update_simple_tree "${SEARCH}"
-
-    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
-    echo "# Update the original index via incremental update"
-    run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 0 --suspect-dir \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
-    check_incremental_update | replace_inodes
-    echo "#####################################"
-    echo
-)
-
-(
-    echo "#####################################"
-    echo "# treat all files/links as suspect (need suspect method 3 because most directories do not have files)"
-    setup_index_and_update_simple_tree "${SEARCH}"
-
-    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
-    echo "# Update the original index via incremental update"
-    run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 --suspect-fl \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" 2>&1 > /dev/null"
-    check_incremental_update | replace_inodes
-    echo "#####################################"
-    echo
-)
-
-(
-    echo "#####################################"
-    echo "# suspect mode 3 with more complex tree"
+    echo "# suspect method 3 with more complex tree"
     setup_index_and_update_complex_tree "${SEARCH}"
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null " | replace_inodes)
+    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 --suspect-stat \"${INDEXROOT}\" \"${SRCDIR}\" \"${SNAPSHOT}\" \"${PARKING_LOT}\" > /dev/null " | replace_inodes)
     echo "${out}" | head -n 1
     echo "${out}" | tail -n +2 | sort
     echo

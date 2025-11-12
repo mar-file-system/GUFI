@@ -5,18 +5,17 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-      --suspect-dir                 default to all directories suspect
-      --suspect-fl                  default to all files/links suspect
+      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime
       --suspect-file <path>         suspect input file
-      --suspect-method <0|1|2|3>    suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl
+      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl
       --suspect-time <s>            time in seconds since epoch for suspect comparision
   -x, --index-xattrs                index xattrs
       --compress                    compress work items
 
 GUFI_tree         GUFI tree
 tree              source tree
-snapshotdb        database file containing records of all directories
-parking_lot       directory to place update db.dbs and moved directories
+snapshotdb        prefix for database file containing records of all directories
+parking_lot       directory prefix to place update db.dbs and moved directories
 
 GUFI_tree and tree may be the same path
 
@@ -28,24 +27,23 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <threads>           number of threads
-      --suspect-dir                 default to all directories suspect
-      --suspect-fl                  default to all files/links suspect
+      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime
       --suspect-file <path>         suspect input file
-      --suspect-method <0|1|2|3>    suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl
+      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl
       --suspect-time <s>            time in seconds since epoch for suspect comparision
   -x, --index-xattrs                index xattrs
       --compress                    compress work items
 
 GUFI_tree         GUFI tree
 tree              source tree
-snapshotdb        database file containing records of all directories
-parking_lot       directory to place update db.dbs and moved directories
+snapshotdb        prefix for database file containing records of all directories
+parking_lot       directory prefix to place update db.dbs and moved directories
 
 GUFI_tree and tree may be the same path
 
 
 #####################################
-# suspect mode 0
+# suspect method 0
 # create source tree
 $ find "prefix"
 prefix
@@ -126,7 +124,7 @@ prefix|16893|uid|gid
 #####################################
 
 #####################################
-# suspect mode 1 (check suspect file for inodes of all directories, files, and links)
+# suspect method 1 (check suspect file for inodes of all directories, files, and links)
 # create source tree
 $ find "prefix"
 prefix
@@ -212,91 +210,7 @@ prefix|16893|uid|gid
 #####################################
 
 #####################################
-# suspect mode 2 (check suspect file for inodes of files and links)
-# create source tree
-$ find "prefix"
-prefix
-prefix/change
-prefix/delete
-prefix/no-change
-prefix/rename
-
-# get index original version of source tree
-$ gufi_dir2index prefix search
-Creating GUFI Index search with 1 threads
-Total Dirs:          5
-Total Non-Dirs:      0
-
-# modify source tree
-$ find "prefix"
-prefix
-prefix/change
-prefix/change/new_file
-prefix/created
-prefix/no-change
-prefix/renamed
-
-# run gufi_dir2index on the updated tree to serve as the expected results
-$ gufi_dir2index prefix updated-index
-Creating GUFI Index updated-index with 1 threads
-Total Dirs:          5
-Total Non-Dirs:      1
-
-# suspect file
-$ cat "suspectfile"
-6 f
-0   t
-bad d
-
-# Update the original index via incremental update
-$ gufi_incremental_update -x --suspect-method 2 --suspect-file "suspectfile" "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
-
-# Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
-prefix/change|d|1|0|1|0
-prefix/delete|d|2|0|1|0
-prefix/no-change|d|3|0|1|0
-prefix/rename|d|4|0|1|0
-prefix|d|0|0|0|0
-
-# Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
-prefix/change|d|1|0|1|1
-prefix/created|d|5|0|1|1
-prefix/no-change|d|3|0|1|0
-prefix/renamed|d|4|0|1|1
-prefix|d|0|0|0|1
-
-# Diff of snapshots
-$ sqlite3 "diff" "SELECT * FROM diff;"
-prefix/change|d|1|0|1|0|prefix/change|d|1|0|1|1
-prefix/delete|d|2|0|1|0||||||
-prefix/rename|d|4|0|1|0|prefix/renamed|d|4|0|1|1
-prefix|d|0|0|0|0|prefix|d|0|0|0|1
-||||||prefix/created|d|5|0|1|1
-
-# State of updated index created with gufi_dir2index
-prefix/change/new_file|33204|uid|gid
-prefix/change|16893|uid|gid
-prefix/created|16893|uid|gid
-prefix/no-change|16893|uid|gid
-prefix/renamed|16893|uid|gid
-prefix|16893|uid|gid
-
-# State of incrementally updated index
-prefix/change/new_file|33204|uid|gid
-prefix/change|16893|uid|gid
-prefix/created|16893|uid|gid
-prefix/no-change|16893|uid|gid
-prefix/renamed|16893|uid|gid
-prefix|16893|uid|gid
-
-# Compare index states
-
-#####################################
-
-#####################################
-# suspect mode 3
+# suspect method 3
 # create source tree
 $ find "prefix"
 prefix
@@ -374,7 +288,7 @@ prefix|16893|uid|gid
 #####################################
 
 #####################################
-# suspect mode 3, in-place update
+# suspect method 3, in-place update
 # create source tree
 $ find "prefix"
 prefix
@@ -435,164 +349,7 @@ prefix|16893|uid|gid
 #####################################
 
 #####################################
-# treat all directories as suspect
-# create source tree
-$ find "prefix"
-prefix
-prefix/change
-prefix/delete
-prefix/no-change
-prefix/rename
-
-# get index original version of source tree
-$ gufi_dir2index prefix search
-Creating GUFI Index search with 1 threads
-Total Dirs:          5
-Total Non-Dirs:      0
-
-# modify source tree
-$ find "prefix"
-prefix
-prefix/change
-prefix/change/new_file
-prefix/created
-prefix/no-change
-prefix/renamed
-
-# run gufi_dir2index on the updated tree to serve as the expected results
-$ gufi_dir2index prefix updated-index
-Creating GUFI Index updated-index with 1 threads
-Total Dirs:          5
-Total Non-Dirs:      1
-
-# Update the original index via incremental update
-$ gufi_incremental_update -x --suspect-method 0 --suspect-dir "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
-
-# Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
-prefix/change|d|1|0|1|0
-prefix/delete|d|2|0|1|0
-prefix/no-change|d|3|0|1|0
-prefix/rename|d|4|0|1|0
-prefix|d|0|0|0|0
-
-# Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
-prefix/change|d|1|0|1|1
-prefix/created|d|5|0|1|1
-prefix/no-change|d|3|0|1|1
-prefix/renamed|d|4|0|1|1
-prefix|d|0|0|0|1
-
-# Diff of snapshots
-$ sqlite3 "diff" "SELECT * FROM diff;"
-prefix/change|d|1|0|1|0|prefix/change|d|1|0|1|1
-prefix/delete|d|2|0|1|0||||||
-prefix/no-change|d|3|0|1|0|prefix/no-change|d|3|0|1|1
-prefix/rename|d|4|0|1|0|prefix/renamed|d|4|0|1|1
-prefix|d|0|0|0|0|prefix|d|0|0|0|1
-||||||prefix/created|d|5|0|1|1
-
-# State of updated index created with gufi_dir2index
-prefix/change/new_file|33204|uid|gid
-prefix/change|16893|uid|gid
-prefix/created|16893|uid|gid
-prefix/no-change|16893|uid|gid
-prefix/renamed|16893|uid|gid
-prefix|16893|uid|gid
-
-# State of incrementally updated index
-prefix/change/new_file|33204|uid|gid
-prefix/change|16893|uid|gid
-prefix/created|16893|uid|gid
-prefix/no-change|16893|uid|gid
-prefix/renamed|16893|uid|gid
-prefix|16893|uid|gid
-
-# Compare index states
-
-#####################################
-
-#####################################
-# treat all files/links as suspect (need suspect method 3 because most directories do not have files)
-# create source tree
-$ find "prefix"
-prefix
-prefix/change
-prefix/delete
-prefix/no-change
-prefix/rename
-
-# get index original version of source tree
-$ gufi_dir2index prefix search
-Creating GUFI Index search with 1 threads
-Total Dirs:          5
-Total Non-Dirs:      0
-
-# modify source tree
-$ find "prefix"
-prefix
-prefix/change
-prefix/change/new_file
-prefix/created
-prefix/no-change
-prefix/renamed
-
-# run gufi_dir2index on the updated tree to serve as the expected results
-$ gufi_dir2index prefix updated-index
-Creating GUFI Index updated-index with 1 threads
-Total Dirs:          5
-Total Non-Dirs:      1
-
-# Update the original index via incremental update
-$ gufi_incremental_update -x --suspect-method 3 --suspect-fl "prefix" "prefix" "snapshot" "parking_lot" 2>&1 > /dev/null
-
-# Snapshot of original index
-$ sqlite3 "snapshot.index" "SELECT * FROM snapshot;"
-prefix/change|d|1|0|1|0
-prefix/delete|d|2|0|1|0
-prefix/no-change|d|3|0|1|0
-prefix/rename|d|4|0|1|0
-prefix|d|0|0|0|0
-
-# Snapshot of tree in current state
-$ sqlite3 "snapshot.tree" "SELECT * FROM snapshot;"
-prefix/change|d|1|0|1|1
-prefix/created|d|5|0|1|1
-prefix/no-change|d|3|0|1|0
-prefix/renamed|d|4|0|1|1
-prefix|d|0|0|0|1
-
-# Diff of snapshots
-$ sqlite3 "diff" "SELECT * FROM diff;"
-prefix/change|d|1|0|1|0|prefix/change|d|1|0|1|1
-prefix/delete|d|2|0|1|0||||||
-prefix/rename|d|4|0|1|0|prefix/renamed|d|4|0|1|1
-prefix|d|0|0|0|0|prefix|d|0|0|0|1
-||||||prefix/created|d|5|0|1|1
-
-# State of updated index created with gufi_dir2index
-prefix/change/new_file|33204|uid|gid
-prefix/change|16893|uid|gid
-prefix/created|16893|uid|gid
-prefix/no-change|16893|uid|gid
-prefix/renamed|16893|uid|gid
-prefix|16893|uid|gid
-
-# State of incrementally updated index
-prefix/change/new_file|33204|uid|gid
-prefix/change|16893|uid|gid
-prefix/created|16893|uid|gid
-prefix/no-change|16893|uid|gid
-prefix/renamed|16893|uid|gid
-prefix|16893|uid|gid
-
-# Compare index states
-
-#####################################
-
-#####################################
-# suspect mode 3 with more complex tree
+# suspect method 3 with more complex tree
 # create source tree
 $ find "prefix"
 prefix
@@ -634,7 +391,7 @@ Total Dirs:          11
 Total Non-Dirs:      0
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
+$ gufi_incremental_update -x --suspect-method 3 --suspect-stat "prefix" "prefix" "snapshot" "parking_lot" > /dev/null
     Warning: Could not stat update db.db in parking lot "parking_lot/10": No such file or directory (2)
     Warning: Could not stat update db.db in parking lot "parking_lot/8": No such file or directory (2)
 

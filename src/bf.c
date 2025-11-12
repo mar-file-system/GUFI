@@ -257,10 +257,9 @@ void print_help(const char* prog_name,
 
             /* gufi_incremental_update flags */
             case FLAG_SUSPECT_FILE_SHORT:            printf("      --suspect-file <path>         suspect input file"); break;
-            case FLAG_SUSPECT_METHOD_SHORT:          printf("      --suspect-method <0|1|2|3>    suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
+            case FLAG_SUSPECT_METHOD_SHORT:          printf("      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl"); break;
             case FLAG_SUSPECT_TIME_SHORT:            printf("      --suspect-time <s>            time in seconds since epoch for suspect comparision"); break;
-            case FLAG_SUSPECT_DIR_SHORT:             printf("      --suspect-dir                 default to all directories suspect"); break;
-            case FLAG_SUSPECT_FILE_LINK_SHORT:       printf("      --suspect-fl                  default to all files/links suspect"); break;
+            case FLAG_SUSPECT_STAT_SHORT:            printf("      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime"); break;
 
             default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
@@ -334,8 +333,7 @@ void show_input(struct input* in, int retval) {
     printf("in.suspectfile              = '%d'\n",          in->suspectfile);
     printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
     printf("in.suspecttime              = '%d'\n",          in->suspecttime);
-    printf("in.suspectd                 = '%d'\n",          in->suspectd);
-    printf("in.suspectfl                = '%d'\n",          in->suspectfl);
+    printf("in.suspectstat              = '%d'\n",          in->suspectstat);
 
     printf("retval                      = %d\n",            retval);
     printf("\n");
@@ -676,12 +674,8 @@ int parse_cmd_line(int                  argc,
                 in->suspecttime_set = 1;
                 break;
 
-            case FLAG_SUSPECT_DIR_SHORT:
-                in->suspectd = 1;
-                break;
-
-            case FLAG_SUSPECT_FILE_LINK_SHORT:
-                in->suspectfl = 1;
+            case FLAG_SUSPECT_STAT_SHORT:
+                in->suspectstat = 1;
                 break;
 
             case '?':

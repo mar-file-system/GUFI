@@ -97,44 +97,37 @@ Perform an index update instead of reindexing the entire source tree.
 
 .Sh OPTIONS
 .Bl -tag -width -indent
-.It Fl h
+.It Fl h, -help
 help
 .It Fl H
 show assigned input values (debugging)
-.It Fl v
+.It Fl v, -version
 version
 .It Fl n, -threads\ <threads>
 number of threads
-.It Fl d, -delim\ <delim>
-delimiter for output file
-.It Fl -suspect-dir
-default all directories as suspect
-.It Fl -suspect-fl
-default all files links as suspect
+.It Fl -suspect-stat
+if an entry is suspect, stat it to get timestamps to compare against suspecttime
 .It Fl -suspect-file\ <path>
 path to input suspect file, if suspects are generated via another program like a GPFS Inode Scan
 
 Each line of the suspect file contains an inode followed by one of the characters 'd', 'f', or 'l' indicating the type the inode points to
-.It Fl -suspect-method\ <0|1|2|3>
+.It Fl -suspect-method\ <0|1|3>
 0: No suspects
 
 1: Given a suspect file, check if any directory, file, or link inode shows up in the suspect file
 
-2: Given a suspect file, check if any file or link inode shows up in the suspect file
-   Directories have their mtime and ctime compared with the suspect time
-
 3: All directories, files, and links have their mtime and ctime compared with the suspect time
 .It Fl -suspect-time\ <s>
-time in seconds since epoch for suspect Comparison, (ignored if GUFI index in src tree)
+time in seconds since epoch for suspect comparison
 .It Fl x, -xattrs
 process xattrs if you are creating GUFI dbs of suspect directories
-.It Fl e
+.It Fl -compress
 compress work items
 
 .It GUFI_tree         GUFI tree
 .It tree              source tree
-.It snapshotdb        database file containing records of all directories
-.It parking_lot       directory to place update db.dbs and moved directories
+.It snapshotdb        prefix for database file containing records of all directories
+.It parking_lot       directory prefix to place update db.dbs and moved directories
 
 .El
 

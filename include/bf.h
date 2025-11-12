@@ -283,13 +283,9 @@ extern "C" {
 #define FLAG_SUSPECT_TIME_LONG "suspect-time"
 #define FLAG_SUSPECT_TIME {FLAG_SUSPECT_TIME_LONG, required_argument, NULL, FLAG_SUSPECT_TIME_SHORT}
 
-#define FLAG_SUSPECT_DIR_SHORT (FLAG_GROUP_INC + 3)
-#define FLAG_SUSPECT_DIR_LONG "suspect-dir"
-#define FLAG_SUSPECT_DIR {FLAG_SUSPECT_DIR_LONG, no_argument, NULL, FLAG_SUSPECT_DIR_SHORT}
-
-#define FLAG_SUSPECT_FILE_LINK_SHORT (FLAG_GROUP_INC + 4)
-#define FLAG_SUSPECT_FILE_LINK_LONG "suspect-fl"
-#define FLAG_SUSPECT_FILE_LINK {FLAG_SUSPECT_FILE_LINK_LONG, no_argument, NULL, FLAG_SUSPECT_FILE_LINK_SHORT}
+#define FLAG_SUSPECT_STAT_SHORT (FLAG_GROUP_INC + 3)
+#define FLAG_SUSPECT_STAT_LONG "suspect-stat"
+#define FLAG_SUSPECT_STAT {FLAG_SUSPECT_STAT_LONG, no_argument, NULL, FLAG_SUSPECT_STAT_SHORT}
 
 /* required at the end of every flag list */
 #define FLAG_END {NULL, 0, NULL, 0}
@@ -435,8 +431,7 @@ struct input {
     int  buildindex;
     size_t maxthreads;
     AFlag_t process_sql;           /* what to do if an SQL statement returns/doesn't return 1 row */
-    int  suspectd;                 /* added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect */
-    int  suspectfl;                /* added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect */
+    int  suspectstat;              /* if an entry is suspect, stat it to get timestamps to compare against suspecttime */
     refstr_t insuspect;            /* added for bfwreaddirplus2db input path for suspects file */
     int  suspectfile;              /* added for bfwreaddirplus2db flag for if we are processing suspects file */
     int  suspectmethod;            /* added for bfwreaddirplus2db flag for if we are processing suspects what method do we use */
@@ -638,7 +633,6 @@ struct entry_data {
 
     /* gufi_incremental_update */
     int           suspect;
-    time_t        suspect_time;
 };
 
 extern const char fielddelim;

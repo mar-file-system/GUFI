@@ -100,12 +100,18 @@ struct NonDirArgs {
     sqlite3_stmt *res;     /* used for inserting into snapshot db */
 };
 
+static int compare_suspect_time(struct work *work, const time_t suspect_time) {
+    if (lstat_wrapper(work) != 0) {
+        return 1; /* something broke - try to reindex */
+    }
+
+    return ((work->statuso.st_ctime >= suspect_time) ||
+            (work->statuso.st_mtime >= suspect_time));
+}
+
 /* check if any non-directory were changed */
 static int process_nondir(struct work *nondir, struct entry_data *ed, void *nondir_args) {
     struct NonDirArgs *nda = (struct NonDirArgs *) nondir_args;
-
-    /* --suspect-fl was set */
-    ed->suspect |= nda->pa->in.suspectfl;
 
     if (ed->suspect == 0) {
         /* mark the parent directory as suspect */
@@ -114,18 +120,20 @@ static int process_nondir(struct work *nondir, struct entry_data *ed, void *nond
             /*     /\* do nothing - this was already done by processdir *\/ */
             /*     break; */
             case 1: /* suspect directories/files/links (from suspect file) */
-            case 2: /* suspect             files/links (from suspect file) */
-                /* check if this file/link inode shows up in the suspect file */
-                nda->ed->suspect |= find_inode(&nda->pa->suspects.fl, nondir->statuso.st_ino);
+                {
+                    /* check if this file/link inode shows up in the suspect file */
+                    const int found = find_inode(&nda->pa->suspects.fl, nondir->statuso.st_ino);
+                    if (found && nda->pa->in.suspectstat) {
+                        nda->ed->suspect |= compare_suspect_time(nondir, nda->pa->in.suspecttime);
+                    }
+                    else {
+                        nda->ed->suspect |= found;
+                    }
+                }
                 break;
             case 3: /* compare file/link timestamps with given suspect time */
-                if (lstat_wrapper(nondir) != 0) {
-                    return 1;
-                }
-
                 /* don't overwrite ed.suspect if the ctime/mtime are not newer than the suspect time */
-                nda->ed->suspect |= ((nondir->statuso.st_ctime >= nda->ed->suspect_time) ||
-                                     (nondir->statuso.st_mtime >= nda->ed->suspect_time));
+                nda->ed->suspect |= compare_suspect_time(nondir, nda->pa->in.suspecttime);
                 break;
             /* no default */
         }
@@ -161,8 +169,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
     ed.type = 'd';
-    ed.suspect = pa->in.suspectd; /* --suspect-dir */
-    ed.suspect_time = pa->in.suspecttime;
+    ed.suspect = 0;
 
     sqlite3 *db = pa->tree.agg.dbs[id]; /* partial snapshot db */
     sqlite3_stmt *res = insertdbprep(db, SNAPSHOT_INSERT);
@@ -173,22 +180,19 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             /*     /\* do nothing - just insert record *\/ */
             /*     break; */
             case 1: /* suspect directories/files/links (from suspect file) */
-                ed.suspect |= find_inode(&pa->suspects.dir, work->statuso.st_ino);
-                break;
-            case 2: /* suspect             files/links (from suspect file) */
-                /*
-                 * currently processing the directory, which is not compared
-                 * against suspect files/links, so just check timestamps
-                 */
-            case 3: /* compare directory timestamps with suspect time */
-                if (lstat_wrapper(work) != 0) {
-                    rc = 1;
-                    goto close_dir;
+                {
+                    const int found = find_inode(&pa->suspects.dir, work->statuso.st_ino);
+                    if (found && pa->in.suspectstat) {
+                        ed.suspect |= compare_suspect_time(work, pa->in.suspecttime);
+                    }
+                    else {
+                        ed.suspect |= found;
+                    }
                 }
-
+                break;
+            case 3: /* compare directory timestamps with suspect time */
                 /* don't overwrite ed.suspect if the ctime/mtime are not newer than the suspect time */
-                ed.suspect |= ((work->statuso.st_ctime >= ed.suspect_time) ||
-                               (work->statuso.st_mtime >= ed.suspect_time));
+                ed.suspect |= compare_suspect_time(work, pa->in.suspecttime);
                 break;
             /* no default */
         }
@@ -220,7 +224,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         reindex_dir(pa, work, &ed, dir);
     }
 
-  close_dir:
     closedir(dir);
 
   cleanup:

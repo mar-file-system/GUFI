@@ -136,8 +136,8 @@ static int validate_source(struct PoolArgs *pa, struct work **tree, struct work 
 static void sub_help(void) {
     printf("GUFI_tree         GUFI tree\n");
     printf("tree              source tree\n");
-    printf("snapshotdb        database file containing records of all directories\n");
-    printf("parking_lot       directory to place update db.dbs and moved directories\n");
+    printf("snapshotdb        prefix for database file containing records of all directories\n");
+    printf("parking_lot       directory prefix to place update db.dbs and moved directories\n");
     printf("\n");
     printf("GUFI_tree and tree may be the same path\n");
     printf("\n");
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
         /* processing flags */
-        FLAG_SUSPECT_DIR, FLAG_SUSPECT_FILE_LINK,
+        FLAG_SUSPECT_STAT,
         FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD, FLAG_SUSPECT_TIME,
         FLAG_INDEX_XATTRS,
 
