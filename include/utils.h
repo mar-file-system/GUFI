@@ -197,6 +197,9 @@ ssize_t process_path_list(struct input *in, struct work *root,
 int write_with_resize(char **buf, size_t *size, size_t *offset,
                       const char *fmt, ...);
 
+/* check if the current directory should be processed */
+int dir_match(struct input *in, struct stat *st);
+
 #ifdef __cplusplus
 }
 #endif

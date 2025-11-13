@@ -62,6 +62,10 @@ OF SUCH DAMAGE.
 
 
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE /* getopt_long(3) + optional arguments */
+#endif
+
 #include <dlfcn.h>
 #include <errno.h>
 #include <pwd.h>
@@ -106,12 +110,6 @@ struct input *input_init(struct input *in) {
     sqlite3_initialize(); /* explicitly initialize here, in a fuction that is run serially once in main */
     if (in) {
         memset(in, 0, sizeof(*in));
-        in->maxthreads              = 1;                      // don't default to zero threads
-        in->delim                   = fielddelim;
-        in->newline                 = linesep;
-        in->process_sql             = RUN_ON_ROW;
-        in->suspecttime             = time(NULL);
-        in->max_level               = -1;                     // default to all the way down
         in->nobody.uid              = 65534;
         in->nobody.gid              = 65534;
         struct passwd *passwd       = getpwnam("nobody");
@@ -119,6 +117,14 @@ struct input *input_init(struct input *in) {
             in->nobody.uid          = passwd->pw_uid;
             in->nobody.gid          = passwd->pw_gid;
         }
+        in->delim                   = fielddelim;
+        in->newline                 = linesep;
+        in->maxthreads              = 1;                      // don't default to zero threads
+        in->dir_match.uid           = geteuid();              /* always successful */
+        in->dir_match.gid           = getegid();              /* always successful */
+        in->process_sql             = RUN_ON_ROW;
+        in->suspecttime             = time(NULL);
+        in->max_level               = -1;                     // default to all the way down
         sll_init(&in->sql_format.tsum);
         sll_init(&in->sql_format.sum);
         sll_init(&in->sql_format.ent);
@@ -201,6 +207,8 @@ void print_help(const char* prog_name,
             case FLAG_DEBUG_SHORT:                   printf("  -H, --debug                       show assigned input values (debugging)"); break;
             case FLAG_VERSION_SHORT:                 printf("  -v, --version                     version"); break;
             case FLAG_PRINTDIR_SHORT:                printf("  -P                                print directories as they are encountered"); break;
+            case FLAG_DIR_MATCH_UID_SHORT:           printf("  --dir-match-uid[=uid]             only traverse directories that are owned by uid (optional; default: euid)"); break;
+            case FLAG_DIR_MATCH_GID_SHORT:           printf("  --dir-match-gid[=gid]             only traverse directories that are owned by gid (optional; default: egid)"); break;
             case FLAG_PROCESS_SQL_SHORT:             printf("  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
                                                             "                                    1 - skip T, run S and E whether or not a row was returned (old -a)\n"
                                                             "                                    2 - run T, S, and E whether or not a row was returned"); break;
@@ -276,6 +284,9 @@ void show_input(struct input* in, int retval) {
     printf("in.buildindex               = %d\n",            in->buildindex);
     printf("in.maxthreads               = %zu\n",           in->maxthreads);
     printf("in.delim                    = '%c'\n",          in->delim);
+    printf("in.dir_match_owner.on       = %d\n",            in->dir_match.on);
+    printf("in.dir_match_owner.uid      = %" STAT_uid "\n", in->dir_match.uid);
+    printf("in.dir_match_owner.gid      = %" STAT_gid "\n", in->dir_match.gid);
     printf("in.process_sql              = %d\n",            (int) in->process_sql);
     printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
     printf("in.nobody.gid               = %" STAT_gid "\n", in->nobody.gid);
@@ -622,6 +633,22 @@ int parse_cmd_line(int                  argc,
                 in->suppress_newline = 1;
                 break;
 
+            case FLAG_DIR_MATCH_UID_SHORT:
+                in->dir_match.on |= DIR_MATCH_UID;
+                if (optarg) {
+                    INSTALL_UID(&in->dir_match.uid, optarg, (uid_t) 0, (uid_t) -1,
+                                "--" FLAG_DIR_MATCH_UID_LONG, &retval);
+                }
+                break;
+
+            case FLAG_DIR_MATCH_GID_SHORT:
+                in->dir_match.on |= DIR_MATCH_GID;
+                if (optarg) {
+                    INSTALL_GID(&in->dir_match.gid, optarg, (uid_t) 0, (uid_t) -1,
+                                "--" FLAG_DIR_MATCH_GID_LONG, &retval);
+                }
+                break;
+
             /* memory usage flags */
 
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:
@@ -753,6 +780,8 @@ int INSTALL_STR(refstr_t *VAR, const char *SOURCE) {
 INSTALL_NUMBER(INT, int, "%d")
 INSTALL_NUMBER(SIZE, size_t, "%zu")
 INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64)
+INSTALL_NUMBER(UID, uid_t, "%" STAT_uid)
+INSTALL_NUMBER(GID, gid_t, "%" STAT_gid)
 
 /*
  * Returns size of a dynamically sized struct work_packed.

@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <stdlib.h> /* EXIT_SUCCESS and EXIT_FAILURE */
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include "SinglyLinkedList.h"
 #include "compress.h"
@@ -229,6 +230,14 @@ extern "C" {
 #define FLAG_SUPPRESS_NEWLINE_LONG "suppress-newline"
 #define FLAG_SUPPRESS_NEWLINE {FLAG_SUPPRESS_NEWLINE_LONG, no_argument, NULL, FLAG_SUPPRESS_NEWLINE_SHORT}
 
+#define FLAG_DIR_MATCH_UID_SHORT (FLAG_GROUP_MISC + 14)
+#define FLAG_DIR_MATCH_UID_LONG "dir-match-uid"
+#define FLAG_DIR_MATCH_UID {FLAG_DIR_MATCH_UID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_UID_SHORT}
+
+#define FLAG_DIR_MATCH_GID_SHORT (FLAG_GROUP_MISC + 15)
+#define FLAG_DIR_MATCH_GID_LONG "dir-match-gid"
+#define FLAG_DIR_MATCH_GID {FLAG_DIR_MATCH_GID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_GID_SHORT}
+
 /* memory utilization flags */
 
 #define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
@@ -342,6 +351,14 @@ struct sum {
     long long int totextdbs; /* only tracked in treesummary, not summary */
 };
 
+/* for --dir-match-uid and --dir-match-gid */
+typedef enum DirMatch {
+    DIR_MATCH_NONE = 0,
+    DIR_MATCH_UID  = 1 << 0,
+    DIR_MATCH_GID  = 1 << 1,
+    DIR_MATCH_ALL  = DIR_MATCH_UID | DIR_MATCH_GID,
+} DirMatch_t;
+
 typedef enum AFlag {
     RUN_ON_ROW = 0,   /* if returned row, run next SQL, else stop (continue descent) (default) */
     RUN_SE     = 1,   /* skip T, run S and E whether or not a row was returned (old -a) */
@@ -430,6 +447,11 @@ struct input {
     int suppress_newline;
     int  buildindex;
     size_t maxthreads;
+    struct {
+        DirMatch_t on;             /* directories have to match uid/gid (gufi_query only) */
+        uid_t uid;                 /* only set if --match-uid is set; defaults to EUID */
+        gid_t gid;                 /* only set if --match-gid is set; defaults to EGID */
+    } dir_match;
     AFlag_t process_sql;           /* what to do if an SQL statement returns/doesn't return 1 row */
     int  suspectstat;              /* if an entry is suspect, stat it to get timestamps to compare against suspecttime */
     refstr_t insuspect;            /* added for bfwreaddirplus2db input path for suspects file */
@@ -567,6 +589,8 @@ int INSTALL_STR(refstr_t *VAR, const char *SOURCE);
 INSTALL_NUMBER_PROTOTYPE(INT, int, "%d");
 INSTALL_NUMBER_PROTOTYPE(SIZE, size_t, "%zu");
 INSTALL_NUMBER_PROTOTYPE(UINT64, uint64_t, "%" PRIu64);
+INSTALL_NUMBER_PROTOTYPE(UID, uid_t, "%" STAT_uid);
+INSTALL_NUMBER_PROTOTYPE(GID, gid_t, "%" STAT_gid);
 
 typedef enum {
     DO_FREE   = 0x01,

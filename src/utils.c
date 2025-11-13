@@ -1095,3 +1095,23 @@ int write_with_resize(char **buf, size_t *size, size_t *offset,
 
     return 0;
 }
+
+int dir_match(struct input *in, struct stat *st) {
+    int rc = 0;
+    switch (in->dir_match.on) {
+        case DIR_MATCH_NONE:
+            rc = 1;
+            break;
+        case DIR_MATCH_UID:
+            rc = (in->dir_match.uid == st->st_uid);
+            break;
+        case DIR_MATCH_GID:
+            rc = (in->dir_match.gid == st->st_gid);
+            break;
+        case DIR_MATCH_ALL:
+            rc = ((in->dir_match.uid == st->st_uid) &&
+                  (in->dir_match.gid == st->st_gid));
+            break;
+    }
+    return rc;
+}

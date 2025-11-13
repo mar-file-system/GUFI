@@ -1347,3 +1347,30 @@ TEST(write_with_resize, good) {
 
     free(buf);
 }
+
+TEST(dir, match) {
+    struct input in;
+    in.dir_match.uid = 1;
+    in.dir_match.gid = 1;
+
+    struct stat st;
+
+    for(uid_t uid = 0; uid < 2; uid++) {
+        for(gid_t gid = 0; gid < 2; gid++) {
+            st.st_uid = uid;
+            st.st_gid = gid;
+
+            in.dir_match.on = DIR_MATCH_NONE;
+            EXPECT_EQ(dir_match(&in, &st), 1); // always passes
+
+            in.dir_match.on = DIR_MATCH_UID;
+            EXPECT_EQ(dir_match(&in, &st), uid == in.dir_match.uid);
+
+            in.dir_match.on = DIR_MATCH_GID;
+            EXPECT_EQ(dir_match(&in, &st), gid == in.dir_match.gid);
+
+            in.dir_match.on = DIR_MATCH_ALL;
+            EXPECT_EQ(dir_match(&in, &st), (uid == in.dir_match.uid) && (gid == in.dir_match.gid));
+        }
+    }
+}

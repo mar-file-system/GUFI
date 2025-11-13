@@ -124,6 +124,20 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
                                                      line, len);
         }
 
+        if (in->dir_match.on != DIR_MATCH_NONE) {
+            /* use lstat(2)/statx(2) here because these might not be index roots */
+            if (lstat_wrapper(&subtree_root->work) != 0) {
+                free(subtree_root);
+                continue;
+            }
+
+            /* check if uid/gid match */
+            if (!dir_match(in, &subtree_root->work.statuso)) {
+                free(subtree_root);
+                continue;
+            }
+        }
+
         /* set modified path name for SQLite3 */
         size_t rp_len = subtree_root->work.name_len; /* discarded */
         subtree_root->sqlite3_name = ((char *) subtree_root->work.name) + subtree_root->work.name_len + 1;
@@ -156,7 +170,7 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_t *ctx) {
     return 0;
 }
 
-static int validate_source(const char *path, gqw_t **gqw) {
+static int validate_source(struct input *in, const char *path, gqw_t **gqw) {
     size_t len = strlen(path);
     if (!len) {
         return 1;
@@ -177,6 +191,13 @@ static int validate_source(const char *path, gqw_t **gqw) {
         fprintf(stderr,"input-dir '%s' is not a directory\n",
                 path);
         return 1;
+    }
+
+    if (in->dir_match.on != DIR_MATCH_NONE) {
+        /* check if uid/gid match */
+        if (!dir_match(in, &st)) {
+            return 1;
+        }
     }
 
     /*
@@ -236,7 +257,7 @@ int main(int argc, char *argv[])
         FLAG_SQL_FIN,
 
         /* SQL processing/tree walk flags */
-        FLAG_PROCESS_SQL,
+        FLAG_DIR_MATCH_UID, FLAG_DIR_MATCH_GID, FLAG_PROCESS_SQL,
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST,
         FLAG_PATH, FLAG_XATTRS, FLAG_QUERY_XATTRS, FLAG_EXTERNAL_ATTACH,
 
@@ -303,7 +324,7 @@ int main(int argc, char *argv[])
         }
         else if (root_count == 1) {
             gqw_t *work = NULL;
-            if (validate_source(argv[idx], &work) == 0) {
+            if (validate_source(&in, argv[idx], &work) == 0) {
                 gqw_process_path_list(&in, work, pool);
             }
             else {
@@ -318,7 +339,7 @@ int main(int argc, char *argv[])
         /* enqueue input paths */
         for(int i = idx; i < argc; i++) {
             gqw_t *work = NULL;
-            if (validate_source(argv[i], &work) != 0) {
+            if (validate_source(&in, argv[i], &work) != 0) {
                 continue;
             }
 

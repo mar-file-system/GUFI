@@ -13,6 +13,8 @@ options:
   -K <create aggregate>             SQL to create the final aggregation table
   -G <SQL_aggregate>                SQL for aggregated results
   -F <SQL_fin>                      SQL cleanup
+  --dir-match-uid[=uid]             only traverse directories that are owned by uid (optional; default: euid)
+  --dir-match-gid[=gid]             only traverse directories that are owned by gid (optional; default: egid)
   -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)
                                     1 - skip T, run S and E whether or not a row was returned (old -a)
                                     2 - run T, S, and E whether or not a row was returned

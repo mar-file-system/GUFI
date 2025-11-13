@@ -107,6 +107,8 @@ static const std::string path_list          = "--path-list"; static const std::s
 static const std::string format             = "--format"; static const std::string format_arg = "f arg";
 static const std::string terse              = "--terse";
 static const std::string rollup_limit       = "--limit"; static const std::string rollup_limit_arg = "1";
+static const std::string dir_match_uid      = "--dir-match-uid"; static const std::string dir_match_uid_arg = "1";
+static const std::string dir_match_gid      = "--dir-match-gid"; static const std::string dir_match_gid_arg = "1";
 
 static const std::string output_buffer_size = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
 static const std::string target_memory      = "--target-memory"; static const std::string target_memory_arg = "1";
@@ -152,6 +154,10 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->open_flags,                         flags?SQLITE_OPEN_READWRITE:SQLITE_OPEN_READONLY);
     EXPECT_EQ(in->terse,                              flags);
     EXPECT_EQ(in->dry_run,                            flags);
+    // not checking --dir-match-uid and --dir-match-gid here
+    EXPECT_EQ(in->dir_match.on,                       DIR_MATCH_NONE);
+    EXPECT_EQ(in->dir_match.uid,                      geteuid());
+    EXPECT_EQ(in->dir_match.gid,                      getegid());
     #if HAVE_ZLIB
     EXPECT_EQ(in->compress,                           flags);
     #endif
@@ -486,6 +492,79 @@ TEST(parse_cmd_line, delimiter) {
 
         input_fini(&in);
     }
+}
+
+TEST(parse_cmd_line, dir_match) {
+    const struct option opts[] = { FLAG_DIR_MATCH_UID, FLAG_DIR_MATCH_GID, FLAG_END };
+
+    // none
+    {
+        const char *argv[] = {
+            exec.c_str(),
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(in.dir_match.on, DIR_MATCH_NONE);
+
+        input_fini(&in);
+    }
+
+    // uid only (no arg)
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            dir_match_uid.c_str(),
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(in.dir_match.on, DIR_MATCH_UID);
+
+        input_fini(&in);
+    }
+
+    // gid only (no arg)
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            dir_match_gid.c_str(),
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(in.dir_match.on, DIR_MATCH_GID);
+
+        input_fini(&in);
+    }
+
+    // all (with args)
+    {
+        // have to attach optional arg to the flag
+        const std::string uid = dir_match_uid + "=" + dir_match_uid_arg;
+        const std::string gid = dir_match_gid + "=" + dir_match_gid_arg;
+        const char *argv[] = {
+            exec.c_str(),
+            uid.c_str(),
+            gid.c_str(),
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(in.dir_match.on, DIR_MATCH_ALL);
+        EXPECT_EQ(in.dir_match.uid, (uid_t) 1);
+        EXPECT_EQ(in.dir_match.gid, (gid_t) 1);
+
+        input_fini(&in);
+     }
 }
 
 TEST(parse_cmd_line, output_arguments) {

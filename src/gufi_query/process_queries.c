@@ -131,6 +131,20 @@ static size_t descend2(QPTPool_t *ctx,
 
                 gqw_t *clone = compress_struct(in->compress, child, gqw_size(child));
 
+                if (in->dir_match.on != DIR_MATCH_NONE) {
+                    /* just in case lstat(2)/statx(2) was skipped */
+                    if (lstat_wrapper(&clone->work) != 0) {
+                        free(child);
+                        continue;
+                    }
+
+                    /* check if uid/gid match */
+                    if (!dir_match(in, &clone->work.statuso)) {
+                        free(child);
+                        continue;
+                    }
+                }
+
                 /* push the subdirectory into the queue for processing */
                 #ifdef QPTPOOL_SWAP
                 QPTPool_enqueue_swappable(ctx, id, func, clone,
