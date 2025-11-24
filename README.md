@@ -30,34 +30,8 @@ See other components of MarFS at:
 
     https://github.com/mar-file-system
 
-## Quick Start
-```bash
-git clone https://github.com/mar-file-system/GUFI.git
-cd GUFI
-mkdir build
-cd build
-cmake ..
-make
-(sudo) make install
-
-# create a GUFI tree
-gufi_dir2index <src_dir> <index_dir>
--or-
-gufi_dir2trace <src_dir> <trace_file_prefix>
-cat <trace_file_prefix>.* > <trace_file>
-gufi_trace2index <trace_file> <index_dir>
-
-# post-process the index
-gufi_treesummary/gufi_treesummary_all/gufi_rollup
-
-# query the index
-gufi_query
-
-# create /etc/GUFI/config from /etc/GUFI/server.example
-
-# use wrapper scripts
-gufi_du/gufi_find/gufi_ls/gufi_getfattr/gufi_stat/gufi_stats
-```
+## Usage
+For instructions on how to quickly get a local GUFI build running, please see the [quickstart](docs/latex/gufi_quickstart.tex) guide.
 
 For the dependency list, detailed build and install instructions, and details about GUFI, please see the [documentation](docs/README.md).
 

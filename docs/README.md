@@ -8,9 +8,9 @@ Documentation on the design of GUFI can be found at [GUFI.docx](GUFI.docx) and i
 Dominic Manno, Jason Lee, Prajwal Challa, Qing Zheng, David Bonnie, Gary Grider, and Bradley Settlemyer. 2022. GUFI: fast, secure file system metadata search for both privileged and unprivileged users. In Proceedings of the International Conference on High Performance Computing, Networking, Storage and Analysis (SC '22). IEEE Press, Article 57, 1–14. https://dl.acm.org/doi/abs/10.5555/3571885.3571960
 
 ## Usage
-See the root [README](/README.md#quick-start) for quick start instructions.
+See the [quick start](latex/gufi_quickstart.tex) documentation to get started quickly.
 
-For more detailed instructions, see the [user, administrator, and developer guides](latex)
+For more detailed instructions, see the [user](latex/gufi_user.tex), [administrator](latex/gufi_administrator.tex), and [developer guides](latex/gufi_developer.tex)
 that will be placed into `docs/latex/pdfs` if building them is enabled with the CMake
 configuration `-DLATEX_BUILD=On`.
 

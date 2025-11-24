@@ -1,0 +1,291 @@
+% This file is part of GUFI, which is part of MarFS, which is released
+% under the BSD license.
+%
+%
+% Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+% All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without modification,
+% are permitted provided that the following conditions are met:
+%
+% 1. Redistributions of source code must retain the above copyright notice, this
+% list of conditions and the following disclaimer.
+%
+% 2. Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation and/or
+% other materials provided with the distribution.
+%
+% 3. Neither the name of the copyright holder nor the names of its contributors
+% may be used to endorse or promote products derived from this software without
+% specific prior written permission.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+% ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+% IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+% INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+% BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+% DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+% OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+% ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+%
+%
+% From Los Alamos National Security, LLC:
+% LA-CC-15-039
+%
+% Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+% Copyright 2017. Los Alamos National Security, LLC. This software was produced
+% under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+% Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+% the U.S. Department of Energy. The U.S. Government has rights to use,
+% reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+% ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+% ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+% modified to produce derivative works, such modified software should be
+% clearly marked, so as not to confuse it with the version available from
+% LANL.
+%
+% THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+% "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+% ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+% OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+% CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+% OF SUCH DAMAGE.
+
+
+
+\section{Quickstart}
+This guide assumes that the reader has some awareness of the purpose
+of GUFI, but does not know how to set it up or use it. This guide
+provides a full run through of the basics of building, installing,
+setting up, and running GUFI within a short period of time.
+
+What this guide does not do is provide information on every single
+executable, flag, design decision, and implementation detail. For that,
+see the other documentation.
+
+\section{Download}
+Obtain a copy of the source code from GitHub: \\
+
+\indent \texttt{git clone}
+\href{https://github.com/mar-file-system/GUFI.git}{\texttt{https://github.com/mar-file-system/GUFI.git}}
+
+\section{Dependencies}
+GUFI is known to build on Linux, macOS, and Windows (via cygwin).
+Most of the dependencies that GUFI requires are part of standard
+packages, such as \texttt{coreutils}, a C compiler, CMake, and
+bash. However, even these dependencies on different systems are known
+under different names. In \texttt{contrib/CI}, there are a series of
+shell scripts that can be run on the systems they are named for to
+download dependencies. Windows dependencies are listed in the GitHub
+Actions YAML file located in \texttt{.github/workflows/test.yml}.
+
+\section{Build and Install}
+\subsection{Build Directory}
+Create a directory to configure and build GUFI. The recommended build
+directory name is \texttt{build} under the source tree root. It can be
+anywhere that is not the source tree root itself. \\
+
+\texttt{mkdir -p build \&\& cd build}
+
+\subsection{Configure Build}
+GUFI uses CMake to generate Makefiles. The method of running CMake
+recommended here does not use the extensive list of flags available in
+\texttt{cmake(1)}: \\
+
+\texttt{cmake .. <flags>} \\
+
+GUFI defines many CMake flags. Run \texttt{ccmake ..} to see the latest flags.
+Some particularly useful ones are listed here: \\
+\begin{table}[H]
+  \centering
+  \begin{tabularx}{\textwidth}{| l | X |}
+    \hline
+    CMake Variable & Explaination \\
+    (prepend with \texttt{-D} when used) & \\
+    \hline
+    \texttt{DEP\_INSTALL\_PREFIX=<directory path>} & Place compiled
+    bundled dependencies here. Used to keep the dependencies when the
+    build directory is deleted. \\
+    \hline
+    \texttt{DEP\_BUILD\_THREADS=<thread count>} & Build dependencies with
+    this many threads to speed up builds. \\
+    \hline
+    \texttt{DEP\_AI=<ON|OFF>} & Enable or disable building sqlite-vec,
+    sqlite-lembed, llama.cpp, and other AI related files. \\
+    & Note that llama.cpp is not bundled with GUFI, and is downloaded
+    during the dependency build step. \\
+    \hline
+    \texttt{CMAKE\_INSTALL\_PREFIX=<directory path>} & Where to install
+    GUFI when runnng \texttt{make install}. Useful if not installing to
+    system directories. \\
+    \hline
+    \texttt{SERVER\_CONFIG=<file path>} & Name of file used to
+    configure Python scripts on the server side (explained later). A
+    copy of \texttt{server.example} will be placed into the parent
+    directory of the provided path. Copy/rename this file to the
+    provided configuration file name. This is the GUFI configuration
+    file that is used in this guide. There is an additional
+    configuration file that is not necessary and not described
+    here. \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Configuring CMake on macOS is trickier than building on Linux,
+especially with \texttt{DEP\_AI=On}. See the latest macOS CMake
+configuration in \texttt{.github/workflows/test.yml}.
+
+Configuring CMake on cygwin has a few caveats as well. See the latest
+cygwin CMake configuration in \texttt{.github/workflows/test.yml}.
+
+\subsection{Build}
+\indent \indent \texttt{make}
+
+\subsection{Install}
+\indent \indent \texttt{(sudo) make install} \\
+
+Due to how GUFI was planned to be deployed, this installs what is
+known as the server side code. The server contains all of the actual
+implementations of GUFI functionality. The implied client side
+code does exist, but is not explained here.
+
+\section {Usage}
+With GUFI installed, usage is grouped into 2 phases. The first,
+indexing, is normally only done by an administrator. Querying can be
+done by both administrators and users, and has been split into 2
+subsections (there is a third way, but has been intentionally left out
+here because it is not necessary to get GUFI running).
+
+\subsection{Phase 1: Index a Filesystem Tree}
+There are 4 executables that can be used to index a filesystem
+tree. Only \gufidirindex is described here. The common inputs are \\
+
+\indent \gufidirindex \texttt{--threads <n> --index-xattrs tree GUFI\_tree\_parent} \\
+
+where \texttt{tree} is the root of a filesystem tree to be
+indexed. The basename of the directory path will be used to create the
+index. \texttt{GUFI\_tree\_parent} is the directory above where the
+index for this tree should be found. For example, passing in
+\texttt{tree=a/b/c} and \texttt{GUFI\_tree\_parent=search} will result
+in the index being generated in \texttt{search/c}. \texttt{GUFI\_tree\_parent}
+was designed this way so that all calls to \gufidirindex can point to
+a unified index location.
+
+\subsubsection{Post-Indexing Optimizations}
+There are a few operations that can be done after indexing a tree to
+help increase search performance. These operations are entirely
+optional. The executables used to do them are listed here, but are not
+elaborated upon: \gufitreesummary, \gufitreesummaryall, and
+\gufirollup.
+
+\subsection{Phase 2: Querying}
+\subsubsection{\gufiquery}
+The primary command line tool for querying a GUFI tree is
+\gufiquery. There are others, but this is the primary one to know
+about.
+
+Using \gufiquery requires knowledge of the internals of GUFI (such as
+the schema of GUFI databases), and thus only ``advanced'' users are
+expected to use it. The 3 primary flags used for passing in SQL,
+\texttt{-T}, \texttt{-S}, and \texttt{-E}, correspond to the
+tables/views that should be queried by them: the (optional)
+\treesummary table, the (\texttt{directory})\summary table, and the
+\entries table. Because the \treesummary table is optional, it will
+not be elaborated on here. The (\texttt{directory})\summary table
+contains \texttt{stat(2)} information about the directory, as well as
+a series of columns that summarize the current directory, such as
+total number of files and the total size of all files. The \entries
+table contains \texttt{stat(2)} information on the individual files
+and links.
+
+There are several things to note that affect how \gufiquery should be
+called (explainations can be found in the other latex documentation).
+
+\begin{itemize}
+\item The \entries table should not be used directly; instead, use the
+  \vrpentries view.
+\item The \summary table should not be used directly; instead, use the
+  \vrsummary view.
+\item \texttt{-S} is run before \texttt{-E}, and will cause
+  \texttt{-E} to not run if \texttt{-S} does not output at least one
+  row of results (say, due to a \texttt{WHERE} clause).
+\item Nothing stops a user from querying an incorrect table from a
+  flag e.g. querying \vrpentries from \texttt{-S}.
+\item Many \href{https://sqlite.org/appfunc.html}{SQLite3 User Defined
+  Functions} have been defined for GUFI. The one to know is
+  \texttt{rpath(sname, sroll, [entry name])} (not usable with \summary
+  and \entries/\pentries).
+\end{itemize}
+
+A simple \gufiquery call might looks something like: \\
+
+\gufiquery \texttt{--threads <n>} \textbackslash \\
+\indent \indent \texttt{-S "SELECT ... FROM vrsummary ... ;"} \textbackslash \\
+\indent \indent \texttt{-E "SELECT ... FROM vrpentries ... ;"} \textbackslash \\
+\indent \indent \texttt{GUFI\_tree} \\
+
+where \texttt{GUFI\_tree} can be any directory generated by indexing. \\
+
+A basic \texttt{find(1)} call such as \\
+
+\texttt{find a/b/c} \\
+
+can be replicated in GUFI like so: \\
+
+\gufiquery \texttt{--threads <n>} \textbackslash \\
+\indent \indent \texttt{-S "SELECT rpath(sname, sroll) FROM vrsummary;"} \textbackslash \\
+\indent \indent \texttt{-E "SELECT rpath(sname, sroll, name) FROM vrpentries;"} \textbackslash \\
+\indent \indent \texttt{search/c}
+
+\paragraph{\gufivt}
+
+\gufivt is a \href{https://sqlite.org/loadext.html}{SQLite3 Run-Time
+  Loadable Extension} that wraps \gufiquery and makes it accessible via
+the SQlite3 command line as well as via any language's SQLite3
+library.
+
+\subsubsection{User Facing Scripts}
+Because \gufiquery is very complex and requires detailed knowledge of
+the internals of GUFI, it is not the expected way most people will use
+to query indexes. Instead, there is a series of Python scripts that
+wrap \gufiquery (or one of the other binaries) to partially replicate
+common filesystem search functionality with GUFI. The tools are:
+\gufidu, \gufifind, \gufigetfattr, \gufils, and \gufistat.
+
+Before running these scripts, the server configuration must be set
+up. Because these tools are intended to be user facing, and users are
+not expected to know where indexes are, the server configuration value
+\texttt{IndexRoot} needs to be set to
+\texttt{GUFI\_tree\_parent}\footnote{These need to be renamed to the
+same variable name at some point.}. If the executables were for
+whatever reason installed to a location that is not
+\texttt{CMAKE\_INSTALL\_PREFIX} (such as files extracted from the GUFI
+RPM being moved to a new location), the paths in the
+configuration file should be pointed to the correct paths.
+
+With the configutation file set up, the user facing tools will
+prefix every path passed to them with \texttt{IndexRoot}: \\
+
+\texttt{In the configuration file:} \\
+\indent \texttt{IndexRoot=search} \\
+
+\gufifind \texttt{c/d} \\
+
+will return all paths accessible by the caller under
+\texttt{search/c/d}. Note that \gufifind has the same quirk as
+\texttt{find(1)} where the input path(s) must come first in the
+argument list. However, flag ordering does not matter. \\
+
+Similarly, \\
+
+\gufils \texttt{-al c/d} \\
+
+will print all directories, files, and links immediately under
+\texttt{search/c/d} formatted similarly to \texttt{ls(1) -al}.

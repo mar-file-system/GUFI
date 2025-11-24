@@ -83,7 +83,7 @@ jobs:
       run:  cmake -B ${{ github.workspace }}/build -DLATEX_BUILD=On
 
     - name: Build PDFs
-      run:  cmake --build ${{ github.workspace }}/build --target gufi_user gufi_administrator gufi_developer
+      run:  cmake --build ${{ github.workspace }}/build --target gufi_quickstart gufi_user gufi_administrator gufi_developer
 
     - name: Upload PDFs
       uses: softprops/action-gh-release@v2

@@ -137,6 +137,10 @@ set(gufi_administrator_inputs
     sections/deploy.tex
 )
 
+set(gufi_quickstart_inputs
+    sections/quickstart.tex
+)
+
 set(gufi_user_inputs
     sections/introduction.tex
     sections/user_env.tex
@@ -157,6 +161,12 @@ ADD_LATEX_DOCUMENT(
 ADD_LATEX_DOCUMENT(
     gufi_administrator.tex
     INPUTS ${common_inputs} ${gufi_administrator_inputs}
+    IMAGE_DIRS "${image_path}"
+)
+
+ADD_LATEX_DOCUMENT(
+    gufi_quickstart.tex
+    INPUTS ${common_inputs} ${gufi_quickstart_inputs}
     IMAGE_DIRS "${image_path}"
 )
 
