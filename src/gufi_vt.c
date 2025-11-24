@@ -107,6 +107,11 @@ typedef struct gufi_query_cmd {
     sll_t remote_args;     /* list of refstr_t that are single arguments to remote_cmd (i.e. user@remote) */
     int verbose;           /* print gufi_query command */
 
+    refstr_t threads;      /* number of threads in string form to avoid converting back and forth */
+    refstr_t min_level;    /* defaults to 0; set to non-0 if index root should be used with path list */
+    refstr_t dir_match_uid;
+    refstr_t dir_match_gid;
+
     /* sql */
     refstr_t I;
     refstr_t T;
@@ -117,8 +122,6 @@ typedef struct gufi_query_cmd {
     refstr_t G;
     refstr_t F;
 
-    refstr_t threads;      /* number of threads in string form to avoid converting back and forth */
-    refstr_t min_level;    /* defaults to 0; set to non-0 if index root should be used with path list */
     refstr_t path_list;    /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
     refstr_t p;            /* source path */
 } gq_cmd_t;
@@ -155,6 +158,8 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
     int argc = 0;
     const char **argv = NULL;
     char *flat = NULL; /* flattened command string that needs to be freed */
+    char *dir_match_uid = NULL;
+    char *dir_match_gid = NULL;
 
     if (cmd->remote_cmd.len) {
         /* need to combine entire gufi_query command into one argument */
@@ -190,6 +195,17 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
         /* construct the rest of the gufi_query command */
         flatten_argv(argc, argv, "--min-level", cmd->min_level);
         flatten_argv(argc, argv, "--path-list", cmd->path_list);
+
+        if (cmd->dir_match_uid.len) {
+            write_with_resize(&flat, &size, &len,
+                              "--dir-match-uid=%s", cmd->dir_match_uid.data);
+        }
+
+        if (cmd->dir_match_gid.len) {
+            write_with_resize(&flat, &size, &len,
+                              "--dir-match-gid=%s", cmd->dir_match_gid.data);
+        }
+
         flatten_argv(argc, argv, "-I",          cmd->I);
         flatten_argv(argc, argv, "-T",          cmd->T);
         flatten_argv(argc, argv, "-S",          cmd->S);
@@ -210,7 +226,7 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
     else {
         /* can keep arguments separate */
 
-        max_argc = 28; /* 5 fixed args, 11 pairs of flags, 1 indexroot */
+        max_argc = 30; /* 5 fixed args, 11 pairs of flags, 2 single argv flags, 1 indexroot */
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
 
@@ -231,6 +247,23 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
         /* construct the rest of the gufi_query command */
         set_argv(argc, argv, "--min-level", cmd->min_level);
         set_argv(argc, argv, "--path-list", cmd->path_list);
+
+        if (cmd->dir_match_uid.len) {
+            size_t size = 0;
+            size_t len = 0;
+            write_with_resize(&dir_match_uid, &size, &len,
+                              "--dir-match-uid=%s", cmd->dir_match_uid.data);
+            argv[argc++] = dir_match_uid;
+        }
+
+        if (cmd->dir_match_gid.len) {
+            size_t size = 0;
+            size_t len = 0;
+            write_with_resize(&dir_match_gid, &size, &len,
+                              "--dir-match-gid=%s", cmd->dir_match_gid.data);
+            argv[argc++] = dir_match_gid;
+        }
+
         set_argv(argc, argv, "-I",          cmd->I);
         set_argv(argc, argv, "-T",          cmd->T);
         set_argv(argc, argv, "-S",          cmd->S);
@@ -260,6 +293,8 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
     /* pass command to popen */
     popen_argv_t *out = popen_argv(argv);
 
+    free(dir_match_gid);
+    free(dir_match_uid);
     free(flat);
     free(argv);
 
@@ -583,7 +618,7 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
         /* fixed queries */                                                       \
         gq_cmd_t cmd;                                                             \
         memset(&cmd, 0, sizeof(cmd));                                             \
-        sll_init(&cmd.remote_args);                                              \
+        sll_init(&cmd.remote_args);                                               \
         set_refstr(&cmd.T, (char *) (t?select_from:NULL));                        \
         set_refstr(&cmd.S, (char *) (s?(vr?select_from_vr:select_from):NULL));    \
         set_refstr(&cmd.E, (char *) (e?(vr?select_from_vr:select_from):NULL));    \
@@ -619,6 +654,9 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     remote_cmd      = '<command to forward this run of gufi_query to a remote (e.g. ssh)>'
  *     remote_arg      = '<single argv[i] passed to remote_cmd before gufi_query (e.g. user@remote)>'
  *     n or threads    =  <positive integer>
+ *     min_level       =  <non-negative integer>
+ *     dir_match_uid   =  <uid>
+ *     dir_match_gid   =  <gid>
  *     I               = '<SQL>'
  *     T               = '<SQL>'
  *     S               = '<SQL>'
@@ -627,7 +665,6 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     J               = '<SQL>'
  *     G               = '<SQL>'
  *     F               = '<SQL>'
- *     min_level       = <non-negative integer>
  *     path_list       = '<file path>'
  *     p               = '<source path for use with spath()>'
  *     index           = '<index path>' (can also pass in without the key)
@@ -829,6 +866,12 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             refstr_t *remote_arg = calloc(1, sizeof(*remote_arg));
             set_refstr(remote_arg, value);
             sll_push(&cmd.remote_args, remote_arg);
+        }
+        else if (strncmp(key, "dir_match_uid", 14) == 0) {
+            set_refstr(&cmd.dir_match_uid, value);
+        }
+        else if (strncmp(key, "dir_match_gid", 14) == 0) {
+            set_refstr(&cmd.dir_match_gid, value);
         }
         else {
             *pzErr = sqlite3_mprintf("Unknown key: %s", key);
