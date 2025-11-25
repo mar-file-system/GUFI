@@ -4,8 +4,8 @@ options:
   -h, --help                        help
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
-  -n, --threads <threads>           number of threads
-  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x1E]
+  -n, --threads <n>                 number of threads
+  -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x1E]
       --target-memory <bytes>       target memory utilization (soft limit)
       --swap-prefix <path>          File name prefix for swap files
 

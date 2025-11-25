@@ -4,10 +4,10 @@ options:
   -h, --help                        help
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
-  -n, --threads <threads>           number of threads
-      --min-level <min level>       minimum level to go down
-      --max-level <max level>       maximum level to go down
-      --path-list <filename>        File containing paths at single level to index (not including starting path). Must also use --min-level
+  -n, --threads <n>                 number of threads
+      --min-level <n>               minimum level to go down
+      --max-level <n>               maximum level to go down
+      --path-list <filename>        File containing paths at single level to walk (not including starting path). If --min-level > 0, prepend each line of the file with the index path.
       --dont-reprocess              if a directory was previously processed, skip descending the subtree
       --suspect-time <s>            time in seconds since epoch for suspect comparision
 

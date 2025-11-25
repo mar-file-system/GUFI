@@ -69,16 +69,21 @@ needs to be provided the search path. \\
 
 \subsubsection{Flags}
 \begin{table} [h!]
-  \begin{tabular}{| l | l |}
+  \centering
+  \begin{tabularx}{\textwidth}{| l | X |}
     \hline
     Option & Description \\
     \hline
-    \texttt{-f <FORMAT>} & use the specified FORMAT instead of the
-    default. \\
-    & A newline is outputted after each use of FORMAT. \\
+    -h, -{}-help & help \\
     \hline
-    \texttt{-j} & print the information in terse form; Same as \\
-    & \texttt{-t}/\texttt{-{}-terse} in \texttt{stat(1)}. \\
+    -H, -{}-debug & show assigned input values (debugging) \\
     \hline
-  \end{tabular}
+    -v, -{}-version & version \\
+    \hline
+    -{}-format \textless FORMAT\textgreater & use the specified FORMAT instead of the
+    default; output a newline after each use of FORMAT. \\
+    \hline
+    -{}-terse & print the information in terse form \\
+    \hline
+  \end{tabularx}
 \end{table}

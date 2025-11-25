@@ -4,7 +4,7 @@ options:
   -h, --help                        help
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
-  -n, --threads <threads>           number of threads
+  -n, --threads <n>                 number of threads
   -x, --set-xattrs                  set xattrs
 
 src...     directory to copy

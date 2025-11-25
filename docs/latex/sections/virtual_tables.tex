@@ -63,43 +63,137 @@
 \subsection{Virtual Tables}
 A series of
 \href{https://www.sqlite.org/vtab.html}{\sqlite~Virtual~Tables} have
-been developed for GUFI.
+been developed for GUFI: \gufivtstar, \gufivt, and \runvt. These
+virtual tables are available in \gufisqlite, and as
+\href{https://sqlite.org/loadext.html}{runtime loadable
+extensions}\footnote{\gufivtstar and \gufivt are in the same
+binary.}\textsuperscript{,}\footnote{Remember to make \gufiquery
+available via \texttt{PATH}.}. This allows for indexes to be used by
+\sqlite libraries in any language that can load \sqlite extensions,
+such as the C, Python, R, or Ruby libraries. The \sqlite shell can
+also be used to load these extensions.
 
-\subsubsection{\gufivtstar and \gufivt}
-\gufivttreesummary, \gufivtsummary, \gufivtentries, \gufivtpentries,
-\gufivtvrsummary, and \gufivtvrpentries, collectively known as
-\gufivtstar, and \gufivt wrap \gufiquery to present indexes as a
-single \sqlite table. This allows for indexes to be used by \sqlite
-wrappers such as SQLAlchemy.
+\subsubsection{\gufivtstar}
+\gufivtstar refers to the following collection of virtual tables:
+\begin{itemize}
+\item \gufivttreesummary
+\item \gufivtsummary
+\item \gufivtentries
+\item \gufivtpentries
+\item \gufivtvrsummary
+\item \gufivtvrpentries
+\end{itemize}
 
-These virtual tables are available in \gufisqlite, and as a runtime
-loadable extension (same file).
-\\\\
-\indent \gufivtstar virtual tables have fixed schemas and are directly usable
-as
-\href{https://www.sqlite.org/vtab.html#tabfunc2}{table-valued~functions}. They
-take in only the index path and number of threads.
-\\\\
+They each wrap \gufiquery with fixed SQL queries. Tree traversal
+behavior maybe customized via positional arguments. Unused trailing
+arguments may be left out. \texttt{NULL} may be used to provide values
+to unused arguments that come before used arguments.
+
+\begin{table}[H]
+  \centering
+  \caption{\gufivtstar argument order}
+  \begin{tabularx}{\textwidth}{| l | c | X |}
+    \hline
+    Argument & Type & Notes \\
+    \hline
+    index path & String & \\
+    \hline
+    \# of threads & Positive integer & \\
+    \hline
+    min\_level & Non-negative integer & \\
+    \hline
+    path\_list & String & File path \\
+    \hline
+    verbose & 0 or 1 & Print command before running it \\
+    \hline
+    remote\_cmd & String & Command to forward this run of \gufiquery to a remote (e.g. \texttt{ssh}) \\
+    \hline
+    remote\_args & String & Space separated arguments to pass to
+    \texttt{remote\_cmd} \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\gufivtstar virtual table names are directly usable as
+\href{https://www.sqlite.org/vtab.html#tabfunc2}{table-valued~functions}. The
+result of each \gufivtstar is presented as a single \sqlite virtual table with a
+fixed schema. \\
+
 Example Usage:
 \begin{verbatim}
 (
+    echo ".load /path/to/gufi_vt" # do not provide extension
     echo "SELECT * FROM gufi_vt_pentries(`/path/to/index', 2);"
-) | gufi_sqlite3
+) | sqlite3
 \end{verbatim}
 
-\indent \gufivt allows for arbitrary queries to be run on an index and have
-the results presented as a single table. However, because the table
-schema is not known beforehand, the virtual table must be set up
-before being used.
-\\\\
+\subsubsection{\gufivt}
+\indent \gufivt is a more generic version of \gufivtstar that allows
+for arbitrary queries to be run on an index. However, because the
+resultant table schema is not known beforehand, a virtual table must
+be set up before being used.
+
+The \gufivt arguments are mostly the same as those of \gufivtstar. The
+difference are:
+
+\begin{itemize}
+\item Argument order does not matter
+\item The right most argument is the value used
+\item Arguments are \texttt{key=value} pairs
+\item There are a few arguments that \gufivtstar does not have
+\end{itemize}
+
+The ordering of the following table is different from the \gufivtstar
+argument table in order to better reflect the command that is run.
+
+\begin{table}[H]
+  \centering
+  \begin{tabularx}{\textwidth}{| l | c | X |}
+    \hline
+    Argument & Type & Notes \\
+    \hline
+    remote\_cmd & String & Command to forward this run of \gufiquery
+    to a remote (e.g. \texttt{ssh}) \\
+    \hline
+    remote\_arg & String & Single \texttt{argv[i]} passed to
+    \texttt{remote\_cmd} before \gufiquery (e.g. \texttt{user@remote})
+    \\
+    & & \\
+    & & Multiple \texttt{remote\_arg} passed in to \gufivt will not
+    overwrite each other (this is an exception to the differences
+    listed above) \\
+    \hline
+    \# of threads & Positive integer & \\
+    \hline
+    min\_level & Non-negative integer & \\
+    \hline
+    dir\_match\_uid & UID & Not found in \gufivtstar \\
+    \hline
+    dir\_match\_gid & GID & Not found in \gufivtstar \\
+    \hline
+    I, T, S, E, K, J, G, F & String & SQL forwarded to \gufiquery \\
+    \hline
+    path\_list & String & File path \\
+    \hline
+    p & String & Source path for use with \texttt{spath()} \\
+    \hline
+    index & String & Arguments without keys are treated as the index
+    path (this is an exception to the differences listed above) \\
+    \hline
+    verbose or VERBOSE & 0 or 1 & Print command before running it \\
+    \hline
+  \end{tabularx}
+\end{table}
+
 Example Usage:
 \begin{verbatim}
 (
+    echo ".load /path/to/gufi_vt" # do not provide extension
     echo "CREATE VIRTUAL TABLE temp.output" \
          "USING gufi_vt(index=/path/to/index, threads=2," \
          "E=`SELECT name, size FROM pentries');"
     echo "SELECT * FROM output;"
-) | gufi_sqlite3
+) | sqlite3
 \end{verbatim}
 
 \subsubsection{\runvt}
@@ -108,14 +202,15 @@ Example Usage:
 \sqlite table.
 
 \runvt is available in \gufiquery, \gufisqlite, and as a runtime
-loadable extensions.
+loadable extension.
 \\\\
 Example Usage:
 \begin{verbatim}
 (
+    echo ".load /path/to/run_vt" # do not provide extension
     echo "CREATE VIRTUAL TABLE temp.output " \
          "USING run_vt(cmd=`cat file.csv', " \
          "d=`,', cols=`name, size');"
     echo "SELECT * FROM output;"
-) | gufi_sqlite3
+) | sqlite3
 \end{verbatim} 

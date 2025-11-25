@@ -77,37 +77,21 @@ may call \gufiquery, but might not be able to use it properly.
   \hline
   Flag & Functionality \\
   \hline
-  -h & help \\
+  -h, -{}-help & help \\
   \hline
-  -H & show assigned input values (debugging) \\
+  -H, -{}-debug & show assigned input values (debugging) \\
+  \hline
+  -v, -{}-version & version \\
+  \hline
+  -n, -{}-threads \textless n\textgreater & number of threads (default: 1) \\
+  \hline
+  -I \textless SQL\_init\textgreater & SQL init \\
   \hline
   -T \textless SQL tsum\textgreater & SQL for tree-summary table \\
   \hline
   -S \textless SQL sum\textgreater & SQL for summary table \\
   \hline
   -E \textless SQL ent\textgreater & SQL for entries table \\
-  \hline
-  -a & AND/OR (SQL query combination) \\
-  \hline
-  -n \textless threads\textgreater & number of threads (default: 1) \\
-  \hline
-  -j & print the information in terse form \\
-  \hline
-  -o \textless out\_fname\textgreater & output file (one-per thread, with thread-id suffix) \\
-  \hline
-  -d \textless delim\textgreater & one char delimiter (default: \texttt{\textbackslash x1E}) \\
-  \hline
-  -O \textless out\_DB\textgreater & output DB \\
-  \hline
-  -u & prefix row with 1 int column count and each column with 1 octet type and 1 size\_t length \\
-  \hline
-  -I \textless SQL\_init\textgreater & SQL init \\
-  \hline
-  -F \textless SQL\_fin\textgreater & SQL cleanup \\
-  \hline
-  -y \textless min-level\textgreater & minimum level to descend to \\
-  \hline
-  -z \textless max-level\textgreater & maximum level to descend to \\
   \hline
   -J \textless SQL\_interm\textgreater & SQL for intermediate
     results (no default. ex.: \texttt{INSERT INTO \textless
@@ -120,28 +104,62 @@ may call \gufiquery, but might not be able to use it properly.
     results (no default. ex.: \texttt{SELECT * FROM
     \textless aggregate table name\textgreater}) \\
   \hline
-  -m & Keep mtime and atime same on the database files \\
+  -F \textless SQL\_fin\textgreater & SQL cleanup \\
   \hline
-  -B \textless buffer size\textgreater & size of each thread's output buffer in bytes \\
+  -{}-dir-match-uid[=uid] & only traverse directories that are owned by
+  uid (optional; default: euid) \\
   \hline
-  -w & open the database files in read-write mode instead of read only mode \\
+  -{}-dir-match-gid[=gid] & only traverse directories that are owned by
+  gid (optional; default: egid) \\
   \hline
-  -x & enable xattr processing \\
+  -a \textless 0\textbar 1\textbar 2\textgreater & 0 - if returned row, run next SQL, else stop (continue descent) (default) \\
+  & 1 - skip T, run S and E whether or not a row was returned (old -a) \\
+  & 2 - run T, S, and E whether or not a row was returned \\
   \hline
-  -k & file containing directory names to skip \\
+  -{}-min-level \textless n\textgreater & minimum level to descend to \\
   \hline
-  -M \textless bytes\textgreater & target memory footprint \\
+  -{}-max-level \textless n\textgreater & maximum level to descend to \\
   \hline
-  -s \textless path\textgreater & File name prefix for swap files \\
+  -{}-path-list \textless filename\textgreater & File containing paths at
+  single level to walk (not including starting path). If -{}-min-level
+  \textgreater \ 0, prepend each line of the file with the index path. \\
   \hline
-  -p \textless path\textgreater & Source path prefix for \%s in SQL \\
+  -p, -{}-path \textless path\textgreater & Source path prefix for \%s in SQL \\
   \hline
-  -e & compress work items \\
+  -x, -{}-query-xattrs & query xattrs \\
   \hline
   -Q \textless basename\textgreater & External database file basename, \\
   \ \ \ \textless table\textgreater & per-attach table name, \\
   \ \ \ \textless template\textgreater.\textless table\textgreater & template + table name, \\
   \ \ \ \textless view\textgreater & and the resultant view \\
+  \hline
+  -w, -{}-read-write & open the database files in read-write mode instead of read only mode \\
+  \hline
+  -{}-keep-matime & Keep mtime and atime same on the database files \\
+  \hline
+  -{}-skip-file \textless filename\textgreater & file containing directory names to skip \\
+  \hline
+  -d, -{}-delim \textless c\textgreater & one char delimiter (default: \texttt{\textbackslash x1E}) \\
+  \hline
+  -{}-newline \textless c\textgreater & character used to separate lines (default: '\textbackslash n') [use 0 for NULL character] \\
+  \hline
+  -{}-suppress-newline & do not print the line separator \\
+  \hline
+  -o, -{}-output-file \textless out\_fname\textgreater & output file (one-per thread, with thread-id suffix) \\
+  \hline
+  -O, -{}-output-db \textless out\_DB\textgreater & output DB \\
+  \hline
+  -{}-print-tlv & prefix row with 1 int column count and each column with 1 octet type and 1 size\_t length \\
+  \hline
+  -{}-terse & print the information in terse form \\
+  \hline
+  -{}-output-buffer-size \textless buffer size\textgreater & size of each thread's output buffer in bytes \\
+  \hline
+  -{}-target-memory \textless bytes\textgreater & target memory utilization (soft limit) \\
+  \hline
+  -{}-swap-prefix \textless path\textgreater & File name prefix for swap files \\
+  \hline
+  -{}-compress & compress work items \\
   \hline
   \caption{\label{tab:widgets} \gufiquery Flags and Arguments}\\
 \end{longtable}

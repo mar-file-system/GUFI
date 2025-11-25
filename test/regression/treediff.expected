@@ -3,8 +3,8 @@ usage: treediff [options] lhs rhs
 options:
   -h, --help                        help
   -H, --debug                       show assigned input values (debugging)
-  -n, --threads <threads>           number of threads
-      --max-level <max level>       maximum level to go down
+  -n, --threads <n>                 number of threads
+      --max-level <n>               maximum level to go down
       --skip-file <filename>        file containing directory names to skip
 
 lhs               starting path of tree used on left hand side of this comparision

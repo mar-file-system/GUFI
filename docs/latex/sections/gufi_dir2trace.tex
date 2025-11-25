@@ -67,36 +67,43 @@ to be copied around.
 
 \begin{table} [htb]
   \centering
-  \begin{tabular}{l|l}
+  \begin{tabularx}{\textwidth}{|l|X|}
+    \hline
     Flag & Functionality \\
     \hline
-    -h & help manual \\
+    -h, -{}-help & help \\
     \hline
-    -H & Show assigned input values \\
+    -H, -{}-debug & show assigned input values (debugging) \\
     \hline
-    -v & version \\
+    -v, -{}-version & version \\
     \hline
-    -n \textless num\_threads\textgreater & define number of threads to use \\
+    -n, -{}-threads \textless n\textgreater & number of threads (default: 1) \\
     \hline
-    -x & index/query xattrs \\
+    -{}-min-level \textless n\textgreater & minimum level to descend to \\
     \hline
-    -d \textless delim\textgreater & delimiter (one char)  [use 'x' for 0x1E] \\
+    -{}-max-level \textless n\textgreater & maximum level to descend to \\
     \hline
-    -k \textless filename\textgreater & file containing directory names to skip \\
+    -{}-path-list \textless filename\textgreater & File containing paths at
+    single level to walk (not including starting path). If -{}-min-level
+    \textgreater \ 0, prepend each line of the file with the index path. \\
     \hline
-    -M \textless bytes\textgreater & target memory footprint \\
+    -x, -{}-index-xattrs & index xattrs \\
     \hline
-    -s \textless path\textgreater & File name prefix for swap files \\
+    -{}-skip-file \textless filename\textgreater & file containing directory names to skip \\
     \hline
-    -C \textless count\textgreater & Number of subdirectories allowed to be \\
-                                   & enqueued for parallel processing. Any \\
-                                   & remainders will be processed in-situ \\
+    -q & check that external databases are valid before tracking during indexing \\
     \hline
-    -e & compress work items \\
+    -d, -{}-delim \textless c\textgreater & one char delimiter (default: \texttt{\textbackslash x1E}) \\
     \hline
-    -q \textless basename\textgreater & Basename of file to keep track of during indexing \\
+    -{}-target-memory \textless bytes\textgreater & target memory utilization (soft limit) \\
     \hline
-  \end{tabular}
+    -{}-swap-prefix \textless path\textgreater & File name prefix for swap files \\
+    \hline
+    -{}-subdir-limit \textless count\textgreater & Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially \\
+    \hline
+    -{}-compress & compress work items \\
+    \hline
+  \end{tabularx}
   \caption{\label{fig:Flags_for_dir2trace} \gufidirtrace Flags and Arguments}
 \end{table}
 

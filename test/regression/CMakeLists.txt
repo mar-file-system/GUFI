@@ -81,10 +81,7 @@ endforeach()
 set(BINARIES
   gufi_dir2index
   gufi_dir2trace
-  gufi_find_outliers
-  gufi_incremental_update
   gufi_index2dir
-  gufi_plugin
   gufi_query
   gufi_sqlite3
   gufi_stat_bin
@@ -93,10 +90,7 @@ set(BINARIES
   gufi_trace2index
   gufi_treesummary
   gufi_treesummary_all
-  querydbs
-
   gufi_vt
-  run_vt
 )
 
 set(PYTHON
@@ -131,11 +125,16 @@ set(OTHERS
   deploy
   external_databases
   gufi_distributed
+  gufi_find_outliers
+  gufi_incremental_update
   gufi_jail
+  gufi_plugin
   longitudinal_snapshot
   parallel_cpr
   parallel_find
   parallel_rmr
+  querydbs
+  run_vt
   treediff
 )
 

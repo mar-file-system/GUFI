@@ -66,38 +66,41 @@ contents of a provided directory.
 
 \begin{table} [h!]
   \centering
-  \begin{tabular}{l|l}
+  \begin{tabularx}{\textwidth}{|l|X|}
+    \hline
     Flag & Functionality \\
     \hline
-    -h & help manual \\
+    -h, -{}-help & help \\
     \hline
-    -H & Show assigned input values \\
+    -H, -{}-debug & show assigned input values (debugging) \\
     \hline
-    -v & version \\
+    -v, -{}-version & version \\
     \hline
-    -n \textless num\_threads\textgreater & define number of threads to use \\
+    -n, -{}-threads \textless n\textgreater & number of threads (default: 1) \\
     \hline
-    -x & index/query xattrs \\
+    -{}-min-level \textless n\textgreater & minimum level to descend to \\
     \hline
-    -y \textless min level\textgreater & minimum level to go down \\
+    -{}-max-level \textless n\textgreater & maximum level to descend to \\
     \hline
-    -z \textless max level\textgreater & maximum level to go down \\
+    -{}-path-list \textless filename\textgreater & File containing paths at
+    single level to walk (not including starting path). If -{}-min-level
+    \textgreater \ 0, prepend each line of the file with the index path. \\
     \hline
-    -k \textless filename\textgreater & file containing directory names to skip \\
+    -x, -{}-index-xattrs & index xattrs \\
     \hline
-    -M \textless bytes\textgreater & target memory footprint \\
+    -q & check that external databases are valid before tracking during indexing \\
     \hline
-    -s \textless path\textgreater & File name prefix for swap files \\
+    -{}-plugin \textless library\_name\textgreater & plugin library for modifying db entries \\
     \hline
-    -C \textless count\textgreater & Number of subdirectories allowed to be \\
-                                   & enqueued for parallel processing. Any \\
-                                   & remainders will be processed in-situ \\
+    -{}-target-memory \textless bytes\textgreater & target memory utilization (soft limit) \\
     \hline
-    -e & compress work items \\
+    -{}-swap-prefix \textless path\textgreater & File name prefix for swap files \\
     \hline
-    -q \textless basename\textgreater & Basename of file to keep track of during indexing \\
+    -{}-subdir-limit \textless count\textgreater & Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially \\
     \hline
-  \end{tabular}
+    -{}-compress & compress work items \\
+    \hline
+  \end{tabularx}
   \caption{\label{fig:Flags_for_dir2index} \gufidirindex Flags and Arguments}
 \end{table}
 
@@ -108,5 +111,5 @@ contents of a provided directory.
 \end{figure}
 
 \paragraph{Usage} ~\\\\
-\gufidirindex \texttt{[flags] input\_dir... /path/to/index} \\\\
-The index of \texttt{input\_dir\textsubscript{i}} will be placed in \texttt{output\_dir/\$(basename input\_dir\textsubscript{i})}.
+\gufidirindex \texttt{[flags] input\_dir... GUFU\_tree\_parent} \\\\
+The index of \texttt{input\_dir\textsubscript{i}} will be placed in \texttt{GUFI\_tree\_parent/\$(basename input\_dir\textsubscript{i})}.

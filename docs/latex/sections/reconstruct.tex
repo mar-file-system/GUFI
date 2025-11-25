@@ -74,7 +74,7 @@ non-portable functions. This may change in the future.
 
 \texttt{gufi\_index2trace} is not available because the functionality
 can be achieved by calling \texttt{gufi\_query -o <trace name> -S
-  ``SELECT * FROM summary;'' -E ``SELECT * FROM entries;''
+  "SELECT * FROM summary;" -E "SELECT * FROM entries;"
   /path/to/index} and optionally combining the resultant trace
 files. Note that if more than 1 thread is used, writing to per-thread
 traces files is required in order to guarantee that each
@@ -107,7 +107,8 @@ directory and its contents are written out as a single stanza.
 \paragraph{Flags}
 \begin{table} [H]
   \centering
-  \begin{tabular}{l|l}
+  \begin{tabular}{|l|l|}
+    \hline
     Flag & Functionality \\
     \hline
     -h & help manual \\

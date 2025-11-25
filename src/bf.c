@@ -212,8 +212,8 @@ void print_help(const char* prog_name,
             case FLAG_PROCESS_SQL_SHORT:             printf("  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
                                                             "                                    1 - skip T, run S and E whether or not a row was returned (old -a)\n"
                                                             "                                    2 - run T, S, and E whether or not a row was returned"); break;
-            case FLAG_THREADS_SHORT:                 printf("  -n, --threads <threads>           number of threads"); break;
-            case FLAG_DELIM_SHORT:                   printf("  -d, --delim <delim>               delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
+            case FLAG_THREADS_SHORT:                 printf("  -n, --threads <n>                 number of threads"); break;
+            case FLAG_DELIM_SHORT:                   printf("  -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
             case FLAG_OUTPUT_FILE_SHORT:             printf("  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)"); break;
             case FLAG_OUTPUT_DB_SHORT:               printf("  -O, --output-db <out_DB>          output DB"); break;
             case FLAG_SQL_INIT_SHORT:                printf("  -I <SQL_init>                     SQL init"); break;
@@ -235,14 +235,14 @@ void print_help(const char* prog_name,
 
             /* no typable short flags */
 
-            case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <min level>       minimum level to go down"); break;
-            case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <max level>       maximum level to go down"); break;
+            case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <n>               minimum level to go down"); break;
+            case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <n>               maximum level to go down"); break;
             case FLAG_PRINT_TLV_SHORT:               printf("      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
             case FLAG_KEEP_MATIME_SHORT:             printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
             case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
             case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
             case FLAG_PLUGIN_SHORT:                  printf("      --plugin <library_name>       plugin library for modifying db entries"); break;
-            case FLAG_PATH_LIST_SHORT:               printf("      --path-list <filename>        File containing paths at single level to index (not including starting path). Must also use --min-level"); break;
+            case FLAG_PATH_LIST_SHORT:               printf("      --path-list <filename>        File containing paths at single level to walk (not including starting path). If --min-level > 0, prepend each line of the file with the index path."); break;
             case FLAG_FORMAT_SHORT:                  printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
             case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
             case FLAG_ROLLUP_LIMIT_SHORT:            printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
