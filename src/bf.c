@@ -443,7 +443,7 @@ int parse_cmd_line(int                  argc,
                 break;
 
             case FLAG_THREADS_SHORT:
-                INSTALL_SIZE(&in->maxthreads, optarg, 1, (size_t) -1, "-n", &retval);
+                INSTALL_SIZE(&in->maxthreads, optarg, 1, (size_t) -1, "-n/--" FLAG_THREADS_LONG, &retval);
                 break;
 
             case FLAG_DELIM_SHORT:

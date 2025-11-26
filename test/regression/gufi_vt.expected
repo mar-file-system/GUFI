@@ -486,21 +486,24 @@ $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries('prefix', '') ORDER BY name ASC, size ASC;"
 ) | sqlite3
-Runtime error near line 2: Bad thread count: '' (19)
+unrecognized option '--threads'
+Error: Failed to read from file descriptor: Bad address (14)
 
 # Zero thread count
 $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries('prefix', 0) ORDER BY name ASC, size ASC;"
 ) | sqlite3
-Runtime error near line 2: Bad thread count: '0' (19)
+argument '-n/--threads' not in range [1, 18446744073709551615]
+Error: Failed to read from file descriptor: Bad address (14)
 
 # Bad min_level
 $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 'a') ORDER BY name ASC, size ASC;"
 ) | sqlite3
-Runtime error near line 2: Bad min_level: 'a' (19)
+could not parse a with format %zu
+Error: Failed to read from file descriptor: Bad address (14)
 
 # Bad verbose (path_list == NULL is not an error)
 $ (
@@ -514,28 +517,42 @@ $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=a);"
 ) | sqlite3
-Runtime error near line 2: Bad thread count: a (21)
+Runtime error near line 2: vtable constructor failed: gufi
 
 # Zero n
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=0);"
 ) | sqlite3
-Runtime error near line 2: Bad thread count: 0 (21)
+Runtime error near line 2: vtable constructor failed: gufi
+
+# Empty n
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=);"
+) | sqlite3
+Runtime error near line 2: vtable constructor failed: gufi
 
 # Bad thread count
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=a);"
 ) | sqlite3
-Runtime error near line 2: Bad thread count: a (21)
+Runtime error near line 2: vtable constructor failed: gufi
 
 # Zero thread count
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=0);"
 ) | sqlite3
-Runtime error near line 2: Bad thread count: 0 (21)
+Runtime error near line 2: vtable constructor failed: gufi
+
+# Empty thread count
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=);"
+) | sqlite3
+Runtime error near line 2: vtable constructor failed: gufi
 
 # Bad E
 $ (

@@ -230,14 +230,16 @@ query_vt() {
     rm -rf "${BADDIR}"
     query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | @SED@ "s%${BADDIR}%baddir%g;"
 
-    echo "# Empty string thread count"
-    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;"
+    (
+        echo "# Empty string thread count"
+        query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;" | @SED@ '\%gufi_query:%d;'
 
-    echo "# Zero thread count"
-    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
+        echo "# Zero thread count"
+        query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
 
-    echo "# Bad min_level"
-    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 'a') ORDER BY name ASC, size ASC;"
+        echo "# Bad min_level"
+        query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 'a') ORDER BY name ASC, size ASC;"
+    ) | @SED@ 's% file descriptor [0-9]\+:% file descriptor:%g;'
 
     echo "# Bad verbose (path_list == NULL is not an error)"
     query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 0, NULL, 'a') ORDER BY name ASC, size ASC;"
@@ -248,11 +250,17 @@ query_vt() {
     echo "# Zero n"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=0);"
 
+    echo "# Empty n"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=);"
+
     echo "# Bad thread count"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=a);"
 
     echo "# Zero thread count"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=0);"
+
+    echo "# Empty thread count"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=);"
 
     echo "# Bad E"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='');"

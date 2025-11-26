@@ -474,10 +474,10 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
  *
  * The following are positional arguments to each virtual table:
  *
- *     index root        (index path)
+ *     index path        (string)
  *     # of threads      (positive integer)
  *     min_level         (non-negative integer)
- *     path_list         (file path)
+ *     path_list         (file path string)
  *     verbose           (0 or 1)
  *     remote_cmd        (string)
  *     remote_args       (string; space separated args)
@@ -789,12 +789,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         if (len == 1) {
             switch (*key) {
                 case 'n':
-                    ;
-                    size_t nthreads = 0;
-                    if ((sscanf(value, "%zu", &nthreads) != 1) || (nthreads == 0)) {
-                        *pzErr = sqlite3_mprintf("Bad thread count: %s", value);
-                        return SQLITE_MISUSE;
-                    }
+                    /* let gufi_query check value */
                     set_refstr(&cmd.threads, value);
                     break;
                 case 'I':
@@ -831,12 +826,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             indexroot = value; /* keep last one */
         }
         else if (strncmp(key, "threads", 8) == 0) {
-            size_t nthreads = 0; /* not kept */
-            if ((sscanf(value, "%zu", &nthreads) != 1) || (nthreads == 0)) {
-                *pzErr = sqlite3_mprintf("Bad thread count: %s", value);
-                sll_destroy(&cmd.remote_args, free);
-                return SQLITE_MISUSE;
-            }
+            /* let gufi_query check value */
             set_refstr(&cmd.threads, value);
         }
         else if ((strncmp(key, "verbose", 8) == 0) ||
@@ -848,12 +838,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             }
         }
         else if (strncmp(key, "min_level", 10) == 0) {
-            size_t min_level = 0; /* not kept */
-            if (sscanf(value, "%zu", &min_level) != 1) {
-                *pzErr = sqlite3_mprintf("Bad min_level: %s", value);
-                sll_destroy(&cmd.remote_args, free);
-                return SQLITE_MISUSE;
-            }
+            /* let gufi_query check value */
             set_refstr(&cmd.min_level, value);
         }
         else if (strncmp(key, "path_list", 10) == 0) {
@@ -868,9 +853,11 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             sll_push(&cmd.remote_args, remote_arg);
         }
         else if (strncmp(key, "dir_match_uid", 14) == 0) {
+            /* let gufi_query check value */
             set_refstr(&cmd.dir_match_uid, value);
         }
         else if (strncmp(key, "dir_match_gid", 14) == 0) {
+            /* let gufi_query check value */
             set_refstr(&cmd.dir_match_gid, value);
         }
         else {
@@ -1090,11 +1077,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
             /* passing NULL in the SQL will result in a NULL pointer */
             char *threads = NULL;
             if ((threads = (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_THREADS]))) {
-                size_t nthreads = 0;
-                if ((sscanf(threads, "%zu", &nthreads) != 1) || (nthreads == 0)) {
-                    vtab->base.zErrMsg = sqlite3_mprintf("Bad thread count: '%s'", threads);
-                    return SQLITE_CONSTRAINT;
-                }
+                /* let gufi_query check value */
                 set_refstr(&vtab->cmd.threads, threads);
             }
 
@@ -1102,11 +1085,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
                 /* passing NULL in the SQL will result in a NULL pointer */
                 char *min_level_str = NULL;
                 if ((min_level_str = (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_MIN_LEVEL]))) {
-                    size_t min_level = 0;
-                    if (sscanf(min_level_str, "%zu", &min_level) != 1) {
-                        vtab->base.zErrMsg = sqlite3_mprintf("Bad min_level: '%s'", min_level_str);
-                        return SQLITE_CONSTRAINT;
-                    }
+                    /* let gufi_query check value */
                     set_refstr(&vtab->cmd.min_level, min_level_str);
                 }
 
