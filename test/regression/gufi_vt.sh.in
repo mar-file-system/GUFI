@@ -135,6 +135,13 @@ query_vt() {
     )
     query_vt "${query}"
 
+    echo "# min_level/max_level"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT path() AS fullpath, size FROM summary;\", min_level=1, max_level=1);"
+        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+    )
+    query_vt "${query}"
+
     echo "# Aggregate"
     query=$(
         echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT, size INT64);\", E=\"INSERT INTO intermediate SELECT path() || '/' || name, size FROM pentries;\", K=\"CREATE TABLE aggregate(fullpath TEXT, size INT64);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate;\");"
@@ -205,7 +212,7 @@ query_vt() {
     run_no_sort "${FIND_SH} \"${INDEXROOT}\" 2 ${THREADS} > \"${PATH_LIST}\""
     run_sort "cat \"${PATH_LIST}\""
     query=$(
-        echo -n "SELECT level, path || '/' || name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 2, '${PATH_LIST}', 1, '${SSH_FAKE}', 'remote');"
+        echo -n "SELECT level, path || '/' || name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 2, NULL, '${PATH_LIST}', 1, '${SSH_FAKE}', 'remote');"
     )
     query_vt "${query}"
 
@@ -242,7 +249,7 @@ query_vt() {
     ) | @SED@ 's% file descriptor [0-9]\+:% file descriptor:%g;'
 
     echo "# Bad verbose (path_list == NULL is not an error)"
-    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 0, NULL, 'a') ORDER BY name ASC, size ASC;"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 0, NULL, NULL, 'a') ORDER BY name ASC, size ASC;"
 
     echo "# Bad n"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=a);"

@@ -267,6 +267,16 @@ $ (
 1024|1024|1024|1KB
 1048576|1048576|1048576|1MB
 
+# min_level/max_level
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", S="SELECT path() AS fullpath, size FROM summary;", min_level=1, max_level=1);SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+) | sqlite3
+7|prefix/directory
+8|prefix/empty_directory
+13|prefix/leaf_directory
+16|prefix/unusual#? directory ,
+
 # Aggregate
 $ (
     echo ".load gufi_vt"
@@ -429,7 +439,7 @@ directory/subdirectory
 
 $ (
     echo ".load gufi_vt"
-    echo "SELECT level, path || '/' || name FROM gufi_vt_pentries('prefix', 2, 2, 'path_list', 1, 'ssh', 'remote');"
+    echo "SELECT level, path || '/' || name FROM gufi_vt_pentries('prefix', 2, 2, NULL, 'path_list', 1, 'ssh', 'remote');"
 ) | sqlite3
 Each line is one argv[i]:
     ssh \
@@ -508,7 +518,7 @@ Error: Failed to read from file descriptor: Bad address (14)
 # Bad verbose (path_list == NULL is not an error)
 $ (
     echo ".load gufi_vt"
-    echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 0, NULL, 'a') ORDER BY name ASC, size ASC;"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 0, NULL, NULL, 'a') ORDER BY name ASC, size ASC;"
 ) | sqlite3
 Runtime error near line 2: Bad verbose value: 'a' (19)
 

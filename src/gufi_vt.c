@@ -109,6 +109,7 @@ typedef struct gufi_query_cmd {
 
     refstr_t threads;      /* number of threads in string form to avoid converting back and forth */
     refstr_t min_level;    /* defaults to 0; set to non-0 if index root should be used with path list */
+    refstr_t max_level;    /* defaults to (uint64_t) -1 */
     refstr_t dir_match_uid;
     refstr_t dir_match_gid;
 
@@ -194,6 +195,7 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
 
         /* construct the rest of the gufi_query command */
         flatten_argv(argc, argv, "--min-level", cmd->min_level);
+        flatten_argv(argc, argv, "--max-level", cmd->max_level);
         flatten_argv(argc, argv, "--path-list", cmd->path_list);
 
         if (cmd->dir_match_uid.len) {
@@ -226,7 +228,7 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
     else {
         /* can keep arguments separate */
 
-        max_argc = 30; /* 5 fixed args, 11 pairs of flags, 2 single argv flags, 1 indexroot */
+        max_argc = 32; /* 5 fixed args, 12 pairs of flags, 2 single argv flags, 1 indexroot */
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
 
@@ -246,6 +248,7 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
 
         /* construct the rest of the gufi_query command */
         set_argv(argc, argv, "--min-level", cmd->min_level);
+        set_argv(argc, argv, "--max-level", cmd->max_level);
         set_argv(argc, argv, "--path-list", cmd->path_list);
 
         if (cmd->dir_match_uid.len) {
@@ -469,7 +472,7 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
  *
  * These may be used like so:
  *     SELECT ...
- *     FROM gufi_vt_*('<indexroot>'[, threads, min_level, path_list, verbose, remote_cmd, remote_args])
+ *     FROM gufi_vt_*('<indexroot>'[, threads, min_level, max_level, path_list, verbose, remote_cmd, remote_args])
  *     ... ;
  *
  * The following are positional arguments to each virtual table:
@@ -477,6 +480,7 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
  *     index path        (string)
  *     # of threads      (positive integer)
  *     min_level         (non-negative integer)
+ *     max_level         (non-negative integer)
  *     path_list         (file path string)
  *     verbose           (0 or 1)
  *     remote_cmd        (string)
@@ -502,15 +506,17 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
 #define GUFI_VT_ARGS_INDEXROOT       0
 #define GUFI_VT_ARGS_THREADS         1
 #define GUFI_VT_ARGS_MIN_LEVEL       2
-#define GUFI_VT_ARGS_PATH_LIST       3
-#define GUFI_VT_ARGS_VERBOSE         4
-#define GUFI_VT_ARGS_REMOTE_CMD      5
-#define GUFI_VT_ARGS_REMOTE_ARGS     6
-#define GUFI_VT_ARGS_COUNT           7
+#define GUFI_VT_ARGS_MAX_LEVEL       3
+#define GUFI_VT_ARGS_PATH_LIST       4
+#define GUFI_VT_ARGS_VERBOSE         5
+#define GUFI_VT_ARGS_REMOTE_CMD      6
+#define GUFI_VT_ARGS_REMOTE_ARGS     7
+#define GUFI_VT_ARGS_COUNT           8
 
 #define GUFI_VT_ARG_COLUMNS          "indexroot TEXT HIDDEN,   " \
                                      "threads INT64 HIDDEN,    " \
                                      "min_level INT64 HIDDEN,  " \
+                                     "max_level INT64 HIDDEN,  " \
                                      "path_list TEXT HIDDEN,   " \
                                      "verbose BOOLEAN HIDDEN,  " \
                                      "remote_cmd TEXT HIDDEN,  " \
@@ -655,6 +661,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     remote_arg      = '<single argv[i] passed to remote_cmd before gufi_query (e.g. user@remote)>'
  *     n or threads    =  <positive integer>
  *     min_level       =  <non-negative integer>
+ *     max_level       =  <non-negative integer>
  *     dir_match_uid   =  <uid>
  *     dir_match_gid   =  <gid>
  *     I               = '<SQL>'
@@ -840,6 +847,10 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         else if (strncmp(key, "min_level", 10) == 0) {
             /* let gufi_query check value */
             set_refstr(&cmd.min_level, value);
+        }
+        else if (strncmp(key, "max_level", 10) == 0) {
+            /* let gufi_query check value */
+            set_refstr(&cmd.max_level, value);
         }
         else if (strncmp(key, "path_list", 10) == 0) {
             set_refstr(&cmd.path_list, value);
@@ -1089,35 +1100,44 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
                     set_refstr(&vtab->cmd.min_level, min_level_str);
                 }
 
-                if (argc > GUFI_VT_ARGS_PATH_LIST) {
-                    set_refstr(&vtab->cmd.path_list, (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_PATH_LIST]));
+                if (argc > GUFI_VT_ARGS_MAX_LEVEL) {
+                    /* passing NULL in the SQL will result in a NULL pointer */
+                    char *max_level_str = NULL;
+                    if ((max_level_str = (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_MAX_LEVEL]))) {
+                        /* let gufi_query check value */
+                        set_refstr(&vtab->cmd.max_level, max_level_str);
+                    }
 
-                    if (argc > GUFI_VT_ARGS_VERBOSE) {
-                        /* passing NULL in the SQL will result in a NULL pointer */
-                        char *verbose_str = NULL;
-                        if ((verbose_str = (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_VERBOSE]))) {
-                            int verbose = 0;
-                            if (sscanf(verbose_str, "%d", &verbose) != 1) {
-                                vtab->base.zErrMsg = sqlite3_mprintf("Bad verbose value: '%s'", verbose_str);
-                                return SQLITE_CONSTRAINT;
+                    if (argc > GUFI_VT_ARGS_PATH_LIST) {
+                        set_refstr(&vtab->cmd.path_list, (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_PATH_LIST]));
+
+                        if (argc > GUFI_VT_ARGS_VERBOSE) {
+                            /* passing NULL in the SQL will result in a NULL pointer */
+                            char *verbose_str = NULL;
+                            if ((verbose_str = (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_VERBOSE]))) {
+                                int verbose = 0;
+                                if (sscanf(verbose_str, "%d", &verbose) != 1) {
+                                    vtab->base.zErrMsg = sqlite3_mprintf("Bad verbose value: '%s'", verbose_str);
+                                    return SQLITE_CONSTRAINT;
+                                }
+
+                                vtab->cmd.verbose = verbose;
                             }
 
-                            vtab->cmd.verbose = verbose;
-                        }
+                            if (argc > GUFI_VT_ARGS_REMOTE_CMD) {
+                                set_refstr(&vtab->cmd.remote_cmd, (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_REMOTE_CMD]));
 
-                        if (argc > GUFI_VT_ARGS_REMOTE_CMD) {
-                            set_refstr(&vtab->cmd.remote_cmd, (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_REMOTE_CMD]));
+                                if (argc > GUFI_VT_ARGS_REMOTE_ARGS) {
+                                    char *remote_args = (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_REMOTE_ARGS]);
+                                    char *saveptr = NULL;
+                                    char *remote_arg = strtok_r(remote_args, " ", &saveptr); /* skip multiple contiguous paces */
+                                    while (remote_arg) {
+                                        refstr_t *ra = calloc(1, sizeof(*ra));
+                                        set_refstr(ra, remote_arg);
+                                        sll_push(&vtab->cmd.remote_args, ra);
 
-                            if (argc > GUFI_VT_ARGS_REMOTE_ARGS) {
-                                char *remote_args = (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_REMOTE_ARGS]);
-                                char *saveptr = NULL;
-                                char *remote_arg = strtok_r(remote_args, " ", &saveptr); /* skip multiple contiguous paces */
-                                while (remote_arg) {
-                                    refstr_t *ra = calloc(1, sizeof(*ra));
-                                    set_refstr(ra, remote_arg);
-                                    sll_push(&vtab->cmd.remote_args, ra);
-
-                                    remote_arg = strtok_r(NULL, " ", &saveptr);
+                                        remote_arg = strtok_r(NULL, " ", &saveptr);
+                                    }
                                 }
                             }
                         }
