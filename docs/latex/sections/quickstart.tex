@@ -110,21 +110,21 @@ Some particularly useful ones are listed here: \\
     CMake Variable & Explaination \\
     (prepend with \texttt{-D} when used) & \\
     \hline
-    \texttt{DEP\_INSTALL\_PREFIX=<directory path>} & Place compiled
-    bundled dependencies here. Used to keep the dependencies when the
-    build directory is deleted. \\
-    \hline
-    \texttt{DEP\_BUILD\_THREADS=<thread count>} & Build dependencies with
-    this many threads to speed up builds. \\
+    \texttt{CMAKE\_INSTALL\_PREFIX=<directory path>} & Where to install
+    GUFI when runnng \texttt{make install}. Useful if not installing to
+    system directories. \\
     \hline
     \texttt{DEP\_AI=<ON|OFF>} & Enable or disable building sqlite-vec,
     sqlite-lembed, llama.cpp, and other AI related files. \\
     & Note that llama.cpp is not bundled with GUFI, and is downloaded
     during the dependency build step. \\
     \hline
-    \texttt{CMAKE\_INSTALL\_PREFIX=<directory path>} & Where to install
-    GUFI when runnng \texttt{make install}. Useful if not installing to
-    system directories. \\
+    \texttt{DEP\_BUILD\_THREADS=<thread count>} & Build dependencies with
+    this many threads to speed up builds. \\
+    \hline
+    \texttt{DEP\_INSTALL\_PREFIX=<directory path>} & Place compiled
+    bundled dependencies here. Used to keep the dependencies when the
+    build directory is deleted. \\
     \hline
     \texttt{SERVER\_CONFIG=<file path>} & Name of file used to
     configure Python scripts on the server side (explained later). A
@@ -260,23 +260,25 @@ common filesystem search functionality with GUFI. The tools are:
 \gufidu, \gufifind, \gufigetfattr, \gufils, and \gufistat.
 
 Before running these scripts, the server configuration must be set
-up. Because these tools are intended to be user facing, and users are
-not expected to know where indexes are, the server configuration value
-\texttt{IndexRoot} needs to be set to
+up. Look in the \texttt{SERVER\_CONFIG} parent directory. There should
+be a file called \texttt{server.example}. Copy this file to
+\texttt{SERVER\_CONFIG} and modify any values that need changing. At
+minimum, \texttt{IndexRoot} will likely need to be changed to point to
 \texttt{GUFI\_tree\_parent}\footnote{These need to be renamed to the
-same variable name at some point.}. If the executables were for
-whatever reason installed to a location that is not
-\texttt{CMAKE\_INSTALL\_PREFIX} (such as files extracted from the GUFI
-RPM being moved to a new location), the paths in the
-configuration file should be pointed to the correct paths.
+same variable name at some point.} or a subdirectory. An absolute path
+is recommended.
 
 With the configutation file set up, the user facing tools will
 prefix every path passed to them with \texttt{IndexRoot}: \\
 
 \texttt{In the configuration file:} \\
 \indent \texttt{IndexRoot=search} \\
+\indent ... \# other configuration values \\
 
-\gufifind \texttt{c/d} \\
+\noindent Then, running \\
+
+\indent \gufifind \texttt{c/d} \hfill \# \texttt{d} is some path under
+\texttt{c} \\
 
 will return all paths accessible by the caller under
 \texttt{search/c/d}. Note that \gufifind has the same quirk as
