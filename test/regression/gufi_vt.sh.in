@@ -130,7 +130,7 @@ query_vt() {
 
     echo "# Multiple indexes"
     query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT name, size, atime, mtime FROM pentries;\", '${INDEXROOT}', index=\"${INDEXROOT}\", threads=${THREADS}, n=${THREADS});"
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}/directory\", E=\"SELECT name, size, atime, mtime FROM pentries;\", '${INDEXROOT}/leaf_directory', index=\"${INDEXROOT}/directory/subdirectory\", threads=${THREADS}, n=${THREADS});"
         echo -n "SELECT size, atime, mtime, name FROM gufi ORDER BY size ASC, name ASC;"
     )
     query_vt "${query}"

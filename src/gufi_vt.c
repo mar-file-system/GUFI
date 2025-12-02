@@ -87,7 +87,7 @@ SQLITE_EXTENSION_INIT1
  * gufi_vt_* is a set of virtual tables with fixed schemas that can be
  * queried directly for ease of use:
  *
- *     SELECT * FROM gufi_vt_pentries('indexroot'[, ...]);
+ *     SELECT * FROM gufi_vt_pentries('index'[, ...]);
  *
  * gufi_vt is a true virtual table as described by the SQLite Virtual
  * Table documentation (https://www.sqlite.org/vtab.html). It is
@@ -125,12 +125,26 @@ typedef struct gufi_query_cmd {
 
     refstr_t path_list;    /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
     refstr_t p;            /* source path */
+
+    sll_t indexroots;      /* list of index roots to pass to gufi_query */
 } gq_cmd_t;
+
+static void gq_cmd_init(gq_cmd_t *cmd) {
+    memset(cmd, 0, sizeof(*cmd));
+    sll_init(&cmd->remote_args);
+    sll_init(&cmd->indexroots);
+}
+
+static void gq_cmd_destroy(gq_cmd_t *cmd) {
+    sll_destroy(&cmd->indexroots, NULL);  /* list of references to argv[i] */
+    sll_destroy(&cmd->remote_args, free); /* list of allocated refstr_t */
+    /* not freeing cmd here */
+}
 
 typedef struct gufi_vtab {
     sqlite3_vtab base;
-    const char *indexroot; /* if this is present, CREATE VIRTUAL TABLE was called */
     gq_cmd_t cmd;
+    int fixed_schema;      /* fixed schema (gufi_vt_*) or not (gufi_vt)? */
 } gufi_vtab;
 
 typedef struct gufi_vtab_cursor {
@@ -148,13 +162,12 @@ typedef struct gufi_vtab_cursor {
 static const char ONE_THREAD[] = "1";
 
 /*
- * run gufi_query, aggregating results into a single db file
+ * run gufi_query
  *
  * have to fork+exec - cannot link gufi_query in without changing
  * everything to link dynamically
  */
-static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
-                      popen_argv_t **output, char **errmsg) {
+static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg) {
     size_t max_argc = 0;
     int argc = 0;
     const char **argv = NULL;
@@ -218,7 +231,8 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
         flatten_argv(argc, argv, "-F",          cmd->F);
         flatten_argv(argc, argv, "-p",          cmd->p);
 
-        if (indexroot) {
+        sll_loop(&cmd->indexroots, node) {
+            const char *indexroot = (char *) sll_node_data(node);
             write_with_resize(&flat, &size, &len,
                               "%s", indexroot);
         }
@@ -228,7 +242,8 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
     else {
         /* can keep arguments separate */
 
-        max_argc = 32; /* 5 fixed args, 12 pairs of flags, 2 single argv flags, 1 indexroot */
+        max_argc = 31; /* 5 fixed args, 12 pairs of flags, 2 single argv flags */
+        max_argc += sll_get_size(&cmd->indexroots);
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
 
@@ -276,7 +291,9 @@ static int gufi_query(const char *indexroot, const gq_cmd_t *cmd,
         set_argv(argc, argv, "-G",          cmd->G);
         set_argv(argc, argv, "-F",          cmd->F);
         set_argv(argc, argv, "-p",          cmd->p);
-        if (indexroot) {
+
+        sll_loop(&cmd->indexroots, node) {
+            const char *indexroot = (char *) sll_node_data(node);
             argv[argc++] = indexroot;
         }
     }
@@ -426,8 +443,8 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
                           sqlite3_vtab **ppVtab,
                           char **pzErr,
                           const char *schema,
-                          const gq_cmd_t *cmd,
-                          const char *indexroot) {
+                          const gq_cmd_t *cmd,  /* reference to struct of pointers */
+                          const int fixed_schema) {
     (void) pAux; (void) pzErr;
     (void) argc; (void) argv;
 
@@ -437,8 +454,8 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
         pNew = (gufi_vtab *)sqlite3_malloc( sizeof(*pNew) );
         if( pNew==0 ) return SQLITE_NOMEM;
         memset(pNew, 0, sizeof(*pNew));
-        pNew->cmd = *cmd; /* remote_args ownership is transferred */
-        pNew->indexroot = indexroot;
+        pNew->cmd = *cmd; /* ownership is transferred */
+        pNew->fixed_schema = fixed_schema;
         /* sqlite3_vtab_config(db, SQLITE_VTAB_DIRECTONLY); */
     }
 
@@ -477,7 +494,7 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
  *
  * The following are positional arguments to each virtual table:
  *
- *     index path        (string)
+ *     indexroots        (string; space separated paths)
  *     # of threads      (positive integer)
  *     min_level         (non-negative integer)
  *     max_level         (non-negative integer)
@@ -623,14 +640,13 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
                                                                                   \
         /* fixed queries */                                                       \
         gq_cmd_t cmd;                                                             \
-        memset(&cmd, 0, sizeof(cmd));                                             \
-        sll_init(&cmd.remote_args);                                               \
+        gq_cmd_init(&cmd);                                                        \
         set_refstr(&cmd.T, (char *) (t?select_from:NULL));                        \
         set_refstr(&cmd.S, (char *) (s?(vr?select_from_vr:select_from):NULL));    \
         set_refstr(&cmd.E, (char *) (e?(vr?select_from_vr:select_from):NULL));    \
                                                                                   \
         return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,                \
-                              schema, &cmd, NULL);                                \
+                              schema, &cmd, 1);                                   \
     }
 
 /* generate xConnect for each table/view */
@@ -674,7 +690,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     F               = '<SQL>'
  *     path_list       = '<file path>'
  *     p               = '<source path for use with spath()>'
- *     index           = '<index path>' (can also pass in without the key)
+ *     index           = '<path>' (can also pass in without the key)
  *     verbose/VERBOSE =  <0|1>
  *
  * Notes:
@@ -685,6 +701,9 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *       quotes. Single quotes are recommended in order to make sure
  *       SQLite3 does not interpret them as column names by accident.
  *     - If there are duplicate arguments, the right-most duplicate will be used
+ *           - The following are exceptions and all values will be used in the order they appear:
+ *                 - remote_arg
+ *                 - index
  *     - When determining the virtual table's schema, there are two separate cases:
  *           - If NOT aggregating, the query that is processed latest will be used:
  *                 - If T is passed in, but not S or E, it will be used
@@ -775,11 +794,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                               sqlite3_vtab **ppVtab,
                               char **pzErr) {
     gq_cmd_t cmd;
-    char *indexroot = NULL;
+    gq_cmd_init(&cmd);
 
-    memset(&cmd, 0, sizeof(cmd));
     set_refstr(&cmd.threads, (char *) ONE_THREAD);
-    sll_init(&cmd.remote_args);                                              \
 
     /* parse args */
     for(int i = 3; i < argc; i++) {
@@ -789,7 +806,10 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
         /* assume this is an index path */
         if (!value || (value == (key + len))) {
-            indexroot = (char *) argv[i]; /* keep last one */
+            /* clean up indexroot */
+            refstr_t ir;
+            set_refstr(&ir, (char *) argv[i]);
+            sll_push(&cmd.indexroots, (char *) ir.data);
             continue;
         }
 
@@ -830,7 +850,10 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             }
         }
         else if (strncmp(key, "index", 6) == 0) {
-            indexroot = value; /* keep last one */
+            /* clean up indexroot */
+            refstr_t ir;
+            set_refstr(&ir, value);
+            sll_push(&cmd.indexroots, (char *) ir.data);
         }
         else if (strncmp(key, "threads", 8) == 0) {
             /* let gufi_query check value */
@@ -840,7 +863,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                  (strncmp(key, "VERBOSE", 8) == 0)) {
             if (sscanf(value, "%d", &cmd.verbose) != 1) {
                 *pzErr = sqlite3_mprintf("Bad verbose value: %s", value);
-                sll_destroy(&cmd.remote_args, free);
+                gq_cmd_destroy(&cmd);
                 return SQLITE_MISUSE;
             }
         }
@@ -873,22 +896,15 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         }
         else {
             *pzErr = sqlite3_mprintf("Unknown key: %s", key);
-            sll_destroy(&cmd.remote_args, free);
+            gq_cmd_destroy(&cmd);
             return SQLITE_CONSTRAINT;
         }
     }
 
-    if (!indexroot && (!cmd.path_list.data && !cmd.path_list.len)) {
+    if (!sll_get_size(&cmd.indexroots) && (!cmd.path_list.data && !cmd.path_list.len)) {
         *pzErr = sqlite3_mprintf("Missing indexroot or path_list");
-        sll_destroy(&cmd.remote_args, free);
+        gq_cmd_destroy(&cmd);
         return SQLITE_CONSTRAINT;
-    }
-
-    /* clean up indexroot */
-    {
-        refstr_t ir;
-        set_refstr(&ir, indexroot);
-        indexroot = (char *) ir.data;
     }
 
     /* get column types of results from gufi_query */
@@ -983,7 +999,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     closedb(tempdb);
 
     return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
-                          schema, &cmd, indexroot);
+                          schema, &cmd, 0);
   error:
     free(lens);
     if (names) {
@@ -995,7 +1011,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     free(types);
 
     closedb(tempdb);
-    sll_destroy(&cmd.remote_args, free);
+    gq_cmd_destroy(&cmd);
     return SQLITE_ERROR;
 }
 
@@ -1014,7 +1030,7 @@ static int gufi_vtpu_xCreate(sqlite3 *db,
 static int gufi_vtBestIndex(sqlite3_vtab *tab,
                             sqlite3_index_info *pIdxInfo) {
     gufi_vtab *vtab = (gufi_vtab *) tab;
-    if (vtab->indexroot) {
+    if (!vtab->fixed_schema) {
         pIdxInfo->estimatedCost = 1000000;
     }
     else {
@@ -1044,7 +1060,7 @@ static int gufi_vtBestIndex(sqlite3_vtab *tab,
 
 static int gufi_vtDisconnect(sqlite3_vtab *pVtab) {
     gufi_vtab *vtab = (gufi_vtab *) pVtab;
-    sll_destroy(&vtab->cmd.remote_args, free);
+    gq_cmd_destroy(&vtab->cmd);
     sqlite3_free(pVtab);
     return SQLITE_OK;
 }
@@ -1076,14 +1092,31 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
     gufi_vtab_cursor *pCur = (gufi_vtab_cursor *) cur;
     gufi_vtab *vtab = (gufi_vtab *) cur->pVtab;
 
-    const char *indexroot = vtab->indexroot;
-
     /* gufi_vt_* */
-    if (!indexroot) {
-        /* indexroot must be present */
-        indexroot = (const char *) sqlite3_value_text(argv[GUFI_VT_ARGS_INDEXROOT]);
-        set_refstr(&vtab->cmd.threads, (char *) ONE_THREAD);
+    if (vtab->fixed_schema) {
+        /* at least one index must be present */
+        char *indexroots = (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_INDEXROOT]);
+        if (!indexroots) {
+            vtab->base.zErrMsg = sqlite3_mprintf("Missing index");
+            return SQLITE_CONSTRAINT;
+        }
 
+        /* push space delimited indexroots */
+        {
+            char *saveptr = NULL;
+            char *indexroot = strtok_r(indexroots, " ", &saveptr); /* skip multiple contiguous spaces */
+            while (indexroot) {
+                refstr_t ir;
+                set_refstr(&ir, indexroot);
+                sll_push(&vtab->cmd.indexroots, (char *) ir.data);
+
+                indexroot = strtok_r(NULL, " ", &saveptr);
+            }
+        }
+        /* not checking for empty string/indexroot list; 0 indexes is valid gufi_query input */
+
+        /* default thread count */
+        set_refstr(&vtab->cmd.threads, (char *) ONE_THREAD);
         if (argc > GUFI_VT_ARGS_THREADS) {
             /* passing NULL in the SQL will result in a NULL pointer */
             char *threads = NULL;
@@ -1130,7 +1163,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
                                 if (argc > GUFI_VT_ARGS_REMOTE_ARGS) {
                                     char *remote_args = (char *) sqlite3_value_text(argv[GUFI_VT_ARGS_REMOTE_ARGS]);
                                     char *saveptr = NULL;
-                                    char *remote_arg = strtok_r(remote_args, " ", &saveptr); /* skip multiple contiguous paces */
+                                    char *remote_arg = strtok_r(remote_args, " ", &saveptr); /* skip multiple contiguous spaces */
                                     while (remote_arg) {
                                         refstr_t *ra = calloc(1, sizeof(*ra));
                                         set_refstr(ra, remote_arg);
@@ -1148,8 +1181,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
     }
 
     /* kick off gufi_query */
-    const int rc = gufi_query(indexroot, &vtab->cmd,
-                              &pCur->output, &vtab->base.zErrMsg);
+    const int rc = gufi_query(&vtab->cmd, &pCur->output, &vtab->base.zErrMsg);
     if (rc != SQLITE_OK) {
         return SQLITE_ERROR;
     }
@@ -1214,7 +1246,7 @@ static int gufi_vtColumn(sqlite3_vtab_cursor *cur,
         return SQLITE_OK;
     }
 
-    const char *buf = pCur->row + pCur->col_starts[N - (pVtab->indexroot?0:GUFI_VT_ARGS_COUNT)];
+    const char *buf = pCur->row + pCur->col_starts[N - (pVtab->fixed_schema?GUFI_VT_ARGS_COUNT:0)];
     const char type = *buf;
     const size_t len = * (size_t *) (buf + 1);
     const char *col = buf + TL;

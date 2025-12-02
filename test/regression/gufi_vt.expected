@@ -250,22 +250,17 @@ d|unusual#? directory ,
 # Multiple indexes
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT name, size, atime, mtime FROM pentries;", 'prefix', index="prefix", threads=2, n=2);SELECT size, atime, mtime, name FROM gufi ORDER BY size ASC, name ASC;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix/directory", E="SELECT name, size, atime, mtime FROM pentries;", 'prefix/leaf_directory', index="prefix/directory/subdirectory", threads=2, n=2);SELECT size, atime, mtime, name FROM gufi ORDER BY size ASC, name ASC;"
 ) | sqlite3
-0|0|0|old_file
 1|1|1|executable
 2|2|2|readonly
 3|3|3|writable
 4|4|4|directory_symlink
+4|4|4|directory_symlink
 5|5|5|repeat_name
-9|9|9|file_symlink
-10|10|10|.hidden
+5|5|5|repeat_name
 11|11|11|leaf_file1
 12|12|12|leaf_file2
-14|14|14|repeat_name
-15|15|15|unusual, name?#
-1024|1024|1024|1KB
-1048576|1048576|1048576|1MB
 
 # min_level/max_level
 $ (
