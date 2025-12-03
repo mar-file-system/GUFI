@@ -101,7 +101,7 @@ recommended here does not use the extensive list of flags available in
 
 \texttt{cmake .. <flags>} \\
 
-GUFI defines many CMake flags. Run \texttt{ccmake ..} to see the latest flags.
+GUFI defines many CMake variables. Run \texttt{ccmake ..} to see the latest variables.
 Some particularly useful ones are listed here: \\
 \begin{table}[H]
   \centering
@@ -224,7 +224,7 @@ called (explainations can be found in the other latex documentation).
   and \entries/\pentries).
 \end{itemize}
 
-A simple \gufiquery call might looks something like: \\
+A simple \gufiquery call might look something like: \\
 
 \gufiquery \texttt{--threads <n>} \textbackslash \\
 \indent \indent \texttt{-S "SELECT ... FROM vrsummary ... ;"} \textbackslash \\
@@ -268,7 +268,7 @@ minimum, \texttt{IndexRoot} will likely need to be changed to point to
 same variable name at some point.} or a subdirectory. An absolute path
 is recommended.
 
-With the configutation file set up, the user facing tools will
+With the configuration file set up, the user facing tools will
 prefix every path passed to them with \texttt{IndexRoot}: \\
 
 \texttt{In the configuration file:} \\
