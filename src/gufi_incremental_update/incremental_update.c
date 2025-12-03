@@ -206,41 +206,36 @@ static const char GET_UPDATES[] =
     /* "ORDER BY " TREE "depth ASC " */
     ";";
 
-#define URD_DB_EXT "urd"
+/* used by get_urd and get_created */
+typedef struct diff_part {
+    char *index;            /* reference */
+    char *tree;             /* reference */
 
-static size_t gen_urd_name(struct PoolArgs *pa, char *name, const size_t name_size) {
-    return SNFORMAT_S(name, name_size, 3,
-                      pa->in.outname.data, pa->in.outname.len,
-                      ".", (size_t) 1,
-                      URD_DB_EXT, sizeof(URD_DB_EXT) - 1);
-}
+    char dbname[MAXPATH];   /* filled in */
+    int ret;                /* 0 for success; non-0 for error */
+} diff_part_t;
 
 static int get_urd(QPTPool_ctx_t *ctx, void *data) {
-    (void) data;
-
+    diff_part_t *dp = (diff_part_t *) data;
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
-    char dbname[MAXPATH];
-    gen_urd_name(pa, dbname, sizeof(dbname));
+    #define URD_DB_EXT "urd"
+    SNFORMAT_S(dp->dbname, sizeof(dp->dbname), 3,
+               pa->in.outname.data, pa->in.outname.len,
+               ".", (size_t) 1,
+               URD_DB_EXT, sizeof(URD_DB_EXT) - 1);
 
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
+    sqlite3 *db = opendb(dp->dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
     if (!db) {
-        return 1;
+        return (dp->ret = 1);
     }
-
-    /* ground truth */
-    char index_snapshot_name[MAXPATH];
-    gen_index_snapshot_name(pa, index_snapshot_name, sizeof(index_snapshot_name));
-
-    /* tree with changes */
-    char tree_snapshot_name[MAXPATH];
-    gen_tree_snapshot_name(pa, tree_snapshot_name, sizeof(tree_snapshot_name));
 
     char *err = NULL;
 
     /* make snapshots available to this database instance */
-    if (!attachdb(index_snapshot_name, db, INDEX_ATTACH, SQLITE_OPEN_READONLY, 1) ||
-        !attachdb(tree_snapshot_name,  db, TREE_ATTACH,  SQLITE_OPEN_READONLY, 1)) {
+    if (!attachdb(dp->index, db, INDEX_ATTACH, SQLITE_OPEN_READONLY, 1) ||
+        !attachdb(dp->tree,  db, TREE_ATTACH,  SQLITE_OPEN_READONLY, 1)) {
+        err = (char *) (uintptr_t) 1; /* set to non-NULL to indicate error */
         goto cleanup;
     }
 
@@ -252,44 +247,30 @@ static int get_urd(QPTPool_ctx_t *ctx, void *data) {
   cleanup:
     closedb(db);
 
-    return !!err;
-}
-
-#define CREATED_DB_EXT "created"
-
-static size_t gen_created_name(struct PoolArgs *pa, char *name, const size_t name_size) {
-    return SNFORMAT_S(name, name_size, 3,
-                      pa->in.outname.data, pa->in.outname.len,
-                      ".", (size_t) 1,
-                      CREATED_DB_EXT, sizeof(CREATED_DB_EXT) - 1);
+    return (dp->ret = !!err);
 }
 
 static int get_created(QPTPool_ctx_t *ctx, void *data) {
-    (void) data;
-
+    diff_part_t *dp = (diff_part_t *) data;
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
-    char dbname[MAXPATH];
-    gen_created_name(pa, dbname, sizeof(dbname));
+    #define CREATED_DB_EXT "created"
+    SNFORMAT_S(dp->dbname, sizeof(dp->dbname), 3,
+               pa->in.outname.data, pa->in.outname.len,
+               ".", (size_t) 1,
+               CREATED_DB_EXT, sizeof(CREATED_DB_EXT) - 1);
 
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
+    sqlite3 *db = opendb(dp->dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
     if (!db) {
-        return 1;
+        return (dp->ret = 1);
     }
-
-    /* ground truth */
-    char index_snapshot_name[MAXPATH];
-    gen_index_snapshot_name(pa, index_snapshot_name, sizeof(index_snapshot_name));
-
-    /* tree with changes */
-    char tree_snapshot_name[MAXPATH];
-    gen_tree_snapshot_name(pa, tree_snapshot_name, sizeof(tree_snapshot_name));
 
     char *err = NULL;
 
     /* make snapshots available to this database instance */
-    if (!attachdb(index_snapshot_name, db, INDEX_ATTACH, SQLITE_OPEN_READONLY, 1) ||
-        !attachdb(tree_snapshot_name,  db, TREE_ATTACH,  SQLITE_OPEN_READONLY, 1)) {
+    if (!attachdb(dp->index, db, INDEX_ATTACH, SQLITE_OPEN_READONLY, 1) ||
+        !attachdb(dp->tree,  db, TREE_ATTACH,  SQLITE_OPEN_READONLY, 1)) {
+        err = (char *) (uintptr_t) 1; /* set to non-NULL to indicate error */
         goto cleanup;
     }
 
@@ -301,29 +282,41 @@ static int get_created(QPTPool_ctx_t *ctx, void *data) {
   cleanup:
     closedb(db);
 
-    return !!err;
+    return (dp->ret = !!err);
 }
 
 /* create db file containing the differences between the index and current state of the tree */
 #define DIFF_SNAPSHOT_EXT "diff"
 static int get_diff(struct PoolArgs *pa, char *diff_dbname, const size_t diff_dbname_size) {
+    /* ground truth */
+    char index_dbname[MAXPATH];
+    gen_index_snapshot_name(pa, index_dbname, sizeof(index_dbname));
+
+    /* tree with changes */
+    char tree_dbname[MAXPATH];
+    gen_tree_snapshot_name(pa, tree_dbname, sizeof(tree_dbname));
+
+    diff_part_t urd = {
+        .index  = index_dbname,
+        .tree   = tree_dbname,
+        .dbname = "",
+        .ret    = 1, /* default to error */
+    };
+
+    diff_part_t created = {
+        .index  = index_dbname,
+        .tree   = tree_dbname,
+        .dbname = "",
+        .ret    = 1, /* default to error */
+    };
+
     /* get matches in parallel */
     QPTPool_wait(pa->ctx);
-    QPTPool_enqueue(pa->ctx, get_urd,     NULL);
-    QPTPool_enqueue(pa->ctx, get_created, NULL);
+    QPTPool_enqueue(pa->ctx, get_urd,     &urd);
+    QPTPool_enqueue(pa->ctx, get_created, &created);
     QPTPool_wait(pa->ctx);
 
-    int rc = 0;
-
-    char *err = NULL;
-
-    /* unchanged, renamed, deleted */
-    char urd_dbname[MAXPATH];
-    gen_urd_name(pa, urd_dbname, sizeof(urd_dbname));
-
-    /* created */
-    char created_dbname[MAXPATH];
-    gen_created_name(pa, created_dbname, sizeof(created_dbname));
+    /* should probably check return values */
 
     /* generate the name of the diff database (<snapshotdb>.diff; not deleted afterwards for debugging) */
     SNFORMAT_S(diff_dbname, diff_dbname_size, 3,
@@ -336,30 +329,30 @@ static int get_diff(struct PoolArgs *pa, char *diff_dbname, const size_t diff_db
         return 1;
     }
 
+    char *err = NULL;
+
     /* make pieces of partial changes available to this database instance */
-    if (!attachdb(urd_dbname,     db, UNCHANGED_RENAMED_DELETED, SQLITE_OPEN_READONLY, 1) ||
-        !attachdb(created_dbname, db, CREATED,                   SQLITE_OPEN_READONLY, 1)) {
-        rc = 1;
+    if (!attachdb(urd.dbname,     db, UNCHANGED_RENAMED_DELETED, SQLITE_OPEN_READONLY, 1) ||
+        !attachdb(created.dbname, db, CREATED,                   SQLITE_OPEN_READONLY, 1)) {
+        err = (char *) (uintptr_t) 1; /* set to non-NULL to indicate error */
         goto cleanup;
     }
 
     /* create a view of all changes between the index and the tree */
     if (sqlite3_exec(db, ALL_MATCHES_CREATE, NULL, NULL, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Could not create all matches view: %s\n", err);
-        rc = 1;
         goto cleanup;
     }
 
     /* write reduced diff to db file */
     if (sqlite3_exec(db, INCR_DIFF_CREATE, NULL, NULL, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Could not create diff table: %s\n", err);
-        rc = 1;
     }
 
   cleanup:
     closedb(db);
 
-    return rc;
+    return !!err;
 }
 
 static int apply_removes_and_move_outs_callback(void *args, int count, char **data, char **columns) {
