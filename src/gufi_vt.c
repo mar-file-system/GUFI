@@ -213,12 +213,12 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
 
         if (cmd->dir_match_uid.len) {
             write_with_resize(&flat, &size, &len,
-                              "--dir-match-uid=%s", cmd->dir_match_uid.data);
+                              "--dir-match-uid=%s ", cmd->dir_match_uid.data);
         }
 
         if (cmd->dir_match_gid.len) {
             write_with_resize(&flat, &size, &len,
-                              "--dir-match-gid=%s", cmd->dir_match_gid.data);
+                              "--dir-match-gid=%s ", cmd->dir_match_gid.data);
         }
 
         flatten_argv(argc, argv, "-I",          cmd->I);
@@ -234,7 +234,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         sll_loop(&cmd->indexroots, node) {
             const char *indexroot = (char *) sll_node_data(node);
             write_with_resize(&flat, &size, &len,
-                              "%s", indexroot);
+                              "%s ", indexroot);
         }
 
         argv[argc++] = flat;
