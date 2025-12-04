@@ -76,8 +76,8 @@ def run(args, config_path):
 
     config = gufi_config.Server(config_path)
 
-    # paths outside of config.indexroot can be passed into args
-    cmd = [config.query] + args[1:] + [config.indexroot]
+    # not automatically adding config.indexroot
+    cmd = [config.query] + args[1:]
 
     # run the command
     query = subprocess.Popen(cmd)       # pylint: disable=consider-using-with

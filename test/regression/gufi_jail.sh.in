@@ -89,7 +89,7 @@ run_no_sort "SSH_ORIGINAL_COMMAND=\"'ls'\" ${TEST_GUFI_JAIL}" || true
 run_sort "SSH_ORIGINAL_COMMAND=\"'${GUFI_TOOL} find'\" ${TEST_GUFI_JAIL}"
 run_sort "SSH_ORIGINAL_COMMAND=\"'${GUFI_TOOL} ls -R'\" ${TEST_GUFI_JAIL}"
 run_sort "SSH_ORIGINAL_COMMAND=\"'${GUFI_TOOL} stat -c \\\"%n %s %X %Y %Z\\\" ${SRCDIR}/old_file'\" ${TEST_GUFI_JAIL}"
-run_sort "SSH_ORIGINAL_COMMAND=\"'${GUFI_TOOL} query.py -d ' ' -E \\\"SELECT path() || '/' || name, size FROM entries\\\"'\" ${TEST_GUFI_JAIL}"
+run_sort "SSH_ORIGINAL_COMMAND=\"'${GUFI_TOOL} query.py -d ' ' -E \\\"SELECT path() || '/' || name, size FROM entries\\\" \\\"${INDEXROOT}\\\"'\" ${TEST_GUFI_JAIL}"
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_jail.expected "${OUTPUT}"

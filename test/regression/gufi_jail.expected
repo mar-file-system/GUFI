@@ -50,7 +50,7 @@ prefix/unusual#? directory ,/unusual, name?#
 $ SSH_ORIGINAL_COMMAND="'gufi_stat -c \"%n %s %X %Y %Z\" prefix/old_file'" gufi_jail
 prefix/old_file 0 0 0 0
 
-$ SSH_ORIGINAL_COMMAND="'gufi_query.py -d ' ' -E \"SELECT path() || '/' || name, size FROM entries\"'" gufi_jail
+$ SSH_ORIGINAL_COMMAND="'gufi_query.py -d ' ' -E \"SELECT path() || '/' || name, size FROM entries\" \"prefix\"'" gufi_jail
 prefix/.hidden 10
 prefix/1KB 1024
 prefix/1MB 1048576

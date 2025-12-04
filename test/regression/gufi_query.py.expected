@@ -49,7 +49,7 @@ GUFI_tree        find GUFI tree here
 $ gufi_query.py
 
 # Get only directories
-$ gufi_query.py -d " " -n 2 -S "SELECT name FROM vrsummary;"
+$ gufi_query.py -d " " -n 2 -S "SELECT name FROM vrsummary;" "prefix"
 directory
 empty_directory
 leaf_directory
@@ -58,7 +58,7 @@ subdirectory
 unusual#? directory ,
 
 # Get only non-directories
-$ gufi_query.py -d " " -n 2 -E "SELECT name FROM vrpentries;"
+$ gufi_query.py -d " " -n 2 -E "SELECT name FROM vrpentries;" "prefix"
 .hidden
 1KB
 1MB
@@ -75,7 +75,7 @@ unusual, name?#
 writable
 
 # Get all directory and non-directory names
-$ gufi_query.py -d " " -n 2 -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;"
+$ gufi_query.py -d " " -n 2 -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix"
 .hidden
 1KB
 1MB

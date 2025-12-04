@@ -73,13 +73,13 @@ echo "# Walk without returning results"
 run_sort "${GUFI_QUERY_PY}"
 
 echo "# Get only directories"
-run_sort "${GUFI_QUERY_PY} -d \" \" -n ${THREADS} -S \"SELECT name FROM vrsummary;\""
+run_sort "${GUFI_QUERY_PY} -d \" \" -n ${THREADS} -S \"SELECT name FROM vrsummary;\" \"${INDEXROOT}\""
 
 echo "# Get only non-directories"
-run_sort "${GUFI_QUERY_PY} -d \" \" -n ${THREADS} -E \"SELECT name FROM vrpentries;\""
+run_sort "${GUFI_QUERY_PY} -d \" \" -n ${THREADS} -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 
 echo "# Get all directory and non-directory names"
-run_sort "${GUFI_QUERY_PY} -d \" \" -n ${THREADS} -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\""
+run_sort "${GUFI_QUERY_PY} -d \" \" -n ${THREADS} -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 ) 2>&1 | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.py.expected "${OUTPUT}"
