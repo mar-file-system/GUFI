@@ -233,7 +233,7 @@ $ gufi_ls prefix/old_file -l --time-style=locale
 -rw-rw-r-- 1 user group 0 Jan   1 00:00 old_file
 
 $ gufi_ls prefix/old_file -l
--rw-rw-r-- 1 user group 0 Jan   1 00:00 old_file
+-rw-rw-r-- 1 user group 0 Jan   1  1970 old_file
 
 $ gufi_ls prefix/old_file --time-style=full-iso
 old_file
@@ -248,28 +248,28 @@ $ gufi_ls prefix/old_file --time-style=locale
 old_file
 
 $ gufi_ls -l --block-size=1000 prefix/1KB
--rw-rw-r-- 1 user group 2 Jan   1 00:00 1KB
+-rw-rw-r-- 1 user group 2 Jan   1  1970 1KB
 
 $ gufi_ls -l --block-size=1024 prefix/1KB
--rw-rw-r-- 1 user group 1 Jan   1 00:00 1KB
+-rw-rw-r-- 1 user group 1 Jan   1  1970 1KB
 
 $ gufi_ls -l --block-size=K    prefix/1KB
--rw-rw-r-- 1 user group 1K Jan   1 00:00 1KB
+-rw-rw-r-- 1 user group 1K Jan   1  1970 1KB
 
 $ gufi_ls -l --block-size=1K   prefix/1KB
--rw-rw-r-- 1 user group 1 Jan   1 00:00 1KB
+-rw-rw-r-- 1 user group 1 Jan   1  1970 1KB
 
 $ gufi_ls -l --block-size=KB   prefix/1KB
--rw-rw-r-- 1 user group 2KB Jan   1 00:00 1KB
+-rw-rw-r-- 1 user group 2KB Jan   1  1970 1KB
 
 $ gufi_ls -l --block-size=1KB  prefix/1KB
--rw-rw-r-- 1 user group 2 Jan   1 00:00 1KB
+-rw-rw-r-- 1 user group 2 Jan   1  1970 1KB
 
 $ gufi_ls -l --block-size=KiB  prefix/1KB
--rw-rw-r-- 1 user group 1KiB Jan   1 00:00 1KB
+-rw-rw-r-- 1 user group 1KiB Jan   1  1970 1KB
 
 $ gufi_ls -l --block-size=1KiB prefix/1KB
--rw-rw-r-- 1 user group 1 Jan   1 00:00 1KB
+-rw-rw-r-- 1 user group 1 Jan   1  1970 1KB
 
 $ gufi_ls --block-size=K    prefix/1KB
 1KB
@@ -290,16 +290,16 @@ $ gufi_ls --block-size=1KiB prefix/1KB
 1KB
 
 $ gufi_ls -lG prefix/old_file
--rw-rw-r-- 1 user 0 Jan   1 00:00 old_file
+-rw-rw-r-- 1 user 0 Jan   1  1970 old_file
 
 $ gufi_ls -G  prefix/old_file
 old_file
 
 $ gufi_ls -lh prefix/1KB
--rw-rw-r-- 1 user group 1.0K Jan   1 00:00 1KB
+-rw-rw-r-- 1 user group 1.0K Jan   1  1970 1KB
 
 $ gufi_ls -lh prefix/1MB
--rw-rw-r-- 1 user group 1.0M Jan   1 00:00 1MB
+-rw-rw-r-- 1 user group 1.0M Jan   1  1970 1MB
 
 $ gufi_ls -h prefix/1KB
 1KB
