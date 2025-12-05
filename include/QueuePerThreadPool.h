@@ -74,9 +74,6 @@ extern "C" {
 /* The Queue Per Thread Pool context */
 typedef struct QPTPool_ctx QPTPool_ctx_t;
 
-/* initialize a QPTPool context - call QPTPool_start to start threads */
-QPTPool_ctx_t *QPTPool_init(const size_t nthreads, void *args);
-
 /*
  * User defined function to select the thread to pass new work to.
  *
@@ -89,6 +86,15 @@ QPTPool_ctx_t *QPTPool_init(const size_t nthreads, void *args);
  */
 typedef size_t (*QPTPoolNextFunc_t)(const size_t id, const size_t prev, const size_t threads,
                                     void *data, void *args);
+
+/* initialize a QPTPool context using default values - call QPTPool_start to start threads */
+QPTPool_ctx_t *QPTPool_init(const size_t nthreads, void *args);
+
+/* initialize a QPTPool context with user defined properties - call QPTPool_start to start threads */
+QPTPool_ctx_t *QPTPool_init_with_props(const size_t nthreads, void *args,
+                                       QPTPoolNextFunc_t next_func, void *next_args,
+                                       const uint64_t queue_limit, const char *swap_prefix,
+                                       const uint64_t steal_num, const uint64_t steal_denom);
 
 /*
  * Set QPTPool context properties
@@ -103,24 +109,20 @@ int QPTPool_set_swap_prefix(QPTPool_ctx_t *ctx, const char *swap_prefix);
 #endif
 int QPTPool_set_steal(QPTPool_ctx_t *ctx, const uint64_t num, const uint64_t denom);
 
-/* Get QPTPool context properties */
-size_t QPTPool_get_id(QPTPool_ctx_t *ctx);
+/*
+ * Get QPTPool context properties
+ * Call these functions before calling QPTPool_destroy
+ *
+ * @return 0 if successful, non-zero if not
+ */
 int QPTPool_get_nthreads(QPTPool_ctx_t *ctx, size_t *nthreads);
 int QPTPool_get_args(QPTPool_ctx_t *ctx, void **args);
-/* This should only be called in the QPTPool function as it expects the ctx to be valid */
-void *QPTPool_get_args_internal(QPTPool_ctx_t *ctx);
 int QPTPool_get_next(QPTPool_ctx_t *ctx, QPTPoolNextFunc_t *func, void **args);
 #ifdef QPTPOOL_SWAP
 int QPTPool_get_queue_limit(QPTPool_ctx_t *ctx, uint64_t *queue_limit);
 int QPTPool_get_swap_prefix(QPTPool_ctx_t *ctx, const char **swap_prefix);
 #endif
 int QPTPool_get_steal(QPTPool_ctx_t *ctx, uint64_t *num, uint64_t *denom);
-
-/* calls QPTPool_init and QPTPool_set_* functions */
-QPTPool_ctx_t *QPTPool_init_with_props(const size_t nthreads, void *args,
-                                       QPTPoolNextFunc_t next_func, void *next_args,
-                                       const uint64_t queue_limit, const char *swap_prefix,
-                                       const uint64_t steal_num, const uint64_t steal_denom);
 
 /*
  * QPTPool_init only allocates memory - call this to start threads
@@ -137,6 +139,10 @@ int QPTPool_start(QPTPool_ctx_t *ctx);
  * @return 0 if successful, non-zero if not
  */
 typedef int (*QPTPool_f)(QPTPool_ctx_t *ctx, void *data);
+
+/* should only be called from within a QPTPool_f */
+size_t QPTPool_get_id(QPTPool_ctx_t *ctx);
+void *QPTPool_get_args_internal(QPTPool_ctx_t *ctx);
 
 /* which queue a new work item will be placed in */
 typedef enum QPTPool_enqueue_dst {
@@ -159,8 +165,8 @@ int QPTPool_generic_alloc_and_deserialize(const int fd, QPTPool_f *func, void **
 
 /*
  * Enqueue data and a function to process the data. Pushes to
- * thread[id]->next_queue, rather than directly to thread[id]. The
- * queue_limit is ignored and work items are not swapped.
+ * ctx->next_queue, rather than directly to ctx. The queue_limit is
+ * ignored and work items are not swapped.
  *
  * This function can be called before starting the thread pool.
  *
@@ -178,9 +184,9 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_ctx_t *ctx,
 #ifdef QPTPOOL_SWAP
 /*
  * Enqueue data and a function to process the data. Pushes to
- * thread[id]->next_queue, rather than directly to thread[id]. If
- * target thread's queue size is greater than or equal to the
- * queue_limit, the work item is swapped and freed from memory.
+ * ctx->next_queue, rather than directly to ctx. If target thread's
+ * queue size is greater than or equal to the queue_limit, the work
+ * item is swapped and freed from memory.
  *
  * This function can be called before starting the thread pool.
  * However, note that if the queue limit or swap prefix is set after
@@ -204,8 +210,8 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_ctx_t *ctx,
 
 /*
  * Enqueue data and a function to process the data. Pushes directly to
- * thread[id] instead of thread[id]->next_queue. The queue_limit is
- * ignored. If the work item is swapped, it is also freed from memory.
+ * ctx instead of ctx->next_queue. The queue_limit is ignored. If the
+ * work item is swapped, it is also freed from memory.
  *
  * This function can be called before starting the thread pool.
  * However, note that if the queue limit or swap prefix is set after

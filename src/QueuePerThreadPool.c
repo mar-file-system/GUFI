@@ -97,16 +97,8 @@ typedef struct QPTPoolThreadData {
     uint64_t threads_successful;
 } QPTPoolThreadData_t;
 
-typedef struct QPTPool QPTPool_t;
-
-/* struct to pass into pthread_create */
-struct QPTPool_ctx {
-    QPTPool_t *pool;
-    size_t id;
-};
-
-/* The Queue Per Thread Pool context */
-struct QPTPool {
+/* the actual Queue Per Thread Pool context */
+typedef struct QPTPool {
     size_t nthreads;
     #ifdef QPTPOOL_SWAP
     uint64_t queue_limit;    /* if the waiting queue reaches this size, write to swap instead */
@@ -114,7 +106,7 @@ struct QPTPool {
     #endif
     struct {
         uint64_t num;        /* if there is work to steal from a queue, take */
-        uint64_t denom;      /* (queue.size * num / denom) items from the front */
+        uint64_t denom;      /* max(queue.size * num / denom, 1) items from the front */
     } steal;
 
     void *args;
@@ -133,7 +125,6 @@ struct QPTPool {
     uint64_t swapped;
 
     QPTPoolThreadData_t *data;
-    QPTPool_ctx_t *ctx;
 
     /*
      * arrays for threads to reference into
@@ -143,6 +134,12 @@ struct QPTPool {
     pthread_mutex_t **claimed_mutex;
     sll_t **waiting;
     pthread_mutex_t **thread_mutex; /* &data[i].mutex */
+} QPTPool_t;
+
+/* struct that is returned to users and used by worker functions */
+struct QPTPool_ctx {
+    QPTPool_t *pool;
+    size_t id;
 };
 
 /* struct that is created when something is enqueued */
@@ -327,20 +324,18 @@ static size_t process_work(QPTPool_ctx_t *ctx, QPTPoolThreadData_t *tw) {
 }
 
 static void *worker_function(void *args) {
-    struct QPTPool_ctx *ctx = (struct QPTPool_ctx *) args;
     /* Not checking arguments */
 
+    struct QPTPool_ctx *ctx = (struct QPTPool_ctx *) args;
+
     QPTPool_t *pool = ctx->pool;
-
-    const size_t id = ctx->id;
-
-    QPTPoolThreadData_t *tw = &pool->data[id];
+    QPTPoolThreadData_t *tw = &pool->data[ctx->id];
 
     while (1) {
         pthread_mutex_lock(&tw->mutex);
         pthread_mutex_lock(&pool->mutex);
 
-        maybe_steal_work(pool, tw, id);
+        maybe_steal_work(pool, tw, ctx->id);
         wait_for_work(pool, tw);
 
         /* if stopping and entire thread pool is empty, this thread can exit */
@@ -383,18 +378,115 @@ static void *worker_function(void *args) {
         pthread_cond_broadcast(&data->cv);
         pthread_mutex_unlock(&data->mutex);
     }
- 
-    return NULL;
-}
 
-static size_t QPTPool_round_robin(const size_t id, const size_t prev, const size_t threads,
-                                  void *data, void *args) {
-    (void) id; (void) data; (void) args;
-    return (prev + 1) % threads;
+    return NULL;
 }
 
 QPTPool_ctx_t *QPTPool_init(const size_t nthreads, void *args) {
     return QPTPool_init_with_props(nthreads, args, NULL, NULL, 0, "", 0, 0);
+}
+
+/* default function for selecting next thread to push to */
+static size_t QPTPool_round_robin(const size_t id, const size_t prev, const size_t threads,
+                                  void *data, void *args) {
+    (void) id; (void) data; (void) args;
+    const size_t next = prev + 1;
+    return (next == threads)?0:next; /* avoid divmod */
+}
+
+QPTPool_ctx_t *QPTPool_init_with_props(const size_t nthreads, void *args,
+                                       QPTPoolNextFunc_t next_func, void *next_args,
+                                       const uint64_t queue_limit, const char *swap_prefix,
+                                       const uint64_t steal_num, const uint64_t steal_denom) {
+    #ifndef QPTPOOL_SWAP
+    (void) queue_limit;
+    (void) swap_prefix;
+    #endif
+
+    if (!nthreads) {
+        return NULL;
+    }
+
+    QPTPool_t *pool = malloc(sizeof(QPTPool_t));
+    pool->nthreads = nthreads;
+    #ifdef QPTPOOL_SWAP
+    pool->queue_limit = queue_limit;
+    pool->swap_prefix = swap_prefix;
+    #endif
+    pool->steal.num = steal_num;
+    pool->steal.denom = steal_denom;
+    pool->args = args;
+    pool->next.func = next_func?next_func:QPTPool_round_robin;
+    pool->next.args = next_args;
+    pthread_mutex_init(&pool->mutex, NULL);
+    pthread_cond_init(&pool->cv, NULL);
+    pool->state = INITIALIZED;
+    pool->incomplete = 0;
+    pool->swapped = 0;
+
+    /* this can fail since nthreads is user input */
+    pool->data          = calloc(nthreads, sizeof(QPTPoolThreadData_t));
+    pool->claimed       = calloc(nthreads, sizeof(sll_t));
+    pool->claimed_mutex = calloc(nthreads, sizeof(pthread_mutex_t));
+    pool->waiting       = calloc(nthreads, sizeof(sll_t));
+    pool->thread_mutex  = calloc(nthreads, sizeof(pthread_mutex_t));
+    QPTPool_ctx_t *ctx  = calloc(nthreads, sizeof(QPTPool_ctx_t));
+    if (!pool->data || !pool->claimed || !pool->claimed_mutex ||
+        !pool->waiting || !pool->thread_mutex || !ctx) {
+        free(pool->thread_mutex);
+        free(pool->waiting);
+        free(pool->claimed_mutex);
+        free(pool->claimed);
+        free(pool->data);
+        free(pool);
+        free(ctx);
+        return NULL;
+    }
+
+    /* set up thread data, but not threads */
+    int bad = 0;
+    for(size_t i = 0; i < nthreads; i++) {
+        QPTPoolThreadData_t *data = &pool->data[i];
+
+        /* set references to pool first */
+        pool->claimed[i]       = &data->claimed;
+        pool->claimed_mutex[i] = &data->claimed_mutex;
+        pool->waiting[i]       = &data->waiting;
+        pool->thread_mutex[i]  = &data->mutex;
+
+        sll_init(&data->claimed);
+        pthread_mutex_init(&data->claimed_mutex, NULL);
+        sll_init(&data->waiting);
+        #ifdef QPTPOOL_SWAP
+        swap_init(&data->swap);
+        if (pool->queue_limit) {
+            if (swap_start(&data->swap, pool->swap_prefix, i) != 0) {
+                bad = 1; /* allow all threads to complete even if there are errors */
+            }
+        }
+        #endif
+        pthread_mutex_init(&data->mutex, NULL);
+        pthread_cond_init(&data->cv, NULL);
+        data->next_queue = i;
+        data->steal_from = i;
+        data->threads_started = 0;
+        data->threads_successful = 0;
+
+        ctx[i].pool = pool;
+        ctx[i].id = i;
+    }
+
+    if (bad) {
+        QPTPool_destroy(ctx);
+        return NULL;
+    }
+
+     /*
+      * the ctx array is returned instead of just ctx[0]
+      *     - equivalent to ctx[0]
+      *     - used to free entire array
+      */
+    return ctx;
 }
 
 int QPTPool_set_next(QPTPool_ctx_t *ctx, QPTPoolNextFunc_t func, void *args) {
@@ -502,14 +594,6 @@ int QPTPool_set_steal(QPTPool_ctx_t *ctx, const uint64_t num, const uint64_t den
     return 0;
 }
 
-size_t QPTPool_get_id(QPTPool_ctx_t *ctx) {
-    if (!ctx) {
-        return -1;
-    }
-
-    return ctx->id;
-}
-
 int QPTPool_get_nthreads(QPTPool_ctx_t *ctx, size_t *nthreads) {
     if (!ctx) {
         return 1;
@@ -532,11 +616,6 @@ int QPTPool_get_args(QPTPool_ctx_t *ctx, void **args) {
     }
 
     return 0;
-}
-
-/* This should only be called in the QPTPool function as it expects the ctx to be valid */
-void *QPTPool_get_args_internal(QPTPool_ctx_t *ctx) {
-    return ctx->pool->args;
 }
 
 int QPTPool_get_next(QPTPool_ctx_t *ctx, QPTPoolNextFunc_t *func, void **args) {
@@ -597,96 +676,6 @@ int QPTPool_get_steal(QPTPool_ctx_t *ctx, uint64_t *num, uint64_t *denom) {
     return 0;
 }
 
-QPTPool_ctx_t *QPTPool_init_with_props(const size_t nthreads, void *args,
-                                       QPTPoolNextFunc_t next_func, void *next_args,
-                                       const uint64_t queue_limit, const char *swap_prefix,
-                                       const uint64_t steal_num, const uint64_t steal_denom) {
-    #ifndef QPTPOOL_SWAP
-    (void) queue_limit;
-    (void) swap_prefix;
-    #endif
-
-    if (!nthreads) {
-        return NULL;
-    }
-
-    QPTPool_t *pool = malloc(sizeof(QPTPool_t));
-    pool->nthreads = nthreads;
-    #ifdef QPTPOOL_SWAP
-    pool->queue_limit = queue_limit;
-    pool->swap_prefix = swap_prefix;
-    #endif
-    pool->steal.num = steal_num;
-    pool->steal.denom = steal_denom;
-    pool->args = args;
-    pool->next.func = next_func?next_func:QPTPool_round_robin;
-    pool->next.args = next_args;
-    pthread_mutex_init(&pool->mutex, NULL);
-    pthread_cond_init(&pool->cv, NULL);
-    pool->state = INITIALIZED;
-    pool->incomplete = 0;
-    pool->swapped = 0;
-
-    /* this can fail since nthreads is user input */
-    pool->data          = calloc(nthreads, sizeof(QPTPoolThreadData_t));
-    pool->ctx           = calloc(nthreads, sizeof(QPTPool_ctx_t));
-    pool->claimed       = calloc(nthreads, sizeof(sll_t));
-    pool->claimed_mutex = calloc(nthreads, sizeof(pthread_mutex_t));
-    pool->waiting       = calloc(nthreads, sizeof(sll_t));
-    pool->thread_mutex  = calloc(nthreads, sizeof(pthread_mutex_t));
-    if (!pool->data || !pool->ctx || !pool->claimed || !pool->claimed_mutex ||
-        !pool->waiting || !pool->thread_mutex) {
-        free(pool->thread_mutex);
-        free(pool->waiting);
-        free(pool->claimed_mutex);
-        free(pool->claimed);
-        free(pool->data);
-        free(pool->ctx);
-        free(pool);
-        return NULL;
-    }
-
-    /* set up thread data, but not threads */
-    int bad = 0;
-    for(size_t i = 0; i < nthreads; i++) {
-        QPTPoolThreadData_t *data = &pool->data[i];
-
-        /* set references to pool first */
-        pool->claimed[i]       = &data->claimed;
-        pool->claimed_mutex[i] = &data->claimed_mutex;
-        pool->waiting[i]       = &data->waiting;
-        pool->thread_mutex[i]  = &data->mutex;
-
-        sll_init(&data->claimed);
-        pthread_mutex_init(&data->claimed_mutex, NULL);
-        sll_init(&data->waiting);
-        #ifdef QPTPOOL_SWAP
-        swap_init(&data->swap);
-        if (pool->queue_limit) {
-            if (swap_start(&data->swap, pool->swap_prefix, i) != 0) {
-                bad = 1; /* allow all threads to complete even if there are errors */
-            }
-        }
-        #endif
-        pthread_mutex_init(&data->mutex, NULL);
-        pthread_cond_init(&data->cv, NULL);
-        data->next_queue = i;
-        data->steal_from = i;
-        data->threads_started = 0;
-        data->threads_successful = 0;
-
-        pool->ctx[i].pool = pool;
-        pool->ctx[i].id = i;
-    }
-    
-    if (bad) {
-        QPTPool_destroy(&pool->ctx[0]);
-        return NULL;
-    }
-
-    return &pool->ctx[0];
-}
-
 int QPTPool_start(QPTPool_ctx_t *ctx) {
     if (!ctx) {
         return 1;
@@ -706,16 +695,26 @@ int QPTPool_start(QPTPool_ctx_t *ctx) {
     for(size_t i = 0; i < pool->nthreads; i++) {
         QPTPoolThreadData_t *data = &pool->data[i];
 
-        started += !pthread_create(&data->thread, NULL, worker_function, &pool->ctx[i]);
+        started += !pthread_create(&data->thread, NULL, worker_function, &ctx[i]);
     }
     pthread_mutex_unlock(&pool->mutex);
 
     if (started != pool->nthreads) {
-        QPTPool_stop(pool->ctx);
+        QPTPool_stop(ctx);
         return 1;
     }
 
     return 0;
+}
+
+size_t QPTPool_get_id(QPTPool_ctx_t *ctx) {
+    /* this function should only be called within a QPTPool_f, so ctx should be valid */
+    return ctx->id;
+}
+
+void *QPTPool_get_args_internal(QPTPool_ctx_t *ctx) {
+    /* this function should only be called within a QPTPool_f, so ctx should be valid */
+    return ctx->pool->args;
 }
 
 #if QPTPOOL_SWAP
@@ -1197,8 +1196,7 @@ void QPTPool_destroy(QPTPool_ctx_t *ctx) {
     free(pool->waiting);
     free(pool->claimed_mutex);
     free(pool->claimed);
-    /* The ctx user interact with is ctx[0] */ 
-    free(pool->ctx);
     free(pool->data);
     free(pool);
+    free(ctx);
 }

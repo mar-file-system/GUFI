@@ -120,15 +120,26 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
   \texttt{nthreads} sets the number of threads in this thread
   pool.
 
-  The \texttt{args} argument will be accessible by all threads that
-  are run.
+  The \texttt{args} argument will be accessible by all threads
+  processing work items. Use
+  \texttt{QPTPool\_get\_args\_internal(ctx)} to retreive it from
+  within a thread.
+
+  The \texttt{ctx} returned is an array of thread contexts but is
+  opaque to the caller. Enqueuing new work from within a user function
+  uses the context for that particular thread to figure out where to
+  put the new work item. In order to not have a different function for
+  enqueuing work from outside of the \texttt{QPTPool}, say from
+  \texttt{main()}, the returned array also acts as the context of
+  thread 0, taking advantage of the fact that \texttt{ctx == \&ctx[0]}.
 
 \item Setting Properties:
 
   \texttt{QPTPool\_init} is intentionally kept simple and uses default
-  values for some features. These values may be modified using
-  \texttt{QPTPool\_init\_with\_props} or \texttt{QPTPool\_set\_*}
-  functions before \texttt{QPTPool\_start} is called.
+  values for some features. These values may be set using
+  \texttt{QPTPool\_init\_with\_props} or modified using the
+  \texttt{QPTPool\_set\_*} functions before \texttt{QPTPool\_start} is
+  called.
 
   By default, \qptp will push new work items in a round robin
   fashion. This can be changed to a custom function with
@@ -157,6 +168,11 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
   Properties may be extracted from the context using the
   \texttt{QPTPool\_get\_*} functions.
 
+  Note that two functions, \texttt{QPTPool\_get\_id} and
+  \texttt{QPTPool\_get\_args\_internal}, are intended to be used
+  within the function processing a work item, and thus the context is
+  assumed to be valid, and is not checked for \texttt{NULL}s.
+
 \item Start the thread pool:
 
   \texttt{QPTPool\_start(ctx);}
@@ -164,17 +180,25 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
 \item Add work:
 
   \begin{itemize}
+    \item Each of the following functions take at least the following
+      arguments:
+      \begin{itemize}
+        \item \texttt{ctx}: The context returned by \texttt{QPTPool}
+          initialization.
+        \item \texttt{function}: The function that will be used to
+          process the associated work item. \texttt{int
+            (*)(QPTPool\_ctx\_t *ctx, void *data)} typedef-ed to
+          \texttt{QPTPool\_f},.
+        \item \texttt{work}: A pointer to the data that will be
+          processed by this thread. This is renamed to \texttt{data}
+          when passed to the function.
+      \end{itemize}
+
     \item \texttt{QPTPool\_enqueue(ctx, function, work);}
 
-    The function passed into \texttt{QPTPool\_enqueue} must match the
-    signature found in \texttt{QueuePerThreadPool.h}. The
-    \texttt{work} argument will only be accessible to the thread
-    processing this work.
-
-    The thread that will receive the new work item is not \texttt{id}.
-    Rather, \texttt{id} is treated as the source thread id and
-    \texttt{threads[id]->next\_queue} will be where the new work item
-    is enqueued.
+    The thread that will receive the new work item is not
+    \texttt{ctx}. Rather, \texttt{ctx} is used to figure out where
+    the new work item is enqueued.
 
     Work enqueued with \texttt{QPTPool\_enqueue} will not be swapped.
 
@@ -183,10 +207,9 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
     Work passed into \texttt{QPTPool\_enqueue\_swappable} may end up
     in the wait queue or be swapped to a filesystem.
 
-    The thread that will receive the new work item is not \texttt{id}.
-    Rather, \texttt{id} is treated as the source thread id and
-    \texttt{threads[id]->next\_queue} will be where the new work item
-    is enqueued.
+    The thread that will receive the new work item is not
+    \texttt{ctx}. Rather, \texttt{ctx} is used to figure out where
+    the new work item is enqueued.
 
     \item \texttt{QPTPool\_enqueue\_here(ctx, id, queue, func, work, serialize, deserialize);}
 
@@ -196,7 +219,10 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
     function. The queue limit is ignored.
 
     If the queue argument is set to \texttt{QPTPool\_enqueue\_SWAP},
-    the work will be written to the selected thread's swap space.
+    the work will be written to the selected thread's swap space. The
+    \texttt{serialize} and \texttt{deserialize} functions are used to
+    write and read the work data to and from the filesystem.
+
   \end{itemize}
 
 \item Wait for work to be completed (optional):
@@ -217,7 +243,7 @@ last-ditch attempt to prevent OOM-ing, and should not occur too often.
       This function waits until all in-memory and swapped work is done.
   \end{itemize}
 
-\item Wait for all work to be completed (threads are joined):
+\item Join threads after all work has been completed:
 
   \texttt{QPTPool\_stop(ctx);}
 
