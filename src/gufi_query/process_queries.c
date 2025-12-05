@@ -128,21 +128,36 @@ static size_t descend2(QPTPool_ctx_t *ctx,
                 child->work.root_parent = gqw->work.root_parent;
                 child->work.root_basename_len = gqw->work.root_basename_len;
 
-                gqw_t *clone = compress_struct(in->compress, child, gqw_size(child));
+                /*
+                 * if ancestor had matching uid/gid, inherit and don't
+                 * check again (uid/gid match is ignored after the
+                 * first match)
+                 *
+                 * The alternative is to not cache uid/gid match
+                 * having already happened and always calling
+                 * lstat_wrapper on every single directory.
+                 */
+                child->id_match = gqw->id_match;
 
-                if (in->dir_match.on != DIR_MATCH_NONE) {
-                    /* just in case lstat(2)/statx(2) was skipped */
-                    if (lstat_wrapper(&clone->work) != 0) {
+                if ((in->dir_match.on != DIR_MATCH_NONE) &&
+                    !gqw->id_match &&
+                    (child->work.level >= in->min_level)) {
+                    /* lstat(2)/statx(2) is not normally called during descent */
+                    if (lstat_wrapper(&child->work) != 0) {
                         free(child);
                         continue;
                     }
 
                     /* check if uid/gid match */
-                    if (!dir_match(in, &clone->work.statuso)) {
+                    if (!dir_match(in, &child->work.statuso)) {
                         free(child);
                         continue;
                     }
+
+                    child->id_match = 1;
                 }
+
+                gqw_t *clone = compress_struct(in->compress, child, gqw_size(child));
 
                 /* push the subdirectory into the queue for processing */
                 #ifdef QPTPOOL_SWAP

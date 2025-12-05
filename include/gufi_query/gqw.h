@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 typedef struct gufi_query_work {
     compressed_t comp;
     struct work work;
+    int id_match; /* if uid/gid matched, record here and do not lstat(2)/statx(2) again */
 
     /*
      * some characters need to be converted for sqlite3,

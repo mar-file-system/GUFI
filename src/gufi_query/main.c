@@ -193,11 +193,16 @@ static int validate_source(struct input *in, const char *path, gqw_t **gqw) {
         return 1;
     }
 
-    if (in->dir_match.on != DIR_MATCH_NONE) {
+    /* if dir_match was called and passed, mark it down and skip future checks */
+    int id_match = 0;
+    if ((in->dir_match.on != DIR_MATCH_NONE) &&
+        (in->min_level == 0)) {
         /* check if uid/gid match */
         if (!dir_match(in, &st)) {
             return 1;
         }
+
+        id_match = 1;
     }
 
     /*
@@ -230,6 +235,8 @@ static int validate_source(struct input *in, const char *path, gqw_t **gqw) {
     new_work->work.basename_len = new_work->work.name_len - new_work->work.root_parent.len;
 
     new_work->work.root_basename_len = new_work->work.basename_len;
+
+    new_work->id_match = id_match;
 
     *gqw = new_work;
 
