@@ -197,7 +197,7 @@ def build_order_by(args):
 
 # argv[0] should be the command name
 def run(argv, config_path):
-    # pylint: disable=too-many-statements,too-many-locals,invalid-name
+    # pylint: disable=too-many-statements,too-many-locals,too-many-branches,invalid-name
 
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
@@ -370,6 +370,65 @@ def run(argv, config_path):
                                     None,
                                     build_order_by(args),
                                     None)
+
+        # need to pad columns
+        if args.long_listing:
+             # columns before padding
+            RESULTS = 'results'
+            RESULTS_SCHEMA = ''
+
+            # max width of each column
+            # mode width is constant
+            # name width doesn't matter
+            MAX_WIDTHS = 'max_widths'
+            MAX_WIDTHS_SCHEMA = ''
+            MAX_WIDTHS_INSERT = ''
+
+            # right pad each column
+            PADDED = ''
+
+            if args.inode:
+                RESULTS_SCHEMA    += 'inode TEXT, '
+                MAX_WIDTHS_SCHEMA += 'inode_len INT64, '
+                MAX_WIDTHS_INSERT += 'max(length(inode)), '
+                PADDED            += '''
+                                     rpad(inode, (SELECT inode_len FROM {0})),
+                                     '''
+
+            RESULTS_SCHEMA    += 'mode TEXT, nlinks TEXT, u TEXT, '
+            MAX_WIDTHS_SCHEMA += 'nlink_len INT64, u_len INT64, '
+            MAX_WIDTHS_INSERT += 'max(length(nlinks)), max(length(u)), '
+            PADDED            += '''
+                                     mode,
+                                     rpad(nlinks, (SELECT nlink_len FROM {0})),
+                                     rpad(u,      (SELECT u_len     FROM {0})),
+                                 '''
+
+            if not args.no_group:
+                RESULTS_SCHEMA    += 'g TEXT, '
+                MAX_WIDTHS_SCHEMA += 'g_len INT64, '
+                MAX_WIDTHS_INSERT += 'max(length(g)), '
+                PADDED            += '''
+                                     rpad(g,      (SELECT g_len     FROM {0})),
+                                     '''
+            RESULTS_SCHEMA    += 'size TEXT, time TEXT, name TEXT'
+            MAX_WIDTHS_SCHEMA += 'size_len INT64, time_len INT64'
+            MAX_WIDTHS_INSERT += 'max(length(size)), max(length(time))'
+            PADDED            += '''
+                                     rpad(size,   (SELECT size_len  FROM {0})),
+                                     rpad(time,   (SELECT time_len  FROM {0})),
+                                     name
+                                 '''
+
+            G = '''
+                   CREATE TABLE {0} ({1});
+                   INSERT INTO  {0} {2};
+                   CREATE TABLE {3} ({4});
+                   INSERT INTO  {3} SELECT {5} FROM {0};
+                   SELECT {6} FROM {0};
+                '''.format(RESULTS, RESULTS_SCHEMA, G,
+                           MAX_WIDTHS, MAX_WIDTHS_SCHEMA, MAX_WIDTHS_INSERT,
+                           PADDED.format(MAX_WIDTHS))
 
         query_cmd += [
             '-I', I,

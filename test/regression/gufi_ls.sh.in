@@ -78,7 +78,7 @@ run_no_sort "${GUFI_LS} ${BASENAME}"
 run_no_sort "${GUFI_LS} ${BASENAME} -a"
 run_no_sort "${GUFI_LS} ${BASENAME} -A"
 run_no_sort "${GUFI_LS} ${BASENAME} -h"
-run_no_sort "${GUFI_LS} ${BASENAME} -i  | @AWK@ '{ print 0, \$2 }'"
+run_no_sort "${GUFI_LS} ${BASENAME} -i | sort -n"
 run_no_sort "${GUFI_LS} ${BASENAME} -R"
 run_no_sort "${GUFI_LS} ${BASENAME} -r"
 run_no_sort "${GUFI_LS} ${BASENAME} -s  | @GREP@ -v -e '.*directory.*' -e 'file_symlink' | @AWK@ '{ \$1=0; print }'"
@@ -95,8 +95,23 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
 
 # long listing (uids, gid, and timestamps)
 (
-    # handle timestamps in the entries table by changing all of them to 0
-    "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE entries SET mtime=0;"
+    # ls a directory, but don't print subdirectories due to link count differences on different systems
+    # all dates are over 6 months in the past, so all of them will print month day year
+    (
+        echo "# ls -l with subdirectories removed"
+        run_no_sort "${GUFI_LS} ${BASENAME} -l | sort -k 9"
+
+        echo "# ls -lG with subdirectories removed"
+        run_no_sort "${GUFI_LS} ${BASENAME} -lG | sort -k 8"
+
+        echo "# ls -ilG with subdirectories removed"
+        run_no_sort "${GUFI_LS} ${BASENAME} -ilG | sort -k 9"
+
+        echo "# ls -ailG with subdirectories removed"
+        run_no_sort "${GUFI_LS} ${BASENAME} -ailG | sort -k 9"
+    ) | @SED@ '\%^.*directory.*%d;'
+
+    # remaining tests ls single files
 
     # timestamp formats
     run_no_sort "${GUFI_LS} ${BASENAME}/old_file --full-time" # implies -l

@@ -96,16 +96,16 @@ old_file
 repeat_name
 unusual#? directory ,
 
-$ gufi_ls prefix -i  | awk '{ print 0, $2 }'
-0 1KB
-0 1MB
-0 directory
-0 empty_directory
-0 file_symlink
-0 leaf_directory
+$ gufi_ls prefix -i | sort -n
 0 old_file
-0 repeat_name
-0 unusual#?
+7 directory
+8 empty_directory
+9 file_symlink
+13 leaf_directory
+14 repeat_name
+16 unusual#? directory ,
+1024 1KB
+1048576 1MB
 
 $ gufi_ls prefix -R
 prefix/1KB
@@ -217,6 +217,39 @@ unusual#? directory ,
 
 $ sqlite3 "prefix/db.db" "DELETE FROM entries WHERE name == 'backup~';"
 
+# ls -l with subdirectories removed
+$ gufi_ls prefix -l | sort -k 9
+-rw-rw-r-- 1 user group 1024    Jan   1  1970 1KB
+-rw-rw-r-- 1 user group 1048576 Jan  13  1970 1MB
+lrwxrwxrwx 1 user group 9       Jan   1  1970 file_symlink -> prefix/1KB
+-rw-rw-r-- 1 user group 0       Jan   1  1970 old_file
+-rw-rw-r-- 1 user group 14      Jan   1  1970 repeat_name
+
+# ls -lG with subdirectories removed
+$ gufi_ls prefix -lG | sort -k 8
+-rw-rw-r-- 1 user 1024    Jan   1  1970 1KB
+-rw-rw-r-- 1 user 1048576 Jan  13  1970 1MB
+lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
+-rw-rw-r-- 1 user 0       Jan   1  1970 old_file
+-rw-rw-r-- 1 user 14      Jan   1  1970 repeat_name
+
+# ls -ilG with subdirectories removed
+$ gufi_ls prefix -ilG | sort -k 9
+1024    -rw-rw-r-- 1 user 1024    Jan   1  1970 1KB
+1048576 -rw-rw-r-- 1 user 1048576 Jan  13  1970 1MB
+9       lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
+0       -rw-rw-r-- 1 user 0       Jan   1  1970 old_file
+14      -rw-rw-r-- 1 user 14      Jan   1  1970 repeat_name
+
+# ls -ailG with subdirectories removed
+$ gufi_ls prefix -ailG | sort -k 9
+10      -rw-rw-r-- 1 user 10      Jan   1  1970 .hidden
+1024    -rw-rw-r-- 1 user 1024    Jan   1  1970 1KB
+1048576 -rw-rw-r-- 1 user 1048576 Jan  13  1970 1MB
+9       lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
+0       -rw-rw-r-- 1 user 0       Jan   1  1970 old_file
+14      -rw-rw-r-- 1 user 14      Jan   1  1970 repeat_name
+
 $ gufi_ls prefix/old_file --full-time
 -rw-rw-r-- 1 user group 0 1970-01-01 00:00:00 +0000 old_file
 
@@ -299,7 +332,7 @@ $ gufi_ls -lh prefix/1KB
 -rw-rw-r-- 1 user group 1.0K Jan   1  1970 1KB
 
 $ gufi_ls -lh prefix/1MB
--rw-rw-r-- 1 user group 1.0M Jan   1  1970 1MB
+-rw-rw-r-- 1 user group 1.0M Jan  13  1970 1MB
 
 $ gufi_ls -h prefix/1KB
 1KB

@@ -299,6 +299,29 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
     sqlite3_result_text(context, bn, bn_len, SQLITE_STATIC);
 }
 
+/*
+ * right pad input string to length using spaces
+ *
+ * used by gufi_ls
+ */
+static void rpad(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    char *value = (char *) sqlite3_value_text(argv[0]);
+    const size_t value_len = strlen(value);
+    const size_t pad_len = sqlite3_value_int(argv[1]);
+
+    if (value_len > pad_len) {
+        sqlite3_result_text(context, value, value_len, SQLITE_TRANSIENT);
+        return;
+    }
+
+    char *buf = malloc(pad_len + 1);
+    SNPRINTF(buf, pad_len + 1, "%-*s", pad_len, value);
+    sqlite3_result_text(context, buf, pad_len, SQLITE_TRANSIENT);
+    free(buf);
+}
+
 /* prefix should end with an opening single quote */
 static void return_error(sqlite3_context *context,
                          const char *prefix, const size_t prefix_size,
@@ -779,6 +802,8 @@ int addqueryfuncs(sqlite3 *db) {
                                  NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
                                  NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "rpad",                2,   SQLITE_UTF8,
+                                 NULL, &rpad,                      NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "strop",               1,   SQLITE_UTF8,
                                  NULL, &strop,                     NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "intop",               1,   SQLITE_UTF8,
