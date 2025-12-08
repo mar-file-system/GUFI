@@ -100,6 +100,7 @@ set(gufi_developer_inputs
     sections/utility.tex
     sections/distributed.tex
     sections/reconstruct.tex
+    sections/incremental_update.tex
     sections/implementation.tex
     sections/qptp.tex
     sections/bottomup.tex
@@ -134,6 +135,7 @@ set(gufi_administrator_inputs
     sections/utility.tex
     sections/distributed.tex
     sections/reconstruct.tex
+    sections/incremental_update.tex
     sections/deploy.tex
 )
 

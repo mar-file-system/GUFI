@@ -265,7 +265,7 @@ void print_help(const char* prog_name,
 
             /* gufi_incremental_update flags */
             case FLAG_SUSPECT_FILE_SHORT:            printf("      --suspect-file <path>         suspect input file"); break;
-            case FLAG_SUSPECT_METHOD_SHORT:          printf("      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl"); break;
+            case FLAG_SUSPECT_METHOD_SHORT:          printf("      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)"); break;
             case FLAG_SUSPECT_TIME_SHORT:            printf("      --suspect-time <s>            time in seconds since epoch for suspect comparision"); break;
             case FLAG_SUSPECT_STAT_SHORT:            printf("      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime"); break;
 

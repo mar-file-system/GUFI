@@ -1,0 +1,286 @@
+% This file is part of GUFI, which is part of MarFS, which is released
+% under the BSD license.
+%
+%
+% Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+% All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without modification,
+% are permitted provided that the following conditions are met:
+%
+% 1. Redistributions of source code must retain the above copyright notice, this
+% list of conditions and the following disclaimer.
+%
+% 2. Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation and/or
+% other materials provided with the distribution.
+%
+% 3. Neither the name of the copyright holder nor the names of its contributors
+% may be used to endorse or promote products derived from this software without
+% specific prior written permission.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+% ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+% IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+% INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+% BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+% DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+% OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+% ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+%
+%
+% From Los Alamos National Security, LLC:
+% LA-CC-15-039
+%
+% Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+% Copyright 2017. Los Alamos National Security, LLC. This software was produced
+% under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+% Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+% the U.S. Department of Energy. The U.S. Government has rights to use,
+% reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+% ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+% ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+% modified to produce derivative works, such modified software should be
+% clearly marked, so as not to confuse it with the version available from
+% LANL.
+%
+% THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+% "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+% ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+% OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+% CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+% OF SUCH DAMAGE.
+
+
+
+\subsection{Incremental Update}
+With the size of filesystems becoming larger and larger, it is not
+necessarily a good idea to do complete reindexes of filesystems every
+time an update is needed. Walking filesystem trees takes time and
+resources. Creating and filling in databases files takes time and
+resources. Walking both trees is required no matter what in order to
+discover changes. However, creating and filling in database files can be
+reduced: database files with unchanged contents do not need to be
+regenerated - only new ones or ones with changes need to be
+(re)generated. Through the series of steps as described below,
+incremental update performed by the \gufiincrementalupdate executable.
+
+\subsubsection{Flags}
+
+\begin{longtable}{|l|p{0.5\linewidth}|}
+  \hline
+  Flag & Functionality \\
+  \hline
+  -h, -{}-help & help \\
+  \hline
+  -H, -{}-debug & show assigned input values (debugging) \\
+  \hline
+  -v, -{}-version & version \\
+  \hline
+  -n, -{}-threads \textless n\textgreater & number of threads (default: 1) \\
+  \hline
+  -{}-suspect-stat \textless n\textgreater & if an entry is suspect,
+  stat it to get timestamps to compare against suspecttime \\
+  \hline
+  -{}-suspect-file \textless path\textgreater & suspect input file \\
+  \hline
+  -{}-suspect-method \textless 0|1|3\textgreater & suspect method (0 no
+  suspects, 1 suspect file\_dfl, 3 suspect stat\_dfl) \\
+  \hline
+  -{}-suspect-time \textless s\textgreater & time in seconds since epoch
+  for suspect comparision \\
+  \hline
+  -x, -{}-index-xattrs & index xattrs \\
+  \hline
+  -{}-compress & compress work items \\
+  \hline
+\end{longtable}
+
+\paragraph{Usage} ~\\\\
+\gufiincrementalupdate \texttt{[flags] GUFI\_tree tree snapshotdb
+parking\_lot} \
+
+\texttt{GUFI\_tree} and \texttt{tree} may be the same
+path. \texttt{snapshotdb} is the filename prefix for where the results
+of the two scans and the diff databases will be placed. These three files
+are left as artifacts. The parking lot is a directory where database
+files and directories will be staged while updating the shape of the index.
+
+\subsubsection{Detailed Walk Through}
+
+The process of incrementally updating indexes is split into two parts:
+computing the changes required and then applying them.
+
+\begin{enumerate}
+\item Scan the old index and get a listing of all directories and
+  their parents into a \sqlite database.
+
+\item Scan the source tree and get a listing of all directories and
+  their parents into a \sqlite database.
+
+    Directories that are suspected to have changed (can use log files
+    or timestamps) are re-indexed, with the update database file
+    placed into the ``parking lot" with the name \texttt{<dir inode>}
+    (or directly into the index if the index is in the source tree)
+
+\item Compare the directory listings to find directories that were
+  unchanged, renamed, deleted, or created
+  \begin{itemize}
+    \item The query used to find directories that were unchanged,
+      renamed, or deleted:
+      \begin{verbatim}
+SELECT index.path    AS indexpath,
+       index.type    AS indextype,
+       index.inode   AS indexinode,
+       index.pinode  AS indexpinode,
+       index.depth   AS indexdepth,
+       index.suspect AS indexsuspect,
+       tree.path     AS treepath,
+       tree.type     AS treetype,
+       tree.inode    AS treeinode,
+       tree.pinode   AS treepinode,
+       tree.depth    AS treedepth,
+       tree.suspect  AS treesuspect
+FROM   index_attach.snapshot AS index
+       LEFT OUTER JOIN tree_attach.snpashot AS tree
+                    ON index.inode == tree.inode
+      \end{verbatim}
+    \item The query used to find directories that were created:
+      \begin{verbatim}
+SELECT index.path    AS indexpath,
+       index.type    AS indextype,
+       index.inode   AS indexinode,
+       index.pinode  AS indexpinode,
+       index.depth   AS indexdepth,
+       index.suspect AS indexsuspect,
+       tree.path     AS treepath,
+       tree.type     AS treetype,
+       tree.inode    AS treeinode,
+       tree.pinode   AS treepinode,
+       tree.depth    AS treedepth,
+       tree.suspect  AS treesuspect
+FROM   tree_attach.snapshot AS tree
+       LEFT OUTER JOIN index_attach.snapshot AS index
+                    ON tree.inode == index.inode
+WHERE  index.inode IS NULL
+    \end{verbatim}
+  \end{itemize}
+
+  Things to note:
+
+  \begin{itemize}
+    \item \texttt{index} is a SQLite keyword and cannot be used to
+      refer to tables. It is used here to make clear which data is
+      being referred to.
+      \item \sqlite does not have \texttt{RIGHT OUTER JOIN}, so the
+        tables in the ``created" query are joined in the opposite way
+        of the first query.
+      \item The \texttt{WHERE} clause in the ``created" query is used
+        to remove all unchanged and renamed directories, leaving only
+        newly created directories.
+      \item This is effectively \texttt{CRUD}: \texttt{CREATE}
+        (created), \texttt{READ} (unchanged), \texttt{UPDATE}
+        (renamed), \texttt{DELETE} (deleted).
+  \end{itemize}
+
+  The results of these two queries are \texttt{UNION ALL}-ed to get
+  the full set of directories found in the index and the tree
+  (\texttt{ALL\_MATCHES}). Another query is then run to reduce the data
+  down to only the changes that need to be applied to the index:
+
+  \begin{itemize} % for indentation
+    \item[] \begin{verbatim}
+CREATE TABLE INCR_DIFF
+SELECT *
+FROM   ALL_MATCHES
+WHERE  (indexpinode != treepinode) ;; rename (new parent)
+  OR   (indexpath   != treepath)   ;; rename (same parent)
+  OR   (indexinode  IS NULL)       ;; created
+  OR   (treeinode   IS NULL)       ;; deleted
+  OR   (treesuspect == 1)          ;; suspected to have changed
+    \end{verbatim}
+  \end{itemize}
+\end{enumerate}
+
+The changes found in \texttt{INCR\_DIFF} are then applied in a
+specific order: \\
+
+First, directory deletes and renames (part 1: move out) are applied to
+the index starting from the bottom of the tree going upwards. This is
+to ensure that the deletion of a directory does not delete
+subdirectories that should not have been deleted, say due to being
+moved. Similarly, renames of a directory won't prevent subdirectories
+from being deleted/moved due to the path no longer being correct
+because they would have been deleted/moved before arriving at the
+current level. Directories that are moved, are moved out to the
+parking lot, renamed to \texttt{<dir inode>.d}. Subdirectories that
+were not modified will follow their parent directory into the parking
+lot. \\
+
+  \begin{itemize} % for indentation
+    \item[] \begin{itemize} % for indentation
+      \item[] \begin{verbatim}
+SELECT indexpath,
+       treeinode,
+       CASE WHEN treepath IS NULL THEN 1 ELSE 0 END
+FROM  INCR_DIFF
+WHERE (treepath    IS NULL)
+  OR  (indexpinode != treepinode)
+  OR  (indexpath   != treepath)
+ORDER BY indexdepth DESC
+      \end{verbatim}
+    \end{itemize}
+  \end{itemize}
+
+Next, directory creations and renames (part 2: move in) are applied to
+the index starting from the top of the tree going downwards. This is
+to ensure that created or renamed directories are placed under
+existing parents. New directories are created without their db.db
+files. Renamed directories are moved from the parking lot to their new
+names.
+
+  \begin{itemize} % for indentation
+    \item[] \begin{itemize} % for indentation
+      \item[] \begin{verbatim}
+SELECT treepath,
+       treeinode,
+       CASE WHEN indexpath IS NULL THEN 1 ELSE 0 END
+FROM   INCR_DIFF
+WHERE  (indexpath   IS NULL)
+  OR   (indexpinode != treepinode)
+  OR   (indexpath   != treepath)
+ORDER BY treedepth ASC
+      \end{verbatim}
+    \end{itemize}
+  \end{itemize}
+
+After this step, the index has been reshaped to the same shape as the
+filesytem (when it was scanned).
+
+The final step is to update the contents of the db.db files. During
+the scan of the filesystem tree, directories that were suspected to
+have changed were re-indexed, and the files were placed into the
+parking lot under the directory's inode. Now, those database files are
+moved into the index to where they belong. Old db.db files are
+overwritten. New db.db files now exist.
+
+  \begin{itemize} % for indentation
+    \item[] \begin{itemize} % for indentation
+      \item[] \begin{verbatim}
+SELECT treepath,
+       treeinode
+FROM   INCR_DIFF
+WHERE  treepath IS NOT NULL
+      \end{verbatim}
+    \end{itemize}
+  \end{itemize}
+
+After each database file is moved into its directory, the directory
+and db.db permissions and owners updated.
