@@ -81,19 +81,22 @@ Allocations are not performed by the standard malloc. Instead,
 extra fields not required by POSIX.1. GUFI takes advantage of the
 nonstandard \texttt{d\_type} field to not call \lstat when determining
 whether or not the entry is a directory. Only when \texttt{d\_type} is
-not set will \lstat be called.
+not set will \lstat be called. Some might know this as
+\texttt{readdirplus}.
 
 \subsubsection{Enqueuing Work Before Processing}
 In order to reduce the amount of time the thread pool spends waiting
 for work, work is enqueued before doing the main processing for a
 directory. When walking a tree, such as with \gufidirindex,
 \gufidirtrace, and \gufiquery, subdirectories are enqueued before
-processing source filesystem information and running
-queries. \gufitraceindex reads each trace file using a single
-thread. However, each stanza is not processed as it is
-encountered. Instead, each stanza's file offset is enqueued in the
-thread pool, allowing for the directories of the index to be generated
-in parallel.
+processing source filesystem information and running queries.
+
+\subsubsection{Breaking Up Trace Files}
+Instead of generating index directories as they appear in a trace
+file, \gufitraceindex reads each trace file using half of the
+available threads. Then, as each stanza is encountered, their file
+offsets are enqueued for parallel processing instead of processed
+immediately.
 
 \subsubsection{String Manipulations}
 Where possible, strings are not copied, and are instead referenced.
@@ -138,14 +141,17 @@ tree traversal to \texttt{struct~entry\_data}, reducing
 \href{https://github.com/mar-file-system/GUFI/issues/121}{Issue~121}.
 
 \href{https://github.com/mar-file-system/GUFI/commit/e260d26aab0713835defbe2a5b6e1187610dcf3d}{e260d26}
-changed \work so that the name field was a flexible
-array stored after the other struct members, reducing
-\work down to $\sim$200~bytes (depends on the length of the
-path). However, C++ does not support flexible arrays, so
+changed \work so that the name field was a flexible array stored after
+the other struct members, reducing \work down to $\sim$200~bytes
+(depends on the length of the path). However, C++ does not support
+flexible arrays, so
 \href{https://github.com/mar-file-system/GUFI/commit/d1265f9ee9a5aa4451400f5abb455eb3ad64957c}{d1265f9}
 was pushed, returning the \texttt{name} member back to its original
 position, but making it a pointer that points to a location after the
-struct.
+struct. This keeps the path close to the structure itself for high
+locality. This has the additional benefit of making \work compressible
+without an additional copy to serialize it because it is already
+contiguous.
 
 \subsubsection{Compression with zlib}
 When zlib is detected during CMake configuration, \work can be
@@ -170,13 +176,13 @@ This was used to fix
 \subsubsection{Database Templates}
 Every directory in an index contains at least one database file,
 called db.db, containing the \lstat data from the source
-filesystem. When creating indexes, a database file is created with
-the same schema as db.db and is left unfilled. When each directory in
-the index is processed, the database file created earlier is copied
-into the directory as a bytestream instead of having \sqlite open new
-database files for each directory. This avoids the multitudes of
-checks done by \sqlite when setting up databases and tables. The same
-is done for external xattr database files.
+filesystem. At the start of index creation, a template database file
+is created with the same schema as db.db and is left unfilled. Then,
+instead of having \sqlite open new database files at each directory
+and creating each table and view, requring the multitudes of checks
+done by \sqlite, the template is copied into the index directory as a
+bytestream, skipping all \sqlite checks. The same is done for external
+xattr database files.
 
 \subsubsection{\sqlite}
 As \sqlite is a major component in GUFI, attempts were made to
