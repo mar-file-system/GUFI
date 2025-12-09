@@ -184,29 +184,6 @@ prefix/directory/subdirectory/directory_symlink
 $ gufi_find -lname 'file*'
 prefix/file_symlink
 
-
-$ gufi_find -ls
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 .hidden
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 1KB
-0 0 -rw-rw-r-- 1 user group 0 Jan 13 1970 1MB
-0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 directory
-0 0 lrwxrwxrwx 1 user group 0 Jan 01 1970 directory_symlink -> prefix/directory/subdirectory
-0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 empty_directory
-0 0 -rwxrwxrwx 1 user group 0 Jan 01 1970 executable
-0 0 lrwxrwxrwx 1 user group 0 Jan 01 1970 file_symlink -> prefix/1KB
-0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 leaf_directory
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 leaf_file1
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 leaf_file2
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 old_file
-0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 prefix
-0 0 -r--r--r-- 1 user group 0 Jan 01 1970 readonly
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 repeat_name
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 repeat_name
-0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 subdirectory
-0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 unusual#? directory ,
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 unusual, name?#
-0 0 -rw-rw-rw- 1 user group 0 Jan 01 1970 writable
-
 $ gufi_find -maxdepth 2
 prefix
 prefix/.hidden
@@ -572,11 +549,11 @@ GUFI query is
     --output-buffer-size 4096 \
     -a 1 \
     --delim ' ' \
-    -I 'CREATE TABLE out (name TEXT, size INT64, type TEXT)' \
-    -S 'INSERT INTO out SELECT substr(rpath(sname, sroll), 8), size, type FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
-    -E 'INSERT INTO out SELECT substr(rpath(sname, sroll, name), 8), size, type FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
-    -J 'INSERT INTO aggregate SELECT name, size, type FROM out ORDER BY size DESC, name ASC' \
-    -K 'CREATE TABLE aggregate (name TEXT, size INT64, type TEXT)' \
+    -I 'CREATE TABLE out (type TEXT, size INT64, name TEXT)' \
+    -S 'INSERT INTO out SELECT type, size, substr(rpath(sname, sroll), 8) FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -E 'INSERT INTO out SELECT type, size, substr(rpath(sname, sroll, name), 8) FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -J 'INSERT INTO aggregate SELECT type, size, name FROM out ORDER BY size DESC, name ASC' \
+    -K 'CREATE TABLE aggregate (type TEXT, size INT64, name TEXT)' \
     -G 'SELECT name FROM aggregate ORDER BY size DESC, name ASC' \
     search
 prefix/1MB
@@ -591,6 +568,72 @@ prefix/directory/writable
 prefix/directory/readonly
 prefix/directory/executable
 prefix/old_file
+
+$ gufi_find -ls
+0 0 -rw-rw-r-- 1 user group 0 Jan 1 1970 prefix/old_file
+1 1 -rwxrwxrwx 1 user group 1 Jan 1 1970 prefix/directory/executable
+10 1 -rw-rw-r-- 1 user group 10 Jan 1 1970 prefix/.hidden
+1024 1 -rw-rw-r-- 1 user group 1024 Jan 1 1970 prefix/1KB
+1048576 1024 -rw-rw-r-- 1 user group 1048576 Jan 13 1970 prefix/1MB
+11 1 -rw-rw-r-- 1 user group 11 Jan 1 1970 prefix/leaf_directory/leaf_file1
+12 1 -rw-rw-r-- 1 user group 12 Jan 1 1970 prefix/leaf_directory/leaf_file2
+13 1 drwxrwxr-x 1 user group 13 Jan 1 1970 prefix/leaf_directory
+14 1 -rw-rw-r-- 1 user group 14 Jan 1 1970 prefix/repeat_name
+15 1 -rw-rw-r-- 1 user group 15 Jan 1 1970 prefix/unusual#? directory ,/unusual, name?#
+16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? directory ,
+17 1 drwxrwxr-x 1 user group 17 Jan 1 1970 prefix
+2 1 -r--r--r-- 1 user group 2 Jan 1 1970 prefix/directory/readonly
+3 1 -rw-rw-rw- 1 user group 3 Jan 1 1970 prefix/directory/writable
+4 1 lrwxrwxrwx 1 user group 4 Jan 1 1970 prefix/directory/subdirectory/directory_symlink -> prefix/directory/subdirectory
+5 1 -rw-rw-r-- 1 user group 5 Jan 1 1970 prefix/directory/subdirectory/repeat_name
+6 1 drwxrwxr-x 1 user group 6 Jan 1 1970 prefix/directory/subdirectory
+7 1 drwxrwxr-x 1 user group 7 Jan 1 1970 prefix/directory
+8 1 drwxrwxr-x 1 user group 8 Jan 1 1970 prefix/empty_directory
+9 1 lrwxrwxrwx 1 user group 9 Jan 1 1970 prefix/file_symlink -> prefix/1KB
+
+$ gufi_find -ls --smallest
+0 0 -rw-rw-r-- 1 user group 0 Jan 1 1970 prefix/old_file
+1 1 -rwxrwxrwx 1 user group 1 Jan 1 1970 prefix/directory/executable
+2 1 -r--r--r-- 1 user group 2 Jan 1 1970 prefix/directory/readonly
+3 1 -rw-rw-rw- 1 user group 3 Jan 1 1970 prefix/directory/writable
+4 1 lrwxrwxrwx 1 user group 4 Jan 1 1970 prefix/directory/subdirectory/directory_symlink -> prefix/directory/subdirectory
+5 1 -rw-rw-r-- 1 user group 5 Jan 1 1970 prefix/directory/subdirectory/repeat_name
+6 1 drwxrwxr-x 1 user group 6 Jan 1 1970 prefix/directory/subdirectory
+7 1 drwxrwxr-x 1 user group 7 Jan 1 1970 prefix/directory
+8 1 drwxrwxr-x 1 user group 8 Jan 1 1970 prefix/empty_directory
+9 1 lrwxrwxrwx 1 user group 9 Jan 1 1970 prefix/file_symlink -> prefix/1KB
+10 1 -rw-rw-r-- 1 user group 10 Jan 1 1970 prefix/.hidden
+11 1 -rw-rw-r-- 1 user group 11 Jan 1 1970 prefix/leaf_directory/leaf_file1
+12 1 -rw-rw-r-- 1 user group 12 Jan 1 1970 prefix/leaf_directory/leaf_file2
+13 1 drwxrwxr-x 1 user group 13 Jan 1 1970 prefix/leaf_directory
+14 1 -rw-rw-r-- 1 user group 14 Jan 1 1970 prefix/repeat_name
+15 1 -rw-rw-r-- 1 user group 15 Jan 1 1970 prefix/unusual#? directory ,/unusual, name?#
+16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? directory ,
+17 1 drwxrwxr-x 1 user group 17 Jan 1 1970 prefix
+1024 1 -rw-rw-r-- 1 user group 1024 Jan 1 1970 prefix/1KB
+1048576 1024 -rw-rw-r-- 1 user group 1048576 Jan 13 1970 prefix/1MB
+
+$ gufi_find -ls --largest
+1048576 1024 -rw-rw-r-- 1 user group 1048576 Jan 13 1970 prefix/1MB
+1024 1 -rw-rw-r-- 1 user group 1024 Jan 1 1970 prefix/1KB
+17 1 drwxrwxr-x 1 user group 17 Jan 1 1970 prefix
+16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? directory ,
+15 1 -rw-rw-r-- 1 user group 15 Jan 1 1970 prefix/unusual#? directory ,/unusual, name?#
+14 1 -rw-rw-r-- 1 user group 14 Jan 1 1970 prefix/repeat_name
+13 1 drwxrwxr-x 1 user group 13 Jan 1 1970 prefix/leaf_directory
+12 1 -rw-rw-r-- 1 user group 12 Jan 1 1970 prefix/leaf_directory/leaf_file2
+11 1 -rw-rw-r-- 1 user group 11 Jan 1 1970 prefix/leaf_directory/leaf_file1
+10 1 -rw-rw-r-- 1 user group 10 Jan 1 1970 prefix/.hidden
+9 1 lrwxrwxrwx 1 user group 9 Jan 1 1970 prefix/file_symlink -> prefix/1KB
+8 1 drwxrwxr-x 1 user group 8 Jan 1 1970 prefix/empty_directory
+7 1 drwxrwxr-x 1 user group 7 Jan 1 1970 prefix/directory
+6 1 drwxrwxr-x 1 user group 6 Jan 1 1970 prefix/directory/subdirectory
+5 1 -rw-rw-r-- 1 user group 5 Jan 1 1970 prefix/directory/subdirectory/repeat_name
+4 1 lrwxrwxrwx 1 user group 4 Jan 1 1970 prefix/directory/subdirectory/directory_symlink -> prefix/directory/subdirectory
+3 1 -rw-rw-rw- 1 user group 3 Jan 1 1970 prefix/directory/writable
+2 1 -r--r--r-- 1 user group 2 Jan 1 1970 prefix/directory/readonly
+1 1 -rwxrwxrwx 1 user group 1 Jan 1 1970 prefix/directory/executable
+0 0 -rw-rw-r-- 1 user group 0 Jan 1 1970 prefix/old_file
 
 $ gufi_find prefix/directory prefix/leaf_directory
 prefix/directory
@@ -716,8 +759,8 @@ $ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t
 $ gufi_find -empty path_after_expression 2>&1 | grep "RuntimeError:"
 RuntimeError: gufi_find: unknown predicate `path_after_expression'
 
-$ gufi_find -atime abc 2>&1 | tail -n 1
-gufi_find: error: argument -atime: abc is not a valid numeric argument
+$ gufi_find -atime abc 2>&1
+argument -atime: abc is not valid
 
 $ gufi_find -unknown-predicate 2>&1 | grep "RuntimeError:"
 RuntimeError: gufi_find: unknown predicate `-unknown-predicate'

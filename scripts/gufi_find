@@ -104,7 +104,7 @@ def numeric_arg(n):
         float(n)
     except:
         # pylint: disable=raise-missing-from
-        raise argparse.ArgumentTypeError('{0} is not a valid numeric argument'.format(n))
+        raise argparse.ArgumentTypeError('{0} is not valid'.format(n))
 
     op = None
     if n[0] == '+':
@@ -118,6 +118,9 @@ def numeric_arg(n):
 
     return op, n
 
+# -size
+# requires '=' if passing in negative values:
+# i.e. -size=-2k
 def parse_size(size):
     unit = 'b'
     if size[-1] in FILESIZE:
@@ -128,18 +131,75 @@ def parse_size(size):
     return comp, int(math.ceil(float(actual_size))) * FILESIZE[unit]
 
 def need_aggregation(args):
-    return bool(args.num_results or args.smallest or args.largest)
+    return bool(args.num_results or args.smallest or args.largest or args.ls)
 
-def build_aggregation_columns(args):
-    # name column is implicit
+LS_COL_NAMES = [
+    'inode',
+    'blocks',
+    'mode',
+    'nlink',
+    'uid',
+    'gid',
+    'size',
+    'mtime',
+    'name'
+]
 
-    cols = set()
+# not using fixed size padding like find(1)
+def pad_ls_output(G):
+    # columns before padding
+    RESULTS = 'results'
+    RESULTS_SCHEMA = ', '.join(LS_COL_NAMES) # not adding types
+
+    # max width of each column
+    # mode width is constant, but is computed because it is in the middle of the list
+    # name width doesn't matter and is not computed
+    MAX_WIDTHS = 'max_widths'
+    MAX_WIDTHS_SCHEMA = ', '.join(['{0}_len'.format(col) for col in LS_COL_NAMES[:-1]])
+    MAX_WIDTHS_INSERT = ', '.join(['max(length({0}))'.format(col) for col in LS_COL_NAMES[:-1]])
+
+    # right pad each column except name
+    # mode also doesn't need padding, but it is in the middle of the list
+    PADDED = ', '.join(['rpad({0}, (SELECT {0}_len FROM {1}))'.format(col, MAX_WIDTHS)
+                        for col in LS_COL_NAMES[:-1]] + [LS_COL_NAMES[-1]])
+
+    return '''
+    CREATE TABLE {0} ({1});
+    INSERT INTO  {0} {2};
+    CREATE TABLE {3} ({4});
+    INSERT INTO  {3} SELECT {5} FROM {0};
+    SELECT {6} FROM {0};
+    '''.format(RESULTS, RESULTS_SCHEMA, G,
+               MAX_WIDTHS, MAX_WIDTHS_SCHEMA, MAX_WIDTHS_INSERT,
+               PADDED)
+
+def build_aggregation_columns(args, path):
+    cols = []
+
+    # (select, col name, col type)
 
     if args.smallest or args.largest:
-        for col in [('size', 'INT64'), ('type', 'TEXT')]:
-            cols.add(col)
+        sort_cols = [(None, 'type', 'TEXT')]
+        if not args.ls:
+            sort_cols += [(None, 'size', 'INT64')]
+        cols += sort_cols
 
-    return sorted(list(cols))
+    if args.ls:
+        cols += [
+            (None, 'inode', 'TEXT'),
+            ('(size / 1024) + (not not (size % 1024))', 'blocks', 'INT64'),
+            ('modetotxt(mode)', 'mode', 'TEXT'),
+            (None, 'nlink', 'INT64'),
+            ('uidtouser(uid)', 'uid', 'TEXT'),
+            ('gidtogroup(gid)', 'gid', 'TEXT'),
+            (None, 'size', 'INT64'),
+            (gufi_common.timestyle_col('mtime'), 'mtime', 'TEXT'),
+            ('{0} || CASE type WHEN \'l\' THEN \' -> \' || linkname ELSE \'\' END'.format(path), 'name', 'TEXT')
+        ]
+    else:
+        cols += [(path, 'name', 'TEXT')]
+
+    return cols
 
 def build_where(args, table, root_uid=0, root_gid=0):
     '''Build the WHERE clause'''
@@ -448,15 +508,7 @@ def build_output(args, name):
     output = [name]
 
     if args.ls:
-        output = ['inode',
-                  '(size / 1024) + (not not (size % 1024))',
-                  'modetotxt(mode)',
-                  'nlink',
-                  'uidtouser(uid)',
-                  'gidtogroup(gid)',
-                  'size',
-                  'strftime(\'%b %d %Y\', mtime)',
-                  'name || CASE type WHEN \'l\' THEN \' -> \' || linkname ELSE \'\' END']
+        output = LS_COL_NAMES
     elif args.printf is not None:
         fmt = args.printf
         fmt_len = len(fmt)
@@ -479,55 +531,19 @@ def build_output(args, name):
 
     return output
 
-def help(parser): # pylint: disable=redefined-builtin
-    # generate list of expressions
-    expr = sorted(parser.parse_args([]).__dict__.keys())
-
-    # don't show these
-    expr.remove('aggregate_name')
-    expr.remove('delim')
-    expr.remove('inmemory_name')
-    expr.remove('skip')
-    expr.remove('verbose')
-
-    # print these separately
-    gufi_specific = ['num_results', 'largest', 'smallest', 'compress']
-    for flag in gufi_specific:
-        expr.remove(flag)
-    gufi_specific[0] = 'num-results'
-
-    expr = [expr[i:i + 5] for i in range(0, len(expr), 5)]
-
-    msg = [
-        'Usage: gufi_find [-P] [path...] [expression]',
-        '',
-        'default path is the index root directory specified in the configuration file',
-        'expression may consist of:',
-        ''
-    ] + [
-        '    ' + ' '.join(row) for row in expr
-    ] + [
-        '',
-        'GUFI Specific Flags (--):',
-        '',
-        '    {0}'.format(' '.join(gufi_specific)),
-        '',
-        'Report (and track progress on fixing) bugs to the GitHub Issues',
-        'page at https://github.com/mar-file-system/GUFI/issues'
-    ]
-
-    print('\n'.join(msg))
-
 def build_expression_parser():
-    # parse the arguments
-    parser = argparse.ArgumentParser('gufi_find', description='GUFI version of find', add_help=False)
+    EPILOG='''Report bugs to the GitHub Issues page at https://github.com/mar-file-system/GUFI/issues
+or by sending an email to <gufi-lanl@lanl.gov>'''
 
-    # override help to not use -h
-    parser.add_argument('-help', '--help',
-                        action='store_true',
-                        help='Print a summary of the command-line usage of find and exit.')
+    # parse the arguments
+    parser = argparse.ArgumentParser('gufi_find', description='GUFI version of find',
+                                     epilog=EPILOG, formatter_class=argparse.RawTextHelpFormatter,
+                                     exit_on_error=False) # new in Python 3.9
 
     # GNU find global options
+    parser.add_argument('--version', '-v',
+                        action='version',
+                        version=gufi_common.VERSION)
     parser.add_argument('-maxdepth',
                         metavar='levels',
                         type=gufi_common.get_non_negative,
@@ -536,9 +552,6 @@ def build_expression_parser():
                         metavar='levels',
                         type=gufi_common.get_non_negative,
                         help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
-    parser.add_argument('--version', '-v',
-                        action='version',
-                        version=gufi_common.VERSION)
 
     # GNU find test expressions
     parser.add_argument('-amin',
@@ -678,15 +691,15 @@ def build_expression_parser():
                         metavar='n',
                         type=parse_size,
                         action='append',
-                        help='')
+                        help='Note that if searching for files of size less than some value (e.g. -2k), must use equal sign (e.g. -size=-2k) so that the value is not interpreted incorrectly by argparse.')
     parser.add_argument('-true',
                         action='store_true',
-                        help='Always true')
+                        help='Always true.')
     parser.add_argument('-type',
                         metavar='c',
                         action='append',
                         type=gufi_common.get_char,
-                        help='File is of type c')
+                        help='File is of type c.')
     parser.add_argument('-uid',
                         metavar='n',
                         type=lambda uid : numeric_arg(str(gufi_common.get_uid(uid))),
@@ -723,39 +736,39 @@ def build_expression_parser():
     query.add_argument('-fprint',
                        metavar='file',
                        type=str,
-                       help='Output result to file')
+                       help='Output result to file.')
 
     query.add_argument('-ls',
                        action='store_true',
-                       help='list current file ls -dils format')
+                       help='List current file ls -dils format.')
     query.add_argument('-print',
                        action='store_true',
-                       help='print the full name on the standard output, followed by a newline, similar to GNU find')
+                       help='Print the full name on the standard output, followed by a newline, similar to GNU find.')
     query.add_argument('-print0',
                        action='store_true',
-                       help='print the full name on the standard output, followed by a null character, similar to GNU find')
+                       help='Print the full name on the standard output, followed by a null character, similar to GNU find.')
     query.add_argument('-printf',
                        metavar='format',
                        type=str,
-                       help='print format on the standard output, similar to GNU find')
+                       help='Print format on the standard output, similar to GNU find.')
 
     # GUFI specific arguments
     parser.add_argument('--num-results',
                         metavar='n',
                         type=gufi_common.get_non_negative,
-                        help='first n results')
+                        help='First n results.')
 
     order = parser.add_mutually_exclusive_group()
     order.add_argument('--smallest',
                        action='store_true',
-                       help='smallest results')
+                       help='Sort output by size, ascending.')
     order.add_argument('--largest',
                        action='store_true',
-                       help='largest results')
+                       help='Sort output by size, descending.')
 
     parser.add_argument('--compress',
                         action='store_true',
-                        help='try to reduce memory usage by compressing with zlib (if available)')
+                        help='Try to reduce memory usage by compressing with zlib (if available).')
 
     gufi_common.add_common_flags(parser)
 
@@ -811,13 +824,13 @@ def run(argv, config_path):
 
     paths = used_paths
 
-    # parse expressions without the 'real' and path arguments
-    expression_parser = build_expression_parser()
-    args, unknown = expression_parser.parse_known_args(argv[arg_offset:])
-
-    if args.help:
-        help(expression_parser)
-        return 0
+    try:
+        # parse expressions without the 'real' and path arguments
+        expression_parser = build_expression_parser()
+        args, unknown = expression_parser.parse_known_args(argv[arg_offset:])
+    except Exception as e: # pylint: disable=broad-exception-caught
+        print(e, file=sys.stderr)
+        sys.exit(1)
 
     if len(paths) == 0:
         return 1
@@ -853,10 +866,13 @@ def run(argv, config_path):
 
     # pylint: disable=invalid-name
     if need_aggregation(args):
-        cols = build_aggregation_columns(args)
+        s_cols = build_aggregation_columns(args, VRSUMMARY_NAME)
+        e_cols = build_aggregation_columns(args, VRPENTRIES_NAME)
 
-        col_decl = ['{0} {1}'.format(name, type)
-                    for name, type in [('name', 'TEXT')] + cols]
+        # -ls adds name column in build_aggregation_columns
+        # no -ls adds name column here because the name column depends on where it is used
+        col_decl = ['{0} {1}'.format(col_name, col_type)
+                    for _, col_name, col_type in s_cols] # both have the same columns
 
         I = 'CREATE TABLE {0} ({1})'.format(
             args.inmemory_name,
@@ -864,7 +880,8 @@ def run(argv, config_path):
 
         S = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query([VRSUMMARY_NAME] + [name for name, _ in cols],
+            gufi_common.build_query([col_select if col_select else col_name
+                                     for col_select, col_name, _ in s_cols],
                                     [gufi_common.VRSUMMARY],
                                     build_where(args, gufi_common.VRSUMMARY),
                                     build_group_by(args),
@@ -873,7 +890,8 @@ def run(argv, config_path):
 
         E = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query([VRPENTRIES_NAME] + [name for name, _ in cols],
+            gufi_common.build_query([col_select if col_select else col_name
+                                     for col_select, col_name, _ in e_cols],
                                     [gufi_common.VRPENTRIES],
                                     build_where(args, gufi_common.VRPENTRIES),
                                     build_group_by(args),
@@ -886,7 +904,8 @@ def run(argv, config_path):
 
         J = 'INSERT INTO {0} {1}'.format(
             args.aggregate_name,
-            gufi_common.build_query(['name'] + [name for name, _ in cols],
+            gufi_common.build_query([col_name
+                                     for _, col_name, _ in s_cols],
                                     [args.inmemory_name],
                                     None,
                                     build_group_by(args),
@@ -899,6 +918,9 @@ def run(argv, config_path):
                                     build_group_by(args),
                                     build_order_by(args),
                                     args.num_results)
+
+        if args.ls:
+            G = pad_ls_output(G)
 
         query_cmd += [
             '-I', I,

@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        img: [ "almalinux:latest", "alpine:edge", "centos:8", "rockylinux:8", "rockylinux:9", "ubuntu:22.04", "ubuntu:24.04" ]
+        img: [ "almalinux:latest", "alpine:edge", "rockylinux:9", "ubuntu:22.04", "ubuntu:24.04" ]
       fail-fast: true
     container:
       image: ${{ matrix.img }}
@@ -104,10 +104,6 @@ jobs:
     - name: Alpine Linux Edge Prerequisites
       if:   matrix.img == 'alpine:edge'
       run:  contrib/CI/alpine.sh
-
-    - name: CentOS 8 Prerequisites
-      if:   matrix.img == 'centos:8'
-      run:  contrib/CI/centos8.sh
 
     - name: Rocky Linux Prerequisites
       if:   startsWith(matrix.img, 'rockylinux:')

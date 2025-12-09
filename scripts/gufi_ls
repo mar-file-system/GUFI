@@ -65,7 +65,6 @@ import argparse
 import os
 import subprocess
 import sys
-import time
 
 import gufi_common
 import gufi_config
@@ -86,9 +85,6 @@ def select_size(args, name):
 
     return [column.format(name)]
 
-# 365.2425 * 24 * 60 * 60 seconds per year
-SIX_MONTHS_IN_SECONDS = int(365.2425 * 24 * 60 * 60 / 2)
-
 def select_time(args, name):
     # --full-time implies long listing
     if not args.long_listing and not args.full_time:
@@ -100,17 +96,7 @@ def select_time(args, name):
     elif args.time_style:
         style = 'strftime(\'{0}\', {1})'.format(gufi_common.TIME_STYLES[args.time_style], name)
     else:
-        now = int(time.time())
-
-        # older than 6 months
-        old = 'strftime(\'{0}\', {1})'.format('%b  %e  %Y', name)
-
-        # younger than 6 months
-        new = 'strftime(\'{0}\', {1})'.format(gufi_common.TIME_STYLES[gufi_common.LOCALE], name)
-
-        style = 'CASE WHEN ({0} - {1}) > {2} THEN {3} ELSE {4} END'.format(now, name, SIX_MONTHS_IN_SECONDS,
-                                                                           old, new)
-
+        style = gufi_common.timestyle_col(name)
     return [style]
 
 def build_select(args, indexroot):

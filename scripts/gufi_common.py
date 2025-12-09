@@ -67,6 +67,7 @@ import os
 import pwd
 import re
 import sys
+import time
 
 if (sys.version_info.major == 3) and (sys.version_info.minor < 3):
     from pipes import quote as sanitize # pylint: disable=deprecated-module
@@ -108,6 +109,20 @@ TIME_STYLES = {
     'iso'      : '%m-%d %R',
     LOCALE     : '%b  %e %H:%M',
 }
+
+# 365.2425 * 24 * 60 * 60 seconds per year
+SIX_MONTHS_IN_SECONDS = int(365.2425 * 24 * 60 * 60 / 2)
+
+def timestyle_col(ts_col, now = int(time.time())):
+    # older than 6 months
+    old = 'strftime(\'%b  %e  %Y\', {0})'.format(ts_col)
+
+    # younger than 6 months
+    new = 'strftime(\'{0}\', {1})'.format(TIME_STYLES[LOCALE], ts_col)
+
+    return 'CASE WHEN ({0} - {1}) > {2} THEN {3} ELSE {4} END'.format(now, ts_col,
+                                                                      SIX_MONTHS_IN_SECONDS,
+                                                                      old, new)
 
 # sqlite3 types (not defined in standard sqlite3.py)
 # https://www.sqlite.org/datatype3.html
@@ -357,12 +372,12 @@ def add_delim_flag(parser):
                         metavar='c',
                         type=get_char,
                         default=' ',
-                        help='delimiter separating output columns')
+                        help='Delimiter separating output columns.')
 
 def add_verbose_flag(parser):
-    parser.add_argument('--verbose', '-V',
+    parser.add_argument('-V', '--verbose',
                         action='store_true',
-                        help='Show the gufi_query being executed')
+                        help='Show the gufi_query being executed.')
 
 
 def add_common_flags(parser):
@@ -374,21 +389,21 @@ def add_common_flags(parser):
                         metavar='name',
                         type=str,
                         default='out',
-                        help='Name of in-memory database when aggregation is performed')
+                        help='Name of in-memory database when aggregation is performed.')
 
     parser.add_argument('--aggregate-name',
                         dest='aggregate_name',
                         metavar='name',
                         type=str,
                         default='aggregate',
-                        help='Name of final database when aggregation is performed')
+                        help='Name of final database when aggregation is performed.')
 
     parser.add_argument('--skip-file',
                         dest='skip',
                         metavar='filename',
                         type=str,
                         default=None,
-                        help='Name of file containing directory basenames to skip')
+                        help='Name of file containing directory basenames to skip.')
 
     add_verbose_flag(parser)
 

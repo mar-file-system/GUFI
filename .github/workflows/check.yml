@@ -116,7 +116,7 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     container:
-      image: centos:8
+      image: rockylinux:9
     steps:
     - uses: actions/checkout@v4
 
@@ -125,8 +125,8 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-old-cmake
 
-    - name: CentOS 8 Prerequisites
-      run:  contrib/CI/centos8.sh
+    - name: Rocky Linux Prerequisites
+      run:  contrib/CI/rockylinux.sh
 
     - name: Install wget
       run:  yum -y install wget

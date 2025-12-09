@@ -111,8 +111,6 @@ run_sort "${GUFI_FIND} -iregex 'LEAF'"            # regex on whole path
 run_sort "${GUFI_FIND} -links 1 -type f"          # directory and symlinks change depending on filesystem
 run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
 run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file link name
-# shellcheck disable=SC2016
-run_no_sort "${GUFI_FIND} -ls" | @SED@ "s%${USER_NAME} ${GROUP_NAME}%${TEST_USER_NAME} ${TEST_GROUP_NAME}%g;" | @AWK@ '{ if (NF > 10) { $1="0"; $2="0"; $4=1; $7="0"; } print }' | sort -k 11; echo
 run_sort "${GUFI_FIND} -maxdepth 2"
 run_sort "${GUFI_FIND} -mindepth 3"
 run_sort "${GUFI_FIND} -mmin  +0"
@@ -169,6 +167,22 @@ run_no_sort "${GUFI_FIND} --largest  -type f"
 # check the verbose flag
 run_no_sort "${GUFI_FIND} --verbose --largest -type f"
 
+# -ls
+# shellcheck disable=SC2016
+(
+    # some inodes were set to their real values, so need to change them back to test values
+    "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE summary SET inode = mtime;"
+    "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE entries SET inode = mtime;"
+
+    run_sort "${GUFI_FIND} -ls"
+
+    # with smallest
+    run_no_sort "${GUFI_FIND} -ls --smallest"
+
+    # with largest
+    run_no_sort "${GUFI_FIND} -ls --largest"
+) | @SED@ "s%${USER_NAME} ${GROUP_NAME}%${TEST_USER_NAME} ${TEST_GROUP_NAME}%g;" | @AWK@ '{ if (NF > 4) { $4=1; } print }' # NF > 4 to not replace command
+
 # multiple input directories
 run_sort "${GUFI_FIND} ${BASENAME}/directory ${BASENAME}/leaf_directory"
 
@@ -191,7 +205,7 @@ run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M
 run_no_sort "${GUFI_FIND} -empty path_after_expression 2>&1 | @GREP@ \"RuntimeError:\""
 
 # bad numerical input
-run_no_sort "${GUFI_FIND} -atime abc 2>&1 | tail -n 1"
+run_no_sort "${GUFI_FIND} -atime abc 2>&1"
 
 # unknown predicate
 run_no_sort "${GUFI_FIND} -unknown-predicate 2>&1 | @GREP@ \"RuntimeError:\""

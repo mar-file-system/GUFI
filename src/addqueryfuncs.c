@@ -302,16 +302,16 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
 /*
  * right pad input string to length using spaces
  *
- * used by gufi_ls
+ * used by gufi_find and gufi_ls
  */
 static void rpad(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
     char *value = (char *) sqlite3_value_text(argv[0]);
     const size_t value_len = strlen(value);
-    const size_t pad_len = sqlite3_value_int(argv[1]);
+    const int pad_len = sqlite3_value_int(argv[1]);
 
-    if (value_len > pad_len) {
+    if (value_len > (size_t) pad_len) {
         sqlite3_result_text(context, value, value_len, SQLITE_TRANSIENT);
         return;
     }

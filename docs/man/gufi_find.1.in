@@ -79,7 +79,15 @@ is a wrapper around
 .Xr gufi_query 1 are predefined pieces that are deterministically combined.
 
 The input arguments and output are intended to be reminicent of GNU
-.Xr find 1 .
+.Xr find 1 . The double dash flags at the bottom are GUFI extensions.
+
+One major difference between
+.Xr find 1 and
+.Xr gufi_find 1 is how arguments are parsed.
+In
+.Xr find 1 , expression order matters.
+In
+.Xr gufi_find 1 , expression order does not matter.
 
 .Sh OPTIONS
 .Bl -tag -width -indent
@@ -87,6 +95,10 @@ The input arguments and output are intended to be reminicent of GNU
 show this help message and exit
 .It Fl -version, v
 show program's version number and exit
+.It Fl maxdepth\ levels
+Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.
+.It Fl mindepth\ levels
+Do not apply any tests or actions at levels less than levels (a non-negative integer). mindepth 1 means process all files except the command line arguments.
 .It Fl amin\ n
 File was last accessed n minutes ago.
 .It Fl atime\ n
@@ -128,40 +140,44 @@ Matches files which are readable.
 .It Fl samefile\ name
 File refers to the same inode as name.
 .It Fl size\ n
+Note that if searching for files of size less than some value (e.g. -2k), must use equal sign (e.g. -size=-2k) so that the value is not interpreted incorrectly by argparse.
 .It Fl true
-Always true
+Always true.
 .It Fl type\ c
-File is of type c
+File is of type c.
 .It Fl uid\ n
 File's numeric user ID is n.
 .It Fl user\ uname
 File is owned by user uname (numeric user ID allowed).
 .It Fl writable
 Matches files which are writable.
-.It Fl maxdepth\ levels
-Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.
-.It Fl mindepth\ levels
-Do not apply any tests or actions at levels less than levels (a non-negative integer). mindepth 1 means process all files except the command line arguments.
 .It Fl fprint\ file
-Output file prefix
+Output file prefix.
 .It Fl ls
-list current file ls -dils format
+List current file ls -dils format.
 .It Fl print
-print the full name on the standard output, followed by a newline, similar to GNU find
+Print the full name on the standard output, followed by a newline, similar to GNU find.
 .It Fl print0
-print the full name on the standard output, followed by a null character, similar to GNU find
-.It Fl -delim\ c
-delimiter separating output columns
-.It Fl -size%\ n\ n
-Modifier to the size flag. Expects 2 values that define the min and max percentage from the size.
+Print the full name on the standard output, followed by a null character, similar to GNU find.
+.It Fl printf format & Print format on the standard output, similar to GNU find. All format specifiers other than ACFTYZ have been implemented.
 .It Fl -num-results\ n
-first n results
-.It Fl -smallest\ n
-top n smallest files
-.It Fl -largest\ n
-top n largest files
+First n results.
+.It Fl -smallest
+Sort output by size, ascending.
+.It Fl -largest
+Sort output by size, descending.
 .It Fl -compress
-try to reduce memory usage by compressing with zlib (if available)
+Try to reduce memory usage by compressing with zlib (if available).
+.It Fl -delim\ c
+Delimiter separating output columns.
+.It Fl -in-memory-name\ name
+Name of in-memory database when aggregation is performed.
+.It Fl -aggregate-name\ name
+Name of final database when aggregation is performed.
+.It Fl -skip-file\ filename
+Name of file containing directory basenames to skip.
+.It Fl V, -verbose
+Show the gufi_query being executed.
 .El
 
 .Sh EXIT STATUS
