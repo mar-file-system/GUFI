@@ -337,6 +337,32 @@ TEST(addqueryfuncs, basename) {
     sqlite3_close(db);
 }
 
+TEST(addqueryfuncs, rpad) {
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db), 0);
+
+    char buf[MAXPATH];
+    char *output = buf;
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT rpad(1, 1);", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(output, "1");
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT rpad(1, 2);", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(output, "1 ");
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT rpad(1, 3);", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(output, "1  ");
+
+    // input is longer than requested padding - return entire input (don't cut)
+    ASSERT_EQ(sqlite3_exec(db, "SELECT rpad('abcde', 3);", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(output, "abcde");
+
+    sqlite3_close(db);
+}
+
 TEST(addqueryfuncs, strop) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
