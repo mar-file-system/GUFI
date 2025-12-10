@@ -62,6 +62,7 @@
 
 set(SERVER_CLIENT_MAN_PAGES
   gufi_du.1
+  gufi_getfattr.1
   gufi_find.1
   gufi_ls.1
   gufi_query.1

@@ -188,6 +188,7 @@ is the command that should be used to perform advanced operations on a GUFI tree
 
 .Sh SEE ALSO
 .Xr gufi_du 1 ,
+.Xr gufi_getfattr 1 ,
 .Xr gufi_find 1 ,
 .Xr gufi_ls 1 ,
 .Xr gufi_stats 1

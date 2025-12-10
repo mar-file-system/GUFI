@@ -75,7 +75,7 @@
 .Sh DESCRIPTION
 .Nm
 is a wrapper around
-.Xr gufi_query 1 , which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
+.Xr gufi_query 1 , which performs queries on the contents of a GUFI tree in a parallel manner. The queries that are passed into
 .Xr gufi_query 1 are predefined pieces that are deterministically combined.
 
 The input arguments and output are intended to be reminicent of GNU
@@ -147,6 +147,7 @@ Show the gufi_query being executed
 
 .Sh SEE ALSO
 .Xr gufi_du 1 ,
+.Xr gufi_getfattr 1 ,
 .Xr gufi_find 1 ,
 .Xr gufi_stats 1 ,
 .Xr gufi_query 1

@@ -60,15 +60,60 @@
 
 
 
-\section{Environment}
+\section{\gufigetfattr}
+\gufigetfattr is a wrapper script for \gufiquery that attempts to recreate
+some of \getfattr 's functionality.
 
-Users interact with GUFI using \gufidu, \gufigetfattr, \gufifind,
-\gufils, \gufistat, and \gufistats. These are wrapper scripts that
-access the actual implementations of these files.
+\subsection{Flags}
+\begin{table} [h!]
+  \centering
+  \begin{tabularx}{\textwidth}{| l | X |}
+    \hline
+    Flags & Functionality \\
+    \hline
+    -{}-help & displays help menu \\
+    \hline
+    -{}-name NAME, -n NAME & Dump the values of the named extended
+    attribute \\
+    \hline
+    -{}-dump, -d & Dump the values of all extended attributes
+    associated with pathname \\
+    \hline
+    -{}-match PATTERN, -m PATTERN & Only include attributes with names
+    matching the regular expression pattern. The default value for
+    pattern is ``\^user.", which includes all the attributes in the
+    user namespace. Specify ``-" for including all attributes. Refer
+    to \texttt{attr(5)} for a more detailed discussion of namespaces. \\
+    \hline
+    -{}-only-values & Dump out the raw extended attribute value(s)
+    without encoding them \\
+    \hline
+    -{}-recursive, -R & List the atttributes of all files and
+    directories recursively \\
+    \hline
+  \end{tabularx}
+\end{table}
 
-These wrapper scripts use a configuration file (that is readable but
-not necessarily modifiable by users) that specifies where the GUFI
-server is, as the actual GUFI trees are not expected to be locally
-available. For experimental GUFI installations, alternative paths to
-the GUFI configuration file can be specified via the
-\texttt{CLIENT\_CONFIG\_FILE} CMake variable.
+GUFI extensions:
+
+\begin{table} [h!]
+  \centering
+  \begin{tabularx}{\textwidth}{| l | X |}
+  \hline
+  Option & Description \\
+  \hline
+  -{}-delim c & delimiter separating output columns \\
+  \hline
+  -{}-in-memory-name \textless name\textgreater & Name of in-memory
+  database when -R is used \\
+  \hline
+  -{}-aggregate-name \textless name\textgreater & Name of final
+  database when -R is used \\
+  \hline
+  -{}-skip-file \textless filename\textgreater & Name of file containing
+  directory basenames to skip \\
+  \hline
+  -V, -{}-verbose & Show the \gufiquery being executed \\
+  \hline
+  \end{tabularx}
+\end{table}

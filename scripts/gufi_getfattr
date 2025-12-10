@@ -181,26 +181,26 @@ def run(argv, config_path):
     # parse the arguments
     parser = argparse.ArgumentParser(
         'gufi_getfattr',
-        description='GUFI version of getfattr\n\nNote: --no-dereference/-h is always set',
+        description='GUFI version of getfattr\n\nNote: -h/--no-dereference and -P/--physical are always set',
         add_help=False, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     gufi_common.add_help_version(parser)
 
-    parser.add_argument('--name', '-n',
+    parser.add_argument('-n', '--name',
                         type=str,
                         help='Dump the values of the named extended attribute')
-    parser.add_argument('--dump', '-d',
+    parser.add_argument('-d', '--dump',
                         action='store_true',
                         help='Dump the values of all extended attributes associated with pathname')
-    parser.add_argument('--match', '-m',
+    parser.add_argument('-m', '--match',
                         dest='pattern',
                         type=str,
-                        help='Only include attributes with names matching the regular expression pattern. The default value for pattern is "^user\\.", which includes all the attributes in the user namespace. Specify "-" for including all attributes". Refer to attr(5) for a more detailed discussion of namespaces.',
+                        help='Only include attributes with names matching the regular expression pattern. The default value for pattern is "^user\\.", which includes all the attributes in the user namespace. Specify "-" for including all attributes. Refer to attr(5) for a more detailed discussion of namespaces.',
                         default='^user\\.')
     parser.add_argument('--only-values',
                         action='store_true',
                         help='Dump out the raw extended attribute value(s) without encoding them')
-    parser.add_argument('--recursive', '-R',
+    parser.add_argument('-R', '--recursive',
                         action='store_true',
                         help='List the atttributes of all files and directories recursively')
 

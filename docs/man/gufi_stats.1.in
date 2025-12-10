@@ -74,8 +74,8 @@ statistic
 
 .Sh DESCRIPTION
 .Nm
-calculates statistics of a directory within a GUFI index through several ways. Most statistics are calulated by wrapping
-.Xr gufi_query 1 , which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
+calculates statistics of a directory within a GUFI tree through several ways. Most statistics are calulated by wrapping
+.Xr gufi_query 1 , which performs queries on the contents of a GUFI tree in a parallel manner. The queries that are passed into
 .Xr gufi_query 1 are predefined pieces that are deterministically combined. However, a few are not calculated through
 .Xr gufi_query 1 , and are instead calculated through serial methods using Python.
 
@@ -148,6 +148,7 @@ Total number of leaf directories under the provided path
 
 .Sh SEE ALSO
 .Xr gufi_du 1 ,
+.Xr gufi_getfattr 1 ,
 .Xr gufi_find 1 ,
 .Xr gufi_ls 1 ,
 .Xr gufi_query 1

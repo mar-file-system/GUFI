@@ -147,6 +147,7 @@ set(gufi_user_inputs
     sections/introduction.tex
     sections/user_env.tex
     sections/gufi_du.tex
+    sections/gufi_getfattr.tex
     sections/gufi_find.tex
     sections/gufi_ls.tex
     sections/gufi_stats.tex

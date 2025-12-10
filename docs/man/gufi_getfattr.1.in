@@ -61,45 +61,53 @@
 
 
 .Dd Nov 12, 2025
-.Dt gufi_du
+.Dt gufi_getfattr
 .Os Linux
 .Sh NAME
-.Nm gufi_du
-.Nd estimate file space usage
+.Nm gufi_getfattr
+.Nd GUFI version of
+.Xr getfattr 1
 .Sh SYNOPSIS
 .Nm
 .Op options
-[paths ...]
+.Op path...
 
 .Sh DESCRIPTION
 .Nm
 is a wrapper around
-.Xr gufi_query 1 , which performs queries on the contents of a GUFI tree in a parallel manner. The queries that are passed into
-.Xr gufi_query 1 are predefined pieces that are deterministically combined.
+.Xr gufi_query 1 , which performs queries on the contents of a GUFI tree in a parallel manner.
 
-The input arguments and output are intended to be reminicent of GNU
-.Xr du 1 .
+The input arguments and output are intended to be reminicent of
+.Xr getfattr 1 with --no-defereence --physical always set.
 
 .Sh OPTIONS
+
 .Bl -tag -width -indent
 .It Fl -help
 show this help message and exit
 .It Fl v, -version
 show program's version number and exit
-.It Fl -aparent-size
-print apparent sizes, rather than disk usage; although the apparent size is usually
-smaller, it may be larger due to holes in ('sparse') files, internal fragmentation,
-indirect blocks, and the like
-.It Fl B\ SIZE, -block-size\ SIZE
-scale sizes by SIZE before printing them
-.It Fl c, -total
-produce a grand total
-.It Fl -inodes
-list inode usage information instead of block usage
-.It Fl S, -separate-dirs
-for directories do not include size of subdirectories
-.It Fl s, -summarize
-display only a total for each argument
+.It Fl n NAME, -name NAME
+Dump the values of the named extended attribute
+.It Fl d, -dump
+Dump the values of all extended attributes associated with pathname
+.It Fl m PATTERN, -match PATTERN
+Only include attributes with names matching the regular expression pattern. The default
+value for pattern is "^user\.", which includes all the attributes in the user namespace.
+Specify "-" for including all attributes. Refer to attr(5) for a more detailed discussion
+of namespaces.
+.It Fl -only-values
+Dump out the raw extended attribute value(s) without encoding them
+.It Fl R -recursive
+List the atttributes of all files and directories recursively
+.It Fl -delim\ c
+Delimiter separating output columns
+.It Fl -in-memory-name\ name
+Name of in-memory database when aggregation is performed
+.It Fl -aggregate-name\ name
+Name of final database when aggregation is performed
+.It Fl -skip-file\ filename
+Name of file containing directory basenames to skip
 .It Fl V, -verbose
 Show the gufi_query being executed
 .El
@@ -112,14 +120,15 @@ Show the gufi_query being executed
 .Pp
 .Sh FILES
 .Bl -tag -width -compact
-.It gufi_du
+.It gufi_getfattr
 .It @INSTALL_CONFIG@
 .El
 
-\# \# .Sh BUGS
+\# .Sh BUGS
 \# .Sh EXAMPLE
+
 .Sh SEE ALSO
-.Xr gufi_getfattr 1 ,
+.Xr gufi_du 1 ,
 .Xr gufi_find 1 ,
 .Xr gufi_ls 1 ,
 .Xr gufi_stats 1 ,
