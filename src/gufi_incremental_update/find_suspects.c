@@ -101,7 +101,7 @@ struct NonDirArgs {
 };
 
 static int compare_suspect_time(struct work *work, const time_t suspect_time) {
-    if (lstat_wrapper(work) != 0) {
+    if (lstat_wrapper(work, 1) != 0) {
         return 1; /* something broke - try to reindex */
     }
 

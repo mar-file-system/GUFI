@@ -898,7 +898,7 @@ void statx_to_work(struct statx *stx, struct work *work) {
 #endif
 
 /* try to call statx if available, otherwise, call lstat */
-int lstat_wrapper(struct work *work) {
+int lstat_wrapper(struct work *work, const int print_eacces) {
     /* don't duplicate work */
     if (work->stat_called != STAT_NOT_CALLED) {
         return 0;
@@ -910,8 +910,10 @@ int lstat_wrapper(struct work *work) {
               AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
               STATX_ALL, &stx) != 0) {
         const int err = errno;
-        fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
+        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
+                    work->name, strerror(err), err);
+        }
         return 1;
     }
 
@@ -921,8 +923,10 @@ int lstat_wrapper(struct work *work) {
     #else
     if (lstat(work->name, &work->statuso) != 0) {
         const int err = errno;
-        fprintf(stderr, "Error: Could not lstat \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
+        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            fprintf(stderr, "Error: Could not lstat \"%s\": %s (%d)\n",
+                    work->name, strerror(err), err);
+        }
         return 1;
     }
 
@@ -935,7 +939,7 @@ int lstat_wrapper(struct work *work) {
 }
 
 /* used by gufi_dir2index and gufi_dir2trace */
-int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
+int fstatat_wrapper(struct work *entry, struct entry_data *ed, const int print_eacces) {
     /* don't duplicate work */
     if (entry->stat_called != STAT_NOT_CALLED) {
         return 0;
@@ -949,8 +953,10 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
               AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
               STATX_ALL, &stx) != 0) {
         const int err = errno;
-        fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
-                entry->name, strerror(err), err);
+        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
+                    entry->name, strerror(err), err);
+        }
         return 1;
     }
 
@@ -960,8 +966,10 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed) {
     #else
     if (fstatat(ed->parent_fd, basename, &entry->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
         const int err = errno;
-        fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n",
-                entry->name, strerror(err), err);
+        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n",
+                    entry->name, strerror(err), err);
+        }
         return 1;
     }
 
@@ -1023,7 +1031,7 @@ ssize_t process_path_list(struct input *in, struct work *root,
                                                        line, len);
 
         /* directory symlinks are not allowed under the root */
-        if (lstat_wrapper(subtree_root) != 0) {
+        if (lstat_wrapper(subtree_root, in->print_eacces) != 0) {
             free(subtree_root);
             continue;
         }

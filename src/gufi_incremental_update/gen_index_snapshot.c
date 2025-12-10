@@ -117,7 +117,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         goto cleanup;
     }
 
-    if (lstat_wrapper(work) != 0) {
+    if (lstat_wrapper(work, 1) != 0) {
         rc = 1;
         goto close_dir;
     }

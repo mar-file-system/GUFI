@@ -113,7 +113,8 @@ static size_t descend2(QPTPool_ctx_t *ctx,
             gqw_t *child = new_gqw_with_name(gqw->work.name, gqw->work.name_len,
                                              entry->d_name, len,
                                              entry, next_level,
-                                             gqw->sqlite3_name, gqw->sqlite3_name_len);
+                                             gqw->sqlite3_name, gqw->sqlite3_name_len,
+                                             in->print_eacces);
             if (!child) {
                 continue;
             }
@@ -143,7 +144,7 @@ static size_t descend2(QPTPool_ctx_t *ctx,
                     !gqw->id_match &&
                     (child->work.level >= in->min_level)) {
                     /* lstat(2)/statx(2) is not normally called during descent */
-                    if (lstat_wrapper(&child->work) != 0) {
+                    if (lstat_wrapper(&child->work, in->print_eacces) != 0) {
                         free(child);
                         continue;
                     }

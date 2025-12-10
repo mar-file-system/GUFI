@@ -232,7 +232,7 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
         print_error_and_goto("Could not open_directory", work->name, cleanup);
     }
 
-    if (lstat_wrapper(work) != 0) {
+    if (lstat_wrapper(work, 1) != 0) {
         print_error_and_goto("Could not lstat directory", work->name, close_dir);
     }
 
@@ -250,7 +250,7 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     struct enqueue_nondir_args nondir_args = {
-        .ctx = ctx, 
+        .ctx = ctx,
         .pa = pa,
     };
 

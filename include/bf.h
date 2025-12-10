@@ -238,6 +238,10 @@ extern "C" {
 #define FLAG_DIR_MATCH_GID_LONG "dir-match-gid"
 #define FLAG_DIR_MATCH_GID {FLAG_DIR_MATCH_GID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_GID_SHORT}
 
+#define FLAG_PRINT_EACCES_SHORT (FLAG_GROUP_MISC + 16)
+#define FLAG_PRINT_EACCES_LONG "print-eacces"
+#define FLAG_PRINT_EACCES {FLAG_PRINT_EACCES_LONG, no_argument, NULL, FLAG_PRINT_EACCES_SHORT}
+
 /* memory utilization flags */
 
 #define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
@@ -444,7 +448,8 @@ struct input {
     int  printed_version;
     char delim;
     char newline;
-    int suppress_newline;
+    int  suppress_newline;
+    int  print_eacces;             /* if cannot open a path due to EACCES, print error message (default: off) */
     int  buildindex;
     size_t maxthreads;
     struct {

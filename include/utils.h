@@ -171,10 +171,10 @@ void statx_to_work(struct statx *stx, struct work *work);
 #endif
 
 /* try to call statx if available, otherwise, call lstat */
-int lstat_wrapper(struct work *work);
+int lstat_wrapper(struct work *work, const int print_eacces);
 
 /* used by gufi_dir2index and gufi_dir2trace */
-int fstatat_wrapper(struct work *entry, struct entry_data *ed);
+int fstatat_wrapper(struct work *entry, struct entry_data *ed, const int print_eacces);
 
 /* make sure --path-list is followed by at most 1 root directory argument */
 int bad_partial_walk(struct input *in, const size_t root_count);

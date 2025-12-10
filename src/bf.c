@@ -249,6 +249,7 @@ void print_help(const char* prog_name,
             case FLAG_DONT_REPROCESS_SHORT:          printf("      --dont-reprocess              if a directory was previously processed, skip descending the subtree"); break;
             case FLAG_NEWLINE_SHORT:                 printf("      --newline <c>                 character used to separate lines (default: '\\n') [use 0 for NULL character]"); break;
             case FLAG_SUPPRESS_NEWLINE_SHORT:        printf("      --suppress-newline            do not print the line separator"); break;
+            case FLAG_PRINT_EACCES_SHORT:            printf("      --print-eacces                print messages when errno is EACCES"); break;
 
             /* memory usage flags */
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:      printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
@@ -326,6 +327,7 @@ void show_input(struct input* in, int retval) {
     printf("in.dont_reprocess           = %d\n",            in->dont_reprocess);
     printf("in.newline                  = '%c'\n",          in->newline);
     printf("in.suppress_newline         = %d\n",            in->suppress_newline);
+    printf("in.print_eacces             = %d\n",            in->print_eacces);
 
     /* memory usage flags */
 
@@ -647,6 +649,10 @@ int parse_cmd_line(int                  argc,
                     INSTALL_GID(&in->dir_match.gid, optarg, (uid_t) 0, (uid_t) -1,
                                 "--" FLAG_DIR_MATCH_GID_LONG, &retval);
                 }
+                break;
+
+            case FLAG_PRINT_EACCES_SHORT:
+                in->print_eacces = 1;
                 break;
 
             /* memory usage flags */

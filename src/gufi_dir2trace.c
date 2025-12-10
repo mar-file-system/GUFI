@@ -120,7 +120,7 @@ static int process_external(struct input *in, void *args,
 static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NondirArgs *nda = (struct NondirArgs *) args;
 
-    if (fstatat_wrapper(entry, ed) != 0) {
+    if (fstatat_wrapper(entry, ed, 1) != 0) {
         return 1;
     }
 
@@ -171,7 +171,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     memset(&ed, 0, sizeof(ed));
-    if (lstat_wrapper(work) != 0) {
+    if (lstat_wrapper(work, 1) != 0) {
         goto close_dir;
     }
 

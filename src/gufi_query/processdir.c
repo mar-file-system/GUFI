@@ -174,7 +174,6 @@ static int collect_dir_inodes(void *args, int count, char **data, char **columns
     return 0;
 }
 
-
 int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
@@ -202,8 +201,10 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
         const int err = errno;
-        fprintf(stderr, "Error: Skipping directory \"%s\": %s (%d)\n",
-                gqw->work.name, strerror(err), err);
+        if ((err != EACCES) || ((err == EACCES) && in->print_eacces)) {
+            fprintf(stderr, "Error: Skipping directory \"%s\": %s (%d)\n",
+                    gqw->work.name, strerror(err), err);
+        }
         goto out_free;
     }
 

@@ -93,7 +93,8 @@ size_t gqw_size(gqw_t *gqw);
 gqw_t *new_gqw_with_name(const char *prefix, const size_t prefix_len,
                          const char *basename, const size_t basename_len,
                          struct dirent *entry, const int next_level,
-                         const char *sqlite3_prefix, const size_t sqlite3_prefix_len);
+                         const char *sqlite3_prefix, const size_t sqlite3_prefix_len,
+                         const int print_eacces);
 
 /* call compress_struct to compress a gqw, but call this to decompress */
 void decompress_gqw(gqw_t **dst, void *src);

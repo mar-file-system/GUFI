@@ -1236,13 +1236,13 @@ TEST(lstat_wrapper, bad) {
     struct work *work = new_work_with_name(name, strlen(name), nullptr, 0);
 
     work->stat_called = STAT_NOT_CALLED;
-    EXPECT_EQ(lstat_wrapper(work), 1);
+    EXPECT_EQ(lstat_wrapper(work, 1), 1);
 
     work->stat_called = NOT_STATX_CALLED;
-    EXPECT_EQ(lstat_wrapper(work), 0);
+    EXPECT_EQ(lstat_wrapper(work, 1), 0);
 
     work->stat_called = STATX_CALLED;
-    EXPECT_EQ(lstat_wrapper(work), 0);
+    EXPECT_EQ(lstat_wrapper(work, 1), 0);
 
     free(work);
 }
@@ -1254,13 +1254,13 @@ TEST(fstatat_wrapper, bad) {
     ed.parent_fd = -1;
 
     work->stat_called = STAT_NOT_CALLED;
-    EXPECT_EQ(fstatat_wrapper(work, &ed), 1);
+    EXPECT_EQ(fstatat_wrapper(work, &ed, 1), 1);
 
     work->stat_called = NOT_STATX_CALLED;
-    EXPECT_EQ(fstatat_wrapper(work, &ed), 0);
+    EXPECT_EQ(fstatat_wrapper(work, &ed, 1), 0);
 
     work->stat_called = STATX_CALLED;
-    EXPECT_EQ(fstatat_wrapper(work, &ed), 0);
+    EXPECT_EQ(fstatat_wrapper(work, &ed, 1), 0);
 
     free(work);
 }

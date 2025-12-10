@@ -109,6 +109,7 @@ static const std::string terse              = "--terse";
 static const std::string rollup_limit       = "--limit"; static const std::string rollup_limit_arg = "1";
 static const std::string dir_match_uid      = "--dir-match-uid"; static const std::string dir_match_uid_arg = "1";
 static const std::string dir_match_gid      = "--dir-match-gid"; static const std::string dir_match_gid_arg = "1";
+static const std::string print_eacces       = "--print-eacces";
 
 static const std::string output_buffer_size = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
 static const std::string target_memory      = "--target-memory"; static const std::string target_memory_arg = "1";
@@ -158,6 +159,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->dir_match.on,                       DIR_MATCH_NONE);
     EXPECT_EQ(in->dir_match.uid,                      geteuid());
     EXPECT_EQ(in->dir_match.gid,                      getegid());
+    EXPECT_EQ(in->print_eacces,                       flags);
     #if HAVE_ZLIB
     EXPECT_EQ(in->compress,                           flags);
     #endif
@@ -298,9 +300,9 @@ TEST(parse_cmd_line, debug) {
         FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
         FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
         FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE,
-        FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY,
-        FLAG_SUBDIR_LIMIT, FLAG_CHECK_EXTDB_VALID, FLAG_EXTERNAL_ATTACH,
-        FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
+        FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_PRINT_EACCES,
+        FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_CHECK_EXTDB_VALID,
+        FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -338,6 +340,7 @@ TEST(parse_cmd_line, debug) {
         dry_run.c_str(),
         rollup_limit.c_str(), rollup_limit_arg.c_str(),
         // skip_file.c_str(), skip_file_arg.c_str(),
+        print_eacces.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
         #ifdef HAVE_ZLIB
@@ -370,7 +373,7 @@ TEST(parse_cmd_line, flags) {
     const struct option opts[] = {
         FLAG_XATTRS, FLAG_PRINTDIR, FLAG_PRINT_TLV,
         FLAG_SUSPECT_STAT, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
-        FLAG_TERSE, FLAG_DRY_RUN,
+        FLAG_TERSE, FLAG_DRY_RUN, FLAG_PRINT_EACCES,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -388,6 +391,7 @@ TEST(parse_cmd_line, flags) {
         w.c_str(),
         terse.c_str(),
         dry_run.c_str(),
+        print_eacces.c_str(),
         #ifdef HAVE_ZLIB
         compress.c_str(),
         #endif
