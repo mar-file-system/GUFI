@@ -66,6 +66,7 @@ import os
 import subprocess
 import sys
 
+from gufi_common import SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_ASC, SQLITE3_DESC
 import gufi_common
 import gufi_config
 
@@ -173,11 +174,11 @@ def build_order_by(args):
     order_by = []
 
     if args.sort_largest:
-        order_by += ['size {0}'.format('ASC' if args.reverse else 'DESC')]
+        order_by += ['size {0}'.format(SQLITE3_ASC if args.reverse else SQLITE3_DESC)]
     elif args.mtime:
-        order_by += ['mtime {0}'.format('ASC' if args.reverse else 'DESC')]
+        order_by += ['mtime {0}'.format(SQLITE3_ASC if args.reverse else SQLITE3_DESC)]
     else:
-        order_by += ['display_name COLLATE NOCASE {0}'.format('DESC' if args.reverse else 'ASC')]
+        order_by += ['display_name COLLATE NOCASE {0}'.format(SQLITE3_DESC if args.reverse else SQLITE3_ASC)]
 
     return order_by
 
@@ -190,13 +191,9 @@ def run(argv, config_path):
 
     # parse the arguments
     parser = argparse.ArgumentParser('gufi_ls', description='GUFI version of ls', add_help=False)
-    # override help to not use -h
-    parser.add_argument('--help',
-                        action='help',
-                        help='show this help message and exit')
-    parser.add_argument('--version', '-v',
-                        action='version',
-                        version=gufi_common.VERSION)
+
+    gufi_common.add_help_version(parser)
+
     parser.add_argument('-a', '--all',
                         action='store_true',
                         help='do not ignore entries starting with .')
@@ -204,6 +201,7 @@ def run(argv, config_path):
                         action='store_true',
                         help='do not list implied . and ..')
     parser.add_argument('--block-size',
+                        metavar='SIZE',
                         type=gufi_common.get_blocksize,
                         help='with -l, scale sizes by SIZE when printing them')
     parser.add_argument('-B', '--ignore-backups',
@@ -303,9 +301,9 @@ def run(argv, config_path):
                 '{0} {1}'.format(column, type)
                 for column, type in zip(columns, # pylint: disable=redefined-builtin
                                         [
-                                            'TEXT', 'TEXT', 'TEXT', 'INT64', 'INT64', 'INT64',
-                                            'INT64', 'INT64', 'INT64', 'INT64', 'INT64', 'INT64',
-                                            'INT64', 'INT64', 'TEXT', 'TEXT', 'INT64'
+                                            SQLITE3_TEXT, SQLITE3_TEXT, SQLITE3_TEXT, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64,
+                                            SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64,
+                                            SQLITE3_INT64, SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_TEXT, SQLITE3_INT64
                                         ]
                                     )
             ]
@@ -374,15 +372,15 @@ def run(argv, config_path):
             PADDED = ''
 
             if args.inode:
-                RESULTS_SCHEMA    += 'inode TEXT, '
-                MAX_WIDTHS_SCHEMA += 'inode_len INT64, '
+                RESULTS_SCHEMA    += 'inode {0}, '.format(SQLITE3_TEXT)
+                MAX_WIDTHS_SCHEMA += 'inode_len {0}, '.format(SQLITE3_INT64)
                 MAX_WIDTHS_INSERT += 'max(length(inode)), '
                 PADDED            += '''
                                      rpad(inode, (SELECT inode_len FROM {0})),
                                      '''
 
-            RESULTS_SCHEMA    += 'mode TEXT, nlinks TEXT, u TEXT, '
-            MAX_WIDTHS_SCHEMA += 'nlink_len INT64, u_len INT64, '
+            RESULTS_SCHEMA    += 'mode {0}, nlinks {0}, u {0}, '.format(SQLITE3_TEXT)
+            MAX_WIDTHS_SCHEMA += 'nlink_len {0}, u_len {0}, '.format(SQLITE3_INT64)
             MAX_WIDTHS_INSERT += 'max(length(nlinks)), max(length(u)), '
             PADDED            += '''
                                      mode,
@@ -391,14 +389,14 @@ def run(argv, config_path):
                                  '''
 
             if not args.no_group:
-                RESULTS_SCHEMA    += 'g TEXT, '
-                MAX_WIDTHS_SCHEMA += 'g_len INT64, '
+                RESULTS_SCHEMA    += 'g {0}, '.format(SQLITE3_TEXT)
+                MAX_WIDTHS_SCHEMA += 'g_len {0}, '.format(SQLITE3_INT64)
                 MAX_WIDTHS_INSERT += 'max(length(g)), '
                 PADDED            += '''
                                      rpad(g,      (SELECT g_len     FROM {0})),
                                      '''
-            RESULTS_SCHEMA    += 'size TEXT, time TEXT, name TEXT'
-            MAX_WIDTHS_SCHEMA += 'size_len INT64, time_len INT64'
+            RESULTS_SCHEMA    += 'size {0}, time {0}, name {0}'.format(SQLITE3_TEXT)
+            MAX_WIDTHS_SCHEMA += 'size_len {0}, time_len {0}'.format(SQLITE3_INT64)
             MAX_WIDTHS_INSERT += 'max(length(size)), max(length(time))'
             PADDED            += '''
                                      rpad(size,   (SELECT size_len  FROM {0})),

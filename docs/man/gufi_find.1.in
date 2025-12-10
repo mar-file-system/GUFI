@@ -91,9 +91,9 @@ In
 
 .Sh OPTIONS
 .Bl -tag -width -indent
-.It Fl h, -help
+.It Fl -help
 show this help message and exit
-.It Fl -version, v
+.It Fl v, -version
 show program's version number and exit
 .It Fl maxdepth\ levels
 Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.
@@ -197,6 +197,6 @@ Show the gufi_query being executed.
 
 .Sh SEE ALSO
 .Xr gufi_du 1 ,
-.Xr gufi_query 1 ,
 .Xr gufi_ls 1 ,
-.Xr gufi_stats 1
+.Xr gufi_stats 1 ,
+.Xr gufi_query 1

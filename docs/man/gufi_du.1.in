@@ -82,15 +82,15 @@ The input arguments and output are intended to be reminicent of GNU
 
 .Sh OPTIONS
 .Bl -tag -width -indent
-.It Fl h, -help
+.It Fl -help
 show this help message and exit
-.It Fl -version, v
+.It Fl v, -version
 show program's version number and exit
 .It Fl -aparent-size
 print apparent sizes, rather than disk usage; although the apparent size is usually
 smaller, it may be larger due to holes in ('sparse') files, internal fragmentation,
 indirect blocks, and the like
-.It Fl B, -block-size\ <SIZE>
+.It Fl B\ SIZE, -block-size\ SIZE
 scale sizes by SIZE before printing them
 .It Fl c, -total
 produce a grand total
@@ -100,7 +100,7 @@ list inode usage information instead of block usage
 for directories do not include size of subdirectories
 .It Fl s, -summarize
 display only a total for each argument
-.It Fl -verbose, -V
+.It Fl V, -verbose
 Show the gufi_query being executed
 .El
 
@@ -113,12 +113,13 @@ Show the gufi_query being executed
 .Sh FILES
 .Bl -tag -width -compact
 .It gufi_du
+.It @INSTALL_CONFIG@
 .El
 
 \# \# .Sh BUGS
 \# .Sh EXAMPLE
 .Sh SEE ALSO
 .Xr gufi_find 1 ,
-.Xr gufi_query 1 ,
 .Xr gufi_ls 1 ,
-.Xr gufi_stats 1
+.Xr gufi_stats 1 ,
+.Xr gufi_query 1

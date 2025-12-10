@@ -68,7 +68,7 @@ listed below
 \subsection{Flags}
 \begin{table} [h!]
   \centering
-  \begin{tabular}{| l | l |}
+  \begin{tabularx}{\textwidth}{| l | X |}
     \hline
     Flags & Functionality \\
     \hline
@@ -80,9 +80,11 @@ listed below
     \hline
     -A, -{}-almost-all & do not list implied . and .. \\
     \hline
-    -{}-block-size \textless block\_size\textgreater & with -l, scale sizes by block\_size when printing them \\
+    -{}-block-size SIZE & with -l, scale sizes by SIZE when printing them \\
     \hline
     -B, -{}-ignore-backups & do not list implied entries ending with ~ \\
+    \hline
+    -{}-full-time & like -l --time-style=full-iso \\
     \hline
     -G, -{}-no-group & in a long listing, don't print group names \\
     \hline
@@ -98,23 +100,22 @@ listed below
     \hline
     -S & sort by file size, largest first \\
     \hline
-    -{}-time-style \textless TIME\_STYLE\textgreater & time/date format with -l \\
+    -{}-time-style {full-iso,iso,locale,long-iso} & time/date format with -l \\
     \hline
     -t & sort by modification time, newest first \\
     \hline
-    -U & do not sort; list entries in directory order \\
-    \hline
-  \end{tabular}
-  \caption{\label{fig:gufi_ls flags}{gufi\_ls Flags and Functionality}}
+  \end{tabularx}
 \end{table}
 
 Additionally, several GUFI extensions have been added:
-\\\\
-\begin{tabular} {| l | l |}
+
+\begin{table} [h!]
+  \centering
+  \begin{tabularx}{\textwidth}{| l | X |}
   \hline
   Option & Description \\
   \hline
-  -{}-delim \textless c\textgreater & delimiter separating output columns \\
+  -{}-delim c & delimiter separating output columns \\
   \hline
   -{}-in-memory-name \textless name\textgreater & Name of in-memory
   database when -R is used \\
@@ -122,15 +123,10 @@ Additionally, several GUFI extensions have been added:
   -{}-aggregate-name \textless name\textgreater & Name of final
   database when -R is used \\
   \hline
-  -{}-nlink-width \textless chars\textgreater & Width of nlink column \\
-  \hline
-  -{}-size-width \textless chars\textgreater & Width of size column \\
-  \hline
-  -{}-user-width \textless chars\textgreater & Width of user column \\
-  \hline
-  -{}-group-width \textless chars\textgreater & Width of group column \\
-  \hline
   -{}-skip-file \textless filename\textgreater & Name of file containing
   directory basenames to skip \\
   \hline
-\end{tabular}
+  -V, -{}-verbose & Show the \gufiquery being executed \\
+  \hline
+  \end{tabularx}
+\end{table}

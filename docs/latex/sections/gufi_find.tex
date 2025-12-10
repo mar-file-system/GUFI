@@ -73,100 +73,99 @@ not matter.
   \hline
   Flag & Functionality \\
   \hline
-  -h, -{}-help & show this help message and exit \\
+  -{}-help & show this help message and exit \\
   \hline
-  -{}-version, -v & show program's version number and exit \\
+  -v, -{}-version & show program's version number and exit \\
   \hline
   -maxdepth levels & Descend at most levels (a non-negative integer)
   levels of directories below the command line arguments. -maxdepth 0
   means only apply the tests and actions to the command line
-  arguments. \\
+  arguments \\
   \hline
   -mindepth levels & Do not apply any tests or actions at levels less
   than levels (a non-negative integer). -mindepth 1 means process all
-  files except the command line arguments. \\
+  files except the command line arguments \\
   \hline
-  -amin n & File was last accessed n minutes ago. \\
+  -amin n & File was last accessed n minutes ago \\
   \hline
-  -anewer file & File was last accessed more recently than file was modified. \\
+  -anewer file & File was last accessed more recently than file was modified \\
   \hline
-  -atime n & File was last accessed n*24 hours ago. \\
+  -atime n & File was last accessed n*24 hours ago \\
   \hline
-  -cmin n & File's status was last changed n minutes ago. \\
+  -cmin n & File's status was last changed n minutes ago \\
   \hline
-  -cnewer file & File's status was last changed more recently than file was modified. \\
+  -cnewer file & File's status was last changed more recently than file was modified \\
   \hline
-  -ctime n & File's status was last changed n*24 hours ago. \\
+  -ctime n & File's status was last changed n*24 hours ago \\
   \hline
-  -empty & File is empty and is either a regular file or a directory. \\
+  -empty & File is empty and is either a regular file or a directory \\
   \hline
   -executable & Matches files which are executable and directories
-  which are searchable (in a file name resolution sense). \\
+  which are searchable (in a file name resolution sense) \\
   \hline
-  -false & File is false and is either a regular file or a directory. \\
+  -false & File is false and is either a regular file or a directory \\
   \hline
-  -gid n & File's numeric group ID is n. \\
+  -gid n & File's numeric group ID is n \\
   \hline
-  -group gname & File belongs to group gname (numeric group ID allowed). \\
+  -group gname & File belongs to group gname (numeric group ID allowed) \\
   \hline
   -iname pattern & Like -name, but the match is case insensitive (uses
-  regex, not glob). \\
+  regex, not glob) \\
   \hline
   -inum n & File has inode number n. It is normally easier to use the
-  -samefile test instead. \\
+  -samefile test instead \\
   \hline
-  -iregex pattern & Like -regex, but the match is case insensitive. \\
+  -iregex pattern & Like -regex, but the match is case insensitive \\
   \hline
-  -links n & File has n links. \\
+  -links n & File has n links \\
   \hline
-  -lname pattern & File is a symbolic link whose contents match shell pattern. \\
+  -lname pattern & File is a symbolic link whose contents match shell pattern \\
   \hline
-  -mmin n & File's data was last modified n minutes ago. \\
+  -mmin n & File's data was last modified n minutes ago \\
   \hline
-  -mtime n & File's data was last modified n*24 hours ago. \\
+  -mtime n & File's data was last modified n*24 hours ago \\
   \hline
   -name pattern & Base of file name (the path with the leading
-  directories removed) matches shell pattern. \\
+  directories removed) matches shell pattern \\
   \hline
-  -newer file & File was modified more recently than file. \\
+  -newer file & File was modified more recently than file \\
   \hline
-  -path pattern & File name matches shell pattern. \\
+  -path pattern & File name matches shell pattern \\
   \hline
-  -readable & Matches files which are readable. \\
+  -readable & Matches files which are readable \\
   \hline
-  -regex pattern & File name matches regular expression pattern. \\
+  -regex pattern & File name matches regular expression pattern \\
   \hline
-  -samefile name & File refers to the same inode as name. \\
+  -samefile name & File refers to the same inode as name \\
   \hline
   -size n & Note that if searching for files of size less
   than some value (e.g. -2k), must use equal sign (e.g. -size=-2k) so
-  that the value is not interpreted incorrectly by argparse. \\
+  that the value is not interpreted incorrectly by argparse \\
   \hline
-  -true & Always true. \\
+  -true & Always true \\
   \hline
-  -type c & File is of type c. \\
+  -type c & File is of type c \\
   \hline
-  -uid n & File's numeric user ID is n. \\
+  -uid n & File's numeric user ID is n \\
   \hline
-  -user uname & File is owned by user uname (numeric user ID allowed). \\
+  -user uname & File is owned by user uname (numeric user ID allowed) \\
   \hline
-  -writable & Matches files which are writable. \\
+  -writable & Matches files which are writable \\
   \hline
   -fprint file & Output result to file \\
   \hline
-  -ls & List current file ls -dils format. \\
+  -ls & List current file ls -dils format \\
   \hline
   -print & Print the full name on the standard output, followed by a
-  newline, similar to GNU find. \\
+  newline, similar to GNU find \\
   \hline
   -print0 & Print the full name on the standard output, followed by a
-  null character, similar to GNU find. \\
+  null character, similar to GNU find \\
   \hline
   -printf format & Print format on the standard output, similar to GNU
   find. All format specifiers other than \texttt{ACFTYZ} have been
-  implemented. \\
+  implemented \\
   \hline
-  \caption{\label{fig:gufi_find_flags}{\gufifind Flags and Functionality}}
 \end{longtable}
 
 Additionally, \gufifind has some flags that \find does not have:
@@ -175,28 +174,26 @@ Additionally, \gufifind has some flags that \find does not have:
   \hline
   Flag & Functionality \\
   \hline
-  -{}-num-results n & First n results. \\
+  -{}-num-results n & First n results \\
   \hline
-  -{}-smallest & Sort output by size, ascending. \\
+  -{}-smallest & Sort output by size, ascending \\
   \hline
-  -{}-largest & Sort output by size, descending. \\
+  -{}-largest & Sort output by size, descending \\
   \hline
   -{}-compress & Try to reduce memory usage by compressing with \\
-  & zlib (if available). \hfill \\
+  & zlib (if available)\\
   \hline
-  -{}-delim c & Delimiter separating output columns. \\
+  -{}-delim c & Delimiter separating output columns \\
   \hline
   -{}-in-memory-name name & Name of in-memory database when
-  aggregation \\
-  & is performed. \\
+  aggregation is performed \\
   \hline
   -{}-aggregate-name name & Name of final database when aggregation \\
-  & is performed. \hfill \\
+  & is performed \\
   \hline
   -{}-skip-file filename & Name of file containing directory basenames \\
-  & to skip. \hfill \\
+  & to skip \\
   \hline
-  -V, -{}-verbose & Show the \gufiquery being executed. \\
+  -V, -{}-verbose & Show the \gufiquery being executed \\
   \hline
-  \caption{\label{fig:gufi_find_ext}{\gufifind Extensions}}
 \end{longtable}

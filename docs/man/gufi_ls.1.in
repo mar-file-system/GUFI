@@ -86,14 +86,18 @@ The input arguments and output are intended to be reminicent of GNU
 .Bl -tag -width -indent
 .It Fl -help
 show this help message and exit
-.It Fl -version, v
+.It Fl v, -version
 show program's version number and exit
 .It Fl a, -all
 do not ignore entries starting with .
 .It Fl A, -almost-all
 do not list implied . and ..
+.It Fl -block-size SIZE
+with -l, scale sizes by SIZE when printing them
 .It Fl B, -ignore-backups
 do not list implied entries ending with ~
+.It Fl -full-time
+like -l --time-style=full-iso
 .It Fl G, -no-group
 in a long listing, don't print group names
 .It Fl h, -human-readable
@@ -115,14 +119,14 @@ time/date format with -l
 .It Fl t
 sort by modification time, newest first
 .It Fl -delim\ c
-delimiter separating output columns
+Delimiter separating output columns
 .It Fl -in-memory-name\ name
 Name of in-memory database when aggregation is performed
 .It Fl -aggregate-name\ name
 Name of final database when aggregation is performed
 .It Fl -skip-file\ filename
 Name of file containing directory basenames to skip
-.It -verbose, V
+.It Fl V, -verbose
 Show the gufi_query being executed
 .El
 
@@ -143,6 +147,6 @@ Show the gufi_query being executed
 
 .Sh SEE ALSO
 .Xr gufi_du 1 ,
-.Xr gufi_query 1 ,
 .Xr gufi_find 1 ,
-.Xr gufi_stats 1
+.Xr gufi_stats 1 ,
+.Xr gufi_query 1

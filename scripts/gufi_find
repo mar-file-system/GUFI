@@ -69,6 +69,7 @@ import subprocess
 import sys
 import time
 
+from gufi_common import SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_ASC, SQLITE3_DESC
 import gufi_common
 import gufi_config
 
@@ -179,25 +180,25 @@ def build_aggregation_columns(args, path):
     # (select, col name, col type)
 
     if args.smallest or args.largest:
-        sort_cols = [(None, 'type', 'TEXT')]
+        sort_cols = [(None, 'type', SQLITE3_TEXT)]
         if not args.ls:
-            sort_cols += [(None, 'size', 'INT64')]
+            sort_cols += [(None, 'size', SQLITE3_INT64)]
         cols += sort_cols
 
     if args.ls:
         cols += [
-            (None, 'inode', 'TEXT'),
-            ('(size / 1024) + (not not (size % 1024))', 'blocks', 'INT64'),
-            ('modetotxt(mode)', 'mode', 'TEXT'),
-            (None, 'nlink', 'INT64'),
-            ('uidtouser(uid)', 'uid', 'TEXT'),
-            ('gidtogroup(gid)', 'gid', 'TEXT'),
-            (None, 'size', 'INT64'),
-            (gufi_common.timestyle_col('mtime'), 'mtime', 'TEXT'),
-            ('{0} || CASE type WHEN \'l\' THEN \' -> \' || linkname ELSE \'\' END'.format(path), 'name', 'TEXT')
+            (None, 'inode', SQLITE3_TEXT),
+            ('(size / 1024) + (not not (size % 1024))', 'blocks', SQLITE3_INT64),
+            ('modetotxt(mode)', 'mode', SQLITE3_TEXT),
+            (None, 'nlink', SQLITE3_INT64),
+            ('uidtouser(uid)', 'uid', SQLITE3_TEXT),
+            ('gidtogroup(gid)', 'gid', SQLITE3_TEXT),
+            (None, 'size', SQLITE3_INT64),
+            (gufi_common.timestyle_col('mtime'), 'mtime', SQLITE3_TEXT),
+            ('{0} || CASE type WHEN \'l\' THEN \' -> \' || linkname ELSE \'\' END'.format(path), 'name', SQLITE3_TEXT)
         ]
     else:
-        cols += [(path, 'name', 'TEXT')]
+        cols += [(path, 'name', SQLITE3_TEXT)]
 
     return cols
 
@@ -376,13 +377,13 @@ def build_order_by(args):
     order_by = []
 
     if args.smallest:
-        order_by += ['size ASC']
+        order_by += ['size {0}'.format(SQLITE3_ASC)]
 
     if args.largest:
-        order_by += ['size DESC']
+        order_by += ['size {0}'.format(SQLITE3_DESC)]
 
     # order by name last so it doesnt break user requested ordering
-    order_by += ['name ASC']
+    order_by += ['name {0}'.format(SQLITE3_ASC)]
 
     return order_by
 
@@ -538,12 +539,12 @@ or by sending an email to <gufi-lanl@lanl.gov>'''
     # parse the arguments
     parser = argparse.ArgumentParser('gufi_find', description='GUFI version of find',
                                      epilog=EPILOG, formatter_class=argparse.RawTextHelpFormatter,
+                                     add_help=False,
                                      exit_on_error=False) # new in Python 3.9
 
+    gufi_common.add_help_version(parser)
+
     # GNU find global options
-    parser.add_argument('--version', '-v',
-                        action='version',
-                        version=gufi_common.VERSION)
     parser.add_argument('-maxdepth',
                         metavar='levels',
                         type=gufi_common.get_non_negative,

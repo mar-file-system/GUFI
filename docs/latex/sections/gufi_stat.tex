@@ -64,20 +64,34 @@
 \gufistat is analogous to \stat in file status mode. \\
 
 \subsection{Flags}
-\begin{tabular}{| l | l |}
-  \hline
-  Option & Description \\
-  \hline
-  -{}-help & display this help and exit \\
-  \hline
-  -{}-version & output version information and exit \\
-  \hline
-  -c FORMAT, -{}-format FORMAT & use the
+\begin{table} [h!]
+  \centering
+  \begin{tabularx}{\textwidth}{| l | X |}
+    \hline
+    Option & Description \\
+    \hline
+    -{}-help & display this help and exit \\
+    \hline
+    -v, -{}-version & output version information and exit \\
+    \hline
+    -c FORMAT, -{}-format FORMAT & use the
     specified FORMAT instead of the default; \\
-  & output a newline after each use of FORMAT \\
-  \hline
-  -t, -{}-terse & print the information in terse form \\
-  \hline
-  -{}-verbose, -V & Show the query being executed \\
-  \hline
-\end{tabular}
+    & output a newline after each use of FORMAT \\
+    \hline
+    -t, -{}-terse & print the information in terse form \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+GUFI extensions:
+
+\begin{table} [h!]
+  \centering
+  \begin{tabularx}{\textwidth}{| l | X |}
+    \hline
+    Flags & Functionality \\
+    \hline
+    -V, -{}-verbose & Show the \gufiquery being executed \\
+    \hline
+  \end{tabularx}
+\end{table}

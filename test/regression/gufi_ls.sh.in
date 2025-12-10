@@ -158,13 +158,11 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     run_no_sort "${GUFI_LS} -h ${BASENAME}/1MB"
 ) | @SED@ "s%${USER_NAME} ${GROUP_NAME}%${TEST_USER_NAME} ${TEST_GROUP_NAME}%g; s%${USER_NAME}%${TEST_USER_NAME}%g;"
 
-(
-    # bad blocksizes
-    run_no_sort "${GUFI_LS} --block-size=YiB"
-    run_no_sort "${GUFI_LS} --block-size=-"
-    run_no_sort "${GUFI_LS} --block-size=-1GB"
-    run_no_sort "${GUFI_LS} --block-size=0GB"
-) | @SED@ 's%\[paths \[paths ...\]\]%\[paths ...\]%g;'
+# bad blocksizes
+run_no_sort "${GUFI_LS} --block-size=YiB 2>&1 | tail -n 1"
+run_no_sort "${GUFI_LS} --block-size=- 2>&1 | tail -n 1"
+run_no_sort "${GUFI_LS} --block-size=-1GB 2>&1 | tail -n 1"
+run_no_sort "${GUFI_LS} --block-size=0GB 2>&1 | tail -n 1"
 
 # skip
 run_sort "${GUFI_LS} --skip \"${SKIP}\" ${BASENAME}"

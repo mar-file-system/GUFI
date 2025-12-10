@@ -74,7 +74,7 @@ SQLITE_EXTENSION_INIT1
  * Run Virtual Table
  *
  * This is intended for power users to be able to run arbitrary
- * commands and generate virtual tables with aribtrary result
+ * commands and generate virtual tables with arbitrary result
  * columns. In order to achieve this, users MUST run "CREATE VIRTUAL
  * TABLE" to create the virtual table before querying it. The virtual
  * table should preferrably be created in the temp namespace:

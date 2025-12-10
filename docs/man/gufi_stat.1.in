@@ -77,13 +77,13 @@ Display file status.
 .Bl -tag -width -indent
 .It Fl -help
 help
-.It Fl -version
+.It Fl v, -version
 show program's version number and exit
 .It Fl c, -format FORMAT
 use the specified FORMAT instead of the default; output a newline after each use of FORMAT
-.It t, -terse
+.It Fl t, -terse
 print the information in terse form
-.It -verbose, V
+.It Fl V, -verbose
 Show the query being executed
 
 .Sh EXIT STATUS
@@ -95,6 +95,7 @@ Show the query being executed
 .Sh FILES
 .Bl -tag -width -compact
 .It gufi_stat
+.It @INSTALL_CONFIG@
 .El
 
 \# .Sh BUGS

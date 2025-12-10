@@ -96,14 +96,7 @@ def build_expression_parser():
     # parse the arguments
     parser = argparse.ArgumentParser('gufi_du', description='GUFI version of du', add_help=False)
 
-    # override help to not use -h
-    parser.add_argument('--help',
-                        action='help',
-                        help='show this help message and exit')
-
-    parser.add_argument('--version', '-v',
-                        action='version',
-                        version=gufi_common.VERSION)
+    gufi_common.add_help_version(parser)
 
     parser.add_argument('--apparent-size',
                         action='store_true',

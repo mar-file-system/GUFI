@@ -340,40 +340,16 @@ $ gufi_ls -h prefix/1KB
 $ gufi_ls -h prefix/1MB
 1MB
 
-$ gufi_ls --block-size=YiB
-usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
-               [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
-               [--time-style {full-iso,iso,locale,long-iso}] [-t] [--delim c]
-               [--in-memory-name name] [--aggregate-name name]
-               [--skip-file filename] [-V]
-               [paths ...]
+$ gufi_ls --block-size=YiB 2>&1 | tail -n 1
 gufi_ls: error: argument --block-size: Invalid --block-size argument: 'YiB'
 
-$ gufi_ls --block-size=-
-usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
-               [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
-               [--time-style {full-iso,iso,locale,long-iso}] [-t] [--delim c]
-               [--in-memory-name name] [--aggregate-name name]
-               [--skip-file filename] [-V]
-               [paths ...]
+$ gufi_ls --block-size=- 2>&1 | tail -n 1
 gufi_ls: error: argument --block-size: Invalid --block-size argument: '-'
 
-$ gufi_ls --block-size=-1GB
-usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
-               [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
-               [--time-style {full-iso,iso,locale,long-iso}] [-t] [--delim c]
-               [--in-memory-name name] [--aggregate-name name]
-               [--skip-file filename] [-V]
-               [paths ...]
+$ gufi_ls --block-size=-1GB 2>&1 | tail -n 1
 gufi_ls: error: argument --block-size: Invalid --block-size argument: '-1GB'
 
-$ gufi_ls --block-size=0GB
-usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
-               [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
-               [--time-style {full-iso,iso,locale,long-iso}] [-t] [--delim c]
-               [--in-memory-name name] [--aggregate-name name]
-               [--skip-file filename] [-V]
-               [paths ...]
+$ gufi_ls --block-size=0GB 2>&1 | tail -n 1
 gufi_ls: error: argument --block-size: Invalid --block-size argument: '0GB'
 
 $ gufi_ls --skip "skip" prefix

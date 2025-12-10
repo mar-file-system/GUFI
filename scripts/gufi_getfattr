@@ -67,6 +67,7 @@ import os
 import subprocess
 import sys
 
+from gufi_common import SQLITE3_TEXT
 import gufi_common
 import gufi_config
 
@@ -110,8 +111,8 @@ def getfattr(args, indexroot, dirname, nondirname):
 
     if args.name:
         # name uses exact match
-        S_where += ['CAST(xattr_name AS TEXT) == CAST(\'{0}\' AS TEXT)'.format(args.name)]
-        E_where += ['CAST(xattr_name AS TEXT) == CAST(\'{0}\' AS TEXT)'.format(args.name)]
+        S_where += ['CAST(xattr_name AS {1}) == CAST(\'{0}\' AS {1})'.format(args.name, SQLITE3_TEXT)]
+        E_where += ['CAST(xattr_name AS {1}) == CAST(\'{0}\' AS {1})'.format(args.name, SQLITE3_TEXT)]
     else:
         S_where += ['xattr_name REGEXP \'{0}\''.format(args.pattern)]
         E_where += ['xattr_name REGEXP \'{0}\''.format(args.pattern)]
@@ -183,20 +184,14 @@ def run(argv, config_path):
         description='GUFI version of getfattr\n\nNote: --no-dereference/-h is always set',
         add_help=False, formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    # override help to not use -h
-    parser.add_argument('--help',
-                        action='help',
-                        help='show this help message and exit')
-    parser.add_argument('--version', '-v',
-                        action='version',
-                        version=gufi_common.VERSION)
+    gufi_common.add_help_version(parser)
 
     parser.add_argument('--name', '-n',
                         type=str,
                         help='Dump the values of the named extended attribute')
     parser.add_argument('--dump', '-d',
                         action='store_true',
-                        help='Dump the values of all extended attributes associated with pathname.')
+                        help='Dump the values of all extended attributes associated with pathname')
     parser.add_argument('--match', '-m',
                         dest='pattern',
                         type=str,
@@ -204,10 +199,10 @@ def run(argv, config_path):
                         default='^user\\.')
     parser.add_argument('--only-values',
                         action='store_true',
-                        help='Dump out the raw extended attribute value(s) without encoding them.')
+                        help='Dump out the raw extended attribute value(s) without encoding them')
     parser.add_argument('--recursive', '-R',
                         action='store_true',
-                        help='List the atttributes of all files and directories recursively.')
+                        help='List the atttributes of all files and directories recursively')
 
     parser.add_argument('path',
                         type=str,

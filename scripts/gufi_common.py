@@ -133,6 +133,8 @@ SQLITE3_REAL    = 'REAL'
 SQLITE3_TEXT    = 'TEXT'
 SQLITE3_BLOB    = 'BLOB'
 
+SQLITE3_IPK     = 'INTEGER PRIMARY KEY'
+
 # 2.1. Boolean Datatype
 SQLITE3_FALSE   = 'FALSE'
 SQLITE3_TRUE    = 'TRUE'
@@ -142,6 +144,10 @@ SQLITE3_INT     = 'INT'
 SQLITE3_INT64   = 'INT64'
 SQLITE3_FLOAT   = 'FLOAT'
 SQLITE3_DOUBLE  = 'DOUBLE'
+
+# ORDER BY keywords
+SQLITE3_ASC     = 'ASC'
+SQLITE3_DESC    = 'DESC'
 
 # GUFI
 # table names
@@ -366,22 +372,44 @@ def print_query(query_tokens):
     print('GUFI query is \n  {0}'.format(formatted_string))
     sys.stdout.flush()
 
+# Note for argparse: short flag first, then long flag
+
+def add_help_version(parser):
+    '''
+    Call this immediately after creating a parser to add common
+    --help and -v/--version flags to the top of the flags list
+
+    Python scripts will not have a -h flag
+    '''
+
+    # override help to not use -h
+    parser.add_argument('--help',
+                        action='help',
+                        help='show this help message and exit')
+
+    parser.add_argument('-v', '--version',
+                        action='version',
+                        version=VERSION)
+
 def add_delim_flag(parser):
     parser.add_argument('--delim',
                         dest='delim',
                         metavar='c',
                         type=get_char,
                         default=' ',
-                        help='Delimiter separating output columns.')
+                        help='Delimiter separating output columns')
 
 def add_verbose_flag(parser):
     parser.add_argument('-V', '--verbose',
                         action='store_true',
-                        help='Show the gufi_query being executed.')
-
+                        help='Show the gufi_query being executed')
 
 def add_common_flags(parser):
-    '''Common GUFI tool flags'''
+    '''
+    Common GUFI tool flags
+
+    Call this after the last executable-specific parser setting
+    '''
     add_delim_flag(parser)
 
     parser.add_argument('--in-memory-name',
@@ -389,21 +417,21 @@ def add_common_flags(parser):
                         metavar='name',
                         type=str,
                         default='out',
-                        help='Name of in-memory database when aggregation is performed.')
+                        help='Name of in-memory database when aggregation is performed')
 
     parser.add_argument('--aggregate-name',
                         dest='aggregate_name',
                         metavar='name',
                         type=str,
                         default='aggregate',
-                        help='Name of final database when aggregation is performed.')
+                        help='Name of final database when aggregation is performed')
 
     parser.add_argument('--skip-file',
                         dest='skip',
                         metavar='filename',
                         type=str,
                         default=None,
-                        help='Name of file containing directory basenames to skip.')
+                        help='Name of file containing directory basenames to skip')
 
     add_verbose_flag(parser)
 
