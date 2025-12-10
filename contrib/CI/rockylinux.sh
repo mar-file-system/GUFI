@@ -71,7 +71,7 @@ dnf -y install epel-release
 dnf -y --enablerepo=devel install fuse-devel libattr-devel pcre2-devel zlib-devel
 
 # install required packages
-dnf -y install attr autoconf clang cmake3 findutils fuse gettext git make patch pkgconfig python3 python3-pip sudo
+dnf -y install attr autoconf clang cmake3 colordiff findutils fuse gettext git make patch pkgconfig python3 python3-pip sudo
 
 # SQLAlchemy needs Python.h
 yum -y install python3-devel

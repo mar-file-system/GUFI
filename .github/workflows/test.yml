@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        img: [ "almalinux:latest", "alpine:edge", "rockylinux:9", "ubuntu:22.04", "ubuntu:24.04" ]
+        img: [ "almalinux:latest", "alpine:edge", "rockylinux/rockylinux:9", "rockylinux/rockylinux:10", "ubuntu:22.04", "ubuntu:24.04" ]
       fail-fast: true
     container:
       image: ${{ matrix.img }}
@@ -106,7 +106,7 @@ jobs:
       run:  contrib/CI/alpine.sh
 
     - name: Rocky Linux Prerequisites
-      if:   startsWith(matrix.img, 'rockylinux:')
+      if:   startsWith(matrix.img, 'rockylinux/rockylinux:')
       run:  contrib/CI/rockylinux.sh
 
     - name: Ubuntu Prerequisites
