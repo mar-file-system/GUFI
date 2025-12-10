@@ -87,9 +87,9 @@ with \texttt{-x}.
     \hline
     -v, -{}-version & version \\
     \hline
-    -n, -{}-threads \textless n\textgreater & number of threads (default: 1) \\
+    -n, -{}-threads \textless n\textgreater & number of threads \\
     \hline
-    -d, -{}-delim \textless c\textgreater & one char delimiter (default: \texttt{\textbackslash x1E}) \\
+    -d, -{}-delim \textless c\textgreater & delimiter (one char)  [use `x' for \texttt{\textbackslash x1E}] \\
     \hline
     -{}-target-memory \textless bytes\textgreater & target memory utilization (soft limit) \\
     \hline
@@ -100,5 +100,5 @@ with \texttt{-x}.
 \end{table}
 
 \paragraph{Usage} ~\\\\
-\gufitraceindex \texttt{[flags] trace\_file... GUFI\_tree\_parent} \\\\
-Each source filesystem found in the trace files will be converted to an index placed underneath \texttt{GUFI\_tree\_parent}.
+\gufitraceindex \texttt{[flags] trace... GUFI\_tree\_parent} \\\\
+Each source filesystem found in the trace files will be converted to an index placed underneath \texttt{GUFI\_tree\_parent} (same as \gufidirindex).

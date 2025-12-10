@@ -257,8 +257,8 @@ static int validate_source(const char *path, struct work **work) {
 }
 
 static void sub_help(void) {
-    printf("tree...              walk one or more trees to produce trace file\n");
-    printf("output_prefix        prefix of output files (<prefix>.<tid>)\n");
+    printf("dir...               walk one or more trees to produce trace file\n");
+    printf("trace                prefix of trace files (<trace>.<tid>)\n");
     printf("\n");
 }
 
@@ -286,7 +286,7 @@ int main(int argc, char *argv[]) {
     };
 
     struct PoolArgs pa;
-    process_args_and_maybe_exit(options, 1, "input_dir... output_prefix", &pa.in);
+    process_args_and_maybe_exit(options, 1, "dir... trace", &pa.in);
 
     /* parse positional args, following the options */
     INSTALL_STR(&pa.trace_prefix, argv[argc - 1]);

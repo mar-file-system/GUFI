@@ -255,7 +255,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 }
 
 static void sub_help(void) {
-   printf("trace_file...     parse one or more trace files to produce the GUFI tree\n");
+   printf("trace...          parse one or more trace files to produce the GUFI tree\n");
    printf("GUFI_tree_parent  build GUFI tree under here\n");
    printf("\n");
 }
@@ -274,7 +274,7 @@ int main(int argc, char *argv[]) {
     };
 
     struct PoolArgs pa;
-    process_args_and_maybe_exit(options, 2, "trace_file... output_dir", &pa.in);
+    process_args_and_maybe_exit(options, 2, "trace... GUFI_tree_parent", &pa.in);
 
     /* parse positional args, following the options */
     INSTALL_STR(&pa.index_parent, argv[argc - 1]);

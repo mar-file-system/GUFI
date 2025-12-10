@@ -166,23 +166,6 @@ not matter.
   find. All format specifiers other than \texttt{ACFTYZ} have been
   implemented \\
   \hline
-\end{longtable}
-
-Additionally, \gufifind has some flags that \find does not have:
-
-\begin{longtable}{|l|p{0.655\linewidth}|}
-  \hline
-  Flag & Functionality \\
-  \hline
-  -{}-num-results n & First n results \\
-  \hline
-  -{}-smallest & Sort output by size, ascending \\
-  \hline
-  -{}-largest & Sort output by size, descending \\
-  \hline
-  -{}-compress & Try to reduce memory usage by compressing with \\
-  & zlib (if available)\\
-  \hline
   -{}-delim c & Delimiter separating output columns \\
   \hline
   -{}-in-memory-name name & Name of in-memory database when
@@ -195,5 +178,22 @@ Additionally, \gufifind has some flags that \find does not have:
   & to skip \\
   \hline
   -V, -{}-verbose & Show the \gufiquery being executed \\
+  \hline
+\end{longtable}
+
+Additionally, \gufifind has some flags that \find does not have:
+
+\begin{longtable}{|l|p{0.87\linewidth}|}
+  \hline
+  Flag & Functionality \\
+  \hline
+  -{}-num-results n & First n results \\
+  \hline
+  -{}-smallest & Sort output by size, ascending \\
+  \hline
+  -{}-largest & Sort output by size, descending \\
+  \hline
+  -{}-compress & Try to reduce memory usage by compressing with \\
+  & zlib (if available) \\
   \hline
 \end{longtable}

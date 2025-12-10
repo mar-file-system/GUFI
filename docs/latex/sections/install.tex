@@ -65,9 +65,16 @@
 To install GUFI from the source build, run \texttt{[sudo] make
   install} from the build directory.
 
+Due to how GUFI is intended to be deployed (see
+Section~\ref{sec:deploy}), the files are split into two groups: server
+and client. Only the server files are installed by \texttt{make}. The
+client files, whose only purpose is to forward commands to the server
+and print results, are only installable through the client RPM. This
+was done because installing the client files with \texttt{make} causes
+weirdness in the CMake configuration and the resulting install.
+
 \subsection{RPMs}
 \texttt{make package} will be available for generating RPMs if
 \texttt{rpmbuild} was found at configuration time. By default, only
-the server RPM will be generated. In order to generate the client RPM
-(see Section~\ref{sec:deploy}), the CMake flag \texttt{-DCLIENT}
-should be set to \texttt{On}.
+the server RPM will be generated. In order to generate the client RPM,
+set \texttt{-DCLIENT=On}.

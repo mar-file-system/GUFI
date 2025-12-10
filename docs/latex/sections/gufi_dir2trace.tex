@@ -77,7 +77,7 @@ to be copied around.
     \hline
     -v, -{}-version & version \\
     \hline
-    -n, -{}-threads \textless n\textgreater & number of threads (default: 1) \\
+    -n, -{}-threads \textless n\textgreater & number of threads \\
     \hline
     -{}-min-level \textless n\textgreater & minimum level to descend to \\
     \hline
@@ -93,7 +93,7 @@ to be copied around.
     \hline
     -q & check that external databases are valid before tracking during indexing \\
     \hline
-    -d, -{}-delim \textless c\textgreater & one char delimiter (default: \texttt{\textbackslash x1E}) \\
+    -d, -{}-delim \textless c\textgreater & delimiter (one char)  [use `x' for \texttt{\textbackslash x1E}] \\
     \hline
     -{}-target-memory \textless bytes\textgreater & target memory utilization (soft limit) \\
     \hline
@@ -108,5 +108,5 @@ to be copied around.
 \end{table}
 
 \paragraph{Usage} ~\\\\
-\gufidirtrace \texttt{[flags] input\_dir... output\_prefix} \\\\
-Trace files with the name \texttt{output\_prefix.\$\{i\}}, where i $\in$ [0, number of threads), will be created.
+\gufidirtrace \texttt{[flags] dir... trace} \\\\
+Trace files with the name \texttt{\$\{trace\}.\$\{i\}}, where i $\in$ [0, number of threads), will be created.

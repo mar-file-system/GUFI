@@ -135,7 +135,7 @@ static int validate_source(struct PoolArgs *pa, struct work **tree, struct work 
 
 static void sub_help(void) {
     printf("GUFI_tree         GUFI tree\n");
-    printf("tree              source tree\n");
+    printf("dir               source tree\n");
     printf("snapshotdb        prefix for database file containing records of all directories\n");
     printf("parking_lot       directory prefix to place update db.dbs and moved directories\n");
     printf("\n");
@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
     };
 
     struct PoolArgs pa = {0};
-    process_args_and_maybe_exit(options, 4, "GUFI_tree tree snapshotdb parking_lot", &pa.in);
+    process_args_and_maybe_exit(options, 4, "GUFI_tree dir snapshotdb parking_lot", &pa.in);
 
     /* parse positional args, following the options */
     INSTALL_STR(&pa.index.path,  argv[argc - 4]);

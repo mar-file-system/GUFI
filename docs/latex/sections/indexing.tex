@@ -87,6 +87,18 @@ is highly parallelizable.
 \input{sections/gufi_dir2trace}
 \input{sections/gufi_trace2index}
 
+\subsection{Streaming Indexing}
+In addition to indirectly indexing a filesystem by creating trace
+files and then moving them to another node before constructing the
+index, it is also possible to stream trace files to another node and
+create the index. If the trace name passed into \gufidirtrace is
+``-'', its output will be written to \stdout. If the trace name passed
+into \gufitraceindex is ``-'', it will read from \stdin. This allows
+for the index of trees to be placed on a different node in a single
+line: \\
+
+\noindent \texttt{ssh} \texttt{remote "} \gufidirtrace \texttt{dir... -" > } \gufitraceindex \texttt{- GUFI\_tree\_parent}
+
 \subsection{Index Placement}
 The output (final positional) argument to \gufidirindex and
 \gufitraceindex does not point to the directory where the index

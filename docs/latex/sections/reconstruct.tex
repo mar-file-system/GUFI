@@ -111,45 +111,46 @@ directory and its contents are written out as a single stanza.
     \hline
     Flag & Functionality \\
     \hline
-    -h & help manual \\
+    -h, -{}-help & help \\
     \hline
-    -H & Show assigned input values \\
+    -H, -{}-debug & Show assigned input values \\
     \hline
-    -v & version \\
+    -v, -{}-version & version \\
     \hline
-    -n \textless num\_threads\textgreater & define number of threads to use \\
+    -n, -{}-threads \textless n\textgreater & number of threads \\
     \hline
-    -d \textless delim\textgreater & delimiter (one char)  [use 'x' for 0x1E] \\
+    -x, -{}-set-xattrs & set xattrs \\
     \hline
-    -x & pull xattrs from source file-sys into GUFI \\
+    -d, -{}-delim \textless c\textgreater & delimiter (one char)  [use `x' for \texttt{\textbackslash x1E}] \\
     \hline
   \end{tabular}
   \caption{\gufitracedir Flags and Arguments}
 \end{table}
 
 \paragraph{Usage} ~\\\\
-\gufitracedir \texttt{[options] trace\_file... output\_dir}
+\gufitracedir \texttt{[options] trace... dir}
 
 \subsubsection{\gufiindexdir}
 \paragraph{Flags}
 \begin{table} [H]
   \centering
   \begin{tabular}{l|l}
+    \hline
     Flag & Functionality \\
     \hline
-    -h & help manual \\
+    -h, -{}-help & help \\
     \hline
-    -H & Show assigned input values \\
+    -H, -{}-debug & Show assigned input values \\
     \hline
-    -v & version \\
+    -v, -{}-version & version \\
     \hline
-    -n \textless num\_threads\textgreater & define number of threads to use \\
+    -n, -{}-threads \textless n\textgreater & number of threads \\
     \hline
-    -x & pull xattrs from source file-sys into GUFI \\
+    -x, -{}-set-xatts & set xattrs \\
     \hline
   \end{tabular}
   \caption{\gufiindexdir Flags and Arguments}
 \end{table}
 
 \paragraph{Usage} ~\\\\
-\gufiindexdir \texttt{[options] input\_dir output\_dir}
+\gufiindexdir \texttt{[options] GUFI\_tree dir}

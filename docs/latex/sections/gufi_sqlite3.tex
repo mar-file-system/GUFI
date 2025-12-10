@@ -63,7 +63,7 @@
 \subsection{\gufisqlite}
 \gufisqlite is a simple program that imitates most of the
 \texttt{sqlite3} cli while providing GUFI specific functions. The
-main difference from the \texttt{sqlite3} cli is that ''dot commands''
+main difference from the \texttt{sqlite3} cli is that ``dot commands''
 are not supported.
 
 \subsubsection{Flags}
@@ -77,7 +77,7 @@ are not supported.
     \hline
     -v, -{}-version & version \\
     \hline
-    -d, -{}-delim \textless c\textgreater & one char delimiter (default: \texttt{\textbackslash x1E}) \\
+    -d, -{}-delim \textless c\textgreater & delimiter (one char)  [use `x' for \texttt{\textbackslash x1E}] \\
     \hline
   \end{tabular}
   \caption{\gufisqlite Flags and Arguments}
@@ -87,10 +87,3 @@ are not supported.
 \gufisqlite \texttt{[options] [db [SQL]...]}
 
 If no SQL statements are passed in, SQL statements will be read in from stdin
-
-\subsection{\querydbs}
-\input{sections/querydbs}
-
-\querydbs was once its own C program, but has been converted to a
-wrapper around \gufisqlite. Features available in \gufisqlite imply
-their availablility in \querydbs.

@@ -1,5 +1,5 @@
 $ gufi_dir2index --help
-usage: gufi_dir2index [options] tree... GUFI_tree_parent
+usage: gufi_dir2index [options] dir... GUFI_tree_parent
 options:
   -h, --help                        help
   -H, --debug                       show assigned input values (debugging)
@@ -17,7 +17,7 @@ options:
       --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
       --compress                    compress work items
 
-tree...           walk one or more trees to produce GUFI tree
+dir...            walk one or more trees to produce GUFI tree
 GUFI_tree_parent  build GUFI tree under here
 
 

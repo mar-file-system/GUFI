@@ -69,8 +69,8 @@
 .Sh SYNOPSIS
 .Nm
 .Op options
-tree...
-output_prefix
+dir...
+trace
 
 .Sh DESCRIPTION
 Generate per-thread trace files by walking the source directory breadth first. These files may be used by

@@ -479,7 +479,7 @@ static int validate_source(refstr_t *index_parent, const char *path, struct work
 }
 
 static void sub_help(void) {
-   printf("tree...           walk one or more trees to produce GUFI tree\n");
+   printf("dir...            walk one or more trees to produce GUFI tree\n");
    printf("GUFI_tree_parent  build GUFI tree under here\n");
    printf("\n");
 }
@@ -505,7 +505,7 @@ int main(int argc, char *argv[]) {
     };
 
     struct PoolArgs pa;
-    process_args_and_maybe_exit(options, 1, "tree... GUFI_tree_parent", &pa.in);
+    process_args_and_maybe_exit(options, 1, "dir... GUFI_tree_parent", &pa.in);
 
     /* parse positional args, following the options */
     /* does not have to be canonicalized */

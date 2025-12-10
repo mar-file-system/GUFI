@@ -69,7 +69,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op options
-input_dir...
+dir...
 GUFI_tree_parent
 
 .Sh DESCRIPTION
