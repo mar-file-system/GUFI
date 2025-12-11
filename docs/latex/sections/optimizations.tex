@@ -75,62 +75,7 @@ Allocations are not performed by the standard malloc. Instead,
 \texttt{jemalloc(3)} is used to override \texttt{malloc(3)}. See
 \href{https://jemalloc.net/}{jemalloc's website} for details.
 
-\subsubsection{Not Calling \lstat During Tree Walk}
-\texttt{struct~dirent}s are returned when reading a directory with
-\readdir. glibc's implementation of \texttt{struct~dirent} provides
-extra fields not required by POSIX.1. GUFI takes advantage of the
-nonstandard \texttt{d\_type} field to not call \lstat when determining
-whether or not the entry is a directory. Only when \texttt{d\_type} is
-not set will \lstat be called. Some might know this as
-\texttt{readdirplus}.
-
-\subsubsection{Enqueuing Work Before Processing}
-In order to reduce the amount of time the thread pool spends waiting
-for work, work is enqueued before doing the main processing for a
-directory. When walking a tree, such as with \gufidirindex,
-\gufidirtrace, and \gufiquery, subdirectories are enqueued before
-processing source filesystem information and running queries.
-
-\subsubsection{Breaking Up Trace Files}
-Instead of generating index directories as they appear in a trace
-file, \gufitraceindex reads each trace file using half of the
-available threads. Then, as each stanza is encountered, their file
-offsets are enqueued for parallel processing instead of processed
-immediately.
-
-\subsubsection{String Manipulations}
-Where possible, strings are not copied, and are instead referenced.
-Additionally, calls to \texttt{strlen(3)} are avoided in order to not
-walk memory one byte at a time. Some string lengths, such as those for
-input arguments are obtained with \texttt{strlen(3)}. Afterwards,
-string manipulations are done by using or modifying lengths to offset
-into or cut short strings.
-
-\subsubsection{Combining Strings with \memcpy}
-One method of combining C-strings is by concantenating them with
-\texttt{snprintf(3)} with format strings containing only \texttt{\%s}
-format specifiers. Instead of parsing the format string, the
-\texttt{SNFORMAT\_S} function was created to do \memcpy s on the
-arguments, skipping figuring out whether or not inputs are strings and
-how long they are by finding \texttt{NULL} terminators. Instead,
-lengths are obtained as by-products of previous string manipulations
-and the values are reused.
-
-\subsubsection{In-Situ Processing}
-Occassionally, GUFI might encounter extremely large directories. This
-results in many long lived dynamic allocations being created during
-descent, which can overwhelm memory. Users can set a subdirectory
-limit so that if too many subdirectories are encountered within a
-single directory, subdirectories past the user provided count will be
-processed recursively using a work item allocated on the thread's
-stack instead of being dynamically allocated and enqueued for
-processing. This reduces memory pressure by limiting the amount of
-work items that extremely large directories would otherwise spawn. The
-subdirectories being processed recursively may themselves enqueue
-dynamically allocated subdirectory work or recurse further down with
-subdirectory work allocated on the stack.
-
-\subsubsection{Smaller Enqueued Work Items}
+\subsubsection{Smaller Work Items}
 The main data structure that is enqueued is \work. This
 struct started at approximately 14KiB in size.
 
@@ -172,6 +117,64 @@ it than \texttt{sizeof(struct~work)~+~name\_len~+~1)}.
 
 This was used to fix
 \href{https://github.com/mar-file-system/GUFI/issues/121}{Issue 121}.
+
+\subsubsection{Enqueuing Work Before Processing}
+In order to reduce the amount of time the thread pool spends waiting
+for work, work is enqueued before doing the main processing for a
+directory. When walking a tree, such as with \gufidirindex,
+\gufidirtrace, and \gufiquery, subdirectories are enqueued before
+processing source filesystem information and running queries.
+
+\subsubsection{Not \texttt{stat}-ing During Tree Walk}
+\texttt{struct~dirent}s are returned when reading a directory with
+\readdir. glibc's implementation of \texttt{struct~dirent} provides
+extra fields not required by POSIX.1. GUFI takes advantage of the
+nonstandard \texttt{d\_type} field to not call \lstat when determining
+whether or not the entry is a directory. Some might know this as
+\texttt{readdirplus}. Only when \texttt{d\_type} is not set will the
+entry be \texttt{stat}-ed. If it was found by CMake, \statx with
+\texttt{AT\_SYMLINK\_NOFOLLOW \textbar\ AT\_STATX\_DONT\_SYNC} will be
+called to try to reduce the cost of \texttt{stat}-ing on parallel
+filesystems. If \statx was not found, \lstat will be called.
+
+\subsubsection{Breaking Up Trace Files}
+Instead of generating index directories as they appear in a trace
+file, \gufitraceindex reads each trace file using half of the
+available threads. Then, as each stanza is encountered, their file
+offsets are enqueued for parallel processing instead of processed
+immediately.
+
+\subsubsection{String Manipulations}
+Where possible, strings are not copied, and are instead referenced.
+Additionally, calls to \texttt{strlen(3)} are avoided in order to not
+walk memory one byte at a time. Some string lengths, such as those for
+input arguments are obtained with \texttt{strlen(3)}. Afterwards,
+string manipulations are done by using or modifying lengths to offset
+into or cut short strings.
+
+\subsubsection{Combining Strings with \memcpy}
+One method of combining C-strings is by concantenating them with
+\texttt{snprintf(3)} with format strings containing only \texttt{\%s}
+format specifiers. Instead of parsing the format string, the
+\texttt{SNFORMAT\_S} function was created to do \memcpy s on the
+arguments, skipping figuring out whether or not inputs are strings and
+how long they are by finding \texttt{NULL} terminators. Instead,
+lengths are obtained as by-products of previous string manipulations
+and the values are reused.
+
+\subsubsection{In-Situ Processing}
+Occassionally, GUFI might encounter extremely large directories. This
+results in many long lived dynamic allocations being created during
+descent, which can overwhelm memory. Users can set a subdirectory
+limit so that if too many subdirectories are encountered within a
+single directory, subdirectories past the user provided count will be
+processed recursively using a work item allocated on the thread's
+stack instead of being dynamically allocated and enqueued for
+processing. This reduces memory pressure by limiting the amount of
+work items that extremely large directories would otherwise spawn. The
+subdirectories being processed recursively may themselves enqueue
+dynamically allocated subdirectory work or recurse further down with
+subdirectory work allocated on the stack.
 
 \subsubsection{Database Templates}
 Every directory in an index contains at least one database file,

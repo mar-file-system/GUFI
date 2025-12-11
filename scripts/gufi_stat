@@ -104,7 +104,10 @@ def parse_args():
                         metavar='FILE',
                         nargs='+')
 
-    gufi_common.add_verbose_flag(parser)
+    # does not call gufi_query, so need custom verbose flag
+    parser.add_argument('-V', '--verbose',
+                        action='store_true',
+                        help='Show the actual command being run')
 
     return parser
 

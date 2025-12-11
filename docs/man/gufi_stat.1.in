@@ -84,7 +84,7 @@ use the specified FORMAT instead of the default; output a newline after each use
 .It Fl t, -terse
 print the information in terse form
 .It Fl V, -verbose
-Show the query being executed
+Show the actual command being run
 
 .Sh EXIT STATUS
 .Bl -tag -width -indent
