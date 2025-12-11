@@ -58,7 +58,7 @@ $ gufi_treesummary_all --dont-reprocess "prefix"
 
 # Create a fresh tree without treesummary tables
 $ gufi_dir2index -n 2 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          6
 Total Non-Dirs:      14
 

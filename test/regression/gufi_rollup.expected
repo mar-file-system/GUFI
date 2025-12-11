@@ -15,7 +15,7 @@ options:
 GUFI_tree         GUFI tree to roll up
 
 
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          69
 Total Non-Dirs:      96
 Roots:
@@ -719,7 +719,7 @@ root 5
 $ gufi_stats -c total-dircount prefix
 69
 
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          69
 Total Non-Dirs:      96
 Roots:
@@ -1480,7 +1480,7 @@ root 5
 $ gufi_stats -c total-dircount prefix
 69
 
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      14
 # Partial Rollup up to level 1

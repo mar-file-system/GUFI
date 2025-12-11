@@ -1,5 +1,5 @@
 $ gufi_dir2index --plugin "gufi_test_plugin" -x "prefix" "search"
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      14
 

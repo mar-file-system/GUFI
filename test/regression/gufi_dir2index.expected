@@ -23,7 +23,7 @@ GUFI_tree_parent  build GUFI tree under here
 
 Index Everything:
 
-    Creating GUFI Index search with 1 threads
+    Creating GUFI tree search with 1 threads
     Total Dirs:          6
     Total Non-Dirs:      14
 
@@ -51,7 +51,7 @@ Index Everything:
 
 Index starting at level 0:
 
-    Creating GUFI Index search with 1 threads
+    Creating GUFI tree search with 1 threads
     Total Dirs:          6
     Total Non-Dirs:      14
 
@@ -79,7 +79,7 @@ Index starting at level 0:
 
 Index starting at level 1:
 
-    Creating GUFI Index search with 1 threads
+    Creating GUFI tree search with 1 threads
     Total Dirs:          5
     Total Non-Dirs:      8
 
@@ -100,7 +100,7 @@ Index starting at level 1:
 
 Index starting at level 2:
 
-    Creating GUFI Index search with 1 threads
+    Creating GUFI tree search with 1 threads
     Total Dirs:          1
     Total Non-Dirs:      2
 
@@ -111,7 +111,7 @@ Index starting at level 2:
 
 Index starting at level 3:
 
-    Creating GUFI Index search with 1 threads
+    Creating GUFI tree search with 1 threads
     Total Dirs:          0
     Total Non-Dirs:      0
 
@@ -119,7 +119,7 @@ Index starting at level 3:
 
 Index up to level 0:
 
-    Creating GUFI Index search with 1 threads
+    Creating GUFI tree search with 1 threads
     Total Dirs:          1
     Total Non-Dirs:      6
 
@@ -134,7 +134,7 @@ Index up to level 0:
 
 Index up to level 1:
 
-    Creating GUFI Index search with 1 threads
+    Creating GUFI tree search with 1 threads
     Total Dirs:          5
     Total Non-Dirs:      12
 
@@ -159,7 +159,7 @@ Index up to level 1:
 
 Index up to level 2:
 
-    Creating GUFI Index search with 1 threads
+    Creating GUFI tree search with 1 threads
     Total Dirs:          6
     Total Non-Dirs:      14
 
@@ -187,7 +187,7 @@ Index up to level 2:
 
 Index up to level 3:
 
-    Creating GUFI Index search with 1 threads
+    Creating GUFI tree search with 1 threads
     Total Dirs:          6
     Total Non-Dirs:      14
 
@@ -215,19 +215,19 @@ Index up to level 3:
 
 # build index in pieces
 $ gufi_dir2index --min-level 2               -x prefix search
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          1
 Total Non-Dirs:      2
 
 $ gufi_dir2index --min-level 1 --max-level 2 -x prefix search
 "search" Already exists!
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      8
 
 $ gufi_dir2index --min-level 0 --max-level 1 -x prefix search
 "search" Already exists!
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      12
 
@@ -272,7 +272,7 @@ directory
 empty_directory
 
 $ gufi_dir2index -n 2 --path-list "distributed.0" --min-level 1 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          3
 Total Non-Dirs:      5
 
@@ -298,7 +298,7 @@ leaf_directory
 unusual#? directory ,
 
 $ gufi_dir2index -n 2 --path-list "distributed.1" --min-level 1 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          2
 Total Non-Dirs:      3
 
@@ -317,19 +317,19 @@ prefix/unusual#? directory ,/unusual, name?#
 $ rm -r "search"
 
 $ gufi_dir2index -n 2 --path-list "distributed.0" --min-level 1 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          3
 Total Non-Dirs:      5
 
 $ gufi_dir2index -n 2 --path-list "distributed.1" --min-level 1 "prefix" "search"
 "search" Already exists!
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          2
 Total Non-Dirs:      3
 
 $ gufi_dir2index -n 2 --max-level 0 "prefix" "search"
 "search" Already exists!
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          1
 Total Non-Dirs:      6
 
@@ -364,14 +364,14 @@ Destination path is not a directory "prefix/1KB"
 
 # source path is file
 $ gufi_dir2index -n 2 "prefix/1KB" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Source path is not a directory "prefix/1KB"
 Total Dirs:          0
 Total Non-Dirs:      0
 
 # empty source path
 $ gufi_dir2index -n 2 "" "trace"
-Creating GUFI Index trace with 2 threads
+Creating GUFI tree trace with 2 threads
 Could not stat source directory "": No such file or directory (2)
 Total Dirs:          0
 Total Non-Dirs:      0
@@ -379,7 +379,7 @@ Total Non-Dirs:      0
 # skip file
 $ gufi_dir2index -n 2 --skip-file "skip" "prefix" "search"
 "search" Already exists!
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          4
 Total Non-Dirs:      9
 

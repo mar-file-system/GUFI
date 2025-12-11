@@ -54,7 +54,7 @@ prefix/rename
 
 # get index original version of source tree
 $ gufi_dir2index prefix search
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      0
 
@@ -69,7 +69,7 @@ prefix/renamed
 
 # run gufi_dir2index on the updated tree to serve as the expected results
 $ gufi_dir2index prefix updated-index
-Creating GUFI Index updated-index with 1 threads
+Creating GUFI tree updated-index with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      1
 
@@ -135,7 +135,7 @@ prefix/rename
 
 # get index original version of source tree
 $ gufi_dir2index prefix search
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      0
 
@@ -150,7 +150,7 @@ prefix/renamed
 
 # run gufi_dir2index on the updated tree to serve as the expected results
 $ gufi_dir2index prefix updated-index
-Creating GUFI Index updated-index with 1 threads
+Creating GUFI tree updated-index with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      1
 
@@ -221,7 +221,7 @@ prefix/rename
 
 # get index original version of source tree
 $ gufi_dir2index prefix search
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      0
 
@@ -236,7 +236,7 @@ prefix/renamed
 
 # run gufi_dir2index on the updated tree to serve as the expected results
 $ gufi_dir2index prefix updated-index
-Creating GUFI Index updated-index with 1 threads
+Creating GUFI tree updated-index with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      1
 
@@ -300,7 +300,7 @@ prefix/rename
 # get index original version of source tree
 $ gufi_dir2index prefix prefix/..
 "prefix/.." Already exists!
-Creating GUFI Index prefix/.. with 1 threads
+Creating GUFI tree prefix/.. with 1 threads
 You are putting the index dbs in input directory
 Total Dirs:          5
 Total Non-Dirs:      0
@@ -320,7 +320,7 @@ prefix/renamed/db.db
 
 # run gufi_dir2index on the updated tree to serve as the expected results
 $ gufi_dir2index prefix updated-index
-Creating GUFI Index updated-index with 1 threads
+Creating GUFI tree updated-index with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      1
 
@@ -366,7 +366,7 @@ prefix/A/C/G/H/I/J
 
 # get index original version of source tree
 $ gufi_dir2index prefix search
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          11
 Total Non-Dirs:      0
 
@@ -386,7 +386,7 @@ prefix/A/B/E/F/G/H/renamed_I/J
 
 # run gufi_dir2index on the updated tree to serve as the expected results
 $ gufi_dir2index prefix updated-index
-Creating GUFI Index updated-index with 1 threads
+Creating GUFI tree updated-index with 1 threads
 Total Dirs:          11
 Total Non-Dirs:      0
 

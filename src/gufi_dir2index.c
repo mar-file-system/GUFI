@@ -558,7 +558,7 @@ int main(int argc, char *argv[]) {
         goto free_xattr;
     }
 
-    fprintf(stderr, "Creating GUFI Index %s with %zu threads\n", pa.index_parent.data, pa.in.maxthreads);
+    fprintf(stderr, "Creating GUFI tree %s with %zu threads\n", pa.index_parent.data, pa.in.maxthreads);
 
     pa.total_dirs    = calloc(pa.in.maxthreads, sizeof(uint64_t));
     pa.total_nondirs = calloc(pa.in.maxthreads, sizeof(uint64_t));

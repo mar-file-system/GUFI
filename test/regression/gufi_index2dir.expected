@@ -7,8 +7,8 @@ options:
   -n, --threads <n>                 number of threads
   -x, --set-xattrs                  set xattrs
 
-GUFI_tree         walk this GUFI index to produce a tree
-dir               reconstruct the tree under here
+GUFI_tree         walk this GUFI tree to produce a source tree
+dir               reconstruct the source tree under here
 
 
 $ gufi_index2dir -n 2 -x "prefix" "reconstructed"

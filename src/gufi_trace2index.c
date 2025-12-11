@@ -331,7 +331,7 @@ int main(int argc, char *argv[]) {
         goto free_xattr;
     }
 
-    fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.index_parent.data, pa.in.maxthreads);
+    fprintf(stdout, "Creating GUFI tree %s with %zu threads\n", pa.index_parent.data, pa.in.maxthreads);
     fflush(stdout);
 
     struct start_end rt;

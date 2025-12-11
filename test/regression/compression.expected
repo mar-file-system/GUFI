@@ -1,5 +1,5 @@
 $ "gufi_dir2index"   -x --compress "prefix" "search.d2i"
-Creating GUFI Index search.d2i with 1 threads
+Creating GUFI tree search.d2i with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      14
 
@@ -9,7 +9,7 @@ Total Dirs:          6
 Total Files:         14
 
 $ "gufi_trace2index"               "trace.0" "search.t2i"
-Creating GUFI Index search.t2i with 1 threads
+Creating GUFI tree search.t2i with 1 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20

@@ -65,7 +65,7 @@
 .Os Linux
 .Sh NAME
 .Nm gufi_query
-.Nd Breadth first walk of a GUFI index
+.Nd Breadth first walk of a GUFI tree
 .Sh SYNOPSIS
 .Nm
 .Op options
@@ -73,7 +73,7 @@ GUFI_tree
 .Op ...
 .Sh DESCRIPTION
 .Nm
-performs queries on the contents of a GUFI index in a parallel manner. Users supply their own SQL queries to run on the entries table, directory table, and, if generated, the tree summary table. Output usually writes to stdout, but can be redirected to per-thread files or per-thread databases.
+performs queries on the contents of a GUFI tree in a parallel manner. Users supply their own SQL queries to run on the entries table, directory table, and, if generated, the tree summary table. Output usually writes to stdout, but can be redirected to per-thread files or per-thread databases.
 
 .Xr gufi_du 1 ,
 .Xr gufi_find 1 ,
@@ -177,14 +177,14 @@ compress work items
 .Nm
 was once called "bfq".
 
-Databases are by default opened in read-only mode, so although the SQL queries are able to modify the databases in the GUFI index, the –w flag must be used in order for writes to be successful.
+Databases are by default opened in read-only mode, so although the SQL queries are able to modify the databases in the GUFI tree, the –w flag must be used in order for writes to be successful.
 
 \# .Sh BUGS
 \# .Sh EXAMPLE
 
 .Sh FLOW
 .Nm
-is the command that should be used to perform advanced operations on a GUFI index. The GUFI index is traversed breadth first. Queries can be performed on the tree-summary, the directory-summary, and/or the directory contents tables. POSIX permission are obeyed, as the original directory permissions were replicated in the GUFI index. Users supply SQL statements for querying the tree, summary, and entries tables, and select AND/OR logic between tree/directory/entry queries. The output can be directed to three different places: stdout, a per-thread file, or a per-thread database file. If an output database prefix was specified, SQL_init can be provided to run a SQL statement on each output thread’s database before starting the walk. This can be used to create the database into which output from queries are placed. Similarly, SQL_fin runs a SQL statement per thread on the output database after the walk.
+is the command that should be used to perform advanced operations on a GUFI tree. The GUFI tree is traversed breadth first. Queries can be performed on the tree-summary, the directory-summary, and/or the directory contents tables. POSIX permission are obeyed, as the original directory permissions were replicated in the GUFI tree. Users supply SQL statements for querying the tree, summary, and entries tables, and select AND/OR logic between tree/directory/entry queries. The output can be directed to three different places: stdout, a per-thread file, or a per-thread database file. If an output database prefix was specified, SQL_init can be provided to run a SQL statement on each output thread’s database before starting the walk. This can be used to create the database into which output from queries are placed. Similarly, SQL_fin runs a SQL statement per thread on the output database after the walk.
 
 .Sh SEE ALSO
 .Xr gufi_du 1 ,

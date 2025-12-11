@@ -18,7 +18,7 @@ Make sure treesummary tables have been generated for every directory.
 # #####################################
 # create index for tree with no subdirectories
 $ gufi_dir2index -n 2 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          1
 Total Non-Dirs:      0
 
@@ -35,7 +35,7 @@ Found 0 outliers
 # #####################################
 # create index for tree with one subdirectory
 $ gufi_dir2index -n 2 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          2
 Total Non-Dirs:      0
 
@@ -52,7 +52,7 @@ Found 0 outliers
 # #####################################
 # create index for tree with multiple directories but no outliers
 $ gufi_dir2index -n 2 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          11
 Total Non-Dirs:      10
 
@@ -69,7 +69,7 @@ Found 0 outliers
 # #####################################
 # create index for tree with one atime outlier
 $ gufi_dir2index -n 2 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          12
 Total Non-Dirs:      11
 
@@ -87,7 +87,7 @@ prefix/outlier|1|no-subdirs|totatime|0|0|0|0|0|0
 # #####################################
 # create index for tree with two atime outliers on the same level
 $ gufi_dir2index -n 2 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          23
 Total Non-Dirs:      22
 
@@ -106,7 +106,7 @@ prefix/outlier.2|1|no-subdirs|totatime|0|0|0|0|0|0
 # #####################################
 # create index for tree with one atime outlier at level 2
 $ gufi_dir2index -n 2 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          23
 Total Non-Dirs:      21
 
@@ -124,7 +124,7 @@ prefix/T_outlier/outlier|2|no-subdirs|totatime|0|0|0|0|0|0
 # #####################################
 # create index for tree with one atime outlier above non-outliers
 $ gufi_dir2index -n 2 "prefix" "search"
-Creating GUFI Index search with 2 threads
+Creating GUFI tree search with 2 threads
 Total Dirs:          22
 Total Non-Dirs:      21
 

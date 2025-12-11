@@ -422,8 +422,8 @@ struct work *validate_inputs(struct PoolArgs *pa) {
 }
 
 void sub_help(void) {
-   printf("GUFI_tree         walk this GUFI index to produce a tree\n");
-   printf("dir               reconstruct the tree under here\n");
+   printf("GUFI_tree         walk this GUFI tree to produce a source tree\n");
+   printf("dir               reconstruct the source tree under here\n");
    printf("\n");
 }
 

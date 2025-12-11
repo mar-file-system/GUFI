@@ -12,7 +12,7 @@ Total Files:         14
 
 # generate the index
 $ gufi_trace2index -d "|" "trace" "search"
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20

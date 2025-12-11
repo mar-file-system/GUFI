@@ -24,7 +24,7 @@ Total Files:         14
 
 # generate the index
 $ gufi_trace2index -d "|" -n 4 "trace" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
@@ -112,7 +112,7 @@ Source Directory:
     prefix/unusual#? directory ,
     prefix/unusual#? directory ,/unusual, name?#
 
-GUFI Index:
+GUFI Tree:
     prefix
     prefix/.hidden
     prefix/1KB
@@ -136,7 +136,7 @@ GUFI Index:
 
 # read from stdin
 $ cat "trace" | gufi_trace2index -d "|" -n 4 "-" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
@@ -167,7 +167,7 @@ Source Directory:
     prefix/unusual#? directory ,
     prefix/unusual#? directory ,/unusual, name?#
 
-GUFI Index:
+GUFI Tree:
     prefix
     prefix/.hidden
     prefix/1KB
@@ -191,7 +191,7 @@ GUFI Index:
 
 # pipe directly from dir2trace
 $ gufi_dir2trace -n 4 "prefix" "-" 2>/dev/null | gufi_trace2index -n 4 "-" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
@@ -222,7 +222,7 @@ Source Directory:
     prefix/unusual#? directory ,
     prefix/unusual#? directory ,/unusual, name?#
 
-GUFI Index:
+GUFI Tree:
     prefix
     prefix/.hidden
     prefix/1KB
@@ -246,7 +246,7 @@ GUFI Index:
 
 # create index with a directory containing a lot of files 
 $ gufi_trace2index -d "|" big.dir.trace "big.dir.index"
-Creating GUFI Index big.dir.index with 1 threads
+Creating GUFI tree big.dir.index with 1 threads
 Dirs:                1 (0 empty)
 Files:               100001
 Total:               100002
@@ -259,7 +259,7 @@ $ gufi_query -d " " -E "SELECT COUNT(*) FROM entries;" "big.dir.index/prefix"
 
 # create index from a trace file whose last item is an empty directory
 $ gufi_trace2index -d "|" -n 4 "empty_last_dir.trace" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 Dirs:                7 (2 empty)
 Files:               14
 Total:               21
@@ -270,7 +270,7 @@ Total Files:         14
 # Process trace with different owners
 # Should work when indexed as user and as root
 $ gufi_trace2index -d "|" -n 4 "different_owners.trace" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
@@ -312,7 +312,7 @@ Could not create directory prefix/1KB
 
 # empty trace (no error message)
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 Dirs:                0 (0 empty)
 Files:               0
 Total:               0
@@ -323,7 +323,7 @@ Total Files:         0
 
 # trace with empty line at front
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 Could not get the first line of trace "badtrace"
 Dirs:                0 (0 empty)
 Files:               0
@@ -335,7 +335,7 @@ Total Files:         0
 
 # cannot find delimiter of first line
 $ gufi_trace2index -d "&" -n 4 "trace" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 Could not find the specified delimiter in "trace"
 Dirs:                0 (0 empty)
 Files:               0
@@ -347,7 +347,7 @@ Total Files:         0
 
 # first line does not start with a directory
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 First line of "badtrace" is not a directory
 Dirs:                0 (0 empty)
 Files:               0
@@ -359,7 +359,7 @@ Total Files:         0
 
 # file delimiter not found
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
-Creating GUFI Index search with 4 threads
+Creating GUFI tree search with 4 threads
 Error: Line at offset 48 does not have a delimiter
 Scout encountered bad line ending at "badtrace" offset 62
 Dirs:                0 (0 empty)

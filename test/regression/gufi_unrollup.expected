@@ -13,7 +13,7 @@ GUFI_tree        GUFI tree to unroll up
 
 
 $ gufi_dir2index -x "prefix" "search"
-Creating GUFI Index search with 1 threads
+Creating GUFI tree search with 1 threads
 Total Dirs:          69
 Total Non-Dirs:      96
 

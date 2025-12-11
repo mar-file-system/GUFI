@@ -255,7 +255,7 @@ def run(argv, config_path):
         # if rows == 0, index might not have treesummary
         rows = 0
 
-        # prepend the provided paths with the GUFI index root
+        # prepend the provided paths with the index root
         fullpath = os.path.normpath(os.path.sep.join([config.indexroot, path]))
 
         # keep only paths that are subdirectories of the index root

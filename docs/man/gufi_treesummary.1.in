@@ -65,7 +65,7 @@
 .Os Linux
 .Sh NAME
 .Nm gufi_treesummary
-.Nd Summary of GUFI index subtree
+.Nd Summary of GUFI subtree
 .Sh SYNOPSIS
 .Nm
 .Op options

@@ -127,7 +127,7 @@ echo "Source Directory:"
 # shellcheck disable=SC2016
 echo "${src_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
-echo "GUFI Index:"
+echo "GUFI Tree:"
 # shellcheck disable=SC2016
 echo "${index_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
@@ -145,7 +145,7 @@ echo "Source Directory:"
 # shellcheck disable=SC2016
 echo "${src_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
-echo "GUFI Index:"
+echo "GUFI Tree:"
 # shellcheck disable=SC2016
 echo "${index_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
@@ -163,7 +163,7 @@ echo "Source Directory:"
 # shellcheck disable=SC2016
 echo "${src_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
-echo "GUFI Index:"
+echo "GUFI Tree:"
 # shellcheck disable=SC2016
 echo "${index_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
