@@ -281,9 +281,12 @@ TEST(print_parallel, tlv) {
 }
 
 static void print_uncached_test(const char **data, const std::size_t count,
-                                const std::size_t len, const bool lock) {
-    char *buf = new char[len + 1]();
-    FILE *file = fmemopen(buf, len + 1, "w+b");
+                                const std::size_t len, const bool lock,
+                                const bool suppress_newline) {
+    // length of printed data + NULL terminator
+    const std::size_t size = len + !suppress_newline + 1;
+    char *buf = new char[size]();
+    FILE *file = fmemopen(buf, size, "w+b");
     ASSERT_NE(file, nullptr);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -296,7 +299,7 @@ static void print_uncached_test(const char **data, const std::size_t count,
     pa.outfile = file;
     pa.rows = 0;
     pa.types = nullptr;
-    pa.suppress_newline = 0;
+    pa.suppress_newline = suppress_newline;
 
     EXPECT_EQ(print_uncached(&pa, count, (char **) data, nullptr), 0);
 
@@ -306,17 +309,19 @@ static void print_uncached_test(const char **data, const std::size_t count,
     delete [] buf;
 }
 
-TEST(print_uncached, mutex) {
-    {
-        const char *data[] = {"abcd", "efgh"};
-        const std::size_t len = 4 + 1 + 4;
-        print_uncached_test(data, 2, len, true);
-        print_uncached_test(data, 2, len, false);
-    }
-    {
-        const char *data[] = {nullptr, nullptr};
-        const std::size_t len = 1;
-        print_uncached_test(data, 2, len, true);
-        print_uncached_test(data, 2, len, false);
+TEST(print, uncached) {
+    for(bool lock : {false, true}) {
+        for(bool suppress_newline : {false, true}) {
+            {
+                const char *data[] = {"abcd", "efgh"};
+                const std::size_t len = 4 + 1 + 4;
+                print_uncached_test(data, 2, len, lock, suppress_newline);
+            }
+            {
+                const char *data[] = {nullptr, nullptr};
+                const std::size_t len = 1;
+                print_uncached_test(data, 2, len, lock, suppress_newline);
+            }
+        }
     }
 }

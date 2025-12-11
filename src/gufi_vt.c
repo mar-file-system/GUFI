@@ -414,9 +414,10 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
 
 /* remove starting/ending quotation marks */
 static void set_refstr(refstr_t *refstr, char *value) {
-    memset(refstr, 0, sizeof(*refstr));
-
     if (value) {
+        /* don't wipe old value if new value is NULL */
+        memset(refstr, 0, sizeof(*refstr));
+
         while ((value[0] == '\'') ||
                (value[0] == '"')) {
             value++;
@@ -697,19 +698,22 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     - Arguments without '=' are considered index paths
  *     - Arguments may appear in any order.
  *     - String arguments do not have to be quoted, but should be.
- *       String arguments can be quoated with single or double
+ *       String arguments can be quoted with single or double
  *       quotes. Single quotes are recommended in order to make sure
  *       SQLite3 does not interpret them as column names by accident.
  *     - If there are duplicate arguments, the right-most duplicate will be used
  *           - The following are exceptions and all values will be used in the order they appear:
  *                 - remote_arg
  *                 - index
+ *     - At least one of T, S, or E must be passed in
  *     - When determining the virtual table's schema, there are two separate cases:
  *           - If NOT aggregating, the query that is processed latest will be used:
  *                 - If T is passed in, but not S or E, it will be used
  *                 - If S is passed in, but not E, it will be used
  *                 - If E is passed in, it will be used
  *           - If aggregating (K is passed in), the G SQL will be used
+ *     - Most bad values are not checked until the first SELECT is
+ *       performed, which is when the arguments are passed to gufi_query
  *
  * Then, SELECT from the virtual table
  *
@@ -944,7 +948,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
     /* if not aggregating, get types for T, S, or E */
     if (!cmd.K.len) {
-        int rc = -1; /* default to error */
+        int rc = -1; /* get_cols returns 0 or 1, so -1 means SQL was not provided */
         if (cmd.T.len && !cmd.S.len && !cmd.E.len) {
             rc = get_cols(tempdb, &cmd.T, &types, &names, &lens, &cols);
         }
@@ -954,7 +958,13 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         else if (cmd.E.len) {
             rc = get_cols(tempdb, &cmd.E, &types, &names, &lens, &cols);
         }
-        if (rc != 0) {
+
+        if (rc == -1) {
+            *pzErr = sqlite3_mprintf("Need at least one of T/S/E when not aggregating");
+            goto error;
+        }
+        else if (rc == 1) {
+            *pzErr = sqlite3_mprintf("Could not get column types");
             goto error;
         }
     }
@@ -968,6 +978,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             goto error;
         }
         if (get_cols(tempdb, &cmd.G, &types, &names, &lens, &cols) != 0) {
+            *pzErr = sqlite3_mprintf("Failed to get column types of -G");
             goto error;
         }
     }

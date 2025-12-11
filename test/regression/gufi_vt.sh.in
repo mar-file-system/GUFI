@@ -233,6 +233,12 @@ query_vt() {
     echo "# Missing indexroot"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt();"
 
+    echo "# NULL indexroot"
+    query_vt "SELECT name FROM gufi_vt_pentries(NULL);"
+
+    echo "# NULL indexroot"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
+
     echo "# Bad indexroot"
     rm -rf "${BADDIR}"
     query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | @SED@ "s%${BADDIR}%baddir%g;"
@@ -244,30 +250,36 @@ query_vt() {
         echo "# Zero thread count"
         query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
 
+        echo "# NULL thread count"
+        query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
+
         echo "# Bad min_level"
         query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 'a') ORDER BY name ASC, size ASC;"
-    ) | @SED@ 's% file descriptor [0-9]\+:% file descriptor:%g;'
 
-    echo "# Bad verbose (path_list == NULL is not an error)"
-    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 0, NULL, NULL, 'a') ORDER BY name ASC, size ASC;"
+        echo "# Bad n"
+        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=a, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Bad n"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=a);"
+        echo "# Zero n"
+        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=0, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Zero n"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=0);"
+        echo "# Empty n"
+        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Empty n"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=);"
+        echo "# NULL n"
+        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Bad thread count"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=a);"
+        echo "# Bad thread count"
+        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=a, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Zero thread count"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=0);"
+        echo "# Zero thread count"
+        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=0, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Empty thread count"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=);"
+        echo "# Empty thread count"
+        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=, E='SELECT 0;'); SELECT * FROM gufi;"
+
+        echo "# NULL thread count"
+        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
+    ) | @SED@ 's%file descriptor [0-9]\+:%file descriptor:%g; \%^.* requires an argument%d;' # different getopt_long()s print slightly different "requires an argument" messages
 
     echo "# Bad E"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='');"
@@ -276,7 +288,10 @@ query_vt() {
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='DELETE FROM entries;');"
 
     echo "# Bad K"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='', G='');"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='0', G='');"
+
+    echo "# Bad K"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K=' ', G='');"
 
     echo "# Bad G"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='CREATE TABLE aggregate(i INT);', G='SELECT * FROM intermediate');"
@@ -295,6 +310,9 @@ query_vt() {
         echo "${query}"
     ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}" 2>&1 | sort
     echo
+
+    echo "# Bad verbose (path_list == NULL is not an error)"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 0, NULL, NULL, 'a') ORDER BY name ASC, size ASC;"
 
     echo "# Bad 5 character key (only 'index' is recognized)"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', abcde='');"

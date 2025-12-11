@@ -712,9 +712,7 @@ int parse_cmd_line(int                  argc,
                 break;
 
             case '?':
-                // getopt returns '?' when there is a problem.  In this case it
-                // also prints, e.g. "getopt_test: illegal option -- z"
-                fprintf(stderr, "unrecognized option '%s'\n", argv[optind -1]);
+                /* getopt_long prints an error message and returns '?' when there is a problem. */
                 retval = -1;
                 break;
 

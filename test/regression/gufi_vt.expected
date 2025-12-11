@@ -479,6 +479,20 @@ $ (
 ) | sqlite3
 Runtime error near line 2: Missing indexroot or path_list (19)
 
+# NULL indexroot
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries(NULL);"
+) | sqlite3
+Runtime error near line 2: Missing index (19)
+
+# NULL indexroot
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
+) | sqlite3
+Runtime error near line 2: Missing indexroot or path_list (19)
+
 # Bad indexroot
 $ (
     echo ".load gufi_vt"
@@ -491,7 +505,6 @@ $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries('prefix', '') ORDER BY name ASC, size ASC;"
 ) | sqlite3
-unrecognized option '--threads'
 Error: Failed to read from file descriptor: Bad address (14)
 
 # Zero thread count
@@ -502,6 +515,26 @@ $ (
 argument '-n/--threads' not in range [1, 18446744073709551615]
 Error: Failed to read from file descriptor: Bad address (14)
 
+# NULL thread count
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', NULL) ORDER BY name ASC, size ASC;"
+) | sqlite3
+.hidden
+1KB
+1MB
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
 # Bad min_level
 $ (
     echo ".load gufi_vt"
@@ -510,61 +543,74 @@ $ (
 could not parse a with format %zu
 Error: Failed to read from file descriptor: Bad address (14)
 
-# Bad verbose (path_list == NULL is not an error)
-$ (
-    echo ".load gufi_vt"
-    echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 0, NULL, NULL, 'a') ORDER BY name ASC, size ASC;"
-) | sqlite3
-Runtime error near line 2: Bad verbose value: 'a' (19)
-
 # Bad n
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=a);"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=a, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+could not parse a with format %zu
+Error: Failed to read from file descriptor: Bad address (14)
 
 # Zero n
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=0);"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=0, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+argument '-n/--threads' not in range [1, 18446744073709551615]
+Error: Failed to read from file descriptor: Bad address (14)
 
 # Empty n
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=);"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+Error: Failed to read from file descriptor: Bad address (14)
+
+# NULL n
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
+) | sqlite3
+could not parse NULL with format %zu
+Error: Failed to read from file descriptor: Bad address (14)
 
 # Bad thread count
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=a);"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=a, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+could not parse a with format %zu
+Error: Failed to read from file descriptor: Bad address (14)
 
 # Zero thread count
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=0);"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=0, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+argument '-n/--threads' not in range [1, 18446744073709551615]
+Error: Failed to read from file descriptor: Bad address (14)
 
 # Empty thread count
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=);"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+Error: Failed to read from file descriptor: Bad address (14)
+
+# NULL thread count
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
+) | sqlite3
+could not parse NULL with format %zu
+Error: Failed to read from file descriptor: Bad address (14)
 
 # Bad E
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', E='');"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+Runtime error near line 2: Need at least one of T/S/E when not aggregating
 
 # Bad E
 $ (
@@ -572,14 +618,22 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', E='DELETE FROM entries;');"
 ) | sqlite3
 Error: 'DELETE FROM entries;' returns no data
-Runtime error near line 2: vtable constructor failed: gufi
+Runtime error near line 2: Could not get column types
 
 # Bad K
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', K='', G='');"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', K='0', G='');"
 ) | sqlite3
-Runtime error near line 2: vtable constructor failed: gufi
+Runtime error near line 2: -K SQL failed while getting columns types: near "0": syntax error
+
+# Bad K
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', K=' ', G='');"
+) | sqlite3
+Error: Could not prepare '(null)' for getting column types: bad parameter or other API misuse (21)
+Runtime error near line 2: Failed to get column types of -G
 
 # Bad G
 $ (
@@ -587,7 +641,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', K='CREATE TABLE aggregate(i INT);', G='SELECT * FROM intermediate');"
 ) | sqlite3
 Error: Could not prepare 'SELECT * FROM intermediate' for getting column types: SQL logic error (1)
-Runtime error near line 2: vtable constructor failed: gufi
+Runtime error near line 2: Failed to get column types of -G
 
 # Missing p
 $ (
@@ -599,6 +653,13 @@ Error: spath() requires source path (-p): prefix/directory/db.db: "SELECT spath(
 Error: spath() requires source path (-p): prefix/directory/subdirectory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 Error: spath() requires source path (-p): prefix/leaf_directory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 Error: spath() requires source path (-p): prefix/unusual%23%3f directory ,/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
+
+# Bad verbose (path_list == NULL is not an error)
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 0, NULL, NULL, 'a') ORDER BY name ASC, size ASC;"
+) | sqlite3
+Runtime error near line 2: Bad verbose value: 'a' (19)
 
 # Bad 5 character key (only 'index' is recognized)
 $ (
