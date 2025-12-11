@@ -253,6 +253,9 @@ target_link_libraries(gufi_vt
 )
 add_dependencies(gufi_vt install_dependencies)
 install(TARGETS gufi_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
+if (CLIENT)
+  install(TARGETS gufi_vt DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
+endif()
 
 add_library(run_vt MODULE
   run_vt.c
