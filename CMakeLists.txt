@@ -601,6 +601,12 @@ if (RPMBUILD)
     set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
   endif()
 
+  # Turn off build-id link creation by RPM to manually control
+  # Also need to keep shebang templating
+  set(CPACK_RPM_SPEC_MORE_DEFINE
+    "%global _build_id_links none\n%global _missing_build_ids_terminate_build 0\n%undefine __brp_mangle_shebangs"
+  )
+
   # Generate source RPM
   set(CPACK_SOURCE_PACKAGE_FILE_NAME "gufi-${GUFI_VERSION}")
   set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}/" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.github/" "${CMAKE_SOURCE_DIR}/.gitignore")
