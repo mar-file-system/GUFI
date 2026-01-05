@@ -12,6 +12,7 @@ prefix/unusual#? directory , 2
 $ gufi_stats --verbose depth "prefix"
 GUFI query is
    gufi_query \
+    --no-print-sql-on-err \
     --threads 1 \
     --output-buffer-size 4096 \
     --delim ' ' \

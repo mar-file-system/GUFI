@@ -97,32 +97,33 @@ static const std::string Q = "-Q"; static const std::string Q_arg0 = "extdb";
                                    static const std::string Q_arg2 = "template.table";
                                    static const std::string Q_arg3 = "view";
 
-static const std::string min_level          = "--min-level"; static const std::string min_level_arg = "1";
-static const std::string max_level          = "--max-level"; static const std::string max_level_arg = "1";
-static const std::string print_tlv          = "--print-tlv";
-static const std::string keep_matime        = "--keep-matime";
-static const std::string skip_file          = "--skip-file"; static const std::string skip_file_arg = "file name";
-static const std::string dry_run            = "--dry-run";
-static const std::string path_list          = "--path-list"; static const std::string path_list_arg = "file name";
-static const std::string format             = "--format"; static const std::string format_arg = "f arg";
-static const std::string terse              = "--terse";
-static const std::string rollup_limit       = "--limit"; static const std::string rollup_limit_arg = "1";
-static const std::string dir_match_uid      = "--dir-match-uid"; static const std::string dir_match_uid_arg = "1";
-static const std::string dir_match_gid      = "--dir-match-gid"; static const std::string dir_match_gid_arg = "1";
-static const std::string print_eacces       = "--print-eacces";
+static const std::string min_level           = "--min-level"; static const std::string min_level_arg = "1";
+static const std::string max_level           = "--max-level"; static const std::string max_level_arg = "1";
+static const std::string print_tlv           = "--print-tlv";
+static const std::string keep_matime         = "--keep-matime";
+static const std::string skip_file           = "--skip-file"; static const std::string skip_file_arg = "file name";
+static const std::string dry_run             = "--dry-run";
+static const std::string path_list           = "--path-list"; static const std::string path_list_arg = "file name";
+static const std::string format              = "--format"; static const std::string format_arg = "f arg";
+static const std::string terse               = "--terse";
+static const std::string rollup_limit        = "--limit"; static const std::string rollup_limit_arg = "1";
+static const std::string dir_match_uid       = "--dir-match-uid"; static const std::string dir_match_uid_arg = "1";
+static const std::string dir_match_gid       = "--dir-match-gid"; static const std::string dir_match_gid_arg = "1";
+static const std::string print_eacces        = "--print-eacces";
+static const std::string no_print_sql_on_err = "--no-print-sql-on-err";
 
-static const std::string output_buffer_size = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
-static const std::string target_memory      = "--target-memory"; static const std::string target_memory_arg = "1";
-static const std::string subdir_limit       = "--subdir-limit"; static const std::string subdir_limit_arg = "1";
+static const std::string output_buffer_size  = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
+static const std::string target_memory       = "--target-memory"; static const std::string target_memory_arg = "1";
+static const std::string subdir_limit        = "--subdir-limit"; static const std::string subdir_limit_arg = "1";
 #if HAVE_ZLIB
-static const std::string compress           = "--compress";
+static const std::string compress            = "--compress";
 #endif
-static const std::string swap_prefix        = "--swap-prefix"; static const std::string swap_prefix_arg  = "swap/prefix";
+static const std::string swap_prefix         = "--swap-prefix"; static const std::string swap_prefix_arg  = "swap/prefix";
 
-static const std::string suspect_file       = "--suspect-file";   static const std::string suspect_file_arg = "suspect file arg";
-static const std::string suspect_method     = "--suspect-method"; static const std::string suspect_method_arg = "1";
-static const std::string suspect_time       = "--suspect-time";   static const std::string suspect_time_arg = "1";
-static const std::string suspect_stat       = "--suspect-stat";
+static const std::string suspect_file        = "--suspect-file";   static const std::string suspect_file_arg = "suspect file arg";
+static const std::string suspect_method      = "--suspect-method"; static const std::string suspect_method_arg = "1";
+static const std::string suspect_time        = "--suspect-time";   static const std::string suspect_time_arg = "1";
+static const std::string suspect_stat        = "--suspect-stat";
 
 static bool operator==(const refstr_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -160,6 +161,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->dir_match.uid,                      geteuid());
     EXPECT_EQ(in->dir_match.gid,                      getegid());
     EXPECT_EQ(in->print_eacces,                       flags);
+    EXPECT_EQ(in->no_print_sql_on_err,                flags);
     #if HAVE_ZLIB
     EXPECT_EQ(in->compress,                           flags);
     #endif
@@ -300,7 +302,8 @@ TEST(parse_cmd_line, debug) {
         FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
         FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
         FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE,
-        FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_PRINT_EACCES,
+        FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE,
+        FLAG_PRINT_EACCES, FLAG_NO_PRINT_SQL_ON_ERR,
         FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_CHECK_EXTDB_VALID,
         FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
@@ -340,7 +343,7 @@ TEST(parse_cmd_line, debug) {
         dry_run.c_str(),
         rollup_limit.c_str(), rollup_limit_arg.c_str(),
         // skip_file.c_str(), skip_file_arg.c_str(),
-        print_eacces.c_str(),
+        print_eacces.c_str(), no_print_sql_on_err.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
         #ifdef HAVE_ZLIB
@@ -374,6 +377,7 @@ TEST(parse_cmd_line, flags) {
         FLAG_XATTRS, FLAG_PRINTDIR, FLAG_PRINT_TLV,
         FLAG_SUSPECT_STAT, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
         FLAG_TERSE, FLAG_DRY_RUN, FLAG_PRINT_EACCES,
+        FLAG_NO_PRINT_SQL_ON_ERR,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -392,6 +396,7 @@ TEST(parse_cmd_line, flags) {
         terse.c_str(),
         dry_run.c_str(),
         print_eacces.c_str(),
+        no_print_sql_on_err.c_str(),
         #ifdef HAVE_ZLIB
         compress.c_str(),
         #endif

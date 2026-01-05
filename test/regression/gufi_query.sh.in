@@ -278,6 +278,12 @@ run_sort "${GUFI_QUERY} -d \" \" --keep-matime -S \"SELECT name FROM vrsummary;\
 
 echo "# multiple input directories are not allowed for partial querying"
 run_no_sort "${GUFI_QUERY} -n ${THREADS} --path-list \"${DISTRIBUTED_0}\" --min-level ${DISTRIBUTED_LEVEL} \"${SEARCH}\" \"${SEARCH}\""
+
+echo "# error message with SQL"
+run_no_sort "${GUFI_QUERY} -E \"SELECT abc;\" \"${SEARCH}\" 2>&1 | @GREP@ \"Error:\" | sort | head -n 1"
+
+echo "# error message without SQL"
+run_no_sort "${GUFI_QUERY} -E \"SELECT abc;\" --no-print-sql-on-err \"${SEARCH}\" 2>&1 | @GREP@ \"Error:\" | sort | head -n 1"
 ) 2>&1 | tee "${OUTPUT}"
 
 echo "# Print terse debug timestamps (not part of expected results)"

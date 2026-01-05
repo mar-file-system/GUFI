@@ -472,6 +472,7 @@ warning: options --apparent-size and -b are ineffective with --inodes
 $ gufi_du --apparent-size --block-size 1 --total --summarize --verbose prefix/1MB prefix/1KB
 GUFI query is
    gufi_query \
+    --no-print-sql-on-err \
     -d ' ' \
     -n 1 \
     --min-level 0 \
@@ -481,6 +482,7 @@ GUFI query is
 1048576 prefix/1MB
 GUFI query is
    gufi_query \
+    --no-print-sql-on-err \
     -d ' ' \
     -n 1 \
     --min-level 0 \

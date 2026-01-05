@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
         /* output flags */
         FLAG_DELIM, FLAG_NEWLINE, FLAG_SUPPRESS_NEWLINE,
         FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_TERSE,
-        FLAG_PRINT_EACCES,
+        FLAG_PRINT_EACCES, FLAG_NO_PRINT_SQL_ON_ERR,
 
         /* memory usage flags  */
         FLAG_OUTPUT_BUFFER_SIZE, FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX,

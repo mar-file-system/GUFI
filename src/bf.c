@@ -250,6 +250,7 @@ void print_help(const char* prog_name,
             case FLAG_NEWLINE_SHORT:                 printf("      --newline <c>                 character used to separate lines (default: '\\n') [use 0 for NULL character]"); break;
             case FLAG_SUPPRESS_NEWLINE_SHORT:        printf("      --suppress-newline            do not print the line separator"); break;
             case FLAG_PRINT_EACCES_SHORT:            printf("      --print-eacces                print messages when errno is EACCES"); break;
+            case FLAG_NO_PRINT_SQL_ON_ERR_SHORT:     printf("      --no-print-sql-on-err         do not print SQL with error messages"); break;
 
             /* memory usage flags */
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:      printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
@@ -328,6 +329,7 @@ void show_input(struct input* in, int retval) {
     printf("in.newline                  = '%c'\n",          in->newline);
     printf("in.suppress_newline         = %d\n",            in->suppress_newline);
     printf("in.print_eacces             = %d\n",            in->print_eacces);
+    printf("in.no_print_sql_on_err      = %d\n",            in->no_print_sql_on_err);
 
     /* memory usage flags */
 
@@ -653,6 +655,10 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_PRINT_EACCES_SHORT:
                 in->print_eacces = 1;
+                break;
+
+            case FLAG_NO_PRINT_SQL_ON_ERR_SHORT:
+                in->no_print_sql_on_err = 1;
                 break;
 
             /* memory usage flags */

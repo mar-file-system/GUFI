@@ -199,6 +199,7 @@ TEST(gufi_query, aggregate_outputs) {
     in.outname.data = SQLITE_MEMORY;
     in.outname.len = strlen(in.outname.data);
     in.sql.init_agg.data = "CREATE TABLE aggregate();";
+    in.no_print_sql_on_err = 0;
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr);
     in.sql.init_agg.data = "CREATE TABLE aggregate(id INT);";
     EXPECT_EQ(aggregate_init(&agg, &in), &agg);

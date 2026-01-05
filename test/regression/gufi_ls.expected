@@ -4,6 +4,7 @@ prefix
 $ gufi_ls --verbose
 GUFI query is
    gufi_query \
+    --no-print-sql-on-err \
     --threads 1 \
     --min-level 0 \
     --max-level 2 \

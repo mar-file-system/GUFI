@@ -204,7 +204,14 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         /* create empty xattr tables to UNION to */
         if (sqlite3_exec(ta->outdb, XATTRS_TEMPLATE_CREATE,
                          NULL, NULL, &err) != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Error: Could create xattr template \"%s\" on %s: %s\n", in->sql.init.data, ta->dbname, err);
+            if (!in->no_print_sql_on_err) {
+                sqlite_print_err_and_free(err, stderr, "Error: Could create xattr template \"%s\" on %s: %s\n",
+                                          in->sql.init.data, ta->dbname, err);
+            }
+            else {
+                sqlite_print_err_and_free(err, stderr, "Error: Could create xattr template: %s\n",
+                                          err);
+            }
             break;
         }
 
@@ -236,7 +243,14 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         /* run -I */
         if (in->sql.init.len) {
             if (sqlite3_exec(ta->outdb, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr, "Error: Could not run SQL Init \"%s\" on %s: %s\n", in->sql.init.data, ta->dbname, err);
+                if (!in->no_print_sql_on_err) {
+                    sqlite_print_err_and_free(err, stderr, "Error: Could not run SQL Init \"%s\" on %s: %s\n",
+                                              in->sql.init.data, ta->dbname, err);
+                }
+                else {
+                    sqlite_print_err_and_free(err, stderr, "Error: Could not run SQL Init %s\n",
+                                              err);
+                }
                 break;
             }
         }

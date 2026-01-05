@@ -545,6 +545,7 @@ prefix/old_file
 $ gufi_find --verbose --largest -type f
 GUFI query is
    gufi_query \
+    --no-print-sql-on-err \
     --threads 1 \
     --output-buffer-size 4096 \
     -a 1 \

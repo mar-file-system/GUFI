@@ -842,6 +842,7 @@ def run(argv, config_path):
     # create the query command
     query_cmd = [
         config.query,
+        '--no-print-sql-on-err',
         '--threads', str(config.threads),
         '--output-buffer-size', str(config.outputbuffer),
         '-a', '1',

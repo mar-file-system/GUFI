@@ -38,6 +38,7 @@ options:
       --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
       --terse                       print the information in terse form
       --print-eacces                print messages when errno is EACCES
+      --no-print-sql-on-err         do not print SQL with error messages
       --output-buffer-size <bytes>  size of each thread's output buffer in bytes
       --target-memory <bytes>       target memory utilization (soft limit)
       --swap-prefix <path>          File name prefix for swap files

@@ -242,6 +242,10 @@ extern "C" {
 #define FLAG_PRINT_EACCES_LONG "print-eacces"
 #define FLAG_PRINT_EACCES {FLAG_PRINT_EACCES_LONG, no_argument, NULL, FLAG_PRINT_EACCES_SHORT}
 
+#define FLAG_NO_PRINT_SQL_ON_ERR_SHORT (FLAG_GROUP_MISC + 17)
+#define FLAG_NO_PRINT_SQL_ON_ERR_LONG "no-print-sql-on-err"
+#define FLAG_NO_PRINT_SQL_ON_ERR {FLAG_NO_PRINT_SQL_ON_ERR_LONG, no_argument, NULL, FLAG_NO_PRINT_SQL_ON_ERR_SHORT}
+
 /* memory utilization flags */
 
 #define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
@@ -450,6 +454,7 @@ struct input {
     char newline;
     int  suppress_newline;
     int  print_eacces;             /* if cannot open a path due to EACCES, print error message (default: off) */
+    int  no_print_sql_on_err;      /* if there is an SQL error, do not print the SQL in the error message */
     int  buildindex;
     size_t maxthreads;
     struct {

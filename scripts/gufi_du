@@ -274,6 +274,7 @@ def run(argv, config_path):
         # create the base command
         query_cmd = [
             config.query,
+            '--no-print-sql-on-err',
             '-d', DELIM,
             '-n', str(config.threads),
         ]
