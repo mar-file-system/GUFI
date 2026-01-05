@@ -255,6 +255,13 @@ add_dependencies(gufi_vt install_dependencies)
 install(TARGETS gufi_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
 if (CLIENT)
   install(TARGETS gufi_vt DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
+
+  # need to install because gufi_vt is really server side code (and
+  # needs to link with sqlite3-pcre), but is being installed on the
+  # client
+  install(FILES "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
+          DESTINATION "${CLIENT_LIB}"
+          COMPONENT Client EXCLUDE_FROM_ALL)
 endif()
 
 add_library(run_vt MODULE
