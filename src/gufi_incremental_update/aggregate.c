@@ -120,14 +120,14 @@ void aggregate_intermediate(Aggregate_t *aggregate, const size_t threads, const 
     for(size_t i = 0; i < threads; i++) {
         SNPRINTF(dbname, MAXPATH, INTERMEDIATE_ATTACH_FORMAT, i + offset);
 
-        if (attachdb_raw(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1)) {
+        if (attachdb_raw(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1, 1)) {
             char *err = NULL;
             if ((sqlite3_exec(aggregate->agg, "INSERT INTO " SNAPSHOT " SELECT * FROM " INTERMEDIATE_ATTACH_NAME "." SNAPSHOT, NULL, NULL, &err) != SQLITE_OK)) {
                 sqlite_print_err_and_free(err, stderr, "Error: Cannot aggregate intermediate databases: %s\n", err);
             }
         }
 
-        detachdb(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1);
+        detachdb(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1, 1);
     }
 }
 

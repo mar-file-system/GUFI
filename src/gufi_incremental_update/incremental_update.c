@@ -233,8 +233,8 @@ static int get_urd(QPTPool_ctx_t *ctx, void *data) {
     char *err = NULL;
 
     /* make snapshots available to this database instance */
-    if (!attachdb(dp->index, db, INDEX_ATTACH, SQLITE_OPEN_READONLY, 1) ||
-        !attachdb(dp->tree,  db, TREE_ATTACH,  SQLITE_OPEN_READONLY, 1)) {
+    if (!attachdb(dp->index, db, INDEX_ATTACH, SQLITE_OPEN_READONLY, 1, 1) ||
+        !attachdb(dp->tree,  db, TREE_ATTACH,  SQLITE_OPEN_READONLY, 1, 1)) {
         err = (char *) (uintptr_t) 1; /* set to non-NULL to indicate error */
         goto cleanup;
     }
@@ -268,8 +268,8 @@ static int get_created(QPTPool_ctx_t *ctx, void *data) {
     char *err = NULL;
 
     /* make snapshots available to this database instance */
-    if (!attachdb(dp->index, db, INDEX_ATTACH, SQLITE_OPEN_READONLY, 1) ||
-        !attachdb(dp->tree,  db, TREE_ATTACH,  SQLITE_OPEN_READONLY, 1)) {
+    if (!attachdb(dp->index, db, INDEX_ATTACH, SQLITE_OPEN_READONLY, 1, 1) ||
+        !attachdb(dp->tree,  db, TREE_ATTACH,  SQLITE_OPEN_READONLY, 1, 1)) {
         err = (char *) (uintptr_t) 1; /* set to non-NULL to indicate error */
         goto cleanup;
     }
@@ -332,8 +332,8 @@ static int get_diff(struct PoolArgs *pa, char *diff_dbname, const size_t diff_db
     char *err = NULL;
 
     /* make pieces of partial changes available to this database instance */
-    if (!attachdb(urd.dbname,     db, UNCHANGED_RENAMED_DELETED, SQLITE_OPEN_READONLY, 1) ||
-        !attachdb(created.dbname, db, CREATED,                   SQLITE_OPEN_READONLY, 1)) {
+    if (!attachdb(urd.dbname,     db, UNCHANGED_RENAMED_DELETED, SQLITE_OPEN_READONLY, 1, 1) ||
+        !attachdb(created.dbname, db, CREATED,                   SQLITE_OPEN_READONLY, 1, 1)) {
         err = (char *) (uintptr_t) 1; /* set to non-NULL to indicate error */
         goto cleanup;
     }

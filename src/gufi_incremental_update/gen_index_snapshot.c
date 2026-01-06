@@ -139,7 +139,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                "/", 1,
                DBNAME, DBNAME_LEN);
 
-    if (!attachdb(index_dbname, db, "tree", SQLITE_OPEN_READONLY, 1)) {
+    if (!attachdb(index_dbname, db, "tree", SQLITE_OPEN_READONLY, 1, 1)) {
         goto close_dir;
     }
 
@@ -157,7 +157,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     sqlite3_finalize(res);
 
   detach_db:
-    detachdb(index_dbname, db, "tree", 1);
+    detachdb(index_dbname, db, "tree", 1, 1);
 
   close_dir:
     closedir(dir);

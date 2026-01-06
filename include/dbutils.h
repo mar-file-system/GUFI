@@ -225,10 +225,14 @@ extern const char VRSUMMARYLONG_CREATE[];
 
 /* name doesn't matter, so long as it is not used by callers */
 #define ATTACH_NAME "tree"
-sqlite3 *attachdb_raw   (const char *name, sqlite3 *db, const char *dbn,                  const int print_err);
-sqlite3 *attachdb       (const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err);
-sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql,                  const int print_err);
-sqlite3 *detachdb       (const char *name, sqlite3 *db, const char *dbn,                  const int print_err);
+sqlite3 *attachdb_raw   (const char *name, sqlite3 *db, const char *dbn,
+                         const int print_err, const int print_eacces);
+sqlite3 *attachdb       (const char *name, sqlite3 *db, const char *dbn, const int flags,
+                         const int print_err, const int print_eacces);
+sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql,
+                         const int print_err, const int print_eacces);
+sqlite3 *detachdb       (const char *name, sqlite3 *db, const char *dbn,
+                         const int print_err, const int print_eacces);
 
 int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql);
 int create_treesummary_tables(const char *name, sqlite3 *db, void *args);

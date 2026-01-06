@@ -673,7 +673,7 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
     SNPRINTF(attachname, sizeof(attachname),
              EXTERNAL_ATTACH_PREFIX "%zu", (*ca->count)++);
 
-    if (!attachdb(child_xattr_db_name, xattr_db, attachname, SQLITE_OPEN_READONLY, 1)) {
+    if (!attachdb(child_xattr_db_name, xattr_db, attachname, SQLITE_OPEN_READONLY, 1, 1)) {
         closedb(xattr_db);
         return 1;
     }
@@ -747,7 +747,7 @@ static int do_rollup(struct RollUp *rollup,
                    DBNAME, DBNAME_LEN);
 
         /* attach subdir database file as 'SUBDIR_ATTACH_NAME' */
-        rc = !attachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, SQLITE_OPEN_READONLY, 1);
+        rc = !attachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, SQLITE_OPEN_READONLY, 1, 1);
 
         /* roll up the subdir into this dir */
         if (!rc) {
@@ -766,7 +766,7 @@ static int do_rollup(struct RollUp *rollup,
         }
 
         /* always detach subdir */
-        detachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, 1);
+        detachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, 1, 1);
 
         if (rc) {
             break;

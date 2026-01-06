@@ -328,7 +328,7 @@ int external_concatenate(sqlite3 *db,
                                                          attachname_args);
 
             /* if attach fails, you don't have access to the database - just continue */
-            if (attachdb(filename, db, attachname, SQLITE_OPEN_READONLY, 0)) {
+            if (attachdb(filename, db, attachname, SQLITE_OPEN_READONLY, 0, 0)) {
                 /* SELECT * FROM <attach name>.<table name> UNION */
                 unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 6,
                                         select->data, select->len,
@@ -382,7 +382,7 @@ static int external_detach(void *args, int count, char **data, char **columns) {
     eda->func(attachname, sizeof(attachname),
               eda->args);
 
-    detachdb(NULL, eda->db, attachname, 0); /* don't check for errors */
+    detachdb(NULL, eda->db, attachname, 0, 0); /* don't check for errors */
     return 0;
 }
 

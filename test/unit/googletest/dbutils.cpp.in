@@ -69,13 +69,48 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 
 TEST(attachdb, nullptr) {
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0), nullptr);
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1), nullptr);
+    // error not printed
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0, 0), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0, 1), nullptr);
+
+    // error printed because error is not SQLITE_CANTOPEN
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1, 0), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1, 1), nullptr);
 }
 
 TEST(detachdb, nullptr) {
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0), nullptr);
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1), nullptr);
+    // error not printed
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0, 0), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0, 1), nullptr);
+
+    // error printed because error is not SQLITE_CANTOPEN
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1, 0), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1, 1), nullptr);
+}
+
+TEST(attachdb, CANTOPEN) {
+    char parent[] = "XXXXXX";
+    ASSERT_EQ(mkdtemp(parent), parent);
+
+    const char bad[] = "bad";
+    char filename[sizeof(parent) + 1 + sizeof(bad)];
+    snprintf(filename, sizeof(filename), "%s/%s", parent, bad);
+
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                              nullptr), SQLITE_OK);
+
+    // error not printed
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0, 0), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0, 1), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1, 0), nullptr);
+
+    // error printed
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1, 1), nullptr);
+
+    EXPECT_EQ(sqlite3_close(db), SQLITE_OK);
+
+    EXPECT_EQ(rmdir(parent), 0);
 }
 
 TEST(create_table_wrapper, nullptr) {

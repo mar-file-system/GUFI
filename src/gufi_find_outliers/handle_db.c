@@ -162,7 +162,7 @@ void write_results(struct PoolArgs *pa, size_t *rows) {
             char dbname[MAXSQL];
             SNPRINTF(dbname, sizeof(dbname), INTERMEDIATE_DBNAME_FORMAT, i);
 
-            if (!attachdb_raw(dbname, db, attachname, 1)) {
+            if (!attachdb_raw(dbname, db, attachname, 1, 1)) {
                 continue;
             }
 
@@ -173,7 +173,7 @@ void write_results(struct PoolArgs *pa, size_t *rows) {
                                           err);
             }
 
-            detachdb(dbname, db, attachname, 1);
+            detachdb(dbname, db, attachname, 1, 1);
         }
 
         char *err = NULL;
