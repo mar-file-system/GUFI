@@ -60,58 +60,15 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 */
 
-#ifndef PLUGIN_H
-#define PLUGIN_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-/*
- * Plugins should create a `struct plugin_operations` with this name to be exported to the
- * GUFI code.
-  */
-#define GUFI_PLUGIN_SYMBOL gufi_plugin_operations
-#define GUFI_PLUGIN_SYMBOL_STR "gufi_plugin_operations"
+#ifndef GUFI_DSI_PLUGIN_H
+#define GUFI_DSI_PLUGIN_H
 
-typedef enum {
-    PLUGIN_NONE,
-    PLUGIN_INDEX,
-    PLUGIN_QUERY,
-} plugin_type;
+#include <stdint.h>
 
-/*
- * Operations for a user-defined plugin library, allowing the user to make custom
- * modifications to the databases as GUFI runs.
- */
-struct plugin_operations {
-    plugin_type type;
-
-    /* One-time initialization */
-    void (*global_init)(void *global);
-
-    /*
-     * Give the user an opportunity to initialize any state for the
-     * current context. The returned pointer is passed to all
-     * subsequent operations as `user_data`.
-     */
-    void *(*ctx_init)(void *ptr);
-
-    /* Process a directory */
-    void (*process_dir)(void *ptr, void *user_data);
-
-    /* Process a file */
-    void (*process_file)(void *ptr, void *user_data);
-
-    /* Clean up any state for the current context */
-    void (*ctx_exit)(void *ptr, void *user_data);
-
-    /* One-time cleanup */
-    void (*global_exit)(void *global);
-};
-
-#ifdef __cplusplus
-}
-#endif
+static const char   DSI_NAME_PREFIX[] = "trusted.COL.file.";
+static const size_t DSI_NAME_PREFIX_LEN = (sizeof(DSI_NAME_PREFIX) - 1);
+static const size_t DSI_VALUE_PREFIX_LEN = 37; /* UUID (32 + 4 separators) + period */
 
 #endif

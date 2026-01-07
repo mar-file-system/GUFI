@@ -27,6 +27,7 @@ options:
      <table>
      <template>.<table>
      <view>                         External database file basename, per-attach table name, template + table name, and the resultant view
+      --plugin <library_name>       plugin library for modifying tree processing
   -w, --read-write                  open the database files in read-write mode instead of read only mode
       --keep-matime                 Keep mtime and atime same on the database files
       --skip-file <filename>        file containing directory names to skip

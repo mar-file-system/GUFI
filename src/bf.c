@@ -101,10 +101,12 @@ static const char DEFAULT_SWAP_PREFIX[] = "";
 
 static const struct plugin_operations null_plugin_ops = {
     .type = PLUGIN_NONE,
-    .init = NULL,
+    .global_init = NULL,
+    .ctx_init = NULL,
     .process_file = NULL,
     .process_dir = NULL,
-    .exit = NULL,
+    .ctx_exit = NULL,
+    .global_exit = NULL,
 };
 
 struct input *input_init(struct input *in) {
@@ -175,7 +177,7 @@ void input_fini(struct input *in) {
  * Returns 0 on success or 1 on failure.
  */
 static int load_plugin_library(struct input *in, char *plugin_name) {
-    void *lib = dlopen(plugin_name, RTLD_NOW);
+    void *lib = dlopen(plugin_name, RTLD_LAZY);
     if (!lib) {
         fprintf(stderr, "Could not open plugin library: %s\n", dlerror());
         return 1;
