@@ -78,6 +78,7 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #include "dbutils.h"
 #include "external.h"
+#include "gufi_dir2index.h"
 #include "template_db.h"
 #include "str.h"
 #include "utils.h"
@@ -91,41 +92,6 @@ struct PoolArgs {
 
     uint64_t *total_dirs;
     uint64_t *total_nondirs;
-};
-
-struct NonDirArgs {
-    struct input *in;
-    refstr_t *index_parent;
-
-    /* thread args */
-    struct template_db *temp_db;
-    struct template_db *temp_xattr;
-    struct work *work;
-    struct entry_data ed;
-
-    /* index path */
-    char *topath;
-    size_t topath_len;
-
-    /* summary of the current directory */
-    struct sum summary;
-
-    /* db.db */
-    sqlite3 *db;
-
-    /* prepared statements */
-    sqlite3_stmt *entries_res;
-    sqlite3_stmt *xattrs_res;
-    sqlite3_stmt *xattr_files_res;
-
-    /* list of xattr dbs */
-    sll_t xattr_db_list;
-
-    /*
-     * an optional opaque pointer to user data for a plugin. if the plugin's db_init() function
-     * creates and returns a pointer, then the later plugin functions can use it to store state.
-     */
-    void *plugin_user_data;
 };
 
 static int process_external(struct input *in, void *args,
@@ -165,7 +131,12 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     insertdbgo(entry, ed, nda->entries_res);
 
     if (in->plugin_ops->process_file) {
-        in->plugin_ops->process_file(entry->name, nda->db, nda->plugin_user_data);
+        struct NonDir nd = {
+            .db = nda->db,
+            .work = entry,
+            .ed = ed,
+        };
+        in->plugin_ops->process_file(&nd, nda->plugin_user_data);
     }
 
 out:
@@ -236,6 +207,10 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         }
     }
 
+    /*
+     * set up for processing, but keep to minimum to quickly hit
+     * descend (and enqueue more work, keeping queues fed)
+     */
     if (process_dir) {
         /* restore "/db.db" */
         nda.topath[nda.topath_len] = '/';
@@ -268,24 +243,21 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
         startdb(nda.db);
 
-        if (pa->in.plugin_ops->db_init) {
-            nda.plugin_user_data = pa->in.plugin_ops->db_init(nda.db);
+        /* run light-weight plugin setup */
+        if (pa->in.plugin_ops->init) {
+            nda.plugin_user_data = pa->in.plugin_ops->init(&nda);
         }
-    }
-
-    if (pa->in.plugin_ops->process_dir) {
-        pa->in.plugin_ops->process_dir(nda.work->name, nda.db, nda.plugin_user_data);
-    }
+   }
 
     struct descend_counters ctrs;
     descend(ctx, nda.in, nda.work, dir, 1,
             processdir, process_dir?process_nondir:NULL, &nda, &ctrs);
 
+    /*
+     * now that subdirectories have been enqueued,
+     * do slower processing on this directory
+     */
     if (process_dir) {
-        if (pa->in.plugin_ops->db_exit) {
-            pa->in.plugin_ops->db_exit(nda.db, nda.plugin_user_data);
-        }
-
         stopdb(nda.db);
 
         /* entries and xattrs have been inserted */
@@ -311,8 +283,18 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         /* the xattrs go into the xattrs_avail table in db.db */
         insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len,
                     nda.work, &nda.ed, &nda.summary);
+
+        /* run plugin before destroying data */
+        if (pa->in.plugin_ops->process_dir) {
+            pa->in.plugin_ops->process_dir(&nda, nda.plugin_user_data);
+        }
+
         if (nda.in->process_xattrs) {
             xattrs_cleanup(&nda.ed.xattrs);
+        }
+
+        if (pa->in.plugin_ops->exit) {
+            pa->in.plugin_ops->exit(&nda, nda.plugin_user_data);
         }
 
         closedb(nda.db);
@@ -512,6 +494,11 @@ int main(int argc, char *argv[]) {
     INSTALL_STR(&pa.index_parent, argv[argc - 1]);
 
     int rc = EXIT_SUCCESS;
+
+    if (check_plugin(pa.in.plugin_ops, PLUGIN_INDEX) != 1) {
+        rc = EXIT_FAILURE;
+        goto cleanup;
+    }
 
     argc--; /* index parent is no longer needed */
     const size_t root_count = argc - idx;

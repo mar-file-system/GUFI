@@ -60,50 +60,67 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 */
 
-#ifndef PLUGIN_H
-#define PLUGIN_H
+
+
+#ifndef GUFI_DIR2INDEX_H
+#define GUFI_DIR2INDEX_H
+
+#include <sqlite3.h>
+
+#include "SinglyLinkedList.h"
+#include "bf.h"
+#include "str.h"
+#include "template_db.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*
- * Plugins should create a `struct plugin_operations` with this name to be exported to the
- * GUFI code.
-  */
-#define GUFI_PLUGIN_SYMBOL gufi_plugin_operations
-#define GUFI_PLUGIN_SYMBOL_STR "gufi_plugin_operations"
-
-typedef enum {
-    PLUGIN_NONE,
-    PLUGIN_INDEX,
-    PLUGIN_QUERY,
-} plugin_type;
-
-/*
- * Operations for a user-defined plugin library, allowing the user to make custom
- * modifications to the databases as GUFI runs.
+ * values passed to process_nondir
+ *
+ * serves double duty as state within processdir
  */
-struct plugin_operations {
-    plugin_type type;
+struct NonDirArgs {
+    struct input *in;
+    refstr_t *index_parent;
+
+    /* thread args */
+    struct template_db *temp_db;
+    struct template_db *temp_xattr;
+    struct work *work;
+    struct entry_data ed;
+
+    /* index path */
+    char *topath;
+    size_t topath_len;
+
+    /* summary of the current directory */
+    struct sum summary;
+
+    /* db.db */
+    sqlite3 *db;
+
+    /* prepared statements */
+    sqlite3_stmt *entries_res;
+    sqlite3_stmt *xattrs_res;
+    sqlite3_stmt *xattr_files_res;
+
+    /* list of xattr dbs */
+    sll_t xattr_db_list;
 
     /*
-     * Give the user an opportunity to initialize any state. The returned pointer
-     * is passed to all subsequent operations as `user_data`.
+     * an optional opaque pointer to user data for a plugin. if the plugin's db_init() function
+     * creates and returns a pointer, then the later plugin functions can use it to store state.
      */
-    void *(*init)(void *ptr);
+    void *plugin_user_data;
+};
 
-    /* Process a directory. */
-    void (*process_dir)(void *ptr, void *user_data);
-
-    /* Process a file */
-    void (*process_file)(void *ptr, void *user_data);
-
-    /*
-     * Clean up any state, and write out any final data to the database, for example
-     * a summary containing information from each of the files seen.
-     */
-    void (*exit)(void *ptr, void *user_data);
+/* used for combining structs into one void * argument */
+struct NonDir {
+    sqlite3 *db;
+    struct work *work;
+    struct entry_data *ed;
 };
 
 #ifdef __cplusplus

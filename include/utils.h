@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "config.h"
 #include "descend.h"
+#include "plugin.h"
 #include "trie.h"
 #include "xattrs.h"
 
@@ -199,6 +200,8 @@ int write_with_resize(char **buf, size_t *size, size_t *offset,
 
 /* check if the current directory should be processed */
 int dir_match(struct input *in, struct stat *st);
+
+int check_plugin(const struct plugin_operations *ops, const plugin_type accepted);
 
 #ifdef __cplusplus
 }

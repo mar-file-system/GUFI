@@ -1123,3 +1123,13 @@ int dir_match(struct input *in, struct stat *st) {
     }
     return rc;
 }
+
+int check_plugin(const struct plugin_operations *ops, const plugin_type accepted) {
+    if ((ops->type != PLUGIN_NONE) &&
+        (ops->type != accepted)) {
+        fprintf(stderr, "Error: Bad plugin type. Expected %d. Got: %d\n",
+                accepted, ops->type);
+        return 0;
+    }
+    return 1;
+}

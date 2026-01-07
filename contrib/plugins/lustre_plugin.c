@@ -98,9 +98,11 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
+#include <lustre/lustreapi.h>
+#include <sqlite3.h>
+
+#include "gufi_dir2index.h"
 #include "plugin.h"
-#include "sqlite3.h"
-#include "lustre/lustreapi.h"
 
 static char *my_basename(char *path) {
     char *base = path;
@@ -245,7 +247,10 @@ static void track_file_stripes(struct stripe_tracker *s,
 /*
  * Set up initial state for tracking Lustre stripe info.
  */
-void *db_init(sqlite3 *db) {
+void *db_init(void *ptr) {
+    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
+    sqlite3 *db = nda->db;
+
     struct stripe_tracker *state = new_stripe_tracker();
     if (!state) {
         fprintf(stderr, "lustre plugin: could not allocate memory to track stripe info");
@@ -265,30 +270,6 @@ void *db_init(sqlite3 *db) {
 
     return state;
 }
-
-/*
- * Save stripe tracking info to the database and clean up state.
- */
-void db_exit(sqlite3 *db, void *user_data) {
-    struct stripe_tracker *state = (struct stripe_tracker *) user_data;
-
-    for (uint32_t i = 0; i <= state->max_ost_idx; i++) {
-        char *text = sqlite3_mprintf("INSERT INTO lustre_osts VALUES(%" PRIu32 ", %" PRIu64 ");",
-                i, state->stripe_count[i]);
-        char *error;
-
-        int res = sqlite3_exec(db, text, NULL, NULL, &error);
-        if (res != SQLITE_OK) {
-            fprintf(stderr, "lustre plugin: db_exit(): error executing statement: %d %s\n",
-                    res, error);
-        }
-
-        sqlite3_free(text);
-        sqlite3_free(error);
-    }
-
-    destroy_stripe_tracker(state);
-};
 
 /*
  * This method of determining the maximum possible size of a `lov_user_md` was suggested by
@@ -324,7 +305,7 @@ static void insert_fid(char *path, sqlite3 *db, void *user_data, int is_child_en
     }
 
     char *text = sqlite3_mprintf("INSERT INTO lustre_fids (name, fid) VALUES('%s', (?));", path);
-    sqlite3_stmt *statement;
+    sqlite3_stmt *statement = NULL;
     res = sqlite3_prepare_v2(db, text, -1, &statement, NULL);
     if (res != SQLITE_OK) {
         fprintf(stderr, "lustre plugin: process_dir(): error in sqlite3_prepare_v2(): %d\n", res);
@@ -357,7 +338,16 @@ static void insert_fid(char *path, sqlite3 *db, void *user_data, int is_child_en
     sqlite3_free(text);
 }
 
-void process_file(char *path, sqlite3 *db, void *user_data) {
+static void process_dir(void *ptr, void *user_data) {
+    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
+    insert_fid(nda->work->name, nda->db, user_data, 0);
+}
+
+static void process_file(void *ptr, void *user_data) {
+    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
+    sqlite3 *db = nda->db;
+    char *path = nda->work->name;
+
     insert_fid(path, db, user_data, 1);
 
     sqlite3_stmt *statement;
@@ -375,7 +365,7 @@ void process_file(char *path, sqlite3 *db, void *user_data) {
 
     char *text = sqlite3_mprintf("UPDATE entries SET ossint4 = %d where name = '%q';",
             layout_info->lmm_stripe_size, my_basename(path));
-    char *error;
+    char *error = NULL;
 
     res = sqlite3_exec(db, text, NULL, NULL, &error);
     if (res != SQLITE_OK) {
@@ -409,13 +399,36 @@ void process_file(char *path, sqlite3 *db, void *user_data) {
     sqlite3_free(text);
 }
 
-void process_dir(char *path, sqlite3 *db, void *user_data) {
-    insert_fid(path, db, user_data, 0);
-}
+/*
+ * Save stripe tracking info to the database and clean up state.
+ */
+static void db_exit(void *ptr, void *user_data) {
+    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
+    sqlite3 *db = nda->db;
+    struct stripe_tracker *state = (struct stripe_tracker *) user_data;
+
+    for (uint32_t i = 0; i <= state->max_ost_idx; i++) {
+        char *text = sqlite3_mprintf("INSERT INTO lustre_osts VALUES(%" PRIu32 ", %" PRIu64 ");",
+                i, state->stripe_count[i]);
+        char *error = NULL;
+
+        int res = sqlite3_exec(db, text, NULL, NULL, &error);
+        if (res != SQLITE_OK) {
+            fprintf(stderr, "lustre plugin: db_exit(): error executing statement: %d %s\n",
+                    res, error);
+        }
+
+        sqlite3_free(text);
+        sqlite3_free(error);
+    }
+
+    destroy_stripe_tracker(state);
+};
 
 struct plugin_operations GUFI_PLUGIN_SYMBOL = {
-    .db_init = db_init,
+    .type = PLUGIN_INDEX,
+    .init = db_init,
     .process_dir = process_dir,
     .process_file = process_file,
-    .db_exit = db_exit,
+    .exit = db_exit,
 };

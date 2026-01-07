@@ -100,10 +100,11 @@ const char linesep = '\n';
 static const char DEFAULT_SWAP_PREFIX[] = "";
 
 static const struct plugin_operations null_plugin_ops = {
-    .db_init = NULL,
+    .type = PLUGIN_NONE,
+    .init = NULL,
     .process_file = NULL,
     .process_dir = NULL,
-    .db_exit = NULL,
+    .exit = NULL,
 };
 
 struct input *input_init(struct input *in) {

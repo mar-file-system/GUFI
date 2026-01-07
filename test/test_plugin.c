@@ -69,8 +69,11 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <sqlite3.h>
+
+#include "bf.h"
+#include "gufi_dir2index.h"
 #include "plugin.h"
-#include "sqlite3.h"
 
 struct state {
     int n_files;
@@ -90,7 +93,10 @@ static void cleanup_state(struct state *p) {
 /*
  * Set up initial state for test plugin.
  */
-static void *db_init(sqlite3 *db) {
+static void *db_init(void *ptr) {
+    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
+    sqlite3 *db = nda->db;
+
     struct state *state = new_state();
 
     const char *text =
@@ -112,13 +118,15 @@ static void *db_init(sqlite3 *db) {
 /*
  * Save state to the database and clean up state.
  */
-static void db_exit(sqlite3 *db, void *user_data) {
+static void db_exit(void *ptr, void *user_data) {
+    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
+    sqlite3 *db = nda->db;
     struct state *p = (struct state *) user_data;
 
     char *text = sqlite3_mprintf("INSERT INTO plugin_test_summary (filetype, count) VALUES ('file', %d);"
             "INSERT INTO plugin_test_summary (filetype, count) VALUES ('directory', %d);",
             p->n_files, p->n_dirs);
-    char *error;
+    char *error = NULL;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
     if (res != SQLITE_OK) {
@@ -132,11 +140,13 @@ static void db_exit(sqlite3 *db, void *user_data) {
     cleanup_state(p);
 }
 
-static void process_file(char *path, sqlite3 *db, void *user_data) {
+static void process_file(void *ptr, void *user_data) {
+    struct NonDir *nd = (struct NonDir *) ptr;
+    sqlite3 *db = nd->db;
     struct state *p = (struct state *) user_data;
 
-    char *text = sqlite3_mprintf("INSERT INTO plugin_test_files (filename) VALUES ('%s');", path);
-    char *error;
+    char *text = sqlite3_mprintf("INSERT INTO plugin_test_files (filename) VALUES ('%s');", nd->work->name);
+    char *error = NULL;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
     if (res == SQLITE_OK) {
@@ -150,10 +160,12 @@ static void process_file(char *path, sqlite3 *db, void *user_data) {
     sqlite3_free(error);
 }
 
-static void process_dir(char *path, sqlite3 *db, void *user_data) {
+static void process_dir(void *ptr, void *user_data) {
+    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
+    sqlite3 *db = nda->db;
     struct state *p = (struct state *) user_data;
 
-    char *text = sqlite3_mprintf("INSERT INTO plugin_test_directories (dirname) VALUES ('%s');", path);
+    char *text = sqlite3_mprintf("INSERT INTO plugin_test_directories (dirname) VALUES ('%s');", nda->work->name);
     char *error;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
@@ -169,8 +181,9 @@ static void process_dir(char *path, sqlite3 *db, void *user_data) {
 }
 
 struct plugin_operations GUFI_PLUGIN_SYMBOL = {
-    .db_init = db_init,
+    .type = PLUGIN_INDEX,
+    .init = db_init,
     .process_dir = process_dir,
     .process_file = process_file,
-    .db_exit = db_exit,
+    .exit = db_exit,
 };
