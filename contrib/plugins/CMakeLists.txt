@@ -68,3 +68,33 @@ if (LUSTRE_PLUGIN)
   add_dependencies(lustre_plugin install_dependencies)
   target_link_libraries(lustre_plugin lustreapi)
 endif()
+
+# common DSI code
+add_library(dsi OBJECT
+  dsi.c
+  "${CMAKE_SOURCE_DIR}/src/SinglyLinkedList.c"
+  "${CMAKE_SOURCE_DIR}/src/plugin.c"
+  "${CMAKE_SOURCE_DIR}/src/utils.c"
+)
+set_property(TARGET dsi PROPERTY POSITION_INDEPENDENT_CODE ON)
+add_dependencies(dsi install_dependencies)
+
+# DSI indexing plugin
+add_library(dsi_indexing SHARED
+  dsi_indexing.c
+  $<TARGET_OBJECTS:dsi>
+)
+add_dependencies(dsi_indexing install_dependencies)
+
+install(TARGETS dsi_indexing DESTINATION "${SERVER_LIB}" COMPONENT Server)
+
+# DSI querying plugin
+add_library(dsi_querying SHARED
+  dsi_querying.c
+  $<TARGET_OBJECTS:dsi>
+)
+target_link_libraries(dsi_querying
+  "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
+)
+add_dependencies(dsi_querying install_dependencies)
+install(TARGETS dsi_querying DESTINATION "${SERVER_LIB}" COMPONENT Server)
