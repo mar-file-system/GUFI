@@ -67,3 +67,10 @@ if (LUSTRE_PLUGIN)
   add_library(lustre_plugin SHARED lustre_plugin.c)
   target_link_libraries(lustre_plugin lustreapi)
 endif()
+
+# DSI indexing plugin
+add_library(dsi_indexing SHARED
+  dsi_indexing.c
+  "${CMAKE_SOURCE_DIR}/src/utils.c"
+)
+add_dependencies(dsi_indexing install_dependencies)
