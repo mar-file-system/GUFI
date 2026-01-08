@@ -311,7 +311,7 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
     free(pa->ta);
     pa->ta = NULL;
 
-    if (pa->in->plugin_ops && pa->in->plugin_ops->global_exit) {
+    if (pa->in->plugin_ops->global_exit) {
         pa->in->plugin_ops->global_exit(NULL);
     }
 

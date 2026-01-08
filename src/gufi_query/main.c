@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "compress.h"
+#include "path_list.h"
 #include "utils.h"
 
 #include "gufi_query/aggregate.h"

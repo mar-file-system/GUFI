@@ -90,7 +90,7 @@ void setup_input(struct input *in, OutputMethod om, bool aggregate) {
     std::mt19937 gen(rd());
     std::uniform_int_distribution <int> dist(1, 8);
 
-    memset(in, 0, sizeof(*in));
+    input_init(in);
     in->maxthreads = dist(gen);
     in->sql.init.data = I.c_str(); in->sql.init.len = strlen(in->sql.init.data);
     in->sql.init_agg.len = aggregate;

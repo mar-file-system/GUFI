@@ -79,6 +79,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "external.h"
 #include "gufi_dir2index.h"
+#include "path_list.h"
 #include "template_db.h"
 #include "str.h"
 #include "utils.h"

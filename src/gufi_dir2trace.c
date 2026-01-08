@@ -79,6 +79,7 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #include "external.h"
 #include "outfiles.h"
+#include "path_list.h"
 #include "str.h"
 #include "trace.h"
 #include "trie.h"

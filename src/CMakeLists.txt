@@ -79,6 +79,7 @@ set(GUFI_SOURCES
   gufi_vt.c
   histogram.c
   outfiles.c
+  path_list.c
   popen_argv.c
   print.c
   run_vt.c
