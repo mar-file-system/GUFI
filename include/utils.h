@@ -73,7 +73,6 @@ OF SUCH DAMAGE.
 #include "config.h"
 #include "descend.h"
 #include "plugin.h"
-#include "trie.h"
 #include "xattrs.h"
 
 #ifdef __cplusplus
@@ -130,9 +129,6 @@ size_t trailing_non_match_index(const char *str, size_t len,
  * used for processing input paths that have been run through realpath
  */
 size_t dirname_len(const char *path, size_t len);
-
-/* add contents of filename into skip */
-ssize_t setup_directory_skip(trie_t *skip, const char *filename);
 
 /* strstr/strtok replacement */
 char *split(char *src, const char *delim, const size_t delim_len, const char *end);
