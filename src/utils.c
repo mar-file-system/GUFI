@@ -493,42 +493,6 @@ size_t dirname_len(const char *path, size_t len) {
     return trailing_match_index(path, len, "/", 1);
 }
 
-/* create a trie of directory names to skip from a file */
-ssize_t setup_directory_skip(trie_t *skip, const char *filename) {
-    if (!skip || !filename) {
-        return -1;
-    }
-
-    /* add user defined directory names to skip */
-    FILE *skipfile = fopen(filename, "r");
-    if (!skipfile) {
-        fprintf(stderr, "Error: Cannot open skip file \"%s\"\n", filename);
-        return -1;
-    }
-
-    ssize_t count = 0;
-
-    char *line = NULL;
-    size_t n = 0;
-    ssize_t len = 0;
-    while ((len = getline(&line, &n, skipfile)) > -1) {
-        len = trailing_non_match_index(line, len, "\r\n", 2);
-        if (len == 0) {
-            continue;
-        }
-
-        if (!trie_search(skip, line, len, NULL)) {
-            trie_insert(skip, line, len, NULL, NULL);
-            count++;
-        }
-    }
-    free(line);
-
-    fclose(skipfile);
-
-    return count;
-}
-
 /* strstr/strtok replacement */
 /* does not terminate on NULL character */
 /* does not skip to the next non-empty column */

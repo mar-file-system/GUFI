@@ -66,7 +66,6 @@ OF SUCH DAMAGE.
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
-#include <fstream>
 #include <random>
 #include <sys/resource.h>
 #include <sys/stat.h>
@@ -795,59 +794,6 @@ TEST(trailing_non_match_index, paths) {
     EXPECT_EQ(trailing_non_match_index(nulls,   strlen(nulls),   match, match_len), (size_t) 0);
 
     EXPECT_EQ(trailing_non_match_index(nullptr, 10,              match, match_len), (size_t) 0);
-}
-
-TEST(setup_directory_skip, file) {
-    const std::string skip_dirs[] = {
-        "skip0",
-        "skip1",
-        "s p a c e s",
-    };
-
-    char skip_name[] = "XXXXXX";
-    const int skip_fd = mkstemp(skip_name);
-    ASSERT_NE(skip_fd, -1);
-    EXPECT_EQ(close(skip_fd), 0);
-
-    {
-        std::ofstream skip_stream(skip_name);
-        EXPECT_TRUE(skip_stream);
-
-        skip_stream << std::endl; // start with empty line
-        for(std::string const & skip_dir : skip_dirs) {
-            skip_stream << skip_dir <<         std::endl;
-            skip_stream << skip_dir << "\r" << std::endl; // duplicates
-        }
-    }
-
-    trie_t *skip = trie_alloc();
-    ASSERT_NE(skip, nullptr);
-    EXPECT_EQ(setup_directory_skip(skip, skip_name), (ssize_t) (sizeof(skip_dirs) / sizeof(skip_dirs[0])));
-    for(std::string const & skip_dir : skip_dirs) {
-        EXPECT_EQ(trie_search(skip, skip_dir.c_str(), skip_dir.size(), nullptr), 1);
-    }
-    trie_free(skip);
-
-    EXPECT_EQ(remove(skip_name), 0);
-}
-
-TEST(setup_directory_skip, bad) {
-    trie_t *skip = trie_alloc();
-    ASSERT_NE(skip, nullptr);
-
-    char name[] = "XXXXXX";
-    const int fd = mkstemp(name);
-    ASSERT_GT(fd, -1);
-    EXPECT_EQ(setup_directory_skip(skip, name), 0);
-    EXPECT_EQ(close(fd), 0);
-    EXPECT_EQ(remove(name), 0);
-
-    EXPECT_EQ(setup_directory_skip(skip, ""), -1);
-    EXPECT_EQ(setup_directory_skip(skip, nullptr), -1);
-
-    trie_free(skip);
-
-    EXPECT_EQ(setup_directory_skip(nullptr, ""), -1);
 }
 
 TEST(split, delims) {
