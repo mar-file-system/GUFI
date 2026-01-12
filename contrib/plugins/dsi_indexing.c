@@ -69,13 +69,10 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "bf.h"
+#include "dsi.h"
 #include "plugin.h"
 #include "utils.h"           /* copyfd and SNFORMAT_S */
 #include "xattrs.h"
-
-static const char   DSI_NAME_PREFIX[] = "user.COL.file.";
-static const size_t DSI_NAME_PREFIX_LEN = (sizeof(DSI_NAME_PREFIX) - 1);
-static const size_t DSI_VALUE_PREFIX_LEN = 37; /* UUID (32 + 4 separators) + period */
 
 static void dsi_indexing_global_init(void *global) {
     struct input *in = (struct input *) global;
