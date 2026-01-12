@@ -68,14 +68,11 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <unistd.h>
 
+#include "dsi.h"
 #include "gufi_dir2index.h"
 #include "plugin.h"
 #include "utils.h"           /* copyfd and SNFORMAT_S */
 #include "xattrs.h"
-
-static const char   DSI_NAME_PREFIX[] = "trusted.COL.file.";
-static const size_t DSI_NAME_PREFIX_LEN = (sizeof(DSI_NAME_PREFIX) - 1);
-static const size_t DSI_VALUE_PREFIX_LEN = 37; /* UUID (32 + 4 separators) + period */
 
 static void dsi_index_dir(void *ptr, void *user_data) {
     struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
