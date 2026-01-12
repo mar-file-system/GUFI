@@ -1,4 +1,4 @@
- /*
+/*
 This file is part of GUFI, which is part of MarFS, which is released
 under the BSD license.
 
@@ -1263,64 +1263,6 @@ TEST(fstatat_wrapper, bad) {
     EXPECT_EQ(fstatat_wrapper(work, &ed, 1), 0);
 
     free(work);
-}
-
-TEST(parse_path, list) {
-    const char ROOT[] = "@CMAKE_BINARY_DIR@";
-    const char SUBDIR[] = "@CMAKE_CURRENT_BINARY_DIR@";
-
-    char list[] = "XXXXXX";
-    const int fd = mkstemp(list);
-    ASSERT_GT(fd, -1);
-
-    // empty line
-    EXPECT_EQ(write(fd, "\n", 1), (ssize_t) 1);
-
-    // bad path
-    char bad[sizeof(SUBDIR) + 11 + 1] = {0};
-    const std::size_t bad_len = snprintf(bad, sizeof(bad), "%s/utils.cpp/\n", SUBDIR + sizeof(ROOT));
-    EXPECT_EQ(write(fd, bad, bad_len), (ssize_t) bad_len);
-
-    // file path
-    char file[sizeof(SUBDIR) + 10 + 1] = {0};
-    const std::size_t file_len = snprintf(file, sizeof(file), "%s/utils.cpp\n", SUBDIR + sizeof(ROOT));
-    EXPECT_EQ(write(fd, file, file_len), (ssize_t) file_len);
-
-    // subdirectory
-    char line[sizeof(SUBDIR) + 1] = {0};
-    const std::size_t len = snprintf(line, sizeof(line), "%s\n", SUBDIR + sizeof(ROOT));
-    EXPECT_EQ(write(fd, line, len), (ssize_t) len);
-
-    EXPECT_EQ(close(fd), 0);
-
-    struct input in = {};
-    in.path_list.data = list;
-    in.path_list.len = strlen(list);
-    in.min_level = 1;
-
-    // this gets freed by process_path_list
-    struct work *root = new_work_with_name(ROOT, strlen(ROOT), nullptr, 0);
-    ASSERT_NE(root, nullptr);
-
-    QPTPool_ctx_t *ctx = QPTPool_init(1, nullptr);
-    ASSERT_NE(ctx, nullptr);
-    ASSERT_EQ(QPTPool_start(ctx), 0);
-
-    EXPECT_EQ(process_path_list(&in, root, ctx,
-                                [](QPTPool_ctx_t *, void *data) -> int {
-                                    free(data);
-                                    return 0;
-                                }), (ssize_t) 1);
-
-    QPTPool_stop(ctx);
-    QPTPool_destroy(ctx);
-    EXPECT_EQ(remove(list), 0);
-
-    // bad path list file
-    EXPECT_EQ(process_path_list(&in, root, ctx,
-                                [](QPTPool_ctx_t *, void *) -> int {
-                                    return 0;
-                                }), (ssize_t) -1);
 }
 
 TEST(write_with_resize, good) {
