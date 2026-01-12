@@ -78,6 +78,7 @@ OF SUCH DAMAGE.
 #include "compress.h"
 #include "dbutils.h"
 #include "external.h"
+#include "plugin.h"
 #include "print.h"
 #include "utils.h"
 
@@ -157,7 +158,7 @@ static int count_rows(void *args, int count, char **data, char **columns) {
     return 0;
 }
 
-/* prepend the current directory to the database filenamee */
+/* prepend the current directory to the database filename */
 static int collect_dir_inodes(void *args, int count, char **data, char **columns) {
     (void) count;
     (void) columns;
@@ -348,11 +349,20 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
                     /* create view for attaching external dbs to */
                     create_extdb_views_noiter(db);
 
+                    void *plugin_user_data = NULL;
+                    if (in->plugin_ops->ctx_init) {
+                        plugin_user_data = in->plugin_ops->ctx_init(db);
+                    }
+
                     /* run queries */
                     process_queries(pa, ctx,
                                     dir, gqw, db, ta->user_strs,
                                     dbname, dbname_len,
                                     1, &subdirs_walked_count);
+
+                    if (in->plugin_ops->ctx_exit) {
+                        in->plugin_ops->ctx_exit(db, plugin_user_data);
+                    }
 
                     /* drop views for attaching GUFI tables to */
                     drop_extdb_views(db);
@@ -383,11 +393,20 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
                         /* create views for attaching GUFI tables to */
                         create_extdb_views_iter(db, dir_inode);
 
+                        void *plugin_user_data = NULL;
+                        if (in->plugin_ops->ctx_init) {
+                            plugin_user_data = in->plugin_ops->ctx_init(db);
+                        }
+
                         /* run queries */
                         process_queries(pa, ctx,
                                         dir, gqw, db, ta->user_strs,
                                         dbname, dbname_len,
                                         desc, &subdirs_walked_count);
+
+                        if (in->plugin_ops->ctx_exit) {
+                            in->plugin_ops->ctx_exit(db, plugin_user_data);
+                        }
 
                         /* drop views for attaching GUFI tables to */
                         drop_extdb_views(db);
@@ -404,12 +423,20 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
             }
             else {
                 /* external databases views were created in PoolArgs_init */
+                void *plugin_user_data = NULL;
+                if (in->plugin_ops->ctx_init) {
+                    plugin_user_data = in->plugin_ops->ctx_init(db);
+                }
 
                 /* run queries */
                 process_queries(pa, ctx,
                                 dir, gqw, db, ta->user_strs,
                                 dbname, dbname_len,
                                 1, &subdirs_walked_count);
+
+                if (in->plugin_ops->ctx_exit) {
+                    in->plugin_ops->ctx_exit(db, plugin_user_data);
+                }
             }
 
             if (xattr_db_count != extdb_count) {

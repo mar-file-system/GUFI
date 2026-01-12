@@ -70,6 +70,8 @@ OF SUCH DAMAGE.
 #include "sqlite-vec.h"
 #endif
 
+#include "plugin.h"
+
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/external.h"
 
@@ -308,6 +310,10 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
 
     free(pa->ta);
     pa->ta = NULL;
+
+    if (pa->in->plugin_ops->global_exit) {
+        pa->in->plugin_ops->global_exit(NULL);
+    }
 
     input_fini(pa->in);
 }

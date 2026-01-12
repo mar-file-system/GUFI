@@ -182,8 +182,10 @@ static void process_dir(void *ptr, void *user_data) {
 
 struct plugin_operations GUFI_PLUGIN_SYMBOL = {
     .type = PLUGIN_INDEX,
-    .init = db_init,
+    .global_init = NULL,
+    .ctx_init = db_init,
     .process_dir = process_dir,
     .process_file = process_file,
-    .exit = db_exit,
+    .ctx_exit = db_exit,
+    .global_exit = NULL,
 };

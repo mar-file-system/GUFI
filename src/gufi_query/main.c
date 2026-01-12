@@ -267,6 +267,7 @@ int main(int argc, char *argv[])
         FLAG_DIR_MATCH_UID, FLAG_DIR_MATCH_GID, FLAG_PROCESS_SQL,
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST,
         FLAG_PATH, FLAG_XATTRS, FLAG_QUERY_XATTRS, FLAG_EXTERNAL_ATTACH,
+        FLAG_PLUGIN,
 
         /* miscellaneous flags */
         FLAG_READ_WRITE, FLAG_KEEP_MATIME, FLAG_SKIP_FILE,
@@ -288,7 +289,19 @@ int main(int argc, char *argv[])
     struct input in;
     process_args_and_maybe_exit(options, 0, "GUFI_tree...", &in);
 
+    if (check_plugin(in.plugin_ops, PLUGIN_QUERY) != 1) {
+        input_fini(&in);
+        return EXIT_FAILURE;
+    }
+
+    if (in.plugin_ops->global_init) {
+        in.plugin_ops->global_init(NULL);
+    }
+
     if (handle_sql(&in) != 0) {
+        if (in.plugin_ops->global_exit) {
+            in.plugin_ops->global_exit(NULL);
+        }
         input_fini(&in);
         return EXIT_FAILURE;
     }
@@ -296,6 +309,9 @@ int main(int argc, char *argv[])
     const size_t root_count = argc - idx;
 
     if (bad_partial_walk(&in, root_count)) {
+        if (in.plugin_ops->global_exit) {
+            in.plugin_ops->global_exit(NULL);
+        }
         input_fini(&in);
         return EXIT_FAILURE;
     }

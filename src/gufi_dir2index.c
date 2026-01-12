@@ -245,8 +245,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         startdb(nda.db);
 
         /* run light-weight plugin setup */
-        if (pa->in.plugin_ops->init) {
-            nda.plugin_user_data = pa->in.plugin_ops->init(&nda);
+        if (pa->in.plugin_ops->ctx_init) {
+            nda.plugin_user_data = pa->in.plugin_ops->ctx_init(&nda);
         }
    }
 
@@ -294,8 +294,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
             xattrs_cleanup(&nda.ed.xattrs);
         }
 
-        if (pa->in.plugin_ops->exit) {
-            pa->in.plugin_ops->exit(&nda, nda.plugin_user_data);
+        if (pa->in.plugin_ops->ctx_exit) {
+            pa->in.plugin_ops->ctx_exit(&nda, nda.plugin_user_data);
         }
 
         closedb(nda.db);
@@ -501,6 +501,10 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
+    if (pa.in.plugin_ops->global_init) {
+        pa.in.plugin_ops->global_init(NULL);
+    }
+
     argc--; /* index parent is no longer needed */
     const size_t root_count = argc - idx;
 
@@ -626,6 +630,10 @@ int main(int argc, char *argv[]) {
     close_template_db(&pa.db);
 
   cleanup:
+    if (pa.in.plugin_ops->global_exit) {
+        pa.in.plugin_ops->global_exit(NULL);
+    }
+
     input_fini(&pa.in);
 
     dump_memory_usage(stderr);

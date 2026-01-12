@@ -101,10 +101,12 @@ static const char DEFAULT_SWAP_PREFIX[] = "";
 
 static const struct plugin_operations null_plugin_ops = {
     .type = PLUGIN_NONE,
-    .init = NULL,
+    .global_init = NULL,
+    .ctx_init = NULL,
     .process_file = NULL,
     .process_dir = NULL,
-    .exit = NULL,
+    .ctx_exit = NULL,
+    .global_exit = NULL,
 };
 
 struct input *input_init(struct input *in) {
@@ -282,7 +284,7 @@ void print_help(const char* prog_name,
             case FLAG_KEEP_MATIME_SHORT:             printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
             case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
             case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
-            case FLAG_PLUGIN_SHORT:                  printf("      --plugin <library_name>       plugin library for modifying db entries"); break;
+            case FLAG_PLUGIN_SHORT:                  printf("      --plugin <library_name>       plugin library for modifying tree processing"); break;
             case FLAG_PATH_LIST_SHORT:               printf("      --path-list <filename>        File containing paths at single level to walk (not including starting path). If --min-level > 0, prepend each line of the file with the index path."); break;
             case FLAG_FORMAT_SHORT:                  printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
             case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */

@@ -87,23 +87,27 @@ typedef enum {
 struct plugin_operations {
     plugin_type type;
 
-    /*
-     * Give the user an opportunity to initialize any state. The returned pointer
-     * is passed to all subsequent operations as `user_data`.
-     */
-    void *(*init)(void *ptr);
+    /* One-time initialization */
+    void (*global_init)(void *global);
 
-    /* Process a directory. */
+    /*
+     * Give the user an opportunity to initialize any state for the
+     * current context. The returned pointer is passed to all
+     * subsequent operations as `user_data`.
+     */
+    void *(*ctx_init)(void *ptr);
+
+    /* Process a directory */
     void (*process_dir)(void *ptr, void *user_data);
 
     /* Process a file */
     void (*process_file)(void *ptr, void *user_data);
 
-    /*
-     * Clean up any state, and write out any final data to the database, for example
-     * a summary containing information from each of the files seen.
-     */
-    void (*exit)(void *ptr, void *user_data);
+    /* Clean up any state for the current context */
+    void (*ctx_exit)(void *ptr, void *user_data);
+
+    /* One-time cleanup */
+    void (*global_exit)(void *global);
 };
 
 #ifdef __cplusplus
