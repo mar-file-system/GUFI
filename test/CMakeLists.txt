@@ -114,15 +114,24 @@ set_tests_properties(gary PROPERTIES LABELS "manual")
 # add_test(NAME gufitest COMMAND gufitest.py all)
 # set_tests_properties(gufitest PROPERTIES LABELS manual)
 
-add_library(test_plugin SHARED test_plugin.c)
-add_dependencies(test_plugin install_dependencies)
+foreach(type index query)
+  add_library("test_${type}ing_plugin" SHARED "test_${type}ing_plugin.c")
+  add_dependencies("test_${type}ing_plugin" install_dependencies)
+endforeach()
 
 if (APPLE OR DARWIN)
   # Apple needs to be told to explicitly not try to resolve symbols at compile time when
   # building the plugin. (They will be resolved dynamically when the plugin is dlopen()ed).
-  target_link_libraries(test_plugin -Wl,-undefined -Wl,dynamic_lookup)
+  foreach(type index query)
+    target_link_libraries("test_${type}ing_plugin" -Wl,-undefined -Wl,dynamic_lookup)
+  endforeach()
 elseif(CYGWIN)
   # Cygwin needs to use an "import library" (reference: https://cygwin.com/cygwin-ug-net/dll.html)
   # to get the symbol definitions it uses from gufi_dir2index.
-  target_link_libraries(test_plugin "${CMAKE_BINARY_DIR}/src/libgufi_dir2index.dll.a")
+  target_link_libraries("test_indexing_plugin" "${CMAKE_BINARY_DIR}/src/libgufi_dir2index.dll.a")
+  target_link_libraries("test_querying_plugin" "${CMAKE_BINARY_DIR}/src/libgufi_query.dll.a")
+else()
+  foreach(type index query)
+    target_link_libraries("test_${type}ing_plugin" "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
+  endforeach()
 endif()

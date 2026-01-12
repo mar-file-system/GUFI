@@ -74,7 +74,8 @@ esac
 # shellcheck disable=SC2034,SC2194,SC2215
 case "@CMAKE_SYSTEM_NAME@" in
     "APPLE" | "Darwin")
-        GUFI_TEST_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_plugin.dylib"
+        GUFI_INDEX_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_indexing_plugin.dylib"
+        GUFI_QUERY_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_querying_plugin.dylib"
 
         os_setfattr() {
             @XATTR@ -w "$1" "$2" "$3"
@@ -116,7 +117,8 @@ case "@CMAKE_SYSTEM_NAME@" in
 
         ;;
     "Linux" | "CYGWIN")
-        GUFI_TEST_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_plugin.so"
+        GUFI_INDEX_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_indexing_plugin.so"
+        GUFI_QUERY_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_querying_plugin.so"
 
         os_setfattr() {
             @SETFATTR@ -n "$1" -v "$2" "$3"

@@ -60,58 +60,61 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 */
 
-#ifndef PLUGIN_H
-#define PLUGIN_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
- * Plugins should create a `struct plugin_operations` with this name to be exported to the
- * GUFI code.
-  */
-#define GUFI_PLUGIN_SYMBOL gufi_plugin_operations
-#define GUFI_PLUGIN_SYMBOL_STR "gufi_plugin_operations"
-
-typedef enum {
-    PLUGIN_NONE  = 0,
-    PLUGIN_INDEX = 1,
-    PLUGIN_QUERY = 2,
-} plugin_type;
-
-/*
- * Operations for a user-defined plugin library, allowing the user to make custom
- * modifications to the databases as GUFI runs.
+ * A simple plugin for gufi_query used for testing purposes.
  */
-struct plugin_operations {
-    plugin_type type;
 
-    /* One-time initialization */
-    void (*global_init)(void *global);
+#include <stdio.h>
 
-    /*
-     * Give the user an opportunity to initialize any state for the
-     * current context. The returned pointer is passed to all
-     * subsequent operations as `user_data`.
-     */
-    void *(*ctx_init)(void *ptr);
+#include <sqlite3.h>
 
-    /* Process a directory */
-    void (*process_dir)(void *ptr, void *user_data);
+#include "plugin.h"
 
-    /* Process a file */
-    void (*process_file)(void *ptr, void *user_data);
-
-    /* Clean up any state for the current context */
-    void (*ctx_exit)(void *ptr, void *user_data);
-
-    /* One-time cleanup */
-    void (*global_exit)(void *global);
-};
-
-#ifdef __cplusplus
+static void global_init(void *global) {
+    (void) global;
+    sqlite3_initialize();
 }
-#endif
 
-#endif
+static void *db_init(void *ptr) {
+    sqlite3 *db = (sqlite3 *) ptr;
+
+    /* do some "setup" */
+    char *err = NULL;
+    if (sqlite3_exec(db, "CREATE TEMP VIEW plugin_query_view AS SELECT * FROM plugin_test_summary;",
+                     NULL, NULL, &err) != SQLITE_OK) {
+        fprintf(stderr, "Error: Querying plugin context setup failed: %s\n", err);
+        sqlite3_free(err);
+        /* return NULL? */
+    }
+
+    return db;
+}
+
+static void db_exit(void *ptr, void *user_data) {
+    (void) user_data;
+    sqlite3 *db = (sqlite3 *) ptr;
+
+    char *err = NULL;
+    if (sqlite3_exec(db, "DROP VIEW IF EXISTS plugin_query_view;",
+                     NULL, NULL, &err) != SQLITE_OK) {
+        fprintf(stderr, "Error: Querying plugin context teardown failed: %s\n", err);
+        sqlite3_free(err);
+    }
+}
+
+static void global_exit(void *global) {
+    (void) global;
+    sqlite3_shutdown();
+}
+
+struct plugin_operations GUFI_PLUGIN_SYMBOL = {
+    .type = PLUGIN_QUERY,
+    .global_init = global_init,
+    .ctx_init = db_init,
+    .process_dir = NULL,
+    .process_file = NULL,
+    .ctx_exit = db_exit,
+    .global_exit = global_exit,
+};

@@ -1,11 +1,11 @@
-$ gufi_dir2index --plugin "gufi_test_plugin" -x "prefix" "search"
+$ gufi_dir2index --plugin "indexing_plugin" -x "prefix" "search"
 Creating GUFI tree search with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      14
 
 
 # test plugin summary output:
-$ gufi_query -d " " -E "SELECT * FROM plugin_test_summary;" prefix
+$ gufi_query -d " " --plugin "querying_plugin" -E "SELECT * FROM plugin_query_view;" "prefix"
 directory 1
 directory 1
 directory 1
@@ -18,6 +18,14 @@ file 2
 file 2
 file 3
 file 6
+
+# index with querying plugin
+$ gufi_dir2index --plugin "querying_plugin" -x "prefix" "search"
+Error: Bad plugin type. Expected 1. Got: 2
+
+# query with indexing plugin
+$ gufi_query -d " " --plugin "indexing_plugin" "prefix"
+Error: Bad plugin type. Expected 2. Got: 1
 
 # bad plugin
 $ gufi_dir2index --plugin "empty_plugin" -x "prefix" "search" 2>&1 > /dev/null | grep -oh "Could not open plugin library"
