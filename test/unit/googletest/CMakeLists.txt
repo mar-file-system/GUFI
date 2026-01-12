@@ -102,6 +102,7 @@ if (CMAKE_CXX_COMPILER)
     dbutils.cpp
     descend.cpp
     external.cpp
+    path_list.cpp
     utils.cpp
   )
   foreach(SRC ${NEED_PATH})

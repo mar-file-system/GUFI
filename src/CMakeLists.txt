@@ -79,6 +79,7 @@ set(GUFI_SOURCES
   gufi_vt.c
   histogram.c
   outfiles.c
+  path_list.c
   popen_argv.c
   print.c
   run_vt.c
@@ -226,6 +227,7 @@ add_library(gufi_vt MODULE
   debug.c
   external.c
   histogram.c
+  path_list.c
   popen_argv.c
   str.c
   template_db.c
