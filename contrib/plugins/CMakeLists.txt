@@ -74,3 +74,14 @@ add_library(dsi_indexing SHARED
   "${CMAKE_SOURCE_DIR}/src/utils.c"
 )
 add_dependencies(dsi_indexing install_dependencies)
+
+# DSI querying plugin
+add_library(dsi_querying SHARED
+  dsi_querying.c
+  "${CMAKE_SOURCE_DIR}/src/SinglyLinkedList.c"
+  "${CMAKE_SOURCE_DIR}/src/utils.c"
+)
+target_link_libraries(dsi_querying
+  "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
+)
+add_dependencies(dsi_querying install_dependencies)
