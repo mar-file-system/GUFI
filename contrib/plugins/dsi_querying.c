@@ -73,6 +73,65 @@ OF SUCH DAMAGE.
 #include "plugin.h"
 #include "utils.h"           /* SNPRINTF, SNFORMAT_S */
 
+/*
+ * dsi_collection_name(xattr_name)
+ *
+ * if the xattr_name is a DSI xattr, return the collection name
+ * if not, return NULL
+ */
+static void dsi_collection_name(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    const char *name = (char *) sqlite3_value_text(argv[0]);
+
+    if (!name || !is_dsi_xattr(name, strlen(name))) {
+        sqlite3_result_null(context);
+        return;
+    }
+
+    sqlite3_result_text(context, name + DSI_NAME_PREFIX_LEN, -1, SQLITE_TRANSIENT);
+}
+
+/*
+ * dsi_uuid(xattr_name, xattr_value)
+ *
+ * if the xattr_name is a DSI xattr, extract the UUID from xattr_value
+ * if not, return NULL
+ */
+static void dsi_uuid(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    const char *name = (char *) sqlite3_value_text(argv[0]);
+
+    if (!name || !is_dsi_xattr(name, strlen(name))) {
+        sqlite3_result_null(context);
+        return;
+    }
+
+    const char *value = (char *) sqlite3_value_text(argv[1]);
+    sqlite3_result_text(context, value, DSI_VALUE_UUID_LEN, SQLITE_TRANSIENT);
+}
+
+/*
+ * dsi_dbpath(xattr_name, xattr_value)
+ *
+ * if the xattr_name is a DSI xattr, extract the db path from xattr_value
+ * if not, return NULL
+ */
+static void dsi_dbpath(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
+    const char *name = (char *) sqlite3_value_text(argv[0]);
+
+    if (!name || !is_dsi_xattr(name, strlen(name))) {
+        sqlite3_result_null(context);
+        return;
+    }
+
+    const char *value = (char *) sqlite3_value_text(argv[1]);
+    sqlite3_result_text(context, value + DSI_VALUE_PREFIX_LEN, -1, SQLITE_TRANSIENT);
+}
+
 /* used for both plugin_user_data and sqlite3_exec callback */
 struct DSI_Querying_State {
     sqlite3 *db;
@@ -87,7 +146,8 @@ static void dsi_querying_global_init(void *global) {
 }
 
 /* attach collection dbs once using the directory's xattrs instead of once per file/link */
-const char ATTACH_COLLECTIONDB_SQL[] = "SELECT rpath(sname, sroll), xattr_name FROM vrxsummary;";
+const char ATTACH_COLLECTIONDB_SQL[] = "SELECT rpath(sname, sroll), xattr_name FROM vrxsummary "
+                                       "WHERE xattr_name IS NOT NULL;";
 static int attach_collectiondb_cb(void *args, int count, char **data, char **columns) {
     struct DSI_Querying_State *dsiqs = (struct DSI_Querying_State *) args;
 
@@ -97,15 +157,11 @@ static int attach_collectiondb_cb(void *args, int count, char **data, char **col
     const char *pwd        = data[0];
     const char *xattr_name = data[1];
 
+    /* xattr_name == NULL has already been checked */
     const size_t xattr_name_len = strlen(xattr_name);
 
     /* not a DSI collection db name */
-    if (xattr_name_len < DSI_NAME_PREFIX_LEN) {
-        return 0;
-    }
-
-    /* not a DSI collection db name */
-    if (strncmp(xattr_name, DSI_NAME_PREFIX, DSI_NAME_PREFIX_LEN) != 0) {
+    if (!is_dsi_xattr(xattr_name, xattr_name_len)) {
         return 0;
     }
 
@@ -156,13 +212,25 @@ static int attach_collectiondb_cb(void *args, int count, char **data, char **col
 static void dsi_querying_ctx_exit(void *ptr, void *plugin_user_data);
 
 static void *dsi_querying_ctx_init(void *ptr) {
+    sqlite3 *db = (sqlite3 *) ptr;
+
+    if ((sqlite3_create_function(db,   "dsi_collection_name", 1, SQLITE_UTF8,
+                                 NULL, &dsi_collection_name,  NULL, NULL) != SQLITE_OK) ||
+        (sqlite3_create_function(db,   "dsi_uuid",            2, SQLITE_UTF8,
+                                 NULL, &dsi_uuid,             NULL, NULL) != SQLITE_OK) ||
+        (sqlite3_create_function(db,   "dsi_dbpath",          2, SQLITE_UTF8,
+                                 NULL, &dsi_dbpath,           NULL, NULL) != SQLITE_OK)) {
+        fprintf(stderr, "Error: Could not create DSI functions\n");
+        return NULL;
+    }
+
     struct DSI_Querying_State *dsiqs = malloc(sizeof(*dsiqs));
-    dsiqs->db = (sqlite3 *) ptr;
+    dsiqs->db = db;
     sll_init(&dsiqs->attached);
 
     /* attach all collection dbs known to this file */
     char *err = NULL;
-    if (sqlite3_exec(dsiqs->db, ATTACH_COLLECTIONDB_SQL, attach_collectiondb_cb, dsiqs, &err) != SQLITE_OK) {
+    if (sqlite3_exec(db, ATTACH_COLLECTIONDB_SQL, attach_collectiondb_cb, dsiqs, &err) != SQLITE_OK) {
         fprintf(stderr, "Error: Could not get xattrs for attaching collection dbs: %s\n", err);
         sqlite3_free(err);
         dsi_querying_ctx_exit(ptr, dsiqs);

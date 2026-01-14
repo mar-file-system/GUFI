@@ -89,11 +89,7 @@ static void dsi_indexing_dir(void *ptr, void *user_data) {
     for(size_t i = 0; i < ed->xattrs.count; i++) {
         struct xattr *xattr = &ed->xattrs.pairs[i];
 
-        if (xattr->name_len < DSI_NAME_PREFIX_LEN) {
-            continue;
-        }
-
-        if (strncmp(xattr->name, DSI_NAME_PREFIX, DSI_NAME_PREFIX_LEN) != 0) {
+        if (!is_dsi_xattr(xattr->name, xattr->name_len)) {
             continue;
         }
 
