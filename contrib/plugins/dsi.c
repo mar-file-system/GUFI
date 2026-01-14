@@ -62,16 +62,14 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_DSI_PLUGIN_H
-#define GUFI_DSI_PLUGIN_H
+#include <string.h>
 
-#include <stddef.h>
+#include "dsi.h"
 
-static const char   DSI_NAME_PREFIX[]    = "user.COL.file.";
-static const size_t DSI_NAME_PREFIX_LEN  = sizeof(DSI_NAME_PREFIX) - 1;
-static const size_t DSI_VALUE_UUID_LEN   = 36;                     /* UUID (32 + 4 separators) */
-static const size_t DSI_VALUE_PREFIX_LEN = DSI_VALUE_UUID_LEN + 1; /* UUID + period */
+int is_dsi_xattr(const char *name, const size_t name_len) {
+    if (name_len <= DSI_NAME_PREFIX_LEN) {
+        return 0;
+    }
 
-int is_dsi_xattr(const char *name, const size_t name_len);
-
-#endif
+    return (strncmp(name, DSI_NAME_PREFIX, DSI_NAME_PREFIX_LEN) == 0);
+}
