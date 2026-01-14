@@ -68,10 +68,17 @@ if (LUSTRE_PLUGIN)
   target_link_libraries(lustre_plugin lustreapi)
 endif()
 
+add_library(dsi SHARED
+  dsi.c
+)
+
 # DSI indexing plugin
 add_library(dsi_indexing SHARED
   dsi_indexing.c
   "${CMAKE_SOURCE_DIR}/src/utils.c"
+)
+target_link_libraries(dsi_indexing
+  dsi
 )
 
 # DSI querying plugin
@@ -81,5 +88,6 @@ add_library(dsi_querying SHARED
   "${CMAKE_SOURCE_DIR}/src/utils.c"
 )
 target_link_libraries(dsi_querying
+  dsi
   "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
 )
