@@ -125,6 +125,7 @@ typedef struct gufi_query_cmd {
 
     refstr_t path_list;    /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
     refstr_t p;            /* source path */
+    refstr_t plugin;       /* gufi_query plugin library path */
 
     sll_t indexroots;      /* list of index roots to pass to gufi_query */
 } gq_cmd_t;
@@ -230,6 +231,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         flatten_argv(argc, argv, "-G",          cmd->G);
         flatten_argv(argc, argv, "-F",          cmd->F);
         flatten_argv(argc, argv, "-p",          cmd->p);
+        flatten_argv(argc, argv, "--plugin",    cmd->plugin);
 
         sll_loop(&cmd->indexroots, node) {
             const char *indexroot = (char *) sll_node_data(node);
@@ -242,7 +244,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     else {
         /* can keep arguments separate */
 
-        max_argc = 31; /* 5 fixed args, 12 pairs of flags, 2 single argv flags */
+        max_argc = 33; /* 5 fixed args, 13 pairs of flags, 2 single argv flags */
         max_argc += sll_get_size(&cmd->indexroots);
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
@@ -291,6 +293,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         set_argv(argc, argv, "-G",          cmd->G);
         set_argv(argc, argv, "-F",          cmd->F);
         set_argv(argc, argv, "-p",          cmd->p);
+        set_argv(argc, argv, "--plugin",    cmd->plugin);
 
         sll_loop(&cmd->indexroots, node) {
             const char *indexroot = (char *) sll_node_data(node);
@@ -691,6 +694,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     F               = '<SQL>'
  *     path_list       = '<file path>'
  *     p               = '<source path for use with spath()>'
+ *     plugin          = '<gufi_query plugin library path>'
  *     index           = '<path>' (can also pass in without the key)
  *     verbose/VERBOSE =  <0|1>
  *
@@ -712,8 +716,11 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *                 - If S is passed in, but not E, it will be used
  *                 - If E is passed in, it will be used
  *           - If aggregating (K is passed in), the G SQL will be used
+ *           - If using plugin generated tables/views, aggregation must be used
+ *             because those tables/views don't exist when column types are checked
  *     - Most bad values are not checked until the first SELECT is
  *       performed, which is when the arguments are passed to gufi_query
+ *     - xattr processing is always enabled
  *
  * Then, SELECT from the virtual table
  *
@@ -859,6 +866,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             set_refstr(&ir, value);
             sll_push(&cmd.indexroots, (char *) ir.data);
         }
+        else if (strncmp(key, "plugin", 7) == 0) {
+            set_refstr(&cmd.plugin, value);
+        }
         else if (strncmp(key, "threads", 8) == 0) {
             /* let gufi_query check value */
             set_refstr(&cmd.threads, value);
@@ -907,6 +917,18 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
     if (!sll_get_size(&cmd.indexroots) && (!cmd.path_list.data && !cmd.path_list.len)) {
         *pzErr = sqlite3_mprintf("Missing indexroot or path_list");
+        gq_cmd_destroy(&cmd);
+        return SQLITE_CONSTRAINT;
+    }
+
+    /*
+     * Querying with plugins must use aggregation because if the
+     * checked query pulls from a generated table/view, the column
+     * types won't be able to be determined. Forcing aggregation makes
+     * sure that the user explicitly lists columns and types.
+     */
+    if (cmd.plugin.data && !cmd.K.data) {
+        *pzErr = sqlite3_mprintf("Aggregation required when using plugin");
         gq_cmd_destroy(&cmd);
         return SQLITE_CONSTRAINT;
     }

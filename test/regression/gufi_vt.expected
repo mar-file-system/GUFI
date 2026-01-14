@@ -463,6 +463,24 @@ $ (
 1024|prefix/1KB
 1048576|prefix/1MB
 
+# With plugin
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="INSERT INTO intermediate SELECT * FROM plugin_query_view;", K="CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", J="INSERT INTO aggregate SELECT * FROM intermediate;", G="SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;", plugin="querying_plugin");SELECT * FROM gufi;"
+) | sqlite3
+directory|1
+directory|1
+directory|1
+directory|1
+directory|1
+directory|1
+file|0
+file|1
+file|2
+file|2
+file|3
+file|6
+
 # ######################################
 # errors
 # Missing indexroot
