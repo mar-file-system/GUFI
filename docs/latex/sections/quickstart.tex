@@ -107,11 +107,11 @@ Some particularly useful ones are listed here: \\
   \centering
   \begin{tabularx}{\textwidth}{| l | X |}
     \hline
-    CMake Variable & Explaination \\
-    (prepend with \texttt{-D} when used) & \\
+    CMake Variable & Explanation \\
+    (prepend with \texttt{-D} to set) & \\
     \hline
     \texttt{CMAKE\_INSTALL\_PREFIX=<directory path>} & Where to install
-    GUFI when runnng \texttt{make install}. Useful if not installing to
+    GUFI when running \texttt{make install}. Useful if not installing to
     system directories. \\
     \hline
     \texttt{DEP\_AI=<ON|OFF>} & Enable or disable building sqlite-vec,
@@ -138,6 +138,27 @@ Some particularly useful ones are listed here: \\
   \end{tabularx}
 \end{table}
 
+There are also a few CMake variables that are not normally modified,
+but are used in later text, and so are defined here:
+
+\begin{table}[H]
+  \centering
+  \begin{tabularx}{\textwidth}{| l | X |}
+    \hline
+    CMake Variable & Explanation \\
+    (prepend with \texttt{-D} to set) & \\
+    \hline
+    \texttt{SERVER\_BIN=<dir>} & Directory under
+    \texttt{CMAKE\_INSTALL\_PREFIX} to place executables. (Default:
+    \texttt{bin}) \\
+    \hline
+    \texttt{SERVER\_LIB=<dir>} & Directory under
+    \texttt{CMAKE\_INSTALL\_PREFIX} to place library files. (Default:
+    \texttt{lib}) \\
+    \hline
+  \end{tabularx}
+\end{table}
+
 Configuring CMake on macOS is trickier than building on Linux,
 especially with \texttt{DEP\_AI=On}. See the latest macOS CMake
 configuration in \texttt{.github/workflows/test.yml}.
@@ -155,6 +176,31 @@ Due to how GUFI was planned to be deployed, this installs what is
 known as the server side code. The server contains all of the actual
 implementations of GUFI functionality. The implied client side
 code does exist, but is not explained here.
+
+At this point, the parent directory of \texttt{SERVER\_CONFIG} should
+have a file called \texttt{server.example} that should be copied or
+renamed to \texttt{SERVER\_CONFIG} and updated before using the user
+facing scripts (Sec~\ref{sec:user_facing_scripts}).
+
+\subsection{Environment Variables}
+If GUFI was installed, add
+\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{SERVER\_BIN\}} to \texttt{PATH}
+and
+\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{SERVER\_LIB\}} to both
+\texttt{LD\_LIBRARY\_PATH} and \texttt{PYTHONPATH} if they are not
+already in there.
+
+Alternatively, if the files in the build directory are being used, the
+absolute path of \texttt{build/src} should be added to \texttt{PATH}
+and \texttt{LD\_LIBRARY\_PATH}. Similarly, the absolute path of
+\texttt{build/scripts} should be added to \texttt{PATH} and
+\texttt{PYTHONPATH}. Note that the server configuration file still
+needs to be found at \texttt{SERVER\_CONFIG}.
+
+Either way, \textbf{DO NOT} use the original files from the
+repository. Many are modified when they are placed in the build
+directory. \textbf{Always} use the files in the build or install
+directory.
 
 \section {Usage}
 With GUFI installed, usage is grouped into 2 phases. The first,
@@ -205,6 +251,8 @@ total number of files and the total size of all files. The \entries
 table contains \texttt{stat(2)} information on the individual files
 and links.
 
+\gufiquery does \textbf{NOT} use \texttt{SERVER\_CONFIG}.
+
 There are several things to note that affect how \gufiquery should be
 called (explainations can be found in the other latex documentation).
 
@@ -249,9 +297,11 @@ can be replicated in GUFI like so: \\
 \gufivt is a \href{https://sqlite.org/loadext.html}{SQLite3 Run-Time
   Loadable Extension} that wraps \gufiquery and makes it accessible via
 the SQlite3 command line as well as via any language's SQLite3
-library.
+library. It can be found in \texttt{build/src} and, if GUFI was installed,
+\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{SERVER\_LIB\}}.
 
 \subsubsection{User Facing Scripts}
+\label{sec:user_facing_scripts}
 Because \gufiquery is very complex and requires detailed knowledge of
 the internals of GUFI, it is not the expected way most people will use
 to query indexes. Instead, there is a series of Python scripts that

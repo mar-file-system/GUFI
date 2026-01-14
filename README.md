@@ -31,7 +31,7 @@ See other components of MarFS at:
     https://github.com/mar-file-system
 
 ## Usage
-For instructions on how to quickly get a local GUFI build running, please see the [quickstart](docs/latex/gufi_quickstart.tex) guide.
+For instructions on how to quickly get a local GUFI build running, please see the [quickstart](https://github.com/mar-file-system/GUFI/releases/latest/download/gufi_quickstart.pdf) guide. Note that the quickstart guide attached to a release is generally only uploaded when a new release is created. To get the latest version, build the LaTeX docs.
 
 For the dependency list, detailed build and install instructions, and details about GUFI, please see the [documentation](docs/README.md).
 
