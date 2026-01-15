@@ -588,7 +588,6 @@ if (RPMBUILD)
   set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python3-pip, coreutils ${EXTRA_DEPS}")
   set(CPACK_RPM_PACKAGE_RELOCATABLE On)
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
-  set(CPACK_RPM_SPEC_MORE_DEFINE "%undefine __brp_mangle_shebangs")
 
   set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
   set(CPACK_RPM_Server_PACKAGE_AUTOREQ Off)

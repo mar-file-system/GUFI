@@ -76,6 +76,7 @@ GUFI_tree
 performs queries on the contents of a GUFI tree in a parallel manner. Users supply their own SQL queries to run on the entries table, directory table, and, if generated, the tree summary table. Output usually writes to stdout, but can be redirected to per-thread files or per-thread databases.
 
 .Xr gufi_du 1 ,
+.Xr gufi_getfattr 1 ,
 .Xr gufi_find 1 ,
 .Xr gufi_ls 1 ,
 and
