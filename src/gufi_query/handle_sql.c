@@ -183,6 +183,15 @@ static int gen_types(struct input *in) {
             setup_xattrs_views(in, db, &work, &count);
         }
 
+        if (in->sql.setup_res_col_types.data && in->sql.setup_res_col_types.len) {
+            char *err = NULL;
+            if (sqlite3_exec(db, in->sql.setup_res_col_types.data, NULL, NULL, &err) != SQLITE_OK) {
+                fprintf(stderr, "Error: Failed to set up table for getting result column types: %s\n", err);
+                sqlite3_free(err);
+                goto error;
+            }
+        }
+
         /* if not aggregating, get types for T, S, and E */
         if (!in->sql.init_agg.len) {
             if (in->sql.tsum.len) {

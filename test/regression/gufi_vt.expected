@@ -463,7 +463,25 @@ $ (
 1024|prefix/1KB
 1048576|prefix/1MB
 
-# With plugin
+# Plugin without aggregation
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_types="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="querying_plugin");SELECT * FROM gufi ORDER BY filetype ASC, count ASC;"
+) | sqlite3
+directory|1
+directory|1
+directory|1
+directory|1
+directory|1
+directory|1
+file|0
+file|1
+file|2
+file|2
+file|3
+file|6
+
+# Plugin with aggregation
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="INSERT INTO intermediate SELECT * FROM plugin_query_view;", K="CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", J="INSERT INTO aggregate SELECT * FROM intermediate;", G="SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;", plugin="querying_plugin");SELECT * FROM gufi;"
@@ -699,4 +717,19 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', ab='');"
 ) | sqlite3
 Runtime error near line 2: Unknown key: ab (19)
+
+# Bad plugin
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_types="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="prefix");SELECT * FROM gufi;"
+) | sqlite3
+Could not open plugin library
+Error: Failed to read from file descriptor: Bad address (14)
+
+# Bad Column Type Setup
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_types="CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Setting up results table failed: near "plugin_query_view": syntax error (19)
 

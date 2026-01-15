@@ -223,9 +223,17 @@ query_vt() {
     )
     query_vt "${query}"
 
-    echo "# With plugin"
     rm -rf "${SEARCH}"
     "${GUFI_DIR2INDEX}" -x --plugin "${GUFI_INDEX_PLUGIN}" "${SRCDIR}" "${SEARCH}" #> /dev/null 2>&1
+
+    echo "# Plugin without aggregation"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_types=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_QUERY_PLUGIN}\");"
+        echo -n "SELECT * FROM gufi ORDER BY filetype ASC, count ASC;"
+    )
+    query_vt "${query}"
+
+    echo "# Plugin with aggregation"
     query=$(
         echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${GUFI_QUERY_PLUGIN}\");"
         echo -n "SELECT * FROM gufi;"
@@ -331,6 +339,20 @@ query_vt() {
 
     echo "# Bad key length"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', ab='');"
+
+    echo "# Bad plugin"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_types=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${INDEXROOT}\");"
+        echo -n "SELECT * FROM gufi;"
+    )
+    query_vt "${query}" | @SED@ 's%Could not open plugin library:.*%Could not open plugin library%g; s%file descriptor [0-9]*%file descriptor%g;'
+
+    echo "# Bad Column Type Setup"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_types=\"CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\");"
+        echo -n "SELECT * FROM gufi;"
+    )
+    query_vt "${query}"
 
     set -e
 ) | replace | tee "${OUTPUT}"

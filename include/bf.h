@@ -186,63 +186,67 @@ extern "C" {
 #define FLAG_PRINT_TLV_LONG "print-tlv"
 #define FLAG_PRINT_TLV {FLAG_PRINT_TLV_LONG, no_argument, NULL, FLAG_PRINT_TLV_SHORT}
 
-#define FLAG_KEEP_MATIME_SHORT (FLAG_GROUP_MISC + 3)
+#define FLAG_SETUP_RES_COL_TYPES_SHORT (FLAG_GROUP_MISC + 3)
+#define FLAG_SETUP_RES_COL_TYPES_LONG "setup-res-col-types"
+#define FLAG_SETUP_RES_COL_TYPES {FLAG_SETUP_RES_COL_TYPES_LONG, required_argument, NULL, FLAG_SETUP_RES_COL_TYPES_SHORT}
+
+#define FLAG_KEEP_MATIME_SHORT (FLAG_GROUP_MISC + 4)
 #define FLAG_KEEP_MATIME_LONG "keep-matime"
 #define FLAG_KEEP_MATIME {FLAG_KEEP_MATIME_LONG, no_argument, NULL, FLAG_KEEP_MATIME_SHORT}
 
-#define FLAG_SKIP_FILE_SHORT (FLAG_GROUP_MISC + 4)
+#define FLAG_SKIP_FILE_SHORT (FLAG_GROUP_MISC + 5)
 #define FLAG_SKIP_FILE_LONG "skip-file"
 #define FLAG_SKIP_FILE {FLAG_SKIP_FILE_LONG, required_argument, NULL, FLAG_SKIP_FILE_SHORT}
 
-#define FLAG_DRY_RUN_SHORT (FLAG_GROUP_MISC + 5)
+#define FLAG_DRY_RUN_SHORT (FLAG_GROUP_MISC + 6)
 #define FLAG_DRY_RUN_LONG "dry-run"
 #define FLAG_DRY_RUN {FLAG_DRY_RUN_LONG, no_argument, NULL, FLAG_DRY_RUN_SHORT}
 
-#define FLAG_PLUGIN_SHORT (FLAG_GROUP_MISC + 6)
+#define FLAG_PLUGIN_SHORT (FLAG_GROUP_MISC + 7)
 #define FLAG_PLUGIN_LONG "plugin"
 #define FLAG_PLUGIN {FLAG_PLUGIN_LONG, required_argument, NULL, FLAG_PLUGIN_SHORT}
 
-#define FLAG_PATH_LIST_SHORT (FLAG_GROUP_MISC + 7)
+#define FLAG_PATH_LIST_SHORT (FLAG_GROUP_MISC + 8)
 #define FLAG_PATH_LIST_LONG "path-list"
 #define FLAG_PATH_LIST {FLAG_PATH_LIST_LONG, required_argument, NULL, FLAG_PATH_LIST_SHORT}
 
-#define FLAG_FORMAT_SHORT (FLAG_GROUP_MISC + 8)
+#define FLAG_FORMAT_SHORT (FLAG_GROUP_MISC + 9)
 #define FLAG_FORMAT_LONG "format"
 #define FLAG_FORMAT {FLAG_FORMAT_LONG, required_argument, NULL, FLAG_FORMAT_SHORT}
 
-#define FLAG_TERSE_SHORT (FLAG_GROUP_MISC + 9)
+#define FLAG_TERSE_SHORT (FLAG_GROUP_MISC + 10)
 #define FLAG_TERSE_LONG "terse"
 #define FLAG_TERSE {FLAG_TERSE_LONG, no_argument, NULL, FLAG_TERSE_SHORT}
 
-#define FLAG_ROLLUP_LIMIT_SHORT (FLAG_GROUP_MISC + 10)
+#define FLAG_ROLLUP_LIMIT_SHORT (FLAG_GROUP_MISC + 11)
 #define FLAG_ROLLUP_LIMIT_LONG "limit"
 #define FLAG_ROLLUP_LIMIT {FLAG_ROLLUP_LIMIT_LONG, required_argument, NULL, FLAG_ROLLUP_LIMIT_SHORT}
 
-#define FLAG_DONT_REPROCESS_SHORT (FLAG_GROUP_MISC + 11)
+#define FLAG_DONT_REPROCESS_SHORT (FLAG_GROUP_MISC + 12)
 #define FLAG_DONT_REPROCESS_LONG "dont-reprocess"
 #define FLAG_DONT_REPROCESS {FLAG_DONT_REPROCESS_LONG, no_argument, NULL, FLAG_DONT_REPROCESS_SHORT}
 
-#define FLAG_NEWLINE_SHORT (FLAG_GROUP_MISC + 12)
+#define FLAG_NEWLINE_SHORT (FLAG_GROUP_MISC + 13)
 #define FLAG_NEWLINE_LONG "newline"
 #define FLAG_NEWLINE {FLAG_NEWLINE_LONG, required_argument, NULL, FLAG_NEWLINE_SHORT}
 
-#define FLAG_SUPPRESS_NEWLINE_SHORT (FLAG_GROUP_MISC + 13)
+#define FLAG_SUPPRESS_NEWLINE_SHORT (FLAG_GROUP_MISC + 14)
 #define FLAG_SUPPRESS_NEWLINE_LONG "suppress-newline"
 #define FLAG_SUPPRESS_NEWLINE {FLAG_SUPPRESS_NEWLINE_LONG, no_argument, NULL, FLAG_SUPPRESS_NEWLINE_SHORT}
 
-#define FLAG_DIR_MATCH_UID_SHORT (FLAG_GROUP_MISC + 14)
+#define FLAG_DIR_MATCH_UID_SHORT (FLAG_GROUP_MISC + 15)
 #define FLAG_DIR_MATCH_UID_LONG "dir-match-uid"
 #define FLAG_DIR_MATCH_UID {FLAG_DIR_MATCH_UID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_UID_SHORT}
 
-#define FLAG_DIR_MATCH_GID_SHORT (FLAG_GROUP_MISC + 15)
+#define FLAG_DIR_MATCH_GID_SHORT (FLAG_GROUP_MISC + 16)
 #define FLAG_DIR_MATCH_GID_LONG "dir-match-gid"
 #define FLAG_DIR_MATCH_GID {FLAG_DIR_MATCH_GID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_GID_SHORT}
 
-#define FLAG_PRINT_EACCES_SHORT (FLAG_GROUP_MISC + 16)
+#define FLAG_PRINT_EACCES_SHORT (FLAG_GROUP_MISC + 17)
 #define FLAG_PRINT_EACCES_LONG "print-eacces"
 #define FLAG_PRINT_EACCES {FLAG_PRINT_EACCES_LONG, no_argument, NULL, FLAG_PRINT_EACCES_SHORT}
 
-#define FLAG_NO_PRINT_SQL_ON_ERR_SHORT (FLAG_GROUP_MISC + 17)
+#define FLAG_NO_PRINT_SQL_ON_ERR_SHORT (FLAG_GROUP_MISC + 18)
 #define FLAG_NO_PRINT_SQL_ON_ERR_LONG "no-print-sql-on-err"
 #define FLAG_NO_PRINT_SQL_ON_ERR {FLAG_NO_PRINT_SQL_ON_ERR_LONG, no_argument, NULL, FLAG_NO_PRINT_SQL_ON_ERR_SHORT}
 
@@ -394,6 +398,17 @@ struct input {
     } nobody;
 
     struct {
+        /*
+         * create a table with the same name and columns as the final
+         * result table so that column types can be determined for
+         * tables/views that do not already exist
+         *
+         * run once when --print-tlv is set in a temporary database
+         *
+         * only the first SQL statement will be processed
+         */
+        refstr_t setup_res_col_types;
+
         /* set up per-thread intermidate tables */
         refstr_t init;
 

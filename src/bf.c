@@ -281,6 +281,7 @@ void print_help(const char* prog_name,
             case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <n>               minimum level to go down"); break;
             case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <n>               maximum level to go down"); break;
             case FLAG_PRINT_TLV_SHORT:               printf("      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
+            case FLAG_SETUP_RES_COL_TYPES_SHORT:     printf("      --setup-res-col-types <SQL>   Single SQL statement to create a table to determine result column types when calling --print-tlv"); break;
             case FLAG_KEEP_MATIME_SHORT:             printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
             case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
             case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
@@ -335,6 +336,7 @@ void show_input(struct input* in, int retval) {
     printf("in.process_sql              = %d\n",            (int) in->process_sql);
     printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
     printf("in.nobody.gid               = %" STAT_gid "\n", in->nobody.gid);
+    printf("in.sql.setup_res_col_types  = '%s'\n",          in->sql.setup_res_col_types.data);
     printf("in.sql.init                 = '%s'\n",          in->sql.init.data);
     printf("in.sql.tsum                 = '%s'\n",          in->sql.tsum.data);
     printf("in.sql.sum                  = '%s'\n",          in->sql.sum.data);
@@ -610,6 +612,10 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_PRINT_TLV_SHORT:
                 in->types.print_tlv = 1;
+                break;
+
+            case FLAG_SETUP_RES_COL_TYPES_SHORT:
+                INSTALL_STR(&in->sql.setup_res_col_types, optarg);
                 break;
 
             case FLAG_KEEP_MATIME_SHORT:

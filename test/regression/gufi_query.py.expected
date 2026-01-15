@@ -37,6 +37,7 @@ options:
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
   -O, --output-db <out_DB>          output DB
       --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
+      --setup-res-col-types <SQL>   Single SQL statement to create a table to determine result column types when calling --print-tlv
       --terse                       print the information in terse form
       --print-eacces                print messages when errno is EACCES
       --no-print-sql-on-err         do not print SQL with error messages

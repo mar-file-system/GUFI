@@ -114,6 +114,13 @@ typedef struct gufi_query_cmd {
     refstr_t dir_match_gid;
 
     /* sql */
+
+    /*
+     * SQL to set up temporary single table that does not exist in
+     * default GUFI to allow for result column types to be discovered
+     */
+    refstr_t setup_res_col_types;
+
     refstr_t I;
     refstr_t T;
     refstr_t S;
@@ -244,7 +251,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     else {
         /* can keep arguments separate */
 
-        max_argc = 33; /* 5 fixed args, 13 pairs of flags, 2 single argv flags */
+        max_argc = 35; /* 5 fixed args, 14 pairs of flags, 2 single argv flags */
         max_argc += sll_get_size(&cmd->indexroots);
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
@@ -284,16 +291,17 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = dir_match_gid;
         }
 
-        set_argv(argc, argv, "-I",          cmd->I);
-        set_argv(argc, argv, "-T",          cmd->T);
-        set_argv(argc, argv, "-S",          cmd->S);
-        set_argv(argc, argv, "-E",          cmd->E);
-        set_argv(argc, argv, "-K",          cmd->K);
-        set_argv(argc, argv, "-J",          cmd->J);
-        set_argv(argc, argv, "-G",          cmd->G);
-        set_argv(argc, argv, "-F",          cmd->F);
-        set_argv(argc, argv, "-p",          cmd->p);
-        set_argv(argc, argv, "--plugin",    cmd->plugin);
+        set_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_types);
+        set_argv(argc, argv, "-I",                    cmd->I);
+        set_argv(argc, argv, "-T",                    cmd->T);
+        set_argv(argc, argv, "-S",                    cmd->S);
+        set_argv(argc, argv, "-E",                    cmd->E);
+        set_argv(argc, argv, "-K",                    cmd->K);
+        set_argv(argc, argv, "-J",                    cmd->J);
+        set_argv(argc, argv, "-G",                    cmd->G);
+        set_argv(argc, argv, "-F",                    cmd->F);
+        set_argv(argc, argv, "-p",                    cmd->p);
+        set_argv(argc, argv, "--plugin",              cmd->plugin);
 
         sll_loop(&cmd->indexroots, node) {
             const char *indexroot = (char *) sll_node_data(node);
@@ -684,6 +692,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     max_level       =  <non-negative integer>
  *     dir_match_uid   =  <uid>
  *     dir_match_gid   =  <gid>
+ *     setup_table     = '<SQL>' (set up single temporary table to make columns available for getting result column types)
  *     I               = '<SQL>'
  *     T               = '<SQL>'
  *     S               = '<SQL>'
@@ -908,6 +917,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             /* let gufi_query check value */
             set_refstr(&cmd.dir_match_gid, value);
         }
+        else if (strncmp(key, "setup_res_col_types", 20) == 0) {
+            set_refstr(&cmd.setup_res_col_types, value);
+        }
         else {
             *pzErr = sqlite3_mprintf("Unknown key: %s", key);
             gq_cmd_destroy(&cmd);
@@ -921,18 +933,6 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         return SQLITE_CONSTRAINT;
     }
 
-    /*
-     * Querying with plugins must use aggregation because if the
-     * checked query pulls from a generated table/view, the column
-     * types won't be able to be determined. Forcing aggregation makes
-     * sure that the user explicitly lists columns and types.
-     */
-    if (cmd.plugin.data && !cmd.K.data) {
-        *pzErr = sqlite3_mprintf("Aggregation required when using plugin");
-        gq_cmd_destroy(&cmd);
-        return SQLITE_CONSTRAINT;
-    }
-
     /* get column types of results from gufi_query */
 
     /* make sure all setup tables are placed into a different db */
@@ -941,6 +941,17 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                              0, 0, create_dbdb_tables, NULL);
 
     create_xattr_tables(SQLITE_MEMORY, tempdb, NULL);
+
+    /* before getting the column types, set up tables that don't exist yet in this temporary space */
+    if (cmd.setup_res_col_types.data && cmd.setup_res_col_types.len) {
+        char *err = NULL;
+        if (sqlite3_exec(tempdb, cmd.setup_res_col_types.data, NULL, NULL, &err) != SQLITE_OK) {
+            *pzErr = sqlite3_mprintf("Setting up results table failed: %s", err);
+            gq_cmd_destroy(&cmd);
+            sqlite3_free(err);
+            return SQLITE_CONSTRAINT;
+        }
+    }
 
     struct input in;
     in.process_xattrs = 1;
