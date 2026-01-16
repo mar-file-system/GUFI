@@ -276,7 +276,7 @@ Creating GUFI tree search with 2 threads
 Total Dirs:          3
 Total Non-Dirs:      5
 
-$ gufi_query -d " " --print-eacces -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+$ gufi_query -d " " --print-eacces -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
 Cannot attach database "prefix/db.db" as "tree": unable to open database: file:prefix/db.db?mode=ro
 prefix/directory
 prefix/directory/executable
@@ -302,7 +302,7 @@ Creating GUFI tree search with 2 threads
 Total Dirs:          2
 Total Non-Dirs:      3
 
-$ gufi_query -d " " --print-eacces -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+$ gufi_query -d " " --print-eacces -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
 Cannot attach database "prefix/db.db" as "tree": unable to open database: file:prefix/db.db?mode=ro
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
@@ -333,7 +333,7 @@ Creating GUFI tree search with 2 threads
 Total Dirs:          1
 Total Non-Dirs:      6
 
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
 prefix
 prefix/.hidden
 prefix/1KB
@@ -383,7 +383,7 @@ Creating GUFI tree search with 2 threads
 Total Dirs:          4
 Total Non-Dirs:      9
 
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
 prefix
 prefix/.hidden
 prefix/1KB

@@ -384,9 +384,9 @@ typedef enum OutputMethod {
 } OutputMethod_t;
 
 enum filter_type {
-    FILTER_TYPE_FILE = 1,
-    FILTER_TYPE_DIR  = 2,
-    FILTER_TYPE_LINK = 4
+    FILTER_TYPE_DIR  = 1,
+    FILTER_TYPE_FILE = 2,
+    FILTER_TYPE_LINK = 4,
 };
 
 /* flags only - positional argument handling is found in individual programs */

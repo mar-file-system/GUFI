@@ -331,7 +331,7 @@ def run(argv, config_path):
                                                                  None))
 
         E = 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
-                                         gufi_common.build_query(['rpath(sname, sroll) || \'/\' || name'] +
+                                         gufi_common.build_query(['rpath(sname, sroll, name)'] +
                                                                  ['name'] + columns[2:],
                                                                  [gufi_common.VRPENTRIES],
                                                                  E_where,
@@ -378,6 +378,14 @@ def run(argv, config_path):
                 MAX_WIDTHS_INSERT += 'max(length(inode)), '
                 PADDED            += '''
                                      rpad(inode, (SELECT inode_len FROM {0})),
+                                     '''
+
+            if args.size:
+                RESULTS_SCHEMA    += 'blocks {0}, '.format(SQLITE3_TEXT)
+                MAX_WIDTHS_SCHEMA += 'blocks_len {0}, '.format(SQLITE3_INT64)
+                MAX_WIDTHS_INSERT += 'max(length(blocks)), '
+                PADDED            += '''
+                                     rpad(blocks, (SELECT blocks_len FROM {0})),
                                      '''
 
             RESULTS_SCHEMA    += 'mode {0}, nlinks {0}, u {0}, '.format(SQLITE3_TEXT)

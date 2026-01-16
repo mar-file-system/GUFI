@@ -80,7 +80,7 @@ out=$("${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}" 2>&1 | @AWK@ '{ print "    
 
 src=$(find "${SRCDIR}" | sort)
 
-fullindex=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | sort)
+fullindex=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "${INDEXROOT}" | sort)
 
 echo "Index Everything:"
 echo
@@ -110,7 +110,7 @@ do
     # find and GUFI levels are slightly different
     src=$( (find "${SRCDIR}" -mindepth ${level} -type d; find "${SRCDIR}" -mindepth $((level + 1)) ! -type d) | sort)
 
-    index=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | sort)
+    index=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "${INDEXROOT}" | sort)
 
     echo "Index starting at level ${level}:"
     echo
@@ -141,7 +141,7 @@ do
     src=$( (find "${SRCDIR}" -maxdepth ${level} -type d; find "${SRCDIR}" -maxdepth $((level + 1)) ! -type d) | sort)
     # src=$(find "${SRCDIR}" -maxdepth ${level} | sort)
 
-    index=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | sort)
+    index=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "${INDEXROOT}" | sort)
 
     echo "Index up to level ${level}:"
     echo
@@ -164,7 +164,7 @@ rm -r "${SEARCH}"
 run_no_sort "${GUFI_DIR2INDEX} --min-level 2               -x ${SRCDIR} ${SEARCH}"
 run_no_sort "${GUFI_DIR2INDEX} --min-level 1 --max-level 2 -x ${SRCDIR} ${SEARCH}"
 run_no_sort "${GUFI_DIR2INDEX} --min-level 0 --max-level 1 -x ${SRCDIR} ${SEARCH}"
-index=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | sort)
+index=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "${INDEXROOT}" | sort)
 
 paste \
     <(echo "Expected Index:"
@@ -184,7 +184,7 @@ echo "# partial indexing (first half)"
 run_no_sort "rm -r \"${SEARCH}\""
 run_no_sort "cat \"${DISTRIBUTED_0}\""
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} --path-list \"${DISTRIBUTED_0}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH}\""
-run_sort "${GUFI_QUERY} -d \" \" --print-eacces -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" --print-eacces -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\""
 echo "# ######################################"
 echo
 echo "# ######################################"
@@ -192,7 +192,7 @@ echo "# partial indexing (second half)"
 run_no_sort "rm -r \"${SEARCH}\""
 run_no_sort "cat \"${DISTRIBUTED_1}\""
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} --path-list \"${DISTRIBUTED_1}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH}\""
-run_sort "${GUFI_QUERY} -d \" \" --print-eacces -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" --print-eacces -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\""
 echo "# ######################################"
 echo
 echo "# ######################################"
@@ -201,7 +201,7 @@ run_no_sort "rm -r \"${SEARCH}\""
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} --path-list \"${DISTRIBUTED_0}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH}\""
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} --path-list \"${DISTRIBUTED_1}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH}\""
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} --max-level 0 \"${SRCDIR}\" \"${SEARCH}\""
-run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\""
 echo "# ######################################"
 echo
 
@@ -221,7 +221,7 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"\" \"${TRACE}\""
 echo "# skip file"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} --skip-file \"${SKIP}\" \"${SRCDIR}\" \"${SEARCH}\""
 
-run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\""
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} --skip-file \"${SKIP}.bad\" \"${SRCDIR}\" \"${SEARCH}\""

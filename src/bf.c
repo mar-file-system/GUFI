@@ -788,10 +788,6 @@ int parse_cmd_line(int                  argc,
         return -1;
     }
 
-    if (in->filter_types == 0) {
-        in->filter_types = FILTER_TYPE_FILE | FILTER_TYPE_DIR | FILTER_TYPE_LINK;
-    }
-
     // caller requires given number of positional args, after the options.
     // <optind> is the number of argv[] values that were recognized as options.
     // NOTE: caller may have custom options ovf their own, so returning a

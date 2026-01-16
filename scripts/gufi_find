@@ -222,7 +222,7 @@ def build_where(args, table, root_uid=0, root_gid=0):
         where += ['atime > {0}'.format(args.anewer.st_atime)]
 
     if args.atime is not None:
-        where += ['({0} - atime) / {1} {2} {3} '.format(now, SECONDS_PER_DAY, atime[0], atime[1])
+        where += ['({0} - atime) / {1} {2} {3}'.format(now, SECONDS_PER_DAY, atime[0], atime[1])
                   for atime in args.atime]
 
     if args.cmin is not None:
@@ -233,7 +233,7 @@ def build_where(args, table, root_uid=0, root_gid=0):
         where += ['ctime > {0}'.format(args.cnewer.st_ctime)]
 
     if args.ctime is not None:
-        where += ['({0} - ctime) / {1} {2} {3} '.format(now, SECONDS_PER_DAY, ctime[0], ctime[1])
+        where += ['({0} - ctime) / {1} {2} {3}'.format(now, SECONDS_PER_DAY, ctime[0], ctime[1])
                   for ctime in args.ctime]
 
     if args.empty is True:
@@ -325,10 +325,10 @@ def build_where(args, table, root_uid=0, root_gid=0):
     # matches on whole path
     if args.regex is not None:
         if table in gufi_common.SUMMARY_NAMES:
-            where += [' OR '.join(['((rpath(sname, sroll)) REGEXP \'{0}\')'.format(regex)
+            where += [' OR '.join(['(rpath(sname, sroll) REGEXP \'{0}\')'.format(regex)
                                    for regex in args.regex])]
         elif table in gufi_common.ENTRIES_NAMES:
-            where += [' OR '.join(['((rpath(sname, sroll) || \'/\' || name) REGEXP \'{0}\')'.format(regex)
+            where += [' OR '.join(['(rpath(sname, sroll, name) REGEXP \'{0}\')'.format(regex)
                                    for regex in args.regex])]
 
     if args.samefile is not None:
