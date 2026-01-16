@@ -97,10 +97,6 @@ first n results
 restrict to user
 .It Fl -delim\ c
 delimiter separating output columns
-.It Fl -in-memory-name\ name
-Name of in-memory database when aggregation is performed
-.It Fl -aggregate-name\ name
-Name of final database when aggregation is performed
 .It Fl -skip-file\ filename
 Name of file containing directory basenames to skip
 .It Fl V, -verbose

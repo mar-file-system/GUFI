@@ -102,9 +102,9 @@ def depth(config, args, where):
     '''
 
     queries = [
-        '-I', build_create(args.inmemory_name, ['name {0}'.format(SQLITE3_TEXT)]),
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, ['name {0}'.format(SQLITE3_TEXT)]),
 
-        '-S', 'INSERT INTO {0} {1} '.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1} '.format(gufi_common.INTERMEDIATE_NAME,
                                             gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2)],
                                                                     [gufi_common.VRSUMMARY],
                                                                     where,
@@ -113,20 +113,20 @@ def depth(config, args, where):
                                                                     args.num_results,
                                                                     None)),
 
-        '-J', 'INSERT INTO {0} {1} '.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1} '.format(gufi_common.AGGREGATE_NAME,
                                             gufi_common.build_query(['*'],
-                                                                    [args.inmemory_name],
+                                                                    [gufi_common.INTERMEDIATE_NAME],
                                                                     None,
                                                                     None,
                                                                     None,
                                                                     None,
                                                                     None)),
 
-        '-K', build_create(args.aggregate_name, ['name {0}'.format(SQLITE3_TEXT)]),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, ['name {0}'.format(SQLITE3_TEXT)]),
 
         '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN \'.\' ELSE name END'] if args.recursive else []) +
                                       ['CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, \'/\', \'\')) + 1 END'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       None,
                                       ['name ' + ORDER[args.order]] if args.order else None,
@@ -149,9 +149,9 @@ def filesize(config, args, where):
     '''
 
     queries = [
-        '-I', build_create(args.inmemory_name, ['name {0}'.format(SQLITE3_TEXT), 'size {0}'.format(SQLITE3_INT64)]),
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, ['name {0}'.format(SQLITE3_TEXT), 'size {0}'.format(SQLITE3_INT64)]),
 
-        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2),
                                                                     'CAST(TOTAL(size) AS {0})'.format(SQLITE3_INT64)],
                                                                    [gufi_common.VRPENTRIES],
@@ -161,20 +161,20 @@ def filesize(config, args, where):
                                                                    args.num_results,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['name', 'size'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    ['name ' + ORDER[args.order]] if args.order else None,
                                                                    args.num_results,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name, ['name {0}'.format(SQLITE3_TEXT), 'size {0}'.format(SQLITE3_INT64)]),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, ['name {0}'.format(SQLITE3_TEXT), 'size {0}'.format(SQLITE3_INT64)]),
 
         '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN \'.\' ELSE name END'] if args.recursive else []) +
                                       ['size'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       None,
                                       ['name ' + ORDER[args.order]] if args.order else None,
@@ -220,8 +220,8 @@ def linkcount(config, args, where):
 
 def extensions(_config, args, where):
     queries = [
-        '-I', build_create(args.inmemory_name, ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
-        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['REPLACE(name, RTRIM(name, REPLACE(name, \'.\', \'\')), \'\') AS ext', 'COUNT(inode)'],
                                                                    [gufi_common.VRPENTRIES],
                                                                    where,
@@ -229,17 +229,17 @@ def extensions(_config, args, where):
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-K', build_create(args.aggregate_name, ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME, ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['ext', 'SUM(count)'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    ['ext'],
                                                                    None,
                                                                    None,
                                                                    None)),
         '-G', gufi_common.build_query(['ext', 'SUM(count)'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       ['ext'],
                                       None,
@@ -262,11 +262,11 @@ def total_filesize(_config, args, where):
     queries = []
     if args.cumulative:
         queries = [
-            '-I', build_create(args.inmemory_name,
+            '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                                ['id {0}'.format(SQLITE3_IPK),
                                 'size {0}'.format(SQLITE3_INT64)]),
 
-            '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+            '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                                gufi_common.build_query(['NULL', 'totsize'],
                                                                        [gufi_common.VRSUMMARY],
                                                                        where,
@@ -275,20 +275,20 @@ def total_filesize(_config, args, where):
                                                                        None,
                                                                        None)),
 
-            '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+            '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                                gufi_common.build_query(['NULL', 'size'],
-                                                                       [args.inmemory_name],
+                                                                       [gufi_common.INTERMEDIATE_NAME],
                                                                        None,
                                                                        None,
                                                                        None,
                                                                        None,
                                                                        None)),
 
-            '-K', build_create(args.aggregate_name, ['id {0}'.format(SQLITE3_IPK),
+            '-K', build_create(gufi_common.AGGREGATE_NAME, ['id {0}'.format(SQLITE3_IPK),
                                                      'size {0}'.format(SQLITE3_INT64)]),
 
             '-G', gufi_common.build_query(['SUM(size)'],
-                                          [args.aggregate_name],
+                                          [gufi_common.AGGREGATE_NAME],
                                           None,
                                           None,
                                           None,
@@ -302,12 +302,12 @@ def total_filesize(_config, args, where):
                     'size {0}'.format(ORDER[args.order])]
 
         queries = [
-            '-I', build_create(args.inmemory_name,
+            '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                                ['id {0}'.format(SQLITE3_IPK),
                                 'uid {0}'.format(SQLITE3_INT64),
                                 'size {0}'.format(SQLITE3_INT64)]),
 
-            '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+            '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                                gufi_common.build_query(['NULL', 'uid', 'SUM(size)'],
                                                                        [gufi_common.VRPENTRIES],
                                                                        where + ['type == \'f\''],
@@ -316,22 +316,22 @@ def total_filesize(_config, args, where):
                                                                        args.num_results,
                                                                        None)),
 
-            '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+            '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                                gufi_common.build_query(['NULL', 'uid', 'size'],
-                                                                       [args.inmemory_name],
+                                                                       [gufi_common.INTERMEDIATE_NAME],
                                                                        None,
                                                                        None,
                                                                        order_by,
                                                                        args.num_results,
                                                                        None)),
 
-            '-K', build_create(args.aggregate_name,
+            '-K', build_create(gufi_common.AGGREGATE_NAME,
                                ['id {0}'.format(SQLITE3_IPK),
                                 'uid {0}'.format(SQLITE3_INT64),
                                 'size {0}'.format(SQLITE3_INT64)]),
 
             '-G', gufi_common.build_query(['uidtouser(uid)', 'SUM(size)'],
-                                          [args.aggregate_name],
+                                          [gufi_common.AGGREGATE_NAME],
                                           None,
                                           group_by,
                                           order_by,
@@ -355,13 +355,13 @@ def total_entries_count(_config, args, where, type): # pylint: disable=redefined
         E_group_by += group_by # pylint: disable=invalid-name
 
     queries = [
-        '-I', build_create(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                            ['id {0}'.format(SQLITE3_IPK),
                             'uid {0}'.format(SQLITE3_INT64),
                             'pinode {0}'.format(SQLITE3_INT64),
                             'count {0}'.format(SQLITE3_INT64)]),
 
-        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['NULL', 'uid', 'pinode',
                                                                     'COUNT(inode) AS count'],
                                                                    [gufi_common.PENTRIES],
@@ -372,10 +372,10 @@ def total_entries_count(_config, args, where, type): # pylint: disable=redefined
                                                                    args.num_results,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['NULL', 'uid',
                                                                     'pinode', 'count'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    ['count {0}'.format(ORDER[args.order]),
@@ -383,14 +383,14 @@ def total_entries_count(_config, args, where, type): # pylint: disable=redefined
                                                                    args.num_results,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME,
                            ['id {0}'.format(SQLITE3_IPK),
                             'uid {0}'.format(SQLITE3_INT64),
                             'pinode {0}'.format(SQLITE3_INT64),
                             'count {0}'.format(SQLITE3_INT64)]),
 
         '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid)']) + ['SUM(count) AS count'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       group_by,
                                       ['count {0}'.format(ORDER[args.order]),
@@ -421,13 +421,13 @@ def dircount(config, args, where):
     '''
 
     queries = [
-        '-I', build_create(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                            ['path {0}'.format(SQLITE3_TEXT),
                             'inode {0}'.format(SQLITE3_INT64),
                             'pinode {0}'.format(SQLITE3_INT64),
                             'level {0}'.format(SQLITE3_INT64)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2),
                                                                     'inode', 'pinode', 'level()'],
                                                                    [gufi_common.VRSUMMARY],
@@ -436,23 +436,23 @@ def dircount(config, args, where):
                                                                    None,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['path', 'inode', 'pinode', 'level'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME,
                            ['path {0}'.format(SQLITE3_TEXT),
                             'inode {0}'.format(SQLITE3_INT64),
                             'pinode {0}'.format(SQLITE3_INT64),
                             'level {0}'.format(SQLITE3_INT64)]),
 
         '-G', gufi_common.build_query((['CASE length(path) WHEN 0 THEN \'.\' ELSE path END as print_path'] if args.recursive else []) +
-                                      ['(SELECT COUNT(*) FROM {0} AS nested WHERE nested.pinode == {0}.inode)'.format(args.aggregate_name)],
-                                      [args.aggregate_name],
+                                      ['(SELECT COUNT(*) FROM {0} AS nested WHERE nested.pinode == {0}.inode)'.format(gufi_common.AGGREGATE_NAME)],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None if args.recursive else ['level == 0'],
                                       None,
                                       ['print_path ASC'] if args.recursive else None,
@@ -476,13 +476,13 @@ def total_dircount(_config, args, where):
     group_by = None if args.cumulative else ['uid']
 
     queries = [
-        '-I', build_create(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                            ['id {0}'.format(SQLITE3_IPK),
                             'name {0}'.format(SQLITE3_TEXT),
                             'uid {0}'.format(SQLITE3_INT64),
                             'count {0}'.format(SQLITE3_INT64)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['NULL', 'name', 'uid', '1 as count'],
                                                                    [gufi_common.SUMMARY],
                                                                    where +
@@ -493,9 +493,9 @@ def total_dircount(_config, args, where):
                                                                    args.num_results,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['NULL', 'name', 'uid', 'count'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    ['count {0}'.format(ORDER[args.order]),
@@ -503,7 +503,7 @@ def total_dircount(_config, args, where):
                                                                    args.num_results,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME,
                            ['id {0}'.format(SQLITE3_IPK),
                             'name {0}'.format(SQLITE3_TEXT),
                             'uid {0}'.format(SQLITE3_INT64),
@@ -511,7 +511,7 @@ def total_dircount(_config, args, where):
 
         '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid)']) +
                                       ['SUM(count) ' + ('' if args.cumulative else '+ 1') + ' AS count'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       group_by,
                                       ['count {0}'.format(ORDER[args.order]),
@@ -530,10 +530,10 @@ def leaf_dirs(config, args, where):
     '''
 
     queries = [
-        '-I', build_create(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                            ['name {0}'.format(SQLITE3_TEXT)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2)],
                                                                    [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
@@ -542,20 +542,20 @@ def leaf_dirs(config, args, where):
                                                                    args.num_results,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['name'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME,
                            ['name {0}'.format(SQLITE3_TEXT)]),
 
         '-G', gufi_common.build_query(['CASE length(name) WHEN 0 THEN \'.\' ELSE name END'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       None,
                                       ['name ' + ORDER[args.order]] if args.order else None,
@@ -577,11 +577,11 @@ def leaf_depth(config, args, where):
     '''
 
     queries = [
-        '-I', build_create(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                            ['name {0}'.format(SQLITE3_TEXT),
                             'level {0}'.format(SQLITE3_INT64)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2), '0'],
                                                                    [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
@@ -590,22 +590,22 @@ def leaf_depth(config, args, where):
                                                                    args.num_results,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['name',
                                                                     '(length(name) - length(replace(name, \'/\', \'\'))) + 1'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME,
                            ['name {0}'.format(SQLITE3_TEXT),
                             'level {0}'.format(SQLITE3_INT64)]),
 
         '-G', gufi_common.build_query(['name', 'level'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       None,
                                       ['name ' + ORDER[args.order]] if args.order else None,
@@ -627,11 +627,11 @@ def leaf(config, args, where, type): # pylint: disable=redefined-builtin
     '''
 
     queries = [
-        '-I', build_create(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                            ['name {0}'.format(SQLITE3_TEXT),
                             'count {0}'.format(SQLITE3_INT64)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2), '(SELECT COUNT(*) FROM entries WHERE type == \'{0}\')'.format(type)],
                                                                    [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
@@ -640,21 +640,21 @@ def leaf(config, args, where, type): # pylint: disable=redefined-builtin
                                                                    args.num_results,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['name', 'count'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME,
                            ['name {0}'.format(SQLITE3_TEXT),
                             'count {0}'.format(SQLITE3_INT64)]),
 
         '-G', gufi_common.build_query(['name', 'count'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       None,
                                       ['name ' + ORDER[args.order]] if args.order else None,
@@ -684,11 +684,11 @@ def total_leaf(_config, args, where, type): # pylint: disable=redefined-builtin
     group_by = None if args.cumulative else ['uid']
 
     queries = [
-        '-I', build_create(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                            ['uid {0}'.format(SQLITE3_INT64),
                             'count {0}'.format(SQLITE3_INT64)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type== \'{0}\') AS count'.format(type)],
                                                                    [gufi_common.SUMMARY],
                                                                    where + ['nlink == 2'],
@@ -698,9 +698,9 @@ def total_leaf(_config, args, where, type): # pylint: disable=redefined-builtin
                                                                    args.num_results,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['uid', 'SUM(count) AS count'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    group_by,
                                                                    ['uid {0}'.format(ORDER[args.order]),
@@ -708,12 +708,12 @@ def total_leaf(_config, args, where, type): # pylint: disable=redefined-builtin
                                                                    args.num_results,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME,
                            ['uid {0}'.format(SQLITE3_INT64),
                             'count {0}'.format(SQLITE3_INT64)]),
 
         '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid)']) + ['SUM(count) AS count'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       group_by,
                                       ['uid {0}'.format(ORDER[args.order]),
@@ -730,15 +730,15 @@ def total_leaf_files(config, args, where):
 def total_leaf_links(config, args, where):
     return total_leaf(config, args, where, 'l')
 
-def average_leaf(_config, args, where, col):
+def average_leaf(_config, _args, where, col):
     '''
     get average number of leaf <col> under the provided directory
     '''
 
     queries = [
-        '-I', build_create(args.inmemory_name, ['val {0}'.format(SQLITE3_INT64)]),
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, ['val {0}'.format(SQLITE3_INT64)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query([col],
                                                                    [gufi_common.SUMMARY],
                                                                    where + ['nlink == 2'],
@@ -747,18 +747,18 @@ def average_leaf(_config, args, where, col):
                                                                    None,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['val'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name, ['val {0}'.format(SQLITE3_INT64)]),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, ['val {0}'.format(SQLITE3_INT64)]),
 
         '-G', gufi_common.build_query(['AVG(val)'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       None,
                                       None,
@@ -777,15 +777,15 @@ def average_leaf_links(config, args, where):
 def average_leaf_size(config, args, where):
     return average_leaf(config, args, where, 'totsize')
 
-def median_leaf(_config, args, where, col):
+def median_leaf(_config, _args, where, col):
     '''
     get median number of leaf files under the provided directory
     '''
 
     queries = [
-        '-I', build_create(args.inmemory_name, ['count {0}'.format(SQLITE3_INT64)]),
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, ['count {0}'.format(SQLITE3_INT64)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query([col],
                                                                    [gufi_common.SUMMARY],
                                                                    where + ['nlink == 2'],
@@ -794,15 +794,15 @@ def median_leaf(_config, args, where, col):
                                                                    None,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['count'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name, ['count {0}'.format(SQLITE3_INT64)]),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, ['count {0}'.format(SQLITE3_INT64)]),
 
         # Adapter from answer by CL
         # https://stackoverflow.com/a/15766121
@@ -813,7 +813,7 @@ def median_leaf(_config, args, where, col):
                        LIMIT 2 - (SELECT COUNT(*) FROM {0}) % 2    -- odd 1, even 2
                                   OFFSET (SELECT (COUNT(*) - 1) / 2
                                           FROM {0})
-                      )'''.format(args.aggregate_name)
+                      )'''.format(gufi_common.AGGREGATE_NAME)
     ]
 
     return queries
@@ -842,13 +842,13 @@ def per_level(_config, args, where, type): # pylint: disable=redefined-builtin
     count = '1' if type == 'd' else '(SELECT COUNT(*) FROM entries WHERE type == \'{0}\')'.format(type)
 
     queries = [
-        '-I', build_create(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                            ['id {0}'.format(SQLITE3_IPK)] +
                            ([] if args.cumulative else ['uid {0}'.format(SQLITE3_INT64)]) +
                            ['level {0}'.format(SQLITE3_INT64),
                             'count {0}'.format(SQLITE3_INT64)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['NULL'] + uid + ['level()', count],
                                                                    [gufi_common.SUMMARY],
                                                                    where,
@@ -857,23 +857,23 @@ def per_level(_config, args, where, type): # pylint: disable=redefined-builtin
                                                                    None,
                                                                    None)),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['NULL'] + uid + ['level', 'SUM(count)'],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    group_by,
                                                                    order_by,
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME,
                            ['id {0}'.format(SQLITE3_IPK)] +
                            ([] if args.cumulative else ['uid {0}'.format(SQLITE3_INT64)]) +
                            ['level {0}'.format(SQLITE3_INT64),
                             'count {0}'.format(SQLITE3_INT64)]),
 
         '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid)']) + ['level', 'SUM(count)'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       ['count != 0'],
                                       group_by,
                                       order_by,
@@ -897,7 +897,7 @@ def duplicate_names(config, args, where):
     columns = ['name', 'type', 'inode', 'mode', 'size']
 
     queries = [
-        '-I', build_create(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME,
                            ['id {0}'.format(SQLITE3_IPK),
                             'path {0}'.format(SQLITE3_TEXT),
                             'name {0}'.format(SQLITE3_TEXT),
@@ -906,7 +906,7 @@ def duplicate_names(config, args, where):
                             'mode {0}'.format(SQLITE3_INT64),
                             'size {0}'.format(SQLITE3_INT64)]),
 
-        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['NULL', 'substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2)] +
                                                                    columns,
                                                                    [gufi_common.VRSUMMARY],
@@ -916,7 +916,7 @@ def duplicate_names(config, args, where):
                                                                    None,
                                                                    None)),
 
-        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(['NULL', 'substr(rpath(sname, sroll), {0})'.format(len(config.indexroot) + 2)] +
                                                                    columns,
                                                                    [gufi_common.VRPENTRIES],
@@ -926,7 +926,7 @@ def duplicate_names(config, args, where):
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
+        '-K', build_create(gufi_common.AGGREGATE_NAME,
                            ['id {0}'.format(SQLITE3_IPK),
                             'path {0}'.format(SQLITE3_TEXT),
                             'name {0}'.format(SQLITE3_TEXT),
@@ -935,17 +935,17 @@ def duplicate_names(config, args, where):
                             'mode {0}'.format(SQLITE3_INT64),
                             'size {0}'.format(SQLITE3_INT64)]),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(['NULL', 'path'] +
                                                                    columns,
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None,
                                                                    None)),
 
-        '-G', 'SELECT lhs.name, lhs.path FROM {0} AS lhs INNER JOIN (SELECT DISTINCT name, type, size FROM {1} GROUP BY name, type, size HAVING COUNT(*) > 1) AS rhs ON ((lhs.name == rhs.name) AND (lhs.type == rhs.type) AND (lhs.size == rhs.size)) ORDER BY lhs.name'.format(args.aggregate_name, args.aggregate_name) + ('LIMIT {0}'.format(args.num_results) if args.num_results else '')
+        '-G', 'SELECT lhs.name, lhs.path FROM {0} AS lhs INNER JOIN (SELECT DISTINCT name, type, size FROM {1} GROUP BY name, type, size HAVING COUNT(*) > 1) AS rhs ON ((lhs.name == rhs.name) AND (lhs.type == rhs.type) AND (lhs.size == rhs.size)) ORDER BY lhs.name'.format(gufi_common.AGGREGATE_NAME, gufi_common.AGGREGATE_NAME) + ('LIMIT {0}'.format(args.num_results) if args.num_results else '')
 
     ]
 
@@ -982,11 +982,11 @@ def uidgid_size(config, args, uidgid, where):
                                        None)
 
     queries = [
-        '-I', build_create(args.inmemory_name, ['{0} {1}'.format(uidgid, SQLITE3_INTEGER),
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, ['{0} {1}'.format(uidgid, SQLITE3_INTEGER),
                                                 'size {0}'.format(SQLITE3_INTEGER),
                                                 'name {0}'.format(SQLITE3_TEXT)]),
 
-        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query([uidgid, 'size', 'fullpath'],
                                                                    ['({0})'.format(gufi_common.build_query([uidgid, 'size',
                                                                                                             'substr(rpath(sname, sroll), {0}) || \'/\' || name AS fullpath'.format(len(config.indexroot) + 2),
@@ -1003,13 +1003,13 @@ def uidgid_size(config, args, uidgid, where):
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name, ['{0} {1}'.format(uidgid, SQLITE3_INTEGER),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, ['{0} {1}'.format(uidgid, SQLITE3_INTEGER),
                                                  'size {0}'.format(SQLITE3_INTEGER),
                                                  'name {0}'.format(SQLITE3_TEXT)]),
 
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(columns,
-                                                                   ['({0})'.format(partition(args.inmemory_name))],
+                                                                   ['({0})'.format(partition(gufi_common.INTERMEDIATE_NAME))],
                                                                    where,
                                                                    None,
                                                                    None,
@@ -1017,7 +1017,7 @@ def uidgid_size(config, args, uidgid, where):
                                                                    None)),
 
         '-G', gufi_common.build_query(columns,
-                                      ['({0})'.format(partition(args.aggregate_name))],
+                                      ['({0})'.format(partition(gufi_common.AGGREGATE_NAME))],
                                       where,
                                       None,
                                       None,
@@ -1061,8 +1061,8 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
     pinode = [pinode_col] if args.recursive else []
 
     queries = [
-        '-I', build_create(args.inmemory_name, pinode_create + ['{0} {1}'.format(exponent, SQLITE3_INTEGER)]),
-        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, pinode_create + ['{0} {1}'.format(exponent, SQLITE3_INTEGER)]),
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(pinode + ['CASE WHEN {0} == 0 THEN -1 ELSE CAST(FLOOR(LOG({1}, {0})) AS {2}) END'.format(field, base, SQLITE3_INTEGER)],
                                                                    table,
                                                                    ['type == \'{0}\''.format(type)],
@@ -1070,18 +1070,18 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-K', build_create(args.aggregate_name, pinode_create + ['{0} {1}'.format(exponent, SQLITE3_INTEGER),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, pinode_create + ['{0} {1}'.format(exponent, SQLITE3_INTEGER),
                                                                  'count {0}'.format(SQLITE3_INTEGER)]),
-        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(pinode + [exponent, 'COUNT({0})'.format(exponent)],
-                                                                   [args.inmemory_name],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
                                                                    pinode + [exponent],
                                                                    None,
                                                                    None,
                                                                    None)),
         '-G', gufi_common.build_query(pinode + ["CASE WHEN {1} == -1 THEN '[0,1)' ELSE '[' || CAST(pow({0}, {1}) AS {2}) || ',' || CAST(pow({0}, {1}+1) AS {2}) || ')' END".format(base, exponent, SQLITE3_INTEGER), 'SUM(count)'],
-                                      [args.aggregate_name],
+                                      [gufi_common.AGGREGATE_NAME],
                                       None,
                                       pinode + [exponent],
                                       (['{0} {1}'.format(pinode_col, ORDER[args.order])] if args.recursive else []) +

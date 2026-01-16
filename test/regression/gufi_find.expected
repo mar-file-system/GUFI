@@ -550,10 +550,10 @@ GUFI query is
     --output-buffer-size 4096 \
     -a 1 \
     --delim ' ' \
-    -I 'CREATE TABLE out (type TEXT, size INT64, name TEXT)' \
-    -S 'INSERT INTO out SELECT type, size, substr(rpath(sname, sroll), 8) FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
-    -E 'INSERT INTO out SELECT type, size, substr(rpath(sname, sroll, name), 8) FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
-    -J 'INSERT INTO aggregate SELECT type, size, name FROM out ORDER BY size DESC, name ASC' \
+    -I 'CREATE TABLE intermediate (type TEXT, size INT64, name TEXT)' \
+    -S 'INSERT INTO intermediate SELECT type, size, substr(rpath(sname, sroll), 8) FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -E 'INSERT INTO intermediate SELECT type, size, substr(rpath(sname, sroll, name), 8) FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -J 'INSERT INTO aggregate SELECT type, size, name FROM intermediate ORDER BY size DESC, name ASC' \
     -K 'CREATE TABLE aggregate (type TEXT, size INT64, name TEXT)' \
     -G 'SELECT name FROM aggregate ORDER BY size DESC, name ASC' \
     search

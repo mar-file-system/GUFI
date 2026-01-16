@@ -170,10 +170,6 @@ Sort output by size, descending.
 Try to reduce memory usage by compressing with zlib (if available).
 .It Fl -delim\ c
 Delimiter separating output columns.
-.It Fl -in-memory-name\ name
-Name of in-memory database when aggregation is performed.
-.It Fl -aggregate-name\ name
-Name of final database when aggregation is performed.
 .It Fl -skip-file\ filename
 Name of file containing directory basenames to skip.
 .It Fl V, -verbose

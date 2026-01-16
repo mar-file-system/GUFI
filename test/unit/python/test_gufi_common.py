@@ -168,10 +168,8 @@ class TestGUFICommon(unittest.TestCase):
         args = parser.parse_args([])
 
         # defaults
-        self.assertEqual(' ',         args.delim)
-        self.assertEqual('out',       args.inmemory_name)
-        self.assertEqual('aggregate', args.aggregate_name)
-        self.assertEqual(None,        args.skip)
+        self.assertEqual(' ',  args.delim)
+        self.assertEqual(None, args.skip)
 
 if __name__ == '__main__':
     unittest.main()

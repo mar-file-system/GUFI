@@ -185,6 +185,10 @@ PPINODE = 'ppinode'
 UID     = 'uid'
 GID     = 'gid'
 
+# intermediate and aggregation table names
+INTERMEDIATE_NAME = 'intermediate'
+AGGREGATE_NAME    = 'aggregate'
+
 # ###############################################
 # useful functions for using in ArgumentParser.add_argument(type=function_name)
 # to make sure input fits certain criteria
@@ -399,6 +403,14 @@ def add_delim_flag(parser):
                         default=' ',
                         help='Delimiter separating output columns')
 
+def add_skip_flag(parser):
+    parser.add_argument('--skip-file',
+                        dest='skip',
+                        metavar='filename',
+                        type=str,
+                        default=None,
+                        help='Name of file containing directory basenames to skip')
+
 def add_verbose_flag(parser):
     parser.add_argument('-V', '--verbose',
                         action='store_true',
@@ -411,28 +423,7 @@ def add_common_flags(parser):
     Call this after the last executable-specific parser setting
     '''
     add_delim_flag(parser)
-
-    parser.add_argument('--in-memory-name',
-                        dest='inmemory_name',
-                        metavar='name',
-                        type=str,
-                        default='out',
-                        help='Name of in-memory database when aggregation is performed')
-
-    parser.add_argument('--aggregate-name',
-                        dest='aggregate_name',
-                        metavar='name',
-                        type=str,
-                        default='aggregate',
-                        help='Name of final database when aggregation is performed')
-
-    parser.add_argument('--skip-file',
-                        dest='skip',
-                        metavar='filename',
-                        type=str,
-                        default=None,
-                        help='Name of file containing directory basenames to skip')
-
+    add_skip_flag(parser)
     add_verbose_flag(parser)
 
 # check if a path is at or underneath the index root

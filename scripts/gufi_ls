@@ -310,7 +310,7 @@ def run(argv, config_path):
             ]
         )
 
-        I = 'CREATE TABLE {0} ({1});'.format(args.inmemory_name, create_table_cols)
+        I = 'CREATE TABLE {0} ({1});'.format(gufi_common.INTERMEDIATE_NAME, create_table_cols)
 
         S_where = build_where(args, match_name)
         E_where = build_where(args, match_name)
@@ -322,7 +322,7 @@ def run(argv, config_path):
             # only get the pentries that were originally in this directory
             E_where += ['atroot == 1', 'level() == 0']
 
-        S = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        S = 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                          gufi_common.build_query(['rpath(sname, sroll)', 'basename(name)'] + columns[2:],
                                                                  [gufi_common.VRSUMMARY],
                                                                  S_where,
@@ -330,7 +330,7 @@ def run(argv, config_path):
                                                                  None,
                                                                  None))
 
-        E = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+        E = 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                          gufi_common.build_query(['rpath(sname, sroll) || \'/\' || name'] +
                                                                  ['name'] + columns[2:],
                                                                  [gufi_common.VRPENTRIES],
@@ -339,18 +339,18 @@ def run(argv, config_path):
                                                                  None,
                                                                  None))
 
-        J = 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+        J = 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                          gufi_common.build_query(['*'],
-                                                                 [args.inmemory_name],
+                                                                 [gufi_common.INTERMEDIATE_NAME],
                                                                  None,
                                                                  None,
                                                                  None,
                                                                  None))
 
-        K = 'CREATE TABLE {0} ({1});'.format(args.aggregate_name, create_table_cols)
+        K = 'CREATE TABLE {0} ({1});'.format(gufi_common.AGGREGATE_NAME, create_table_cols)
 
         G = gufi_common.build_query(build_select(args, config.indexroot),
-                                    [args.aggregate_name],
+                                    [gufi_common.AGGREGATE_NAME],
                                     None,
                                     None,
                                     build_order_by(args),
