@@ -74,10 +74,10 @@ Remaining Dirs: 18 (25.71%)
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "search" | wc -l
 69
 
-$ gufi_query -d " " -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search" | wc -l
+$ gufi_query -d " " -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search" | wc -l
 96
 
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search" | wc -l
 165
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "search"
@@ -783,10 +783,10 @@ Remaining Dirs: 70 (100.00%)
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "search" | wc -l
 69
 
-$ gufi_query -d " " -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search" | wc -l
+$ gufi_query -d " " -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search" | wc -l
 96
 
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search" | wc -l
 165
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "search"

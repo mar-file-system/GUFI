@@ -150,7 +150,7 @@ def nondir(args, name):
     return [
         '--min-level', '0',
         '--max-level', '0',
-        '-E', 'SELECT level(), 1, {0}, rpath(sname, sroll) || \'/\' || name FROM {1} WHERE name == \'{2}\';'.format(E_col,
+        '-E', 'SELECT level(), 1, {0}, rpath(sname, sroll, name) FROM {1} WHERE name == \'{2}\';'.format(E_col,
                                                                                                                     gufi_common.VRPENTRIES,
                                                                                                                     name),
     ]

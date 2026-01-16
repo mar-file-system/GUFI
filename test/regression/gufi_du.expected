@@ -477,7 +477,7 @@ GUFI query is
     -n 1 \
     --min-level 0 \
     --max-level 0 \
-    -E 'SELECT level(), 1, size, rpath(sname, sroll) || '"'"'/'"'"' || name FROM vrpentries WHERE name == '"'"'1MB'"'"';' \
+    -E 'SELECT level(), 1, size, rpath(sname, sroll, name) FROM vrpentries WHERE name == '"'"'1MB'"'"';' \
     prefix
 1048576 prefix/1MB
 GUFI query is
@@ -487,7 +487,7 @@ GUFI query is
     -n 1 \
     --min-level 0 \
     --max-level 0 \
-    -E 'SELECT level(), 1, size, rpath(sname, sroll) || '"'"'/'"'"' || name FROM vrpentries WHERE name == '"'"'1KB'"'"';' \
+    -E 'SELECT level(), 1, size, rpath(sname, sroll, name) FROM vrpentries WHERE name == '"'"'1KB'"'"';' \
     prefix
 1024 prefix/1KB
 1049600 total

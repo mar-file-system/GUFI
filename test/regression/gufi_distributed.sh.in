@@ -193,7 +193,7 @@ run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_di
 rm -rf "${slurm_files[@]}"
 
 echo "# Query Index"
-run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${PARALLEL_FIND_SH}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\""
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${PARALLEL_FIND_SH}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), mtime FROM vrpentries;\""
 
 echo "# combine output files"
 # shellcheck disable=SC2145
@@ -201,10 +201,10 @@ run_sort "cat ${slurm_files[@]}" | @SED@ "s%${INDEXROOT2}%prefix2%g;"
 
 echo "# Diff original index results against the combined results"
 # shellcheck disable=SC2145,SC2153
-run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${slurm_files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), mtime FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${slurm_files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
 echo "# Diff original index results against querying the new index from a single node"
-run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
 rm -f "${slurm_files[@]}"
 
@@ -219,7 +219,7 @@ run_sort "cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }'"
 
 echo "# Diff original index results against the trace files"
 # shellcheck disable=SC2145,SC2153
-run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's%${SEARCH}/%%g;') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's%${SEARCH}/%%g;') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
 
 echo "# Use existing group files (path_list.4 does not exist)"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --sbatch \"${SBATCH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-group-files \"${PARALLEL_FIND_SH}\" slurm \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
@@ -255,7 +255,7 @@ echo "# Index Source Tree"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" \"${PARALLEL_FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
 
 echo "# Query Index"
-run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" --output_prefix \"output\""
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), mtime FROM vrpentries;\" --output_prefix \"output\""
 
 echo "# combine output files"
 # shellcheck disable=SC2145
@@ -263,10 +263,10 @@ run_sort "cat ${ssh_files[@]}" | @SED@ "s%${INDEXROOT2}%prefix2%g;"
 
 echo "# Diff original index results against the combined results"
 # shellcheck disable=SC2145,SC2153
-run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${ssh_files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), mtime FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${ssh_files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
 echo "# Diff original index results against querying the new index from a single node"
-run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
 echo "# Convert source tree to trace files"
 run_no_sort "${GUFI_DIR2TRACE_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2trace \"${GUFI_DIR2TRACE}\" -d \"${DELIM}\" \"${PARALLEL_FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACES}\""
@@ -279,7 +279,7 @@ run_sort "cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }'"
 
 echo "# Diff original index results against the trace files"
 # shellcheck disable=SC2145,SC2153
-run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's%${SEARCH}/%%g;') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\" | sort | @SED@ 's%${SEARCH}/%%g;') <(cat ${traces[@]} | @AWK@ -F'${DELIM}' '{ print \$1 }' | sort)"
 
 echo "# Use existing group files (path_list.4 does not exist)"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-group-files \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null | tail -n 9"
@@ -315,7 +315,7 @@ echo "# Index Source Tree"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-paths \"${PATH_LIST}\" \"${PARALLEL_FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SEARCH2}\" 2>/dev/null"
 
 echo "# Query Index"
-run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" --output_prefix \"output\""
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), mtime FROM vrpentries;\" --output_prefix \"output\""
 
 echo "# combine output files"
 # shellcheck disable=SC2145
@@ -323,10 +323,10 @@ run_sort "cat ${ssh_files[@]}" | @SED@ "s%${INDEXROOT2}%prefix2%g;"
 
 echo "# Diff original index results against the combined results"
 # shellcheck disable=SC2145,SC2153
-run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${ssh_files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+run_no_sort "@DIFF@ <(\"${GUFI_QUERY}\" -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), mtime FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(cat ${ssh_files[@]} | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 
 echo "# Diff original index results against querying the new index from a single node"
-run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
+run_no_sort "@DIFF@ <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\" | sort) <(${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT2}\" | sort | sed 's/${INDEXROOT2//\//\\/}/${INDEXROOT//\//\\/}/g')"
 echo "#####################################"
 echo
 echo "#####################################"
@@ -341,10 +341,10 @@ echo "# Bad source path"
 run_no_sort "${GUFI_DIR2INDEX_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_dir2index \"${GUFI_DIR2INDEX}\" --use-existing-group-files \"${PARALLEL_FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${HOSTFILE}\" \"${SEARCH2}\" 2>&1 | tail -n 1"
 
 echo "# Missing argument to gufi_query_distributed"
-run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" 2>&1 | tail -n 1"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${GUFI_QUERY}\" --threads ${THREADS} --delim \"${DELIM}\" \"${FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), mtime FROM vrpentries;\" 2>&1 | tail -n 1"
 
 echo "# Bad executable"
-run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${HOSTFILE}\" --threads ${THREADS} --delim \"${DELIM}\" \"${PARALLEL_FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;\" 2>&1 | tail -n 1"
+run_no_sort "${GUFI_QUERY_DISTRIBUTED} --ssh \"${SSH_FAKE}\" --gufi_query \"${HOSTFILE}\" --threads ${THREADS} --delim \"${DELIM}\" \"${PARALLEL_FIND_SH}\" ssh \"${HOSTFILE}\" ${DISTRIBUTED_LEVEL} \"${INDEXROOT2}\" -S \"SELECT rpath(sname, sroll), mtime FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), mtime FROM vrpentries;\" 2>&1 | tail -n 1"
 
 (
     echo

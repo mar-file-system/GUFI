@@ -121,7 +121,7 @@ done
 
 echo "# compare contents"
 src_contents=$(find "${SRCDIR}" | sort)
-index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | replace | sort)
+index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "${INDEXROOT}" | replace | sort)
 
 echo "Source Directory:"
 # shellcheck disable=SC2016
@@ -139,7 +139,7 @@ run_no_sort "cat \"${TRACE}\" | ${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS
 
 echo "# compare contents"
 src_contents=$(find "${SRCDIR}" | sort)
-index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | replace | sort)
+index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "${INDEXROOT}" | replace | sort)
 
 echo "Source Directory:"
 # shellcheck disable=SC2016
@@ -157,7 +157,7 @@ run_no_sort "${GUFI_DIR2TRACE} -n ${THREADS} \"${SRCDIR}\" \"-\" 2>/dev/null | $
 
 echo "# compare contents"
 src_contents=$(find "${SRCDIR}" | sort)
-index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | replace | sort)
+index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "${INDEXROOT}" | replace | sort)
 
 echo "Source Directory:"
 # shellcheck disable=SC2016

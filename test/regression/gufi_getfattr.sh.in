@@ -149,6 +149,10 @@ do_tests() {
     echo "# 3 xattrs"
     run_sort "${GUFI_GETFATTR} --match user\\..* ${BASENAME}/leaf_directory/leaf_file2"
 
+    # match -
+    echo "# 3 xattrs"
+    run_sort "${GUFI_GETFATTR} --match - ${BASENAME}/leaf_directory/leaf_file2"
+
     # only-values
     echo "# 1 xattr"
     run_sort "${GUFI_GETFATTR} --only-values ${BASENAME}/1MB"

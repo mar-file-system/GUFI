@@ -32,7 +32,7 @@ Splitting 4 paths into 5 groups of max size 1
 Waiting for slurm jobs to complete
 
 # Query Index
-$ gufi_query_distributed --sbatch "sbatch" --gufi_query "gufi_query" --threads 2 --delim "|" "parallel_find.sh" slurm "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;"
+$ gufi_query_distributed --sbatch "sbatch" --gufi_query "gufi_query" --threads 2 --delim "|" "parallel_find.sh" slurm "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), mtime FROM vrpentries;"
 Splitting 4 paths into 5 groups of max size 1
     Range 0: 1 path on localhost
         directory directory
@@ -75,10 +75,10 @@ prefix2/unusual#? directory ,|16
 prefix2|17
 
 # Diff original index results against the combined results
-$ diff <("gufi_query" -d "|" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" "prefix" | sort) <(cat slurm.fake-0.out slurm.fake-1.out slurm.fake-2.out slurm.fake-3.out slurm.fake-4.out | sort | sed 's/search2\/prefix/search\/prefix/g')
+$ diff <("gufi_query" -d "|" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), mtime FROM vrpentries;" "prefix" | sort) <(cat slurm.fake-0.out slurm.fake-1.out slurm.fake-2.out slurm.fake-3.out slurm.fake-4.out | sort | sed 's/search2\/prefix/search\/prefix/g')
 
 # Diff original index results against querying the new index from a single node
-$ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort) <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search2/prefix" | sort | sed 's/search2\/prefix/search\/prefix/g')
+$ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix" | sort) <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search2/prefix" | sort | sed 's/search2\/prefix/search\/prefix/g')
 
 # Convert source tree to trace files
 $ gufi_dir2trace_distributed --sbatch "sbatch" --gufi_dir2trace "gufi_dir2trace" -d "|" "find.sh" slurm "hostfile" 1 "prefix" "traces"
@@ -119,7 +119,7 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # Diff original index results against the trace files
-$ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort | sed 's%search/%%g;') <(cat traces.0.0 traces.1.0 traces.2.0 traces.3.0 traces.0 | awk -F'|' '{ print $1 }' | sort)
+$ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix" | sort | sed 's%search/%%g;') <(cat traces.0.0 traces.1.0 traces.2.0 traces.3.0 traces.0 | awk -F'|' '{ print $1 }' | sort)
 
 # Use existing group files (path_list.4 does not exist)
 $ gufi_dir2index_distributed --sbatch "sbatch" --gufi_dir2index "gufi_dir2index" --use-existing-group-files "parallel_find.sh" slurm "hostfile" 1 "prefix" "search2" 2>/dev/null
@@ -212,7 +212,7 @@ Splitting 4 paths into 5 groups of max size 1
 Waiting for ssh jobs to complete
 
 # Query Index
-$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" --output_prefix "output"
+$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), mtime FROM vrpentries;" --output_prefix "output"
 Splitting 4 paths into 5 groups of max size 1
     Range 0: 1 path on localhost
         directory directory
@@ -250,10 +250,10 @@ prefix2/unusual#? directory ,|16
 prefix2|17
 
 # Diff original index results against the combined results
-$ diff <("gufi_query" -d "|" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" "prefix" | sort) <(cat output.localhost.0.0 output.127.0.0.1.1.0 output.localhost.2.0 output.127.0.0.1.3.0 output.127.0.0.1.top.0 output.localhost.0.1 output.127.0.0.1.1.1 output.localhost.2.1 output.127.0.0.1.3.1 output.127.0.0.1.top.1 | sort | sed 's/search2\/prefix/search\/prefix/g')
+$ diff <("gufi_query" -d "|" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), mtime FROM vrpentries;" "prefix" | sort) <(cat output.localhost.0.0 output.127.0.0.1.1.0 output.localhost.2.0 output.127.0.0.1.3.0 output.127.0.0.1.top.0 output.localhost.0.1 output.127.0.0.1.1.1 output.localhost.2.1 output.127.0.0.1.3.1 output.127.0.0.1.top.1 | sort | sed 's/search2\/prefix/search\/prefix/g')
 
 # Diff original index results against querying the new index from a single node
-$ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort) <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search2/prefix" | sort | sed 's/search2\/prefix/search\/prefix/g')
+$ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix" | sort) <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search2/prefix" | sort | sed 's/search2\/prefix/search\/prefix/g')
 
 # Convert source tree to trace files
 $ gufi_dir2trace_distributed --ssh "ssh" --gufi_dir2trace "gufi_dir2trace" -d "|" "parallel_find.sh" ssh "hostfile" 1 "prefix" "traces"
@@ -294,7 +294,7 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # Diff original index results against the trace files
-$ diff <(gufi_query -d "|" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort | sed 's%search/%%g;') <(cat traces.0.0 traces.1.0 traces.2.0 traces.3.0 traces.0 | awk -F'|' '{ print $1 }' | sort)
+$ diff <(gufi_query -d "|" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix" | sort | sed 's%search/%%g;') <(cat traces.0.0 traces.1.0 traces.2.0 traces.3.0 traces.0 | awk -F'|' '{ print $1 }' | sort)
 
 # Use existing group files (path_list.4 does not exist)
 $ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" --use-existing-group-files "find.sh" ssh "hostfile" 1 "prefix" "search2" 2>/dev/null | tail -n 9
@@ -389,7 +389,7 @@ Splitting 4 paths into 5 groups of max size 1
 Waiting for ssh jobs to complete
 
 # Query Index
-$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" --output_prefix "output"
+$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), mtime FROM vrpentries;" --output_prefix "output"
 Splitting 4 paths into 5 groups of max size 1
     Range 0: 1 path on localhost
         directory directory
@@ -427,10 +427,10 @@ prefix2/unusual#? directory ,|16
 prefix2|17
 
 # Diff original index results against the combined results
-$ diff <("gufi_query" -d "|" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" "prefix" | sort) <(cat output.localhost.0.0 output.127.0.0.1.1.0 output.localhost.2.0 output.127.0.0.1.3.0 output.127.0.0.1.top.0 output.localhost.0.1 output.127.0.0.1.1.1 output.localhost.2.1 output.127.0.0.1.3.1 output.127.0.0.1.top.1 | sort | sed 's/search2\/prefix/search\/prefix/g')
+$ diff <("gufi_query" -d "|" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), mtime FROM vrpentries;" "prefix" | sort) <(cat output.localhost.0.0 output.127.0.0.1.1.0 output.localhost.2.0 output.127.0.0.1.3.0 output.127.0.0.1.top.0 output.localhost.0.1 output.127.0.0.1.1.1 output.localhost.2.1 output.127.0.0.1.3.1 output.127.0.0.1.top.1 | sort | sed 's/search2\/prefix/search\/prefix/g')
 
 # Diff original index results against querying the new index from a single node
-$ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | sort) <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "search2/prefix" | sort | sed 's/search2\/prefix/search\/prefix/g')
+$ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix" | sort) <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search2/prefix" | sort | sed 's/search2\/prefix/search\/prefix/g')
 
 #####################################
 
@@ -448,11 +448,11 @@ $ gufi_dir2index_distributed --ssh "ssh" --gufi_dir2index "gufi_dir2index" --use
 gufi_dir2index_distributed: error: argument input_dir: Bad directory: hostfile
 
 # Missing argument to gufi_query_distributed
-$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" 2>&1 | tail -n 1
+$ gufi_query_distributed --ssh "ssh" --gufi_query "gufi_query" --threads 2 --delim "|" "find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), mtime FROM vrpentries;" 2>&1 | tail -n 1
 RuntimeError: --output_prefix must be set
 
 # Bad executable
-$ gufi_query_distributed --ssh "ssh" --gufi_query "hostfile" --threads 2 --delim "|" "parallel_find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, mtime FROM vrpentries;" 2>&1 | tail -n 1
+$ gufi_query_distributed --ssh "ssh" --gufi_query "hostfile" --threads 2 --delim "|" "parallel_find.sh" ssh "hostfile" 1 "search2/prefix" -S "SELECT rpath(sname, sroll), mtime FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), mtime FROM vrpentries;" 2>&1 | tail -n 1
 gufi_query_distributed: error: argument --gufi_query: Bad executable: hostfile
 
 # Bad hostfile

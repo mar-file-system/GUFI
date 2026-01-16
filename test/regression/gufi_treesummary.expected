@@ -111,7 +111,7 @@ prefix/directory
 prefix/leaf_directory
 
 # Find file sizes in range
-$ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);" -E "SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;" prefix
+$ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);" -E "SELECT rpath(sname, sroll, name), size FROM vrpentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;" prefix
 prefix/old_file 0
 prefix/file_symlink 9
 prefix/.hidden 10

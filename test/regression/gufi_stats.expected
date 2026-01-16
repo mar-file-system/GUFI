@@ -17,8 +17,8 @@ GUFI query is
     --output-buffer-size 4096 \
     --delim ' ' \
     -I 'CREATE TABLE intermediate(name TEXT)' \
-    -S 'INSERT INTO intermediate SELECT substr(rpath(sname, sroll), 8) FROM vrsummary ' \
-    -J 'INSERT INTO aggregate SELECT * FROM intermediate ' \
+    -S 'INSERT INTO intermediate SELECT substr(rpath(sname, sroll), 8) FROM vrsummary' \
+    -J 'INSERT INTO aggregate SELECT * FROM intermediate' \
     -K 'CREATE TABLE aggregate(name TEXT)' \
     -G 'SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '"'"'/'"'"', '"'"''"'"')) + 1 END FROM aggregate ORDER BY name ASC' \
     --min-level 0 \

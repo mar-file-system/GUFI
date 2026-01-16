@@ -88,7 +88,7 @@ def getfattr(args, indexroot, dirname, nondirname):
         # default to getting path and xattr name
         S_cols = ['substr(rpath(sname, sroll), {0})'.format(indexroot_len),
                   'xattr_name']
-        E_cols = ['substr(rpath(sname, sroll) || \'/\' || name, {0})'.format(indexroot_len),
+        E_cols = ['substr(rpath(sname, sroll, name), {0})'.format(indexroot_len),
                   'xattr_name']
 
         # also get xattr value
@@ -211,6 +211,9 @@ def run(argv, config_path):
     gufi_common.add_common_flags(parser)
 
     args = parser.parse_args(argv[1:])
+
+    if args.pattern == '-':
+        args.pattern = '.*'
 
     rc = 0
 

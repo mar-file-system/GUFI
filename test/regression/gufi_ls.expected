@@ -20,7 +20,7 @@ GUFI query is
             (isroot == 1 AND depth == 0)
     END
 )' \
-    -E 'INSERT INTO intermediate SELECT rpath(sname, sroll) || '"'"'/'"'"' || name, name, type, inode, nlink, size, mode, uid, gid, blksize, blocks, mtime, atime, ctime, linkname, xattr_names, pinode FROM vrpentries WHERE (name REGEXP '"'"'^(?![\.]).*$'"'"') AND (atroot == 1) AND (level() == 0)' \
+    -E 'INSERT INTO intermediate SELECT rpath(sname, sroll, name), name, type, inode, nlink, size, mode, uid, gid, blksize, blocks, mtime, atime, ctime, linkname, xattr_names, pinode FROM vrpentries WHERE (name REGEXP '"'"'^(?![\.]).*$'"'"') AND (atroot == 1) AND (level() == 0)' \
     -K 'CREATE TABLE aggregate (fullpath TEXT, name TEXT, type TEXT, inode INT64, nlink INT64, size INT64, mode INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, mtime INT64, atime INT64, ctime INT64, linkname TEXT, xattr_names TEXT, pinode INT64);' \
     -J 'INSERT INTO aggregate SELECT * FROM intermediate' \
     -G 'SELECT name AS display_name FROM aggregate ORDER BY display_name COLLATE NOCASE ASC' \
@@ -76,6 +76,17 @@ unusual#? directory ,
 
 $ gufi_ls prefix -A
 .hidden
+1KB
+1MB
+directory
+empty_directory
+file_symlink
+leaf_directory
+old_file
+repeat_name
+unusual#? directory ,
+
+$ gufi_ls prefix -G
 1KB
 1MB
 directory
@@ -218,39 +229,112 @@ unusual#? directory ,
 
 $ sqlite3 "prefix/db.db" "DELETE FROM entries WHERE name == 'backup~';"
 
+$ gufi_ls prefix/old_file --time-style=full-iso
+old_file
+
+$ gufi_ls prefix/old_file --time-style=long-iso
+old_file
+
+$ gufi_ls prefix/old_file --time-style=iso
+old_file
+
+$ gufi_ls prefix/old_file --time-style=locale
+old_file
+
+$ gufi_ls --block-size=K    prefix/1KB
+1KB
+
+$ gufi_ls --block-size=1K   prefix/1KB
+1KB
+
+$ gufi_ls --block-size=KB   prefix/1KB
+1KB
+
+$ gufi_ls --block-size=1KB  prefix/1KB
+1KB
+
+$ gufi_ls --block-size=KiB  prefix/1KB
+1KB
+
+$ gufi_ls --block-size=1KiB prefix/1KB
+1KB
+
 # ls -l with subdirectories removed
-$ gufi_ls prefix -l | sort -k 9
+$ gufi_ls prefix -l | sort -n -k 5
+-rw-rw-r-- 1 user group 0       Jan   1  1970 old_file
+lrwxrwxrwx 1 user group 9       Jan   1  1970 file_symlink -> prefix/1KB
+-rw-rw-r-- 1 user group 14      Jan   1  1970 repeat_name
 -rw-rw-r-- 1 user group 1024    Jan   1  1970 1KB
 -rw-rw-r-- 1 user group 1048576 Jan  13  1970 1MB
-lrwxrwxrwx 1 user group 9       Jan   1  1970 file_symlink -> prefix/1KB
--rw-rw-r-- 1 user group 0       Jan   1  1970 old_file
--rw-rw-r-- 1 user group 14      Jan   1  1970 repeat_name
 
 # ls -lG with subdirectories removed
-$ gufi_ls prefix -lG | sort -k 8
+$ gufi_ls prefix -lG | sort -n -k 4
+-rw-rw-r-- 1 user 0       Jan   1  1970 old_file
+lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
+-rw-rw-r-- 1 user 14      Jan   1  1970 repeat_name
 -rw-rw-r-- 1 user 1024    Jan   1  1970 1KB
 -rw-rw-r-- 1 user 1048576 Jan  13  1970 1MB
-lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
+
+# ls -li with subdirectories removed
+$ gufi_ls prefix -li | sort -n -k 6
+0       -rw-rw-r-- 1 user group 0       Jan   1  1970 old_file
+9       lrwxrwxrwx 1 user group 9       Jan   1  1970 file_symlink -> prefix/1KB
+14      -rw-rw-r-- 1 user group 14      Jan   1  1970 repeat_name
+1024    -rw-rw-r-- 1 user group 1024    Jan   1  1970 1KB
+1048576 -rw-rw-r-- 1 user group 1048576 Jan  13  1970 1MB
+
+# ls -liG with subdirectories removed
+$ gufi_ls prefix -liG | sort -n -k 5
+0       -rw-rw-r-- 1 user 0       Jan   1  1970 old_file
+9       lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
+14      -rw-rw-r-- 1 user 14      Jan   1  1970 repeat_name
+1024    -rw-rw-r-- 1 user 1024    Jan   1  1970 1KB
+1048576 -rw-rw-r-- 1 user 1048576 Jan  13  1970 1MB
+
+# ls -la with subdirectories removed
+$ gufi_ls prefix -la | sort -n -k 5
+-rw-rw-r-- 1 user group 0       Jan   1  1970 old_file
+lrwxrwxrwx 1 user group 9       Jan   1  1970 file_symlink -> prefix/1KB
+-rw-rw-r-- 1 user group 10      Jan   1  1970 .hidden
+-rw-rw-r-- 1 user group 14      Jan   1  1970 repeat_name
+-rw-rw-r-- 1 user group 1024    Jan   1  1970 1KB
+-rw-rw-r-- 1 user group 1048576 Jan  13  1970 1MB
+
+# ls -laG with subdirectories removed
+$ gufi_ls prefix -laG | sort -n -k 4
 -rw-rw-r-- 1 user 0       Jan   1  1970 old_file
+lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
+-rw-rw-r-- 1 user 10      Jan   1  1970 .hidden
 -rw-rw-r-- 1 user 14      Jan   1  1970 repeat_name
+-rw-rw-r-- 1 user 1024    Jan   1  1970 1KB
+-rw-rw-r-- 1 user 1048576 Jan  13  1970 1MB
 
-# ls -ilG with subdirectories removed
-$ gufi_ls prefix -ilG | sort -k 9
-1024    -rw-rw-r-- 1 user 1024    Jan   1  1970 1KB
-1048576 -rw-rw-r-- 1 user 1048576 Jan  13  1970 1MB
-9       lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
+# ls -lai with subdirectories removed
+$ gufi_ls prefix -lai | sort -n -k 6
+0       -rw-rw-r-- 1 user group 0       Jan   1  1970 old_file
+9       lrwxrwxrwx 1 user group 9       Jan   1  1970 file_symlink -> prefix/1KB
+10      -rw-rw-r-- 1 user group 10      Jan   1  1970 .hidden
+14      -rw-rw-r-- 1 user group 14      Jan   1  1970 repeat_name
+1024    -rw-rw-r-- 1 user group 1024    Jan   1  1970 1KB
+1048576 -rw-rw-r-- 1 user group 1048576 Jan  13  1970 1MB
+
+# ls -laiG with subdirectories removed
+$ gufi_ls prefix -laiG | sort -n -k 5
 0       -rw-rw-r-- 1 user 0       Jan   1  1970 old_file
-14      -rw-rw-r-- 1 user 14      Jan   1  1970 repeat_name
-
-# ls -ailG with subdirectories removed
-$ gufi_ls prefix -ailG | sort -k 9
+9       lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
 10      -rw-rw-r-- 1 user 10      Jan   1  1970 .hidden
+14      -rw-rw-r-- 1 user 14      Jan   1  1970 repeat_name
 1024    -rw-rw-r-- 1 user 1024    Jan   1  1970 1KB
 1048576 -rw-rw-r-- 1 user 1048576 Jan  13  1970 1MB
-9       lrwxrwxrwx 1 user 9       Jan   1  1970 file_symlink -> prefix/1KB
-0       -rw-rw-r-- 1 user 0       Jan   1  1970 old_file
-14      -rw-rw-r-- 1 user 14      Jan   1  1970 repeat_name
 
+# ls -laiGs with subdirectories removed
+$ 0 prefix -laiGs | sort -n -k 6
+0 0 -rw-rw-r-- 1 user 0 Jan 1 1970 old_file
+9 0 lrwxrwxrwx 1 user 9 Jan 1 1970 file_symlink -> prefix/1KB
+10 0 -rw-rw-r-- 1 user 10 Jan 1 1970 .hidden
+14 0 -rw-rw-r-- 1 user 14 Jan 1 1970 repeat_name
+1024 0 -rw-rw-r-- 1 user 1024 Jan 1 1970 1KB
+1048576 0 -rw-rw-r-- 1 user 1048576 Jan 13 1970 1MB
 $ gufi_ls prefix/old_file --full-time
 -rw-rw-r-- 1 user group 0 1970-01-01 00:00:00 +0000 old_file
 
@@ -268,18 +352,6 @@ $ gufi_ls prefix/old_file -l --time-style=locale
 
 $ gufi_ls prefix/old_file -l
 -rw-rw-r-- 1 user group 0 Jan   1  1970 old_file
-
-$ gufi_ls prefix/old_file --time-style=full-iso
-old_file
-
-$ gufi_ls prefix/old_file --time-style=long-iso
-old_file
-
-$ gufi_ls prefix/old_file --time-style=iso
-old_file
-
-$ gufi_ls prefix/old_file --time-style=locale
-old_file
 
 $ gufi_ls -l --block-size=1000 prefix/1KB
 -rw-rw-r-- 1 user group 2 Jan   1  1970 1KB
@@ -305,41 +377,8 @@ $ gufi_ls -l --block-size=KiB  prefix/1KB
 $ gufi_ls -l --block-size=1KiB prefix/1KB
 -rw-rw-r-- 1 user group 1 Jan   1  1970 1KB
 
-$ gufi_ls --block-size=K    prefix/1KB
-1KB
-
-$ gufi_ls --block-size=1K   prefix/1KB
-1KB
-
-$ gufi_ls --block-size=KB   prefix/1KB
-1KB
-
-$ gufi_ls --block-size=1KB  prefix/1KB
-1KB
-
-$ gufi_ls --block-size=KiB  prefix/1KB
-1KB
-
-$ gufi_ls --block-size=1KiB prefix/1KB
-1KB
-
-$ gufi_ls -lG prefix/old_file
--rw-rw-r-- 1 user 0 Jan   1  1970 old_file
-
-$ gufi_ls -G  prefix/old_file
-old_file
-
-$ gufi_ls -lh prefix/1KB
--rw-rw-r-- 1 user group 1.0K Jan   1  1970 1KB
-
-$ gufi_ls -lh prefix/1MB
--rw-rw-r-- 1 user group 1.0M Jan  13  1970 1MB
-
-$ gufi_ls -h prefix/1KB
-1KB
-
-$ gufi_ls -h prefix/1MB
-1MB
+$ gufi_ls -lh prefix/old_file
+-rw-rw-r-- 1 user group 0.0 Jan   1  1970 old_file
 
 $ gufi_ls --block-size=YiB 2>&1 | tail -n 1
 gufi_ls: error: argument --block-size: Invalid --block-size argument: 'YiB'

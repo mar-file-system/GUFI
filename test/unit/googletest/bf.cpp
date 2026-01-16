@@ -98,9 +98,12 @@ static const std::string Q = "-Q"; static const std::string Q_arg0 = "extdb";
                                    static const std::string Q_arg2 = "template.table";
                                    static const std::string Q_arg3 = "view";
 
+static const std::string path                = "--path"; static const std::string path_arg = "path arg";
+static const std::string filter_type         = "--filter-type"; static const std::string filter_type_arg = "dfl";
 static const std::string min_level           = "--min-level"; static const std::string min_level_arg = "1";
 static const std::string max_level           = "--max-level"; static const std::string max_level_arg = "1";
 static const std::string print_tlv           = "--print-tlv";
+static const std::string setup_res_col_types = "--setup-res-col-types"; static const std::string setup_res_col_types_arg = "setup-res-col-types arg";
 static const std::string keep_matime         = "--keep-matime";
 static const std::string skip_file           = "--skip-file"; static const std::string skip_file_arg = "file name";
 static const std::string dry_run             = "--dry-run";
@@ -108,6 +111,7 @@ static const std::string path_list           = "--path-list"; static const std::
 static const std::string format              = "--format"; static const std::string format_arg = "f arg";
 static const std::string terse               = "--terse";
 static const std::string rollup_limit        = "--limit"; static const std::string rollup_limit_arg = "1";
+static const std::string dont_reprocess      = "--dont-reprocess";
 static const std::string dir_match_uid       = "--dir-match-uid"; static const std::string dir_match_uid_arg = "1";
 static const std::string dir_match_gid       = "--dir-match-gid"; static const std::string dir_match_gid_arg = "1";
 static const std::string print_eacces        = "--print-eacces";
@@ -143,6 +147,30 @@ TEST(input, nullptr) {
     EXPECT_NO_THROW(input_fini(nullptr));
 }
 
+TEST(print_help, null_opts) {
+    const int fd = dup(STDOUT_FILENO);
+    ASSERT_NE(fd, -1);
+    EXPECT_EQ(close(STDOUT_FILENO), 0);
+
+    EXPECT_NO_THROW(print_help(exec.c_str(), nullptr, ""));
+
+    ASSERT_EQ(dup(fd), STDOUT_FILENO);
+    EXPECT_EQ(close(fd), 0);
+}
+
+TEST(build_getopt_str, optional) {
+    const struct option options[] = {
+        {"", optional_argument, NULL, '0' - 1}, // will not be part of string
+        {"", optional_argument, NULL, 'A'},     // will be part of string
+        {"", optional_argument, NULL, 'z' + 1}, // will not be part of string
+        {nullptr, 0, nullptr, 0},
+    };
+
+    char *str = build_getopt_str(options);
+    EXPECT_STREQ(str, "A::");
+    free(str);
+}
+
 static void check_input(struct input *in, const bool helped, const bool version,
                         const bool flags, const bool options, AFlag_t process_sql) {
     EXPECT_EQ(in->helped,                             static_cast<int>(helped));
@@ -157,6 +185,7 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->open_flags,                         flags?SQLITE_OPEN_READWRITE:SQLITE_OPEN_READONLY);
     EXPECT_EQ(in->terse,                              flags);
     EXPECT_EQ(in->dry_run,                            flags);
+    EXPECT_EQ(in->dont_reprocess,                     flags);
     // not checking --dir-match-uid and --dir-match-gid here
     EXPECT_EQ(in->dir_match.on,                       DIR_MATCH_NONE);
     EXPECT_EQ(in->dir_match.uid,                      geteuid());
@@ -173,20 +202,23 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->process_sql,                    process_sql);
         EXPECT_EQ(in->delim,                          '|');
         // not checking -o and -O here
+        EXPECT_EQ(in->sql.setup_res_col_types,        setup_res_col_types_arg);
         EXPECT_EQ(in->sql.init,                       I_arg);
         EXPECT_EQ(in->sql.tsum,                       T_arg);
         EXPECT_EQ(in->sql.sum,                        S_arg);
         EXPECT_EQ(in->sql.ent,                        E_arg);
-        EXPECT_EQ(in->sql.fin,                        F_arg);
-        EXPECT_EQ(in->insuspect.data,                 suspect_file_arg.c_str());
-        EXPECT_EQ(in->suspectfile,                    1);
-        EXPECT_EQ(in->suspectmethod,                  1);
-        EXPECT_EQ(in->suspecttime,                    1);
-        EXPECT_EQ(in->min_level,                      (std::size_t) 1);
-        EXPECT_EQ(in->max_level,                      (std::size_t) 1);
         EXPECT_EQ(in->sql.intermediate,               J_arg);
         EXPECT_EQ(in->sql.init_agg,                   K_arg);
         EXPECT_EQ(in->sql.agg,                        G_arg);
+        EXPECT_EQ(in->sql.fin,                        F_arg);
+        EXPECT_EQ(in->insuspect,                      suspect_file_arg);
+        EXPECT_EQ(in->suspectfile,                    1);
+        EXPECT_EQ(in->suspectmethod,                  1);
+        EXPECT_EQ(in->suspecttime,                    1);
+        EXPECT_EQ(in->source_prefix.data,             path_arg);
+        EXPECT_EQ(in->filter_types,                   FILTER_TYPE_DIR | FILTER_TYPE_FILE | FILTER_TYPE_LINK);
+        EXPECT_EQ(in->min_level,                      (std::size_t) 1);
+        EXPECT_EQ(in->max_level,                      (std::size_t) 1);
         EXPECT_EQ(in->output_buffer_size,             (std::size_t) 1);
         EXPECT_EQ(in->format,                         format_arg);
         EXPECT_EQ(in->rollup_entries_limit,           (std::size_t) 1);
@@ -216,20 +248,23 @@ static void check_input(struct input *in, const bool helped, const bool version,
         EXPECT_EQ(in->delim,                          fielddelim);
         EXPECT_EQ(in->output,                         STDOUT);
         EXPECT_EQ(in->outname,                        empty);
+        EXPECT_EQ(in->sql.setup_res_col_types,        empty);
         EXPECT_EQ(in->sql.init,                       empty);
         EXPECT_EQ(in->sql.tsum,                       empty);
         EXPECT_EQ(in->sql.sum,                        empty);
         EXPECT_EQ(in->sql.ent,                        empty);
+        EXPECT_EQ(in->sql.intermediate,               empty);
+        EXPECT_EQ(in->sql.init_agg,                   empty);
+        EXPECT_EQ(in->sql.agg,                        empty);
         EXPECT_EQ(in->sql.fin,                        empty);
         EXPECT_EQ(in->insuspect.data,                 nullptr);
         EXPECT_EQ(in->suspectfile,                    0);
         EXPECT_EQ(in->suspectmethod,                  0);
         EXPECT_NE(in->suspecttime,                    0);
+        EXPECT_EQ(in->source_prefix,                  empty);
+        EXPECT_EQ(in->filter_types,                   0);
         EXPECT_EQ(in->min_level,                      (std::size_t) 0);
         EXPECT_EQ(in->max_level,                      (std::size_t) -1);
-        EXPECT_EQ(in->sql.intermediate,               empty);
-        EXPECT_EQ(in->sql.init_agg,                   empty);
-        EXPECT_EQ(in->sql.agg,                        empty);
         EXPECT_EQ(in->output_buffer_size,             (std::size_t) 4096);
         EXPECT_EQ(in->format,                         empty);
         EXPECT_EQ(in->rollup_entries_limit,           (std::size_t) 0);
@@ -297,13 +332,13 @@ TEST(parse_cmd_line, debug) {
     const struct option opts[] = {
         FLAG_DEBUG, FLAG_XATTRS, FLAG_PRINTDIR,
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
-        FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SQL_INIT,
-        FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
+        FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SETUP_RES_COL_TYPES,
+        FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
         FLAG_SUSPECT_STAT, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
-        FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
+        FLAG_SUSPECT_TIME, FLAG_PATH, FLAG_FILTER_TYPE, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
         FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
         FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE,
-        FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE,
+        FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_DONT_REPROCESS,
         FLAG_PRINT_EACCES, FLAG_NO_PRINT_SQL_ON_ERR,
         FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_CHECK_EXTDB_VALID,
         FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
@@ -322,6 +357,7 @@ TEST(parse_cmd_line, debug) {
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
         print_tlv.c_str(),
+        setup_res_col_types.c_str(), setup_res_col_types_arg.c_str(),
         I.c_str(), I_arg.c_str(),
         T.c_str(), T_arg.c_str(),
         S.c_str(), S_arg.c_str(),
@@ -331,6 +367,8 @@ TEST(parse_cmd_line, debug) {
         suspect_file.c_str(), suspect_file_arg.c_str(),
         suspect_method.c_str(), suspect_method_arg.c_str(),
         suspect_time.c_str(), suspect_time_arg.c_str(),
+        path.c_str(), path_arg.c_str(),
+        filter_type.c_str(), filter_type_arg.c_str(),
         min_level.c_str(), min_level_arg.c_str(),
         max_level.c_str(), max_level_arg.c_str(),
         J.c_str(), J_arg.c_str(),
@@ -344,6 +382,7 @@ TEST(parse_cmd_line, debug) {
         dry_run.c_str(),
         rollup_limit.c_str(), rollup_limit_arg.c_str(),
         // skip_file.c_str(), skip_file_arg.c_str(),
+        dont_reprocess.c_str(),
         print_eacces.c_str(), no_print_sql_on_err.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
@@ -377,8 +416,8 @@ TEST(parse_cmd_line, flags) {
     const struct option opts[] = {
         FLAG_XATTRS, FLAG_PRINTDIR, FLAG_PRINT_TLV,
         FLAG_SUSPECT_STAT, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
-        FLAG_TERSE, FLAG_DRY_RUN, FLAG_PRINT_EACCES,
-        FLAG_NO_PRINT_SQL_ON_ERR,
+        FLAG_TERSE, FLAG_DRY_RUN, FLAG_DONT_REPROCESS,
+        FLAG_PRINT_EACCES, FLAG_NO_PRINT_SQL_ON_ERR,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -396,6 +435,7 @@ TEST(parse_cmd_line, flags) {
         w.c_str(),
         terse.c_str(),
         dry_run.c_str(),
+        dont_reprocess.c_str(),
         print_eacces.c_str(),
         no_print_sql_on_err.c_str(),
         #ifdef HAVE_ZLIB
@@ -416,9 +456,10 @@ TEST(parse_cmd_line, flags) {
 TEST(parse_cmd_line, options) {
     const struct option opts[] = {
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
-        FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT,
-        FLAG_SQL_FIN, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
-        FLAG_SUSPECT_TIME, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
+        FLAG_SETUP_RES_COL_TYPES, FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM,
+        FLAG_SQL_ENT, FLAG_SQL_FIN, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
+        FLAG_SUSPECT_TIME, FLAG_PATH, FLAG_FILTER_TYPE,
+        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_OUTPUT_BUFFER_SIZE, FLAG_FORMAT,
         FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY,
         FLAG_SUBDIR_LIMIT, FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX,
@@ -431,6 +472,7 @@ TEST(parse_cmd_line, options) {
         a.c_str(), a_arg.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
+        setup_res_col_types.c_str(), setup_res_col_types_arg.c_str(),
         I.c_str(), I_arg.c_str(),
         T.c_str(), T_arg.c_str(),
         S.c_str(), S_arg.c_str(),
@@ -439,6 +481,8 @@ TEST(parse_cmd_line, options) {
         suspect_file.c_str(), suspect_file_arg.c_str(),
         suspect_method.c_str(), suspect_method_arg.c_str(),
         suspect_time.c_str(), suspect_time_arg.c_str(),
+        path.c_str(), path_arg.c_str(),
+        filter_type.c_str(), filter_type_arg.c_str(),
         min_level.c_str(), min_level_arg.c_str(),
         max_level.c_str(), max_level_arg.c_str(),
         J.c_str(), J_arg.c_str(),

@@ -122,6 +122,12 @@ prefix/leaf_directory/leaf_file2 user.name4
 prefix/leaf_directory/leaf_file2 user.name5
 prefix/leaf_directory/leaf_file2 user.name6
 
+# 3 xattrs
+$ gufi_getfattr --match - prefix/leaf_directory/leaf_file2
+prefix/leaf_directory/leaf_file2 user.name4
+prefix/leaf_directory/leaf_file2 user.name5
+prefix/leaf_directory/leaf_file2 user.name6
+
 # 1 xattr
 $ gufi_getfattr --only-values prefix/1MB
 1MB

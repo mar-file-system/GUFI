@@ -146,7 +146,7 @@ query
 echo
 
 echo "# Find file sizes in range"
-run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);\" -E \"SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;\" ${INDEXROOT}" | @SED@ '\%^$%d;'
+run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);\" -E \"SELECT rpath(sname, sroll, name), size FROM vrpentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;\" ${INDEXROOT}" | @SED@ '\%^$%d;'
 echo
 
 echo "# Find directories that have xattrs"

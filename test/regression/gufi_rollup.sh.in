@@ -92,8 +92,8 @@ run_no_sort "${GUFI_ROLLUP} --help"
 
 do_tests() {
     run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${SEARCH}\" | wc -l | @AWK@ '{ print \$1 }'"
-    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${SEARCH}\" | wc -l | @AWK@ '{ print \$1 }'"
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${SEARCH}\" | wc -l | @AWK@ '{ print \$1 }'"
+    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${SEARCH}\" | wc -l | @AWK@ '{ print \$1 }'"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${SEARCH}\" | wc -l | @AWK@ '{ print \$1 }'"
 
     run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;\" \"${SEARCH}\""
 

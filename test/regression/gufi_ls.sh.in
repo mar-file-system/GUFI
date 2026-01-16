@@ -77,6 +77,7 @@ run_no_sort "${GUFI_LS} -R" # Issue #49
 run_no_sort "${GUFI_LS} ${BASENAME}"
 run_no_sort "${GUFI_LS} ${BASENAME} -a"
 run_no_sort "${GUFI_LS} ${BASENAME} -A"
+run_no_sort "${GUFI_LS} ${BASENAME} -G"
 run_no_sort "${GUFI_LS} ${BASENAME} -h"
 run_no_sort "${GUFI_LS} ${BASENAME} -i | sort -n"
 run_no_sort "${GUFI_LS} ${BASENAME} -R"
@@ -93,22 +94,59 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"INSERT INTO entries (name) VALU
 run_no_sort "${GUFI_LS} ${BASENAME} -B"
 run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name == '${BACKUP}';\""
 
+# timestamp formats without -l (should only show name)
+run_no_sort "${GUFI_LS} ${BASENAME}/old_file --time-style=full-iso"
+run_no_sort "${GUFI_LS} ${BASENAME}/old_file --time-style=long-iso"
+run_no_sort "${GUFI_LS} ${BASENAME}/old_file --time-style=iso"
+run_no_sort "${GUFI_LS} ${BASENAME}/old_file --time-style=locale"
+
+# --block-size without -l (should only show name)
+run_no_sort "${GUFI_LS} --block-size=K    ${BASENAME}/1KB"
+run_no_sort "${GUFI_LS} --block-size=1K   ${BASENAME}/1KB"
+run_no_sort "${GUFI_LS} --block-size=KB   ${BASENAME}/1KB"
+run_no_sort "${GUFI_LS} --block-size=1KB  ${BASENAME}/1KB"
+run_no_sort "${GUFI_LS} --block-size=KiB  ${BASENAME}/1KB"
+run_no_sort "${GUFI_LS} --block-size=1KiB ${BASENAME}/1KB"
+
 # long listing (uids, gid, and timestamps)
 (
     # ls a directory, but don't print subdirectories due to link count differences on different systems
     # all dates are over 6 months in the past, so all of them will print month day year
+    #
     (
-        echo "# ls -l with subdirectories removed"
-        run_no_sort "${GUFI_LS} ${BASENAME} -l | sort -k 9"
+        # -s is not run here because the output changes depending on system
+        for a in "" "a"
+        do
+            for i in "" "i"
+            do
+                for G in "" "G"
+                do
+                    flags="-l${a}${i}${G}"
 
-        echo "# ls -lG with subdirectories removed"
-        run_no_sort "${GUFI_LS} ${BASENAME} -lG | sort -k 8"
+                    # sort -k column
+                    k=5
 
-        echo "# ls -ilG with subdirectories removed"
-        run_no_sort "${GUFI_LS} ${BASENAME} -ilG | sort -k 9"
+                    if [[ "${i}" == "i" ]]
+                    then
+                        k=$(( k + 1 ))
+                    fi
 
-        echo "# ls -ailG with subdirectories removed"
-        run_no_sort "${GUFI_LS} ${BASENAME} -ailG | sort -k 9"
+                    if [[ "${G}" == "G" ]]
+                    then
+                        k=$(( k - 1 ))
+                    fi
+
+                    echo "# ls ${flags} with subdirectories removed"
+                    run_no_sort "${GUFI_LS} ${BASENAME} ${flags} | sort -n -k ${k}"
+                done
+            done
+        done
+
+        # run -s separately
+        flags="-laiGs"
+        echo "# ls ${flags} with subdirectories removed"
+        # shellcheck disable=SC2016
+        run_no_sort "${GUFI_LS} ${BASENAME} ${flags} | sort -n -k 6" | @AWK@ '{ $2=0 ; print }' | head -n -1
     ) | @SED@ '\%^.*directory.*%d;'
 
     # remaining tests ls single files
@@ -121,12 +159,6 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     run_no_sort "${GUFI_LS} ${BASENAME}/old_file -l --time-style=locale"
     run_no_sort "${GUFI_LS} ${BASENAME}/old_file -l"
 
-    # timestamp formats without -l (should only show name)
-    run_no_sort "${GUFI_LS} ${BASENAME}/old_file --time-style=full-iso"
-    run_no_sort "${GUFI_LS} ${BASENAME}/old_file --time-style=long-iso"
-    run_no_sort "${GUFI_LS} ${BASENAME}/old_file --time-style=iso"
-    run_no_sort "${GUFI_LS} ${BASENAME}/old_file --time-style=locale"
-
     # minimum number of user provided blocks required to store this entry
     run_no_sort "${GUFI_LS} -l --block-size=1000 ${BASENAME}/1KB"
     run_no_sort "${GUFI_LS} -l --block-size=1024 ${BASENAME}/1KB"
@@ -137,25 +169,9 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     run_no_sort "${GUFI_LS} -l --block-size=KiB  ${BASENAME}/1KB"
     run_no_sort "${GUFI_LS} -l --block-size=1KiB ${BASENAME}/1KB"
 
-    # --block-size without -l (should only show name)
-    run_no_sort "${GUFI_LS} --block-size=K    ${BASENAME}/1KB"
-    run_no_sort "${GUFI_LS} --block-size=1K   ${BASENAME}/1KB"
-    run_no_sort "${GUFI_LS} --block-size=KB   ${BASENAME}/1KB"
-    run_no_sort "${GUFI_LS} --block-size=1KB  ${BASENAME}/1KB"
-    run_no_sort "${GUFI_LS} --block-size=KiB  ${BASENAME}/1KB"
-    run_no_sort "${GUFI_LS} --block-size=1KiB ${BASENAME}/1KB"
-
-    # no group
-    run_no_sort "${GUFI_LS} -lG ${BASENAME}/old_file"
-    run_no_sort "${GUFI_LS} -G  ${BASENAME}/old_file"  # (should only show name)
-
     # human readable sizes
-    run_no_sort "${GUFI_LS} -lh ${BASENAME}/1KB"
-    run_no_sort "${GUFI_LS} -lh ${BASENAME}/1MB"
+    run_no_sort "${GUFI_LS} -lh ${BASENAME}/old_file"
 
-    # human readable sizes without -l (should only show name)
-    run_no_sort "${GUFI_LS} -h ${BASENAME}/1KB"
-    run_no_sort "${GUFI_LS} -h ${BASENAME}/1MB"
 ) | @SED@ "s%${USER_NAME} ${GROUP_NAME}%${TEST_USER_NAME} ${TEST_GROUP_NAME}%g; s%${USER_NAME}%${TEST_USER_NAME}%g;"
 
 # bad blocksizes

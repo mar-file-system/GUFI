@@ -311,11 +311,14 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
 
     const size_t user_types = args->pa->in.filter_types;
     const struct stat *st = &work->statuso;
-    if (!(((user_types & FILTER_TYPE_DIR)  && S_ISDIR(st->st_mode))  ||
-          ((user_types & FILTER_TYPE_FILE) && S_ISREG(st->st_mode))  ||
-          ((user_types & FILTER_TYPE_LINK) && S_ISLNK(st->st_mode)))) {
-        return 0;
+    if (user_types) { /* if user_types was set, only process allowed types */
+        if (!(((user_types & FILTER_TYPE_DIR)  && S_ISDIR(st->st_mode))  ||
+              ((user_types & FILTER_TYPE_FILE) && S_ISREG(st->st_mode))  ||
+              ((user_types & FILTER_TYPE_LINK) && S_ISLNK(st->st_mode)))) {
+            return 0;
+        }
     }
+    /* if user_types was not set, process everything */
 
     struct PrintArgs print = {
         .output_buffer = &args->pa->obufs.buffers[args->id],

@@ -3,7 +3,7 @@ Creating GUFI tree search with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      25
 
-$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066
@@ -50,7 +50,7 @@ Total:               31
 Total Dirs:          6
 Total Files:         25
 
-$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066
@@ -118,7 +118,7 @@ Directories:    6 (1 empty)
 Total:          31
 Remaining Dirs: 1 (16.67%)
 
-$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066
@@ -153,7 +153,7 @@ prefix/ugo+rw/ugo f user.ugo 666
 
 $ gufi_unrollup "prefix"
 
-$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066
