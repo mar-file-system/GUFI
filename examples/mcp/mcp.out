@@ -1,0 +1,33 @@
+Connected to Server
+--------------------
+Tools Available}
+--------------------
+Tool Name: local_file_index_schema
+Description: sql query on local file information index
+--------------------
+Tool Name: gufi_version
+Description: gufi_query -- version
+--------------------
+Tool Name: local_file_index
+Description: sql query on local file information index
+--------------------
+Tool Name: remote_file_index
+Description: sql query on remote file information index
+--------------------
+Tool Name: gufi_location
+Description: gufi_query location
+run locate gufi_query
+Result: CompletedProcess(args=['which', 'gufi_query'], returncode=0, stdout='gufi_query\n', stderr='')
+--------------------
+run gufi_query version
+Result: CompletedProcess(args=['gufi_query', '--version'], returncode=0, stdout='0.6.10\n', stderr='')
+--------------------
+run vt_pentries list schema
+Result: CREATE VIEW vrpentries AS SELECT REPLACE(vrsummary.name, RTRIM(vrsummary.name, REPLACE(vrsummary.name, '/', '')), '') AS dname, vrsummary.name AS sname, vrsummary.mode AS dmode, vrsummary.nlink AS dnlink, vrsummary.uid AS duid, vrsummary.gid AS dgid, vrsummary.size AS dsize, vrsummary.blksize AS dblksize, vrsummary.blocks AS dblocks, vrsummary.atime AS datime, vrsummary.mtime AS dmtime, vrsummary.ctime AS dctime, vrsummary.linkname AS dlinkname, vrsummary.totfiles AS dtotfile, vrsummary.totlinks AS dtotlinks, vrsummary.minuid AS dminuid, vrsummary.maxuid AS dmaxuid, vrsummary.mingid AS dmingid, vrsummary.maxgid AS dmaxgid, vrsummary.minsize AS dminsize, vrsummary.maxsize AS dmaxsize, vrsummary.totzero AS dtotzero, vrsummary.totltk AS dtotltk, vrsummary.totmtk AS dtotmtk, vrsummary.totltm AS totltm, vrsummary.totmtm AS dtotmtm, vrsummary.totmtg AS dtotmtg, vrsummary.totmtt AS dtotmtt, vrsummary.totsize AS dtotsize, vrsummary.minctime AS dminctime, vrsummary.maxctime AS dmaxctime, vrsummary.minmtime AS dminmtime, vrsummary.maxmtime AS dmaxmtime, vrsummary.minatime AS dminatime, vrsummary.maxatime AS dmaxatime, vrsummary.minblocks AS dminblocks, vrsummary.maxblocks AS dmaxblocks, vrsummary.totxattr AS dtotxattr, vrsummary.depth AS ddepth, vrsummary.mincrtime AS dmincrtime, vrsummary.maxcrtime AS dmaxcrtime, vrsummary.rollupscore AS sroll, vrsummary.isroot AS atroot, vrsummary.srollsubdirs AS srollsubdirs, pentries.* FROM vrsummary, pentries WHERE vrsummary.inode == pentries.pinode
+/* vrpentries(dname,sname,dmode,dnlink,duid,dgid,dsize,dblksize,dblocks,datime,dmtime,dctime,dlinkname,dtotfile,dtotlinks,dminuid,dmaxuid,dmingid,dmaxgid,dminsize,dmaxsize,dtotzero,dtotltk,dtotmtk,totltm,dtotmtm,dtotmtg,dtotmtt,dtotsize,dminctime,dmaxctime,dminmtime,dmaxmtime,dminatime,dmaxatime,dminblocks,dmaxblocks,dtotxattr,ddepth,dmincrtime,dmaxcrtime,sroll,atroot,srollsubdirs,name,type,inode,mode,nlink,uid,gid,size,blksize,blocks,atime,mtime,ctime,linkname,xattr_names,crtime,ossint1,ossint2,ossint3,ossint4,osstext1,osstext2,pinode,ppinode) */;
+
+--------------------
+query local gufi  index
+"local/path","file",1234
+query remote gufi  index
+"remote/path","file",1234

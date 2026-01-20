@@ -1,0 +1,66 @@
+/*
+This file is part of GUFI, which is part of MarFS, which is released
+under the BSD license.
+
+
+Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+From Los Alamos National Security, LLC:
+LA-CC-15-039
+
+Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+Copyright 2017. Los Alamos National Security, LLC. This software was produced
+under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+the U.S. Department of Energy. The U.S. Government has rights to use,
+reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+modified to produce derivative works, such modified software should be
+clearly marked, so as not to confuse it with the version available from
+LANL.
+
+THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+*/
+
+
+
+CREATE VIEW vrpentries AS SELECT REPLACE(vrsummary.name, RTRIM(vrsummary.name, REPLACE(vrsummary.name, '/', '')), '') AS dname, vrsummary.name AS sname, vrsummary.mode AS dmode, vrsummary.nlink AS dnlink, vrsummary.uid AS duid, vrsummary.gid AS dgid, vrsummary.size AS dsize, vrsummary.blksize AS dblksize, vrsummary.blocks AS dblocks, vrsummary.atime AS datime, vrsummary.mtime AS dmtime, vrsummary.ctime AS dctime, vrsummary.linkname AS dlinkname, vrsummary.totfiles AS dtotfile, vrsummary.totlinks AS dtotlinks, vrsummary.minuid AS dminuid, vrsummary.maxuid AS dmaxuid, vrsummary.mingid AS dmingid, vrsummary.maxgid AS dmaxgid, vrsummary.minsize AS dminsize, vrsummary.maxsize AS dmaxsize, vrsummary.totzero AS dtotzero, vrsummary.totltk AS dtotltk, vrsummary.totmtk AS dtotmtk, vrsummary.totltm AS totltm, vrsummary.totmtm AS dtotmtm, vrsummary.totmtg AS dtotmtg, vrsummary.totmtt AS dtotmtt, vrsummary.totsize AS dtotsize, vrsummary.minctime AS dminctime, vrsummary.maxctime AS dmaxctime, vrsummary.minmtime AS dminmtime, vrsummary.maxmtime AS dmaxmtime, vrsummary.minatime AS dminatime, vrsummary.maxatime AS dmaxatime, vrsummary.minblocks AS dminblocks, vrsummary.maxblocks AS dmaxblocks, vrsummary.totxattr AS dtotxattr, vrsummary.depth AS ddepth, vrsummary.mincrtime AS dmincrtime, vrsummary.maxcrtime AS dmaxcrtime, vrsummary.rollupscore AS sroll, vrsummary.isroot AS atroot, vrsummary.srollsubdirs AS srollsubdirs, pentries.* FROM vrsummary, pentries WHERE vrsummary.inode == pentries.pinode
+/* vrpentries(dname,sname,dmode,dnlink,duid,dgid,dsize,dblksize,dblocks,datime,dmtime,dctime,dlinkname,dtotfile,dtotlinks,dminuid,dmaxuid,dmingid,dmaxgid,dminsize,dmaxsize,dtotzero,dtotltk,dtotmtk,totltm,dtotmtm,dtotmtg,dtotmtt,dtotsize,dminctime,dmaxctime,dminmtime,dmaxmtime,dminatime,dmaxatime,dminblocks,dmaxblocks,dtotxattr,ddepth,dmincrtime,dmaxcrtime,sroll,atroot,srollsubdirs,name,type,inode,mode,nlink,uid,gid,size,blksize,blocks,atime,mtime,ctime,linkname,xattr_names,crtime,ossint1,ossint2,ossint3,ossint4,osstext1,osstext2,pinode,ppinode) */;
