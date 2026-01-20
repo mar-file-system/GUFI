@@ -77,6 +77,18 @@ is a wrapper around
 .Xr gufi_query 1 , which performs queries on the contents of a GUFI tree in a parallel manner. The queries that are passed into
 .Xr gufi_query 1 are predefined pieces that are deterministically combined.
 
+Note that a treesummary table MUST be available at the input path.
+.Xr gufi_du 1 does not recurse down into the tree to get sizes of an individual subtree. treesummary tables are meant to amortize that cost. Run
+.Xr gufi_treesummary 1
+.Xr gufi_treesummary_all 1 or
+.Xr gufi_rollup 1 to generate treesummary tables.
+
+If a treesummary table is not available,
+.Xr gufi_du 1 will print
+
+    Warning: Did not get any results from gufi_query.
+    Does "<input path>" have treesummary data?
+
 The input arguments and output are intended to be reminicent of GNU
 .Xr du 1 .
 
@@ -86,7 +98,7 @@ The input arguments and output are intended to be reminicent of GNU
 show this help message and exit
 .It Fl v, -version
 show program's version number and exit
-.It Fl -aparent-size
+.It Fl -apparent-size
 print apparent sizes, rather than disk usage; although the apparent size is usually
 smaller, it may be larger due to holes in ('sparse') files, internal fragmentation,
 indirect blocks, and the like
