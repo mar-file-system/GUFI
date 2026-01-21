@@ -66,7 +66,8 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-#include <trie.h>
+#include "plugin.h"
+#include "trie.h"
 
 #include "gufi_incremental_update/PoolArgs.h"
 
@@ -119,8 +120,19 @@ int PoolArgs_init(struct PoolArgs *pa) {
     pa->index.parent_len = trailing_match_index(pa->index.path.data, pa->index.path.len, "/", 1);
     pa->tree.parent_len = trailing_match_index(pa->tree.path.data, pa->tree.path.len, "/", 1);
 
+    /* fail early */
+    if (check_plugin(pa->in.plugin_ops, PLUGIN_INCREMENTAL) != 1) {
+        pa->in.plugin_ops = NULL;
+        return 1;
+    }
+
     if (setup_suspect_file(pa) != 0) {
         return 1;
+    }
+
+    /* actually initialize after suspect file has been read */
+    if (pa->in.plugin_ops->global_init) {
+        pa->in.plugin_ops->global_init(NULL);
     }
 
     pa->ctx = QPTPool_init(pa->in.maxthreads, pa);
@@ -135,6 +147,9 @@ int PoolArgs_init(struct PoolArgs *pa) {
 void PoolArgs_fini(struct PoolArgs *pa) {
     QPTPool_stop(pa->ctx);
     QPTPool_destroy(pa->ctx);
+    if (pa->in.plugin_ops && pa->in.plugin_ops->global_exit) {
+        pa->in.plugin_ops->global_exit(NULL);
+    }
     trie_free(pa->suspects.fl.inodes);
     trie_free(pa->suspects.dir.inodes);
     input_fini(&pa->in);

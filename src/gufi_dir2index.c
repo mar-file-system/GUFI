@@ -78,8 +78,8 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #include "dbutils.h"
 #include "external.h"
-#include "gufi_dir2index.h"
 #include "path_list.h"
+#include "plugin.h"
 #include "template_db.h"
 #include "str.h"
 #include "utils.h"
@@ -93,6 +93,46 @@ struct PoolArgs {
 
     uint64_t *total_dirs;
     uint64_t *total_nondirs;
+};
+
+/*
+ * values passed to process_nondir
+ *
+ * serves double duty as state within processdir
+ */
+struct NonDirArgs {
+    struct input *in;
+    refstr_t *index_parent;
+
+    /* thread args */
+    struct template_db *temp_db;
+    struct template_db *temp_xattr;
+    struct work *work;
+    struct entry_data ed;
+
+    /* index path */
+    char *topath;
+    size_t topath_len;
+
+    /* summary of the current directory */
+    struct sum summary;
+
+    /* db.db */
+    sqlite3 *db;
+
+    /* prepared statements */
+    sqlite3_stmt *entries_res;
+    sqlite3_stmt *xattrs_res;
+    sqlite3_stmt *xattr_files_res;
+
+    /* list of xattr dbs */
+    sll_t xattr_db_list;
+
+    /*
+     * an optional opaque pointer to user data for a plugin. if the plugin's ctx_init() function
+     * creates and returns a pointer, then the later plugin functions can use it to store state.
+     */
+    void *plugin_user_data;
 };
 
 static int process_external(struct input *in, void *args,
@@ -132,12 +172,12 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     insertdbgo(entry, ed, nda->entries_res);
 
     if (in->plugin_ops->process_file) {
-        struct NonDir nd = {
+        PCS_t pcs = {
             .db = nda->db,
             .work = entry,
             .ed = ed,
         };
-        in->plugin_ops->process_file(&nd, nda->plugin_user_data);
+        in->plugin_ops->process_file(&pcs, nda->plugin_user_data);
     }
 
 out:
@@ -160,6 +200,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     nda.topath     = NULL;
     nda.ed.type    = 'd';
     nda.plugin_user_data = NULL;
+
+    PCS_t pcs; /* references passed into plugin */
 
     DIR *dir = NULL;
 
@@ -246,7 +288,10 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
         /* run light-weight plugin setup */
         if (pa->in.plugin_ops->ctx_init) {
-            nda.plugin_user_data = pa->in.plugin_ops->ctx_init(&nda);
+            pcs.db = nda.db;
+            pcs.work = nda.work;
+            pcs.ed = &nda.ed;
+            nda.plugin_user_data = pa->in.plugin_ops->ctx_init(&pcs);
         }
    }
 
@@ -287,7 +332,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
         /* run plugin before destroying data */
         if (pa->in.plugin_ops->process_dir) {
-            pa->in.plugin_ops->process_dir(&nda, nda.plugin_user_data);
+            pa->in.plugin_ops->process_dir(&pcs, nda.plugin_user_data);
         }
 
         if (nda.in->process_xattrs) {
@@ -295,7 +340,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         }
 
         if (pa->in.plugin_ops->ctx_exit) {
-            pa->in.plugin_ops->ctx_exit(&nda, nda.plugin_user_data);
+            pa->in.plugin_ops->ctx_exit(&pcs, nda.plugin_user_data);
         }
 
         closedb(nda.db);

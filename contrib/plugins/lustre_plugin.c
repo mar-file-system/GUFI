@@ -248,8 +248,8 @@ static void track_file_stripes(struct stripe_tracker *s,
  * Set up initial state for tracking Lustre stripe info.
  */
 void *db_init(void *ptr) {
-    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
-    sqlite3 *db = nda->db;
+    PCS_t *pcs = (PCS_t *) ptr;
+    sqlite3 *db = pcs->db;
 
     struct stripe_tracker *state = new_stripe_tracker();
     if (!state) {
@@ -339,14 +339,14 @@ static void insert_fid(char *path, sqlite3 *db, void *user_data, int is_child_en
 }
 
 static void process_dir(void *ptr, void *user_data) {
-    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
-    insert_fid(nda->work->name, nda->db, user_data, 0);
+    PCS_t *pcs = (PCS_t *) ptr;
+    insert_fid(pcs->work->name, pcs->db, user_data, 0);
 }
 
 static void process_file(void *ptr, void *user_data) {
-    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
-    sqlite3 *db = nda->db;
-    char *path = nda->work->name;
+    PCS_t *pcs = (PCS_t *) ptr;
+    sqlite3 *db = pcs->db;
+    char *path = pcs->work->name;
 
     insert_fid(path, db, user_data, 1);
 
@@ -403,8 +403,8 @@ static void process_file(void *ptr, void *user_data) {
  * Save stripe tracking info to the database and clean up state.
  */
 static void db_exit(void *ptr, void *user_data) {
-    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
-    sqlite3 *db = nda->db;
+    PCS_t *pcs = (PCS_t *) ptr;
+    sqlite3 *db = pcs->db;
     struct stripe_tracker *state = (struct stripe_tracker *) user_data;
 
     for (uint32_t i = 0; i <= state->max_ost_idx; i++) {

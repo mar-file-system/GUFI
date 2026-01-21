@@ -10,6 +10,7 @@ options:
       --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)
       --suspect-time <s>            time in seconds since epoch for suspect comparision
   -x, --index-xattrs                index xattrs
+      --plugin <library_name>       plugin library for modifying tree processing
       --compress                    compress work items
 
 GUFI_tree         GUFI tree
@@ -32,6 +33,7 @@ options:
       --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)
       --suspect-time <s>            time in seconds since epoch for suspect comparision
   -x, --index-xattrs                index xattrs
+      --plugin <library_name>       plugin library for modifying tree processing
       --compress                    compress work items
 
 GUFI_tree         GUFI tree

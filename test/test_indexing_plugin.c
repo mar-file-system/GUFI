@@ -72,7 +72,6 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 
 #include "bf.h"
-#include "gufi_dir2index.h"
 #include "plugin.h"
 
 struct state {
@@ -94,8 +93,8 @@ static void cleanup_state(struct state *p) {
  * Set up initial state for test plugin.
  */
 static void *db_init(void *ptr) {
-    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
-    sqlite3 *db = nda->db;
+    PCS_t *pcs = (PCS_t *) ptr;
+    sqlite3 *db = pcs->db;
 
     struct state *state = new_state();
 
@@ -119,8 +118,8 @@ static void *db_init(void *ptr) {
  * Save state to the database and clean up state.
  */
 static void db_exit(void *ptr, void *user_data) {
-    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
-    sqlite3 *db = nda->db;
+    PCS_t *pcs = (PCS_t *) ptr;
+    sqlite3 *db = pcs->db;
     struct state *p = (struct state *) user_data;
 
     char *text = sqlite3_mprintf("INSERT INTO plugin_test_summary (filetype, count) VALUES ('file', %d);"
@@ -141,11 +140,11 @@ static void db_exit(void *ptr, void *user_data) {
 }
 
 static void process_file(void *ptr, void *user_data) {
-    struct NonDir *nd = (struct NonDir *) ptr;
-    sqlite3 *db = nd->db;
+    PCS_t *pcs = (PCS_t *) ptr;
+    sqlite3 *db = pcs->db;
     struct state *p = (struct state *) user_data;
 
-    char *text = sqlite3_mprintf("INSERT INTO plugin_test_files (filename) VALUES ('%s');", nd->work->name);
+    char *text = sqlite3_mprintf("INSERT INTO plugin_test_files (filename) VALUES ('%s');", pcs->work->name);
     char *error = NULL;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
@@ -161,11 +160,11 @@ static void process_file(void *ptr, void *user_data) {
 }
 
 static void process_dir(void *ptr, void *user_data) {
-    struct NonDirArgs *nda = (struct NonDirArgs *) ptr;
-    sqlite3 *db = nda->db;
+    PCS_t *pcs = (PCS_t *) ptr;
+    sqlite3 *db = pcs->db;
     struct state *p = (struct state *) user_data;
 
-    char *text = sqlite3_mprintf("INSERT INTO plugin_test_directories (dirname) VALUES ('%s');", nda->work->name);
+    char *text = sqlite3_mprintf("INSERT INTO plugin_test_directories (dirname) VALUES ('%s');", pcs->work->name);
     char *error;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);

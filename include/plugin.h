@@ -63,6 +63,8 @@ OF SUCH DAMAGE.
 #ifndef PLUGIN_H
 #define PLUGIN_H
 
+#include <sqlite3.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -75,9 +77,10 @@ extern "C" {
 #define GUFI_PLUGIN_SYMBOL_STR "gufi_plugin_operations"
 
 typedef enum {
-    PLUGIN_NONE  = 0,
-    PLUGIN_INDEX = 1,
-    PLUGIN_QUERY = 2,
+    PLUGIN_NONE        = 0,
+    PLUGIN_INDEX       = 1,
+    PLUGIN_QUERY       = 2,
+    PLUGIN_INCREMENTAL = 3,
 } plugin_type;
 
 /*
@@ -87,7 +90,11 @@ typedef enum {
 struct plugin_operations {
     plugin_type type;
 
-    /* One-time initialization */
+    /*
+     * One-time initialization
+     *
+     * If the plugin does SQLite 3 operations, should call sqlite3_initialize()
+     */
     void (*global_init)(void *global);
 
     /*
@@ -106,9 +113,24 @@ struct plugin_operations {
     /* Clean up any state for the current context */
     void (*ctx_exit)(void *ptr, void *user_data);
 
-    /* One-time cleanup */
+    /*
+     * One-time cleanup
+     *
+     * If the plugin does SQLite 3 operations, should call sqlite3_shutdown()
+     */
     void (*global_exit)(void *global);
 };
+
+/* forward declarations */
+struct work;
+struct entry_data;
+
+/* common plugin ptr struct (don't have to use; here to reduce duplicate struct definitions) */
+typedef struct PluginCommonStruct {
+    sqlite3 *db;
+    struct work *work;
+    struct entry_data *ed;
+} PCS_t;
 
 #ifdef __cplusplus
 }

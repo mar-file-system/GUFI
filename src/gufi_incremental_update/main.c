@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "debug.h"
 #include "descend.h"
+#include "plugin.h"
 #include "template_db.h"
 #include "utils.h"
 
@@ -150,7 +151,7 @@ int main(int argc, char *argv[]) {
         /* processing flags */
         FLAG_SUSPECT_STAT,
         FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD, FLAG_SUSPECT_TIME,
-        FLAG_INDEX_XATTRS,
+        FLAG_INDEX_XATTRS, FLAG_PLUGIN,
 
         /* memory usage flags */
         #ifdef HAVE_ZLIB

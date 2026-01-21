@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "dbutils.h"
+#include "plugin.h"
 #include "template_db.h"
 
 #include "gufi_incremental_update/incremental_update.h"
@@ -110,6 +111,18 @@ int reindex_dir(struct PoolArgs *pa,
 
     /* rewind the directory */
     rewinddir(dir);
+
+    PCS_t pcs = {
+        .db = db,
+        .work = work,
+        .ed = ed,
+    };
+
+    /* run light-weight plugin setup before information is available */
+    void *plugin_user_data = NULL;
+    if (pa->in.plugin_ops->ctx_init) {
+        plugin_user_data = pa->in.plugin_ops->ctx_init(&pcs);
+    }
 
     /*
      * loop over dirents, if link push it on the queue, if file or
@@ -179,6 +192,15 @@ int reindex_dir(struct PoolArgs *pa,
         sumit(&summary, child, &child_ed);
         insertdbgo(child, &child_ed, res);
 
+        if (pa->in.plugin_ops->process_file) {
+            PCS_t child_pcs = {
+                .db = db,
+                .work = child,
+                .ed = &child_ed,
+            };
+            pa->in.plugin_ops->process_file(&child_pcs, plugin_user_data);
+        }
+
         if (pa->in.process_xattrs) {
             xattrs_cleanup(&child_ed.xattrs);
         }
@@ -190,9 +212,20 @@ int reindex_dir(struct PoolArgs *pa,
     insertdbfin(res);
 
     insertsumdb(db, work->name, work, ed, &summary);
+
+    /* run plugin before destroying data */
+    if (pa->in.plugin_ops->process_dir) {
+        pa->in.plugin_ops->process_dir(&pcs, plugin_user_data);
+    }
+
     if (pa->in.process_xattrs) {
         xattrs_cleanup(&ed->xattrs);
     }
+
+    if (pa->in.plugin_ops->ctx_exit) {
+        pa->in.plugin_ops->ctx_exit(&pcs, plugin_user_data);
+    }
+
     closedb(db);
 
     chown(dbpath, work->statuso.st_uid, work->statuso.st_gid);
