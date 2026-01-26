@@ -685,27 +685,27 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     USING gufi_vt(threads=2, E='SELECT * FROM pentries;', index=path);
  *
  * Most arguments should be key=value pairs. The allowed keys are:
- *     remote_cmd      = '<command to forward this run of gufi_query to a remote (e.g. ssh)>'
- *     remote_arg      = '<single argv[i] passed to remote_cmd before gufi_query (e.g. user@remote)>'
- *     n or threads    =  <positive integer>
- *     min_level       =  <non-negative integer>
- *     max_level       =  <non-negative integer>
- *     dir_match_uid   =  <uid>
- *     dir_match_gid   =  <gid>
- *     setup_table     = '<SQL>' (set up single temporary table to make columns available for getting result column types)
- *     I               = '<SQL>'
- *     T               = '<SQL>'
- *     S               = '<SQL>'
- *     E               = '<SQL>'
- *     K               = '<SQL>'
- *     J               = '<SQL>'
- *     G               = '<SQL>'
- *     F               = '<SQL>'
- *     path_list       = '<file path>'
- *     p               = '<source path for use with spath()>'
- *     plugin          = '<gufi_query plugin library path>'
- *     index           = '<path>' (can also pass in without the key)
- *     verbose/VERBOSE =  <0|1>
+ *     remote_cmd              = '<command to forward this run of gufi_query to a remote (e.g. ssh)>'
+ *     remote_arg              = '<single argv[i] passed to remote_cmd before gufi_query (e.g. user@remote)>'
+ *     n or threads            =  <positive integer>
+ *     min_level               =  <non-negative integer>
+ *     max_level               =  <non-negative integer>
+ *     dir_match_uid           =  <uid>
+ *     dir_match_gid           =  <gid>
+ *     setup_res_col_types     = '<SQL>' (set up single temporary table to make columns available for getting result column types)
+ *     I                       = '<SQL>'
+ *     T                       = '<SQL>'
+ *     S                       = '<SQL>'
+ *     E                       = '<SQL>'
+ *     K                       = '<SQL>'
+ *     J                       = '<SQL>'
+ *     G                       = '<SQL>'
+ *     F                       = '<SQL>'
+ *     path_list               = '<file path>'
+ *     p                       = '<source path for use with spath()>'
+ *     plugin                  = '<gufi_query plugin library path>'
+ *     index                   = '<path>' (can also pass in without the key)
+ *     verbose/VERBOSE         =  <0|1>
  *
  * Notes:
  *     - Arguments without '=' are considered index paths

@@ -91,7 +91,7 @@ int addhistfuncs(sqlite3 *db);
 /* ********************************************* */
 /*
  * log Histograms
- * log_hist(input, bucket_count) ->  base;bucket_count;underflow;overflow;bucket1:count1;bucket2:count2;...
+ * log_hist(input, base, bucket_count) ->  base;bucket_count;underflow;overflow;bucket1:count1;bucket2:count2;...
  *
  * Convert an input into a number and get
  * floor(log2(value)/log2(base)) of that value. Strings and blobs are
@@ -140,7 +140,7 @@ void mode_hist_free(mode_hist_t *hist);
 /* ********************************************* */
 /*
  * Timestamp/Age Histograms
- * time_hist(timestamp, ref) -> ref;seconds1:count1;seconds2:count2;...
+ * time_hist(timestamp, ref) -> ref;bucket1:count1;bucket2:count2;...
  *
  * The buckets where timestamps are counted are predefined.
  * The buckets represent [bucket[i - 1], bucket[i]) intervals.

@@ -110,7 +110,7 @@ int serialize_bucket(sqlite3_context *context,
 }
 
 static log_hist_t *log_hist_init(sqlite3_context *context, log_hist_t *hist,
-                                 const size_t base, const size_t count) {
+                                 const size_t base, const size_t bucket_count) {
     if (base < 2) {
         if (context) {
             char buf[1024];
@@ -122,7 +122,7 @@ static log_hist_t *log_hist_init(sqlite3_context *context, log_hist_t *hist,
 
     hist->base = base;
     hist->conv = log2(hist->base);
-    hist->count = count;
+    hist->count = bucket_count;
     hist->lt = 0;
     hist->buckets = calloc(hist->count, sizeof(hist->buckets[0]));
     hist->ge = 0;
@@ -156,7 +156,8 @@ static void log_hist_step(sqlite3_context *context, int argc, sqlite3_value **ar
     log_hist_t *hist = (log_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (hist->base == 0) {
         const size_t base = sqlite3_value_int(argv[1]);
-        if (!log_hist_init(context, hist, base, sqlite3_value_int(argv[2]))) {
+        const size_t bucket_count = sqlite3_value_int(argv[2]);
+        if (!log_hist_init(context, hist, base, bucket_count)) {
             return;
         }
     }
