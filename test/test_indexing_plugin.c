@@ -102,7 +102,7 @@ static void *db_init(void *ptr) {
         "CREATE TABLE plugin_test_files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT);"
         "CREATE TABLE plugin_test_directories (id INTEGER PRIMARY KEY AUTOINCREMENT, dirname TEXT);"
         "CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));";
-    char *error;
+    char *error = NULL;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
     if (res != SQLITE_OK) {
@@ -165,7 +165,7 @@ static void process_dir(void *ptr, void *user_data) {
     struct state *p = (struct state *) user_data;
 
     char *text = sqlite3_mprintf("INSERT INTO plugin_test_directories (dirname) VALUES ('%s');", pcs->work->name);
-    char *error;
+    char *error = NULL;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
     if (res == SQLITE_OK) {

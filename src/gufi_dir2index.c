@@ -268,6 +268,10 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
             goto close_dir;
         }
 
+        pcs.db = nda.db;
+        pcs.work = nda.work;
+        pcs.ed = &nda.ed;
+
         /* prepare to insert into the database */
         zeroit(&nda.summary);
 
@@ -288,9 +292,6 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
         /* run light-weight plugin setup */
         if (pa->in.plugin_ops->ctx_init) {
-            pcs.db = nda.db;
-            pcs.work = nda.work;
-            pcs.ed = &nda.ed;
             nda.plugin_user_data = pa->in.plugin_ops->ctx_init(&pcs);
         }
    }
