@@ -130,6 +130,7 @@ typedef struct PluginCommonStruct {
     sqlite3 *db;
     struct work *work;
     struct entry_data *ed;
+    void *data; /* any extra data to pass along */
 } PCS_t;
 
 #ifdef __cplusplus

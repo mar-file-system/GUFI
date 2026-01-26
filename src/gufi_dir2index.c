@@ -111,8 +111,7 @@ struct NonDirArgs {
     struct entry_data ed;
 
     /* index path */
-    char *topath;
-    size_t topath_len;
+    str_t topath;
 
     /* summary of the current directory */
     struct sum summary;
@@ -155,7 +154,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     if (in->process_xattrs) {
         insertdbgo_xattrs(in, &nda->work->statuso, entry, ed,
                           &nda->xattr_db_list, nda->temp_xattr,
-                          nda->topath, nda->topath_len,
+                          nda->topath.data, nda->topath.len,
                           nda->xattrs_res, nda->xattr_files_res);
     }
 
@@ -197,11 +196,11 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     nda.temp_xattr = &pa->xattr;
     nda.work       = NULL;
     memset(&nda.ed, 0, sizeof(nda.ed));
-    nda.topath     = NULL;
     nda.ed.type    = 'd';
     nda.plugin_user_data = NULL;
 
     PCS_t pcs; /* references passed into plugin */
+    memset(&pcs, 0, sizeof(pcs));
 
     DIR *dir = NULL;
 
@@ -224,27 +223,27 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     /* offset by work->root_len to remove prefix */
-    nda.topath_len = pa->index_parent.len + 1 + nda.work->name_len - nda.work->root_parent.len;
+    nda.topath.len = pa->index_parent.len + 1 + nda.work->name_len - nda.work->root_parent.len;
 
     /*
      * allocate space for "/db.db" in nda.topath
      *
      * extra buffer is not needed and save on memcpy-ing
      */
-    const size_t topath_size = nda.topath_len + 1 + DBNAME_LEN + 1;
+    const size_t topath_size = nda.topath.len + 1 + DBNAME_LEN + 1;
 
-    nda.topath = malloc(topath_size);
-    SNFORMAT_S(nda.topath, topath_size, 4,
+    nda.topath.data = malloc(topath_size);
+    SNFORMAT_S(nda.topath.data, topath_size, 4,
                pa->index_parent.data, pa->index_parent.len,
                "/", (size_t) 1,
                nda.work->name + nda.work->root_parent.len, nda.work->name_len - nda.work->root_parent.len,
                "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     /* don't need recursion because parent is guaranteed to exist */
-    if (mkdir(nda.topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+    if (mkdir(nda.topath.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
         const int err = errno;
         if (err != EEXIST) {
-            fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath, err, strerror(err));
+            fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath.data, err, strerror(err));
             rc = 1;
             goto close_dir;
         }
@@ -256,12 +255,12 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
      */
     if (process_dir) {
         /* restore "/db.db" */
-        nda.topath[nda.topath_len] = '/';
+        nda.topath.data[nda.topath.len] = '/';
 
-        nda.db = template_to_db(nda.temp_db, nda.topath, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
+        nda.db = template_to_db(nda.temp_db, nda.topath.data, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
 
         /* remove "/db.db" */
-        nda.topath[nda.topath_len] = '\0';
+        nda.topath.data[nda.topath.len] = '\0';
 
         if (!nda.db) {
             rc = 1;
@@ -271,6 +270,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         pcs.db = nda.db;
         pcs.work = nda.work;
         pcs.ed = &nda.ed;
+        pcs.data = &nda.topath;
 
         /* prepare to insert into the database */
         zeroit(&nda.summary);
@@ -349,8 +349,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     /* ignore errors */
-    chmod(nda.topath, nda.work->statuso.st_mode);
-    chown(nda.topath, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
+    chmod(nda.topath.data, nda.work->statuso.st_mode);
+    chown(nda.topath.data, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
 
   close_dir:
     closedir(dir);
@@ -362,7 +362,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         pa->total_nondirs[id] += ctrs.nondirs_processed;
     }
 
-    free(nda.topath);
+    free(nda.topath.data);
     free(nda.work);
 
     return rc;
