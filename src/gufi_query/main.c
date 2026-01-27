@@ -296,12 +296,12 @@ int main(int argc, char *argv[])
     }
 
     if (in.plugin_ops->global_init) {
-        in.plugin_ops->global_init(NULL);
+        in.plugin_ops->global_init(&in);
     }
 
     if (handle_sql(&in) != 0) {
         if (in.plugin_ops->global_exit) {
-            in.plugin_ops->global_exit(NULL);
+            in.plugin_ops->global_exit(&in);
         }
         input_fini(&in);
         return EXIT_FAILURE;
@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
 
     if (bad_partial_walk(&in, root_count)) {
         if (in.plugin_ops->global_exit) {
-            in.plugin_ops->global_exit(NULL);
+            in.plugin_ops->global_exit(&in);
         }
         input_fini(&in);
         return EXIT_FAILURE;

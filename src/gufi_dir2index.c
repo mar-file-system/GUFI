@@ -548,7 +548,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (pa.in.plugin_ops->global_init) {
-        pa.in.plugin_ops->global_init(NULL);
+        pa.in.plugin_ops->global_init(&pa.in);
     }
 
     argc--; /* index parent is no longer needed */
@@ -677,7 +677,7 @@ int main(int argc, char *argv[]) {
 
   cleanup:
     if (pa.in.plugin_ops->global_exit) {
-        pa.in.plugin_ops->global_exit(NULL);
+        pa.in.plugin_ops->global_exit(&pa.in);
     }
 
     input_fini(&pa.in);

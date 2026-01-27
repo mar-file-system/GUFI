@@ -185,10 +185,6 @@ static int gen_types(struct input *in) {
             }
         }
 
-        if (in->plugin_ops->global_init) {
-            in->plugin_ops->global_init(NULL);
-        }
-
         void *plugin_user_data = NULL;
         if (in->plugin_ops->ctx_init) {
             plugin_user_data = in->plugin_ops->ctx_init(db);
@@ -238,10 +234,6 @@ static int gen_types(struct input *in) {
 
         if (in->plugin_ops->ctx_exit) {
             in->plugin_ops->ctx_exit(db, plugin_user_data);
-        }
-
-        if (in->plugin_ops->global_exit) {
-            in->plugin_ops->global_exit(NULL);
         }
 
         closedb(db);

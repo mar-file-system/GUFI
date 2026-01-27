@@ -986,7 +986,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     }
 
     if (in.plugin_ops->global_init) {
-        in.plugin_ops->global_init(NULL);
+        in.plugin_ops->global_init(&in);
     }
 
     void *plugin_user_data = NULL;
@@ -1072,7 +1072,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     }
 
     if (in.plugin_ops->global_exit) {
-        in.plugin_ops->global_exit(NULL);
+        in.plugin_ops->global_exit(&in);
     }
 
     unload_plugin_library(&in);
@@ -1096,7 +1096,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     }
 
     if (in.plugin_ops->global_exit) {
-        in.plugin_ops->global_exit(NULL);
+        in.plugin_ops->global_exit(&in);
     }
 
     unload_plugin_library(&in);

@@ -312,7 +312,7 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
     pa->ta = NULL;
 
     if (pa->in->plugin_ops->global_exit) {
-        pa->in->plugin_ops->global_exit(NULL);
+        pa->in->plugin_ops->global_exit(pa->in);
     }
 
     input_fini(pa->in);

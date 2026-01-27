@@ -132,7 +132,7 @@ int PoolArgs_init(struct PoolArgs *pa) {
 
     /* actually initialize after suspect file has been read */
     if (pa->in.plugin_ops->global_init) {
-        pa->in.plugin_ops->global_init(NULL);
+        pa->in.plugin_ops->global_init(&pa->in);
     }
 
     pa->ctx = QPTPool_init(pa->in.maxthreads, pa);
@@ -148,7 +148,7 @@ void PoolArgs_fini(struct PoolArgs *pa) {
     QPTPool_stop(pa->ctx);
     QPTPool_destroy(pa->ctx);
     if (pa->in.plugin_ops && pa->in.plugin_ops->global_exit) {
-        pa->in.plugin_ops->global_exit(NULL);
+        pa->in.plugin_ops->global_exit(&pa->in);
     }
     trie_free(pa->suspects.fl.inodes);
     trie_free(pa->suspects.dir.inodes);
