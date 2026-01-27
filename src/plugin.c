@@ -60,87 +60,51 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 */
 
-#ifndef PLUGIN_H
-#define PLUGIN_H
 
-#include <sqlite3.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <dlfcn.h>
 
-/* forward declarations */
-struct input;
-struct work;
-struct entry_data;
+#include "bf.h"
+#include "plugin.h"
 
-/*
- * Plugins should create a `struct plugin_operations` with this name to be exported to the
- * GUFI code.
-  */
-#define GUFI_PLUGIN_SYMBOL gufi_plugin_operations
-#define GUFI_PLUGIN_SYMBOL_STR "gufi_plugin_operations"
-
-typedef enum {
-    PLUGIN_NONE        = 0,
-    PLUGIN_INDEX       = 1,
-    PLUGIN_QUERY       = 2,
-    PLUGIN_INCREMENTAL = 3,
-} plugin_type;
-
-/*
- * Operations for a user-defined plugin library, allowing the user to make custom
- * modifications to the databases as GUFI runs.
- */
-struct plugin_operations {
-    plugin_type type;
-
-    /*
-     * One-time initialization
-     *
-     * If the plugin does SQLite 3 operations, should call sqlite3_initialize()
-     */
-    void (*global_init)(void *global);
-
-    /*
-     * Give the user an opportunity to initialize any state for the
-     * current context. The returned pointer is passed to all
-     * subsequent operations as `user_data`.
-     */
-    void *(*ctx_init)(void *ptr);
-
-    /* Process a directory */
-    void (*process_dir)(void *ptr, void *user_data);
-
-    /* Process a file */
-    void (*process_file)(void *ptr, void *user_data);
-
-    /* Clean up any state for the current context */
-    void (*ctx_exit)(void *ptr, void *user_data);
-
-    /*
-     * One-time cleanup
-     *
-     * If the plugin does SQLite 3 operations, should call sqlite3_shutdown()
-     */
-    void (*global_exit)(void *global);
+const struct plugin_operations null_plugin_ops = {
+    .type = PLUGIN_NONE,
+    .global_init = NULL,
+    .ctx_init = NULL,
+    .process_file = NULL,
+    .process_dir = NULL,
+    .ctx_exit = NULL,
+    .global_exit = NULL,
 };
 
-extern const struct plugin_operations null_plugin_ops;
+/*
+ * If a plugin library path is given in in->plugin_name,
+ * then load that library and add its plugin functions to in->plugin_ops.
+ *
+ * Returns 0 on success or 1 on failure.
+ */
+int load_plugin_library(struct input *in, const char *plugin_name) {
+    void *lib = dlopen(plugin_name, RTLD_NOW);
+    if (!lib) {
+        fprintf(stderr, "Could not open plugin library: %s\n", dlerror());
+        return 1;
+    }
 
-int load_plugin_library(struct input *in, const char *plugin_name);
-void unload_plugin_library(struct input *in);
+    in->plugin_handle = lib;
 
-/* common plugin ptr struct (don't have to use; here to reduce duplicate struct definitions) */
-typedef struct PluginCommonStruct {
-    sqlite3 *db;
-    struct work *work;
-    struct entry_data *ed;
-    void *data; /* any extra data to pass along */
-} PCS_t;
+    struct plugin_operations *user_plugin_ops = (struct plugin_operations *) dlsym(lib, GUFI_PLUGIN_SYMBOL_STR);
+    if (!user_plugin_ops) {
+        fprintf(stderr, "Could not find exported operations in the plugin library: %s\n", dlerror());
+        return 1;
+    }
 
-#ifdef __cplusplus
+    in->plugin_ops = user_plugin_ops;
+
+    return 0;
 }
-#endif
 
-#endif
+void unload_plugin_library(struct input *in) {
+    if (in->plugin_handle) {
+        dlclose(in->plugin_handle);
+    }
+}

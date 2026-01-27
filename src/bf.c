@@ -66,7 +66,6 @@ OF SUCH DAMAGE.
 #define _GNU_SOURCE /* getopt_long(3) + optional arguments */
 #endif
 
-#include <dlfcn.h>
 #include <errno.h>
 #include <pwd.h>
 #include <stdint.h>
@@ -98,16 +97,6 @@ const char fielddelim = '\x1E';     /* ASCII Record Separator */
 const char linesep = '\n';
 
 static const char DEFAULT_SWAP_PREFIX[] = "";
-
-static const struct plugin_operations null_plugin_ops = {
-    .type = PLUGIN_NONE,
-    .global_init = NULL,
-    .ctx_init = NULL,
-    .process_file = NULL,
-    .process_dir = NULL,
-    .ctx_exit = NULL,
-    .global_exit = NULL,
-};
 
 struct input *input_init(struct input *in) {
     sqlite3_initialize(); /* explicitly initialize here, in a fuction that is run serially once in main */
@@ -163,37 +152,9 @@ void input_fini(struct input *in) {
         free(in->types.tsum);
         sll_destroy(&in->external_attach, free);
         trie_free(in->skip);
-        if (in->plugin_handle) {
-            dlclose(in->plugin_handle);
-        }
+        unload_plugin_library(in);
     }
     sqlite3_shutdown();
-}
-
-/*
- * If a plugin library path is given in in->plugin_name,
- * then load that library and add its plugin functions to in->plugin_ops.
- *
- * Returns 0 on success or 1 on failure.
- */
-static int load_plugin_library(struct input *in, char *plugin_name) {
-    void *lib = dlopen(plugin_name, RTLD_NOW);
-    if (!lib) {
-        fprintf(stderr, "Could not open plugin library: %s\n", dlerror());
-        return 1;
-    }
-
-    in->plugin_handle = lib;
-
-    struct plugin_operations *user_plugin_ops = (struct plugin_operations *) dlsym(lib, GUFI_PLUGIN_SYMBOL_STR);
-    if (!user_plugin_ops) {
-        fprintf(stderr, "Could not find exported operations in the plugin library: %s\n", dlerror());
-        return 1;
-    }
-
-    in->plugin_ops = user_plugin_ops;
-
-    return 0;
 }
 
 /*

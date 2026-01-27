@@ -119,7 +119,7 @@ typedef struct gufi_query_cmd {
      * SQL to set up temporary single table that does not exist in
      * default GUFI to allow for result column types to be discovered
      */
-    refstr_t setup_res_col_types;
+    refstr_t setup_res_col_type;
 
     refstr_t I;
     refstr_t T;
@@ -229,16 +229,17 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--dir-match-gid=%s ", cmd->dir_match_gid.data);
         }
 
-        flatten_argv(argc, argv, "-I",          cmd->I);
-        flatten_argv(argc, argv, "-T",          cmd->T);
-        flatten_argv(argc, argv, "-S",          cmd->S);
-        flatten_argv(argc, argv, "-E",          cmd->E);
-        flatten_argv(argc, argv, "-K",          cmd->K);
-        flatten_argv(argc, argv, "-J",          cmd->J);
-        flatten_argv(argc, argv, "-G",          cmd->G);
-        flatten_argv(argc, argv, "-F",          cmd->F);
-        flatten_argv(argc, argv, "-p",          cmd->p);
-        flatten_argv(argc, argv, "--plugin",    cmd->plugin);
+        flatten_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
+        flatten_argv(argc, argv, "-I",                    cmd->I);
+        flatten_argv(argc, argv, "-T",                    cmd->T);
+        flatten_argv(argc, argv, "-S",                    cmd->S);
+        flatten_argv(argc, argv, "-E",                    cmd->E);
+        flatten_argv(argc, argv, "-K",                    cmd->K);
+        flatten_argv(argc, argv, "-J",                    cmd->J);
+        flatten_argv(argc, argv, "-G",                    cmd->G);
+        flatten_argv(argc, argv, "-F",                    cmd->F);
+        flatten_argv(argc, argv, "-p",                    cmd->p);
+        flatten_argv(argc, argv, "--plugin",              cmd->plugin);
 
         sll_loop(&cmd->indexroots, node) {
             const char *indexroot = (char *) sll_node_data(node);
@@ -291,7 +292,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = dir_match_gid;
         }
 
-        set_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_types);
+        set_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
         set_argv(argc, argv, "-I",                    cmd->I);
         set_argv(argc, argv, "-T",                    cmd->T);
         set_argv(argc, argv, "-S",                    cmd->S);
@@ -692,7 +693,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     max_level               =  <non-negative integer>
  *     dir_match_uid           =  <uid>
  *     dir_match_gid           =  <gid>
- *     setup_res_col_types     = '<SQL>' (set up single temporary table to make columns available for getting result column types)
+ *     setup_res_col_type      = '<SQL>' (set up single temporary table to make columns available for getting result column types)
  *     I                       = '<SQL>'
  *     T                       = '<SQL>'
  *     S                       = '<SQL>'
@@ -917,8 +918,8 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             /* let gufi_query check value */
             set_refstr(&cmd.dir_match_gid, value);
         }
-        else if (strncmp(key, "setup_res_col_types", 20) == 0) {
-            set_refstr(&cmd.setup_res_col_types, value);
+        else if (strncmp(key, "setup_res_col_type", 19) == 0) {
+            set_refstr(&cmd.setup_res_col_type, value);
         }
         else {
             *pzErr = sqlite3_mprintf("Unknown key: %s", key);
@@ -933,7 +934,24 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         return SQLITE_CONSTRAINT;
     }
 
-    /* get column types of results from gufi_query */
+    struct input in;
+    in.plugin_ops = &null_plugin_ops;
+    in.plugin_handle = NULL;
+
+    if (cmd.plugin.data && cmd.plugin.len) {
+        if (load_plugin_library(&in, cmd.plugin.data) != 0) {
+            gq_cmd_destroy(&cmd);
+            return SQLITE_CONSTRAINT;
+        }
+
+        if (check_plugin(in.plugin_ops, PLUGIN_QUERY) != 1) {
+            unload_plugin_library(&in);
+            gq_cmd_destroy(&cmd);
+            return SQLITE_CONSTRAINT;
+        }
+    }
+
+    /* get result column types */
 
     /* make sure all setup tables are placed into a different db */
     /* this should never fail */
@@ -942,18 +960,6 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
     create_xattr_tables(SQLITE_MEMORY, tempdb, NULL);
 
-    /* before getting the column types, set up tables that don't exist yet in this temporary space */
-    if (cmd.setup_res_col_types.data && cmd.setup_res_col_types.len) {
-        char *err = NULL;
-        if (sqlite3_exec(tempdb, cmd.setup_res_col_types.data, NULL, NULL, &err) != SQLITE_OK) {
-            *pzErr = sqlite3_mprintf("Setting up results table failed: %s", err);
-            gq_cmd_destroy(&cmd);
-            sqlite3_free(err);
-            return SQLITE_CONSTRAINT;
-        }
-    }
-
-    struct input in;
     in.process_xattrs = 1;
     in.source_prefix = cmd.p;
     struct work work; /* unused */
@@ -977,6 +983,27 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     if (cmd.T.len) {
         /* this should never fail */
         create_table_wrapper(SQLITE_MEMORY, tempdb, TREESUMMARY, TREESUMMARY_CREATE);
+    }
+
+    if (in.plugin_ops->global_init) {
+        in.plugin_ops->global_init(NULL);
+    }
+
+    void *plugin_user_data = NULL;
+    if (in.plugin_ops->ctx_init) {
+        plugin_user_data = in.plugin_ops->ctx_init(tempdb);
+    }
+
+    /* before getting the column types, set up tables that don't exist yet in this temporary space */
+    if (cmd.setup_res_col_type.data && cmd.setup_res_col_type.len) {
+        char *err = NULL;
+        if (sqlite3_exec(tempdb, cmd.setup_res_col_type.data, NULL, NULL, &err) != SQLITE_OK) {
+            *pzErr = sqlite3_mprintf("Setting up results table with '%s' failed: %s",
+                                     cmd.setup_res_col_type.data, err);
+            gq_cmd_destroy(&cmd);
+            sqlite3_free(err);
+            return SQLITE_CONSTRAINT;
+        }
     }
 
     /* if not aggregating, get types for T, S, or E */
@@ -1040,6 +1067,16 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     free(names);
     free(types);
 
+    if (in.plugin_ops->ctx_exit) {
+        in.plugin_ops->ctx_exit(tempdb, plugin_user_data);
+    }
+
+    if (in.plugin_ops->global_exit) {
+        in.plugin_ops->global_exit(NULL);
+    }
+
+    unload_plugin_library(&in);
+
     closedb(tempdb);
 
     return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
@@ -1053,6 +1090,16 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         free(names);
     }
     free(types);
+
+    if (in.plugin_ops->ctx_exit) {
+        in.plugin_ops->ctx_exit(db, plugin_user_data);
+    }
+
+    if (in.plugin_ops->global_exit) {
+        in.plugin_ops->global_exit(NULL);
+    }
+
+    unload_plugin_library(&in);
 
     closedb(tempdb);
     gq_cmd_destroy(&cmd);

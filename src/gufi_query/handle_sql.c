@@ -167,6 +167,13 @@ static int gen_types(struct input *in) {
             .in = in,
             .work = &work,
         };
+        if (in->process_xattrs) {
+            create_xattr_tables(SQLITE_MEMORY, db, NULL);
+
+            size_t count = 0; /* unused */
+            setup_xattrs_views(in, db, &work, &count);
+        }
+
         if ((addqueryfuncs(db) != 0) ||
             (addqueryfuncs_with_context(db, &ctx) != 0)) {
             goto error;
@@ -178,9 +185,13 @@ static int gen_types(struct input *in) {
             }
         }
 
-        if (in->process_xattrs) {
-            size_t count = 0; /* unused */
-            setup_xattrs_views(in, db, &work, &count);
+        if (in->plugin_ops->global_init) {
+            in->plugin_ops->global_init(NULL);
+        }
+
+        void *plugin_user_data = NULL;
+        if (in->plugin_ops->ctx_init) {
+            plugin_user_data = in->plugin_ops->ctx_init(db);
         }
 
         if (in->sql.setup_res_col_types.data && in->sql.setup_res_col_types.len) {
@@ -223,6 +234,14 @@ static int gen_types(struct input *in) {
             if (get_col_types(db, &in->sql.agg, &in->types.agg, &cols) != 0) {
                 goto error;
             }
+        }
+
+        if (in->plugin_ops->ctx_exit) {
+            in->plugin_ops->ctx_exit(db, plugin_user_data);
+        }
+
+        if (in->plugin_ops->global_exit) {
+            in->plugin_ops->global_exit(NULL);
         }
 
         closedb(db);
