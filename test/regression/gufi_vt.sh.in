@@ -82,7 +82,7 @@ trap cleanup_exit EXIT
 
 cleanup
 
-LOAD=".load @CMAKE_BINARY_DIR@/src/gufi_vt"
+LOAD=".load ${GUFI_VT}"
 
 query_vt() {
     sql="$1"
@@ -100,247 +100,285 @@ query_vt() {
 . "@CMAKE_CURRENT_BINARY_DIR@/gufi_vt.common"
 
 (
-    echo "# ######################################"
-    echo "# gufi_vt_*"
-    run_tests query_vt
+echo "# ######################################"
+echo "# gufi_vt_*"
+run_tests query_vt
 
-    echo "# ######################################"
-    echo "# gufi_vt"
-    echo
-    echo "# Manipulate column without alias"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT path() || '/' || name, size FROM pentries;\");"
-        echo -n "SELECT size, \"path() || '/' || name\" FROM gufi ORDER BY size ASC, \"path() || '/' || name\" ASC;"
-    )
-    query_vt "${query}"
+echo "# ######################################"
+echo "# gufi_vt"
+echo
+echo "# Manipulate column without alias"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT path() || '/' || name, size FROM pentries;\");"
+    echo -n "SELECT size, \"path() || '/' || name\" FROM gufi ORDER BY size ASC, \"path() || '/' || name\" ASC;"
+)
+query_vt "${query}"
 
-    echo "# Manipulate column with alias"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT path() || '/' || name AS fullpath, size FROM pentries;\");"
-        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
-    )
-    query_vt "${query}"
+echo "# Manipulate column with alias"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT path() || '/' || name AS fullpath, size FROM pentries;\");"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# S selects more columns than E - S columns get dropped and mapped incorrectly"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT * FROM summary;\", E=\"SELECT path() || '/' || name AS fullpath, size FROM pentries;\");"
-        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
-    )
-    query_vt "${query}"
+echo "# S selects more columns than E - S columns get dropped and mapped incorrectly"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT * FROM summary;\", E=\"SELECT path() || '/' || name AS fullpath, size FROM pentries;\");"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# Multiple indexes"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}/directory\", E=\"SELECT name, size, atime, mtime FROM pentries;\", '${INDEXROOT}/leaf_directory', index=\"${INDEXROOT}/directory/subdirectory\", threads=${THREADS}, n=${THREADS});"
-        echo -n "SELECT size, atime, mtime, name FROM gufi ORDER BY size ASC, name ASC;"
-    )
-    query_vt "${query}"
+echo "# Multiple indexes"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}/directory\", E=\"SELECT name, size, atime, mtime FROM pentries;\", '${INDEXROOT}/leaf_directory', index=\"${INDEXROOT}/directory/subdirectory\", threads=${THREADS}, n=${THREADS});"
+    echo -n "SELECT size, atime, mtime, name FROM gufi ORDER BY size ASC, name ASC;"
+)
+query_vt "${query}"
 
-    echo "# min_level/max_level"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT path() AS fullpath, size FROM summary;\", min_level=1, max_level=1);"
-        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
-    )
-    query_vt "${query}"
+echo "# min_level/max_level"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT path() AS fullpath, size FROM summary;\", min_level=1, max_level=1);"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# Aggregate"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT, size INT64);\", E=\"INSERT INTO intermediate SELECT path() || '/' || name, size FROM pentries;\", K=\"CREATE TABLE aggregate(fullpath TEXT, size INT64);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate;\");"
-        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
-    )
-    query_vt "${query}"
+echo "# Run IF"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"SELECT NULL;\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\", F=\"SELECT NULL;\");"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# xattr view"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT path() || '/' || name AS fullpath, xattr_name, xattr_value FROM xpentries;\");"
-        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC, xattr_name ASC;"
-    )
-    query_vt "${query}"
+echo "# SELECT TSE"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", T=\"SELECT NULL;\", S=\"SELECT NULL;\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\");"
+    echo -n "SELECT size, fullpath FROM gufi WHERE size IS NOT NULL ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# Get source paths"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;\", p=\"source/${SRCDIR}\");"
-        echo -n "SELECT size, srcpath FROM gufi ORDER BY size ASC, srcpath ASC;"
-    )
-    query_vt "${query}"
+echo "# SELECT TSE with -a 2"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", a=2, T=\"SELECT NULL WHERE 0;\", S=\"SELECT NULL WHERE 0;\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\");"
+    echo -n "SELECT size, fullpath FROM gufi WHERE size IS NOT NULL ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# Run custom UDFs"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT strop('echo str') AS str, intop('echo 1') AS num, blobop('printf blob; printf 1') AS blob FROM vrsummary;\");"
-        echo -n "SELECT str, num, blob FROM gufi;"
-    )
-    query_vt "${query}"
+echo "# SELECT T only"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", T=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\");"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# Get Row IDs"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT);\", S=\"INSERT INTO intermediate SELECT rpath(sname, sroll) FROM vrsummary;\", K=\"CREATE TABLE aggregate(fullpath TEXT);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY fullpath ASC;\");"
-        echo -n "SELECT rowid, * FROM gufi;"
-    )
-    query_vt "${query}"
+echo "# SELECT S only"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\");"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# Treesummary Table (parsed, but not actually used)"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT);\", T='SELECT 1;', S=\"INSERT INTO intermediate SELECT rpath(sname, sroll) FROM vrsummary;\", K=\"CREATE TABLE aggregate(fullpath TEXT);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY fullpath ASC;\");"
-        echo -n "SELECT * FROM gufi;"
-    )
-    query_vt "${query}"
+echo "# Aggregation"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT, size INT64);\", E=\"INSERT INTO intermediate SELECT path() || '/' || name, size FROM pentries;\", K=\"CREATE TABLE aggregate(fullpath TEXT, size INT64);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate;\");"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# Get gufi_vt from remote"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\", verbose=0, remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
-        echo -n "SELECT fullpath FROM gufi ORDER BY fullpath ASC;"
-    )
-    query_vt "${query}"
+echo "# xattr view"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT path() || '/' || name AS fullpath, xattr_name, xattr_value FROM xpentries;\");"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC, xattr_name ASC;"
+)
+query_vt "${query}"
 
-    echo "# Get gufi_vt from remote with min_level = 1"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, level() AS level FROM vrpentries;\", VERBOSE=1, min_level=1, remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
-        echo -n "SELECT level, fullpath FROM gufi ORDER BY level ASC, fullpath ASC;"
-    )
-    query_vt "${query}"
+echo "# Get source paths"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;\", p=\"source/${SRCDIR}\");"
+    echo -n "SELECT size, srcpath FROM gufi ORDER BY size ASC, srcpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# Get gufi_vt from remote with a path list"
-    # can't use find.sh because full path is needed
-    run_no_sort "echo \"${INDEXROOT}/directory\" > \"${PATH_LIST}\""
-    run_sort "cat \"${PATH_LIST}\""
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, level() AS level FROM vrpentries;\", path_list=\"${PATH_LIST}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
-        echo -n "SELECT level, fullpath FROM gufi ORDER BY level ASC, fullpath ASC;"
-    )
-    query_vt "${query}"
+echo "# Run custom UDFs"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", S=\"SELECT strop('echo str') AS str, intop('echo 1') AS num, blobop('printf blob; printf 1') AS blob FROM vrsummary;\");"
+    echo -n "SELECT str, num, blob FROM gufi;"
+)
+query_vt "${query}"
 
-    echo "# Get gufi_vt_* from remote with a path list and min_level = 2"
-    run_no_sort "${FIND_SH} \"${INDEXROOT}\" 2 ${THREADS} > \"${PATH_LIST}\""
-    run_sort "cat \"${PATH_LIST}\""
-    query=$(
-        echo -n "SELECT level, path || '/' || name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 2, NULL, '${PATH_LIST}', 1, '${SSH_FAKE}', 'remote');"
-    )
-    query_vt "${query}"
+echo "# Get Row IDs"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT);\", S=\"INSERT INTO intermediate SELECT rpath(sname, sroll) FROM vrsummary;\", K=\"CREATE TABLE aggregate(fullpath TEXT);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY fullpath ASC;\");"
+    echo -n "SELECT rowid, * FROM gufi;"
+)
+query_vt "${query}"
 
-    echo "# Remote aggregate"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT, size INT64);\", E=\"INSERT INTO intermediate SELECT path() || '/' || name, size FROM pentries;\", K=\"CREATE TABLE aggregate(fullpath TEXT, size INT64);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate;\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
-        echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
-    )
-    query_vt "${query}"
+echo "# Remote gufi_vt without aggregation"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\", verbose=0, remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    rm -rf "${SEARCH}"
-    "${GUFI_DIR2INDEX}" -x --plugin "${GUFI_INDEX_PLUGIN}" "${SRCDIR}" "${SEARCH}" #> /dev/null 2>&1
+echo "# Remote gufi_vt with min_level = 1"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, level() AS level FROM vrpentries;\", VERBOSE=1, min_level=1, remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT level, fullpath FROM gufi ORDER BY level ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# ######################################"
-    echo "# errors"
+echo "# Get gufi_vt from remote with a path list"
+# can't use find.sh because full path is needed
+run_no_sort "echo \"${INDEXROOT}/directory\" > \"${PATH_LIST}\""
+run_sort "cat \"${PATH_LIST}\""
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, level() AS level FROM vrpentries;\", path_list=\"${PATH_LIST}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT level, fullpath FROM gufi ORDER BY level ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    set +e
-    echo "# Missing indexroot"
-    query_vt "SELECT name FROM gufi_vt_pentries();"
+echo "# Get gufi_vt_* from remote with a path list and min_level = 2"
+run_no_sort "${FIND_SH} \"${INDEXROOT}\" 2 ${THREADS} > \"${PATH_LIST}\""
+run_sort "cat \"${PATH_LIST}\""
+query=$(
+    echo -n "SELECT level, path || '/' || name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 2, NULL, '${PATH_LIST}', 1, '${SSH_FAKE}', 'remote');"
+)
+query_vt "${query}"
 
-    echo "# Missing indexroot"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt();"
+echo "# Remote aggregate"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (fullpath TEXT, size INT64);\", E=\"INSERT INTO intermediate SELECT path() || '/' || name, size FROM pentries;\", K=\"CREATE TABLE aggregate(fullpath TEXT, size INT64);\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate;\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
 
-    echo "# NULL indexroot"
-    query_vt "SELECT name FROM gufi_vt_pentries(NULL);"
+echo "# ######################################"
+echo "# errors"
 
-    echo "# NULL indexroot"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
+set +e
+echo "# Missing indexroot"
+query_vt "SELECT name FROM gufi_vt_pentries();"
 
-    echo "# Bad indexroot"
-    rm -rf "${BADDIR}"
-    query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | @SED@ "s%${BADDIR}%baddir%g;"
+echo "# Missing indexroot"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt();"
 
-    (
-        echo "# Empty string thread count"
-        query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;" | @SED@ '\%gufi_query:%d;'
+echo "# NULL indexroot"
+query_vt "SELECT name FROM gufi_vt_pentries(NULL);"
 
-        echo "# Zero thread count"
-        query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
+echo "# NULL indexroot"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
 
-        echo "# NULL thread count"
-        query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
+echo "# Bad indexroot"
+rm -rf "${BADDIR}"
+query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | @SED@ "s%${BADDIR}%baddir%g;"
 
-        echo "# Bad min_level"
-        query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 'a') ORDER BY name ASC, size ASC;"
+(
+    echo "# Empty string thread count"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', '') ORDER BY name ASC, size ASC;" | @SED@ '\%gufi_query:%d;'
 
-        echo "# Bad n"
-        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=a, E='SELECT 0;'); SELECT * FROM gufi;"
+    echo "# Zero thread count"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
 
-        echo "# Zero n"
-        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=0, E='SELECT 0;'); SELECT * FROM gufi;"
+    echo "# NULL thread count"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
 
-        echo "# Empty n"
-        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=, E='SELECT 0;'); SELECT * FROM gufi;"
+    echo "# Bad min_level"
+    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 'a') ORDER BY name ASC, size ASC;"
 
-        echo "# NULL n"
-        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
+    echo "# Bad n"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=a, E='SELECT 0;'); SELECT * FROM gufi;"
 
-        echo "# Bad thread count"
-        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=a, E='SELECT 0;'); SELECT * FROM gufi;"
+    echo "# Zero n"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=0, E='SELECT 0;'); SELECT * FROM gufi;"
 
-        echo "# Zero thread count"
-        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=0, E='SELECT 0;'); SELECT * FROM gufi;"
+    echo "# Empty n"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=, E='SELECT 0;'); SELECT * FROM gufi;"
 
-        echo "# Empty thread count"
-        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=, E='SELECT 0;'); SELECT * FROM gufi;"
+    echo "# NULL n"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
 
-        echo "# NULL thread count"
-        query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
-    ) | @SED@ 's%file descriptor [0-9]\+:%file descriptor:%g; \%^.* requires an argument%d;' # different getopt_long()s print slightly different "requires an argument" messages
+    echo "# Bad thread count"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=a, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Bad E"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='');"
+    echo "# Zero thread count"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=0, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Bad E"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='DELETE FROM entries;');"
+    echo "# Empty thread count"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Bad K"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='0', G='');"
+    echo "# NULL thread count"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Bad K"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K=' ', G='');"
+    echo "# Bad a"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', a=a, E='SELECT * FROM pentries'); SELECT * FROM gufi;"
 
-    echo "# Bad G"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='CREATE TABLE aggregate(i INT);', G='SELECT * FROM intermediate');"
+    echo "# Bad a"
+    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', a=3, E='SELECT * FROM pentries'); SELECT * FROM gufi;"
+) | @SED@ 's%file descriptor [0-9]\+:%file descriptor:%g; \%^.* requires an argument%d;' # different getopt_long()s print slightly different "requires an argument" messages
 
-    echo "# Missing p"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;\");"
-        echo -n "SELECT size, srcpath FROM gufi ORDER BY size ASC, srcpath ASC;"
-    )
-    echo "$ ("
-    echo "    echo \"${LOAD}\""
-    echo "    echo \"${query}\""
-    echo ") | ${SQLITE3}"
-    (
-        echo "${LOAD}"
-        echo "${query}"
-    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}" 2>&1 | sort
-    echo
+echo "# Bad E"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='');"
 
-    echo "# Bad verbose (path_list == NULL is not an error)"
-    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 0, NULL, NULL, 'a') ORDER BY name ASC, size ASC;"
+echo "# Bad E"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', E='DELETE FROM entries;');"
 
-    echo "# Bad 5 character key (only 'index' is recognized)"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', abcde='');"
+echo "# Bad K"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='0', G='');"
 
-    echo "# Bad 7 character key (only 'threads' is recognized)"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', abcdefg='');"
+echo "# Bad K"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K=' ', G='');"
 
-    echo "# Bad key length"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', ab='');"
+echo "# Bad G"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', K='CREATE TABLE aggregate(i INT);', G='SELECT * FROM intermediate');"
 
-    echo "# Bad plugin"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${INDEXROOT}\");"
-        echo -n "SELECT * FROM gufi;"
-    )
-    query_vt "${query}" | @SED@ 's%Could not open plugin library:.*%Could not open plugin library%g; s%file descriptor [0-9]*%file descriptor%g;'
+echo "# Missing p"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;\");"
+    echo -n "SELECT size, srcpath FROM gufi ORDER BY size ASC, srcpath ASC;"
+)
+echo "$ ("
+echo "    echo \"${LOAD}\""
+echo "    echo \"${query}\""
+echo ") | ${SQLITE3}"
+(
+    echo "${LOAD}"
+    echo "${query}"
+) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}" 2>&1 | sort
+echo
 
-    echo "# Bad Column Type Setup"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\");"
-        echo -n "SELECT * FROM gufi;"
-    )
-    query_vt "${query}"
+echo "# Bad verbose (path_list == NULL is not an error)"
+query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 0, NULL, NULL, 'a') ORDER BY name ASC, size ASC;"
 
-    set -e
+echo "# Bad 5 character key (only 'index' is recognized)"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', abcde='');"
+
+echo "# Bad 7 character key (only 'threads' is recognized)"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', abcdefg='');"
+
+echo "# Bad key length"
+query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', ab='');"
+
+echo "# Bad plugin"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_INDEXING_PLUGIN}\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+echo "# Bad plugin"
+
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${INDEXROOT}\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}" | @SED@ 's%Could not open plugin library:.*%Could not open plugin library%g; s%file descriptor [0-9]*%file descriptor%g;'
+
+echo "# Bad Column Type Setup"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+set -e
 ) | replace | tee "${OUTPUT}"
 
 # FIXME: cygwin is having trouble with plugin tests.
@@ -348,18 +386,21 @@ query_vt() {
 #        Disabling sqlite3_initialize causes segfaults.
 
 (
+rm -rf "${SEARCH}"
+"${GUFI_DIR2INDEX}" --plugin "${GUFI_INDEXING_PLUGIN}" "${SRCDIR}" "${SEARCH}" > /dev/null 2>&1
+
 echo "# Plugin without aggregation"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_QUERY_PLUGIN}\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_QUERYING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi ORDER BY filetype ASC, count ASC;"
-     )
+)
 query_vt "${query}"
 
 echo "# Plugin with aggregation"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${GUFI_QUERY_PLUGIN}\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${GUFI_QUERYING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi;"
-     )
+)
 query_vt "${query}"
 ) | replace
 

@@ -108,6 +108,7 @@ typedef struct gufi_query_cmd {
     int verbose;           /* print gufi_query command */
 
     refstr_t threads;      /* number of threads in string form to avoid converting back and forth */
+    refstr_t a;            /* gufi_query -a <0|1|2> */
     refstr_t min_level;    /* defaults to 0; set to non-0 if index root should be used with path list */
     refstr_t max_level;    /* defaults to (uint64_t) -1 */
     refstr_t dir_match_uid;
@@ -205,7 +206,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         write_with_resize(&flat, &size, &len,
                           "-x ");
         write_with_resize(&flat, &size, &len,
-                          "--threads %s ", cmd->threads.data);
+                          "--threads %s ",                cmd->threads.data);
 
         /* flatten the entire gufi_query command into a single string */
         #define flatten_argv(argc, argv, flag, refstr)               \
@@ -214,19 +215,21 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                                   "%s \"%s\" ", flag, refstr.data);  \
             }
 
+        flatten_argv(argc, argv, "-a",                    cmd->a);
+
         /* construct the rest of the gufi_query command */
-        flatten_argv(argc, argv, "--min-level", cmd->min_level);
-        flatten_argv(argc, argv, "--max-level", cmd->max_level);
-        flatten_argv(argc, argv, "--path-list", cmd->path_list);
+        flatten_argv(argc, argv, "--min-level",           cmd->min_level);
+        flatten_argv(argc, argv, "--max-level",           cmd->max_level);
+        flatten_argv(argc, argv, "--path-list",           cmd->path_list);
 
         if (cmd->dir_match_uid.len) {
             write_with_resize(&flat, &size, &len,
-                              "--dir-match-uid=%s ", cmd->dir_match_uid.data);
+                              "--dir-match-uid=%s ",      cmd->dir_match_uid.data);
         }
 
         if (cmd->dir_match_gid.len) {
             write_with_resize(&flat, &size, &len,
-                              "--dir-match-gid=%s ", cmd->dir_match_gid.data);
+                              "--dir-match-gid=%s ",      cmd->dir_match_gid.data);
         }
 
         flatten_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
@@ -252,7 +255,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     else {
         /* can keep arguments separate */
 
-        max_argc = 35; /* 5 fixed args, 14 pairs of flags, 2 single argv flags */
+        max_argc = 37; /* 5 fixed args, 15 pairs of flags, 2 single argv flags */
         max_argc += sll_get_size(&cmd->indexroots);
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
@@ -270,6 +273,8 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                 argv[argc++] = flag;                \
                 argv[argc++] = refstr.data;         \
             }
+
+        set_argv(argc, argv, "-a",          cmd->a);
 
         /* construct the rest of the gufi_query command */
         set_argv(argc, argv, "--min-level", cmd->min_level);
@@ -346,13 +351,13 @@ static const size_t TL = sizeof(char) + sizeof(size_t);
 
 /* read TLV rows terminated by newline - this only works because type is in the range [1, 5] */
 static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
-    static const size_t ROW_PREFIX = sizeof(size_t) + sizeof(int);
-    char *buf = NULL;
-    char *curr = buf;
-
-    size_t *starts = NULL; /* index of where each column starts in buf */
     size_t row_len = 0;
     int count = 0;
+    static const size_t ROW_PREFIX = sizeof(row_len) + sizeof(count);
+
+    char *buf = NULL;
+    char *curr = buf;
+    size_t *starts = NULL; /* index of where each column starts in buf */
 
     const int fd = popen_argv_fd(pCur->output);
 
@@ -374,6 +379,7 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
 
     row_len -= ROW_PREFIX;
 
+    /* read the entire row into buf */
     /* buf does not contain row prefix */
     buf = malloc(row_len + 1); /* allow for NULL terminator */
     curr = buf;
@@ -689,6 +695,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     remote_cmd              = '<command to forward this run of gufi_query to a remote (e.g. ssh)>'
  *     remote_arg              = '<single argv[i] passed to remote_cmd before gufi_query (e.g. user@remote)>'
  *     n or threads            =  <positive integer>
+ *     a                       =  <0|1|2> (see gufi_query)
  *     min_level               =  <non-negative integer>
  *     max_level               =  <non-negative integer>
  *     dir_match_uid           =  <uid>
@@ -840,6 +847,10 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                     /* let gufi_query check value */
                     set_refstr(&cmd.threads, value);
                     break;
+                case 'a':
+                    /* let gufi_query check value */
+                    set_refstr(&cmd.a, value);
+                    break;
                 case 'I':
                     set_refstr(&cmd.I, value);
                     break;
@@ -928,7 +939,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         }
     }
 
-    if (!sll_get_size(&cmd.indexroots) && (!cmd.path_list.data && !cmd.path_list.len)) {
+    if (!sll_get_size(&cmd.indexroots) && !cmd.path_list.len) {
         *pzErr = sqlite3_mprintf("Missing indexroot or path_list");
         gq_cmd_destroy(&cmd);
         return SQLITE_CONSTRAINT;
@@ -938,7 +949,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     in.plugin_ops = &null_plugin_ops;
     in.plugin_handle = NULL;
 
-    if (cmd.plugin.data && cmd.plugin.len) {
+    if (cmd.plugin.len) {
         if (load_plugin_library(&in, cmd.plugin.data) != 0) {
             gq_cmd_destroy(&cmd);
             return SQLITE_CONSTRAINT;
@@ -995,7 +1006,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     }
 
     /* before getting the column types, set up tables that don't exist yet in this temporary space */
-    if (cmd.setup_res_col_type.data && cmd.setup_res_col_type.len) {
+    if (cmd.setup_res_col_type.len) {
         char *err = NULL;
         if (sqlite3_exec(tempdb, cmd.setup_res_col_type.data, NULL, NULL, &err) != SQLITE_OK) {
             *pzErr = sqlite3_mprintf("Setting up results table with '%s' failed: %s",

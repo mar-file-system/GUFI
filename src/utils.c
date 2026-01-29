@@ -806,6 +806,7 @@ ssize_t read_size(const int fd, void *buf, const size_t size) {
             const int err = errno;
             fprintf(stderr, "Error: Failed to read from file descriptor %d: %s (%d)\n",
                     fd, strerror(err), err);
+            errno = err;
             return -1;
         }
         else if (r == 0) {

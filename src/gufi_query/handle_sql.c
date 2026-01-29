@@ -201,6 +201,16 @@ static int gen_types(struct input *in) {
 
         /* if not aggregating, get types for T, S, and E */
         if (!in->sql.init_agg.len) {
+            /*
+             * Types for all available SQL must be generated even if
+             * only one produces the final results. If this is not
+             * done, results will contain output without types,
+             * causing gufi_vt to parse lines incorrectly.
+             *
+             * Due to get_col_types using sqlite3_prepare_v2, multiple
+             * SQL in a single T/S/E option must SELECT first and do
+             * other operations afterwards.
+             */
             if (in->sql.tsum.len) {
                 if (get_col_types(db, &in->sql.tsum, &in->types.tsum, &cols) != 0) {
                     goto error;

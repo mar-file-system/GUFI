@@ -89,19 +89,19 @@ cleanup
 rm -rf "${SEARCH}"
 
 # generate the index
-run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_INDEX_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_INDEXING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
 
 echo
 echo "# test plugin summary output:"
 
 # make sure the querying plugin "did some set up with" plugin_test_summary and is accessible
-run_sort "${GUFI_QUERY} -d \" \" --plugin \"${GUFI_QUERY_PLUGIN}\" -E \"SELECT * FROM plugin_query_view;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" --plugin \"${GUFI_QUERYING_PLUGIN}\" -E \"SELECT * FROM plugin_query_view;\" \"${INDEXROOT}\""
 
 echo "# index with querying plugin"
-run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_QUERY_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_QUERYING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
 
 echo "# query with indexing plugin"
-run_sort "${GUFI_QUERY} -d \" \" --plugin \"${GUFI_INDEX_PLUGIN}\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" --plugin \"${GUFI_INDEXING_PLUGIN}\" \"${INDEXROOT}\""
 
 echo "# bad plugin"
 run_no_sort "${GUFI_DIR2INDEX} --plugin \"${EMPTY_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 > /dev/null | @GREP@ -oh \"Could not open plugin library\""

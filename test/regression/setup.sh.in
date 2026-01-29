@@ -297,8 +297,8 @@ replace() {
     s%${GUFI_TREESUMMARY_ALL_DISTRIBUTED}%gufi_treesummary_all_distributed%g;
     s%${GUFI_UNROLLUP_DISTRIBUTED}%gufi_unrollup_distributed%g;
 
-    s%${GUFI_INDEX_PLUGIN}%indexing_plugin%g;
-    s%${GUFI_QUERY_PLUGIN}%querying_plugin%g;
+    s%${GUFI_INDEXING_PLUGIN}%indexing_plugin%g;
+    s%${GUFI_QUERYING_PLUGIN}%querying_plugin%g;
 
     s%${TEST_GUFI_JAIL}%gufi_jail%g;
 
