@@ -68,7 +68,7 @@ import subprocess
 import sys
 import time
 
-from gufi_common import SQLITE3_INTEGER, SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_IPK, SQLITE3_ASC, SQLITE3_DESC
+from gufi_common import PINODE, SQLITE3_INTEGER, SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_IPK, SQLITE3_ASC, SQLITE3_DESC
 import gufi_common
 import gufi_config
 
@@ -220,35 +220,100 @@ def linkcount(config, args, where):
     return entries_count(config, args, where, 'l')
 
 def extensions(_config, args, where):
+    '''
+    get file extension histogram
+    files without extensions ('Makefile') are placed in the 'no-ext' category
+
+    with --recursive, groups results by pinode
+    with --cumulative, sums all results
+
+    '''
+
+    pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
+    pinode = [PINODE] if args.recursive else []
+
     queries = [
-        '-I', build_create(gufi_common.INTERMEDIATE_NAME, ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, pinode_create + ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
         '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
-                                           gufi_common.build_query(['REPLACE(name, RTRIM(name, REPLACE(name, \'.\', \'\')), \'\') AS ext', 'COUNT(inode)'],
+                                           # Adapted from answer by rayzinnz
+                                           # https://stackoverflow.com/a/76040173
+                                           gufi_common.build_query(pinode + ['CASE WHEN name LIKE \'%.%\' THEN REPLACE(name, RTRIM(name, REPLACE(name, \'.\', \'\')), \'\') ELSE \'no-ext\' END AS ext', 'COUNT(*)'],
                                                                    [gufi_common.VRPENTRIES],
                                                                    where,
-                                                                   ['ext'],
+                                                                   pinode + ['ext'],
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-K', build_create(gufi_common.AGGREGATE_NAME, ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, pinode_create  + ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
         '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
-                                           gufi_common.build_query(['ext', 'SUM(count)'],
+                                           gufi_common.build_query(pinode + ['ext', 'SUM(count)'],
                                                                    [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
-                                                                   ['ext'],
+                                                                   pinode + ['ext'],
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-G', gufi_common.build_query(['ext', 'SUM(count)'],
+        '-G', gufi_common.build_query(pinode + ['ext', 'SUM(count)'],
                                       [gufi_common.AGGREGATE_NAME],
                                       None,
-                                      ['ext'],
-                                      None,
+                                      pinode + ['ext'],
+                                      pinode,
                                       None,
                                       None),
     ]
 
-    if args.recursive is False:
+    if not args.recursive and not args.cumulative:
+        queries += ['--max-level', '0']
+
+    return queries
+
+def extensions_hist(_config, args, where):
+    '''
+    get file extension histogram
+    files without extensions ('Makefile') are placed in the 'no-ext' category
+
+    with --recursive, groups results by pinode
+    with --cumulative, sums all results
+
+    '''
+
+    pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
+    pinode = [PINODE] if args.recursive else []
+
+    # G column
+    res_sql = ['category_hist_combine(ext, 1)' if not args.recursive else 'ext']
+
+    queries = [
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, pinode_create + ['ext {0}'.format(SQLITE3_TEXT)]),
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
+                                           # Adapted from answer by rayzinnz
+                                           # https://stackoverflow.com/a/76040173
+                                           gufi_common.build_query(pinode + ['category_hist(CASE WHEN name LIKE \'%.%\' THEN REPLACE(name, RTRIM(name, REPLACE(name, \'.\', \'\')), \'\') ELSE \'no-ext\' END, 1, 0)'],
+                                                                   [gufi_common.VRPENTRIES],
+                                                                   where,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, pinode_create + ['ext {0}'.format(SQLITE3_TEXT)]),
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
+                                           gufi_common.build_query(pinode + ['ext'],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-G', gufi_common.build_query(pinode + res_sql,
+                                      [gufi_common.AGGREGATE_NAME],
+                                      None,
+                                      None,
+                                      pinode,
+                                      None,
+                                      None),
+    ]
+
+    if not args.recursive and not args.cumulative:
         queries += ['--max-level', '0']
 
     return queries
@@ -805,7 +870,7 @@ def median_leaf(_config, _args, where, col):
 
         '-K', build_create(gufi_common.AGGREGATE_NAME, ['count {0}'.format(SQLITE3_INT64)]),
 
-        # Adapter from answer by CL
+        # Adapted from answer by CL
         # https://stackoverflow.com/a/15766121
         '-G', '''SELECT AVG(count)
                  FROM (SELECT count
@@ -1057,7 +1122,6 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
         table = [gufi_common.SUMMARY]
         field = 'totfiles'
 
-    PINODE = 'pinode'
     pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
     pinode = [PINODE] if args.recursive else []
 
@@ -1137,7 +1201,6 @@ def size_bins_hist(args, base, type): # pylint: disable=redefined-builtin
     elif base == 1024:
         buckets = 6  # exabyte
 
-    PINODE = 'pinode'
     pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
     pinode = [PINODE] if args.recursive else []
 
@@ -1207,7 +1270,6 @@ def age_bins(args, time_name, type):  # pylint: disable=redefined-builtin
     elif type == 'd':
         table = [gufi_common.SUMMARY]
 
-    PINODE = 'pinode'
     pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
     pinode = [PINODE] if args.recursive else []
 
@@ -1304,7 +1366,6 @@ def age_bins_hist(args, time_name, type):  # pylint: disable=redefined-builtin
     elif type == 'd':
         table = [gufi_common.SUMMARY]
 
-    PINODE = 'pinode'
     pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
     pinode = [PINODE] if args.recursive else []
 
@@ -1362,7 +1423,7 @@ def dir_age_ctime_hist(_config, args, _where):
 # mapping of desired statistics to functions
 
 # normally only computes for current directory
-# use --recursive to recurse down tree
+# use --recursive to compute for every directory
 RECURSIVE = [
     ['depth',                          depth],
 
@@ -1376,12 +1437,10 @@ RECURSIVE = [
     ['leaf-depth',                     leaf_depth],
     ['leaf-files',                     leaf_files],
     ['leaf-links',                     leaf_links],
-
-    ['extensions',                     extensions],
 ]
 
 # normally computes statistics by uid
-# use --cumulative to combine
+# use --cumulative to combine results into single result
 CUMULATIVE = [
     ['total-filesize',                 total_filesize],
 
@@ -1398,6 +1457,9 @@ CUMULATIVE = [
 ]
 
 BOTH = [
+    ['extensions',                     extensions],
+    ['extensions-hist',                extensions_hist],
+
     ['filesize-log2-bins',             filesize_log2_bins],
     ['filesize-log1024-bins',          filesize_log1024_bins],
 

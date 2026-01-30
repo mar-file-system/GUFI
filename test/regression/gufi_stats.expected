@@ -59,29 +59,6 @@ prefix/empty_directory 0
 prefix/leaf_directory 0
 prefix/unusual#? directory , 0
 
-$ gufi_stats    extensions "prefix"
-1KB 1
-1MB 1
-file_symlink 1
-hidden 1
-old_file 1
-repeat_name 1
-
-$ gufi_stats -r extensions "prefix"
-1KB 1
-1MB 1
-directory_symlink 1
-executable 1
-file_symlink 1
-hidden 1
-leaf_file1 1
-leaf_file2 1
-old_file 1
-readonly 1
-repeat_name 2
-unusual, name?# 1
-writable 1
-
 $ gufi_stats    total-filesize "prefix"
 1001 1049673
 
@@ -234,6 +211,36 @@ $ gufi_stats --num-results 6 --order DESC gid-size "prefix"
 1001 14 prefix/repeat_name
 1001 12 prefix/leaf_directory/leaf_file2
 1001 11 prefix/leaf_directory/leaf_file1
+
+$ gufi_stats    extensions "prefix"
+hidden 1
+no-ext 5
+
+$ gufi_stats -r extensions "prefix"
+6 no-ext 2
+7 no-ext 3
+13 no-ext 2
+16 no-ext 1
+17 hidden 1
+17 no-ext 5
+
+$ gufi_stats -c extensions "prefix"
+hidden 1
+no-ext 13
+
+$ gufi_stats    extensions-hist "prefix"
+2;6:hidden:1;6:no-ext:5;
+
+$ gufi_stats -r extensions-hist "prefix"
+ 0;
+6 1;6:no-ext:2;
+7 1;6:no-ext:3;
+13 1;6:no-ext:2;
+16 1;6:no-ext:1;
+17 2;6:hidden:1;6:no-ext:5;
+
+$ gufi_stats -c extensions-hist "prefix"
+2;6:hidden:1;6:no-ext:13;
 
 $ gufi_stats    filesize-log2-bins "prefix"
 [0,1) 1

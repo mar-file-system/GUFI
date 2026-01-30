@@ -600,7 +600,7 @@ TEST(histogram, category) {
     // no buckets
     {
         char *hist_str = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0, 0) FROM test;",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
@@ -620,7 +620,7 @@ TEST(histogram, category) {
 
     {
         char *hist_str = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1, 1) FROM test;",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
@@ -653,7 +653,7 @@ TEST(histogram, category) {
         free(hist_str);
         hist_str = nullptr;
 
-        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0, 1) FROM test;",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
@@ -696,10 +696,10 @@ TEST(histogram, category) {
 
             // category "abcd" does not show up due to ordering of categories
 
-            EXPECT_STREQ(hist->buckets[1].name, "str");
+            EXPECT_STREQ(hist->buckets[1].name, "abcd");
             EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
 
-            EXPECT_STREQ(hist->buckets[2].name, "string");
+            EXPECT_STREQ(hist->buckets[2].name, "str");
             EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
 
             category_hist_free(hist);
@@ -711,12 +711,12 @@ TEST(histogram, category) {
     // combine histograms in C
     {
         char *with = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1, 0) FROM test;",
                                copy_columns_callback, &with, nullptr), SQLITE_OK);
         ASSERT_NE(with, nullptr);
 
         char *without = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0, 0) FROM test;",
                                copy_columns_callback, &without, nullptr), SQLITE_OK);
         ASSERT_NE(without, nullptr);
 
@@ -743,13 +743,13 @@ TEST(histogram, category) {
     {
         ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hists(str TEXT);",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hists SELECT category_hist(category, 1) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hists SELECT category_hist(category, 1, 0) FROM test;",
                                nullptr, nullptr, nullptr), SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hists SELECT category_hist(category, 0) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hists SELECT category_hist(category, 0, 0) FROM test;",
                                nullptr, nullptr, nullptr), SQLITE_OK);
 
         char *combined_str = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist_combine(str) FROM hists;",
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist_combine(str, 1) FROM hists;",
                                copy_columns_callback, &combined_str, nullptr), SQLITE_OK);
 
         category_hist_t *sql_sum = category_hist_parse(combined_str);
@@ -761,12 +761,12 @@ TEST(histogram, category) {
         combined_str = nullptr;
 
         // empty histogram
-        EXPECT_EQ(sqlite3_exec(db, "SELECT category_hist_combine(NULL);",
+        EXPECT_EQ(sqlite3_exec(db, "SELECT category_hist_combine(NULL, 1);",
                                copy_columns_callback, &combined_str, nullptr), SQLITE_ERROR);
         EXPECT_EQ(combined_str, nullptr);
 
         // bad histogram string input
-        EXPECT_EQ(sqlite3_exec(db, "SELECT category_hist_combine('a');",
+        EXPECT_EQ(sqlite3_exec(db, "SELECT category_hist_combine('a', 1);",
                                copy_columns_callback, &combined_str, nullptr), SQLITE_ERROR);
         EXPECT_EQ(combined_str, nullptr);
     }

@@ -428,7 +428,7 @@ def gen_log2_hist_col(col, buckets):
 
 def gen_category_hist_col(col):
     return [
-        Stat('hist',       SQLITE3_TEXT, 'category_hist(CAST({0} AS TEXT), 1)'.format(col)),
+        Stat('hist',       SQLITE3_TEXT, 'category_hist(CAST({0} AS TEXT), 1, 0)'.format(col)),
     ]
 
 def gen_mode_count_col(col):
@@ -468,7 +468,7 @@ def gen_time_cols(col, reftime):
     # duplicate min/max cols
     return gen_stat_cols(col) + [
         Stat('age_hist',   SQLITE3_TEXT, 'time_hist({0}, {1})'.format(col, reftime)),
-        Stat('hour_hist',  SQLITE3_TEXT, 'category_hist(CAST({0} AS TEXT), 1)'.format(
+        Stat('hour_hist',  SQLITE3_TEXT, 'category_hist(CAST({0} AS TEXT), 1, 0)'.format(
             'strftime(\'%H\', {0})'.format(col))),
     ]
 # ###############################################

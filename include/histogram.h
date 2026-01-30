@@ -184,7 +184,7 @@ void time_hist_free(time_hist_t *hist);
 /* ********************************************* */
 /*
  * Generic Category Histograms
- * category_hist(string, keep_1) -> category_count;len1:category1:count1;len2:category2:count2;...
+ * category_hist(string, keep_1, sort) -> category_count;len1:category1:count1;len2:category2:count2;...
  *
  * Categories are not predefined. Instead, they are generated as
  * values are passed into category_hist. If none of the inputs match,
@@ -192,6 +192,8 @@ void time_hist_free(time_hist_t *hist);
  *
  * If keep_1 is set to 0, the returned string only contains categories
  * with more than 1 count.
+ *
+ * If sort is set to 1, categories will be sorted when printed.
  */
 typedef struct category_bucket {
     char *name;

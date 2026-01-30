@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include "SinglyLinkedList.h"
 #include "bf.h"
 #include "histogram.h"
+#include "str.h"
 #include "trie.h"
 #include "utils.h"
 
@@ -597,11 +598,12 @@ void time_hist_free(time_hist_t *hist) {
     free(hist);
 }
 
-/* category_hist(string, keep_1) */
+/* category_hist(string, keep_1, sort) */
 typedef struct sqlite_category_hist {
     trie_t *trie;
     sll_t categories; /* categories are collected as they appear, not preset */
     int keep_1;
+    int sort;
 } sqlite_category_hist_t;
 
 static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -612,6 +614,9 @@ static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value
         sll_init(&hist->categories);
         if (argc > 1) { /* mode_count does not pass in second arg */
             hist->keep_1 = sqlite3_value_int(argv[1]);
+        }
+        if (argc > 2) {
+            hist->sort = sqlite3_value_int(argv[2]);
         }
     }
 
@@ -658,19 +663,45 @@ static void free_str(void *ptr) {
     free(str);
 }
 
+static int category_compare(const void *lhs, const void *rhs) {
+    const refstr_t *l = * (const refstr_t **) lhs;
+    const refstr_t *r = * (const refstr_t **) rhs;
+    return str_cmp((const str_t *) l, (const str_t *) r);
+}
+
 static void category_hist_final(sqlite3_context *context) {
     sqlite_category_hist_t *hist = (sqlite_category_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (!hist->trie) {
         hist->trie = trie_alloc();
         sll_init(&hist->categories);
         hist->keep_1 = 0;
+        hist->sort = 0;
+    }
+
+    /* sort categories for consistent ordering */
+    if (hist->sort) {
+        const size_t category_count = sll_get_size(&hist->categories);
+        refstr_t **categories = malloc(category_count * sizeof(categories[0]));
+        size_t i = 0;
+        sll_loop(&hist->categories, node) {
+            categories[i++] = (refstr_t *) sll_node_data(node);
+        }
+
+        qsort(categories, category_count, sizeof(categories[0]), category_compare);
+
+        sll_destroy(&hist->categories, NULL);
+        for(i = 0; i < category_count; i++) {
+            sll_push(&hist->categories, categories[i]);
+        }
+
+        free(categories);
     }
 
     sll_t keep;
     sll_init(&keep);
 
     sll_loop(&hist->categories, node) {
-        refstr_t *cat = sll_node_data(node);
+        refstr_t *cat = (refstr_t *) sll_node_data(node);
 
         size_t *count = NULL;
 
@@ -855,6 +886,7 @@ static void category_hist_combine_step(sqlite3_context *context, int argc, sqlit
         hist->trie = trie_alloc();
         sll_init(&hist->categories);
         hist->keep_1 = 1;
+        hist->sort = sqlite3_value_int(argv[1]);
     }
 
     const char *new_hist_str = (char *) sqlite3_value_text(argv[0]);
@@ -991,9 +1023,9 @@ int addhistfuncs(sqlite3 *db) {
                                  NULL, NULL,  time_hist_step,             time_hist_final)     == SQLITE_OK) &&
         (sqlite3_create_function(db,   "time_hist_combine",     1,  SQLITE_UTF8,
                                  NULL, NULL,  time_hist_combine_step,     time_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "category_hist",         2,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "category_hist",         3,  SQLITE_UTF8,
                                  NULL, NULL,  category_hist_step,         category_hist_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "category_hist_combine", 1,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "category_hist_combine", 2,  SQLITE_UTF8,
                                  NULL, NULL,  category_hist_combine_step, category_hist_final) == SQLITE_OK) &&
         (sqlite3_create_function(db,   "mode_count",            1,  SQLITE_UTF8,
                                  NULL, NULL,  category_hist_step,         mode_count_final)    == SQLITE_OK)

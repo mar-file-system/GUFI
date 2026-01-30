@@ -96,9 +96,6 @@ run "${GUFI_STATS} -r filecount \"${BASENAME}\""
 run "${GUFI_STATS}    linkcount \"${BASENAME}\""
 run "${GUFI_STATS} -r linkcount \"${BASENAME}\""
 
-run "${GUFI_STATS}    extensions \"${BASENAME}\""
-run "${GUFI_STATS} -r extensions \"${BASENAME}\""
-
 run "${GUFI_STATS}    total-filesize \"${BASENAME}\""
 run "${GUFI_STATS} -c total-filesize \"${BASENAME}\""
 
@@ -136,6 +133,14 @@ run_uidgid_size "${GUFI_STATS} --num-results 6 --order DESC gid-size \"${BASENAM
 
 # replace all inodes for size bins with recursion
 "${GUFI_QUERY}" -a 1 -w -S "UPDATE summary SET inode = mtime, size = mtime, atime = mtime, ctime = mtime, pinode = 16;" -E "UPDATE entries SET inode = mtime, size = mtime, atime = mtime, ctime = mtime" "${INDEXROOT}"
+
+run_no_sort "${GUFI_STATS}    extensions \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r extensions \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c extensions \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    extensions-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r extensions-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c extensions-hist \"${BASENAME}\""
 
 run_no_sort "${GUFI_STATS}    filesize-log2-bins \"${BASENAME}\""
 run_no_sort "${GUFI_STATS} -r filesize-log2-bins \"${BASENAME}\""
