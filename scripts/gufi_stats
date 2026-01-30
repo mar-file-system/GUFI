@@ -66,6 +66,7 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 
 from gufi_common import SQLITE3_INTEGER, SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_IPK, SQLITE3_ASC, SQLITE3_DESC
 import gufi_common
@@ -1045,7 +1046,7 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
     with --cumulative, sums all results
     '''
 
-    exponent = 'exponent'
+    EXPONENT = 'exponent'
 
     table = []
     field = gufi_common.SQLITE3_NULL
@@ -1056,12 +1057,12 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
         table = [gufi_common.SUMMARY]
         field = 'totfiles'
 
-    pinode_col = 'pinode'
-    pinode_create = ['{0} {1}'.format(pinode_col, SQLITE3_INTEGER)] if args.recursive else []
-    pinode = [pinode_col] if args.recursive else []
+    PINODE = 'pinode'
+    pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
+    pinode = [PINODE] if args.recursive else []
 
     queries = [
-        '-I', build_create(gufi_common.INTERMEDIATE_NAME, pinode_create + ['{0} {1}'.format(exponent, SQLITE3_INTEGER)]),
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, pinode_create + ['{0} {1}'.format(EXPONENT, SQLITE3_INTEGER)]),
         '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query(pinode + ['CASE WHEN {0} == 0 THEN -1 ELSE CAST(FLOOR(LOG({1}, {0})) AS {2}) END'.format(field, base, SQLITE3_INTEGER)],
                                                                    table,
@@ -1070,22 +1071,22 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-K', build_create(gufi_common.AGGREGATE_NAME, pinode_create + ['{0} {1}'.format(exponent, SQLITE3_INTEGER),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, pinode_create + ['{0} {1}'.format(EXPONENT, SQLITE3_INTEGER),
                                                                         'count {0}'.format(SQLITE3_INTEGER)]),
         '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
-                                           gufi_common.build_query(pinode + [exponent, 'COUNT({0})'.format(exponent)],
+                                           gufi_common.build_query(pinode + [EXPONENT, 'COUNT({0})'.format(EXPONENT)],
                                                                    [gufi_common.INTERMEDIATE_NAME],
                                                                    None,
-                                                                   pinode + [exponent],
+                                                                   pinode + [EXPONENT],
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-G', gufi_common.build_query(pinode + ["CASE WHEN {1} == -1 THEN '[0,1)' ELSE '[' || CAST(pow({0}, {1}) AS {2}) || ',' || CAST(pow({0}, {1}+1) AS {2}) || ')' END".format(base, exponent, SQLITE3_INTEGER), 'SUM(count)'],
+        '-G', gufi_common.build_query(pinode + ["CASE WHEN {1} == -1 THEN '[0,1)' ELSE '[' || CAST(pow({0}, {1}) AS {2}) || ',' || CAST(pow({0}, {1}+1) AS {2}) || ')' END".format(base, EXPONENT, SQLITE3_INTEGER), 'SUM(count)'],
                                       [gufi_common.AGGREGATE_NAME],
                                       None,
-                                      pinode + [exponent],
-                                      (['{0} {1}'.format(pinode_col, ORDER[args.order])] if args.recursive else []) +
-                                      ['{0} {1}'.format(exponent, ORDER[args.order])],
+                                      pinode + [EXPONENT],
+                                      (['{0} {1}'.format(PINODE, ORDER[args.order])] if args.recursive else []) +
+                                      ['{0} {1}'.format(EXPONENT, ORDER[args.order])],
                                       None,
                                       None),
     ]
@@ -1106,6 +1107,178 @@ def dirfilecount_log2_bins(_config, args, _where):
 
 def dirfilecount_log1024_bins(_config, args, _where):
     return size_bins(args, 1024, 'd')
+
+# do binning here
+def age_bins(args, time_name, type):  # pylint: disable=redefined-builtin
+    '''
+    Gets histogram of ages of timestamps relative to a reference time
+
+    Requires SQLite 3.35.0
+
+    default returns bins for 1 directory
+    with --recursive, groups results by pinode
+    with --cumulative, sums all results
+    '''
+
+    BUCKET = 'bucket'
+
+    table = []
+    if type in ['f', 'l']:
+        table = [gufi_common.PENTRIES]
+    elif type == 'd':
+        table = [gufi_common.SUMMARY]
+
+    PINODE = 'pinode'
+    pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
+    pinode = [PINODE] if args.recursive else []
+
+    # if (args.reftime - timestamp) < TIME_BUCKETS[i], this age goes into bucket i
+    TIME_BUCKETS = [
+        ['future',     0],
+        ['second',     1],
+        ['minute',     60],
+        ['hour',       3600],
+        ['day',        86400],
+        ['week',       604800],
+        ['four_weeks', 2419200],
+        ['year',       31536000],
+    ]
+
+    bucket_sql = (
+        'CASE ' +
+        ' '.join(['WHEN ({0} - {1}) < {2} THEN \'{3}\''.format(args.reftime, time_name, secs, duration)
+                  for duration, secs in TIME_BUCKETS]) +
+        ' ELSE \'years\' END'
+    )
+
+    queries = [
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, pinode_create + ['{0} {1}'.format(BUCKET, SQLITE3_TEXT)]),
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
+                                           gufi_common.build_query(pinode + [bucket_sql],
+                                                                   table,
+                                                                   ['type == \'{0}\''.format(type)],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, pinode_create +
+                           ['{0} {1}'.format(BUCKET, SQLITE3_TEXT),
+                            'count {0}'.format(SQLITE3_INTEGER)]),
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
+                                           gufi_common.build_query(pinode + [BUCKET, 'COUNT(*)'],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
+                                                                   None,
+                                                                   pinode + [BUCKET],
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-G', gufi_common.build_query(pinode + [BUCKET, 'SUM(count)'],
+                                      [gufi_common.AGGREGATE_NAME],
+                                      None,
+                                      pinode + [BUCKET],
+                                      (['{0} {1}'.format(PINODE, ORDER[args.order])] if args.recursive else []) +
+                                      ['{0} {1}'.format(BUCKET, ORDER[args.order])],
+                                      None,
+                                      None),
+    ]
+
+    if not args.recursive and not args.cumulative:
+        queries += ['--max-level', '0']
+
+    return queries
+
+def file_age_atime(_config, args, _where):
+    return age_bins(args, 'atime', 'f')
+
+def file_age_mtime(_config, args, _where):
+    return age_bins(args, 'mtime', 'f')
+
+def file_age_ctime(_config, args, _where):
+    return age_bins(args, 'ctime', 'f')
+
+def dir_age_atime(_config, args, _where):
+    return age_bins(args, 'atime', 'd')
+
+def dir_age_mtime(_config, args, _where):
+    return age_bins(args, 'mtime', 'd')
+
+def dir_age_ctime(_config, args, _where):
+    return age_bins(args, 'ctime', 'd')
+
+# use internal histogram functionality
+def age_bins_hist(args, time_name, type):  # pylint: disable=redefined-builtin
+    '''
+    Gets histogram of ages of timestamps relative to a reference time
+
+    Requires SQLite 3.35.0
+
+    default returns bins for 1 directory
+    with --recursive, groups results by pinode
+    with --cumulative, sums all results
+    '''
+
+    HISTOGRAM = 'histogram'
+
+    table = []
+    if type in ['f', 'l']:
+        table = [gufi_common.PENTRIES]
+    elif type == 'd':
+        table = [gufi_common.SUMMARY]
+
+    PINODE = 'pinode'
+    pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
+    pinode = [PINODE] if args.recursive else []
+
+    queries = [
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, pinode_create + ['{0} {1}'.format(HISTOGRAM, SQLITE3_TEXT)]),
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
+                                           gufi_common.build_query(pinode + ['time_hist({0}, {1})'.format(time_name, args.reftime)],
+                                                                   table,
+                                                                   ['type == \'{0}\''.format(type)],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, pinode_create + ['{0} {1}'.format(HISTOGRAM, SQLITE3_INTEGER)]),
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
+                                           gufi_common.build_query(pinode + [HISTOGRAM],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
+                                                                   None,
+                                                                   pinode + [HISTOGRAM],
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-G', gufi_common.build_query(pinode + ['time_hist_combine({0})'.format(HISTOGRAM)],
+                                      [gufi_common.AGGREGATE_NAME],
+                                      None,
+                                      pinode,
+                                      ['{0} {1}'.format(PINODE, ORDER[args.order])] if args.recursive else [],
+                                      None,
+                                      None),
+    ]
+
+    if not args.recursive and not args.cumulative:
+        queries += ['--max-level', '0']
+
+    return queries
+
+def file_age_atime_hist(_config, args, _where):
+    return age_bins_hist(args, 'atime', 'f')
+
+def file_age_mtime_hist(_config, args, _where):
+    return age_bins_hist(args, 'mtime', 'f')
+
+def file_age_ctime_hist(_config, args, _where):
+    return age_bins_hist(args, 'ctime', 'f')
+
+def dir_age_atime_hist(_config, args, _where):
+    return age_bins_hist(args, 'atime', 'd')
+
+def dir_age_mtime_hist(_config, args, _where):
+    return age_bins_hist(args, 'mtime', 'd')
+
+def dir_age_ctime_hist(_config, args, _where):
+    return age_bins_hist(args, 'ctime', 'd')
 
 # mapping of desired statistics to functions
 
@@ -1143,6 +1316,18 @@ BOTH = [
     ['filesize-log1024-bins',     filesize_log1024_bins],
     ['dirfilecount-log2-bins',    dirfilecount_log2_bins],
     ['dirfilecount-log1024-bins', dirfilecount_log1024_bins],
+    ['file-age-atime',            file_age_atime],
+    ['file-age-mtime',            file_age_mtime],
+    ['file-age-ctime',            file_age_ctime],
+    ['dir-age-atime',             dir_age_atime],
+    ['dir-age-mtime',             dir_age_mtime],
+    ['dir-age-ctime',             dir_age_ctime],
+    ['file-age-atime-hist',       file_age_atime_hist],
+    ['file-age-mtime-hist',       file_age_mtime_hist],
+    ['file-age-ctime-hist',       file_age_ctime_hist],
+    ['dir-age-atime-hist',        dir_age_atime_hist],
+    ['dir-age-mtime-hist',        dir_age_mtime_hist],
+    ['dir-age-ctime-hist',        dir_age_ctime_hist],
 ]
 
 # does not use either
@@ -1190,6 +1375,10 @@ def run(argv, config_path):
                         metavar='u',
                         type=gufi_common.get_uid,
                         help='restrict to user')
+    parser.add_argument('--reftime',
+                        default=time.time(),
+                        type=gufi_common.get_non_negative,
+                        help='time used to compare timestamps with')
     parser.add_argument('stat',
                         choices=stats.keys(),
                         help='statistic to get')

@@ -151,6 +151,54 @@ run_no_sort "${GUFI_STATS}    dirfilecount-log1024-bins \"${BASENAME}\""
 run_no_sort "${GUFI_STATS} -r dirfilecount-log1024-bins \"${BASENAME}\""
 run_no_sort "${GUFI_STATS} -c dirfilecount-log1024-bins \"${BASENAME}\""
 
+run_no_sort "${GUFI_STATS}    --reftime 31536000 file-age-atime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 file-age-atime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 file-age-atime \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 file-age-mtime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 file-age-mtime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 file-age-mtime \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 file-age-ctime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 file-age-ctime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 file-age-ctime \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 dir-age-atime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 dir-age-atime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 dir-age-atime \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 dir-age-mtime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 dir-age-mtime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 dir-age-mtime \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 dir-age-ctime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 dir-age-ctime \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 dir-age-ctime \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 file-age-atime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 file-age-atime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 file-age-atime-hist \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 file-age-mtime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 file-age-mtime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 file-age-mtime-hist \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 file-age-ctime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 file-age-ctime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 file-age-ctime-hist \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 dir-age-atime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 dir-age-atime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 dir-age-atime-hist \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 dir-age-mtime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 dir-age-mtime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 dir-age-mtime-hist \"${BASENAME}\""
+
+run_no_sort "${GUFI_STATS}    --reftime 31536000 dir-age-ctime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r --reftime 31536000 dir-age-ctime-hist \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c --reftime 31536000 dir-age-ctime-hist \"${BASENAME}\""
+
 # bad flags
 run "${GUFI_STATS} -c depth \"${BASENAME}\""
 run "${GUFI_STATS} -r total-filesize \"${BASENAME}\""

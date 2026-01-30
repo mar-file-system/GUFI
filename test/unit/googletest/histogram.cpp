@@ -435,16 +435,20 @@ TEST(histogram, time) {
         time_hist *hist = time_hist_parse(hist_str);
         ASSERT_NE(hist, nullptr);
 
-        EXPECT_EQ(hist->ref,        (std::time_t) 0);
-        EXPECT_EQ(hist->buckets[0], (std::size_t) 0); // future
-        EXPECT_EQ(hist->buckets[1], (std::size_t) 0); // < second
-        EXPECT_EQ(hist->buckets[2], (std::size_t) 0); // < minute
-        EXPECT_EQ(hist->buckets[3], (std::size_t) 0); // < hour
-        EXPECT_EQ(hist->buckets[4], (std::size_t) 0); // < day
-        EXPECT_EQ(hist->buckets[5], (std::size_t) 0); // < week
-        EXPECT_EQ(hist->buckets[6], (std::size_t) 0); // < 4 weeks
-        EXPECT_EQ(hist->buckets[7], (std::size_t) 0); // < year
-        EXPECT_EQ(hist->buckets[8], (std::size_t) 0); // >= year
+        EXPECT_EQ(hist->ref,         (std::time_t) 0);
+        EXPECT_EQ(hist->buckets[0],  (std::size_t) 0); // future
+        EXPECT_EQ(hist->buckets[1],  (std::size_t) 0); // < second
+        EXPECT_EQ(hist->buckets[2],  (std::size_t) 0); // < minute
+        EXPECT_EQ(hist->buckets[3],  (std::size_t) 0); // < hour
+        EXPECT_EQ(hist->buckets[4],  (std::size_t) 0); // < day
+        EXPECT_EQ(hist->buckets[5],  (std::size_t) 0); // < week
+        EXPECT_EQ(hist->buckets[6],  (std::size_t) 0); // < 4 weeks
+        EXPECT_EQ(hist->buckets[7],  (std::size_t) 0); // < year
+        EXPECT_EQ(hist->buckets[8],  (std::size_t) 0); // < 2 years
+        EXPECT_EQ(hist->buckets[9],  (std::size_t) 0); // < 5 years
+        EXPECT_EQ(hist->buckets[10], (std::size_t) 0); // < 10 years
+        EXPECT_EQ(hist->buckets[11], (std::size_t) 0); // < 20 years
+        EXPECT_EQ(hist->buckets[12], (std::size_t) 0); // >= 20 years
 
         time_hist_free(hist);
         free(hist_str);
@@ -463,16 +467,20 @@ TEST(histogram, time) {
         time_hist *hist = time_hist_parse(hist_str);
         ASSERT_NE(hist, nullptr);
 
-        EXPECT_EQ(hist->ref,        (std::time_t) 31536000);
-        EXPECT_EQ(hist->buckets[0], (std::size_t) 1); // future
-        EXPECT_EQ(hist->buckets[1], (std::size_t) 1); // < second
-        EXPECT_EQ(hist->buckets[2], (std::size_t) 2); // < minute
-        EXPECT_EQ(hist->buckets[3], (std::size_t) 1); // < hour
-        EXPECT_EQ(hist->buckets[4], (std::size_t) 1); // < day
-        EXPECT_EQ(hist->buckets[5], (std::size_t) 0); // < week
-        EXPECT_EQ(hist->buckets[6], (std::size_t) 0); // < 4 weeks
-        EXPECT_EQ(hist->buckets[7], (std::size_t) 0); // < year
-        EXPECT_EQ(hist->buckets[8], (std::size_t) 1); // >= year
+        EXPECT_EQ(hist->ref,         (std::time_t) 31536000);
+        EXPECT_EQ(hist->buckets[0],  (std::size_t) 1); // future
+        EXPECT_EQ(hist->buckets[1],  (std::size_t) 1); // < second
+        EXPECT_EQ(hist->buckets[2],  (std::size_t) 2); // < minute
+        EXPECT_EQ(hist->buckets[3],  (std::size_t) 1); // < hour
+        EXPECT_EQ(hist->buckets[4],  (std::size_t) 1); // < day
+        EXPECT_EQ(hist->buckets[5],  (std::size_t) 0); // < week
+        EXPECT_EQ(hist->buckets[6],  (std::size_t) 0); // < 4 weeks
+        EXPECT_EQ(hist->buckets[7],  (std::size_t) 0); // < year
+        EXPECT_EQ(hist->buckets[8],  (std::size_t) 1); // < 2 years
+        EXPECT_EQ(hist->buckets[9],  (std::size_t) 0); // < 5 years
+        EXPECT_EQ(hist->buckets[10], (std::size_t) 0); // < 10 years
+        EXPECT_EQ(hist->buckets[11], (std::size_t) 0); // < 20 years
+        EXPECT_EQ(hist->buckets[12], (std::size_t) 0); // >= 20 years
 
         time_hist_free(hist);
         free(hist_str);
@@ -498,16 +506,20 @@ TEST(histogram, time) {
         time_hist *hist = time_hist_parse(hist_str);
         ASSERT_NE(hist, nullptr);
 
-        EXPECT_EQ(hist->ref,        (std::time_t) 31536000);
-        EXPECT_EQ(hist->buckets[0], (std::size_t) 0); // future
-        EXPECT_EQ(hist->buckets[1], (std::size_t) 0); // < second
-        EXPECT_EQ(hist->buckets[2], (std::size_t) 1); // < minute
-        EXPECT_EQ(hist->buckets[3], (std::size_t) 0); // < hour
-        EXPECT_EQ(hist->buckets[4], (std::size_t) 1); // < day
-        EXPECT_EQ(hist->buckets[5], (std::size_t) 0); // < week
-        EXPECT_EQ(hist->buckets[6], (std::size_t) 0); // < 4 weeks
-        EXPECT_EQ(hist->buckets[7], (std::size_t) 0); // < year
-        EXPECT_EQ(hist->buckets[8], (std::size_t) 0); // >= year
+        EXPECT_EQ(hist->ref,         (std::time_t) 31536000);
+        EXPECT_EQ(hist->buckets[0],  (std::size_t) 0); // future
+        EXPECT_EQ(hist->buckets[1],  (std::size_t) 0); // < second
+        EXPECT_EQ(hist->buckets[2],  (std::size_t) 1); // < minute
+        EXPECT_EQ(hist->buckets[3],  (std::size_t) 0); // < hour
+        EXPECT_EQ(hist->buckets[4],  (std::size_t) 1); // < day
+        EXPECT_EQ(hist->buckets[5],  (std::size_t) 0); // < week
+        EXPECT_EQ(hist->buckets[6],  (std::size_t) 0); // < 4 weeks
+        EXPECT_EQ(hist->buckets[7],  (std::size_t) 0); // < year
+        EXPECT_EQ(hist->buckets[8],  (std::size_t) 0); // < 2 years
+        EXPECT_EQ(hist->buckets[9],  (std::size_t) 0); // < 5 years
+        EXPECT_EQ(hist->buckets[10], (std::size_t) 0); // < 10 years
+        EXPECT_EQ(hist->buckets[11], (std::size_t) 0); // < 20 years
+        EXPECT_EQ(hist->buckets[12], (std::size_t) 0); // >= 20 years
 
         time_hist_free(hist);
         free(hist_str);

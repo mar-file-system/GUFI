@@ -309,6 +309,150 @@ $ gufi_stats -c dirfilecount-log1024-bins "prefix"
 [0,1) 1
 [1,1024) 5
 
+$ gufi_stats    --reftime 31536000 file-age-atime "prefix"
+year 4
+years 1
+
+$ gufi_stats -r --reftime 31536000 file-age-atime "prefix"
+6 year 1
+7 year 3
+13 year 2
+16 year 1
+17 year 4
+17 years 1
+
+$ gufi_stats -c --reftime 31536000 file-age-atime "prefix"
+year 11
+years 1
+
+$ gufi_stats    --reftime 31536000 file-age-mtime "prefix"
+year 4
+years 1
+
+$ gufi_stats -r --reftime 31536000 file-age-mtime "prefix"
+6 year 1
+7 year 3
+13 year 2
+16 year 1
+17 year 4
+17 years 1
+
+$ gufi_stats -c --reftime 31536000 file-age-mtime "prefix"
+year 11
+years 1
+
+$ gufi_stats    --reftime 31536000 file-age-ctime "prefix"
+year 4
+years 1
+
+$ gufi_stats -r --reftime 31536000 file-age-ctime "prefix"
+6 year 1
+7 year 3
+13 year 2
+16 year 1
+17 year 4
+17 years 1
+
+$ gufi_stats -c --reftime 31536000 file-age-ctime "prefix"
+year 11
+years 1
+
+$ gufi_stats    --reftime 31536000 dir-age-atime "prefix"
+year 1
+
+$ gufi_stats -r --reftime 31536000 dir-age-atime "prefix"
+16 year 6
+
+$ gufi_stats -c --reftime 31536000 dir-age-atime "prefix"
+year 6
+
+$ gufi_stats    --reftime 31536000 dir-age-mtime "prefix"
+year 1
+
+$ gufi_stats -r --reftime 31536000 dir-age-mtime "prefix"
+16 year 6
+
+$ gufi_stats -c --reftime 31536000 dir-age-mtime "prefix"
+year 6
+
+$ gufi_stats    --reftime 31536000 dir-age-ctime "prefix"
+year 1
+
+$ gufi_stats -r --reftime 31536000 dir-age-ctime "prefix"
+16 year 6
+
+$ gufi_stats -c --reftime 31536000 dir-age-ctime "prefix"
+year 6
+
+$ gufi_stats    --reftime 31536000 file-age-atime-hist "prefix"
+31536000;31536000:4;63072000:1;
+
+$ gufi_stats -r --reftime 31536000 file-age-atime-hist "prefix"
+ 0;
+6 31536000;31536000:1;
+7 31536000;31536000:3;
+13 31536000;31536000:2;
+16 31536000;31536000:1;
+17 31536000;31536000:4;63072000:1;
+
+$ gufi_stats -c --reftime 31536000 file-age-atime-hist "prefix"
+31536000;31536000:10;63072000:1;
+
+$ gufi_stats    --reftime 31536000 file-age-mtime-hist "prefix"
+31536000;31536000:4;63072000:1;
+
+$ gufi_stats -r --reftime 31536000 file-age-mtime-hist "prefix"
+ 0;
+6 31536000;31536000:1;
+7 31536000;31536000:3;
+13 31536000;31536000:2;
+16 31536000;31536000:1;
+17 31536000;31536000:4;63072000:1;
+
+$ gufi_stats -c --reftime 31536000 file-age-mtime-hist "prefix"
+31536000;31536000:10;63072000:1;
+
+$ gufi_stats    --reftime 31536000 file-age-ctime-hist "prefix"
+31536000;31536000:4;63072000:1;
+
+$ gufi_stats -r --reftime 31536000 file-age-ctime-hist "prefix"
+ 0;
+6 31536000;31536000:1;
+7 31536000;31536000:3;
+13 31536000;31536000:2;
+16 31536000;31536000:1;
+17 31536000;31536000:4;63072000:1;
+
+$ gufi_stats -c --reftime 31536000 file-age-ctime-hist "prefix"
+31536000;31536000:10;63072000:1;
+
+$ gufi_stats    --reftime 31536000 dir-age-atime-hist "prefix"
+31536000;31536000:1;
+
+$ gufi_stats -r --reftime 31536000 dir-age-atime-hist "prefix"
+16 31536000;31536000:1;
+
+$ gufi_stats -c --reftime 31536000 dir-age-atime-hist "prefix"
+31536000;31536000:1;
+
+$ gufi_stats    --reftime 31536000 dir-age-mtime-hist "prefix"
+31536000;31536000:1;
+
+$ gufi_stats -r --reftime 31536000 dir-age-mtime-hist "prefix"
+16 31536000;31536000:1;
+
+$ gufi_stats -c --reftime 31536000 dir-age-mtime-hist "prefix"
+31536000;31536000:1;
+
+$ gufi_stats    --reftime 31536000 dir-age-ctime-hist "prefix"
+31536000;31536000:1;
+
+$ gufi_stats -r --reftime 31536000 dir-age-ctime-hist "prefix"
+16 31536000;31536000:1;
+
+$ gufi_stats -c --reftime 31536000 dir-age-ctime-hist "prefix"
+31536000;31536000:1;
+
 $ gufi_stats -c depth "prefix"
 --cumulative/-c has no effect on "depth" statistic
 1
