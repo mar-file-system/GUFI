@@ -155,6 +155,7 @@ typedef struct time_bucket {
 } time_bucket_t;
 
 static const time_bucket_t TIME_BUCKETS[] = {
+    {"future",      0},
     {"second",      1},
     {"minute",      60},
     {"hour",        3600},
@@ -162,7 +163,7 @@ static const time_bucket_t TIME_BUCKETS[] = {
     {"week",        604800},
     {"four_weeks",  2419200},
     {"year",        31536000},
-    {"years",       0}, /* overflow value - keep last */
+    {"years",       31536001}, /* overflow value - keep last; this value doesn't matter so long as it is not a repeat */
 };
 
 #define TIME_BUCKETS_COUNT (sizeof(TIME_BUCKETS) / sizeof(TIME_BUCKETS[0]))

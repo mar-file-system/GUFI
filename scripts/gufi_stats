@@ -285,7 +285,7 @@ def total_filesize(_config, args, where):
                                                                        None)),
 
             '-K', build_create(gufi_common.AGGREGATE_NAME, ['id {0}'.format(SQLITE3_IPK),
-                                                     'size {0}'.format(SQLITE3_INT64)]),
+                                                            'size {0}'.format(SQLITE3_INT64)]),
 
             '-G', gufi_common.build_query(['SUM(size)'],
                                           [gufi_common.AGGREGATE_NAME],
@@ -983,8 +983,8 @@ def uidgid_size(config, args, uidgid, where):
 
     queries = [
         '-I', build_create(gufi_common.INTERMEDIATE_NAME, ['{0} {1}'.format(uidgid, SQLITE3_INTEGER),
-                                                'size {0}'.format(SQLITE3_INTEGER),
-                                                'name {0}'.format(SQLITE3_TEXT)]),
+                                                           'size {0}'.format(SQLITE3_INTEGER),
+                                                           'name {0}'.format(SQLITE3_TEXT)]),
 
         '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
                                            gufi_common.build_query([uidgid, 'size', 'fullpath'],
@@ -1004,8 +1004,8 @@ def uidgid_size(config, args, uidgid, where):
                                                                    None)),
 
         '-K', build_create(gufi_common.AGGREGATE_NAME, ['{0} {1}'.format(uidgid, SQLITE3_INTEGER),
-                                                 'size {0}'.format(SQLITE3_INTEGER),
-                                                 'name {0}'.format(SQLITE3_TEXT)]),
+                                                        'size {0}'.format(SQLITE3_INTEGER),
+                                                        'name {0}'.format(SQLITE3_TEXT)]),
 
         '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(columns,
@@ -1071,7 +1071,7 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
                                                                    None,
                                                                    None)),
         '-K', build_create(gufi_common.AGGREGATE_NAME, pinode_create + ['{0} {1}'.format(exponent, SQLITE3_INTEGER),
-                                                                 'count {0}'.format(SQLITE3_INTEGER)]),
+                                                                        'count {0}'.format(SQLITE3_INTEGER)]),
         '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
                                            gufi_common.build_query(pinode + [exponent, 'COUNT({0})'.format(exponent)],
                                                                    [gufi_common.INTERMEDIATE_NAME],

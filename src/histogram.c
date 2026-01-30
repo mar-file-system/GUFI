@@ -544,7 +544,13 @@ time_hist_t *time_hist_parse(const char *str) {
 }
 
 static int time_hist_combine_inplace(sqlite_time_hist_t *lhs, time_hist_t *rhs) {
-    if (lhs->ref != rhs->ref) {
+    if (lhs->ref == 0) {
+        lhs->ref = rhs->ref;
+    }
+    else if (rhs->ref == 0) {
+        /* do nothing */
+    }
+    else if (lhs->ref != rhs->ref) {
         fprintf(stderr, "Error: Cannot combine time histograms with different reference times: %ld vs %ld\n",
                 lhs->ref, rhs->ref);
         return 1;
