@@ -1108,6 +1108,85 @@ def dirfilecount_log2_bins(_config, args, _where):
 def dirfilecount_log1024_bins(_config, args, _where):
     return size_bins(args, 1024, 'd')
 
+def size_bins_hist(args, base, type): # pylint: disable=redefined-builtin
+    '''
+    Gets histogram of sizes
+    bins are [b^n, b^(n+1))
+
+    Requires SQLite 3.35.0
+
+    default returns bins for 1 directory
+    with --recursive, groups results by pinode
+    with --cumulative, sums all results
+    '''
+
+    HISTOGRAM = 'histogram'
+
+    table = []
+    field = gufi_common.SQLITE3_NULL
+    if type in ['f', 'l']:
+        table = [gufi_common.PENTRIES]
+        field = 'size'
+    elif type == 'd':
+        table = [gufi_common.SUMMARY]
+        field = 'totfiles'
+
+    buckets = 0
+    if base == 2:
+        buckets = 60 # exabyte
+    elif base == 1024:
+        buckets = 6  # exabyte
+
+    PINODE = 'pinode'
+    pinode_create = ['{0} {1}'.format(PINODE, SQLITE3_INTEGER)] if args.recursive else []
+    pinode = [PINODE] if args.recursive else []
+
+    queries = [
+        '-I', build_create(gufi_common.INTERMEDIATE_NAME, pinode_create + ['{0} {1}'.format(HISTOGRAM, SQLITE3_TEXT)]),
+        '-E', 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
+                                           gufi_common.build_query(pinode +
+                                                                   ['log_hist({0}, {1}, {2})'.format(field, base, buckets)],
+                                                                   table,
+                                                                   ['type == \'{0}\''.format(type)],
+                                                                   None, # cannot GROUP BY here because value would be aggregate
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-K', build_create(gufi_common.AGGREGATE_NAME, pinode_create + ['{0} {1}'.format(HISTOGRAM, SQLITE3_TEXT)]),
+        '-J', 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
+                                           gufi_common.build_query(pinode + [HISTOGRAM],
+                                                                   [gufi_common.INTERMEDIATE_NAME],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-G', gufi_common.build_query(pinode + ['log_hist_combine({0})'.format(HISTOGRAM)],
+                                      [gufi_common.AGGREGATE_NAME],
+                                      None,
+                                      pinode,
+                                      ['{0} {1}'.format(PINODE, ORDER[args.order])] if args.recursive else [],
+                                      None,
+                                      None),
+    ]
+
+    if not args.recursive and not args.cumulative:
+        queries += ['--max-level', '0']
+
+    return queries
+
+def filesize_log2_bins_hist(_config, args, _where):
+    return size_bins_hist(args, 2, 'f')
+
+def filesize_log1024_bins_hist(_config, args, _where):
+    return size_bins_hist(args, 1024, 'f')
+
+def dirfilecount_log2_bins_hist(_config, args, _where):
+    return size_bins_hist(args, 2, 'd')
+
+def dirfilecount_log1024_bins_hist(_config, args, _where):
+    return size_bins_hist(args, 1024, 'd')
+
 # do binning here
 def age_bins(args, time_name, type):  # pylint: disable=redefined-builtin
     '''
@@ -1285,62 +1364,83 @@ def dir_age_ctime_hist(_config, args, _where):
 # normally only computes for current directory
 # use --recursive to recurse down tree
 RECURSIVE = [
-    ['depth',                     depth],
-    ['filesize',                  filesize],
-    ['filecount',                 filecount],
-    ['linkcount',                 linkcount],
-    ['dircount',                  dircount],
-    ['leaf-dirs',                 leaf_dirs],
-    ['leaf-depth',                leaf_depth],
-    ['leaf-files',                leaf_files],
-    ['leaf-links',                leaf_links],
-    ['extensions',                extensions],
+    ['depth',                          depth],
+
+    ['filesize',                       filesize],
+
+    ['filecount',                      filecount],
+    ['linkcount',                      linkcount],
+    ['dircount',                       dircount],
+
+    ['leaf-dirs',                      leaf_dirs],
+    ['leaf-depth',                     leaf_depth],
+    ['leaf-files',                     leaf_files],
+    ['leaf-links',                     leaf_links],
+
+    ['extensions',                     extensions],
 ]
 
 # normally computes statistics by uid
 # use --cumulative to combine
 CUMULATIVE = [
-    ['total-filesize',            total_filesize],
-    ['total-filecount',           total_filecount],
-    ['total-linkcount',           total_linkcount],
-    ['total-dircount',            total_dircount],
-    ['total-leaf-files',          total_leaf_files],
-    ['total-leaf-links',          total_leaf_links],
-    ['files-per-level',           files_per_level],
-    ['links-per-level',           links_per_level],
-    ['dirs-per-level',            dirs_per_level],
+    ['total-filesize',                 total_filesize],
+
+    ['total-filecount',                total_filecount],
+    ['total-linkcount',                total_linkcount],
+    ['total-dircount',                 total_dircount],
+
+    ['total-leaf-files',               total_leaf_files],
+    ['total-leaf-links',               total_leaf_links],
+
+    ['files-per-level',                files_per_level],
+    ['links-per-level',                links_per_level],
+    ['dirs-per-level',                 dirs_per_level],
 ]
 
 BOTH = [
-    ['filesize-log2-bins',        filesize_log2_bins],
-    ['filesize-log1024-bins',     filesize_log1024_bins],
-    ['dirfilecount-log2-bins',    dirfilecount_log2_bins],
-    ['dirfilecount-log1024-bins', dirfilecount_log1024_bins],
-    ['file-age-atime',            file_age_atime],
-    ['file-age-mtime',            file_age_mtime],
-    ['file-age-ctime',            file_age_ctime],
-    ['dir-age-atime',             dir_age_atime],
-    ['dir-age-mtime',             dir_age_mtime],
-    ['dir-age-ctime',             dir_age_ctime],
-    ['file-age-atime-hist',       file_age_atime_hist],
-    ['file-age-mtime-hist',       file_age_mtime_hist],
-    ['file-age-ctime-hist',       file_age_ctime_hist],
-    ['dir-age-atime-hist',        dir_age_atime_hist],
-    ['dir-age-mtime-hist',        dir_age_mtime_hist],
-    ['dir-age-ctime-hist',        dir_age_ctime_hist],
+    ['filesize-log2-bins',             filesize_log2_bins],
+    ['filesize-log1024-bins',          filesize_log1024_bins],
+
+    ['filesize-log2-bins-hist',        filesize_log2_bins_hist],
+    ['filesize-log1024-bins-hist',     filesize_log1024_bins_hist],
+
+    ['dirfilecount-log2-bins',         dirfilecount_log2_bins],
+    ['dirfilecount-log1024-bins',      dirfilecount_log1024_bins],
+
+    ['dirfilecount-log2-bins-hist',    dirfilecount_log2_bins_hist],
+    ['dirfilecount-log1024-bins-hist', dirfilecount_log1024_bins_hist],
+
+    ['file-age-atime',                 file_age_atime],
+    ['file-age-mtime',                 file_age_mtime],
+    ['file-age-ctime',                 file_age_ctime],
+
+    ['dir-age-atime',                  dir_age_atime],
+    ['dir-age-mtime',                  dir_age_mtime],
+    ['dir-age-ctime',                  dir_age_ctime],
+
+    ['file-age-atime-hist',            file_age_atime_hist],
+    ['file-age-mtime-hist',            file_age_mtime_hist],
+    ['file-age-ctime-hist',            file_age_ctime_hist],
+
+    ['dir-age-atime-hist',             dir_age_atime_hist],
+    ['dir-age-mtime-hist',             dir_age_mtime_hist],
+    ['dir-age-ctime-hist',             dir_age_ctime_hist],
 ]
 
 # does not use either
 OTHERS = [
-    ['average-leaf-files',        average_leaf_files],
-    ['average-leaf-links',        average_leaf_links],
-    ['average-leaf-size',         average_leaf_size], # file size only
-    ['median-leaf-files',         median_leaf_files],
-    ['median-leaf-links',         median_leaf_links],
-    ['median-leaf-size',          median_leaf_size],  # file size only
-    ['duplicate-names',           duplicate_names],
-    ['uid-size',                  uid_size],
-    ['gid-size',                  gid_size],
+    ['average-leaf-files',             average_leaf_files],
+    ['average-leaf-links',             average_leaf_links],
+    ['average-leaf-size',              average_leaf_size], # file size only
+
+    ['median-leaf-files',              median_leaf_files],
+    ['median-leaf-links',              median_leaf_links],
+    ['median-leaf-size',               median_leaf_size],  # file size only
+
+    ['duplicate-names',                duplicate_names],
+
+    ['uid-size',                       uid_size],
+    ['gid-size',                       gid_size],
 ]
 
 # argv[0] should be the command name

@@ -283,6 +283,34 @@ $ gufi_stats -c filesize-log1024-bins "prefix"
 [1024,1048576) 1
 [1048576,1073741824) 1
 
+$ gufi_stats    filesize-log2-bins-hist "prefix"
+2;60;1;0;3:2;10:1;20:1;
+
+$ gufi_stats -r filesize-log2-bins-hist "prefix"
+ 0;0;0;0;
+6 2;60;0;0;2:1;
+7 2;60;0;0;0:1;1:2;
+13 2;60;0;0;3:2;
+16 2;60;0;0;3:1;
+17 2;60;1;0;3:2;10:1;20:1;
+
+$ gufi_stats -c filesize-log2-bins-hist "prefix"
+2;60;1;0;0:1;1:2;2:1;3:5;10:1;20:1;
+
+$ gufi_stats    filesize-log1024-bins-hist "prefix"
+1024;6;1;0;0:2;1:1;2:1;
+
+$ gufi_stats -r filesize-log1024-bins-hist "prefix"
+ 0;0;0;0;
+6 1024;6;0;0;0:1;
+7 1024;6;0;0;0:3;
+13 1024;6;0;0;0:2;
+16 1024;6;0;0;0:1;
+17 1024;6;1;0;0:2;1:1;2:1;
+
+$ gufi_stats -c filesize-log1024-bins-hist "prefix"
+1024;6;1;0;0:9;1:1;2:1;
+
 $ gufi_stats    dirfilecount-log2-bins "prefix"
 [4,8) 1
 
@@ -308,6 +336,24 @@ $ gufi_stats -r dirfilecount-log1024-bins "prefix"
 $ gufi_stats -c dirfilecount-log1024-bins "prefix"
 [0,1) 1
 [1,1024) 5
+
+$ gufi_stats    dirfilecount-log2-bins-hist "prefix"
+2;60;0;0;2:1;
+
+$ gufi_stats -r dirfilecount-log2-bins-hist "prefix"
+16 2;60;1;0;0:2;1:2;2:1;
+
+$ gufi_stats -c dirfilecount-log2-bins-hist "prefix"
+2;60;1;0;0:2;1:2;2:1;
+
+$ gufi_stats    dirfilecount-log1024-bins-hist "prefix"
+1024;6;0;0;0:1;
+
+$ gufi_stats -r dirfilecount-log1024-bins-hist "prefix"
+16 1024;6;1;0;0:5;
+
+$ gufi_stats -c dirfilecount-log1024-bins-hist "prefix"
+1024;6;1;0;0:5;
 
 $ gufi_stats    --reftime 31536000 file-age-atime "prefix"
 year 4
