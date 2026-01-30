@@ -18,8 +18,8 @@ GUFI query is
     --delim ' ' \
     -I 'CREATE TABLE intermediate(name TEXT)' \
     -S 'INSERT INTO intermediate SELECT substr(rpath(sname, sroll), 8) FROM vrsummary' \
-    -J 'INSERT INTO aggregate SELECT * FROM intermediate' \
     -K 'CREATE TABLE aggregate(name TEXT)' \
+    -J 'INSERT INTO aggregate SELECT * FROM intermediate' \
     -G 'SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '"'"'/'"'"', '"'"''"'"')) + 1 END FROM aggregate ORDER BY name ASC' \
     --min-level 0 \
     --max-level 0 \
@@ -217,12 +217,12 @@ hidden 1
 no-ext 5
 
 $ gufi_stats -r extensions "prefix"
-6 no-ext 2
-7 no-ext 3
-13 no-ext 2
-16 no-ext 1
-17 hidden 1
-17 no-ext 5
+prefix hidden 1
+prefix no-ext 5
+prefix/directory no-ext 3
+prefix/directory/subdirectory no-ext 2
+prefix/leaf_directory no-ext 2
+prefix/unusual#? directory , no-ext 1
 
 $ gufi_stats -c extensions "prefix"
 hidden 1
@@ -232,12 +232,12 @@ $ gufi_stats    extensions-hist "prefix"
 2;6:hidden:1;6:no-ext:5;
 
 $ gufi_stats -r extensions-hist "prefix"
- 0;
-6 1;6:no-ext:2;
-7 1;6:no-ext:3;
-13 1;6:no-ext:2;
-16 1;6:no-ext:1;
-17 2;6:hidden:1;6:no-ext:5;
+prefix 2;6:hidden:1;6:no-ext:5;
+prefix/directory 1;6:no-ext:3;
+prefix/directory/subdirectory 1;6:no-ext:2;
+prefix/empty_directory 0;
+prefix/leaf_directory 1;6:no-ext:2;
+prefix/unusual#? directory , 1;6:no-ext:1;
 
 $ gufi_stats -c extensions-hist "prefix"
 2;6:hidden:1;6:no-ext:13;
@@ -249,15 +249,15 @@ $ gufi_stats    filesize-log2-bins "prefix"
 [1048576,2097152) 1
 
 $ gufi_stats -r filesize-log2-bins "prefix"
-6 [4,8) 1
-7 [1,2) 1
-7 [2,4) 2
-13 [8,16) 2
-16 [8,16) 1
-17 [0,1) 1
-17 [8,16) 2
-17 [1024,2048) 1
-17 [1048576,2097152) 1
+prefix [0,1) 1
+prefix [8,16) 2
+prefix [1024,2048) 1
+prefix [1048576,2097152) 1
+prefix/directory [1,2) 1
+prefix/directory [2,4) 2
+prefix/directory/subdirectory [4,8) 1
+prefix/leaf_directory [8,16) 2
+prefix/unusual#? directory , [8,16) 1
 
 $ gufi_stats -c filesize-log2-bins "prefix"
 [0,1) 1
@@ -275,14 +275,14 @@ $ gufi_stats    filesize-log1024-bins "prefix"
 [1048576,1073741824) 1
 
 $ gufi_stats -r filesize-log1024-bins "prefix"
-6 [1,1024) 1
-7 [1,1024) 3
-13 [1,1024) 2
-16 [1,1024) 1
-17 [0,1) 1
-17 [1,1024) 2
-17 [1024,1048576) 1
-17 [1048576,1073741824) 1
+prefix [0,1) 1
+prefix [1,1024) 2
+prefix [1024,1048576) 1
+prefix [1048576,1073741824) 1
+prefix/directory [1,1024) 3
+prefix/directory/subdirectory [1,1024) 1
+prefix/leaf_directory [1,1024) 2
+prefix/unusual#? directory , [1,1024) 1
 
 $ gufi_stats -c filesize-log1024-bins "prefix"
 [0,1) 1
@@ -294,12 +294,12 @@ $ gufi_stats    filesize-log2-bins-hist "prefix"
 2;60;1;0;3:2;10:1;20:1;
 
 $ gufi_stats -r filesize-log2-bins-hist "prefix"
- 0;0;0;0;
-6 2;60;0;0;2:1;
-7 2;60;0;0;0:1;1:2;
-13 2;60;0;0;3:2;
-16 2;60;0;0;3:1;
-17 2;60;1;0;3:2;10:1;20:1;
+prefix 2;60;1;0;3:2;10:1;20:1;
+prefix/directory 2;60;0;0;0:1;1:2;
+prefix/directory/subdirectory 2;60;0;0;2:1;
+prefix/empty_directory 0;0;0;0;
+prefix/leaf_directory 2;60;0;0;3:2;
+prefix/unusual#? directory , 2;60;0;0;3:1;
 
 $ gufi_stats -c filesize-log2-bins-hist "prefix"
 2;60;1;0;0:1;1:2;2:1;3:5;10:1;20:1;
@@ -308,12 +308,12 @@ $ gufi_stats    filesize-log1024-bins-hist "prefix"
 1024;6;1;0;0:2;1:1;2:1;
 
 $ gufi_stats -r filesize-log1024-bins-hist "prefix"
- 0;0;0;0;
-6 1024;6;0;0;0:1;
-7 1024;6;0;0;0:3;
-13 1024;6;0;0;0:2;
-16 1024;6;0;0;0:1;
-17 1024;6;1;0;0:2;1:1;2:1;
+prefix 1024;6;1;0;0:2;1:1;2:1;
+prefix/directory 1024;6;0;0;0:3;
+prefix/directory/subdirectory 1024;6;0;0;0:1;
+prefix/empty_directory 0;0;0;0;
+prefix/leaf_directory 1024;6;0;0;0:2;
+prefix/unusual#? directory , 1024;6;0;0;0:1;
 
 $ gufi_stats -c filesize-log1024-bins-hist "prefix"
 1024;6;1;0;0:9;1:1;2:1;
@@ -322,10 +322,12 @@ $ gufi_stats    dirfilecount-log2-bins "prefix"
 [4,8) 1
 
 $ gufi_stats -r dirfilecount-log2-bins "prefix"
-16 [0,1) 1
-16 [1,2) 2
-16 [2,4) 2
-16 [4,8) 1
+prefix [4,8) 1
+prefix/directory [2,4) 1
+prefix/directory/subdirectory [1,2) 1
+prefix/empty_directory [0,1) 1
+prefix/leaf_directory [2,4) 1
+prefix/unusual#? directory , [1,2) 1
 
 $ gufi_stats -c dirfilecount-log2-bins "prefix"
 [0,1) 1
@@ -337,8 +339,12 @@ $ gufi_stats    dirfilecount-log1024-bins "prefix"
 [1,1024) 1
 
 $ gufi_stats -r dirfilecount-log1024-bins "prefix"
-16 [0,1) 1
-16 [1,1024) 5
+prefix [1,1024) 1
+prefix/directory [1,1024) 1
+prefix/directory/subdirectory [1,1024) 1
+prefix/empty_directory [0,1) 1
+prefix/leaf_directory [1,1024) 1
+prefix/unusual#? directory , [1,1024) 1
 
 $ gufi_stats -c dirfilecount-log1024-bins "prefix"
 [0,1) 1
@@ -348,7 +354,12 @@ $ gufi_stats    dirfilecount-log2-bins-hist "prefix"
 2;60;0;0;2:1;
 
 $ gufi_stats -r dirfilecount-log2-bins-hist "prefix"
-16 2;60;1;0;0:2;1:2;2:1;
+prefix 2;60;0;0;2:1;
+prefix/directory 2;60;0;0;1:1;
+prefix/directory/subdirectory 2;60;0;0;0:1;
+prefix/empty_directory 2;60;1;0;
+prefix/leaf_directory 2;60;0;0;1:1;
+prefix/unusual#? directory , 2;60;0;0;0:1;
 
 $ gufi_stats -c dirfilecount-log2-bins-hist "prefix"
 2;60;1;0;0:2;1:2;2:1;
@@ -357,96 +368,116 @@ $ gufi_stats    dirfilecount-log1024-bins-hist "prefix"
 1024;6;0;0;0:1;
 
 $ gufi_stats -r dirfilecount-log1024-bins-hist "prefix"
-16 1024;6;1;0;0:5;
+prefix 1024;6;0;0;0:1;
+prefix/directory 1024;6;0;0;0:1;
+prefix/directory/subdirectory 1024;6;0;0;0:1;
+prefix/empty_directory 1024;6;1;0;
+prefix/leaf_directory 1024;6;0;0;0:1;
+prefix/unusual#? directory , 1024;6;0;0;0:1;
 
 $ gufi_stats -c dirfilecount-log1024-bins-hist "prefix"
 1024;6;1;0;0:5;
 
 $ gufi_stats    --reftime 31536000 file-age-atime "prefix"
-year 4
-years 1
+[4 weeks ago, 1 year ago) 4
+[1 year ago, 2 years ago) 1
 
 $ gufi_stats -r --reftime 31536000 file-age-atime "prefix"
-6 year 1
-7 year 3
-13 year 2
-16 year 1
-17 year 4
-17 years 1
+prefix [4 weeks ago, 1 year ago) 4
+prefix [1 year ago, 2 years ago) 1
+prefix/directory [4 weeks ago, 1 year ago) 3
+prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
+prefix/leaf_directory [4 weeks ago, 1 year ago) 2
+prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 file-age-atime "prefix"
-year 11
-years 1
+[4 weeks ago, 1 year ago) 11
+[1 year ago, 2 years ago) 1
 
 $ gufi_stats    --reftime 31536000 file-age-mtime "prefix"
-year 4
-years 1
+[4 weeks ago, 1 year ago) 4
+[1 year ago, 2 years ago) 1
 
 $ gufi_stats -r --reftime 31536000 file-age-mtime "prefix"
-6 year 1
-7 year 3
-13 year 2
-16 year 1
-17 year 4
-17 years 1
+prefix [4 weeks ago, 1 year ago) 4
+prefix [1 year ago, 2 years ago) 1
+prefix/directory [4 weeks ago, 1 year ago) 3
+prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
+prefix/leaf_directory [4 weeks ago, 1 year ago) 2
+prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 file-age-mtime "prefix"
-year 11
-years 1
+[4 weeks ago, 1 year ago) 11
+[1 year ago, 2 years ago) 1
 
 $ gufi_stats    --reftime 31536000 file-age-ctime "prefix"
-year 4
-years 1
+[4 weeks ago, 1 year ago) 4
+[1 year ago, 2 years ago) 1
 
 $ gufi_stats -r --reftime 31536000 file-age-ctime "prefix"
-6 year 1
-7 year 3
-13 year 2
-16 year 1
-17 year 4
-17 years 1
+prefix [4 weeks ago, 1 year ago) 4
+prefix [1 year ago, 2 years ago) 1
+prefix/directory [4 weeks ago, 1 year ago) 3
+prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
+prefix/leaf_directory [4 weeks ago, 1 year ago) 2
+prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 file-age-ctime "prefix"
-year 11
-years 1
+[4 weeks ago, 1 year ago) 11
+[1 year ago, 2 years ago) 1
 
 $ gufi_stats    --reftime 31536000 dir-age-atime "prefix"
-year 1
+[4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -r --reftime 31536000 dir-age-atime "prefix"
-16 year 6
+prefix [4 weeks ago, 1 year ago) 1
+prefix/directory [4 weeks ago, 1 year ago) 1
+prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
+prefix/empty_directory [4 weeks ago, 1 year ago) 1
+prefix/leaf_directory [4 weeks ago, 1 year ago) 1
+prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 dir-age-atime "prefix"
-year 6
+[4 weeks ago, 1 year ago) 6
 
 $ gufi_stats    --reftime 31536000 dir-age-mtime "prefix"
-year 1
+[4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -r --reftime 31536000 dir-age-mtime "prefix"
-16 year 6
+prefix [4 weeks ago, 1 year ago) 1
+prefix/directory [4 weeks ago, 1 year ago) 1
+prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
+prefix/empty_directory [4 weeks ago, 1 year ago) 1
+prefix/leaf_directory [4 weeks ago, 1 year ago) 1
+prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 dir-age-mtime "prefix"
-year 6
+[4 weeks ago, 1 year ago) 6
 
 $ gufi_stats    --reftime 31536000 dir-age-ctime "prefix"
-year 1
+[4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -r --reftime 31536000 dir-age-ctime "prefix"
-16 year 6
+prefix [4 weeks ago, 1 year ago) 1
+prefix/directory [4 weeks ago, 1 year ago) 1
+prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
+prefix/empty_directory [4 weeks ago, 1 year ago) 1
+prefix/leaf_directory [4 weeks ago, 1 year ago) 1
+prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 dir-age-ctime "prefix"
-year 6
+[4 weeks ago, 1 year ago) 6
 
 $ gufi_stats    --reftime 31536000 file-age-atime-hist "prefix"
 31536000;31536000:4;63072000:1;
 
 $ gufi_stats -r --reftime 31536000 file-age-atime-hist "prefix"
- 0;
-6 31536000;31536000:1;
-7 31536000;31536000:3;
-13 31536000;31536000:2;
-16 31536000;31536000:1;
-17 31536000;31536000:4;63072000:1;
+prefix 31536000;31536000:4;63072000:1;
+prefix/directory 31536000;31536000:3;
+prefix/directory/subdirectory 31536000;31536000:1;
+prefix/empty_directory 0;
+prefix/leaf_directory 31536000;31536000:2;
+prefix/unusual#? directory , 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 file-age-atime-hist "prefix"
 31536000;31536000:10;63072000:1;
@@ -455,12 +486,12 @@ $ gufi_stats    --reftime 31536000 file-age-mtime-hist "prefix"
 31536000;31536000:4;63072000:1;
 
 $ gufi_stats -r --reftime 31536000 file-age-mtime-hist "prefix"
- 0;
-6 31536000;31536000:1;
-7 31536000;31536000:3;
-13 31536000;31536000:2;
-16 31536000;31536000:1;
-17 31536000;31536000:4;63072000:1;
+prefix 31536000;31536000:4;63072000:1;
+prefix/directory 31536000;31536000:3;
+prefix/directory/subdirectory 31536000;31536000:1;
+prefix/empty_directory 0;
+prefix/leaf_directory 31536000;31536000:2;
+prefix/unusual#? directory , 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 file-age-mtime-hist "prefix"
 31536000;31536000:10;63072000:1;
@@ -469,12 +500,12 @@ $ gufi_stats    --reftime 31536000 file-age-ctime-hist "prefix"
 31536000;31536000:4;63072000:1;
 
 $ gufi_stats -r --reftime 31536000 file-age-ctime-hist "prefix"
- 0;
-6 31536000;31536000:1;
-7 31536000;31536000:3;
-13 31536000;31536000:2;
-16 31536000;31536000:1;
-17 31536000;31536000:4;63072000:1;
+prefix 31536000;31536000:4;63072000:1;
+prefix/directory 31536000;31536000:3;
+prefix/directory/subdirectory 31536000;31536000:1;
+prefix/empty_directory 0;
+prefix/leaf_directory 31536000;31536000:2;
+prefix/unusual#? directory , 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 file-age-ctime-hist "prefix"
 31536000;31536000:10;63072000:1;
@@ -483,7 +514,12 @@ $ gufi_stats    --reftime 31536000 dir-age-atime-hist "prefix"
 31536000;31536000:1;
 
 $ gufi_stats -r --reftime 31536000 dir-age-atime-hist "prefix"
-16 31536000;31536000:1;
+prefix 31536000;31536000:1;
+prefix/directory 31536000;31536000:1;
+prefix/directory/subdirectory 31536000;31536000:1;
+prefix/empty_directory 31536000;31536000:1;
+prefix/leaf_directory 31536000;31536000:1;
+prefix/unusual#? directory , 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 dir-age-atime-hist "prefix"
 31536000;31536000:1;
@@ -492,7 +528,12 @@ $ gufi_stats    --reftime 31536000 dir-age-mtime-hist "prefix"
 31536000;31536000:1;
 
 $ gufi_stats -r --reftime 31536000 dir-age-mtime-hist "prefix"
-16 31536000;31536000:1;
+prefix 31536000;31536000:1;
+prefix/directory 31536000;31536000:1;
+prefix/directory/subdirectory 31536000;31536000:1;
+prefix/empty_directory 31536000;31536000:1;
+prefix/leaf_directory 31536000;31536000:1;
+prefix/unusual#? directory , 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 dir-age-mtime-hist "prefix"
 31536000;31536000:1;
@@ -501,7 +542,12 @@ $ gufi_stats    --reftime 31536000 dir-age-ctime-hist "prefix"
 31536000;31536000:1;
 
 $ gufi_stats -r --reftime 31536000 dir-age-ctime-hist "prefix"
-16 31536000;31536000:1;
+prefix 31536000;31536000:1;
+prefix/directory 31536000;31536000:1;
+prefix/directory/subdirectory 31536000;31536000:1;
+prefix/empty_directory 31536000;31536000:1;
+prefix/leaf_directory 31536000;31536000:1;
+prefix/unusual#? directory , 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 dir-age-ctime-hist "prefix"
 31536000;31536000:1;
