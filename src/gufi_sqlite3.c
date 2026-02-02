@@ -96,8 +96,8 @@ int main(int argc, char *argv[]) {
     struct input in;
     process_args_and_maybe_exit(options, 0, "[db [SQL]...]", &in);
 
-    const int args_left = argc - idx;
-    const char *dbname = (args_left == 0)?SQLITE_MEMORY:argv[idx++];
+    const int args_left = in.pos.argc;
+    const char *dbname = (args_left == 0)?SQLITE_MEMORY:in.pos.argv[0];
     sqlite3 *db = opendb(dbname,
                          SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
                          0, 1, NULL, NULL);
@@ -149,8 +149,9 @@ int main(int argc, char *argv[]) {
         free(line);
     }
     else {
-        for(int i = idx; i < argc; i++) {
-            if (sqlite3_exec(db, argv[i], print_parallel, &pa, &err) != SQLITE_OK) {
+        /* in.pos.argv[0] would have been the file name */
+        for(int i = 1; i < in.pos.argc; i++) {
+            if (sqlite3_exec(db, in.pos.argv[i], print_parallel, &pa, &err) != SQLITE_OK) {
                 sqlite_print_err_and_free(err, stderr, "Error: SQL error: %s\n", err);
                 break;
             }

@@ -289,12 +289,12 @@ int main(int argc, char *argv[]) {
     process_args_and_maybe_exit(options, 1, "dir... trace", &pa.in);
 
     /* parse positional args, following the options */
-    INSTALL_STR(&pa.trace_prefix, argv[argc - 1]);
+    INSTALL_STR(&pa.trace_prefix, pa.in.pos.argv[pa.in.pos.argc - 1]);
 
     int rc = EXIT_SUCCESS;
 
-    argc--; /* trace prefix is no longer needed */
-    const size_t root_count = argc - idx;
+    pa.in.pos.argc--; /* trace prefix is no longer needed */
+    const size_t root_count = pa.in.pos.argc;
 
     if (bad_partial_walk(&pa.in, root_count)){
         rc = EXIT_FAILURE;
@@ -335,7 +335,7 @@ int main(int argc, char *argv[]) {
         }
         else if (root_count == 1) {
             struct work *root = NULL;
-            if (validate_source(argv[idx], &root) == 0) {
+            if (validate_source(pa.in.pos.argv[0], &root) == 0) {
                 process_path_list(&pa.in, root, ctx, processdir);
             }
             else {
@@ -344,10 +344,10 @@ int main(int argc, char *argv[]) {
         }
     }
     else {
-        for(int i = idx; i < argc; i++) {
+        for(int i = 0; i < pa.in.pos.argc; i++) {
             /* get first work item by validating source path */
             struct work *root = NULL;
-            if (validate_source(argv[i], &root) != 0) {
+            if (validate_source(pa.in.pos.argv[i], &root) != 0) {
                 continue;
             }
 

@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
 
     BU_descend_f desc = in.dont_reprocess?treesummary_descend:NULL;
 
-    const int rc = parallel_bottomup(argv + idx, argc - idx,
+    const int rc = parallel_bottomup(in.pos.argv, in.pos.argc,
                                      in.min_level, in.max_level,
                                      &in.path_list,
                                      in.maxthreads,

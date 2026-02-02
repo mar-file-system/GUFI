@@ -538,8 +538,8 @@ int main(int argc, char *argv[])
 
     /* process all input paths */
     int rc = 0;
-    for(int i = idx; i < argc; i++) {
-        rc |= process_path(argv[i], stdout, format);
+    for(int i = 0; i < in.pos.argc; i++) {
+        rc |= process_path(in.pos.argv[i], stdout, format);
     }
 
     input_fini(&in);

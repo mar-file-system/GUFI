@@ -120,19 +120,8 @@ int PoolArgs_init(struct PoolArgs *pa) {
     pa->index.parent_len = trailing_match_index(pa->index.path.data, pa->index.path.len, "/", 1);
     pa->tree.parent_len = trailing_match_index(pa->tree.path.data, pa->tree.path.len, "/", 1);
 
-    /* fail early */
-    if (check_plugin(pa->in.plugin_ops, PLUGIN_INCREMENTAL) != 1) {
-        pa->in.plugin_ops = NULL;
-        return 1;
-    }
-
     if (setup_suspect_file(pa) != 0) {
         return 1;
-    }
-
-    /* actually initialize after suspect file has been read */
-    if (pa->in.plugin_ops->global_init) {
-        pa->in.plugin_ops->global_init(&pa->in);
     }
 
     pa->ctx = QPTPool_init(pa->in.maxthreads, pa);

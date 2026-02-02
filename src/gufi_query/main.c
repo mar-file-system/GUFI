@@ -307,7 +307,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    const size_t root_count = argc - idx;
+    const size_t root_count = in.pos.argc;
 
     if (bad_partial_walk(&in, root_count)) {
         if (in.plugin_ops->global_exit) {
@@ -349,7 +349,7 @@ int main(int argc, char *argv[])
         }
         else if (root_count == 1) {
             gqw_t *work = NULL;
-            if (validate_source(&in, argv[idx], &work) == 0) {
+            if (validate_source(&in, in.pos.argv[0], &work) == 0) {
                 gqw_process_path_list(&in, work, ctx);
             }
             else {
@@ -362,9 +362,9 @@ int main(int argc, char *argv[])
     }
     else {
         /* enqueue input paths */
-        for(int i = idx; i < argc; i++) {
+        for(int i = 0; i < in.pos.argc; i++) {
             gqw_t *work = NULL;
-            if (validate_source(&in, argv[i], &work) != 0) {
+            if (validate_source(&in, in.pos.argv[i], &work) != 0) {
                 continue;
             }
 

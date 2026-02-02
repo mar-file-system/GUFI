@@ -536,23 +536,23 @@ int main(int argc, char *argv[]) {
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 1, "dir... GUFI_tree_parent", &pa.in);
 
-    /* parse positional args, following the options */
-    /* does not have to be canonicalized */
-    INSTALL_STR(&pa.index_parent, argv[argc - 1]);
-
-    int rc = EXIT_SUCCESS;
-
     if (check_plugin(pa.in.plugin_ops, PLUGIN_INDEX) != 1) {
-        rc = EXIT_FAILURE;
-        goto cleanup;
+        input_fini(&pa.in);
+        return EXIT_FAILURE;
     }
 
     if (pa.in.plugin_ops->global_init) {
         pa.in.plugin_ops->global_init(&pa.in);
     }
 
-    argc--; /* index parent is no longer needed */
-    const size_t root_count = argc - idx;
+    /* parse positional args, following the options */
+    /* does not have to be canonicalized */
+    INSTALL_STR(&pa.index_parent, pa.in.pos.argv[pa.in.pos.argc - 1]);
+
+    /* index parent is no longer needed */
+    const size_t root_count = --pa.in.pos.argc;
+
+    int rc = EXIT_SUCCESS;
 
     if (bad_partial_walk(&pa.in, root_count)){
         rc = EXIT_FAILURE;
@@ -613,7 +613,7 @@ int main(int argc, char *argv[]) {
         }
         else if (root_count == 1) {
             struct work *root = NULL;
-            if (validate_source(&pa.index_parent, argv[idx], &root) == 0) {
+            if (validate_source(&pa.index_parent, pa.in.pos.argv[0], &root) == 0) {
                 process_path_list(&pa.in, root, ctx, process_subtree_root);
             }
             else {
@@ -623,10 +623,10 @@ int main(int argc, char *argv[]) {
     }
     else {
         if (root_count) {
-            for(int i = idx; i < argc; i++) {
+            for(int i = 0; i < pa.in.pos.argc; i++) {
                 /* get first work item by validating source path */
                 struct work *root = NULL;
-                if (validate_source(&pa.index_parent, argv[i], &root) != 0) {
+                if (validate_source(&pa.index_parent, pa.in.pos.argv[i], &root) != 0) {
                     continue;
                 }
 

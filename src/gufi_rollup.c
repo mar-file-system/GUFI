@@ -939,12 +939,9 @@ int main(int argc, char *argv[]) {
         pa.stats[i].remaining = 0;
     }
 
-    argv += idx;
-    argc -= idx;
-
     BU_descend_f desc = pa.in.dont_reprocess?rollup_descend:NULL;
 
-    const int rc = parallel_bottomup(argv, argc,
+    const int rc = parallel_bottomup(pa.in.pos.argv, pa.in.pos.argc,
                                      pa.in.min_level, pa.in.max_level,
                                      &pa.in.path_list,
                                      pa.in.maxthreads,
@@ -954,7 +951,7 @@ int main(int argc, char *argv[]) {
                                      1,
                                      &pa);
 
-    print_stats(argv, argc, &pa.in, pa.stats);
+    print_stats(pa.in.pos.argv, pa.in.pos.argc, &pa.in, pa.stats);
 
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
         sll_destroy(&pa.stats[i].rolled_up, 0);

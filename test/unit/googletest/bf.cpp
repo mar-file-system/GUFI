@@ -171,12 +171,14 @@ TEST(build_getopt_str, optional) {
     free(str);
 }
 
-static void check_input(struct input *in, const bool helped, const bool version,
+static void check_input(const int /* argc */, const char **argv,
+                        struct input *in, const bool helped, const bool version,
                         const bool flags, const bool options, AFlag_t process_sql) {
     EXPECT_EQ(in->helped,                             static_cast<int>(helped));
 
     EXPECT_EQ(in->printed_version,                    version);
 
+    EXPECT_NE(in->pos.argv,                           &argv[in->pos.argc]);
     EXPECT_EQ(in->process_xattrs,                     flags);
     EXPECT_EQ(in->printdir,                           flags);
     EXPECT_EQ(in->types.print_tlv,                    flags);
@@ -186,7 +188,6 @@ static void check_input(struct input *in, const bool helped, const bool version,
     EXPECT_EQ(in->terse,                              flags);
     EXPECT_EQ(in->dry_run,                            flags);
     EXPECT_EQ(in->dont_reprocess,                     flags);
-    // not checking --dir-match-uid and --dir-match-gid here
     EXPECT_EQ(in->dir_match.on,                       DIR_MATCH_NONE);
     EXPECT_EQ(in->dir_match.uid,                      geteuid());
     EXPECT_EQ(in->dir_match.gid,                      getegid());
@@ -298,7 +299,7 @@ TEST(parse_cmd_line, help) {
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
 
-    check_input(&in, true, false, false, false, RUN_ON_ROW);
+    check_input(argc, argv, &in, true, false, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
@@ -323,7 +324,7 @@ TEST(parse_cmd_line, version) {
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
 
-    check_input(&in, false, true, false, false, RUN_ON_ROW);
+    check_input(argc, argv, &in, false, true, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
@@ -407,7 +408,7 @@ TEST(parse_cmd_line, debug) {
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
 
-    check_input(&in, true, false, true, true, RUN_TSE);
+    check_input(argc, argv, &in, true, false, true, true, RUN_TSE);
 
     input_fini(&in);
 }
@@ -448,7 +449,7 @@ TEST(parse_cmd_line, flags) {
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-    check_input(&in, false, false, true, false, RUN_ON_ROW);
+    check_input(argc, argv, &in, false, false, true, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
@@ -503,7 +504,7 @@ TEST(parse_cmd_line, options) {
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-    check_input(&in, false, false, false, true, RUN_TSE);
+    check_input(argc, argv, &in, false, false, false, true, RUN_TSE);
 
     input_fini(&in);
 }
@@ -727,7 +728,7 @@ TEST(parse_cmd_line, positional) {
     // 1, since no options were read
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), 1);
 
-    check_input(&in, false, false, false, false, RUN_ON_ROW);
+    check_input(argc, argv, &in, false, false, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
@@ -751,7 +752,7 @@ TEST(parse_cmd_line, unused) {
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
 
-    check_input(&in, true, false, false, false, RUN_ON_ROW);
+    check_input(argc, argv, &in, true, false, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }
@@ -775,7 +776,7 @@ TEST(parse_cmd_line, invalid) {
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
 
-    check_input(&in, true, false, false, false, RUN_ON_ROW);
+    check_input(argc, argv, &in, true, false, false, false, RUN_ON_ROW);
 
     input_fini(&in);
 }

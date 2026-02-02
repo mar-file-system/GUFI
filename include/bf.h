@@ -391,11 +391,21 @@ enum filter_type {
 
 /* flags only - positional argument handling is found in individual programs */
 struct input {
-    int process_xattrs;
     struct {
         uid_t uid;
         gid_t gid;
     } nobody;
+
+    struct {
+        int argc;    /* counts positional arguments */
+        char **argv; /* starts at first positional argument */
+
+        /*
+         * any modifications to argv will be to the positional
+         * arguments as all flags will have been parsed when this
+         * struct is available
+         */
+    } pos;
 
     struct {
         /*
@@ -535,6 +545,8 @@ struct input {
 
     /* prefix of swap files */
     refstr_t swap_prefix;
+
+    int process_xattrs;
 
     /* directory paths to process (normally at -y level > 0, but level == 0 is allowed) */
     refstr_t path_list;

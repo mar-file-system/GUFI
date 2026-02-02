@@ -745,6 +745,9 @@ int parse_cmd_line(int                  argc,
         retval = -(in->min_level > in->max_level);
     }
 
+    in->pos.argc = argc - optind;
+    in->pos.argv = &argv[optind];
+
     if (in->printed_version) {
         return -1;
     }

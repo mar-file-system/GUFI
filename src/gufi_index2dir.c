@@ -440,8 +440,8 @@ int main(int argc, char * argv[]) {
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 2, "GUFI_tree dir", &pa.in);
 
-    INSTALL_STR(&pa.index, argv[idx++]);
-    INSTALL_STR(&pa.dir,   argv[idx++]);
+    INSTALL_STR(&pa.index, pa.in.pos.argv[0]);
+    INSTALL_STR(&pa.dir,   pa.in.pos.argv[1]);
 
     pa.index.len = trailing_non_match_index(pa.index.data, pa.index.len - 1, "/", 1) + 1;
     pa.dir.len   = trailing_non_match_index(pa.dir.data,   pa.dir.len   - 1, "/", 1) + 1;

@@ -164,11 +164,22 @@ int main(int argc, char *argv[]) {
     struct PoolArgs pa = {0};
     process_args_and_maybe_exit(options, 4, "GUFI_tree dir snapshotdb parking_lot", &pa.in);
 
+    /* fail early */
+    if (check_plugin(pa.in.plugin_ops, PLUGIN_INCREMENTAL) != 1) {
+        input_fini(&pa.in);
+        return EXIT_FAILURE;
+    }
+
+    /* actually initialize after suspect file has been read */
+    if (pa.in.plugin_ops->global_init) {
+        pa.in.plugin_ops->global_init(&pa.in);
+    }
+
     /* parse positional args, following the options */
-    INSTALL_STR(&pa.index.path,  argv[argc - 4]);
-    INSTALL_STR(&pa.tree.path,   argv[argc - 3]);
-    INSTALL_STR(&pa.in.outname,  argv[argc - 2]);
-    INSTALL_STR(&pa.parking_lot, argv[argc - 1]);
+    INSTALL_STR(&pa.index.path,  pa.in.pos.argv[pa.in.pos.argc - 4]);
+    INSTALL_STR(&pa.tree.path,   pa.in.pos.argv[pa.in.pos.argc - 3]);
+    INSTALL_STR(&pa.in.outname,  pa.in.pos.argv[pa.in.pos.argc - 2]);
+    INSTALL_STR(&pa.parking_lot, pa.in.pos.argv[pa.in.pos.argc - 1]);
 
     int rc = EXIT_SUCCESS;
 

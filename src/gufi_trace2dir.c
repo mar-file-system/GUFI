@@ -199,7 +199,7 @@ void sub_help(void) {
    printf("\n");
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
@@ -216,12 +216,12 @@ int main(int argc, char * argv[]) {
     process_args_and_maybe_exit(options, 2, "trace... output_dir", &pa.in);
 
     // parse positional args, following the options
-    INSTALL_STR(&pa.tree_parent, argv[argc - 1]);
+    INSTALL_STR(&pa.tree_parent, pa.in.pos.argv[pa.in.pos.argc - 1]);
 
     /* open trace files for threads to jump around in */
     /* open the trace files here to not repeatedly open in threads */
-    const size_t trace_count = argc - idx - 1;
-    int *traces = open_traces(&argv[idx], trace_count);
+    const size_t trace_count = pa.in.pos.argc - 1;
+    int *traces = open_traces(&pa.in.pos.argv[0], trace_count);
     if (!traces) {
         fprintf(stderr, "Failed to open trace file for each thread\n");
         input_fini(&pa.in);
@@ -246,7 +246,7 @@ int main(int argc, char * argv[]) {
 
     /* parse the trace files and enqueue work */
     struct TraceStats stats;
-    enqueue_traces(&argv[idx], traces, trace_count,
+    enqueue_traces(&pa.in.pos.argv[0], traces, trace_count,
                    pa.in.delim,
                    /* allow for some threads to start processing while reading */
                    (pa.in.maxthreads / 2) + !!(pa.in.maxthreads & 1),

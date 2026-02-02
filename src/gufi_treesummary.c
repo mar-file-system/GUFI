@@ -325,7 +325,7 @@ int main(int argc, char *argv[]) {
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 1, "GUFI_tree", &pa.in);
 
-    INSTALL_STR(&pa.index, argv[idx++]);
+    INSTALL_STR(&pa.index, pa.in.pos.argv[0]);
 
     /* not an error, but you might want to know ... */
     if (pa.in.dry_run) {

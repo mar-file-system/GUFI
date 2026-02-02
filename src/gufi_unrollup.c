@@ -288,7 +288,7 @@ int main(int argc, char *argv[]) {
     struct input in;
     process_args_and_maybe_exit(options, 1, "GUFI_tree ...", &in);
 
-    const int root_count = argc - idx;
+    const int root_count = in.pos.argc;
 
     QPTPool_ctx_t *ctx = QPTPool_init(in.maxthreads, &in);
     if (QPTPool_start(ctx) != 0) {
@@ -299,13 +299,13 @@ int main(int argc, char *argv[]) {
     }
 
     /* enqueue input paths */
-    for(int i = idx; i < argc; i++) {
-        size_t len = strlen(argv[i]);
+    for(int i = 0; i < in.pos.argc; i++) {
+        size_t len = strlen(in.pos.argv[i]);
         if (!len) {
             continue;
         }
 
-        struct Unrollup *root = unrollup_create(argv[i], len, NULL, 0, 0);
+        struct Unrollup *root = unrollup_create(in.pos.argv[i], len, NULL, 0, 0);
 
         if (root) {
             if (doing_partial_walk(&in, root_count)) {
