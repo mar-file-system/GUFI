@@ -137,6 +137,21 @@ struct input *input_init(struct input *in) {
 
         in->plugin_ops = &null_plugin_ops;
         in->plugin_handle = NULL;
+
+        /* pull values from the environment to override default */
+        /* not an error if environment variable is not found */
+
+        char *min_level_str = getenv(ENV_MIN_LEVEL);
+        if (min_level_str) {
+            /* don't handle errors */
+            sscanf(min_level_str, "%zu", &in->min_level);
+        }
+
+        char *max_level_str = getenv(ENV_MAX_LEVEL);
+        if (max_level_str) {
+            /* don't handle errors */
+            sscanf(max_level_str, "%zu", &in->max_level);
+        }
     }
 
     return in;

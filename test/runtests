@@ -80,6 +80,9 @@ TREE="$2"
 TARGET="$3"
 INDEX="${TARGET}/$(basename ${TREE})"
 
+unset GUFI_MIN_LEVEL
+unset GUFI_MAX_LEVEL
+
 cleanup() {
     rm -rf "${TREE}" "${INDEX}"
 }

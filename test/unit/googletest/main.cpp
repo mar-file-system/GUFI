@@ -62,10 +62,15 @@ OF SUCH DAMAGE.
 
 
 
+#include <cstdlib>
+
 #include <gtest/gtest.h>
 #include <sqlite3.h>
 
 int main(int argc, char *argv[]) {
+    unsetenv("GUFI_MIN_LEVEL");
+    unsetenv("GUFI_MAX_LEVEL");
+
     sqlite3_initialize();
     testing::InitGoogleTest(&argc, argv);
     const int rc = RUN_ALL_TESTS();

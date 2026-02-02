@@ -100,6 +100,10 @@ INDEXROOT="${SEARCH}/${BASENAME}"
 # skip file (list of directory basenames)
 SKIP="skip"
 
+# unset environment variables that affect gufi_query
+unset GUFI_MIN_LEVEL
+unset GUFI_MAX_LEVEL
+
 # shellcheck disable=SC2034
 USER_ID="$(id -u)"
 # shellcheck disable=SC2034
