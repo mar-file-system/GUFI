@@ -95,36 +95,14 @@ sort output (if applicable)
 first n results
 .It Fl -uid, --user\ u
 restrict to user
+.It Fl -reftime REFTIME
+time used to compare timestamps with
 .It Fl -delim\ c
 delimiter separating output columns
 .It Fl -skip-file\ filename
 Name of file containing directory basenames to skip
 .It Fl V, -verbose
 Show the gufi_query being executed
-.El
-
-.Sh STATISTIC
-.Bl -tag -width -indent
-.It depth
-Get the depth of all subdirectories relative to the provided path
-.It leaf-depth
-Get the depth of all leaf subdirectories relative to the provided path
-.It files
-Get the number of files in the provided path
-.It leaf-count
-Get the number of leaf directories in the provided path
-.It median-leaf
-Get the median number of leaf directories under each directory
-.It directory-count
-Count the number of directories under the the provided path
-.It space
-Space taken up by the files in the provided path
-.It total-files
-Total number of files are under the provided path
-.It total-space
-Total amount of space taken up by the files under the provided path
-.It total-leaf
-Total number of leaf directories under the provided path
 .El
 
 .Sh EXIT STATUS

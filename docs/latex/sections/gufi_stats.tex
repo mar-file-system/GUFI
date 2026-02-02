@@ -90,6 +90,7 @@ their category: recursive, cumulative, or other.
     \hline
     -{}-uid u, -{}-user u & restrict to user \\
     \hline
+    -{}-reftime REFTIME & time used to compare timestamps with \\
     \hline
     -{}-delim c & Delimeter separating output
     columns \\
@@ -182,23 +183,57 @@ into a single sum.
 
 \subsubsection{Both}
 These statistics can be called with both \texttt{-{}-recursive} or
-\texttt{-{}-cumulative}.
+\texttt{-{}-cumulative}. The statistics that have an associated
+\texttt{-hist} version call user defined functions and return single
+formatted records (see \texttt{histogram.h}) instead of per-bucket
+records.
 \\
-\begin{tabularx}{\textwidth}{| l | X |}
+\begin{longtable}{|l|p{0.55\linewidth}|}
+  \hline
+  extensions & Generate histogram of file extensions \\
+  extensions-hist & Return a single formatted record \\
   \hline
   filesize-log2-bins & Generate histogram of filesizes with bins
   [2\textsuperscript{n}, 2\textsuperscript{n+1}) \\
+  filesize-log2-bins-hist & \\
   \hline
   filesize-log1024-bins & Generate histogram of filesizes with bins
   [1024\textsuperscript{n}, 1024\textsuperscript{n+1}) \\
+  filesize-log1024-bins-hist & \\
   \hline
   dirfilecount-log2-bins & Generate histogram of files per directory with bins
   [2\textsuperscript{n}, 2\textsuperscript{n+1}) \\
+  dirfilecount-log2-bins-hist & \\
   \hline
   dirfilecount-log1024-bins & Generate histogram of files per directory with bins
   [1024\textsuperscript{n}, 1024\textsuperscript{n+1}) \\
+  dirfilecount-log1024-bins-hist & \\
   \hline
-\end{tabularx}
+  file-age-atime & Generate histogram of distance from atime. Use
+  \texttt{-{}-reftime} to change the timestamp being compared with. \\
+  file-age-atime-hist & \\
+  \hline
+  file-age-mtime & Generate histogram of distance from mtime. Use
+  \texttt{-{}-reftime} to change the timestamp being compared with. \\
+  file-age-mtime-hist & \\
+  \hline
+  file-age-ctime & Generate histogram of distance from ctime. Use
+  \texttt{-{}-reftime} to change the timestamp being compared with. \\
+  file-age-ctime-hist & \\
+  \hline
+  dir-age-atime & Generate histogram of distance from atime. Use
+  \texttt{-{}-reftime} to change the timestamp being compared with. \\
+  dir-age-atime-hist & \\
+  \hline
+  dir-age-mtime & Generate histogram of distance from mtime. Use
+  \texttt{-{}-reftime} to change the timestamp being compared with. \\
+  dir-age-mtime-hist & \\
+  \hline
+  dir-age-ctime & Generate histogram of distance from ctime. Use
+  \texttt{-{}-reftime} to change the timestamp being compared with. \\
+  dir-age-ctime-hist & \\
+  \hline
+\end{longtable}
 
 \subsubsection{Other}
 Statistics under the ``other'' category do not have extra flags
