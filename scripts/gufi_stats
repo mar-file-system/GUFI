@@ -297,7 +297,7 @@ def extensions_hist(_config, args, where):
     path_create, E_path, path = path_sql(args)
 
     # G column
-    res_sql = ['category_hist_combine(ext, 1)' if not args.recursive else 'ext']
+    res_sql = ['extension_hist_combine(ext, 1)' if not args.recursive else 'ext']
 
     queries = [
         '-I', build_create(INTERMEDIATE_NAME, path_create + ['ext {0}'.format(SQLITE3_TEXT)]),
@@ -305,7 +305,7 @@ def extensions_hist(_config, args, where):
         '-E', 'INSERT INTO {0} {1}'.format(INTERMEDIATE_NAME,
                                            # Adapted from answer by rayzinnz
                                            # https://stackoverflow.com/a/76040173
-                                           build_query(E_path + ['category_hist(CASE WHEN name LIKE \'%.%\' THEN REPLACE(name, RTRIM(name, REPLACE(name, \'.\', \'\')), \'\') ELSE \'no-ext\' END, 1, 0)'],
+                                           build_query(E_path + ['extension_hist(name, 1, 0)'],
                                                        [VRPENTRIES],
                                                        where,
                                                        None,

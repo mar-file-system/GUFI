@@ -193,7 +193,7 @@ void time_hist_free(time_hist_t *hist);
  * If keep_1 is set to 0, the returned string only contains categories
  * with more than 1 count.
  *
- * If sort is set to 1, categories will be sorted when printed.
+ * If sort is set to 1, categories will be sorted lexicographically only when printed.
  */
 typedef struct category_bucket {
     char *name;
@@ -206,7 +206,7 @@ typedef struct category_hist {
     size_t count;
 } category_hist_t;
 
-category_hist_t *category_hist_parse(const char *str);
+category_hist_t *category_hist_parse(const char *str); /* buckets are sorted by count, then lexicographically */
 category_hist_t *category_hist_combine(category_hist_t *lhs, category_hist_t *rhs);
 void category_hist_free(category_hist_t *hist);
 /* ********************************************* */

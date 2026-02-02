@@ -606,8 +606,7 @@ typedef struct sqlite_category_hist {
     int sort;
 } sqlite_category_hist_t;
 
-static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    (void) argc;
+static sqlite_category_hist_t *category_hist_init(sqlite3_context *context, int argc, sqlite3_value **argv) {
     sqlite_category_hist_t *hist = (sqlite_category_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
     if (!hist->trie) {
         hist->trie = trie_alloc();
@@ -619,14 +618,10 @@ static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value
             hist->sort = sqlite3_value_int(argv[2]);
         }
     }
+    return hist;
+}
 
-    const char *cat = (char *) sqlite3_value_text(argv[0]);
-
-    if (!cat) {
-        return;
-    }
-
-    const size_t len = strlen(cat);
+static void category_hist_insert(sqlite_category_hist_t *hist, const char *cat, const size_t len) {
     size_t *count = NULL;
     if (trie_search(hist->trie, cat, len, (void **) &count)) {
         (*count)++;
@@ -644,6 +639,18 @@ static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value
 
         sll_push(&hist->categories, cat_str);
     }
+}
+
+static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    sqlite_category_hist_t *hist = category_hist_init(context, argc, argv);
+
+    const char *cat = (char *) sqlite3_value_text(argv[0]);
+
+    if (!cat) {
+        return;
+    }
+
+    category_hist_insert(hist, cat, strlen(cat));
 }
 
 typedef struct category {
@@ -687,6 +694,7 @@ static void category_hist_final(sqlite3_context *context) {
             categories[i++] = (refstr_t *) sll_node_data(node);
         }
 
+        /* lexicographical sort */
         qsort(categories, category_count, sizeof(categories[0]), category_compare);
 
         sll_destroy(&hist->categories, NULL);
@@ -799,6 +807,7 @@ category_hist_t *category_hist_parse(const char *str) {
                 total_read, str, len);
     }
 
+    /* sort by count, then lexicographical */
     qsort(hist->buckets, hist->count, sizeof(hist->buckets[0]), category_bucket_cmp);
 
     return hist;
@@ -903,6 +912,31 @@ static void category_hist_combine_step(sqlite3_context *context, int argc, sqlit
 
     category_hist_combine_inplace(hist, new_hist, 1);
     category_hist_free(new_hist);
+}
+
+/* extension_hist(string, keep_1, sort) */
+/* extension uses category histogram */
+static void extension_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+
+    static const char NO_EXT[] = "no-ext";
+    sqlite_category_hist_t *hist = category_hist_init(context, argc, argv);
+
+    const char *ext = (char *) sqlite3_value_text(argv[0]);
+
+    if (!ext) {
+        return;
+    }
+
+    const size_t len = strlen(ext);
+
+    /* just search from back; not using pcre2 */
+    const size_t idx = trailing_match_index(ext, len, ".", 1);
+    if ((idx == 0) || (idx == len)) {
+        category_hist_insert(hist, NO_EXT, sizeof(NO_EXT) - 1);
+    }
+    else {
+        category_hist_insert(hist, &ext[idx], len - idx);
+    }
 }
 
 static ssize_t serialize_mode(char *curr, const size_t avail, void *key, void *data) {
@@ -1011,23 +1045,27 @@ void mode_count_free(mode_count_t *mc) {
 
 int addhistfuncs(sqlite3 *db) {
     return (
-        (sqlite3_create_function(db,   "log_hist",              3,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "log_hist",               3,  SQLITE_UTF8,
                                  NULL, NULL,  log_hist_step,             log_hist_final)       == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "log_hist_combine",      1,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "log_hist_combine",       1,  SQLITE_UTF8,
                                  NULL, NULL,  log_hist_combine_step,     log_hist_final)       == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "mode_hist",             1,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "mode_hist",              1,  SQLITE_UTF8,
                                  NULL, NULL,  mode_hist_step,             mode_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "mode_hist_combine",     1,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "mode_hist_combine",      1,  SQLITE_UTF8,
                                  NULL, NULL,  mode_hist_combine_step,     mode_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "time_hist",             2,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "time_hist",              2,  SQLITE_UTF8,
                                  NULL, NULL,  time_hist_step,             time_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "time_hist_combine",     1,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "time_hist_combine",      1,  SQLITE_UTF8,
                                  NULL, NULL,  time_hist_combine_step,     time_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "category_hist",         3,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "category_hist",          3,  SQLITE_UTF8,
                                  NULL, NULL,  category_hist_step,         category_hist_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "category_hist_combine", 2,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "category_hist_combine",  2,  SQLITE_UTF8,
                                  NULL, NULL,  category_hist_combine_step, category_hist_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "mode_count",            1,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "extension_hist",         3,  SQLITE_UTF8,
+                                 NULL, NULL,  extension_hist_step,        category_hist_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "extension_hist_combine", 2,  SQLITE_UTF8,
+                                 NULL, NULL,  category_hist_combine_step, category_hist_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "mode_count",             1,  SQLITE_UTF8,
                                  NULL, NULL,  category_hist_step,         mode_count_final)    == SQLITE_OK)
         );
 }

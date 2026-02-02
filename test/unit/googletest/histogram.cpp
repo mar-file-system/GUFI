@@ -569,6 +569,8 @@ static const std::string CATEGORIES[] = {
     "'abcd'",
     "'abcd'",
     "'once'",
+
+    "NULL", // does not add to histogram
 };
 
 static void check_combined(category_hist_t *hist) {
@@ -694,8 +696,6 @@ TEST(histogram, category) {
             EXPECT_STREQ(hist->buckets[0].name, "3x");
             EXPECT_EQ(hist->buckets[0].count, (std::size_t) 3);
 
-            // category "abcd" does not show up due to ordering of categories
-
             EXPECT_STREQ(hist->buckets[1].name, "abcd");
             EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
 
@@ -783,6 +783,149 @@ TEST(histogram, category) {
     EXPECT_EQ(category_hist_parse("1;3:cat"),    nullptr);
     EXPECT_EQ(category_hist_parse("1;3:cat:"),   nullptr);
     EXPECT_EQ(category_hist_parse("1;3:cat:0"),  nullptr);
+}
+
+static const std::string EXTENSIONS[] = {
+    "'file.txt'",
+    "'name.csv'",
+    "'files.tar.gz'",
+    "'.hidden'",
+    "'no-extension'",
+    "'file.txt'",
+    "'name.csv'",
+    "'files.tar.gz'",
+    "'.hidden'",
+    "'at_end.'",
+    "'show.up.once'",
+    "NULL", // does not add to histogram
+};
+
+TEST(histogram, extension) {
+    sqlite3 *db = nullptr;
+    setup_db(&db);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE test (extension TEXT);",
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+
+    // no buckets
+    {
+        char *hist_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT extension_hist(extension, 0, 0) FROM test;",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        category_hist_t *hist = category_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+        ASSERT_NE(hist->buckets, nullptr);
+
+        EXPECT_EQ(hist->count, (std::size_t) 0);
+
+        category_hist_free(hist);
+        free(hist_str);
+    }
+
+    for(std::string const &extension : EXTENSIONS) {
+        insert(db, "extension", extension);
+    }
+
+    {
+        char *hist_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT extension_hist(extension, 1, 1) FROM test;",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        // normal usage
+        {
+            category_hist_t *hist = category_hist_parse(hist_str);
+            ASSERT_NE(hist, nullptr);
+            ASSERT_NE(hist->buckets, nullptr);
+
+            EXPECT_EQ(hist->count, (std::size_t) 6);
+
+            EXPECT_STREQ(hist->buckets[0].name, "csv");
+            EXPECT_EQ(hist->buckets[0].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[1].name, "gz");
+            EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[2].name, "hidden");
+            EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[3].name, "no-ext");
+            EXPECT_EQ(hist->buckets[3].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[4].name, "txt");
+            EXPECT_EQ(hist->buckets[4].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[5].name, "once");
+            EXPECT_EQ(hist->buckets[5].count, (std::size_t) 1);
+
+            category_hist_free(hist);
+        }
+
+        free(hist_str);
+        hist_str = nullptr;
+
+        ASSERT_EQ(sqlite3_exec(db, "SELECT extension_hist(extension, 0, 1) FROM test;",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        // normal usage
+        {
+            category_hist_t *hist = category_hist_parse(hist_str);
+            ASSERT_NE(hist, nullptr);
+            ASSERT_NE(hist->buckets, nullptr);
+
+            EXPECT_EQ(hist->count, (std::size_t) 5);
+
+            EXPECT_STREQ(hist->buckets[0].name, "csv");
+            EXPECT_EQ(hist->buckets[0].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[1].name, "gz");
+            EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[2].name, "hidden");
+            EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[3].name, "no-ext");
+            EXPECT_EQ(hist->buckets[3].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[4].name, "txt");
+            EXPECT_EQ(hist->buckets[4].count, (std::size_t) 2);
+
+            // category "once" does not show up
+
+            category_hist_free(hist);
+        }
+
+        {
+            hist_str[0] = '3'; // incorrect count
+
+            category_hist_t *hist = category_hist_parse(hist_str);
+            ASSERT_NE(hist, nullptr);
+            ASSERT_NE(hist->buckets, nullptr);
+
+            EXPECT_EQ(hist->count, (std::size_t) 3);
+
+            EXPECT_STREQ(hist->buckets[0].name, "csv");
+            EXPECT_EQ(hist->buckets[0].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[1].name, "gz");
+            EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[2].name, "hidden");
+            EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
+
+            category_hist_free(hist);
+        }
+
+        free(hist_str);
+    }
+
+    // combining histograms is done with category histogram functions, which are tested above
+
+    sqlite3_close(db);
+
+    // bad string tests are done with category_hist_parse, which is tested above
 }
 
 TEST(histogram, mode_count) {
