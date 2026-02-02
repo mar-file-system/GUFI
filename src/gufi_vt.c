@@ -112,7 +112,9 @@ typedef struct gufi_query_cmd {
     refstr_t min_level;    /* defaults to 0; set to non-0 if index root should be used with path list */
     refstr_t max_level;    /* defaults to (uint64_t) -1 */
     refstr_t dir_match_uid;
+    int dir_match_uid_set;
     refstr_t dir_match_gid;
+    int dir_match_gid_set;
 
     /* sql */
 
@@ -226,10 +228,18 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             write_with_resize(&flat, &size, &len,
                               "--dir-match-uid=%s ",      cmd->dir_match_uid.data);
         }
+        else if (cmd->dir_match_uid_set) {
+            write_with_resize(&flat, &size, &len,
+                              "--dir-match-uid ");
+        }
 
         if (cmd->dir_match_gid.len) {
             write_with_resize(&flat, &size, &len,
                               "--dir-match-gid=%s ",      cmd->dir_match_gid.data);
+        }
+        else if (cmd->dir_match_gid_set) {
+            write_with_resize(&flat, &size, &len,
+                              "--dir-match-gid ");
         }
 
         flatten_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
@@ -288,12 +298,26 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--dir-match-uid=%s", cmd->dir_match_uid.data);
             argv[argc++] = dir_match_uid;
         }
+        else if (cmd->dir_match_uid_set) {
+            size_t size = 0;
+            size_t len = 0;
+            write_with_resize(&dir_match_uid, &size, &len,
+                              "--dir-match-uid");
+            argv[argc++] = dir_match_uid;
+        }
 
         if (cmd->dir_match_gid.len) {
             size_t size = 0;
             size_t len = 0;
             write_with_resize(&dir_match_gid, &size, &len,
                               "--dir-match-gid=%s", cmd->dir_match_gid.data);
+            argv[argc++] = dir_match_gid;
+        }
+        else if (cmd->dir_match_gid_set) {
+            size_t size = 0;
+            size_t len = 0;
+            write_with_resize(&dir_match_gid, &size, &len,
+                              "--dir-match-gid");
             argv[argc++] = dir_match_gid;
         }
 
@@ -924,10 +948,12 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         else if (strncmp(key, "dir_match_uid", 14) == 0) {
             /* let gufi_query check value */
             set_refstr(&cmd.dir_match_uid, value);
+            cmd.dir_match_uid_set = 1;
         }
         else if (strncmp(key, "dir_match_gid", 14) == 0) {
             /* let gufi_query check value */
             set_refstr(&cmd.dir_match_gid, value);
+            cmd.dir_match_gid_set = 1;
         }
         else if (strncmp(key, "setup_res_col_type", 19) == 0) {
             set_refstr(&cmd.setup_res_col_type, value);
