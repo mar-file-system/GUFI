@@ -89,6 +89,14 @@ extern "C" {
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
 #define GETLINE_DEFAULT_SIZE 750 /* magic number */
 
+/*
+ * environment variables that will set values if detected
+ * command line arguments will override the environment values
+ * values of 0 for numerical values will not be used
+ */
+#define ENV_MIN_LEVEL "GUFI_MIN_LEVEL"
+#define ENV_MAX_LEVEL "GUFI_MAX_LEVEL"
+
 #define FLAG_HELP_SHORT 'h'
 #define FLAG_HELP_LONG "help"
 #define FLAG_HELP {FLAG_HELP_LONG, no_argument, NULL, FLAG_HELP_SHORT}
