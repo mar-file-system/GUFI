@@ -246,34 +246,34 @@ def extensions(_config, args, where):
     path_create, E_path, path = path_sql(args)
 
     queries = [
-        '-I', build_create(INTERMEDIATE_NAME, path_create + ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
+        '-I', build_create(INTERMEDIATE_NAME, path_create + ['extension {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
 
         '-E', 'INSERT INTO {0} {1}'.format(INTERMEDIATE_NAME,
                                            # Adapted from answer by rayzinnz
                                            # https://stackoverflow.com/a/76040173
-                                           build_query(E_path + ['CASE WHEN name LIKE \'%.%\' THEN REPLACE(name, RTRIM(name, REPLACE(name, \'.\', \'\')), \'\') ELSE \'no-ext\' END AS ext', 'COUNT(*)'],
+                                           build_query(E_path + ['ext(name) AS extension', 'COUNT(*)'],
                                                        [VRPENTRIES],
                                                        where,
-                                                       path + ['ext'],
+                                                       path + ['extension'],
                                                        None,
                                                        None,
                                                        None)),
 
-        '-K', build_create(AGGREGATE_NAME, path_create  + ['ext {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
+        '-K', build_create(AGGREGATE_NAME, path_create  + ['extension {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
 
         '-J', 'INSERT INTO {0} {1}'.format(AGGREGATE_NAME,
-                                           build_query(path + ['ext', 'SUM(count)'],
+                                           build_query(path + ['extension', 'SUM(count)'],
                                                        [INTERMEDIATE_NAME],
                                                        None,
-                                                       path + ['ext'],
+                                                       path + ['extension'],
                                                        None,
                                                        None,
                                                        None)),
 
-        '-G', build_query(path + ['ext', 'SUM(count)'],
+        '-G', build_query(path + ['extension', 'SUM(count)'],
                           [AGGREGATE_NAME],
                           None,
-                          path + ['ext'],
+                          path + ['extension'],
                           path,
                           None,
                           None),

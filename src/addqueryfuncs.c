@@ -299,6 +299,28 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
     sqlite3_result_text(context, bn, bn_len, SQLITE_STATIC);
 }
 
+/* pull extension from filename */
+static void ext(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+    const char *str = (const char *) sqlite3_value_text(argv[0]);
+
+    if (!str) {
+        sqlite3_result_null(context);
+        return;
+    }
+
+    const size_t len = strlen(str);
+
+    /* just search from back; not using pcre2 */
+    const size_t idx = trailing_match_index(str, len, ".", 1);
+    if ((idx == 0) || (idx == len)) {
+        sqlite3_result_null(context);
+    }
+    else {
+        sqlite3_result_text(context, &str[idx], len - idx, SQLITE_TRANSIENT);
+    }
+}
+
 /*
  * right pad input string to length using spaces
  *
@@ -802,6 +824,8 @@ int addqueryfuncs(sqlite3 *db) {
                                  NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
                                  NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "ext",                 1,   SQLITE_UTF8,
+                                 NULL,  ext,                       NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "rpad",                2,   SQLITE_UTF8,
                                  NULL, &rpad,                      NULL, NULL)   == SQLITE_OK) &&
         (sqlite3_create_function(db,   "strop",               1,   SQLITE_UTF8,

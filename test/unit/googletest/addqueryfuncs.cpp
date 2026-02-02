@@ -337,6 +337,39 @@ TEST(addqueryfuncs, basename) {
     sqlite3_close(db);
 }
 
+TEST(addqueryfuncs, ext) {
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db), 0);
+
+    char buf[MAXPATH] = {};
+    char *output = buf;
+
+    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('file.txt');", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(buf, "txt");
+
+    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('name.csv');", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(buf, "csv");
+
+    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('files.tar.gz');", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(buf, "gz");
+
+    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('.hidden');", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(buf, "hidden");
+
+    memset(buf, 0, sizeof(buf));
+    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('no-extension');", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(buf, "");
+
+    memset(buf, 0, sizeof(buf));
+    EXPECT_EQ(sqlite3_exec(db, "SELECT ext(NULL);", copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(buf, "");
+
+    sqlite3_close(db);
+}
+
 TEST(addqueryfuncs, rpad) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
