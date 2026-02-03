@@ -90,8 +90,47 @@ set(BINARIES
   gufi_trace2index
   gufi_treesummary
   gufi_treesummary_all
-  gufi_vt
 )
+
+set(GUFI_VT
+  gufi_vt
+  gufi_vt_py # test gufi_vt with the builtin Python SQLite library
+)
+
+# Python wrapper tool (not part of scripts)
+configure_file(gufi_vt_py.py.in gufi_vt_py.py @ONLY)
+
+# check for SQLAlchemy and add test if found
+execute_process(COMMAND python3 -c "import sqlalchemy"
+  RESULT_VARIABLE SQLALCHEMY_RC
+  OUTPUT_QUIET ERROR_QUIET)
+if (SQLALCHEMY_RC EQUAL 0)
+  message(STATUS "SQLAlchemy found. Adding test.")
+  list(APPEND GUFI_VT
+    gufi_vt_sqlalchemy
+  )
+
+  # Python wrapper tool (not part of scripts)
+  configure_file(gufi_vt_sqlalchemy.py.in gufi_vt_sqlalchemy.py @ONLY)
+
+  # check for pugsql and add test if found
+  execute_process(COMMAND python3 -c "import pugsql"
+    RESULT_VARIABLE PUGSQL_RC
+    OUTPUT_QUIET ERROR_QUIET)
+  if (PUGSQL_RC EQUAL 0)
+    message(STATUS "pugsql found. Adding test.")
+    list(APPEND GUFI_VT
+      gufi_vt_pugsql
+    )
+
+    # Python wrapper tool (not part of scripts)
+    configure_file(gufi_vt_pugsql.py.in gufi_vt_pugsql.py @ONLY)
+  else()
+    message(STATUS "pugsql not found.")
+  endif()
+else()
+  message(STATUS "SQLAlchemy not found.")
+endif()
 
 set(PYTHON
   gufi_du
@@ -163,49 +202,10 @@ configure_file(gufi_tool.py.in gufi_tool.py @ONLY)
 # gufi_vt.common is always required by gufi_vt test
 configure_file(gufi_vt.common gufi_vt.common @ONLY)
 
-# test gufi_vt with the builtin Python SQLite library
-list(APPEND PYTHON
-  gufi_vt_py
-)
-
-# Python wrapper tool (not part of scripts)
-configure_file(gufi_vt_py.py.in gufi_vt_py.py @ONLY)
-
-# check for SQLAlchemy and add test if found
-execute_process(COMMAND python3 -c "import sqlalchemy"
-  RESULT_VARIABLE SQLALCHEMY_RC
-  OUTPUT_QUIET ERROR_QUIET)
-if (SQLALCHEMY_RC EQUAL 0)
-  message(STATUS "SQLAlchemy found. Adding test.")
-  list(APPEND PYTHON
-    gufi_vt_sqlalchemy
-  )
-
-  # Python wrapper tool (not part of scripts)
-  configure_file(gufi_vt_sqlalchemy.py.in gufi_vt_sqlalchemy.py @ONLY)
-
-  # check for pugsql and add test if found
-  execute_process(COMMAND python3 -c "import pugsql"
-    RESULT_VARIABLE PUGSQL_RC
-    OUTPUT_QUIET ERROR_QUIET)
-  if (PUGSQL_RC EQUAL 0)
-    message(STATUS "pugsql found. Adding test.")
-    list(APPEND PYTHON
-      gufi_vt_pugsql
-    )
-
-    # Python wrapper tool (not part of scripts)
-    configure_file(gufi_vt_pugsql.py.in gufi_vt_pugsql.py @ONLY)
-  else()
-    message(STATUS "pugsql not found.")
-  endif()
-else()
-  message(STATUS "SQLAlchemy not found.")
-endif()
-
 # .sh and .expected
 set(SH_AND_EXPECTED
   ${BINARIES}
+  ${GUFI_VT}
   ${PYTHON}
   ${EXAMPLES}
   ${OTHERS}
@@ -222,6 +222,15 @@ endforeach()
 foreach(NAME ${BINARIES})
   set_tests_properties("${NAME}" PROPERTIES LABELS "regression;binary")
 endforeach()
+
+set_tests_properties("gufi_vt"              PROPERTIES LABELS "regression;gufi_vt;binary")
+set_tests_properties("gufi_vt_py"           PROPERTIES LABELS "regression;gufi_vt;python")
+if (SQLALCHEMY_RC EQUAL 0)
+  set_tests_properties("gufi_vt_sqlalchemy" PROPERTIES LABELS "regression;gufi_vt;python")
+  if (PUGSQL_RC EQUAL 0)
+    set_tests_properties("gufi_vt_pugsql"   PROPERTIES LABELS "regression;gufi_vt;python")
+  endif()
+endif()
 
 foreach(NAME ${EXAMPLES})
   set_tests_properties("${NAME}" PROPERTIES LABELS "regression;examples")
