@@ -103,6 +103,26 @@ void sll_push(sll_t *sll, void *data) {
     return;
 }
 
+void sll_push_front(sll_t *sll, void *data) {
+    /* Not checking arguments */
+
+    sll_node_t *node = calloc(1, sizeof(sll_node_t));
+    node->data = data;
+
+    if (!sll->head) {
+        sll->head = node;
+        sll->tail = node;
+    }
+    else {
+        node->next = sll->head;
+        sll->head = node;
+    }
+
+    sll->size++;
+
+    return;
+}
+
 void *sll_pop(sll_t *sll) {
     /* Not checking arguments */
 
