@@ -191,7 +191,7 @@ void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
         char *err = NULL;
         if (sqlite3_exec(db, ow->query->data, ow->handler->sqlite_callback, dd, &err) == SQLITE_OK) {
             /* save this subdir */
-            sll_push(subdirs, dd);
+            sll_push_back(subdirs, dd);
         }
         else {
             sqlite_print_err_and_free(err, stderr, "Error: Could not get column from \"%s\": \"%s\": %s\n",

@@ -634,7 +634,7 @@ static void category_hist_insert(sqlite_category_hist_t *hist, const char *cat, 
         str_t *cat_str = str_alloc(len);
         SNFORMAT_S(cat_str->data, len + 1, 1, cat, len);
 
-        sll_push(&hist->categories, cat_str);
+        sll_push_back(&hist->categories, cat_str);
     }
 }
 
@@ -690,7 +690,7 @@ static void category_hist_final(sqlite3_context *context) {
 
         sll_destroy(&hist->categories, NULL);
         for(i = 0; i < category_count; i++) {
-            sll_push(&hist->categories, categories[i]);
+            sll_push_back(&hist->categories, categories[i]);
         }
 
         free(categories);
@@ -713,7 +713,7 @@ static void category_hist_final(sqlite3_context *context) {
             ref->name = *cat;
             ref->count = *count;
 
-            sll_push(&keep, ref);
+            sll_push_back(&keep, ref);
         }
     }
 
@@ -825,7 +825,7 @@ static void category_hist_combine_inplace(sqlite_category_hist_t *accumulator,
                        bucket->name, bucket->len);
 
             trie_insert(accumulator->trie, bucket->name, bucket->len, count, free);
-            sll_push(&accumulator->categories, cat_str);
+            sll_push_back(&accumulator->categories, cat_str);
         }
     }
 }

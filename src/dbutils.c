@@ -745,7 +745,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
             if (!xattr_uid_db) {
                 return 1;
             }
-            sll_push(xattr_db_list, xattr_uid_db);
+            sll_push_back(xattr_db_list, xattr_uid_db);
         }
 
         /* group id/permission mismatch */
@@ -761,7 +761,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
             if (!xattr_gid_db) {
                 return 1;
             }
-            sll_push(xattr_db_list, xattr_gid_db);
+            sll_push_back(xattr_db_list, xattr_gid_db);
         }
 
         /* insert into per-user and per-group xattr dbs */

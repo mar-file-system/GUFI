@@ -268,7 +268,7 @@ static struct BottomUp *track(struct BottomUp *src,
     copy->epoch = epoch;
 
     /* store the subdirectories without enqueuing them */
-    sll_push(sll, copy);
+    sll_push_back(sll, copy);
 
     return copy;
 }

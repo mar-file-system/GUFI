@@ -66,6 +66,9 @@ OF SUCH DAMAGE.
 
 #include "SinglyLinkedList.h"
 
+static const char A = 'a';
+static const char B = 'b';
+
 TEST(SinglyLinkedList, init_destroy) {
     sll_t sll;
     EXPECT_EQ(&sll, sll_init(&sll));
@@ -75,14 +78,14 @@ TEST(SinglyLinkedList, init_destroy) {
     sll_destroy(&sll, nullptr);
 }
 
-TEST(SinglyLinkedList, push) {
+TEST(SinglyLinkedList, push_front) {
     sll_t sll;
     EXPECT_EQ(&sll, sll_init(&sll));
     EXPECT_EQ(sll.head, nullptr);
     EXPECT_EQ(sll.tail, nullptr);
 
-    // push first item onto sll
-    sll_push(&sll, nullptr);
+    // push first item into sll
+    sll_push_front(&sll, (char *) &A);
 
     // head and tail are no longer NULL
     EXPECT_NE(sll.head, nullptr);
@@ -91,8 +94,8 @@ TEST(SinglyLinkedList, push) {
     // the head and tail nodes should be the same
     EXPECT_EQ(sll.head, sll.tail);
 
-    // push second item onto sll
-    sll_push(&sll, nullptr);
+    // push second item into sll
+    sll_push_front(&sll, (char *) &B);
 
     // head and tail are still not NULL
     EXPECT_NE(sll.head, nullptr);
@@ -101,10 +104,47 @@ TEST(SinglyLinkedList, push) {
     // the head and tail nodes should be different now
     EXPECT_NE(sll.head, sll.tail);
 
+    // B -> A
+    EXPECT_EQ(sll_node_data(sll.head), &B);
+    EXPECT_EQ(sll_node_data(sll.tail), &A);
+
     sll_destroy(&sll, nullptr);
 }
 
-TEST(SinglyLinkedList, pop) {
+TEST(SinglyLinkedList, push_back) {
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+    EXPECT_EQ(sll.head, nullptr);
+    EXPECT_EQ(sll.tail, nullptr);
+
+    // push first item into sll
+    sll_push_back(&sll, (char *) &A);
+
+    // head and tail are no longer NULL
+    EXPECT_NE(sll.head, nullptr);
+    EXPECT_NE(sll.tail, nullptr);
+
+    // the head and tail nodes should be the same
+    EXPECT_EQ(sll.head, sll.tail);
+
+    // push second item into sll
+    sll_push_back(&sll, (char *) &B);
+
+    // head and tail are still not NULL
+    EXPECT_NE(sll.head, nullptr);
+    EXPECT_NE(sll.tail, nullptr);
+
+    // the head and tail nodes should be different now
+    EXPECT_NE(sll.head, sll.tail);
+
+    // A -> B
+    EXPECT_EQ(sll_node_data(sll.head), &A);
+    EXPECT_EQ(sll_node_data(sll.tail), &B);
+
+    sll_destroy(&sll, nullptr);
+}
+
+TEST(SinglyLinkedList, pop_front) {
     const std::size_t count = 5;
 
     sll_t sll;
@@ -117,13 +157,13 @@ TEST(SinglyLinkedList, pop) {
     for(size_t items = 1; items <= count; items++)  {
         // push items
         for(size_t i = 1; i <= items; i++) {
-            sll_push(&sll, data);
+            sll_push_back(&sll, data);
         }
         EXPECT_EQ(sll.size, items);
 
         // pop all but the last item
         for(size_t i = 1; i < items; i++) {
-            void *popped = sll_pop(&sll);
+            void *popped = sll_pop_front(&sll);
             EXPECT_EQ(popped, data);
 
             EXPECT_NE(sll.head, nullptr);
@@ -135,7 +175,7 @@ TEST(SinglyLinkedList, pop) {
         EXPECT_EQ(sll.size, (size_t) 1);
 
         // pop last item
-        void *popped = sll_pop(&sll);
+        void *popped = sll_pop_front(&sll);
         EXPECT_EQ(popped, data);
 
         // head and tail are NULL
@@ -145,7 +185,7 @@ TEST(SinglyLinkedList, pop) {
     }
 
     // pop from empty list
-    EXPECT_EQ(sll_pop(&sll), nullptr);
+    EXPECT_EQ(sll_pop_front(&sll), nullptr);
 
     sll_destroy(&sll, nullptr);
 }
@@ -176,7 +216,7 @@ TEST(SinglyLinkedList, move_append_first) {
         // src with items
         {
             for(std::size_t i = 0; i < src_count; i++) {
-                sll_push(&src, (void *) (uintptr_t) (i + src_start));
+                sll_push_back(&src, (void *) (uintptr_t) (i + src_start));
             }
 
             // move some of src
@@ -218,7 +258,7 @@ TEST(SinglyLinkedList, move_append_first) {
         static const std::size_t dst_count = dst_stop - dst_start;
 
         for(std::size_t i = 0; i < dst_count; i++) {
-            sll_push(&dst, (void *) (uintptr_t) (i + dst_start));
+            sll_push_back(&dst, (void *) (uintptr_t) (i + dst_start));
         }
 
         // empty src
@@ -237,7 +277,7 @@ TEST(SinglyLinkedList, move_append_first) {
         // src with items
         {
             for(std::size_t i = 0; i < src_count; i++) {
-                sll_push(&src, (void *) (uintptr_t) (i + src_start));
+                sll_push_back(&src, (void *) (uintptr_t) (i + src_start));
             }
 
             // move some of src
@@ -295,7 +335,7 @@ TEST(SinglyLinkedList, move_append) {
         // src with items
         {
             for(std::size_t i = 0; i < src_count; i++) {
-                sll_push(&src, (void *) (uintptr_t) (i + src_start));
+                sll_push_back(&src, (void *) (uintptr_t) (i + src_start));
             }
 
             // move all of src
@@ -324,7 +364,7 @@ TEST(SinglyLinkedList, move_append) {
         static const std::size_t dst_count = dst_stop - dst_start;
 
         for(std::size_t i = 0; i < dst_count; i++) {
-            sll_push(&dst, (void *) (uintptr_t) (i + dst_start));
+            sll_push_back(&dst, (void *) (uintptr_t) (i + dst_start));
         }
 
         // empty src
@@ -343,7 +383,7 @@ TEST(SinglyLinkedList, move_append) {
         // src with items
         {
             for(std::size_t i = 0; i < src_count; i++) {
-                sll_push(&src, (void *) (uintptr_t) (i + src_start));
+                sll_push_back(&src, (void *) (uintptr_t) (i + src_start));
             }
 
             // move all of src
@@ -371,8 +411,8 @@ TEST(SinglyLinkedList, head_node) {
     EXPECT_EQ(sll.head, nullptr);
     EXPECT_EQ(sll.head, sll_head_node(&sll));
 
-    sll_push(&sll, nullptr);
-    sll_push(&sll, nullptr);
+    sll_push_back(&sll, nullptr);
+    sll_push_back(&sll, nullptr);
 
     // non-null head node
     EXPECT_NE(sll.head, nullptr);
@@ -388,18 +428,18 @@ TEST(SinglyLinkedList, next_node) {
     EXPECT_EQ(&sll, sll_init(&sll));
 
     // push first node
-    sll_push(&sll, nullptr);
+    sll_push_back(&sll, nullptr);
     sll_node_t *head = sll_head_node(&sll);
     EXPECT_NE(head, nullptr);
     EXPECT_EQ(sll_next_node(head), nullptr);
 
     // push second node
-    sll_push(&sll, nullptr);
+    sll_push_back(&sll, nullptr);
     sll_node_t *second = sll.tail;
     EXPECT_EQ(second, sll_next_node(head));
 
     // push third node
-    sll_push(&sll, nullptr);
+    sll_push_back(&sll, nullptr);
     sll_node_t *third = sll.tail;
     EXPECT_EQ(third, sll_next_node(second));
 
@@ -414,8 +454,8 @@ TEST(SinglyLinkedList, tail_node) {
     EXPECT_EQ(sll.tail, nullptr);
     EXPECT_EQ(sll.tail, sll_tail_node(&sll));
 
-    sll_push(&sll, nullptr);
-    sll_push(&sll, nullptr);
+    sll_push_back(&sll, nullptr);
+    sll_push_back(&sll, nullptr);
 
     // non-null tail node
     EXPECT_NE(sll.tail, nullptr);
@@ -429,7 +469,7 @@ TEST(SinglyLinkedList, node_data) {
     int value = 1234;
     sll_t sll;
     EXPECT_EQ(&sll, sll_init(&sll));
-    sll_push(&sll, &value);
+    sll_push_back(&sll, &value);
 
     void *data = sll_node_data(sll_head_node(&sll));
     EXPECT_EQ(&value, data);
@@ -447,7 +487,7 @@ TEST(SinglyLinkedList, loop) {
     EXPECT_EQ(&sll, sll_init(&sll));
     for(uint64_t i = 0; i < count; i++) {
         values[i] = i;
-        sll_push(&sll, &values[i]);
+        sll_push_back(&sll, &values[i]);
     }
 
     // check values
@@ -467,7 +507,7 @@ TEST(SinglyLinkedList, destroy_func) {
 
     void *ptr = malloc(10);
     ASSERT_NE(ptr, nullptr);
-    sll_push(&sll, ptr);
+    sll_push_back(&sll, ptr);
 
     // use valgrind to check for leaks
     sll_destroy(&sll, free);

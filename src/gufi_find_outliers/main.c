@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
             str_t p = REFSTR(path, strlen(path));
 
             str_t *query = calloc(1, sizeof(*query));
-            sll_push(&queries, query);
+            sll_push_back(&queries, query);
 
             handler->gen_sql(query, c.data);
 

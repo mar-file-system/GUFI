@@ -533,7 +533,7 @@ int parse_cmd_line(int                  argc,
 
                     optarg = argv[++optind];
 
-                    sll_push(&in->external_attach, user);
+                    sll_push_back(&in->external_attach, user);
                 }
                 break;
 

@@ -313,7 +313,7 @@ TEST(bottomup_collect_treesummary, nullptr) {
 
     sll_t sll;
     sll_init(&sll);
-    sll_push(&sll, dirname);
+    sll_push_back(&sll, dirname);
 
     EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", &sll, ROLLUPSCORE_KNOWN_YES), 1);
 

@@ -82,7 +82,27 @@ sll_t *sll_init(sll_t *sll) {
     return sll_clear(sll);
 }
 
-void sll_push(sll_t *sll, void *data) {
+void sll_push_front(sll_t *sll, void *data) {
+    /* Not checking arguments */
+
+    sll_node_t *node = calloc(1, sizeof(sll_node_t));
+    node->data = data;
+
+    if (!sll->head) {
+        sll->head = node;
+        sll->tail = node;
+    }
+    else {
+        node->next = sll->head;
+        sll->head = node;
+    }
+
+    sll->size++;
+
+    return;
+}
+
+void sll_push_back(sll_t *sll, void *data) {
     /* Not checking arguments */
 
     sll_node_t *node = calloc(1, sizeof(sll_node_t));
@@ -103,7 +123,7 @@ void sll_push(sll_t *sll, void *data) {
     return;
 }
 
-void *sll_pop(sll_t *sll) {
+void *sll_pop_front(sll_t *sll) {
     /* Not checking arguments */
 
     if (sll->size == 0) {

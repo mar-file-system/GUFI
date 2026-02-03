@@ -83,10 +83,11 @@ struct SinglyLinkedList {
 typedef struct SinglyLinkedList sll_t;
 
 sll_t *sll_init(sll_t *sll);
-void sll_push(sll_t *sll, void *data);                                /* back */
-void  *sll_pop(sll_t *sll);                                           /* front */
-void sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n); /* move first n from src to dst, appending to dst */
-void sll_move_append(sll_t *dst, sll_t *src);                         /* move all from src to dst, appending to dst */
+void  sll_push_front(sll_t *sll, void *data);
+void  sll_push_back(sll_t *sll, void *data);
+void *sll_pop_front(sll_t *sll);
+void  sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n); /* move first n from src to dst, appending to dst */
+void  sll_move_append(sll_t *dst, sll_t *src);                         /* move all from src to dst, appending to dst */
 uint64_t sll_get_size(const sll_t *sll);
 
 /* functions for looping over a sll */

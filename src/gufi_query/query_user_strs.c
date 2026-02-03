@@ -93,7 +93,7 @@ void save_user_str(sll_t *idx, const str_t *sql, const size_t *i) {
     usk_t *key = malloc(sizeof(*key));
     key->start = *i;
     key->end = j;
-    sll_push(idx, key);
+    sll_push_back(idx, key);
 }
 
 int replace_user_str(const str_t *sql,

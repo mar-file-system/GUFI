@@ -306,7 +306,7 @@ static size_t process_work(QPTPool_ctx_t *ctx, QPTPoolThreadData_t *tw) {
      *     lower memory utilization
      */
     pthread_mutex_lock(&tw->claimed_mutex);
-    struct queue_item *qi = (struct queue_item *) sll_pop(&tw->claimed);
+    struct queue_item *qi = (struct queue_item *) sll_pop_front(&tw->claimed);
     pthread_mutex_unlock(&tw->claimed_mutex);
 
     while (qi) {
@@ -314,7 +314,7 @@ static size_t process_work(QPTPool_ctx_t *ctx, QPTPoolThreadData_t *tw) {
         free(qi);
 
         pthread_mutex_lock(&tw->claimed_mutex);
-        qi = (struct queue_item *) sll_pop(&tw->claimed);
+        qi = (struct queue_item *) sll_pop_front(&tw->claimed);
         pthread_mutex_unlock(&tw->claimed_mutex);
 
         work_count++; /* increment for previous work item */
@@ -775,7 +775,7 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_ctx_t *ctx, QPTPool_f func, void *
 
     /* always push into wait queue no matter what the queue_limit is */
     pthread_mutex_lock(&next->mutex);
-    sll_push(&next->waiting, qi);
+    sll_push_back(&next->waiting, qi);
     ret = QPTPool_enqueue_WAIT;
     pthread_mutex_lock(&pool->mutex);
     pool->incomplete++;
@@ -857,7 +857,7 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_ctx_t *ctx, QPTPool_f fu
         qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
         qi->work = new_work;
 
-        sll_push(&next->waiting, qi);
+        sll_push_back(&next->waiting, qi);
         ret = QPTPool_enqueue_WAIT;
 
         pthread_mutex_lock(&pool->mutex);
@@ -911,7 +911,7 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_ctx_t *ctx, const size_t id, 
         qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
         qi->work = new_work;
 
-        sll_push(&data->waiting, qi);
+        sll_push_back(&data->waiting, qi);
 
         pthread_mutex_lock(&pool->mutex);
         pool->incomplete++;

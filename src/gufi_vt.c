@@ -861,7 +861,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             /* clean up indexroot */
             str_t ir;
             set_refstr(&ir, (char *) argv[i]);
-            sll_push(&cmd.indexroots, (char *) ir.data);
+            sll_push_back(&cmd.indexroots, (char *) ir.data);
             continue;
         }
 
@@ -909,7 +909,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             /* clean up indexroot */
             str_t ir;
             set_refstr(&ir, value);
-            sll_push(&cmd.indexroots, (char *) ir.data);
+            sll_push_back(&cmd.indexroots, (char *) ir.data);
         }
         else if (strncmp(key, "plugin", 7) == 0) {
             set_refstr(&cmd.plugin, value);
@@ -943,7 +943,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         else if (strncmp(key, "remote_arg", 11) == 0) {
             str_t *remote_arg = calloc(1, sizeof(*remote_arg));
             set_refstr(remote_arg, value);
-            sll_push(&cmd.remote_args, remote_arg);
+            sll_push_back(&cmd.remote_args, remote_arg);
         }
         else if (strncmp(key, "dir_match_uid", 14) == 0) {
             /* let gufi_query check value */
@@ -1236,7 +1236,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
             while (indexroot) {
                 str_t ir;
                 set_refstr(&ir, indexroot);
-                sll_push(&vtab->cmd.indexroots, (char *) ir.data);
+                sll_push_back(&vtab->cmd.indexroots, (char *) ir.data);
 
                 indexroot = strtok_r(NULL, " ", &saveptr);
             }
@@ -1295,7 +1295,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
                                     while (remote_arg) {
                                         str_t *ra = calloc(1, sizeof(*ra));
                                         set_refstr(ra, remote_arg);
-                                        sll_push(&vtab->cmd.remote_args, ra);
+                                        sll_push_back(&vtab->cmd.remote_args, ra);
 
                                         remote_arg = strtok_r(NULL, " ", &saveptr);
                                     }

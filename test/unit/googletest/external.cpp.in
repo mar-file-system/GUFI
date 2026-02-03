@@ -311,7 +311,7 @@ TEST(gufi_query_external, NULL_db) {
 
     struct input in;
     sll_init(&in.external_attach);
-    sll_push(&in.external_attach, &eus);
+    sll_push_back(&in.external_attach, &eus);
 
     std::size_t extdb_count = 0;
     detach_extdbs(&in, nullptr, nullptr, 0, &extdb_count);

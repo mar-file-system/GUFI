@@ -576,7 +576,7 @@ static ssize_t split_file(const char *name, const int fd, const size_t max_parts
          * be able to keep track of the correct user struct
          */
         void *filled = fill(&tr, fill_args);
-        sll_push(chunks, filled);
+        sll_push_back(chunks, filled);
 
         /* jump to next chunk */
         start = end;
@@ -592,7 +592,7 @@ static ssize_t split_file(const char *name, const int fd, const size_t max_parts
         };
 
         void *filled = fill(&tr, fill_args);
-        sll_push(chunks, filled);
+        sll_push_back(chunks, filled);
     }
 
     return sll_get_size(chunks);
@@ -776,7 +776,7 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
             memcpy(str->data, line, len);
 
             /* work now owns this line too */
-            sll_push(&work->entry_lines, str);
+            sll_push_back(&work->entry_lines, str);
         }
 
         /* have getline allocate a new buffer */

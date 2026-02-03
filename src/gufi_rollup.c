@@ -862,7 +862,7 @@ static int rollup_ascend(void *args) {
                 }
 
                 dir->rolledup = ds->success;
-                sll_push(&stats[id].rolled_up, ds);
+                sll_push_back(&stats[id].rolled_up, ds);
 
                 /* root directory will always remain */
                 if (!dir->data.parent) {
@@ -871,7 +871,7 @@ static int rollup_ascend(void *args) {
             }
             else if (ds->score == 0) {
                 /* is not allowed to roll up */
-                sll_push(&stats[id].not_rolled_up, ds);
+                sll_push_back(&stats[id].not_rolled_up, ds);
 
                 /* count this directory */
                 stats[id].remaining++;
@@ -891,7 +891,7 @@ static int rollup_ascend(void *args) {
     }
     else {
         /* did not check if can roll up */
-        sll_push(&stats[id].not_processed, ds);
+        sll_push_back(&stats[id].not_processed, ds);
 
         stats[id].remaining++;
     }

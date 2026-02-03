@@ -170,7 +170,7 @@ static int collect_dir_inodes(void *args, int count, char **data, char **columns
     memcpy(inode, data[0], len);
     inode[len] = '\0';
 
-    sll_push(inodes, inode);
+    sll_push_back(inodes, inode);
 
     return 0;
 }

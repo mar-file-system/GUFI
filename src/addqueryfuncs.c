@@ -669,7 +669,7 @@ static void median_step(sqlite3_context *context, int argc, sqlite3_value **argv
     }
 
     const double value = sqlite3_value_double(argv[0]);
-    sll_push(data, (void *) (uintptr_t) value);
+    sll_push_back(data, (void *) (uintptr_t) value);
 }
 
 static int cmp_double(const void *lhs, const void *rhs) {

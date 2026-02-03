@@ -170,7 +170,7 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
 
                 /* if the subtree is an outlier, queue it up for processing */
                 if ((dd->t.value < t_lo) || (t_hi < dd->t.value)) {
-                    sll_push(&outliers, dd);
+                    sll_push_back(&outliers, dd);
                 }
             }
 
