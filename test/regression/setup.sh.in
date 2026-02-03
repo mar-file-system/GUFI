@@ -178,6 +178,7 @@ GUFI_TREESUMMARY="${BINARY_DIR}/src/gufi_treesummary"
 GUFI_TREESUMMARY_ALL="${BINARY_DIR}/src/gufi_treesummary_all"
 GUFI_UNROLLUP="${BINARY_DIR}/src/gufi_unrollup"
 GUFI_VT="${BINARY_DIR}/src/gufi_vt"
+GUFI_VT_PY="${CURRENT_BINARY_DIR}/gufi_vt_py.py"
 LONGITUDINAL_SNAPSHOT="${BINARY_DIR}/contrib/stats/snapshot.py"
 OLDBIGFILES="${BINARY_DIR}/examples/oldbigfiles"
 PARALLEL_CPR="${BINARY_DIR}/src/parallel_cpr"
@@ -269,6 +270,7 @@ replace() {
     s%${GUFI_TREESUMMARY}%gufi_treesummary%g;
     s%${GUFI_TREESUMMARY_ALL}%gufi_treesummary_all%g;
     s%${GUFI_UNROLLUP}%gufi_unrollup%g;
+    s%${GUFI_VT_PY}%gufi_vt_py%g;
     s%${GUFI_VT}%gufi_vt%g;
     s%${LONGITUDINAL_SNAPSHOT}%longitudinal_snapshot.py%g;
     s%${OLDBIGFILES}%oldbigfiles%g;

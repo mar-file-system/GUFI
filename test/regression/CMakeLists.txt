@@ -163,6 +163,14 @@ configure_file(gufi_tool.py.in gufi_tool.py @ONLY)
 # gufi_vt.common is always required by gufi_vt test
 configure_file(gufi_vt.common gufi_vt.common @ONLY)
 
+# test gufi_vt with the builtin Python SQLite library
+list(APPEND PYTHON
+  gufi_vt_py
+)
+
+# Python wrapper tool (not part of scripts)
+configure_file(gufi_vt_py.py.in gufi_vt_py.py @ONLY)
+
 # check for SQLAlchemy and add test if found
 execute_process(COMMAND python3 -c "import sqlalchemy"
   RESULT_VARIABLE SQLALCHEMY_RC
@@ -173,7 +181,7 @@ if (SQLALCHEMY_RC EQUAL 0)
     gufi_vt_sqlalchemy
   )
 
-  # python wrapper tool (not part of scripts)
+  # Python wrapper tool (not part of scripts)
   configure_file(gufi_vt_sqlalchemy.py.in gufi_vt_sqlalchemy.py @ONLY)
 
   # check for pugsql and add test if found
@@ -186,7 +194,7 @@ if (SQLALCHEMY_RC EQUAL 0)
       gufi_vt_pugsql
     )
 
-    # python wrapper tool (not part of scripts)
+    # Python wrapper tool (not part of scripts)
     configure_file(gufi_vt_pugsql.py.in gufi_vt_pugsql.py @ONLY)
   else()
     message(STATUS "pugsql not found.")
