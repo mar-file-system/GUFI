@@ -169,6 +169,7 @@ set(C_SOURCES
   parallel_cpr.c
   parallel_find.c
   parallel_rmr.c
+  parallel_traversal.c
 )
 
 # build the C executables
