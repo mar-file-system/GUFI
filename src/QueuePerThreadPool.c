@@ -251,23 +251,48 @@ static inline void maybe_steal_work(QPTPool_t *pool, QPTPoolThreadData_t *tw, si
 
 /*
  * wait_for_work() -
- *     Assumes pool->mutex and tw->mutex are locked.
+ *     Assumes pool->mutex, tw->mutex, and tw->claimed are locked.
  */
 static void wait_for_work(QPTPool_t *pool, QPTPoolThreadData_t *tw) {
     while (
-        /* running, but no work in pool or current thread */
-        ((pool->state == RUNNING) && ((!pool->incomplete && !pool->swapped) ||
-                                     !tw->waiting.size)) ||
-        /*
-         * not running and still have work in
-         * other threads, just not this one
-         */
-        ((pool->state == STOPPING) && (pool->incomplete || pool->swapped) &&
-         !tw->waiting.size)
+        (
+            /* running but no work, so sit here */
+            (pool->state == RUNNING) &&
+            (
+                /* no claimed or waiting work in this thread */
+                (!tw->claimed.size && !tw->waiting.size)
+
+                /*
+                 * OR because if there is work in other threads, sit
+                 * here and wait for signal instead of looping
+                 */
+                ||
+
+                /* no work in pool */
+                (!pool->incomplete && !pool->swapped)
+            )
+        )
+        ||
+        (
+            /*
+             * stopping but still have work in
+             * other threads, just not this one
+             */
+            (pool->state == STOPPING) &&
+            (
+                !tw->claimed.size &&
+
+                !tw->waiting.size &&
+
+                (pool->incomplete || pool->swapped)
+            )
+        )
         ) {
+        pthread_mutex_unlock(&tw->claimed_mutex);
         pthread_mutex_unlock(&pool->mutex);
         pthread_cond_wait(&tw->cv, &tw->mutex);
         pthread_mutex_lock(&pool->mutex);
+        pthread_mutex_lock(&tw->claimed_mutex);
     }
 }
 
@@ -336,7 +361,10 @@ static void *worker_function(void *args) {
         pthread_mutex_lock(&pool->mutex);
 
         maybe_steal_work(pool, tw, ctx->id);
+
+        pthread_mutex_lock(&tw->claimed_mutex); /* lock claimed_mutex after stealing work */
         wait_for_work(pool, tw);
+        pthread_mutex_unlock(&tw->claimed_mutex);
 
         /* if stopping and entire thread pool is empty, this thread can exit */
         if ((pool->state == STOPPING) && !pool->incomplete && !pool->swapped) {
@@ -782,6 +810,44 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_ctx_t *ctx, QPTPool_f func, void *
     pthread_mutex_unlock(&pool->mutex);
 
     pthread_cond_broadcast(&next->cv);
+    pthread_mutex_unlock(&next->mutex);
+
+    return ret;
+}
+
+/* id selects the next_queue variable to use, not where the work will be placed */
+QPTPool_enqueue_dst_t QPTPool_enqueue_front(QPTPool_ctx_t *ctx, QPTPool_f func, void *new_work) {
+    /* Not checking arguments */
+
+    struct queue_item *qi = malloc(sizeof(struct queue_item));
+    qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
+    qi->work = new_work;
+
+    QPTPool_t *pool = ctx->pool;
+    const size_t id = ctx->id;
+
+    QPTPoolThreadData_t *data = &pool->data[id];
+    pthread_mutex_lock(&data->mutex);
+    QPTPoolThreadData_t *next = &pool->data[data->next_queue];
+
+    /* have to calculate next_queue before new_work is modified */
+    data->next_queue = pool->next.func(id, data->next_queue, pool->nthreads,
+                                      new_work, pool->next.args);
+    pthread_mutex_unlock(&data->mutex);
+
+    QPTPool_enqueue_dst_t ret = QPTPool_enqueue_ERROR;
+
+    /* push to the front of claimed queue */
+    pthread_mutex_lock(&next->mutex);
+    pthread_mutex_lock(&next->claimed_mutex);
+    sll_push_front(&next->claimed, qi);
+    ret = QPTPool_enqueue_CLAIMED;
+    pthread_mutex_lock(&pool->mutex);
+    pool->incomplete++;
+    pthread_mutex_unlock(&pool->mutex);
+
+    pthread_cond_broadcast(&next->cv);
+    pthread_mutex_unlock(&next->claimed_mutex);
     pthread_mutex_unlock(&next->mutex);
 
     return ret;

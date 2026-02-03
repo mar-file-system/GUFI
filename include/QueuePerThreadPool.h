@@ -65,7 +65,8 @@ OF SUCH DAMAGE.
 #ifndef QUEUE_PER_THREAD_POOL_H
 #define QUEUE_PER_THREAD_POOL_H
 
-#include <inttypes.h>
+#include <stddef.h> /* size_t */
+#include <stdint.h> /* uint64 */
 
 #ifdef __cplusplus
 extern "C" {
@@ -151,6 +152,7 @@ typedef enum QPTPool_enqueue_dst {
     #ifdef QPTPOOL_SWAP
     QPTPool_enqueue_SWAP,
     #endif
+    QPTPool_enqueue_CLAIMED,
 } QPTPool_enqueue_dst_t;
 
 #ifdef QPTPOOL_SWAP
@@ -180,6 +182,9 @@ int QPTPool_generic_alloc_and_deserialize(const int fd, QPTPool_f *func, void **
  */
 QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_ctx_t *ctx,
                                       QPTPool_f func, void *new_work);
+
+QPTPool_enqueue_dst_t QPTPool_enqueue_front(QPTPool_ctx_t *ctx,
+                                            QPTPool_f func, void *new_work);
 
 #ifdef QPTPOOL_SWAP
 /*
