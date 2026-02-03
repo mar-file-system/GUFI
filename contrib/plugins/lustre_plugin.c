@@ -101,7 +101,7 @@ OF SUCH DAMAGE.
 #include <lustre/lustreapi.h>
 #include <sqlite3.h>
 
-#include "gufi_dir2index.h"
+#include "bf.h"
 #include "plugin.h"
 
 static char *my_basename(char *path) {
@@ -349,8 +349,6 @@ static void process_file(void *ptr, void *user_data) {
     char *path = pcs->work->name;
 
     insert_fid(path, db, user_data, 1);
-
-    sqlite3_stmt *statement;
 
     struct lov_user_md *layout_info = alloc_lum();
 
