@@ -179,7 +179,13 @@ int xattrs_get(const char *path, struct xattrs *xattrs) {
     while (offset < name_list_len) {
         const char *name = name_list + offset;
         const ssize_t name_len = strlen(name);
-        xattrs->count++;
+
+        if (name_len > 5) {
+            if (strncmp(name, "user.", 5) == 0) {
+                xattrs->count++;
+            }
+        }
+
         offset += name_len + 1; /* + 1 for NULL seperator */
     }
 
@@ -193,20 +199,26 @@ int xattrs_get(const char *path, struct xattrs *xattrs) {
 
         offset += name_len + 1; /* + 1 for NULL seperator */
 
-        xattr->name_len = SNFORMAT_S(xattr->name, sizeof(xattr->name), 1, name, name_len);
-        const ssize_t value_len = GETXATTR(path, xattr->name, xattr->value, sizeof(xattr->value));
+        if (name_len > 5) {
+            if (strncmp(name, "user.", 5) != 0) {
+                continue;
+            }
 
-        /* man page says positive value or -1 */
-        if (value_len > 0) {
-            xattr->value_len = value_len;
+            xattr->name_len = SNFORMAT_S(xattr->name, sizeof(xattr->name), 1, name, name_len);
+            const ssize_t value_len = GETXATTR(path, xattr->name, xattr->value, sizeof(xattr->value));
 
-            xattrs->name_len += xattr->name_len;
-            xattrs->len += xattr->name_len + xattr->value_len;
+            /* man page says positive value or -1 */
+            if (value_len > 0) {
+                xattr->value_len = value_len;
 
-            i++;
-        }
-        else {
-            xattrs->count--;
+                xattrs->name_len += xattr->name_len;
+                xattrs->len += xattr->name_len + xattr->value_len;
+
+                i++;
+            }
+            else {
+                xattrs->count--;
+            }
         }
     }
 
