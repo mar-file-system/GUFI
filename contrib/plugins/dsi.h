@@ -67,7 +67,7 @@ OF SUCH DAMAGE.
 
 #include <stddef.h>
 
-static const char   DSI_NAME_PREFIX[]    = "trusted.COL.file.";
+static const char   DSI_NAME_PREFIX[]    = "user.COL.file.";
 static const size_t DSI_NAME_PREFIX_LEN  = sizeof(DSI_NAME_PREFIX) - 1;
 static const size_t DSI_VALUE_UUID_LEN   = 36;                     /* UUID (32 + 4 separators) */
 static const size_t DSI_VALUE_PREFIX_LEN = DSI_VALUE_UUID_LEN + 1; /* UUID + period */
