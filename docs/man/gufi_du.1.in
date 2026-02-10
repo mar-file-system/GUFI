@@ -77,6 +77,9 @@ is a wrapper around
 .Xr gufi_query 1 , which performs queries on the contents of a GUFI tree in a parallel manner. The queries that are passed into
 .Xr gufi_query 1 are predefined pieces that are deterministically combined.
 
+gufi_du differs from
+.Xr du 1 in that directory sizes are not included in the reported values.
+
 Note that a treesummary table MUST be available at the input path.
 .Xr gufi_du 1 does not recurse down into the tree to get sizes of an individual subtree. treesummary tables are meant to amortize that cost. Run
 .Xr gufi_treesummary 1
@@ -106,6 +109,8 @@ indirect blocks, and the like
 scale sizes by SIZE before printing them
 .It Fl c, -total
 produce a grand total
+.It Fl h, -human-readable
+print sizes in human readable format (e.g., 1K 234M 2G)
 .It Fl -inodes
 list inode usage information instead of block usage
 .It Fl S, -separate-dirs

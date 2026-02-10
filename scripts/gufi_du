@@ -62,6 +62,7 @@
 
 
 import argparse
+import math
 import os
 import subprocess
 import sys
@@ -115,6 +116,10 @@ def build_expression_parser():
                         action='store_true',
                         help='produce a grand total')
 
+    parser.add_argument('-h', '--human-readable',
+                        action='store_true',
+                        help='print sizes in human readable format (e.g., 1K 234M 2G)')
+
     parser.add_argument('--inodes',
                         action='store_true',
                         help='list inode usage information instead of block usage')
@@ -151,8 +156,8 @@ def nondir(args, name):
         '--min-level', '0',
         '--max-level', '0',
         '-E', 'SELECT level(), 1, {0}, rpath(sname, sroll, name) FROM {1} WHERE name == \'{2}\';'.format(E_col,
-                                                                                                                    gufi_common.VRPENTRIES,
-                                                                                                                    name),
+                                                                                                         gufi_common.VRPENTRIES,
+                                                                                                         name),
     ]
 
 # no flags
@@ -213,6 +218,32 @@ def summarize(args):
                                                                                                                                                 gufi_common.TREESUMMARY,
                                                                                                                                                 gufi_common.VRSUMMARY),
     ]
+
+SUFFIXES = [
+    '',
+    'K',
+    'M',
+    'G',
+    'T',
+    'P',
+    'E',
+    # uint64_t can't go this high
+    # 'Z',
+    # 'Y',
+]
+
+def human_readable_size(size):
+    unit_index = 0
+    while (unit_index < (len(SUFFIXES) - 1)) and (size >= 1024):
+        size /= 1024
+        unit_index += 1
+
+    suffix = SUFFIXES[unit_index]
+
+    if (size == 0) or (math.log(size, 10) > 2):
+        return '{0}{1}'.format(math.ceil(size), suffix)
+
+    return '{0:.1f}{1}'.format(size, suffix)
 
 # argv[0] should be the command name
 def run(argv, config_path):
@@ -325,7 +356,10 @@ def run(argv, config_path):
 
             # -s/--summarize removes individual prints
             if not args.summarize:
-                print('{0} {1}'.format(size, name[INDEXROOT_LEN:]))
+                entry_size = size
+                if args.human_readable:
+                    entry_size = human_readable_size(entry_size)
+                print('{0} {1}'.format(entry_size, name[INDEXROOT_LEN:]))
 
             dir_size += size
 
@@ -335,6 +369,8 @@ def run(argv, config_path):
 
         # -s/--summarize prints a combined size at the end of the current input path
         if args.summarize:
+            if args.human_readable:
+                dir_size = human_readable_size(dir_size)
             print('{0} {1}'.format(dir_size, path))
 
         if query.returncode != 0:
@@ -346,6 +382,8 @@ def run(argv, config_path):
 
     # print total size of all input directories
     if args.total:
+        if args.human_readable:
+            total_blocks = human_readable_size(total_blocks)
         print('{0} total'.format(total_blocks))
 
     if processed_paths == 0:

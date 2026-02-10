@@ -34,6 +34,12 @@ Does "prefix" have treesummary data?
 0 prefix
 0 total
 
+$ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix
+Warning: Did not get any results from gufi_query.
+Does "prefix" have treesummary data?
+0 prefix
+0 total
+
 # separate dirs
 $ gufi_du --separate-dirs --apparent-size --block-size 1 prefix | sort -k 2
 1049624 prefix
@@ -67,6 +73,14 @@ $ gufi_du --separate-dirs --inodes prefix | sort -k 2
 2 prefix/leaf_directory
 1 prefix/unusual#? directory ,
 
+$ gufi_du --separate-dirs --inodes --human-readable prefix | sort -k 2
+6.0 prefix
+3.0 prefix/directory
+2.0 prefix/directory/subdirectory
+0 prefix/empty_directory
+2.0 prefix/leaf_directory
+1.0 prefix/unusual#? directory ,
+
 # inodes
 $ gufi_du --inodes prefix | sort -k 2
 Warning: Did not get any results from gufi_query.
@@ -83,6 +97,12 @@ Does "prefix" have treesummary data?
 0 prefix
 
 $ gufi_du --inodes --total --summarize prefix
+Warning: Did not get any results from gufi_query.
+Does "prefix" have treesummary data?
+0 prefix
+0 total
+
+$ gufi_du --inodes --total --summarize --human-readable prefix
 Warning: Did not get any results from gufi_query.
 Does "prefix" have treesummary data?
 0 prefix
@@ -180,6 +200,10 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 prefix
 1049673 total
 
+$ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix
+1.0M prefix
+1.0M total
+
 # separate dirs
 $ gufi_du --separate-dirs --apparent-size --block-size 1 prefix | sort -k 2
 1049624 prefix
@@ -213,6 +237,14 @@ $ gufi_du --separate-dirs --inodes prefix | sort -k 2
 2 prefix/leaf_directory
 1 prefix/unusual#? directory ,
 
+$ gufi_du --separate-dirs --inodes --human-readable prefix | sort -k 2
+6.0 prefix
+3.0 prefix/directory
+2.0 prefix/directory/subdirectory
+0 prefix/empty_directory
+2.0 prefix/leaf_directory
+1.0 prefix/unusual#? directory ,
+
 # inodes
 $ gufi_du --inodes prefix | sort -k 2
 14 prefix
@@ -237,6 +269,10 @@ $ gufi_du --inodes --summarize prefix
 $ gufi_du --inodes --total --summarize prefix
 14 prefix
 14 total
+
+$ gufi_du --inodes --total --summarize --human-readable prefix
+14.0 prefix
+14.0 total
 #####################################
 
 #####################################
@@ -293,6 +329,10 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 prefix
 1049673 total
 
+$ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix
+1.0M prefix
+1.0M total
+
 # separate dirs
 $ gufi_du --separate-dirs --apparent-size --block-size 1 prefix | sort -k 2
 1049624 prefix
@@ -326,6 +366,14 @@ $ gufi_du --separate-dirs --inodes prefix | sort -k 2
 2 prefix/leaf_directory
 1 prefix/unusual#? directory ,
 
+$ gufi_du --separate-dirs --inodes --human-readable prefix | sort -k 2
+6.0 prefix
+3.0 prefix/directory
+2.0 prefix/directory/subdirectory
+0 prefix/empty_directory
+2.0 prefix/leaf_directory
+1.0 prefix/unusual#? directory ,
+
 # inodes
 $ gufi_du --inodes prefix | sort -k 2
 14 prefix
@@ -350,6 +398,10 @@ $ gufi_du --inodes --summarize prefix
 $ gufi_du --inodes --total --summarize prefix
 14 prefix
 14 total
+
+$ gufi_du --inodes --total --summarize --human-readable prefix
+14.0 prefix
+14.0 total
 #####################################
 
 #####################################
@@ -390,6 +442,11 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix/1MB prefix/1
 1024 prefix/1KB
 1049600 total
 
+$ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix/1MB prefix/1KB
+1.0M prefix/1MB
+1.0K prefix/1KB
+1.0M total
+
 # separate dirs
 $ gufi_du --separate-dirs --apparent-size --block-size 1 prefix/1MB prefix/1KB | sort -k 2
 1024 prefix/1KB
@@ -413,6 +470,10 @@ $ gufi_du --separate-dirs --inodes prefix/1MB prefix/1KB | sort -k 2
 1 prefix/1KB
 1 prefix/1MB
 
+$ gufi_du --separate-dirs --inodes --human-readable prefix/1MB prefix/1KB | sort -k 2
+1.0 prefix/1KB
+1.0 prefix/1MB
+
 # inodes
 $ gufi_du --inodes prefix/1MB prefix/1KB | sort -k 2
 1 prefix/1KB
@@ -431,6 +492,11 @@ $ gufi_du --inodes --total --summarize prefix/1MB prefix/1KB
 1 prefix/1MB
 1 prefix/1KB
 2 total
+
+$ gufi_du --inodes --total --summarize --human-readable prefix/1MB prefix/1KB
+1.0 prefix/1MB
+1.0 prefix/1KB
+2.0 total
 
 #####################################
 

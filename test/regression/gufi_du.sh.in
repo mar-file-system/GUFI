@@ -78,6 +78,7 @@ do_tests() {
     run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --total ${paths[@]} | sort -k 2"
     run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --summarize ${paths[@]}"
     run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --total --summarize ${paths[@]}"
+    run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --total --summarize --human-readable ${paths[@]}"
 
     echo "# separate dirs"
     run_no_sort "${GUFI_DU} --separate-dirs --apparent-size --block-size 1 ${paths[@]} | sort -k 2"
@@ -85,12 +86,14 @@ do_tests() {
     run_no_sort "${GUFI_DU} --separate-dirs --apparent-size --block-size 1 --summarize ${paths[@]}"
     run_no_sort "${GUFI_DU} --separate-dirs --apparent-size --block-size 1 --total --summarize ${paths[@]}"
     run_no_sort "${GUFI_DU} --separate-dirs --inodes ${paths[@]} | sort -k 2"
+    run_no_sort "${GUFI_DU} --separate-dirs --inodes --human-readable ${paths[@]} | sort -k 2"
 
     echo "# inodes"
     run_no_sort "${GUFI_DU} --inodes ${paths[@]} | sort -k 2"
     run_no_sort "${GUFI_DU} --inodes --total ${paths[@]} | sort -k 2"
     run_no_sort "${GUFI_DU} --inodes --summarize ${paths[@]}"
     run_no_sort "${GUFI_DU} --inodes --total --summarize ${paths[@]}"
+    run_no_sort "${GUFI_DU} --inodes --total --summarize --human-readable ${paths[@]}"
 }
 
 run_no_sort "${GUFI_DU} --help"
