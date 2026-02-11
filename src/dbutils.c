@@ -560,6 +560,7 @@ int copy_columns_callback(void *args, int count, char **data, char **columns) {
 
     for(int i = 0; i < count; i++) {
         if (!data[i]) {
+            strs[i] = NULL;
             continue;
         }
 

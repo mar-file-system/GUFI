@@ -77,15 +77,12 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 
 TEST(addqueryfuncs, uidtouser) {
-    // user caller's uid
+    // user's uid
     const uid_t uid = getuid();
 
-    struct passwd pwd;
-    struct passwd *result = nullptr;
-
-    char ubuf[MAXPATH] = {};
-    ASSERT_EQ(getpwuid_r(uid, &pwd, ubuf, sizeof(ubuf), &result), 0);
-    ASSERT_EQ(result, &pwd);
+    // no need for reentrant call
+    struct passwd *pwd = getpwuid(uid);
+    ASSERT_NE(pwd, nullptr);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
@@ -93,29 +90,39 @@ TEST(addqueryfuncs, uidtouser) {
 
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    // use value obtained from summary table
     char query[MAXSQL] = {};
-    SNPRINTF(query, MAXSQL, "SELECT uidtouser('%d');", uid);
-
     char buf[MAXPATH] = {};
     char *output = buf;
-    ASSERT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
 
-    EXPECT_STREQ(output, pwd.pw_name);
+    /* convert good uid */
+    SNPRINTF(query, MAXSQL, "SELECT uidtouser(%" STAT_uid ");", uid);
+    ASSERT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(output, pwd->pw_name);
+
+    /* convert bad uid */
+    SNPRINTF(query, MAXSQL, "SELECT uidtouser('abcd');");
+    ASSERT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_EQ(output, nullptr);
+
+    /* convert NULL */
+    SNPRINTF(query, MAXSQL, "SELECT uidtouser(NULL);");
+    ASSERT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_EQ(output, nullptr);
+
+    /* convert large number */
+    SNPRINTF(query, MAXSQL, "SELECT uidtouser(98765432100123456789);");
+    EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_ERROR);
 
     sqlite3_close(db);
 }
 
 TEST(addqueryfuncs, gidtogroup) {
-    // user caller's gid
+    // user's gid
     const gid_t gid = getgid();
 
-    struct group grp;
-    struct group *result = nullptr;
-
-    char gbuf[MAXPATH] = {};
-    ASSERT_EQ(getgrgid_r(gid, &grp, gbuf, sizeof(gbuf), &result), 0);
-    ASSERT_EQ(result, &grp);
+    // no need for reentrant call
+    struct group *grp = getgrgid(gid);
+    ASSERT_NE(grp, nullptr);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
@@ -123,15 +130,28 @@ TEST(addqueryfuncs, gidtogroup) {
 
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    // use value obtained from summary table
     char query[MAXSQL] = {};
-    SNPRINTF(query, MAXSQL, "SELECT gidtogroup('%d');", gid);
-
     char buf[MAXPATH] = {};
     char *output = buf;
-    ASSERT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
 
-    EXPECT_STREQ(output, grp.gr_name);
+    /* convert good gid */
+    SNPRINTF(query, MAXSQL, "SELECT gidtogroup(%" STAT_gid ");", gid);
+    ASSERT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(output, grp->gr_name);
+
+    /* convert bad gid */
+    SNPRINTF(query, MAXSQL, "SELECT gidtogroup('abcd');");
+    ASSERT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_EQ(output, nullptr);
+
+    /* convert NULL */
+    SNPRINTF(query, MAXSQL, "SELECT gidtogroup(NULL);");
+    ASSERT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_EQ(output, nullptr);
+
+    /* convert large number */
+    SNPRINTF(query, MAXSQL, "SELECT gidtogroup(98765432100123456789);");
+    EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_ERROR);
 
     sqlite3_close(db);
 }

@@ -62,12 +62,14 @@ OF SUCH DAMAGE.
 
 
 
+#include <errno.h>
 #include <grp.h>
 #include <math.h>
 #include <pwd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "addqueryfuncs.h"
 #include "utils.h"
@@ -77,12 +79,63 @@ static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
     (void) argc;
 
     const char *text = (char *) sqlite3_value_text(argv[0]);
+    if (!text) {
+        sqlite3_result_null(context);
+        return;
+    }
 
-    const int fuid = atoi(text);
-    struct passwd *fmypasswd = getpwuid(fuid);
-    const char *show = fmypasswd?fmypasswd->pw_name:text;
+    int read = 0;
+    uid_t uid = 0;
+    if (sscanf(text, "%" STAT_uid "%n", &uid, &read) != 1) {
+        sqlite3_result_null(context);
+        return;
+    }
 
-    sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
+    /* catch too long numbers or non-numbers following numbers */
+    if ((size_t) read != strlen(text)) {
+        sqlite3_result_error(context, "Bad input", -1);
+        return;
+    }
+
+    /*
+     * adapted from question by Tyler DiBartolo
+     * https://stackoverflow.com/q/47462890
+     */
+
+    const long init_len = sysconf(_SC_GETPW_R_SIZE_MAX);
+    size_t len = 1024;
+    if (init_len != -1) {
+        len = init_len;
+    }
+
+    void *buf = malloc(len);
+
+    struct passwd pwd;
+    struct passwd *res = NULL;
+    int rc = 0;
+    while ((rc = getpwuid_r(uid, &pwd, buf, len, &res)) == ERANGE) {
+        void *new_buf = realloc(buf, len * 2);
+
+        if (!new_buf) {
+            sqlite3_result_error_nomem(context);
+            free(buf);
+            return;
+        }
+
+        buf = new_buf;
+        len *= 2;
+    }
+
+    if (rc != 0) {
+        const int err = errno;
+        char errmsg[1024];
+        const size_t errmsg_len = SNPRINTF(errmsg, sizeof(errmsg), "getpwuid: %s (%d)\n", strerror(err), err);
+        sqlite3_result_error(context, errmsg, errmsg_len);
+        return;
+    }
+
+    sqlite3_result_text(context, res?res->pw_name:text, -1, SQLITE_TRANSIENT);
+    free(buf);
 }
 
 static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -90,12 +143,63 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
     (void) argc;
 
     const char *text = (char *) sqlite3_value_text(argv[0]);
+    if (!text) {
+        sqlite3_result_null(context);
+        return;
+    }
 
-    const int fgid = atoi(text);
-    struct group *fmygroup = getgrgid(fgid);
-    const char *show = fmygroup?fmygroup->gr_name:text;
+    int read = 0;
+    gid_t gid = 0;
+    if (sscanf(text, "%" STAT_gid "%n", &gid, &read) != 1) {
+        sqlite3_result_null(context);
+        return;
+    }
 
-    sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
+    /* catch too long numbers or non-numbers following numbers */
+    if ((size_t) read != strlen(text)) {
+        sqlite3_result_error(context, "Bad input", -1);
+        return;
+    }
+
+    /*
+     * adapted from question by Tyler DiBartolo
+     * https://stackoverflow.com/q/47462890
+     */
+
+    const long init_len = sysconf(_SC_GETGR_R_SIZE_MAX);
+    size_t len = 1024;
+    if (init_len != -1) {
+        len = init_len;
+    }
+
+    void *buf = malloc(len);
+
+    struct group grp;
+    struct group *res = NULL;
+    int rc = 0;
+    while ((rc = getgrgid_r(gid, &grp, buf, len, &res)) == ERANGE) {
+        void *new_buf = realloc(buf, len * 2);
+
+        if (!new_buf) {
+            sqlite3_result_error_nomem(context);
+            free(buf);
+            return;
+        }
+
+        buf = new_buf;
+        len *= 2;
+    }
+
+    if (rc != 0) {
+        const int err = errno;
+        char errmsg[1024];
+        const size_t errmsg_len = SNPRINTF(errmsg, sizeof(errmsg), "getgrgid: %s (%d)\n", strerror(err), err);
+        sqlite3_result_error(context, errmsg, errmsg_len);
+        return;
+    }
+
+    sqlite3_result_text(context, res?res->gr_name:text, -1, SQLITE_TRANSIENT);
+    free(buf);
 }
 
 static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
