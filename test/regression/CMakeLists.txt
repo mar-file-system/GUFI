@@ -174,7 +174,6 @@ set(OTHERS
   parallel_rmr
   querydbs
   run_vt
-  treediff
 )
 
 if (COMPOPT EQUAL 0)

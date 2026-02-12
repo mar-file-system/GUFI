@@ -62,7 +62,6 @@
 
 set(CONTRIB_SOURCES
   gendir.c                # simple source tree generator
-  treediff.c              # walk two trees and print the names that don't match
 )
 
 # potentially useful C++ executables
