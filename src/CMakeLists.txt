@@ -215,6 +215,10 @@ if (DEP_AI)
   target_compile_options(gufi_query PUBLIC "${OpenMP_C_FLAGS}")
 endif()
 
+if (ALLOW_DB_WRITES)
+  target_compile_definitions(gufi_query PUBLIC ALLOW_DB_WRITES=1)
+endif()
+
 set_target_properties(gufi_query PROPERTIES ENABLE_EXPORTS TRUE)
 
 # build custom SQLite virtual tables

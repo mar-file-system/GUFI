@@ -486,6 +486,8 @@ include_directories(${COMMON_INCLUDES})
 
 option(QPTPOOL_SWAP "Whether or not to enable swapping in QueuePerThreadPool" On)
 
+option(ALLOW_DB_WRITES "Whether or not to allow gufi_query to write to databases" On)
+
 set(SERVER_BIN "bin"       CACHE PATH "Directory to install executables at")
 set(SERVER_LIB "lib"       CACHE PATH "Directory to install libraries at")
 set(SERVER_MAN "share/man" CACHE PATH "Directory to install man pages at")

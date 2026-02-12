@@ -187,6 +187,36 @@ jobs:
       working-directory: ${{ github.workspace }}/build
       run:  ctest --output-on-failure
 
+  NoDBWrites:
+    needs: [ShellCheck, Pylint]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - uses: actions/cache@v4
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-test-directory
+
+    - name: Ubuntu Prerequisites
+      run:  sudo contrib/CI/ubuntu.sh
+
+    - name: Install Python Packages
+      run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Configure CMake
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DALLOW_DB_WRITES=Off
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build
+      run:  ctest --output-on-failure
+
   Memcheck:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest

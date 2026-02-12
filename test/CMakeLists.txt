@@ -65,73 +65,77 @@ set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory t
 execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}"
     COMMAND_ERROR_IS_FATAL ANY)
 
-# add regression tests
-add_subdirectory(regression)
-
-# make sure unit tests work first
-add_subdirectory(unit)
-
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydbs
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-  )
-  # copy the script into the build directory for easy access
-  configure_file("${TEST}" "${TEST}" @ONLY)
-endforeach()
-
-set(TESTTAR "${CMAKE_CURRENT_SOURCE_DIR}/testdir.tar")
-set(TESTDIR "${TEST_WORKING_DIRECTORY}/testdir")
-set(TESTDST "${TEST_WORKING_DIRECTORY}/gary")
-
-add_test(
-  NAME gary
-  COMMAND "${CMAKE_COMMAND}" -E env "PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:$ENV{PATH}" "${CMAKE_CURRENT_BINARY_DIR}/runtests" "${TESTTAR}" "${TESTDIR}" "${TESTDST}"
-  WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-set_tests_properties(gary PROPERTIES LABELS "manual")
-
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
-
-foreach(type index query)
-  add_library("test_${type}ing_plugin" SHARED "test_${type}ing_plugin.c")
-  add_dependencies("test_${type}ing_plugin" install_dependencies)
-endforeach()
-
-if (APPLE OR DARWIN)
-  # Apple needs to be told to explicitly not try to resolve symbols at compile time when
-  # building the plugin. (They will be resolved dynamically when the plugin is dlopen()ed).
-  foreach(type index query)
-    target_link_libraries("test_${type}ing_plugin" -Wl,-undefined -Wl,dynamic_lookup)
+if (ALLOW_DB_WRITES)
+  # copy test scripts into the test directory within the build directory
+  # list these explicitly to prevent random garbage from getting in
+  foreach(TEST
+      bfwiflat2gufitest
+      dfw2gufitest
+      gufitest.py
+      robinhoodin
+      runbffuse
+      runbfq
+      runbfqforfuse
+      runbfti
+      runbfwi
+      rundfw
+      rungenuidgidsummaryavoidentriesscan
+      rungroupfilespacehog
+      rungroupfilespacehogusesummary
+      runlistschemadb
+      runlisttablesdb
+      runoldbigfiles
+      runquerydbs
+      runuidgidsummary
+      runuidgidummary
+      runuserfilespacehog
+      runuserfilespacehogusesummary
+      runtests
+      )
+    # copy the script into the build directory for easy access
+    configure_file("${TEST}" "${TEST}" @ONLY)
   endforeach()
-elseif(CYGWIN)
-  # Cygwin needs to use an "import library" (reference: https://cygwin.com/cygwin-ug-net/dll.html)
-  # to get the symbol definitions it uses from gufi_dir2index.
-  target_link_libraries("test_indexing_plugin" "${CMAKE_BINARY_DIR}/src/libgufi_dir2index.dll.a")
-  target_link_libraries("test_querying_plugin" "${CMAKE_BINARY_DIR}/src/libgufi_query.dll.a")
-else()
-  foreach(type index query)
-    target_link_libraries("test_${type}ing_plugin" "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
-  endforeach()
+
+  set(TESTTAR "${CMAKE_CURRENT_SOURCE_DIR}/testdir.tar")
+  set(TESTDIR "${TEST_WORKING_DIRECTORY}/testdir")
+  set(TESTDST "${TEST_WORKING_DIRECTORY}/gary")
+
+  add_test(
+    NAME gary
+    COMMAND "${CMAKE_COMMAND}" -E env "PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:$ENV{PATH}" "${CMAKE_CURRENT_BINARY_DIR}/runtests" "${TESTTAR}" "${TESTDIR}" "${TESTDST}"
+    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
+  set_tests_properties(gary PROPERTIES LABELS "manual")
+
+  # add_test(NAME gufitest COMMAND gufitest.py all)
+  # set_tests_properties(gufitest PROPERTIES LABELS manual)
 endif()
+
+# add regression tests
+if (ALLOW_DB_WRITES) # required to clean up test indexes
+  foreach(type index query)
+    add_library("test_${type}ing_plugin" SHARED "test_${type}ing_plugin.c")
+    add_dependencies("test_${type}ing_plugin" install_dependencies)
+  endforeach()
+
+  if (APPLE OR DARWIN)
+    # Apple needs to be told to explicitly not try to resolve symbols at compile time when
+    # building the plugin. (They will be resolved dynamically when the plugin is dlopen()ed).
+    foreach(type index query)
+      target_link_libraries("test_${type}ing_plugin" -Wl,-undefined -Wl,dynamic_lookup)
+    endforeach()
+  elseif(CYGWIN)
+    # Cygwin needs to use an "import library" (reference: https://cygwin.com/cygwin-ug-net/dll.html)
+    # to get the symbol definitions it uses from gufi_dir2index.
+    target_link_libraries("test_indexing_plugin" "${CMAKE_BINARY_DIR}/src/libgufi_dir2index.dll.a")
+    target_link_libraries("test_querying_plugin" "${CMAKE_BINARY_DIR}/src/libgufi_query.dll.a")
+  else()
+    foreach(type index query)
+      target_link_libraries("test_${type}ing_plugin" "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
+    endforeach()
+  endif()
+
+  add_subdirectory(regression)
+endif()
+
+# add unit tests
+add_subdirectory(unit)

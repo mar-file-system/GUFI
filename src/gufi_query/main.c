@@ -272,7 +272,11 @@ int main(int argc, char *argv[])
         FLAG_PLUGIN,
 
         /* miscellaneous flags */
-        FLAG_READ_WRITE, FLAG_KEEP_MATIME, FLAG_SKIP_FILE,
+        #if ALLOW_DB_WRITES
+        FLAG_READ_WRITE,
+        #endif
+
+        FLAG_KEEP_MATIME, FLAG_SKIP_FILE,
 
         /* output flags */
         FLAG_DELIM, FLAG_NEWLINE, FLAG_SUPPRESS_NEWLINE,
