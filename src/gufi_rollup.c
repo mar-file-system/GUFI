@@ -386,21 +386,30 @@ static int add_entries_count(void *args, int count, char **data, char **columns)
     (void) count; (void) columns;
 
     size_t *total = (size_t *) args;
-    size_t rows = 0;
-    if (sscanf(data[0], "%zu", &rows) != 1) {
+
+    /* handle index root, which does not have summary data */
+    if (!data[0]) {
+        return 0;
+    }
+
+    if (sscanf(data[0], "%zu", total) != 1) {
         return 1;
     }
-    *total += rows;
+
     return 0;
 }
 
-/* get number of non-dirs in this directory from the pentries table */
+/* get number of non-dirs in this directory (including rolled up non-dirs) */
 static int get_nondirs(const char *name, sqlite3 *dst, size_t *subnondir_count) {
+    *subnondir_count = 0;
+
+    /* reduce number of times add_entries_count is called to 1 per directory by using SUM() */
     char *err = NULL;
-    const int exec_rc = sqlite3_exec(dst, "SELECT COUNT(*) FROM pentries",
+    const int exec_rc = sqlite3_exec(dst, "SELECT SUM(totfiles + totlinks) FROM summary;",
                                      add_entries_count, subnondir_count, &err);
     if (exec_rc != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Warning: Failed to get entries row count from \"%s\": %s\n", name, err);
+        sqlite_print_err_and_free(err, stderr, "Warning: Failed to get non-directory count from \"%s\": %s\n",
+                                  name, err);
     }
     return exec_rc;
 }
@@ -523,7 +532,6 @@ static int can_rollup(struct input *in,
     int legal = 0;
 
     /* get count of number of non-directories in the current directory */
-    ds->subnondir_count = 0;
     get_nondirs(rollup->data.name, dst, &ds->subnondir_count);
 
     /* the current directory has too many immediate files/links, don't roll up */
