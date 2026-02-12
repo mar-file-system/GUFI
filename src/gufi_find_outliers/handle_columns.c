@@ -339,98 +339,98 @@ trie_t *setup_column_functions(void) {
     return col_funcs;
 }
 
-#define T_ONLY_COLS                             \
-    { "totsubdirs",     10, },                  \
-    { "maxsubdirfiles", 14, },                  \
-    { "maxsubdirlinks", 14, },                  \
-    { "maxsubdirsize",  13, },
+#define T_ONLY_COLS                      \
+    REFSTR("totsubdirs",     10),        \
+    REFSTR("maxsubdirfiles", 14),        \
+    REFSTR("maxsubdirlinks", 14),        \
+    REFSTR("maxsubdirsize",  13),
 
-#define MIN_COLS                                \
-    /* { "minuid",          6, },            */ \
-    /* { "mingid",          6, },            */ \
-    { "minsize",         7, },                  \
-    { "minblocks",       9, },                  \
-    { "minatime",        8, },                  \
-    { "minmtime",        8, },                  \
-    { "minctime",        8, },                  \
-    { "mincrtime",       9, },                  \
-    { "minossint1",     10, },                  \
-    { "minossint2",     10, },                  \
-    { "minossint3",     10, },                  \
-    { "minossint4",     10, },
+#define MIN_COLS                         \
+    /* REFSTR("minuid",          6), */  \
+    /* REFSTR("mingid",          6), */  \
+    REFSTR("minsize",         7),        \
+    REFSTR("minblocks",       9),        \
+    REFSTR("minatime",        8),        \
+    REFSTR("minmtime",        8),        \
+    REFSTR("minctime",        8),        \
+    REFSTR("mincrtime",       9),        \
+    REFSTR("minossint1",     10),        \
+    REFSTR("minossint2",     10),        \
+    REFSTR("minossint3",     10),        \
+    REFSTR("minossint4",     10),
 
-#define MAX_COLS                                \
-    /* { "maxuid",          6, },          */   \
-    /* { "maxgid",          6, },          */   \
-    { "maxsize",         7, },                  \
-    { "maxblocks",       9, },                  \
-    { "maxatime",        8, },                  \
-    { "maxmtime",        8, },                  \
-    { "maxctime",        8, },                  \
-    { "maxcrtime",       9, },                  \
-    { "maxossint1",     10, },                  \
-    { "maxossint2",     10, },                  \
-    { "maxossint3",     10, },                  \
-    { "maxossint4",     10, },
+#define MAX_COLS                         \
+    /* REFSTR("maxuid",          6), */  \
+    /* REFSTR("maxgid",          6), */  \
+    REFSTR("maxsize",         7),        \
+    REFSTR("maxblocks",       9),        \
+    REFSTR("maxatime",        8),        \
+    REFSTR("maxmtime",        8),        \
+    REFSTR("maxctime",        8),        \
+    REFSTR("maxcrtime",       9),        \
+    REFSTR("maxossint1",     10),        \
+    REFSTR("maxossint2",     10),        \
+    REFSTR("maxossint3",     10),        \
+    REFSTR("maxossint4",     10),
 
-#define TOT_COLS                                \
-    { "totfiles",        8, },                  \
-    { "totlinks",        8, },                  \
-    { "totsize",         7, },                  \
-    { "totzero",         7, },                  \
-    { "totltk",          6, },                  \
-    { "totmtk",          6, },                  \
-    { "totltm",          6, },                  \
-    { "totmtm",          6, },                  \
-    { "totmtg",          6, },                  \
-    { "totmtt",          6, },                  \
-    { "totblocks",       9, },                  \
-    { "totossint1",     10, },                  \
-    { "totossint2",     10, },                  \
-    { "totossint3",     10, },                  \
-    { "totossint4",     10, },
+#define TOT_COLS                         \
+    REFSTR("totfiles",        8),        \
+    REFSTR("totlinks",        8),        \
+    REFSTR("totsize",         7),        \
+    REFSTR("totzero",         7),        \
+    REFSTR("totltk",          6),        \
+    REFSTR("totmtk",          6),        \
+    REFSTR("totltm",          6),        \
+    REFSTR("totmtm",          6),        \
+    REFSTR("totmtg",          6),        \
+    REFSTR("totmtt",          6),        \
+    REFSTR("totblocks",       9),        \
+    REFSTR("totossint1",     10),        \
+    REFSTR("totossint2",     10),        \
+    REFSTR("totossint3",     10),        \
+    REFSTR("totossint4",     10),
 
-#define TIME_COLS                               \
-    { "totatime",        8, },                  \
-    { "totmtime",        8, },                  \
-    { "totctime",        8, },                  \
-    { "totcrtime",       9, },
+#define TIME_COLS                        \
+    REFSTR("totatime",        8),        \
+    REFSTR("totmtime",        8),        \
+    REFSTR("totctime",        8),        \
+    REFSTR("totcrtime",       9),
 
-#define LAST                                    \
-    { NULL,              0, },
+#define LAST                             \
+    REFSTR(NULL,              0),
 
-static const refstr_t T_ONLYS[] = {
+static const str_t T_ONLYS[] = {
     T_ONLY_COLS
     LAST
 };
 
-static const refstr_t MINS[] = {
+static const str_t MINS[] = {
     MIN_COLS
     LAST
 };
 
-static const refstr_t MAXS[] = {
+static const str_t MAXS[] = {
     MAX_COLS
     LAST
 };
 
-static const refstr_t MINMAXS[] = {
+static const str_t MINMAXS[] = {
     MIN_COLS
     MAX_COLS
     LAST
 };
 
-static const refstr_t TOTS[] = {
+static const str_t TOTS[] = {
     TOT_COLS
     LAST
 };
 
-static const refstr_t TIMES[] = {
+static const str_t TIMES[] = {
     TIME_COLS
     LAST
 };
 
-static const refstr_t ALL[] = {
+static const str_t ALL[] = {
     T_ONLY_COLS
     MIN_COLS
     MAX_COLS
@@ -440,23 +440,23 @@ static const refstr_t ALL[] = {
 };
 
 typedef struct {
-    const refstr_t name;
-    const refstr_t *cols;
+    const str_t name;
+    const str_t *cols;
 } Group_t;
 
 static const Group_t GROUPS[] = {
-    { { "T_ONLYS", 7, }, T_ONLYS, },
-    { { "MINS",    5, }, MINS,    },
-    { { "MAXS",    5, }, MAXS,    },
-    { { "MINMAXS", 7, }, MINMAXS, },
-    { { "TOTS",    4, }, TOTS,    },
-    { { "TIMES",   5, }, TIMES,   },
-    { { "ALL",     3, }, ALL,     },
+    { REFSTR("T_ONLYS", 7), T_ONLYS, },
+    { REFSTR("MINS",    5), MINS,    },
+    { REFSTR("MAXS",    5), MAXS,    },
+    { REFSTR("MINMAXS", 7), MINMAXS, },
+    { REFSTR("TOTS",    4), TOTS,    },
+    { REFSTR("TIMES",   5), TIMES,   },
+    { REFSTR("ALL",     3), ALL,     },
 };
 
 static const size_t GROUP_COUNT = sizeof(GROUPS) / sizeof(GROUPS[0]);
 
-const refstr_t *handle_group(const char *name, const size_t len) {
+const str_t *handle_group(const char *name, const size_t len) {
     for(size_t i = 0; i < GROUP_COUNT; i++) {
         const Group_t *g = &GROUPS[i];
         if (g->name.len == len) {

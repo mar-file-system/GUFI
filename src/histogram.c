@@ -631,11 +631,8 @@ static void category_hist_insert(sqlite_category_hist_t *hist, const char *cat, 
         *count = 1;
         trie_insert(hist->trie, cat, len, count, free);
 
-        /* use refstr_t as a real string */
-        refstr_t *cat_str = malloc(sizeof(*cat_str));
-        cat_str->data = malloc(len + 1);
-        cat_str->len = SNFORMAT_S((char *) cat_str->data, len + 1, 1,
-                                  cat, len);
+        str_t *cat_str = str_alloc(len);
+        SNFORMAT_S(cat_str->data, len + 1, 1, cat, len);
 
         sll_push(&hist->categories, cat_str);
     }
@@ -654,7 +651,7 @@ static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value
 }
 
 typedef struct category {
-    refstr_t name;
+    str_t name;
     size_t count;
 } category_t;
 
@@ -664,15 +661,9 @@ static ssize_t serialize_category_bucket(char *curr, const size_t avail, void *k
     return snprintf(curr, avail, "%zu:%s:%zu;", cat->name.len, cat->name.data, cat->count);
 }
 
-static void free_str(void *ptr) {
-    refstr_t *str = ptr;
-    free((char *) str->data);
-    free(str);
-}
-
 static int category_compare(const void *lhs, const void *rhs) {
-    const refstr_t *l = * (const refstr_t **) lhs;
-    const refstr_t *r = * (const refstr_t **) rhs;
+    const str_t *l = * (const str_t **) lhs;
+    const str_t *r = * (const str_t **) rhs;
     return str_cmp((const str_t *) l, (const str_t *) r);
 }
 
@@ -688,10 +679,10 @@ static void category_hist_final(sqlite3_context *context) {
     /* sort categories for consistent ordering */
     if (hist->sort) {
         const size_t category_count = sll_get_size(&hist->categories);
-        refstr_t **categories = malloc(category_count * sizeof(categories[0]));
+        str_t **categories = malloc(category_count * sizeof(categories[0]));
         size_t i = 0;
         sll_loop(&hist->categories, node) {
-            categories[i++] = (refstr_t *) sll_node_data(node);
+            categories[i++] = (str_t *) sll_node_data(node);
         }
 
         /* lexicographical sort */
@@ -709,7 +700,7 @@ static void category_hist_final(sqlite3_context *context) {
     sll_init(&keep);
 
     sll_loop(&hist->categories, node) {
-        refstr_t *cat = (refstr_t *) sll_node_data(node);
+        str_t *cat = (str_t *) sll_node_data(node);
 
         size_t *count = NULL;
 
@@ -747,7 +738,7 @@ static void category_hist_final(sqlite3_context *context) {
 
   cleanup:
     sll_destroy(&keep, free);
-    sll_destroy(&hist->categories, free_str);
+    sll_destroy(&hist->categories, str_free_void);
     trie_free(hist->trie);
 }
 
@@ -829,11 +820,9 @@ static void category_hist_combine_inplace(sqlite_category_hist_t *accumulator,
             *count = bucket->count;
 
             /* copy the category */
-            /* use refstr_t as a real string */
-            refstr_t *cat_str = malloc(sizeof(*cat_str));
-            cat_str->data = malloc(bucket->len + 1);
-            cat_str->len = SNFORMAT_S((char *) cat_str->data, bucket->len + 1, 1,
-                                      bucket->name, bucket->len);
+            str_t *cat_str = str_alloc(bucket->len);
+            SNFORMAT_S(cat_str->data, bucket->len + 1, 1,
+                       bucket->name, bucket->len);
 
             trie_insert(accumulator->trie, bucket->name, bucket->len, count, free);
             sll_push(&accumulator->categories, cat_str);
@@ -872,7 +861,7 @@ category_hist_t *category_hist_combine(category_hist_t *lhs, category_hist_t *rh
         bucket->count = *count;
     }
 
-    sll_destroy(&accumulator.categories, free_str);
+    sll_destroy(&accumulator.categories, str_free_void);
     trie_free(accumulator.trie);
     return hist;
 }
@@ -940,7 +929,7 @@ static void extension_hist_step(sqlite3_context *context, int argc, sqlite3_valu
 }
 
 static ssize_t serialize_mode(char *curr, const size_t avail, void *key, void *data) {
-    refstr_t *mode = (refstr_t *) key;
+    str_t *mode = (str_t *) key;
     size_t *count = (size_t *) data;
     return snprintf(curr, avail, "%zu:%s:%zu;", mode->len, mode->data, *count);
 }
@@ -957,7 +946,7 @@ static void mode_count_final(sqlite3_context *context) {
     category_t *categories = malloc(sll_get_size(&hist->categories) * sizeof(*categories));
     size_t cat_count = 0;
     sll_loop(&hist->categories, node) {
-        refstr_t *cat = sll_node_data(node);
+        str_t *cat = (str_t *) sll_node_data(node);
 
         size_t *count = NULL;
 
@@ -1007,7 +996,7 @@ static void mode_count_final(sqlite3_context *context) {
 
   cleanup:
     free(categories);
-    sll_destroy(&hist->categories, free_str);
+    sll_destroy(&hist->categories, str_free_void);
     trie_free(hist->trie);
 }
 

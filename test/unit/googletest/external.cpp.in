@@ -197,25 +197,10 @@ TEST(external, concatenate) {
     // type is used when querying the external database table,
     // not for attching the individual external databases
     #define VIEWNAME "testview"
-    const refstr_t type = {
-        VIEWNAME,
-        sizeof(VIEWNAME) - 1,
-    };
-
-    const refstr_t viewname = {
-        VIEWNAME,
-        sizeof(VIEWNAME) - 1,
-    };
-
-    const refstr_t select = {
-        " SELECT * FROM ",
-        15,
-    };
-
-    const refstr_t external_dbs = {
-        EXTERNAL_DBS,
-        sizeof(EXTERNAL_DBS) - 1,
-    };
+    const str_t type = REFSTR(VIEWNAME, sizeof(VIEWNAME) - 1);
+    const str_t viewname = REFSTR(VIEWNAME, sizeof(VIEWNAME) - 1);
+    const str_t select = REFSTR(" SELECT * FROM ", 15);
+    const str_t external_dbs = REFSTR(EXTERNAL_DBS, sizeof(EXTERNAL_DBS) - 1);
 
     const char drop_view[] = "DROP VIEW " VIEWNAME ";";
 
@@ -322,8 +307,7 @@ TEST(gufi_query_external, NULL_db) {
 
     eus_t eus;
     memset(&eus, 0, sizeof(eus));
-    eus.view.data = "testview";
-    eus.view.len = strlen(eus.view.data);
+    eus.view = REFSTR("testview", 8);
 
     struct input in;
     sll_init(&in.external_attach);

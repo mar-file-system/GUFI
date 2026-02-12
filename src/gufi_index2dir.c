@@ -81,8 +81,8 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
-    refstr_t index;
-    refstr_t dir;
+    str_t index;
+    str_t dir;
 
     size_t index_dirname_len;
 };

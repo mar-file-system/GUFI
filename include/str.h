@@ -74,9 +74,24 @@ extern "C" {
 /* ****************************************************** */
 /* simple string */
 typedef struct {
-    char *data; /* always managed by str API */
+    char *data;           /* always managed by str API */
     size_t len;
+    void (*free)(void *); /* if set, this is a real allocation else this is a reference */
 } str_t;
+
+#ifdef __cplusplus
+#define REFSTR(buf, buflen) {   \
+    (char *) (buf),             \
+    (buflen),                   \
+    nullptr,                    \
+}
+#else
+#define REFSTR(buf, buflen) {   \
+    .data = (char *) (buf),     \
+    .len = (buflen),            \
+    .free = NULL,               \
+}
+#endif
 
 /*
  * str_t allocation (not data) not user controlled
@@ -93,7 +108,8 @@ void str_free_void(void *ptr); /* convenience signature */
  *
  * str_t str = {
  *     .data = NULL,
- *     .len = 0,
+ *     .len  = 0,
+ *     .free = NULL,
  * };
  * str_alloc_existing(&str, len);
  * str_free_existing(&str);
@@ -105,16 +121,6 @@ void str_free_existing(str_t *str);
 int str_cmp(const str_t *lhs, const str_t *rhs);
 /* ****************************************************** */
 
-/* ****************************************************** */
-/*
- * this should be treated as a POD
- * the data member does not own the pointer
- */
-typedef struct refstring {
-    const char *data;
-    size_t len;
-} refstr_t;
-/* ****************************************************** */
 #ifdef __cplusplus
 }
 #endif

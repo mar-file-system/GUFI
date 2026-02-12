@@ -772,9 +772,8 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
                 file_count++;
             }
 
-            str_t *str = malloc(sizeof(*str));
-            str->data = line;
-            str->len = len;
+            str_t *str = str_alloc(len);
+            memcpy(str->data, line, len);
 
             /* work now owns this line too */
             sll_push(&work->entry_lines, str);

@@ -106,12 +106,12 @@ extern const char EXTERNAL_DBS_ROLLUP_INSERT[];
 /* column value */
 #define EXTERNAL_TYPE_XATTR_NAME   "xattrs"
 #define EXTERNAL_TYPE_XATTR_LEN    (sizeof(EXTERNAL_TYPE_XATTR_NAME) - 1)
-extern const refstr_t EXTERNAL_TYPE_XATTR;               /* convenience struct */
+extern const str_t EXTERNAL_TYPE_XATTR;                  /* convenience struct */
 
 /* column value */
 #define EXTERNAL_TYPE_USER_DB_NAME "user_db"
 #define EXTERNAL_TYPE_USER_DB_LEN  (sizeof(EXTERNAL_TYPE_USER_DB_NAME) - 1)
-extern const refstr_t EXTERNAL_TYPE_USER_DB;             /* convenience struct */
+extern const str_t EXTERNAL_TYPE_USER_DB;                /* convenience struct */
 
 #define EXTERNAL_ATTACH_PREFIX     "extdb"
 
@@ -152,12 +152,12 @@ size_t external_read_file(struct input *in,
  * @return the number of external databases attached
  */
 int external_concatenate(sqlite3 *db,
-                         const refstr_t *type,
-                         const refstr_t *extra,
-                         const refstr_t *viewname,
-                         const refstr_t *select,
-                         const refstr_t *tablename,
-                         const refstr_t *default_table,
+                         const str_t *type,
+                         const str_t *extra,
+                         const str_t *viewname,
+                         const str_t *select,
+                         const str_t *tablename,
+                         const str_t *default_table,
                          size_t (*modify_filename)(char **dst, const size_t dst_size,
                                                    const char *src, const size_t src_len,
                                                    void *args),
@@ -179,8 +179,8 @@ int external_concatenate(sqlite3 *db,
  * @in extra              extra conditions to check to select external database rows
  */
 void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
-                                  const refstr_t *type,
-                                  const refstr_t *extra,
+                                  const str_t *type,
+                                  const str_t *extra,
                                   size_t (*set_attachname)(char *dst, const size_t dst_size,
                                                            void *args),
                                   void *attachname_args);
@@ -191,11 +191,11 @@ size_t external_decrement_attachname(char *dst, const size_t dst_size,
                                      void *args);
 
 typedef struct external_user_setup {
-    refstr_t basename;
-    /* refstr_t attachname (pulled from table) */
-    refstr_t table;
-    refstr_t template_table;
-    refstr_t view;
+    str_t basename;
+    /* str_t attachname (pulled from table) */
+    str_t table;
+    str_t template_table;
+    str_t view;
 } eus_t;
 
 /*
@@ -216,7 +216,7 @@ typedef struct external_user_setup {
  * @return the number of views created
  */
 int external_with_template(sqlite3 *db,
-                           const refstr_t *type,
+                           const str_t *type,
                            sll_t *eus);
 
 /*
@@ -231,7 +231,7 @@ int external_with_template(sqlite3 *db,
  * @return 0
  */
 int external_with_template_cleanup(sqlite3 *db,
-                                   const refstr_t *type,
+                                   const str_t *type,
                                    sll_t *eus);
 
 #ifdef __cplusplus

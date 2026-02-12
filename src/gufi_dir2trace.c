@@ -87,7 +87,7 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
-    refstr_t trace_prefix;
+    str_t trace_prefix;
 
     FILE **outfiles;
     pthread_mutex_t *mutex; /* for writing to stdout */
@@ -245,7 +245,7 @@ static int validate_source(const char *path, struct work **work) {
 
     struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
-    new_work->root_parent.data = path;
+    new_work->root_parent.data = (char *) path;
     new_work->root_parent.len = dirname_len(path, new_work->name_len);
     new_work->level = 0;
     new_work->basename_len = new_work->name_len - new_work->root_parent.len;

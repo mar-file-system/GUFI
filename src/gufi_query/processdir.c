@@ -241,16 +241,12 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
         /* only valid for current directory */
 
         /* {n} -> directory name */
-        const refstr_t n = {
-            .data = gqw->work.name + gqw->work.name_len - gqw->work.basename_len,
-            .len = gqw->work.basename_len,
-        };
+        const str_t n = REFSTR(gqw->work.name + gqw->work.name_len - gqw->work.basename_len,
+                               gqw->work.basename_len);
 
         /* {i} -> directory path */
-        const refstr_t i = {
-            .data = gqw->work.name,
-            .len = gqw->work.name_len,
-        };
+        const str_t i = REFSTR(gqw->work.name,
+                               gqw->work.name_len);
 
         trie_insert(ta->user_strs, "n", 1, (void *) &n, NULL);
         trie_insert(ta->user_strs, "i", 1, (void *) &i, NULL);

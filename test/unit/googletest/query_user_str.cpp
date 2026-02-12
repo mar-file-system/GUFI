@@ -79,9 +79,7 @@ static const std::size_t FORMAT_START[]  = {1, 5, 10};
 static const std::size_t FORMAT_END[]    = {3, 8, 14};
 
 TEST(query_user_str, no_replace) {
-    refstr_t sql;
-    sql.data = "SQL"; /* nothing to replace */
-    sql.len = strlen(sql.data);
+    str_t sql = REFSTR("SQL", 3); // nothing to replace
 
     sll_t fmts;
     EXPECT_EQ(save_replacements(&sql, &fmts), (std::size_t) 0);
@@ -98,9 +96,7 @@ TEST(query_user_str, no_replace) {
 }
 
 TEST(query_user_str, even) {
-    refstr_t sql;
-    sql.data = FORMAT;
-    sql.len = sizeof(FORMAT) - 2; // ends on user string
+    str_t sql = REFSTR(FORMAT, sizeof(FORMAT) - 2); // ends on user string
 
     sll_t fmts;
     EXPECT_EQ(save_replacements(&sql, &fmts), (std::size_t) 3);
@@ -115,20 +111,11 @@ TEST(query_user_str, even) {
 
     /* insert some user strings */
     trie_t *user_strs = trie_alloc();
-    str_t A = {
-        (char *) "a",
-        1,
-    };
+    str_t A = REFSTR("a", 1);
     trie_insert(user_strs, "A", 1, &A, nullptr);
-    str_t BC = {
-        (char *) "bc",
-        2,
-    };
+    str_t BC = REFSTR("bc", 2);
     trie_insert(user_strs, "BC", 2, &BC, nullptr);
-    str_t DEF = {
-        (char *) "def",
-        3,
-    };
+    str_t DEF = REFSTR("def", 3);
     trie_insert(user_strs, "DEF", 3, &DEF, nullptr);
 
     ASSERT_EQ(trie_search(user_strs, "A",   1, nullptr), 1);
@@ -149,9 +136,7 @@ TEST(query_user_str, even) {
 }
 
 TEST(query_user_str, odd) {
-    refstr_t sql;
-    sql.data = FORMAT;
-    sql.len = sizeof(FORMAT) - 1; // ends on non-format
+    str_t sql = REFSTR(FORMAT, sizeof(FORMAT) - 1); // ends on non-format
 
     sll_t fmts;
     EXPECT_EQ(save_replacements(&sql, &fmts), (std::size_t) 3);
@@ -166,20 +151,11 @@ TEST(query_user_str, odd) {
 
     /* insert some user strings */
     trie_t *user_strs = trie_alloc();
-    str_t A = {
-        (char *) "a",
-        1,
-    };
+    str_t A = REFSTR("a", 1);
     trie_insert(user_strs, "A", 1, &A, nullptr);
-    str_t BC = {
-        (char *) "bc",
-        2,
-    };
+    str_t BC = REFSTR("bc", 2);
     trie_insert(user_strs, "BC", 2, &BC, nullptr);
-    str_t DEF = {
-        (char *) "def",
-        3,
-    };
+    str_t DEF = REFSTR("def", 3);
     trie_insert(user_strs, "DEF", 3, &DEF, nullptr);
 
     ASSERT_EQ(trie_search(user_strs, "A",   1, nullptr), 1);

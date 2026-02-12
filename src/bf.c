@@ -131,8 +131,9 @@ struct input *input_init(struct input *in) {
 
         sll_init(&in->external_attach);
 
-        in->swap_prefix.data = DEFAULT_SWAP_PREFIX;
+        in->swap_prefix.data = (char *) DEFAULT_SWAP_PREFIX;
         in->swap_prefix.len  = 0;
+        in->swap_prefix.free = NULL;
 
         in->plugin_ops = &null_plugin_ops;
         in->plugin_handle = NULL;
@@ -585,10 +586,7 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_SKIP_FILE_SHORT:
                 {
-                    refstr_t skipfile = {
-                        .data = NULL,
-                        .len = 0,
-                    };
+                    str_t skipfile;
                     INSTALL_STR(&skipfile, optarg);
                     const ssize_t added = setup_directory_skip(in->skip, skipfile.data);
                     if (added < 0) {
@@ -772,12 +770,13 @@ int parse_cmd_line(int                  argc,
     return (retval ? retval : optind);
 }
 
-int INSTALL_STR(refstr_t *VAR, const char *SOURCE) {
+int INSTALL_STR(str_t *VAR, const char *SOURCE) {
     if (!SOURCE) {
         return -1;
     }
-    VAR->data = (const char *) (SOURCE);
+    VAR->data = (char *) (SOURCE);
     VAR->len = strlen(VAR->data);
+    VAR->free = NULL;
     return 0;
 }
 

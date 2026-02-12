@@ -81,11 +81,11 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
-    refstr_t tree_parent; /* actual tree is placed at <tree parent>/<path in trace> */
+    str_t tree_parent; /* actual tree is placed at <tree parent>/<path in trace> */
 };
 
 /* TODO: possible optimization - pass in and modify parent name by adding entry's name to save on some copying */
-static int process_entries(refstr_t *tree_parent,
+static int process_entries(str_t *tree_parent,
                            struct work *entry, struct entry_data *ed) {
     char path[MAXPATH];
     SNFORMAT_S(path, sizeof(path), 3,

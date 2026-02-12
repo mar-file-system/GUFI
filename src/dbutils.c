@@ -1073,7 +1073,7 @@ const size_t ROLLUP_CLEANUP_SIZE = sizeof(ROLLUP_CLEANUP);
 int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
-    refstr_t *name = (refstr_t *) args;
+    str_t *name = (str_t *) args;
 
     char *relpath = data[0];
     char fullpath[MAXPATH];
@@ -1170,26 +1170,14 @@ static int xattr_create_views(sqlite3 *db) {
 
 void setup_xattrs_views(struct input *in, sqlite3 *db,
                         struct work *work, size_t *extdb_count) {
-    static const refstr_t XATTRS_REF = {
-        .data = XATTRS,
-        .len  = sizeof(XATTRS) - 1,
-    };
+    static const str_t XATTRS_REF = REFSTR(XATTRS, sizeof(XATTRS) - 1);
 
     #define XATTRS_COLS " SELECT inode, name, value FROM "
-    static const refstr_t XATTRS_COLS_REF = {
-        .data = XATTRS_COLS,
-        .len  = sizeof(XATTRS_COLS) - 1,
-    };
+    static const str_t XATTRS_COLS_REF = REFSTR(XATTRS_COLS, sizeof(XATTRS_COLS) - 1);
 
-    static const refstr_t XATTRS_AVAIL_REF = {
-        .data = XATTRS_AVAIL,
-        .len  = sizeof(XATTRS_AVAIL) - 1,
-    };
+    static const str_t XATTRS_AVAIL_REF = REFSTR(XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1);
 
-    static const refstr_t XATTRS_TEMPLATE_REF = {
-        .data = XATTRS_TEMPLATE,
-        .len  = sizeof(XATTRS_TEMPLATE) - 1,
-    };
+    static const str_t XATTRS_TEMPLATE_REF = REFSTR(XATTRS_TEMPLATE, sizeof(XATTRS_TEMPLATE) - 1);
 
     /* always set up xattrs view */
     external_concatenate(db,
@@ -1455,7 +1443,7 @@ static trie_t *sqlite3_types(void) {
     return types;
 }
 
-int get_col_types(sqlite3 *db, const refstr_t *sql, int **types, int *cols) {
+int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols) {
     /* parse sql */
     sqlite3_stmt *stmt = NULL;
     const int rc = sqlite3_prepare_v2(db, sql->data, sql->len, &stmt, NULL);
@@ -1512,7 +1500,7 @@ int get_col_types(sqlite3 *db, const refstr_t *sql, int **types, int *cols) {
     return 0;
 }
 
-int get_col_names(sqlite3 *db, const refstr_t *sql, char ***names, size_t **lens, int *cols) {
+int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, int *cols) {
     int rc = SQLITE_OK;
 
     /* parse sql */

@@ -325,7 +325,7 @@ static const char CREATE_TABLE_TEST[] = "CREATE TABLE test(i INT, f FLOAT, t TEX
 
 TEST(get_col_types, have_cols) {
     sqlite3 *db = nullptr;
-    refstr_t str = {};
+    str_t str = {};
     int cols = 0;
 
     ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db,
@@ -335,8 +335,7 @@ TEST(get_col_types, have_cols) {
     ASSERT_EQ(sqlite3_exec(db, CREATE_TABLE_TEST,
                            nullptr, nullptr, nullptr), SQLITE_OK);
 
-    str.data = "SELECT * FROM test;";
-    str.len = strlen(str.data);
+    str = REFSTR("SELECT * FROM test;", 19);
 
     int *types = nullptr;
     EXPECT_EQ(get_col_types(db, &str, &types, &cols), 0);
@@ -356,7 +355,7 @@ TEST(get_col_types, have_cols) {
 
 TEST(get_col_types, no_cols) {
     sqlite3 *db = nullptr;
-    refstr_t str = {};
+    str_t str = {};
     int cols = 0;
 
     ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db,
@@ -366,8 +365,9 @@ TEST(get_col_types, no_cols) {
     ASSERT_EQ(sqlite3_exec(db, CREATE_TABLE_TEST,
                            nullptr, nullptr, nullptr), SQLITE_OK);
 
-    str.data = "INSERT INTO test (i) VALUES (0);";
+    str.data = (char *) "INSERT INTO test (i) VALUES (0);";
     str.len = strlen(str.data);
+    str.free = nullptr;
 
     int *types = nullptr;
     EXPECT_EQ(get_col_types(db, &str, &types, &cols), -1);
@@ -378,7 +378,7 @@ TEST(get_col_types, no_cols) {
 
 TEST(get, col_types) {
     sqlite3 *db = nullptr;
-    refstr_t str = {};
+    str_t str = {};
     int cols = 0;
     int *types = nullptr;
 
@@ -399,8 +399,7 @@ TEST(get, col_types) {
 
     // &cols == nullptr will break
 
-    str.data = "bad SQL";
-    str.len = strlen(str.data);
+    str = REFSTR("bad SQL", 7);
 
     EXPECT_EQ(get_col_types(db, &str, &types, &cols), -1);
     EXPECT_EQ(types, nullptr);
@@ -410,7 +409,7 @@ TEST(get, col_types) {
 
 TEST(get, col_names) {
     sqlite3 *db = nullptr;
-    refstr_t sql = {};
+    str_t sql = {};
     char **names = nullptr;
     std::size_t *lens = nullptr;
     int cols = 0;
@@ -424,14 +423,12 @@ TEST(get, col_names) {
               SQLITE_OK);
 
     // good db, bad sql
-    sql.data = "";
-    sql.len = 0;
+    sql = REFSTR("", 0);
     EXPECT_EQ(get_col_names(db,  &sql, &names, &lens, &cols), -1);
 
     // good sql
     // since the columns are not being pulled from a table, the columns are used as the names
-    sql.data = "SELECT 1, 'abc' AS def;";
-    sql.len = 24;
+    sql = REFSTR("SELECT 1, 'abc' AS def;", 24);
     EXPECT_EQ(get_col_names(db,  &sql, &names, &lens, &cols), 0);
     EXPECT_NE(names, nullptr);
     EXPECT_NE(lens, nullptr);

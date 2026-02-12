@@ -96,7 +96,7 @@ int copy_template(struct template_db *tdb, const char * dst, uid_t uid, gid_t gi
 sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid);
 
 /* create db.db with empty tables at the given directory (and leave it on the filesystem) */
-int create_empty_dbdb(struct template_db *tdb, refstr_t *dst, uid_t uid, gid_t gid);
+int create_empty_dbdb(struct template_db *tdb, str_t *dst, uid_t uid, gid_t gid);
 
 #ifdef __cplusplus
 }

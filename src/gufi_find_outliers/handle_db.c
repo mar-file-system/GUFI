@@ -112,7 +112,7 @@ void intermediate_dbs_fini(struct PoolArgs *pa) {
 }
 
 int insert_outlier(sqlite3_stmt *stmt, const str_t *path, const size_t level,
-                   const char *outlier_type, const refstr_t *col,
+                   const char *outlier_type, const str_t *col,
                    const Stats_t *t, const Stats_t *s) {
     sqlite3_bind_text(stmt,    1, path->data,   path->len, SQLITE_STATIC); /* valid until after all paths are inserted */
     sqlite3_bind_int64(stmt,   2, level);

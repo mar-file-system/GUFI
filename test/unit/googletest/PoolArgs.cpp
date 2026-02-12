@@ -92,7 +92,7 @@ void setup_input(struct input *in, OutputMethod om, bool aggregate) {
 
     input_init(in);
     in->maxthreads = dist(gen);
-    in->sql.init.data = I.c_str(); in->sql.init.len = strlen(in->sql.init.data);
+    in->sql.init = REFSTR(I.c_str(), I.size());
     in->sql.init_agg.len = aggregate;
     in->output = om;
     in->output_buffer_size = OB_SIZE;

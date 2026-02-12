@@ -103,17 +103,17 @@ SQLITE_EXTENSION_INIT1
  */
 
 typedef struct gufi_query_cmd {
-    refstr_t remote_cmd;   /* command to send this run to a remote host (i.e. ssh); prefixes gufi_query command */
-    sll_t remote_args;     /* list of refstr_t that are single arguments to remote_cmd (i.e. user@remote) */
-    int verbose;           /* print gufi_query command */
+    str_t remote_cmd;   /* command to send this run to a remote host (i.e. ssh); prefixes gufi_query command */
+    sll_t remote_args;  /* list of str_t that are single arguments to remote_cmd (i.e. user@remote) */
+    int verbose;        /* print gufi_query command */
 
-    refstr_t threads;      /* number of threads in string form to avoid converting back and forth */
-    refstr_t a;            /* gufi_query -a <0|1|2> */
-    refstr_t min_level;    /* defaults to 0; set to non-0 if index root should be used with path list */
-    refstr_t max_level;    /* defaults to (uint64_t) -1 */
-    refstr_t dir_match_uid;
+    str_t threads;      /* number of threads in string form to avoid converting back and forth */
+    str_t a;            /* gufi_query -a <0|1|2> */
+    str_t min_level;    /* defaults to 0; set to non-0 if index root should be used with path list */
+    str_t max_level;    /* defaults to (uint64_t) -1 */
+    str_t dir_match_uid;
     int dir_match_uid_set;
-    refstr_t dir_match_gid;
+    str_t dir_match_gid;
     int dir_match_gid_set;
 
     /* sql */
@@ -122,22 +122,22 @@ typedef struct gufi_query_cmd {
      * SQL to set up temporary single table that does not exist in
      * default GUFI to allow for result column types to be discovered
      */
-    refstr_t setup_res_col_type;
+    str_t setup_res_col_type;
 
-    refstr_t I;
-    refstr_t T;
-    refstr_t S;
-    refstr_t E;
-    refstr_t K;
-    refstr_t J;
-    refstr_t G;
-    refstr_t F;
+    str_t I;
+    str_t T;
+    str_t S;
+    str_t E;
+    str_t K;
+    str_t J;
+    str_t G;
+    str_t F;
 
-    refstr_t path_list;    /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
-    refstr_t p;            /* source path */
-    refstr_t plugin;       /* gufi_query plugin library path */
+    str_t path_list;    /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
+    str_t p;            /* source path */
+    str_t plugin;       /* gufi_query plugin library path */
 
-    sll_t indexroots;      /* list of index roots to pass to gufi_query */
+    sll_t indexroots;   /* list of index roots to pass to gufi_query */
 } gq_cmd_t;
 
 static void gq_cmd_init(gq_cmd_t *cmd) {
@@ -148,7 +148,7 @@ static void gq_cmd_init(gq_cmd_t *cmd) {
 
 static void gq_cmd_destroy(gq_cmd_t *cmd) {
     sll_destroy(&cmd->indexroots, NULL);  /* list of references to argv[i] */
-    sll_destroy(&cmd->remote_args, free); /* list of allocated refstr_t */
+    sll_destroy(&cmd->remote_args, free); /* list of allocated str_t */
     /* not freeing cmd here */
 }
 
@@ -194,7 +194,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
 
         argv[argc++] = cmd->remote_cmd.data;
         sll_loop(&cmd->remote_args, node) {
-            refstr_t *remote_arg = (refstr_t *) sll_node_data(node);
+            str_t *remote_arg = (str_t *) sll_node_data(node);
             argv[argc++] = remote_arg->data;
         }
 
@@ -455,7 +455,7 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
 }
 
 /* remove starting/ending quotation marks */
-static void set_refstr(refstr_t *refstr, char *value) {
+static void set_refstr(str_t *refstr, char *value) {
     if (value) {
         /* don't wipe old value if new value is NULL */
         memset(refstr, 0, sizeof(*refstr));
@@ -824,7 +824,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *                 while rows from E will have both
  */
 
-static int get_cols(sqlite3 *db, refstr_t *sql, int **types,
+static int get_cols(sqlite3 *db, str_t *sql, int **types,
                     char ***names, size_t **lens, int *cols) {
     int type_cols = 0;
     if ((get_col_types(db, sql, types, &type_cols) != 0) ||
@@ -859,7 +859,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         /* assume this is an index path */
         if (!value || (value == (key + len))) {
             /* clean up indexroot */
-            refstr_t ir;
+            str_t ir;
             set_refstr(&ir, (char *) argv[i]);
             sll_push(&cmd.indexroots, (char *) ir.data);
             continue;
@@ -907,7 +907,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         }
         else if (strncmp(key, "index", 6) == 0) {
             /* clean up indexroot */
-            refstr_t ir;
+            str_t ir;
             set_refstr(&ir, value);
             sll_push(&cmd.indexroots, (char *) ir.data);
         }
@@ -941,7 +941,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             set_refstr(&cmd.remote_cmd, value);
         }
         else if (strncmp(key, "remote_arg", 11) == 0) {
-            refstr_t *remote_arg = calloc(1, sizeof(*remote_arg));
+            str_t *remote_arg = calloc(1, sizeof(*remote_arg));
             set_refstr(remote_arg, value);
             sll_push(&cmd.remote_args, remote_arg);
         }
@@ -1234,7 +1234,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
             char *saveptr = NULL;
             char *indexroot = strtok_r(indexroots, " ", &saveptr); /* skip multiple contiguous spaces */
             while (indexroot) {
-                refstr_t ir;
+                str_t ir;
                 set_refstr(&ir, indexroot);
                 sll_push(&vtab->cmd.indexroots, (char *) ir.data);
 
@@ -1293,7 +1293,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
                                     char *saveptr = NULL;
                                     char *remote_arg = strtok_r(remote_args, " ", &saveptr); /* skip multiple contiguous spaces */
                                     while (remote_arg) {
-                                        refstr_t *ra = calloc(1, sizeof(*ra));
+                                        str_t *ra = calloc(1, sizeof(*ra));
                                         set_refstr(ra, remote_arg);
                                         sll_push(&vtab->cmd.remote_args, ra);
 

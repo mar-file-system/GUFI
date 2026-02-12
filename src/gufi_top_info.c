@@ -111,7 +111,7 @@ static int check_summary_row_count(void *args, int count, char **data, char **co
  * returns 0 on good path
  *         1 on bad path/error
  */
-static int check_at_top(const refstr_t *path) {
+static int check_at_top(const str_t *path) {
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, sizeof(dbname), 3,
                path->data, path->len,
@@ -396,8 +396,8 @@ int main(int argc, char *argv[]) {
 
     int rc = EXIT_SUCCESS;
 
-    refstr_t path;
-    refstr_t op;
+    str_t path;
+    str_t op;
     INSTALL_STR(&path, argv[idx++]);
     INSTALL_STR(&op,   argv[idx++]);
 

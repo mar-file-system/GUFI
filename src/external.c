@@ -88,15 +88,11 @@ const char EXTERNAL_DBS_ROLLUP_CREATE[] =
 const char EXTERNAL_DBS_ROLLUP_INSERT[] =
     "INSERT INTO " EXTERNAL_DBS_ROLLUP " VALUES (@type, pinode, @filename, @mode, @uid, @gid);";
 
-const refstr_t EXTERNAL_TYPE_XATTR = {
-    .data = EXTERNAL_TYPE_XATTR_NAME,
-    .len  = EXTERNAL_TYPE_XATTR_LEN,
-};
+const str_t EXTERNAL_TYPE_XATTR = REFSTR(EXTERNAL_TYPE_XATTR_NAME,
+                                         EXTERNAL_TYPE_XATTR_LEN);
 
-const refstr_t EXTERNAL_TYPE_USER_DB = {
-    .data = EXTERNAL_TYPE_USER_DB_NAME,
-    .len  = EXTERNAL_TYPE_USER_DB_LEN,
-};
+const str_t EXTERNAL_TYPE_USER_DB = REFSTR(EXTERNAL_TYPE_USER_DB_NAME,
+                                           EXTERNAL_TYPE_USER_DB_LEN);
 
 int create_external_tables(const char *name, sqlite3 *db, void *args) {
     (void) args;
@@ -114,8 +110,8 @@ int create_external_tables(const char *name, sqlite3 *db, void *args) {
 static size_t external_create_query(char *sql,         const size_t sql_size,
                                     const char *cols,  const size_t cols_len,
                                     const char *table, const size_t table_len,
-                                    const refstr_t *type,
-                                    const refstr_t *extra) {
+                                    const str_t *type,
+                                    const str_t *extra) {
     size_t len = SNFORMAT_S(sql, sql_size, 4,
                             "SELECT ", (size_t) 7,
                             cols, cols_len,
@@ -271,12 +267,12 @@ size_t external_read_file(struct input *in,
 }
 
 int external_concatenate(sqlite3 *db,
-                         const refstr_t *type,
-                         const refstr_t *extra,
-                         const refstr_t *viewname,
-                         const refstr_t *select,
-                         const refstr_t *tablename,
-                         const refstr_t *default_table,
+                         const str_t *type,
+                         const str_t *extra,
+                         const str_t *viewname,
+                         const str_t *select,
+                         const str_t *tablename,
+                         const str_t *default_table,
                          size_t (*modify_filename)(char **dst, const size_t dst_size,
                                                    const char *src, const size_t src_len,
                                                    void *args),
@@ -387,8 +383,8 @@ static int external_detach(void *args, int count, char **data, char **columns) {
 }
 
 void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
-                                  const refstr_t *type,
-                                  const refstr_t *extra,
+                                  const str_t *type,
+                                  const str_t *extra,
                                   size_t (*set_attachname)(char *dst, const size_t dst_size,
                                                            void *args),
                                   void *attachname_args)

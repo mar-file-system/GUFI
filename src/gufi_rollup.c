@@ -724,10 +724,8 @@ static int do_rollup(struct RollUp *rollup,
      */
     setup[sizeof(setup) - sizeof("0;")] += ds->score;
 
-    refstr_t name = {
-        .data = rollup->data.name,
-        .len  = rollup->data.name_len,
-    };
+    str_t name = REFSTR(rollup->data.name,
+                        rollup->data.name_len);
 
     if (sqlite3_exec(dst, setup, xattrs_rollup_cleanup, &name, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Failed to set up database for rollup: \"%s\": %s\n", rollup->data.name, err);

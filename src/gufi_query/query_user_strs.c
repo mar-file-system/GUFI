@@ -72,7 +72,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/query_user_strs.h"
 
 /* insert position of user string into list of indexes */
-void save_user_str(sll_t *idx, const refstr_t *sql, const size_t *i) {
+void save_user_str(sll_t *idx, const str_t *sql, const size_t *i) {
     size_t j = *i + 1;
 
     /* find stop character */
@@ -96,7 +96,7 @@ void save_user_str(sll_t *idx, const refstr_t *sql, const size_t *i) {
     sll_push(idx, key);
 }
 
-int replace_user_str(const refstr_t *sql,
+int replace_user_str(const str_t *sql,
                      size_t *src_start,
                      void *pos,
                      str_t *replaced,

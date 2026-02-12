@@ -145,7 +145,7 @@ ssize_t copyfd(int src_fd, off_t src_off,
 
 /* replace root of actual path being walked with original user inputted root */
 size_t present_user_path(const char *path, size_t path_len,
-                         refstr_t *root_parent, const size_t root_basename_len, refstr_t *orig_root,
+                         str_t *root_parent, const size_t root_basename_len, str_t *orig_root,
                          char *buf, size_t len);
 
 /* set metadata on given path */

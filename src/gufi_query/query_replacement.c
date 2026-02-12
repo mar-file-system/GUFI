@@ -70,7 +70,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/query_replacement.h"
 #include "gufi_query/query_user_strs.h"
 
-size_t save_replacements(const refstr_t *sql, sll_t *idx) {
+size_t save_replacements(const str_t *sql, sll_t *idx) {
     /* idx should not already have nodes */
     sll_init(idx);
 
@@ -86,7 +86,7 @@ size_t save_replacements(const refstr_t *sql, sll_t *idx) {
     return (size_t) sll_get_size(idx);
 }
 
-int replace_sql(const refstr_t *orig, const sll_t *idx,
+int replace_sql(const str_t *orig, const sll_t *idx,
                 const trie_t *user_strs,
                 char **used) {
     if (sll_get_size(idx) == 0) {
@@ -95,10 +95,7 @@ int replace_sql(const refstr_t *orig, const sll_t *idx,
     }
 
     size_t orig_start = 0;
-    str_t replaced = {
-        .data = NULL,
-        .len = 0,
-    };
+    str_t replaced = REFSTR(NULL, 0);
     size_t allocd = 0;
 
     sll_loop(idx, node) {

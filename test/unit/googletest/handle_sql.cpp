@@ -87,11 +87,11 @@ TEST(handle_sql, no_aggregation) {
     in.types.print_tlv = 1;
 
     for(const char *S : {(const char *) nullptr, S_GOOD, S_BAD}) {
-        in.sql.sum.data = S?S:nullptr;
+        in.sql.sum.data = S?(char *) S:nullptr;
         in.sql.sum.len = S?strlen(S):0;
 
         for(const char *E : {(const char *) nullptr, E_GOOD, E_BAD}) {
-            in.sql.ent.data = E?E:nullptr;
+            in.sql.ent.data = E?(char *) E:nullptr;
             in.sql.ent.len = E?strlen(E):0;
 
             /* Bad SQL -> return -1 */
@@ -123,20 +123,20 @@ TEST(handle_sql, aggregation) {
     const char G_GOOD[] = "SELECT i FROM agg";
     const char G_BAD[]  = "INSERT INT agg (i) VALUES (0);";
 
-    in.sql.init.data = I; in.sql.init.len = strlen(I);
-    in.sql.intermediate.data = J; in.sql.intermediate.len = strlen(J);
+    in.sql.init = REFSTR(I, strlen(I));
+    in.sql.intermediate = REFSTR(J, strlen(J));
 
-    in.sql.init_agg.data = K_GOOD; in.sql.init_agg.len = strlen(K_GOOD);
-    in.sql.agg.data = G_GOOD; in.sql.agg.len = strlen(G_GOOD);
+    in.sql.init_agg = REFSTR(K_GOOD, strlen(K_GOOD));
+    in.sql.agg = REFSTR(G_GOOD, strlen(G_GOOD));
     EXPECT_EQ(handle_sql(&in), 0);
 
     free(in.types.agg);
     in.types.agg = nullptr;
 
-    in.sql.agg.data = G_BAD; in.sql.agg.len = strlen(G_BAD);
+    in.sql.agg = REFSTR(G_BAD, strlen(G_BAD));
     EXPECT_EQ(handle_sql(&in), -1);
 
-    in.sql.init_agg.data = K_BAD; in.sql.init_agg.len = strlen(K_BAD);
+    in.sql.init_agg = REFSTR(K_BAD, strlen(K_BAD));
     EXPECT_EQ(handle_sql(&in), -1);
 
     input_fini(&in);

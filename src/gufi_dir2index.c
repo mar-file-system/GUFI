@@ -86,7 +86,7 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
-    refstr_t index_parent; /* actual index is placed at <index parent>/$(basename <src>) */
+    str_t index_parent; /* actual index is placed at <index parent>/$(basename <src>) */
 
     struct template_db db;
     struct template_db xattr;
@@ -102,7 +102,7 @@ struct PoolArgs {
  */
 struct NonDirArgs {
     struct input *in;
-    refstr_t *index_parent;
+    str_t *index_parent;
 
     /* thread args */
     struct template_db *temp_db;
@@ -467,7 +467,7 @@ static int setup_dst(const char *index_parent) {
     return 0;
 }
 
-static int validate_source(refstr_t *index_parent, const char *path, struct work **work) {
+static int validate_source(str_t *index_parent, const char *path, struct work **work) {
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) != 0) {
@@ -484,7 +484,7 @@ static int validate_source(refstr_t *index_parent, const char *path, struct work
 
     struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
-    new_work->root_parent.data = path;
+    new_work->root_parent.data = (char *) path;
     new_work->root_parent.len = dirname_len(path, new_work->name_len);
     new_work->level = 0;
     new_work->basename_len = new_work->name_len - new_work->root_parent.len;

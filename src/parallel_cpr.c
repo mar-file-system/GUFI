@@ -76,10 +76,10 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
-    refstr_t dst;
+    str_t dst;
 };
 
-static str_t create_dst_name(const refstr_t *dst_root, struct work *work) {
+static str_t create_dst_name(const str_t *dst_root, struct work *work) {
     str_t dst;
     str_alloc_existing(&dst, dst_root->len + 1 + work->name_len - work->root_parent.len);
 
@@ -170,7 +170,7 @@ static int cpr_file(QPTPool_ctx_t *ctx, void *data) {
     return rc;
 }
 
-static int cpr_link(struct work *work, struct entry_data *ed, const refstr_t *dir_path) {
+static int cpr_link(struct work *work, struct entry_data *ed, const str_t *dir_path) {
     int rc = 0;
 
     /* need to give users ability to force overwriting of links */
@@ -278,7 +278,7 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
     return rc;
 }
 
-static int setup(const refstr_t *dst) {
+static int setup(const str_t *dst) {
     const mode_t old_umask = umask(0);
     umask(old_umask); /* reset umask */
     return dupdir(dst->data, ~old_umask & 0777, geteuid(), getegid());
@@ -355,7 +355,7 @@ int main(int argc, char * argv[]) {
         work->name_len = trailing_non_match_index(path + 1, len - 1, "/", 1) + 1;
         work->name[work->name_len] = '\0';
         work->basename_len = work->name_len - trailing_match_index(work->name, work->name_len, "/", 1);
-        work->root_parent.data = path;
+        work->root_parent.data = (char *) path;
         work->root_parent.len = dirname_len(path, work->name_len);
 
         if (S_ISDIR(st.st_mode)) {

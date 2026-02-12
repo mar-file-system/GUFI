@@ -417,29 +417,29 @@ struct input {
          *
          * only the first SQL statement will be processed
          */
-        refstr_t setup_res_col_types;
+        str_t setup_res_col_types;
 
         /* set up per-thread intermidate tables */
-        refstr_t init;
+        str_t init;
 
-        refstr_t tsum;
-        refstr_t sum;
-        refstr_t ent;
+        str_t tsum;
+        str_t sum;
+        str_t ent;
 
         /* if not aggregating, output results */
         /* if aggregating, insert into aggregate table */
-        refstr_t intermediate;
+        str_t intermediate;
 
         /* set up final aggregation table */
-        refstr_t init_agg;
+        str_t init_agg;
 
         /* query table containing aggregated results */
-        refstr_t agg;
+        str_t agg;
 
-        refstr_t fin;
+        str_t fin;
     } sql;
 
-    refstr_t source_prefix; /* for {s} and spath() since the source directory is not stored in the index */
+    str_t source_prefix; /* for {s} and spath() since the source directory is not stored in the index */
 
     /*
      * if the SQL has any formatting in it,
@@ -489,7 +489,7 @@ struct input {
     } dir_match;
     AFlag_t process_sql;           /* what to do if an SQL statement returns/doesn't return 1 row */
     int  suspectstat;              /* if an entry is suspect, stat it to get timestamps to compare against suspecttime */
-    refstr_t insuspect;            /* added for bfwreaddirplus2db input path for suspects file */
+    str_t insuspect;               /* added for bfwreaddirplus2db input path for suspects file */
     int  suspectfile;              /* added for bfwreaddirplus2db flag for if we are processing suspects file */
     int  suspectmethod;            /* added for bfwreaddirplus2db flag for if we are processing suspects what method do we use */
     int  suspecttime;              /* added for bfwreaddirplus2db time for suspect comparison in seconds since epoch */
@@ -499,7 +499,7 @@ struct input {
     int dry_run;
 
     OutputMethod_t output;
-    refstr_t outname;
+    str_t outname;
 
     int keep_matime;
 
@@ -511,7 +511,7 @@ struct input {
 
     /* only used by gufi_stat */
     int format_set;
-    refstr_t format;
+    str_t format;
 
     /* only used by rollup */
     size_t rollup_entries_limit;
@@ -544,12 +544,12 @@ struct input {
     sll_t external_attach;     /* list of eus_t */
 
     /* prefix of swap files */
-    refstr_t swap_prefix;
+    str_t swap_prefix;
 
     int process_xattrs;
 
     /* directory paths to process (normally at -y level > 0, but level == 0 is allowed) */
-    refstr_t path_list;
+    str_t path_list;
 
     /*
      * if a directory has already been
@@ -615,7 +615,7 @@ int parse_cmd_line(int         argc,
         return EXIT_FAILURE;                                                      \
     }
 
-int INSTALL_STR(refstr_t *VAR, const char *SOURCE);
+int INSTALL_STR(str_t *VAR, const char *SOURCE);
 
 /* parse a cmd-line string-argument */
 #define INSTALL_NUMBER_PROTOTYPE(name, type, fmt)            \
@@ -653,8 +653,8 @@ typedef enum {
  */
 struct work {
     compressed_t  compressed;
-    refstr_t      orig_root;              /* argv[i] */
-    refstr_t      root_parent;            /* dirname(realpath(argv[i])) */
+    str_t         orig_root;              /* argv[i] */
+    str_t         root_parent;            /* dirname(realpath(argv[i])) */
     size_t        root_basename_len;      /* strlen(basename(argv[i])) */
     size_t        level;
     char          *name;                  /* points to memory located after struct work */

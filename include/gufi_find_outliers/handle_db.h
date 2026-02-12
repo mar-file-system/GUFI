@@ -102,7 +102,7 @@ int intermediate_dbs_init(struct PoolArgs *pa);
 
 /* insert into intermediate dbs */
 int insert_outlier(sqlite3_stmt *stmt, const str_t *path, const size_t level,
-                   const char *outlier_type, const refstr_t *col,
+                   const char *outlier_type, const str_t *col,
                    const Stats_t *t, const Stats_t *s);
 
 /* output */

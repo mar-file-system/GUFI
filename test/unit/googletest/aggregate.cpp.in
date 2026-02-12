@@ -100,11 +100,11 @@ TEST(gufi_query, aggregate) {
     input_init(&in);
     in.maxthreads             = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
     in.delim                  = ' ';
-    in.sql.init.data          = I.c_str(); in.sql.init.len = strlen(in.sql.init.data);
-    in.sql.ent.data           = E.c_str(); in.sql.ent.len = strlen(in.sql.ent.data);
-    in.sql.init_agg.data      = K.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
-    in.sql.intermediate.data  = J.c_str(); in.sql.intermediate.len = strlen(in.sql.intermediate.data);
-    in.sql.agg.data           = G.c_str(); in.sql.agg.len = strlen(in.sql.agg.data);
+    in.sql.init               = REFSTR(I.c_str(), I.size());
+    in.sql.ent                = REFSTR(E.c_str(), E.size());
+    in.sql.init_agg           = REFSTR(K.c_str(), K.size());
+    in.sql.intermediate       = REFSTR(J.c_str(), J.size());
+    in.sql.agg                = REFSTR(G.c_str(), G.size());
     in.output_buffer_size     = 1024;
 
     PoolArgs_t pa;
@@ -139,11 +139,11 @@ TEST(gufi_query, aggregate) {
     Aggregate_t aggregate;
 
     // init with bad SQL statement
-    in.sql.init_agg.data = BAD_SQL.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
+    in.sql.init_agg = REFSTR(BAD_SQL.c_str(), BAD_SQL.size());
     ASSERT_EQ(aggregate_init(&aggregate, &in), nullptr);
 
     // init with good SQL statement
-    in.sql.init_agg.data = K.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
+    in.sql.init_agg = REFSTR(K.c_str(), K.size());
     ASSERT_NE(aggregate_init(&aggregate, &in), nullptr);
 
     // replace stdout with in-memory file
@@ -152,18 +152,18 @@ TEST(gufi_query, aggregate) {
     ASSERT_NE(aggregate.outfile, nullptr);
 
     // run bad intermediate SQL statement
-    in.sql.intermediate.data = BAD_SQL.c_str(); in.sql.intermediate.len = strlen(in.sql.intermediate.data);
+    in.sql.intermediate = REFSTR(BAD_SQL.c_str(), BAD_SQL.size());
     EXPECT_NO_THROW(aggregate_intermediate(&aggregate, &pa, &in));
 
     // run intermediate SQL statement to move data into aggregate table
-    in.sql.intermediate.data = J.c_str(); in.sql.intermediate.len = strlen(in.sql.intermediate.data);
+    in.sql.intermediate = REFSTR(J.c_str(), J.size());
     EXPECT_NO_THROW(aggregate_intermediate(&aggregate, &pa, &in));
 
     // run aggregate SQL to get final result
     EXPECT_EQ(aggregate_process(&aggregate, &in), 0);
 
     // run a bad aggregate SQL statement
-    in.sql.agg.data = BAD_SQL.c_str(); in.sql.agg.len = strlen(in.sql.agg.data);
+    in.sql.agg = REFSTR(BAD_SQL.c_str(), BAD_SQL.size());
     EXPECT_EQ(aggregate_process(&aggregate, &in), -1);
 
     // cleanup
@@ -178,6 +178,7 @@ TEST(gufi_query, aggregate) {
 
 TEST(gufi_query, aggregate_outputs) {
     struct input in;
+    memset(&in, 0, sizeof(in));
     Aggregate_t agg;
     memset(&agg, 0, sizeof(agg));
 
@@ -186,22 +187,22 @@ TEST(gufi_query, aggregate_outputs) {
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* bad buffer size */
 
     in.output = OUTFILE;
-    in.outname.data = "@CMAKE_BINARY_DIR@";
+    in.outname.data = (char *) "@CMAKE_BINARY_DIR@";
     in.outname.len = strlen(in.outname.data);
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* directory, not file */
 
     in.output = OUTDB;
-    in.outname.data = "@CMAKE_BINARY_DIR@";
+    in.outname.data = (char *) "@CMAKE_BINARY_DIR@";
     in.outname.len = strlen(in.outname.data);
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* directory, not file */
 
     in.output = OUTDB;
-    in.outname.data = SQLITE_MEMORY;
+    in.outname.data = (char *) SQLITE_MEMORY;
     in.outname.len = strlen(in.outname.data);
-    in.sql.init_agg.data = "CREATE TABLE aggregate();";
+    in.sql.init_agg.data = (char *) "CREATE TABLE aggregate();";
     in.no_print_sql_on_err = 0;
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr);
-    in.sql.init_agg.data = "CREATE TABLE aggregate(id INT);";
+    in.sql.init_agg.data = (char *) "CREATE TABLE aggregate(id INT);";
     EXPECT_EQ(aggregate_init(&agg, &in), &agg);
     EXPECT_NE(agg.db, nullptr);
 

@@ -162,20 +162,20 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        const refstr_t user_cols[] = {
-            { user_col,  user_col_len, },
-            { NULL,      0,            },
+        const str_t user_cols[] = {
+            REFSTR(user_col, user_col_len),
+            REFSTR(NULL,     0),
         };
 
         /* check if processing multiple columns */
-        const refstr_t *groups = handle_group(user_col, user_col_len);
+        const str_t *groups = handle_group(user_col, user_col_len);
         if (!groups) {
             groups = user_cols;
         }
 
         size_t g = 0;
         while (groups[g].data) {
-            const refstr_t c = groups[g++];
+            const str_t c = groups[g++];
 
             /* find column type handler */
             ColHandler_t *handler = NULL;
@@ -185,10 +185,7 @@ int main(int argc, char *argv[]) {
             }
 
             /* this is actually a reference */
-            str_t p = {
-                .data = (char *) path,
-                .len = strlen(path),
-            };
+            str_t p = REFSTR(path, strlen(path));
 
             str_t *query = calloc(1, sizeof(*query));
             sll_push(&queries, query);
@@ -229,7 +226,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Time Spent Processing: %.2Lfs\n", processtime);
 
     /* cleanup */
-    sll_destroy(&queries, (void (*)(void *)) str_free);
+    sll_destroy(&queries, str_free_void);
     free(pa.opendbs);
     trie_free(col_funcs);
     QPTPool_destroy(ctx);

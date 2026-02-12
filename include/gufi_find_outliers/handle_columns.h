@@ -85,6 +85,6 @@ typedef struct ColHandler {
 trie_t *setup_column_functions(void);
 
 /* T_ONLY, MIN, MAX, MINMAX, TOT, TIME, ALL */
-const refstr_t *handle_group(const char *name, const size_t len);
+const str_t *handle_group(const char *name, const size_t len);
 
 #endif

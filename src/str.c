@@ -73,7 +73,9 @@ str_t *str_alloc(const size_t len) {
 }
 
 void str_free(str_t *str) {
-    free(str->data);
+    if (str->free) {
+        str->free(str->data);
+    }
     free(str);
 }
 
@@ -84,14 +86,18 @@ void str_free_void(void *ptr) {
 str_t *str_alloc_existing(str_t *str, const size_t len) {
     str->data = malloc(len + 1);
     str->data[len] = '\0'; /* no source data to copy - only null terminate */
-    str->len = len;
+    str->len  = len;
+    str->free = free;
     return str;
 }
 
 void str_free_existing(str_t *str) {
-    free(str->data);
+    if (str->free) {
+        str->free(str->data);
+    }
     str->data = NULL;
-    str->len = 0;
+    str->len  = 0;
+    str->free = NULL;
 }
 
 int str_cmp(const str_t *lhs, const str_t *rhs) {

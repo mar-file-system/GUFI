@@ -225,12 +225,14 @@ static int validate_source(struct input *in, const char *path, gqw_t **gqw) {
                                         sqlite3_name, sqlite3_name_len);
 
     /* keep original user input */
-    new_work->work.orig_root.data = path;
-    new_work->work.orig_root.len = len;
+    new_work->work.orig_root.data = (char *) path;
+    new_work->work.orig_root.len  = len;
+    new_work->work.orig_root.free = NULL;
 
     /* parent of input path */
-    new_work->work.root_parent.data = path;
-    new_work->work.root_parent.len = dirname_len(path, len);
+    new_work->work.root_parent.data = (char *) path;
+    new_work->work.root_parent.len  = dirname_len(path, len);
+    new_work->work.root_parent.free = NULL;
 
     new_work->work.basename_len = new_work->work.name_len - new_work->work.root_parent.len;
 

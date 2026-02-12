@@ -77,7 +77,7 @@ OF SUCH DAMAGE.
 
 /* used to generate snapshots of the index and tree */
 struct GenSnapshot {
-    refstr_t path;         /* argv */
+    str_t path;            /* argv */
     size_t parent_len;     /* strlen(diriname(path) */
     Aggregate_t agg;       /* per-thread in-memory databases that are merged at end to get final results */
 };
@@ -92,7 +92,7 @@ struct SuspectInodes {
 
 struct PoolArgs {
     struct input in;
-    refstr_t parking_lot;  /* directory to place update db.dbs and directories */
+    str_t parking_lot;     /* directory to place update db.dbs and directories */
     struct template_db db; /* (optimization) db.db with empty tables for copying when creating update db.dbs */
 
     QPTPool_ctx_t *ctx;

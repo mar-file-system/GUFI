@@ -772,7 +772,7 @@ static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 }
 
 static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **argv,
-                          struct work *work, refstr_t *prefix)
+                          struct work *work, str_t *prefix)
 {
     const int rollupscore = sqlite3_value_int(argv[1]);
 
@@ -806,9 +806,10 @@ static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **ar
         }
     }
     else { /* reconstruct full path out of argv[0] */
-        refstr_t input;
-        input.data = (const char *) sqlite3_value_text(argv[0]);
+        str_t input;
+        input.data = (char *) sqlite3_value_text(argv[0]);
         input.len  = strlen(input.data);
+        input.free = NULL;
 
         /*
          * fullpath = work->name[:-work->basename_len] + input
@@ -894,7 +895,7 @@ static void spath(sqlite3_context *context, int argc, sqlite3_value **argv)
 static void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc; (void) argv;
 
-    refstr_t *root = (refstr_t *) sqlite3_user_data(context);
+    str_t *root = (str_t *) sqlite3_user_data(context);
     sqlite3_result_text(context, root->data, root->len, SQLITE_STATIC);
 }
 

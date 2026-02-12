@@ -753,10 +753,8 @@ TEST(addqueryfuncs_with_context, path) {
     const char dirname[MAXPATH] = "dirname";
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
-    work->orig_root.data = "index_root";
-    work->orig_root.len = strlen(work->orig_root.data);
-    work->root_parent.data = "";
-    work->root_parent.len = 0;
+    work->orig_root = REFSTR("index_root", 10);
+    work->root_parent = REFSTR("", 0);
     work->root_basename_len = work->orig_root.len;
     work->basename_len = strlen(dirname);
 
@@ -784,8 +782,7 @@ TEST(addqueryfuncs_with_context, epath) {
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
     work->basename_len = strlen(dirname);
-    work->root_parent.data = "index_root";     // currently at index_root/dirname
-    work->root_parent.len = strlen(work->root_parent.data);
+    work->root_parent = REFSTR("index_root", 10);     // currently at index_root/dirname
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
@@ -842,10 +839,8 @@ TEST(addqueryfuncs_with_context, rpath) {
     const char dirname[MAXPATH] = "dirname";
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
-    work->orig_root.data = "index_root";
-    work->orig_root.len = strlen(work->orig_root.data);
-    work->root_parent.data = "";
-    work->root_parent.len = 0;
+    work->orig_root = REFSTR("index_root", 10);
+    work->root_parent = REFSTR("", 0);
     work->root_basename_len = work->orig_root.len;
     work->basename_len = strlen(dirname);
 
@@ -900,14 +895,11 @@ TEST(addqueryfuncs_with_context, spath) {
     const char source[]  = "source/prefix";
 
     struct input in;
-    in.source_prefix.data = source;
-    in.source_prefix.len = strlen(source);
+    in.source_prefix = REFSTR(source, strlen(source));
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
-    work->orig_root.data = "index_root";
-    work->orig_root.len = strlen(work->orig_root.data);
-    work->root_parent.data = "";
-    work->root_parent.len = 0;
+    work->orig_root = REFSTR("index_root", 10);
+    work->root_parent = REFSTR("", 0);
     work->root_basename_len = work->orig_root.len;
     work->basename_len = strlen(dirname);
 
@@ -966,15 +958,13 @@ TEST(addqueryfuncs_with_context, spath) {
 
     char *err = nullptr;
 
-    in.source_prefix.data = nullptr;
-    in.source_prefix.len = strlen(source);
+    in.source_prefix = REFSTR(nullptr, strlen(source));
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, nullptr, &err), SQLITE_ERROR);
     EXPECT_NE(err, nullptr);
     sqlite3_free(err);
     err = nullptr;
 
-    in.source_prefix.data = source;
-    in.source_prefix.len = 0;
+    in.source_prefix = REFSTR(source, 0);
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, nullptr, &err), SQLITE_ERROR);
     EXPECT_NE(err, nullptr);
     sqlite3_free(err);
@@ -986,8 +976,7 @@ TEST(addqueryfuncs_with_context, spath) {
 
 TEST(addqueryfuncs_with_context, starting_point) {
     struct work *work = new_work_with_name(nullptr, 0, nullptr, 0);
-    work->orig_root.data = "/index_root";
-    work->orig_root.len = strlen(work->orig_root.data);
+    work->orig_root = REFSTR("/index_root", 11);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);

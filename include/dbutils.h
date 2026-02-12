@@ -327,9 +327,9 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
                                  const enum CheckRollupScore check_rollupscore);
 
 /* caller frees types */
-int get_col_types(sqlite3 *db, const refstr_t *sql, int **types, int *cols);
+int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols);
 /* caller frees names, names[i], and lens */
-int get_col_names(sqlite3 *db, const refstr_t *sql, char ***names, size_t **lens, int *cols);
+int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, int *cols);
 
 struct Permissions {
     mode_t mode;

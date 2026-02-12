@@ -75,7 +75,7 @@ OF SUCH DAMAGE.
 typedef struct {
     str_t path;
     size_t level;
-    refstr_t col;
+    str_t col;
     const ColHandler_t *handler;  /* functions for handling the column type */
     const str_t *query;           /* SQL for pulling data from index; reference to allocation in main */
     int is_outlier;
@@ -85,7 +85,7 @@ typedef struct {
 } OutlierWork_t;
 
 OutlierWork_t *OutlierWork_create(const str_t *path, const size_t level,
-                                  const refstr_t col,
+                                  const str_t col,
                                   const ColHandler_t *handler, const str_t *query,
                                   const int is_outlier,
                                   const Stats_t *t, const Stats_t *s);

@@ -70,7 +70,7 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 /* allocate the array of FILE * and open files */
-FILE **outfiles_init(const refstr_t *prefix, const size_t count) {
+FILE **outfiles_init(const str_t *prefix, const size_t count) {
     /* Not checking arguments */
     FILE **files = calloc(count, sizeof(FILE *));
     if (!files) {

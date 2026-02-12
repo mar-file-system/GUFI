@@ -82,7 +82,7 @@ OF SUCH DAMAGE.
 /* global to pool - passed around in "args" argument */
 struct PoolArgs {
     struct input in;
-    refstr_t index_parent; /* actual index is placed at <index parent>/<path in trace> */
+    str_t index_parent; /* actual index is placed at <index parent>/<path in trace> */
 
     struct template_db db;
     struct template_db xattr;

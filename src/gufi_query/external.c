@@ -91,15 +91,8 @@ void attach_extdbs(struct input *in, sqlite3 *db,
                                                     user->basename.data, user->basename.len,
                                                     "')", (size_t) 2);
 
-        const refstr_t basename_comp_ref = {
-            .data = basename_comp,
-            .len  = basename_comp_len,
-        };
-
-        static const refstr_t SELECT_STAR = {
-            .data = " SELECT * FROM ",
-            .len  = 15,
-        };
+        const str_t basename_comp_ref = REFSTR(basename_comp, basename_comp_len);
+        static const str_t SELECT_STAR = REFSTR(" SELECT * FROM ", 15);
 
         /*
          * attach database for current directory (if it
@@ -199,10 +192,7 @@ void detach_extdbs(struct input *in, sqlite3 *db,
                                                         user->basename.data, user->basename.len,
                                                         "')", (size_t) 2);
 
-            const refstr_t basename_comp_ref = {
-                .data = basename_comp,
-                .len  = basename_comp_len,
-            };
+            const str_t basename_comp_ref = REFSTR(basename_comp, basename_comp_len);
 
             external_concatenate_cleanup(db, drop_extdb_view,
                                          &EXTERNAL_TYPE_USER_DB,

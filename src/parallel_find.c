@@ -397,14 +397,12 @@ int main(int argc, char *argv[]) {
     int rc = 0;
 
     if (!pa.in.format_set) {
-        pa.in.format.data = DEFAULT_FORMAT;
-        pa.in.format.len = sizeof(DEFAULT_FORMAT) - 1;
+        pa.in.format.data = (char *) DEFAULT_FORMAT;
+        pa.in.format.len  = sizeof(DEFAULT_FORMAT) - 1;
+        pa.in.format.free = NULL;
     }
 
-    const refstr_t STDOUT_NAME = {
-        .data = "-",
-        .len = 1,
-    };
+    const str_t STDOUT_NAME = REFSTR("-", 1);
 
     pa.outfiles = outfiles_init((pa.in.output == STDOUT)?&STDOUT_NAME:&pa.in.outname, pa.in.maxthreads);
     if (!pa.outfiles) {
@@ -440,7 +438,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        work->orig_root.data = path;
+        work->orig_root.data = (char *) path;
         work->orig_root.len = path_len + 1;  /* add 1 to remove the slash added from descend */
 
         /* input path that are links are followed (find -H) */

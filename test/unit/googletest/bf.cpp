@@ -130,7 +130,7 @@ static const std::string suspect_method      = "--suspect-method"; static const 
 static const std::string suspect_time        = "--suspect-time";   static const std::string suspect_time_arg = "1";
 static const std::string suspect_stat        = "--suspect-stat";
 
-static bool operator==(const refstr_t &refstr, const std::string &str) {
+static bool operator==(const str_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
         return false;
     }
@@ -783,7 +783,7 @@ TEST(parse_cmd_line, invalid) {
 
 TEST(INSTALL, STR) {
     const std::string SOURCE = "INSTALL_STR";
-    refstr_t dst;
+    str_t dst;
     EXPECT_EQ(INSTALL_STR(&dst, SOURCE.c_str()), 0);
     EXPECT_EQ(dst, SOURCE);
 

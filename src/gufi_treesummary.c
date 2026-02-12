@@ -122,7 +122,7 @@ static int printits(struct input *in, struct work *pwork, struct entry_data *ed,
 
 struct PoolArgs {
     struct input in;
-    refstr_t index;
+    str_t index;
     struct sum *sums; /* per thread summary data */
 };
 

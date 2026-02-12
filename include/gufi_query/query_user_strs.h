@@ -88,9 +88,9 @@ typedef struct user_str_key {
     size_t end;   /* index of } */
 } usk_t;
 
-void save_user_str(sll_t *idx, const refstr_t *sql, const size_t *i);
+void save_user_str(sll_t *idx, const str_t *sql, const size_t *i);
 
-int replace_user_str(const refstr_t *sql,
+int replace_user_str(const str_t *sql,
                      size_t *src_start,
                      void *pos,
                      str_t *replaced,

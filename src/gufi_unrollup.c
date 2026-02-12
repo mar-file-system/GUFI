@@ -211,10 +211,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     /* now that work has been pushed onto the queue, clean up this db */
     if (deep_enough(in, work) && db && rolledup) {
-        refstr_t name = {
-            .data = work->name,
-            .len  = work->name_len,
-        };
+        str_t name = REFSTR(work->name, work->name_len);
 
         char *err = NULL;
         if (sqlite3_exec(db, ROLLUP_CLEANUP, xattrs_rollup_cleanup, &name, &err) != SQLITE_OK) {

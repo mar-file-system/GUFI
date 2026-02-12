@@ -504,7 +504,7 @@ int parallel_bottomup_enqueue(QPTPool_ctx_t *ctx,
 
 static int parallel_bottomup_enqueue_subdirs(QPTPool_ctx_t *ctx,
                                              const char *path, const size_t len,
-                                             const size_t min_level, const refstr_t *path_list,
+                                             const size_t min_level, const str_t *path_list,
                                              void *extra_args) {
     struct UserArgs *ua = NULL;
     QPTPool_get_args(ctx, (void **) &ua);
@@ -579,7 +579,7 @@ int parallel_bottomup_fini(QPTPool_ctx_t *ctx) {
 
 int parallel_bottomup(char **root_names, const size_t root_count,
                       const size_t min_level, const size_t max_level,
-                      const refstr_t *path_list,
+                      const str_t *path_list,
                       const size_t thread_count,
                       const size_t user_struct_size,
                       BU_descend_f descend, BU_ascend_f ascend,
