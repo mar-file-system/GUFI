@@ -303,12 +303,16 @@ def get_valconcat(cursor,gqapps,parttype,column,withopval,asonly,iswhere,checkse
         colnm=row[2]
 
     # fix the date value and the mode op
+    #print('********in get_valconcat string in *******')
+    #print(row)
     theval=row[0]
     theop=row[1]
     if parttype=='i':
       if withopval==2:
         if row[3]=='d':
-          qrdt=datetime.strptime(row[0], '%Y-%m-%d')
+          datecorrect=row[0][:10]
+          #qrdt=datetime.strptime(row[0], '%Y-%m-%d')
+          qrdt=datetime.strptime(datecorrect, '%Y-%m-%d')
           theval=int(qrdt.timestamp())
         if row[3]=='m':
           if row[1]=='lor':
@@ -452,7 +456,8 @@ def postsubmit_validate(cursor,gqapps,queryin_window):
     if matchcount==0:
       print("postsubmit_validate: required row not present")
       if queryin_window=='':
-        outerr=_error('a required input is needed')
+        #outerr=_error('a required input is needed')
+        outerr='a required input is needed'
         weberr=output_errors_web(outerr)
         return(weberr)
       else:
@@ -723,7 +728,7 @@ def output_errors_web(web_error):
   htmlout+='<html>'
   htmlout+='<head><title>gufi query results</title></head>'
   htmlout+='<body>'
-  htmlout+='<h1>gufi error message/h1>'
+  htmlout+='<h1>gufi error message</h1>'
   htmlout+='<h2>%s</h2>' % web_error
   htmlout+='</body>'
   htmlout+='</html>'
@@ -785,6 +790,8 @@ def output_result_web(root,infotext,rq_verbose,vfq,vqtable,fq,colnames,deepdebug
     qhtmlout+="<tr>"
     for i in range(ncols):
        qhtmlout+="<td>%s</td>" % item[i]
+       #print(item[i])
+       #print(item)
     qhtmlout+="</tr>"
     rowcounter+=1
     if rowcounter>int(rq_rowmax):
