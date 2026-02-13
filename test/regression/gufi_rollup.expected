@@ -9,6 +9,7 @@ options:
       --max-level <n>               maximum level to go down
       --path-list <filename>        File containing paths at single level to walk (not including starting path). If --min-level > 0, prepend each line of the file with the index path.
       --limit <count>               Highest number of files/links in a directory allowed to be rolled up
+      --delete-below <level>        Delete rollup data under (not including) this level
       --dry-run                     Dry run
       --dont-reprocess              if a directory was previously processed, skip descending the subtree
 
@@ -1520,13 +1521,13 @@ Total:          10
 Remaining Dirs: 2 (66.67%)
 
 # Check which directories have been rolled up
-$ gufi_query -d "|" -S "SELECT rpath(sname, sroll), rollupscore FROM vrsummary" "prefix"
-prefix/directory/subdirectory|1
-prefix/directory|1
-prefix/empty_directory|0
-prefix/leaf_directory|1
-prefix/unusual#? directory ,|0
-prefix|0
+$ gufi_query -d "|" -S "SELECT path(), rpath(sname, sroll), rollupscore FROM vrsummary;" "prefix"
+prefix/directory|prefix/directory/subdirectory|1
+prefix/directory|prefix/directory|1
+prefix/empty_directory|prefix/empty_directory|0
+prefix/leaf_directory|prefix/leaf_directory|1
+prefix/unusual#? directory ,|prefix/unusual#? directory ,|0
+prefix|prefix|0
 
 # Full Rollup up to level 1
 $ gufi_rollup --min-level 1 "prefix"
@@ -1565,13 +1566,13 @@ Total:          15
 Remaining Dirs: 0 (0.00%)
 
 # Check which directories have been rolled up
-$ gufi_query -d "|" -S "SELECT rpath(sname, sroll), rollupscore FROM vrsummary" "prefix"
-prefix/directory/subdirectory|1
-prefix/directory|1
-prefix/empty_directory|1
-prefix/leaf_directory|1
-prefix/unusual#? directory ,|1
-prefix|0
+$ gufi_query -d "|" -S "SELECT path(), rpath(sname, sroll), rollupscore FROM vrsummary;" "prefix"
+prefix/directory|prefix/directory/subdirectory|1
+prefix/directory|prefix/directory|1
+prefix/empty_directory|prefix/empty_directory|1
+prefix/leaf_directory|prefix/leaf_directory|1
+prefix/unusual#? directory ,|prefix/unusual#? directory ,|1
+prefix|prefix|0
 
 # Complete rollup using existing data
 $ gufi_rollup --dont-reprocess "prefix"
@@ -1610,13 +1611,186 @@ Total:          7
 Remaining Dirs: 1 (100.00%)
 
 # Check which directories have been rolled up
-$ gufi_query -d "|" -S "SELECT rpath(sname, sroll), rollupscore FROM vrsummary" "prefix"
-prefix/directory/subdirectory|1
-prefix/directory|1
-prefix/empty_directory|1
-prefix/leaf_directory|1
-prefix/unusual#? directory ,|1
-prefix|1
+$ gufi_query -d "|" -S "SELECT path(), rpath(sname, sroll), rollupscore FROM vrsummary;" "prefix"
+prefix|prefix/directory/subdirectory|1
+prefix|prefix/directory|1
+prefix|prefix/empty_directory|1
+prefix|prefix/leaf_directory|1
+prefix|prefix/unusual#? directory ,|1
+prefix|prefix|1
+
+Creating GUFI tree search with 1 threads
+Total Dirs:          6
+Total Non-Dirs:      14
+# test-xattr.db starts at prefix/directory/subdirectory
+$ find "prefix" -name "*.db"
+prefix/db.db
+prefix/directory/db.db
+prefix/directory/subdirectory/db.db
+prefix/directory/subdirectory/test-xattr.db
+prefix/empty_directory/db.db
+prefix/leaf_directory/db.db
+prefix/unusual#? directory ,/db.db
+
+# delete rollups under prefix
+$ gufi_rollup --delete-below 1 "search"
+Roots:
+    search
+
+Thread Pool Size:            1
+Files/Links Limit:           0
+
+Not Processed:               0
+Cannot Roll Up:              1
+    Subdirectories:
+        min:                 1
+        max:                 1
+        median:           1.00
+        sum:                 1
+        average:          1.00
+    Files/Links:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Level:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Too Many Before:         0
+    Too Many After:          0
+Can Roll Up:                 6
+    Subdirectories:
+        min:                 0
+        max:                 4
+        median:           0.00
+        sum:                 5
+        average:          0.83
+    Files/Links:
+        min:                 0
+        max:                 6
+        median:           2.00
+        sum:                14
+        average:          2.33
+    Level:
+        min:                 1
+        max:                 3
+        median:           2.00
+        sum:                12
+        average:          2.00
+    Successful:              6
+    Failed:                  0
+Files/Links:    14
+Directories:    7 (2 empty)
+Total:          21
+Remaining Dirs: 2 (28.57%)
+# test-xattr.db is only left at prefix and prefix/directory/subdirectory
+$ find "prefix" -name "*.db"
+prefix/db.db
+prefix/directory/db.db
+prefix/directory/subdirectory/db.db
+prefix/directory/subdirectory/test-xattr.db
+prefix/empty_directory/db.db
+prefix/leaf_directory/db.db
+prefix/test-xattr.db
+prefix/unusual#? directory ,/db.db
+
+# prefix is rolled up, so directory traversal stops immediately
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix"
+prefix|prefix/directory/subdirectory|0|1|test.name|test.value
+prefix|prefix/directory/subdirectory|0|1|user.name|sub
+prefix|prefix/directory/subdirectory|0|1|user.type|dir
+prefix|prefix/directory|0|1||
+prefix|prefix/empty_directory|0|1||
+prefix|prefix/leaf_directory|0|1|user.name|leaf
+prefix|prefix/leaf_directory|0|1|user.type|dir
+prefix|prefix/unusual#? directory ,|0|1||
+prefix|prefix|1|1||
+
+# prefix/directory is not rolled up, so directory traversal does not stop
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix/directory"
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|test.name|test.value
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|user.name|sub
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|user.type|dir
+prefix/directory|prefix/directory|1|0||
+
+Creating GUFI tree search with 1 threads
+Total Dirs:          6
+Total Non-Dirs:      14
+# keep rollups between 2 levels (delete rollups in prefix/directory/subdirectory)
+$ gufi_rollup --min-level 1 --delete-below 2 "search"
+Roots:
+    search
+
+Thread Pool Size:            1
+Files/Links Limit:           0
+
+Not Processed:               0
+Cannot Roll Up:              0
+Can Roll Up:                 6
+    Subdirectories:
+        min:                 0
+        max:                 4
+        median:           0.00
+        sum:                 5
+        average:          0.83
+    Files/Links:
+        min:                 0
+        max:                 6
+        median:           2.00
+        sum:                14
+        average:          2.33
+    Level:
+        min:                 1
+        max:                 3
+        median:           2.00
+        sum:                12
+        average:          2.00
+    Successful:              6
+    Failed:                  0
+Files/Links:    14
+Directories:    6 (1 empty)
+Total:          20
+Remaining Dirs: 0 (0.00%)
+
+$ find "prefix" -name "db.db" -exec "sqlite3" {} "SELECT name, isroot, rollupscore FROM summary;" \;
+directory/subdirectory|0|1
+directory|1|1
+empty_directory|1|1
+leaf_directory|1|1
+prefix/directory/subdirectory|0|1
+prefix/directory|0|1
+prefix/empty_directory|0|1
+prefix/leaf_directory|0|1
+prefix/unusual#? directory ,|0|1
+prefix|1|1
+subdirectory|1|0
+unusual#? directory ,|1|1
+
+# prefix is rolled up, so directory traversal stops immediately
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix"
+prefix|prefix/directory/subdirectory|0|1|user.name|sub
+prefix|prefix/directory/subdirectory|0|1|user.type|dir
+prefix|prefix/directory|0|1||
+prefix|prefix/empty_directory|0|1||
+prefix|prefix/leaf_directory|0|1|user.name|leaf
+prefix|prefix/leaf_directory|0|1|user.type|dir
+prefix|prefix/unusual#? directory ,|0|1||
+prefix|prefix|1|1||
+
+# prefix/directory is also rolled up, so directory traversal stops immediately
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix/directory"
+prefix/directory|prefix/directory/subdirectory|0|1|user.name|sub
+prefix/directory|prefix/directory/subdirectory|0|1|user.type|dir
+prefix/directory|prefix/directory|1|1||
+
+# prefix/directory/subdirectory is not rolled up
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix/directory/subdirectory"
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|user.name|sub
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|user.type|dir
 
 # bad thread count
 $ gufi_rollup -n 18446744073709551615 "search"

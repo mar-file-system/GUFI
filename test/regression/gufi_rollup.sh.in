@@ -161,25 +161,93 @@ do_tests
 rm -rf "${SEARCH}"
 
 "${GENERATETREE}" "${SRCDIR}"
+
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}" 2>&1
 
-echo "# Partial Rollup up to level 1"
-run_no_sort "${GUFI_ROLLUP} --min-level 1 --path-list \"${PATH_LIST}\" \"${INDEXROOT}\""
+# partial rollups
+{
+    echo "# Partial Rollup up to level 1"
+    run_no_sort "${GUFI_ROLLUP} --min-level 1 --path-list \"${PATH_LIST}\" \"${INDEXROOT}\""
 
-echo "# Check which directories have been rolled up"
-run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""
+    echo "# Check which directories have been rolled up"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT path(), rpath(sname, sroll), rollupscore FROM vrsummary;\" \"${INDEXROOT}\""
 
-echo "# Full Rollup up to level 1"
-run_no_sort "${GUFI_ROLLUP} --min-level 1 \"${INDEXROOT}\""
+    echo "# Full Rollup up to level 1"
+    run_no_sort "${GUFI_ROLLUP} --min-level 1 \"${INDEXROOT}\""
 
-echo "# Check which directories have been rolled up"
-run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""
+    echo "# Check which directories have been rolled up"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT path(), rpath(sname, sroll), rollupscore FROM vrsummary;\" \"${INDEXROOT}\""
 
-echo "# Complete rollup using existing data"
-run_no_sort "${GUFI_ROLLUP} --dont-reprocess \"${INDEXROOT}\""
+    echo "# Complete rollup using existing data"
+    run_no_sort "${GUFI_ROLLUP} --dont-reprocess \"${INDEXROOT}\""
 
-echo "# Check which directories have been rolled up"
-run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), rollupscore FROM vrsummary\" \"${INDEXROOT}\""
+    echo "# Check which directories have been rolled up"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT path(), rpath(sname, sroll), rollupscore FROM vrsummary;\" \"${INDEXROOT}\""
+}
+
+rm -rf "${SEARCH}"
+
+"${GUFI_DIR2INDEX}" --index-xattrs "${SRCDIR}" "${SEARCH}" 2>&1
+
+# delete rollups to save space
+{
+    # don't need to explicitly clean this up because it is deleted along with the index
+    INSERT_DIR="${INDEXROOT}/directory/subdirectory"
+    EXT_DBNAME="test-xattr.db"
+    TEST_XATTR_DB="${INSERT_DIR}/${EXT_DBNAME}"
+
+    # create an external xattr db that is rolled up into parents
+    INODE=$(stat -c "%i" "${SRCDIR}/directory/subdirectory")
+
+    (
+        echo "CREATE TABLE xattrs_pwd(inode TEXT, name TEXT, value TEXT);"
+        echo "CREATE TABLE xattrs_rollup(inode TEXT, name TEXT, value TEXT);"
+        echo "CREATE VIEW xattrs_avail AS SELECT * FROM xattrs_pwd UNION SELECT * FROM xattrs_rollup;"
+        echo "INSERT INTO xattrs_pwd VALUES ('${INODE}', 'test.name', 'test.value');" # add to subdirectory
+    ) | "${SQLITE3}" "${TEST_XATTR_DB}"
+
+    # insert the external xattr db into the records ${INDEXROOT}/directory/subdirectory/db.db
+    (
+        echo "INSERT INTO external_dbs_pwd VALUES ('xattrs', 'pinode', '${EXT_DBNAME}', 0, 0, 0);"
+    ) | "${SQLITE3}" "${INSERT_DIR}/db.db"
+
+    echo "# ${EXT_DBNAME} starts at ${INSERT_DIR}"
+    run_sort "find \"${INDEXROOT}\" -name \"*.db\""
+
+    echo "# delete rollups under ${INDEXROOT}"
+    echo "$ ${GUFI_ROLLUP} --delete-below 1 \"${SEARCH}\""
+    "${GUFI_ROLLUP}" --delete-below 1 "${SEARCH}" # alpine linux is weird about running this in run_no_sort
+
+    echo "# ${EXT_DBNAME} is only left at ${INDEXROOT} and ${INSERT_DIR}"
+    run_sort "find \"${INDEXROOT}\" -name \"*.db\""
+
+    echo "# ${INDEXROOT} is rolled up, so directory traversal stops immediately"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --query-xattrs -S \"SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}\""
+
+    echo "# ${INDEXROOT}/directory is not rolled up, so directory traversal does not stop"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --query-xattrs -S \"SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}/directory\""
+}
+
+rm -rf "${SEARCH}"
+
+"${GUFI_DIR2INDEX}" --index-xattrs "${SRCDIR}" "${SEARCH}" 2>&1
+
+# keep rollups between 2 levels
+{
+    echo "# keep rollups between 2 levels (delete rollups in ${INDEXROOT}/directory/subdirectory)"
+    run_no_sort "${GUFI_ROLLUP} --min-level 1 --delete-below 2 \"${SEARCH}\""
+
+    run_sort "find \"${INDEXROOT}\" -name \"db.db\" -exec \"${SQLITE3}\" {} \"SELECT name, isroot, rollupscore FROM summary;\" \;"
+
+    echo "# ${INDEXROOT} is rolled up, so directory traversal stops immediately"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --query-xattrs -S \"SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}\""
+
+    echo "# ${INDEXROOT}/directory is also rolled up, so directory traversal stops immediately"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --query-xattrs -S \"SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}/directory\""
+
+    echo "# ${INDEXROOT}/directory/subdirectory is not rolled up"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --query-xattrs -S \"SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}/directory/subdirectory\""
+}
 
 echo "# bad thread count"
 run_no_sort "${GUFI_ROLLUP} -n 18446744073709551615 \"${SEARCH}\""

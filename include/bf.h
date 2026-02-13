@@ -171,6 +171,7 @@ extern "C" {
 #define FLAG_GROUP_MEM     2000
 #define FLAG_GROUP_XATTRS  3000
 #define FLAG_GROUP_INC     4000
+#define FLAG_GROUP_ROLLUP  5000
 
 /* miscellaneous flags */
 
@@ -218,35 +219,31 @@ extern "C" {
 #define FLAG_TERSE_LONG "terse"
 #define FLAG_TERSE {FLAG_TERSE_LONG, no_argument, NULL, FLAG_TERSE_SHORT}
 
-#define FLAG_ROLLUP_LIMIT_SHORT (FLAG_GROUP_MISC + 11)
-#define FLAG_ROLLUP_LIMIT_LONG "limit"
-#define FLAG_ROLLUP_LIMIT {FLAG_ROLLUP_LIMIT_LONG, required_argument, NULL, FLAG_ROLLUP_LIMIT_SHORT}
-
-#define FLAG_DONT_REPROCESS_SHORT (FLAG_GROUP_MISC + 12)
+#define FLAG_DONT_REPROCESS_SHORT (FLAG_GROUP_MISC + 11)
 #define FLAG_DONT_REPROCESS_LONG "dont-reprocess"
 #define FLAG_DONT_REPROCESS {FLAG_DONT_REPROCESS_LONG, no_argument, NULL, FLAG_DONT_REPROCESS_SHORT}
 
-#define FLAG_NEWLINE_SHORT (FLAG_GROUP_MISC + 13)
+#define FLAG_NEWLINE_SHORT (FLAG_GROUP_MISC + 12)
 #define FLAG_NEWLINE_LONG "newline"
 #define FLAG_NEWLINE {FLAG_NEWLINE_LONG, required_argument, NULL, FLAG_NEWLINE_SHORT}
 
-#define FLAG_SUPPRESS_NEWLINE_SHORT (FLAG_GROUP_MISC + 14)
+#define FLAG_SUPPRESS_NEWLINE_SHORT (FLAG_GROUP_MISC + 13)
 #define FLAG_SUPPRESS_NEWLINE_LONG "suppress-newline"
 #define FLAG_SUPPRESS_NEWLINE {FLAG_SUPPRESS_NEWLINE_LONG, no_argument, NULL, FLAG_SUPPRESS_NEWLINE_SHORT}
 
-#define FLAG_DIR_MATCH_UID_SHORT (FLAG_GROUP_MISC + 15)
+#define FLAG_DIR_MATCH_UID_SHORT (FLAG_GROUP_MISC + 14)
 #define FLAG_DIR_MATCH_UID_LONG "dir-match-uid"
 #define FLAG_DIR_MATCH_UID {FLAG_DIR_MATCH_UID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_UID_SHORT}
 
-#define FLAG_DIR_MATCH_GID_SHORT (FLAG_GROUP_MISC + 16)
+#define FLAG_DIR_MATCH_GID_SHORT (FLAG_GROUP_MISC + 15)
 #define FLAG_DIR_MATCH_GID_LONG "dir-match-gid"
 #define FLAG_DIR_MATCH_GID {FLAG_DIR_MATCH_GID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_GID_SHORT}
 
-#define FLAG_PRINT_EACCES_SHORT (FLAG_GROUP_MISC + 17)
+#define FLAG_PRINT_EACCES_SHORT (FLAG_GROUP_MISC + 16)
 #define FLAG_PRINT_EACCES_LONG "print-eacces"
 #define FLAG_PRINT_EACCES {FLAG_PRINT_EACCES_LONG, no_argument, NULL, FLAG_PRINT_EACCES_SHORT}
 
-#define FLAG_NO_PRINT_SQL_ON_ERR_SHORT (FLAG_GROUP_MISC + 18)
+#define FLAG_NO_PRINT_SQL_ON_ERR_SHORT (FLAG_GROUP_MISC + 17)
 #define FLAG_NO_PRINT_SQL_ON_ERR_LONG "no-print-sql-on-err"
 #define FLAG_NO_PRINT_SQL_ON_ERR {FLAG_NO_PRINT_SQL_ON_ERR_LONG, no_argument, NULL, FLAG_NO_PRINT_SQL_ON_ERR_SHORT}
 
@@ -307,6 +304,16 @@ extern "C" {
 #define FLAG_SUSPECT_STAT_SHORT (FLAG_GROUP_INC + 3)
 #define FLAG_SUSPECT_STAT_LONG "suspect-stat"
 #define FLAG_SUSPECT_STAT {FLAG_SUSPECT_STAT_LONG, no_argument, NULL, FLAG_SUSPECT_STAT_SHORT}
+
+/* gufi_rollup flags */
+
+#define FLAG_ROLLUP_LIMIT_SHORT (FLAG_GROUP_ROLLUP + 0)
+#define FLAG_ROLLUP_LIMIT_LONG "limit"
+#define FLAG_ROLLUP_LIMIT {FLAG_ROLLUP_LIMIT_LONG, required_argument, NULL, FLAG_ROLLUP_LIMIT_SHORT}
+
+#define FLAG_ROLLUP_DELETE_BELOW_SHORT (FLAG_GROUP_ROLLUP + 1)
+#define FLAG_ROLLUP_DELETE_BELOW_LONG "delete-below"
+#define FLAG_ROLLUP_DELETE_BELOW {FLAG_ROLLUP_DELETE_BELOW_LONG, required_argument, NULL, FLAG_ROLLUP_DELETE_BELOW_SHORT}
 
 /* required at the end of every flag list */
 #define FLAG_END {NULL, 0, NULL, 0}
@@ -514,7 +521,11 @@ struct input {
     str_t format;
 
     /* only used by rollup */
-    size_t rollup_entries_limit;
+    struct {
+        size_t entries_limit;
+        size_t delete_below;
+        int attach_flag;    /* SQLITE_OPEN_READONLY or SQLITE_OPEN_READWRITE; set by --delete-below */
+    } rollup;
 
     /* trie containing directory basenames to skip during tree traversal */
     trie_t *skip;

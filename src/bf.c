@@ -123,6 +123,8 @@ struct input *input_init(struct input *in) {
         in->output                  = STDOUT;
         in->output_buffer_size      = 4096;
         in->open_flags              = SQLITE_OPEN_READONLY;   // default to read-only opens
+        in->rollup.delete_below     = -1;
+        in->rollup.attach_flag      = SQLITE_OPEN_READONLY;
         in->skip                    = trie_alloc();
 
         /* always skip . and .. */
@@ -251,7 +253,6 @@ void print_help(const char* prog_name,
             case FLAG_PATH_LIST_SHORT:               printf("      --path-list <filename>        File containing paths at single level to walk (not including starting path). If --min-level > 0, prepend each line of the file with the index path."); break;
             case FLAG_FORMAT_SHORT:                  printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
             case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
-            case FLAG_ROLLUP_LIMIT_SHORT:            printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
             case FLAG_DONT_REPROCESS_SHORT:          printf("      --dont-reprocess              if a directory was previously processed, skip descending the subtree"); break;
             case FLAG_NEWLINE_SHORT:                 printf("      --newline <c>                 character used to separate lines (default: '\\n') [use 0 for NULL character]"); break;
             case FLAG_SUPPRESS_NEWLINE_SHORT:        printf("      --suppress-newline            do not print the line separator"); break;
@@ -276,6 +277,10 @@ void print_help(const char* prog_name,
             case FLAG_SUSPECT_METHOD_SHORT:          printf("      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)"); break;
             case FLAG_SUSPECT_TIME_SHORT:            printf("      --suspect-time <s>            time in seconds since epoch for suspect comparision"); break;
             case FLAG_SUSPECT_STAT_SHORT:            printf("      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime"); break;
+
+            /* gufi_rollup flags */
+            case FLAG_ROLLUP_LIMIT_SHORT:            printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
+            case FLAG_ROLLUP_DELETE_BELOW_SHORT:     printf("      --delete-below <level>        Delete rollup data under (not including) this level"); break;
 
             default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
@@ -331,7 +336,6 @@ void show_input(struct input* in, int retval) {
     printf("in.format_set               = %d\n",            in->format_set);
     printf("in.format                   = '%s'\n",          in->format.data);
     printf("in.terse                    = %d\n",            in->terse);
-    printf("in.rollup_entries_limit     = %zu\n",           in->rollup_entries_limit);
     printf("in.dont_reprocess           = %d\n",            in->dont_reprocess);
     printf("in.newline                  = '%c'\n",          in->newline);
     printf("in.suppress_newline         = %d\n",            in->suppress_newline);
@@ -350,12 +354,17 @@ void show_input(struct input* in, int retval) {
 
     printf("in.process_xattrs           = %d\n",            in->process_xattrs);
 
-    /* gufi_incremental_update */
+    /* gufi_incremental_update flags */
     printf("in.insuspect                = '%s'\n",          in->insuspect.data);
     printf("in.suspectfile              = '%d'\n",          in->suspectfile);
     printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
     printf("in.suspecttime              = '%d'\n",          in->suspecttime);
     printf("in.suspectstat              = '%d'\n",          in->suspectstat);
+
+    /* gufi_rollup flags */
+    printf("in.rollup.entries_limit     = %zu\n",           in->rollup.entries_limit);
+    printf("in.rollup.delete_below      = %zu\n",           in->rollup.delete_below);
+    printf("in.rollup.attach_flag       = %d\n",            in->rollup.attach_flag);
 
     printf("retval                      = %d\n",            retval);
     printf("\n");
@@ -623,11 +632,6 @@ int parse_cmd_line(int                  argc,
                 in->terse = 1;
                 break;
 
-            case FLAG_ROLLUP_LIMIT_SHORT:
-                INSTALL_SIZE(&in->rollup_entries_limit, optarg, (size_t) 0, (size_t) -1,
-                             "--" FLAG_ROLLUP_LIMIT_LONG, &retval);
-                break;
-
             case FLAG_DONT_REPROCESS_SHORT:
                 in->dont_reprocess = 1;
                 break;
@@ -703,7 +707,7 @@ int parse_cmd_line(int                  argc,
                 in->process_xattrs = 1; /* all xattr flags point to the same variable */
                 break;
 
-            /* gufi_incremental_update */
+            /* gufi_incremental_update flags */
 
             case FLAG_SUSPECT_FILE_SHORT:
                 INSTALL_STR(&in->insuspect, optarg);
@@ -723,6 +727,19 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_SUSPECT_STAT_SHORT:
                 in->suspectstat = 1;
+                break;
+
+            /* gufi_rollup flags */
+
+            case FLAG_ROLLUP_LIMIT_SHORT:
+                INSTALL_SIZE(&in->rollup.entries_limit, optarg, (size_t) 0, (size_t) -1,
+                             "--" FLAG_ROLLUP_LIMIT_LONG, &retval);
+                break;
+
+            case FLAG_ROLLUP_DELETE_BELOW_SHORT:
+                INSTALL_SIZE(&in->rollup.delete_below, optarg, (size_t) 0, (size_t) -1,
+                             "--" FLAG_ROLLUP_DELETE_BELOW_LONG, &retval);
+                in->rollup.attach_flag = SQLITE_OPEN_READWRITE;
                 break;
 
             case '?':

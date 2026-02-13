@@ -110,7 +110,6 @@ static const std::string dry_run             = "--dry-run";
 static const std::string path_list           = "--path-list"; static const std::string path_list_arg = "file name";
 static const std::string format              = "--format"; static const std::string format_arg = "f arg";
 static const std::string terse               = "--terse";
-static const std::string rollup_limit        = "--limit"; static const std::string rollup_limit_arg = "1";
 static const std::string dont_reprocess      = "--dont-reprocess";
 static const std::string dir_match_uid       = "--dir-match-uid"; static const std::string dir_match_uid_arg = "1";
 static const std::string dir_match_gid       = "--dir-match-gid"; static const std::string dir_match_gid_arg = "1";
@@ -129,6 +128,8 @@ static const std::string suspect_file        = "--suspect-file";   static const 
 static const std::string suspect_method      = "--suspect-method"; static const std::string suspect_method_arg = "1";
 static const std::string suspect_time        = "--suspect-time";   static const std::string suspect_time_arg = "1";
 static const std::string suspect_stat        = "--suspect-stat";
+static const std::string rollup_limit        = "--limit"; static const std::string rollup_limit_arg = "1";
+static const std::string rollup_delete_below = "--delete-below"; static const std::string rollup_delete_below_arg = "1";
 
 static bool operator==(const str_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -222,7 +223,9 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->max_level,                      (std::size_t) 1);
         EXPECT_EQ(in->output_buffer_size,             (std::size_t) 1);
         EXPECT_EQ(in->format,                         format_arg);
-        EXPECT_EQ(in->rollup_entries_limit,           (std::size_t) 1);
+        EXPECT_EQ(in->rollup.entries_limit,           (std::size_t) 1);
+        EXPECT_EQ(in->rollup.delete_below,            (std::size_t) 1);
+        EXPECT_EQ(in->rollup.attach_flag,             SQLITE_OPEN_READWRITE);
         EXPECT_NE(in->skip,                           nullptr);
         EXPECT_EQ(in->target_memory,                  (std::size_t) 1);
         EXPECT_EQ(in->subdir_limit,                   (std::size_t) 1);
@@ -268,7 +271,9 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->max_level,                      (std::size_t) -1);
         EXPECT_EQ(in->output_buffer_size,             (std::size_t) 4096);
         EXPECT_EQ(in->format,                         empty);
-        EXPECT_EQ(in->rollup_entries_limit,           (std::size_t) 0);
+        EXPECT_EQ(in->rollup.entries_limit,           (std::size_t) 0);
+        EXPECT_EQ(in->rollup.delete_below,            (std::size_t) -1);
+        EXPECT_EQ(in->rollup.attach_flag,             SQLITE_OPEN_READONLY);
         EXPECT_NE(in->skip,                           nullptr);
         EXPECT_EQ(in->target_memory,                  (std::size_t) 0);
         EXPECT_EQ(in->subdir_limit,                   (std::size_t) 0);
@@ -339,10 +344,11 @@ TEST(parse_cmd_line, debug) {
         FLAG_SUSPECT_TIME, FLAG_PATH, FLAG_FILTER_TYPE, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
         FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
         FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE,
-        FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_DONT_REPROCESS,
-        FLAG_PRINT_EACCES, FLAG_NO_PRINT_SQL_ON_ERR,
-        FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_CHECK_EXTDB_VALID,
-        FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
+        FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW,
+        FLAG_SKIP_FILE, FLAG_DONT_REPROCESS, FLAG_PRINT_EACCES,
+        FLAG_NO_PRINT_SQL_ON_ERR, FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT,
+        FLAG_CHECK_EXTDB_VALID, FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX,
+        FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -382,6 +388,7 @@ TEST(parse_cmd_line, debug) {
         terse.c_str(),
         dry_run.c_str(),
         rollup_limit.c_str(), rollup_limit_arg.c_str(),
+        rollup_delete_below.c_str(), rollup_delete_below_arg.c_str(),
         // skip_file.c_str(), skip_file_arg.c_str(),
         dont_reprocess.c_str(),
         print_eacces.c_str(), no_print_sql_on_err.c_str(),
@@ -462,9 +469,9 @@ TEST(parse_cmd_line, options) {
         FLAG_SUSPECT_TIME, FLAG_PATH, FLAG_FILTER_TYPE,
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_OUTPUT_BUFFER_SIZE, FLAG_FORMAT,
-        FLAG_ROLLUP_LIMIT, FLAG_SKIP_FILE, FLAG_TARGET_MEMORY,
-        FLAG_SUBDIR_LIMIT, FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX,
-        FLAG_PATH_LIST,
+        FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE,
+        FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_EXTERNAL_ATTACH,
+        FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         FLAG_END
     };
 
@@ -492,6 +499,7 @@ TEST(parse_cmd_line, options) {
         output_buffer_size.c_str(), output_buffer_size_arg.c_str(),
         format.c_str(), format_arg.c_str(),
         rollup_limit.c_str(), rollup_limit_arg.c_str(),
+        rollup_delete_below.c_str(), rollup_delete_below_arg.c_str(),
         // skip_file.c_str(), skip_file_arg.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
