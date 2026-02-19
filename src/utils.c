@@ -829,6 +829,7 @@ ssize_t read_size(const int fd, void *buf, const size_t size) {
  */
 int gufi_dirfd(DIR *d) {
     int d_fd = dirfd(d);
+    #ifdef __APPLE__
     if (d_fd < 0) {
         /*
          * We should never get here. glibc's dirfd(3) never return errors, and
@@ -838,7 +839,7 @@ int gufi_dirfd(DIR *d) {
         fprintf(stderr, "BUG: dirfd(3) failed: errno = %d\n", errno);
         exit(1);
     }
-
+    #endif
     return d_fd;
 }
 

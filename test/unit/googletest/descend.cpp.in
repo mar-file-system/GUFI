@@ -76,6 +76,18 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "descend.h"
 
+TEST(try_skip_lstat, DT_UNKNOWN) {
+    struct dirent entry;
+    entry.d_type = DT_UNKNOWN;
+
+    const char root[] = "@CMAKE_BINARY_DIR@";
+    struct work *work = new_work_with_name(nullptr, 0, root, strlen(root));
+
+    EXPECT_EQ(try_skip_lstat(&entry, work, 0), work);
+
+    free(work);
+}
+
 TEST(descend, builddir) {
     struct input in = {};
 

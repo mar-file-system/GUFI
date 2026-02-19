@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <cmath>
 #include <ctime>
+#include <fstream>
 #include <grp.h>
 #include <pwd.h>
 #include <stdlib.h>
@@ -533,38 +534,72 @@ static int copy_blob_column_callback(void *args, int count, char **data, char **
 }
 
 TEST(addqueryfuncs, blobop) {
-    const char data[] = "abc def\n\x00\x01\x02 \x03\x04\x05\nghi jkl";
-    const std::size_t len = sizeof(data) - 1;
-
     // sqlite3 does not like binary in SQL statements, so write contents to temp file first
     char temp[] = "XXXXXX";
-    int fd = mkstemp(temp);
-    ASSERT_GT(fd, -1);
-    ASSERT_EQ(write(fd, data, len), (ssize_t) len);
-    close(fd);
+    {
+        const int fd = mkstemp(temp);
+        ASSERT_GT(fd, -1);
+        close(fd);
+    }
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
-
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    // have to insert into table to get length later without opening file twice
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "CREATE TABLE data(col BLOB); INSERT INTO data SELECT blobop('cat %s');", temp);
-    ASSERT_EQ(sqlite3_exec(db, cmd, nullptr, nullptr, nullptr), SQLITE_OK);
-
     str_t output;
+    memset(&output, 0, sizeof(output));
     char *err = nullptr;
-    ASSERT_EQ(sqlite3_exec(db, "SELECT length(col), col FROM data;",
-                           copy_blob_column_callback, &output, &err), SQLITE_OK);
-    EXPECT_EQ(err, nullptr);
-    EXPECT_EQ(output.len, len);
-    ASSERT_NE(output.data, nullptr);
-    EXPECT_EQ(memcmp(output.data, data, len), 0);
-    str_free_existing(&output);
-    sqlite3_free(err);
-    err = nullptr;
+
+    // have to insert into table to get length later without opening file twice
+
+    // empty file
+    {
+        snprintf(cmd, sizeof(cmd), "CREATE TABLE data(col BLOB); INSERT INTO data SELECT blobop('cat %s');", temp);
+        ASSERT_EQ(sqlite3_exec(db, cmd, nullptr, nullptr, nullptr), SQLITE_OK);
+
+        ASSERT_EQ(sqlite3_exec(db, "SELECT length(col), col FROM data; DROP TABLE data;",
+                               copy_blob_column_callback, &output, &err), SQLITE_OK);
+        EXPECT_EQ(err, nullptr);
+        EXPECT_EQ(output.len, (std::size_t) 0);
+        ASSERT_NE(output.data, nullptr);
+        str_free_existing(&output);
+    }
+
+    // short result
+    {
+        const char data[] = "abc def\n\x00\x01\x02 \x03\x04\x05\nghi jkl";
+        const std::size_t len = sizeof(data) - 1;
+        std::ofstream(temp).write(data, len);
+        snprintf(cmd, sizeof(cmd), "CREATE TABLE data(col BLOB); INSERT INTO data SELECT blobop('cat %s');", temp);
+        ASSERT_EQ(sqlite3_exec(db, cmd, nullptr, nullptr, nullptr), SQLITE_OK);
+
+        ASSERT_EQ(sqlite3_exec(db, "SELECT length(col), col FROM data; DROP TABLE data;",
+                               copy_blob_column_callback, &output, &err), SQLITE_OK);
+        EXPECT_EQ(err, nullptr);
+        EXPECT_EQ(output.len, len);
+        ASSERT_NE(output.data, nullptr);
+        EXPECT_EQ(memcmp(output.data, data, len), 0);
+        str_free_existing(&output);
+    }
+
+    // "long" result (force a reallocation)
+    {
+        const std::size_t len = 256;
+        const std::string A(len, 'a');
+        std::ofstream(temp) << A;
+        snprintf(cmd, sizeof(cmd), "CREATE TABLE data(col BLOB); INSERT INTO data SELECT blobop('cat %s');", temp);
+        ASSERT_EQ(sqlite3_exec(db, cmd, NULL, NULL, NULL), SQLITE_OK);
+
+        ASSERT_EQ(sqlite3_exec(db, "SELECT length(col), col FROM data; DROP TABLE data;",
+                               copy_blob_column_callback, &output, &err), SQLITE_OK);
+        EXPECT_EQ(err, nullptr);
+        EXPECT_EQ(output.len, len);
+        ASSERT_NE(output.data, nullptr);
+        EXPECT_EQ(memcmp(output.data, A.c_str(), len), 0);
+        str_free_existing(&output);
+    }
 
     // not enough file descriptors
     {
@@ -575,7 +610,8 @@ TEST(addqueryfuncs, blobop) {
         fewer_fds.rlim_cur = 3;
         ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
 
-        ASSERT_EQ(sqlite3_exec(db, "SELECT blobop('echo blob');", copy_columns_callback, &output, &err), SQLITE_ERROR);
+        ASSERT_EQ(sqlite3_exec(db, "SELECT blobop('echo blob');",
+                               copy_columns_callback, &output, &err), SQLITE_ERROR);
         EXPECT_NE(err, nullptr);
         sqlite3_free(err);
         err = nullptr;

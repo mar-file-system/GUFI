@@ -278,6 +278,68 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
     return rc;
 }
 
+/*
+ * check if lhs contains rhs
+ *
+ * lhs and rhs should be absolute paths
+ *
+ * lhs and rhs are modified but should exit this function with their original values
+ * flip changes the order of the paths printed
+ *
+ * returns -1 on error
+ *          0 on lhs does not contain rhs
+ *          1 on lhs containes rhs
+ */
+static int check_contains(char *lhs, char *rhs, const int flip) {
+    struct stat lhs_st;
+    if (stat(lhs, &lhs_st) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Cannot stat \"%s\": %s (%d)\n",
+                lhs, strerror(err), err);
+        return -1;
+    }
+
+    /* last path segment is not followed by a slash, so have to handle separately */
+    struct stat rhs_st;
+    if (stat(rhs, &rhs_st) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Cannot stat \"%s\": %s (%d)\n",
+                rhs, strerror(err), err);
+        return -1;
+    }
+
+    if (lhs_st.st_ino == rhs_st.st_ino) {
+        fprintf(stderr, "Error: Not copying into itself: \"%s\" -> \"%s\"\n",
+                flip?rhs:lhs, flip?lhs:rhs);
+        return 1;
+    }
+
+    size_t len = trailing_match_index(rhs, strlen(rhs) - 1, "/", 1);
+    while (len > 1) {
+        rhs[len - 1] = '\0';
+
+        const int stat_rc = stat(rhs, &rhs_st);
+        rhs[len - 1] = '/';
+
+        if (stat_rc != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Cannot stat \"%s\": %s (%d)\n",
+                    rhs, strerror(err), err); /* rhs is the full path, not the stat-ed path */
+            return -1;
+        }
+
+        if (lhs_st.st_ino == rhs_st.st_ino) {
+            fprintf(stderr, "Error: Not copying into itself: \"%s\" -> \"%s\"\n",
+                    flip?rhs:lhs, flip?lhs:rhs);
+            return 1;
+        }
+
+        len = trailing_match_index(rhs, len - 1, "/", 1);
+    }
+
+    return 0;
+}
+
 static int setup(const str_t *dst) {
     const mode_t old_umask = umask(0);
     umask(old_umask); /* reset umask */
@@ -315,13 +377,12 @@ int main(int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
 
-    /* get realpath after set up to ensure the path exists */
-    const char *dst = pa.dst.data;
-    const char *real_dst = realpath(dst, NULL);
+    /* get realpath after set up to ensure the destination path exists */
+    char *real_dst = realpath(pa.dst.data, NULL);
     if (!real_dst) {
         const int err = errno;
         fprintf(stderr, "Error: Cannot get realpath of \"%s\": %s (%d)\n",
-                dst, strerror(err), err);
+                pa.dst.data, strerror(err), err);
         input_fini(&pa.in);
         return EXIT_FAILURE;
     }
@@ -330,7 +391,7 @@ int main(int argc, char * argv[]) {
     if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(ctx);
-        free((char *) real_dst);
+        free(real_dst);
         input_fini(&pa.in);
         return EXIT_FAILURE;
     }
@@ -359,13 +420,20 @@ int main(int argc, char * argv[]) {
         work->root_parent.len = dirname_len(path, work->name_len);
 
         if (S_ISDIR(st.st_mode)) {
-            const char *real_path = realpath(path, NULL);
-            const int match = !strncmp(real_dst, real_path, strlen(real_path));
-            free((char *) real_path);
-            if (match) {
-                fprintf(stderr, "Not copying into itself: \"%s\" -> \"%s\"\n",
-                        path, dst);
+            char *real_path = realpath(path, NULL);
+
+            /*
+             * check if current source is under the destination
+             * or if the destination is under the current source
+             */
+            const int contains = (check_contains(real_path, real_dst, 0) ||
+                                  check_contains(real_dst, real_path, 1));
+
+            free(real_path);
+
+            if (contains) {
                 rc = 1;
+                free(work);
                 continue;
             }
 
@@ -419,7 +487,7 @@ int main(int argc, char * argv[]) {
     const uint64_t threads_completed = QPTPool_threads_completed(ctx);
     QPTPool_destroy(ctx);
 
-    free((char *) real_dst);
+    free(real_dst);
 
     input_fini(&pa.in);
 

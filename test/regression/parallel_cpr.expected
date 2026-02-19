@@ -84,6 +84,9 @@ $ compare xattrs of "prefix/old_file"
 $ compare xattrs of "prefix/repeat_name"
 $ compare xattrs of "prefix/unusual#? directory ,"
 $ compare xattrs of "prefix/unusual#? directory ,/unusual, name?#"
+# Copy to similar name
+$ parallel_cpr "prefix"   "prefix2"
+
 $ rm -rf "copy"
 
 $ parallel_cpr    "prefix/leaf_directory/leaf_file1" "copy"
@@ -111,23 +114,27 @@ prefix/1KB
 
 $ rm -rf "copy"
 
-$ parallel_cpr "prefix"   "copy"
+# copy to existing directory
+$ parallel_cpr "prefix" "copy"
 
 $ rm -rf "copy"
 
-$ parallel_cpr "prefix"   "prefix"
-Not copying into itself: "prefix" -> "prefix"
+$ parallel_cpr "prefix" "prefix"
+Error: Not copying into itself: "prefix" -> "prefix"
 
-$ parallel_cpr "prefix"   "prefix/directory"
-Not copying into itself: "prefix" -> "prefix/directory"
+$ parallel_cpr "prefix" "prefix/directory"
+Error: Not copying into itself: "prefix" -> "prefix/directory"
+
+$ parallel_cpr "prefix/directory" "prefix"
+Error: Not copying into itself: "prefix/directory" -> "prefix"
 
 $ parallel_cpr "badtrace" "copy"
 Error: Cannot lstat "badtrace": No such file or directory (2)
 
-$ parallel_cpr /dev/null       "copy"
+$ parallel_cpr /dev/null "copy"
 Not copying "/dev/null"
 
-$ parallel_cpr "prefix"   "prefix/old_file"
+$ parallel_cpr "prefix" "prefix/old_file"
 Error: Cannot copy to "prefix/old_file": File exists (17)
 
 $ parallel_cpr -n 18446744073709551615 "prefix" "copy"

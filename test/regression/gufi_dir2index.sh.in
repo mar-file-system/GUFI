@@ -218,6 +218,9 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}/1KB\" \"${SEARCH}\"" | 
 echo "# empty source path"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"\" \"${TRACE}\""
 
+echo "# desintation path contains a file in a path segment"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SRCDIR}/1KB/${SEARCH}\""
+
 echo "# skip file"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} --skip-file \"${SKIP}\" \"${SRCDIR}\" \"${SEARCH}\""
 

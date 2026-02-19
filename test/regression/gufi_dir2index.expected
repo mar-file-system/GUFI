@@ -376,6 +376,10 @@ Could not stat source directory "": No such file or directory (2)
 Total Dirs:          0
 Total Non-Dirs:      0
 
+# desintation path contains a file in a path segment
+$ gufi_dir2index -n 2 "prefix" "prefix/1KB/search"
+Could not create prefix/1KB/search
+
 # skip file
 $ gufi_dir2index -n 2 --skip-file "skip" "prefix" "search"
 "search" Already exists!

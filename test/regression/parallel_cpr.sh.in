@@ -67,9 +67,10 @@ set -e
 OUTPUT="parallel_cpr.out"
 
 CPR_ROOT="copy"
+CPR_ROOT2="${SRCDIR}2"
 
 cleanup() {
-    rm -rf "${CPR_ROOT}"
+    rm -rf "${CPR_ROOT}" "${CPR_ROOT2}"
 }
 
 cleanup_exit() {
@@ -114,6 +115,9 @@ do
 done
 set -e
 
+echo "# Copy to similar name"
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${CPR_ROOT2}\""
+
 # copy single files/links
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
@@ -128,26 +132,27 @@ run_no_sort "readlink \"${CPR_ROOT}/file_symlink\""
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
 
-# copy to existing directory
+echo "# copy to existing directory"
 mkdir "${CPR_ROOT}"
-run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${CPR_ROOT}\""
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\" \"${CPR_ROOT}\""
 
 # errors
 
 run_no_sort "rm -rf \"${CPR_ROOT}\""
 
 # copy into self
-run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}\""
-run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}/directory\""
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\" \"${SRCDIR}\""
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\" \"${SRCDIR}/directory\""
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}/directory\" \"${SRCDIR}\""
 
 # non-existant source
 run_no_sort "${PARALLEL_CPR} \"${BADTRACE}\" \"${CPR_ROOT}\""
 
 # non-directory/link/file source
-run_no_sort "${PARALLEL_CPR} /dev/null       \"${CPR_ROOT}\""
+run_no_sort "${PARALLEL_CPR} /dev/null \"${CPR_ROOT}\""
 
 # directory to file
-run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\"   \"${SRCDIR}/old_file\""
+run_no_sort "${PARALLEL_CPR} \"${SRCDIR}\" \"${SRCDIR}/old_file\""
 
 # bad thread count
 run_no_sort "${PARALLEL_CPR} -n 18446744073709551615 \"${SRCDIR}\" \"${CPR_ROOT}\""

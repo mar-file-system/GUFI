@@ -65,5 +65,6 @@ find_path(LUSTRE_PLUGIN "lustre/lustreapi.h")
 # If so, build the lustre example plugin:
 if (LUSTRE_PLUGIN)
   add_library(lustre_plugin SHARED lustre_plugin.c)
+  add_dependencies(lustre_plugin install_dependencies)
   target_link_libraries(lustre_plugin lustreapi)
 endif()
