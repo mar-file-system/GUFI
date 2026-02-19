@@ -19,6 +19,7 @@ GUFI_tree         GUFI tree to roll up
 Creating GUFI tree search with 1 threads
 Total Dirs:          69
 Total Non-Dirs:      96
+$ gufi_rollup --dry-run "search"
 Roots:
     search
 
@@ -72,6 +73,62 @@ Files/Links:    96
 Directories:    70 (22 empty)
 Total:          166
 Remaining Dirs: 18 (25.71%)
+
+$ gufi_rollup "search"
+Roots:
+    search
+
+Thread Pool Size:            1
+Files/Links Limit:           0
+
+Not Processed:               0
+Cannot Roll Up:              5
+    Subdirectories:
+        min:                 1
+        max:                 4
+        median:           4.00
+        sum:                17
+        average:          3.40
+    Files/Links:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Level:
+        min:                 0
+        max:                 2
+        median:           2.00
+        sum:                 7
+        average:          1.40
+    Too Many Before:         0
+    Too Many After:          0
+Can Roll Up:                65
+    Subdirectories:
+        min:                 0
+        max:                 4
+        median:           0.00
+        sum:                52
+        average:          0.80
+    Files/Links:
+        min:                 0
+        max:                 3
+        median:           1.00
+        sum:                96
+        average:          1.48
+    Level:
+        min:                 2
+        max:                 4
+        median:           4.00
+        sum:               242
+        average:          3.72
+    Successful:             65
+    Failed:                  0
+Files/Links:    96
+Directories:    70 (22 empty)
+Total:          166
+Remaining Dirs: 18 (25.71%)
+
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "search" | wc -l
 69
 
@@ -723,6 +780,7 @@ $ gufi_stats -c total-dircount prefix
 Creating GUFI tree search with 1 threads
 Total Dirs:          69
 Total Non-Dirs:      96
+$ gufi_rollup --limit 3 "search"
 Roots:
     search
 
@@ -781,6 +839,7 @@ Files/Links:    96
 Directories:    70 (22 empty)
 Total:          166
 Remaining Dirs: 70 (100.00%)
+
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "search" | wc -l
 69
 
@@ -1687,6 +1746,7 @@ Files/Links:    14
 Directories:    7 (2 empty)
 Total:          21
 Remaining Dirs: 2 (28.57%)
+
 # test-xattr.db is only left at prefix and prefix/directory/subdirectory
 $ find "prefix" -name "*.db"
 prefix/db.db

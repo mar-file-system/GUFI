@@ -875,7 +875,7 @@ static int do_rollup(struct RollUp *rollup,
      * were integrated into above loop, but that would add a lot
      * of complexity
      */
-    if (!rc) {
+    if (!rc && !pa->in.dry_run) {
         bottomup_collect_treesummary(dst, rollup->data.name, &rollup->data.subdirs, ROLLUPSCORE_KNOWN_YES);
     }
 
@@ -979,7 +979,9 @@ static int rollup_ascend(void *args) {
                 }
             }
 
-            bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ROLLUPSCORE_KNOWN_NO);
+            if (!pa->in.dry_run) {
+                bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ROLLUPSCORE_KNOWN_NO);
+            }
         }
     }
 

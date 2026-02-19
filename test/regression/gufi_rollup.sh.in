@@ -136,6 +136,9 @@ do_tests() {
     run_sort "${GUFI_STATS} -c total-dircount ${BASENAME}"
 }
 
+# there is a weird bug with printing out stats when
+# running gufi_query on alpine linux in run_no_sort
+
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}" 2>&1
 "${GUFI_QUERY}" \
     -a 1 \
@@ -143,7 +146,12 @@ do_tests() {
     -S "UPDATE summary SET uid = 0, gid = 0, minuid = 0, maxuid = 0, mingid = 0, maxgid = 0;" \
     -E "UPDATE entries SET uid = 0, gid = 0;" \
     "${SEARCH}"
+echo "$ ${GUFI_ROLLUP} --dry-run \"${SEARCH}\""
+"${GUFI_ROLLUP}" --dry-run "${SEARCH}"
+echo
+echo "$ ${GUFI_ROLLUP} \"${SEARCH}\""
 "${GUFI_ROLLUP}" "${SEARCH}"
+echo
 do_tests
 
 rm -r "${SEARCH}"
@@ -155,7 +163,9 @@ rm -r "${SEARCH}"
     -S "UPDATE summary SET uid = 0, gid = 0, minuid = 0, maxuid = 0, mingid = 0, maxgid = 0;" \
     -E "UPDATE entries SET uid = 0, gid = 0;" \
     "${SEARCH}"
+echo "$ ${GUFI_ROLLUP} --limit 3 \"${SEARCH}\""
 "${GUFI_ROLLUP}" --limit 3 "${SEARCH}"
+echo
 do_tests
 
 rm -rf "${SEARCH}"
@@ -216,7 +226,8 @@ rm -rf "${SEARCH}"
 
     echo "# delete rollups under ${INDEXROOT}"
     echo "$ ${GUFI_ROLLUP} --delete-below 1 \"${SEARCH}\""
-    "${GUFI_ROLLUP}" --delete-below 1 "${SEARCH}" # alpine linux is weird about running this in run_no_sort
+    "${GUFI_ROLLUP}" --delete-below 1 "${SEARCH}"
+    echo
 
     echo "# ${EXT_DBNAME} is only left at ${INDEXROOT} and ${INSERT_DIR}"
     run_sort "find \"${INDEXROOT}\" -name \"*.db\""
