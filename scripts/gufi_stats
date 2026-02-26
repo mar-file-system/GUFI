@@ -140,11 +140,11 @@ def depth(config, args, where):
                                                        None)),
 
         '-G', build_query((['CASE length(name) WHEN 0 THEN \'.\' ELSE name END'] if args.recursive else []) +
-                          ['CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, \'/\', \'\')) + 1 END'],
+                          ['CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, \'/\', \'\')) + 1 END AS depth'],
                           [AGGREGATE_NAME],
                           None,
                           None,
-                          ['name ' + ORDER[args.order]] if args.order else None,
+                          ['depth ' + ORDER[args.order]] + (['name ' + ORDER[args.order]] if args.order else []),
                           args.num_results,
                           None),
     ]

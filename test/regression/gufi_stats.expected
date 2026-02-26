@@ -20,7 +20,7 @@ GUFI query is
     -S 'INSERT INTO intermediate SELECT substr(rpath(sname, sroll), 8) FROM vrsummary' \
     -K 'CREATE TABLE aggregate(name TEXT)' \
     -J 'INSERT INTO aggregate SELECT * FROM intermediate' \
-    -G 'SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '"'"'/'"'"', '"'"''"'"')) + 1 END FROM aggregate ORDER BY name ASC' \
+    -G 'SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '"'"'/'"'"', '"'"''"'"')) + 1 END AS depth FROM aggregate ORDER BY depth ASC, name ASC' \
     --min-level 0 \
     --max-level 0 \
     prefix
