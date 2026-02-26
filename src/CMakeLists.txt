@@ -112,8 +112,8 @@ set_source_files_properties(bf.c PROPERTIES COMPILE_FLAGS -DGUFI_VERSION="${VERS
 #If the GPFS library exists, build the gpfs scan tool
 if (GPFS_LIB AND GPFS_BUILD)
   include_directories("/usr/lpp/mmfs/include")
-  add_executable(gpfs-scan-tool gpfs-scan-tool.c)
-  target_link_libraries(gpfs-scan-tool ${GPFS_LIB} ${COMMON_LIBRARIES})
+  add_executable(gpfs_inode_scan_partitioned gpfs_inode_scan_partitioned.c)
+  target_link_libraries(gpfs_inode_scan_partitioned ${GPFS_LIB} ${COMMON_LIBRARIES})
 endif()
 
 # This function builds C executables using the provided file names
