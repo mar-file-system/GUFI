@@ -164,7 +164,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     decompress_work(&work, data);
 
-    DIR *dir = opendir(work->name);
+    DIR *dir = opendir_wrapper(work->name, 1);
     if (!dir) {
         rc = 1;
         goto cleanup;

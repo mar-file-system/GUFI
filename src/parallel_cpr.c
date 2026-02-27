@@ -227,9 +227,9 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
 
     int rc = 0;
 
-    DIR *dir = opendir(work->name);
+    DIR *dir = opendir_wrapper(work->name, 1);
     if (!dir) {
-        print_error_and_goto("Could not open_directory", work->name, cleanup);
+        goto cleanup;
     }
 
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,

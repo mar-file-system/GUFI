@@ -269,9 +269,8 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
     sqlite3 *db = NULL;
     int rc = 0;
 
-    DIR *dir = opendir(work->name);
+    DIR *dir = opendir_wrapper(work->name, 1);
     if (!dir) {
-        fprintf(stderr, "Could not open directory \"%s\"\n", work->name);
         rc = 1;
         goto cleanup;
     }

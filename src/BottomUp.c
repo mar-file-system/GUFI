@@ -281,11 +281,9 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
     /* keep track of which thread was used to walk downwards */
     bu->tid.down = QPTPool_get_id(ctx);
 
-    DIR *dir = opendir(bu->name);
+    DIR *dir = opendir_wrapper(bu->name, 1);
 
     if (!dir) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n", bu->name, strerror(err), err);
         sll_destroy(&bu->subdirs, bottomup_destroy);
         sll_destroy(&bu->subnondirs, bottomup_destroy);
         if (bu->parent) {

@@ -354,9 +354,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     process_output(work, &ed, &nondir_args);
 
-    DIR *dir = opendir(work->name);
+    DIR *dir = opendir_wrapper(work->name, 1);
     if (!dir) {
-        fprintf(stderr, "Error: Could not open directory \"%s\"\n", work->name);
         rc = 1;
     }
     else {

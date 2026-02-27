@@ -1054,3 +1054,17 @@ int check_plugin(const struct plugin_operations *ops, const plugin_type accepted
     }
     return 1;
 }
+
+DIR *opendir_wrapper(const char *name, const int print_eacces) {
+    DIR *dir = opendir(name);
+    if (!dir) {
+        const int err = errno;
+        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
+                    name, strerror(err), err);
+        }
+        return NULL;
+    }
+
+    return dir;
+}

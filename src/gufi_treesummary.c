@@ -133,9 +133,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
 
-    DIR *dir = opendir(passmywork->name);
+    DIR *dir = opendir_wrapper(passmywork->name, 1);
     if (!dir) {
-        fprintf(stderr, "Could not open directory \"%s\"\n", passmywork->name);
         goto out_free;
     }
 

@@ -108,11 +108,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     decompress_work(&work, data);
 
-    dir = opendir(work->name);
+    dir = opendir_wrapper(work->name, 1);
     if (!dir) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
         rc = 1;
         goto cleanup;
     }

@@ -180,16 +180,10 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
                                          gqw->sqlite3_name, gqw->sqlite3_name_len,
                                          "/" DBNAME, DBNAME_LEN + 1);
 
-    /* keep opendir near opendb to help speed up sqlite3_open_v2 */
-    dir = opendir(gqw->work.name);
+    dir = opendir_wrapper(gqw->work.name, in->print_eacces);
 
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
-        const int err = errno;
-        if ((err != EACCES) || ((err == EACCES) && in->print_eacces)) {
-            fprintf(stderr, "Error: Skipping directory \"%s\": %s (%d)\n",
-                    gqw->work.name, strerror(err), err);
-        }
         goto out_free;
     }
 

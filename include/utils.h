@@ -203,6 +203,9 @@ int dir_match(struct input *in, struct stat *st);
 
 int check_plugin(const struct plugin_operations *ops, const plugin_type accepted);
 
+/* common opendir code wrapper */
+DIR *opendir_wrapper(const char *name, const int print_eacces);
+
 #ifdef __cplusplus
 }
 #endif

@@ -134,9 +134,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct Unrollup *work = (struct Unrollup *) data;
     int rc = 0;
 
-    DIR *dir = opendir(work->name);
+    DIR *dir = opendir_wrapper(work->name, 1);
     if (!dir) {
-        fprintf(stderr, "Error: Could not open directory \"%s\": %s", work->name, strerror(errno));
         rc = 1;
         goto cleanup;
     }

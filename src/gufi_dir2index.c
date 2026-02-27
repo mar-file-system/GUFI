@@ -209,10 +209,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     const int process_dir = ((pa->in.min_level <= nda.work->level) &&
                              (nda.work->level <= pa->in.max_level));
 
-    dir = opendir(nda.work->name);
+    dir = opendir_wrapper(nda.work->name, 1);
     if (!dir) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n", nda.work->name, strerror(err), err);
         rc = 1;
         goto cleanup;
     }

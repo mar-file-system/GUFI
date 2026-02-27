@@ -108,11 +108,8 @@ static int is_subdir(const char *path, struct dirent *entry) {
 /* go down only one level */
 void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
                  QPTPool_ctx_t *ctx) {
-    DIR *dir = opendir(ow->path.data);
+    DIR *dir = opendir_wrapper(ow->path.data, 1);
     if (!dir) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
-                ow->path.data, strerror(err), err);
         return;
     }
 
