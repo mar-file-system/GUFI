@@ -305,7 +305,8 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
         return 0; /* not an error */
     }
 
-    if (lstat_wrapper(work, 1) != 0) {
+    if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
+                      &work->stat_called, 1, 1) != 0) {
         return 1; /* error (not handled anywhere) */
     }
 

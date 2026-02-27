@@ -79,6 +79,7 @@ processed before processing the current one
 #include <sys/types.h>
 
 #include "BottomUp.h"
+#include "bf.h"
 #include "dbutils.h"
 #include "debug.h"
 #include "utils.h"
@@ -319,34 +320,20 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
 
         int is_dir = 0;
         if (entry->d_type == DT_UNKNOWN) {
-            #if HAVE_STATX
-            struct statx stx;
-            if (statx(dir_fd, entry->d_name,
-                      AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
-                      STATX_ALL, &stx) != 0) {
-                const int err = errno;
-                fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
-                        entry->d_name, strerror(err), err);
+            struct work child;
+            child.name = entry->d_name;
+            child.name_len = name_len;
+            child.basename_len = name_len;
+            child.stat_called = STAT_NOT_CALLED;
+
+            struct entry_data ed;
+            ed.parent_fd = dir_fd;
+
+            if (fstatat_wrapper(&child, &ed, 1, 1) != 0) {
                 return 1;
             }
 
-            if (S_ISDIR(stx.stx_mode)) {
-                is_dir = 1;
-            }
-            #else
-            struct stat st;
-            const int rc = fstatat(dir_fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW);
-
-            if (rc != 0) {
-                fprintf(stderr, "Error: Could not stat \"%s/%s\": %s\n",
-                        bu->name, entry->d_name, strerror(errno));
-                continue;
-            }
-
-            if (S_ISDIR(st.st_mode)) {
-                is_dir = 1;
-            }
-            #endif
+            is_dir = S_ISDIR(child.statuso.st_mode);
         } else if (entry->d_type == DT_DIR) {
             is_dir = 1;
         }

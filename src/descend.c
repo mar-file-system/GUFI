@@ -101,7 +101,8 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work, const int p
         case DT_UNKNOWN:
         default:
             /* some filesystems don't support d_type - fall back to calling lstat */
-            if (lstat_wrapper(work, print_eacces) != 0) {
+            if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
+                              &work->stat_called, 1, print_eacces) != 0) {
                 return NULL;
             }
             break;

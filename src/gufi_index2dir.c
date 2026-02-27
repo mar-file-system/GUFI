@@ -277,7 +277,8 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
     }
 
     // get source directory info
-    if (lstat_wrapper(work, 1) != 0)  {
+    if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
+                      &work->stat_called, 1, 1) != 0) {
         rc = 1;
         goto close_dir;
     }

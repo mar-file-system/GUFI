@@ -144,7 +144,8 @@ static size_t descend2(QPTPool_ctx_t *ctx,
                     !gqw->id_match &&
                     (child->work.level >= in->min_level)) {
                     /* lstat(2)/statx(2) is not normally called during descent */
-                    if (lstat_wrapper(&child->work, in->print_eacces) != 0) {
+                    if (lstat_wrapper(child->work.name, &child->work.statuso, &child->work.crtime,
+                                      &child->work.stat_called, 1, in->print_eacces) != 0) {
                         free(child);
                         continue;
                     }

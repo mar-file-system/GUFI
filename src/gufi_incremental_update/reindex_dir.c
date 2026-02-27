@@ -75,7 +75,8 @@ OF SUCH DAMAGE.
 int reindex_dir(struct PoolArgs *pa,
                 struct work *work, struct entry_data *ed,
                 DIR *dir) {
-    if (lstat_wrapper(work, 1) != 0) {
+    if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
+                      &work->stat_called, 1, 1) != 0) {
         return 1;
     }
 
@@ -164,7 +165,8 @@ int reindex_dir(struct PoolArgs *pa,
         }
 
         /* need actual values of files/links */
-        if (lstat_wrapper(child, 1) != 0) {
+        if (lstat_wrapper(child->name, &child->statuso, &child->crtime,
+                          &child->stat_called, 1, 1) != 0) {
             free(child);
             continue;
         }

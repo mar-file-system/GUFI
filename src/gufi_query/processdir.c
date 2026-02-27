@@ -98,27 +98,11 @@ static inline int save_matime(gqw_t *gqw,
                                          "/" DBNAME, DBNAME_LEN + 1);
 
     struct stat st;
+    time_t crtime = 0;                        /* unused */
+    StatCalled stat_called = STAT_NOT_CALLED; /* unused */
 
-    int rc = 0;
-
-    #if HAVE_STATX
-    struct statx stx;
-    if (statx(AT_FDCWD, dbpath,
-              AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
-              STATX_ATIME | STATX_MTIME, &stx) == 0) {
-        st.st_atime = stx.stx_atime.tv_sec;
-        st.st_mtime = stx.stx_mtime.tv_sec;
-    }
-    else {
-        rc = 1;
-    }
-    #else
-    if (lstat(dbpath, &st) != 0) {
-        rc = 1;
-    }
-    #endif
-
-    if (rc == 1) {
+    const int rc = lstat_wrapper(dbpath, &st, &crtime, &stat_called, 0, 0);
+    if (rc != 0) {
         const int err = errno;
 
         char buf[MAXPATH];

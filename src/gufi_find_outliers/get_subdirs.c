@@ -92,29 +92,14 @@ static int is_subdir(const char *path, struct dirent *entry) {
         default:
             ;
             /* some filesystems don't support d_type - fall back to calling stat */
-            #if HAVE_STATX
-            struct statx stx;
-            if (statx(AT_FDCWD, path,
-                      AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
-                      STATX_ALL, &stx) != 0) {
-                const int err = errno;
-                fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
-                        path, strerror(err), err);
-                return -1;
-            }
-
-            return S_ISDIR(stx.stx_mode);
-            #else
             struct stat st;
-            if (stat(path, &st) != 0) { /* follow links in index */
-                const int err = errno;
-                fprintf(stderr, "Error: Could not stat \"%s\": %s (%d)\n",
-                        path, strerror(err), err);
+            time_t crtime = 0; /* unused */
+            StatCalled stat_called = STAT_NOT_CALLED;
+            if (stat_wrapper(path, &st, &crtime,
+                             &stat_called, 1, 1) != 0) {
                 return -1;
             }
-
             return S_ISDIR(st.st_mode);
-            #endif
     }
 
     return 0; /* shoud never get here */

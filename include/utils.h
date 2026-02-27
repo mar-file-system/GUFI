@@ -164,14 +164,18 @@ int gufi_dirfd(DIR *d);
 
 #if HAVE_STATX
 /* useful if calling statx without the wrapper function */
-void statx_to_work(struct statx *stx, struct work *work);
+void statx_to_work(struct statx *stx, struct stat *st, time_t *crtime);
 #endif
 
+/* try to call statx if available, otherwise, call stat */
+int stat_wrapper(const char *name, struct stat *st, time_t *crtime,
+                 StatCalled *stat_called, const int print_err, const int print_eacces);
 /* try to call statx if available, otherwise, call lstat */
-int lstat_wrapper(struct work *work, const int print_eacces);
-
+int lstat_wrapper(const char *name, struct stat *st, time_t *crtime,
+                  StatCalled *stat_called, const int print_err, const int print_eacces);
 /* used by gufi_dir2index and gufi_dir2trace */
-int fstatat_wrapper(struct work *entry, struct entry_data *ed, const int print_eacces);
+int fstatat_wrapper(struct work *entry, struct entry_data *ed,
+                    const int print_err, const int print_eacces);
 
 /* make sure --path-list is followed by at most 1 root directory argument */
 int bad_partial_walk(struct input *in, const size_t root_count);

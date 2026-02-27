@@ -139,7 +139,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         goto out_free;
     }
 
-    if (lstat_wrapper(passmywork, 1) != 0) {
+    if (lstat_wrapper(passmywork->name, &passmywork->statuso, &passmywork->crtime,
+                      &passmywork->stat_called, 1, 1) != 0) {
         goto close_dir;
     }
 

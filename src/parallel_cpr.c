@@ -232,7 +232,8 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
         print_error_and_goto("Could not open_directory", work->name, cleanup);
     }
 
-    if (lstat_wrapper(work, 1) != 0) {
+    if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
+                      &work->stat_called, 0, 0) != 0) {
         print_error_and_goto("Could not lstat directory", work->name, close_dir);
     }
 

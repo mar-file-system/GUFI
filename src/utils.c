@@ -844,8 +844,7 @@ int gufi_dirfd(DIR *d) {
 }
 
 #if HAVE_STATX
-void statx_to_work(struct statx *stx, struct work *work) {
-    struct stat *st = &work->statuso;
+void statx_to_work(struct statx *stx, struct stat *st, time_t *crtime) {
     st->st_dev      = (dev_t)     makedev(stx->stx_dev_major, stx->stx_dev_minor);
     st->st_ino      = (ino_t)     stx->stx_ino;
     st->st_mode     = (mode_t)    stx->stx_mode;
@@ -856,56 +855,78 @@ void statx_to_work(struct statx *stx, struct work *work) {
     st->st_size     = (off_t)     stx->stx_size;
     st->st_blksize  = (blksize_t) stx->stx_blksize;
     st->st_blocks   = (blkcnt_t)  stx->stx_blocks;
-    st->st_atime    = (time_t)    stx->stx_atime.tv_sec;
-    st->st_mtime    = (time_t)    stx->stx_mtime.tv_sec;
-    st->st_ctime    = (time_t)    stx->stx_ctime.tv_sec;
-    work->crtime    = (time_t)    stx->stx_btime.tv_sec;
+    st->st_atime    = (time_t)    stx->stx_atime.tv_sec; /* round down (ignoring tv_nsec) */
+    st->st_mtime    = (time_t)    stx->stx_mtime.tv_sec; /* round down (ignoring tv_nsec) */
+    st->st_ctime    = (time_t)    stx->stx_ctime.tv_sec; /* round down (ignoring tv_nsec) */
+    *crtime         = (time_t)    stx->stx_btime.tv_sec; /* round down (ignoring tv_nsec) */
 }
 #endif
 
-/* try to call statx if available, otherwise, call lstat */
-int lstat_wrapper(struct work *work, const int print_eacces) {
+/* try to call statx if available, otherwise, call func */
+static int stat_func_wrapper(int (*func)(const char *, struct stat *),
+                             const char *name, struct stat *st, time_t *crtime,
+                             StatCalled *stat_called,
+                             const int print_err, const int print_eacces) {
     /* don't duplicate work */
-    if (work->stat_called != STAT_NOT_CALLED) {
+    if (*stat_called != STAT_NOT_CALLED) {
         return 0;
     }
 
     #if HAVE_STATX
+    (void) func;
+
     struct statx stx;
-    if (statx(AT_FDCWD, work->name,
+    if (statx(AT_FDCWD, name,
               AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
               STATX_ALL, &stx) != 0) {
         const int err = errno;
-        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
-            fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
-                    work->name, strerror(err), err);
+        if (print_err) {
+            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+                fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
+                        name, strerror(err), err);
+            }
         }
         return 1;
     }
 
-    statx_to_work(&stx, work);
+    statx_to_work(&stx, st, crtime);
 
-    work->stat_called = STATX_CALLED;
+    *stat_called = STATX_CALLED;
     #else
-    if (lstat(work->name, &work->statuso) != 0) {
-        const int err = errno;
-        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
-            fprintf(stderr, "Error: Could not lstat \"%s\": %s (%d)\n",
-                    work->name, strerror(err), err);
+    if (func(name, st) != 0) {
+        if (print_err) {
+            const int err = errno;
+            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+                fprintf(stderr, "Error: Could not lstat \"%s\": %s (%d)\n",
+                        name, strerror(err), err);
+            }
         }
         return 1;
     }
 
-    work->crtime = 0;
+    *crtime = 0;
 
-    work->stat_called = NOT_STATX_CALLED;
+    *stat_called = NOT_STATX_CALLED;
     #endif
 
     return 0;
 }
 
+/* try to call statx if available, otherwise, call stat */
+int stat_wrapper(const char *name, struct stat *st, time_t *crtime,
+                 StatCalled *stat_called, const int print_err, const int print_eacces) {
+    return stat_func_wrapper(stat, name, st, crtime, stat_called, print_err, print_eacces);
+}
+
+/* try to call statx if available, otherwise, call lstat */
+int lstat_wrapper(const char *name, struct stat *st, time_t *crtime,
+                  StatCalled *stat_called, const int print_err, const int print_eacces) {
+    return stat_func_wrapper(lstat, name, st, crtime, stat_called, print_err, print_eacces);
+}
+
 /* used by gufi_dir2index and gufi_dir2trace */
-int fstatat_wrapper(struct work *entry, struct entry_data *ed, const int print_eacces) {
+int fstatat_wrapper(struct work *entry, struct entry_data *ed,
+                    const int print_err, const int print_eacces) {
     /* don't duplicate work */
     if (entry->stat_called != STAT_NOT_CALLED) {
         return 0;
@@ -918,23 +939,27 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed, const int print_e
     if (statx(ed->parent_fd, basename,
               AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
               STATX_ALL, &stx) != 0) {
-        const int err = errno;
-        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
-            fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
-                    entry->name, strerror(err), err);
+        if (print_err) {
+            const int err = errno;
+            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+                fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
+                        entry->name, strerror(err), err);
+            }
         }
         return 1;
     }
 
-    statx_to_work(&stx, entry);
+    statx_to_work(&stx, &entry->statuso, &entry->crtime);
 
     entry->stat_called = STATX_CALLED;
     #else
     if (fstatat(ed->parent_fd, basename, &entry->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
-        const int err = errno;
-        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
-            fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n",
-                    entry->name, strerror(err), err);
+        if (print_err) {
+            const int err = errno;
+            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+                fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n",
+                        entry->name, strerror(err), err);
+            }
         }
         return 1;
     }

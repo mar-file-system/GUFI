@@ -139,28 +139,13 @@ static int treesummary_ascend(void *args) {
     /* check if this treesummary table needs to be updated */
     if (!subdir_modified && in->suspecttime) {
         struct stat st;
+        time_t crtime = 0; /* unused */
+        StatCalled stat_called = STAT_NOT_CALLED;
 
-        #if HAVE_STATX
-        struct statx stx;
-        if (statx(AT_FDCWD, dbname,
-                  AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
-                  STATX_MTIME | STATX_CTIME, &stx) != 0) {
-            const int err = errno;
-            fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
-                    dbname, strerror(err), err);
+        if (lstat_wrapper(dbname, &st, &crtime,
+                          &stat_called, 1, 1) != 0) {
             return 1;
         }
-
-        st.st_mtime = stx.stx_mtime.tv_sec + !!stx.stx_mtime.tv_nsec; /* round up */
-        st.st_ctime = stx.stx_ctime.tv_sec + !!stx.stx_ctime.tv_nsec; /* round up */
-        #else
-        if (lstat(dbname, &st) != 0) {
-            const int err = errno;
-            fprintf(stderr, "Error: Could not lstat \"%s\": %s (%d)\n",
-                    dbname, strerror(err), err);
-            return 1;
-        }
-        #endif
 
         /* suspect time is more recent than mtime/ctime -> nothing to update */
         if ((st.st_mtime < in->suspecttime) &&

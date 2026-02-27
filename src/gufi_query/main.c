@@ -126,7 +126,8 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_ctx_t *ctx) {
 
         if (in->dir_match.on != DIR_MATCH_NONE) {
             /* use lstat(2)/statx(2) here because these might not be index roots */
-            if (lstat_wrapper(&subtree_root->work, in->print_eacces) != 0) {
+            if (lstat_wrapper(subtree_root->work.name, &subtree_root->work.statuso, &subtree_root->work.crtime,
+                              &subtree_root->work.stat_called, 1, in->print_eacces) != 0) {
                 free(subtree_root);
                 continue;
             }
