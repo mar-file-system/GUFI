@@ -111,12 +111,11 @@ void OutputBuffer_destroy(struct OutputBuffer *obuf) {
     }
 }
 
-struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size_t count, const size_t capacity, pthread_mutex_t *global_mutex) {
+struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size_t count, const size_t capacity) {
     if (!obufs || !count) {
         return NULL;
     }
 
-    obufs->mutex = global_mutex;
     obufs->count = 0;
     obufs->buffers = calloc(count, sizeof(struct OutputBuffer));
     if (!obufs->buffers) {
@@ -137,10 +136,6 @@ struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size
 size_t OutputBuffers_flush_to_single(struct OutputBuffers *obufs, FILE *out) {
     /* Not checking arguments */
 
-    if (obufs->mutex) {
-        pthread_mutex_lock(obufs->mutex);
-    }
-
     size_t octets = 0;
     for(size_t i = 0; i < obufs->count; i++) {
         octets += OutputBuffer_flush(&obufs->buffers[i], out);
@@ -148,19 +143,11 @@ size_t OutputBuffers_flush_to_single(struct OutputBuffers *obufs, FILE *out) {
 
     fflush(out);
 
-    if (obufs->mutex) {
-        pthread_mutex_unlock(obufs->mutex);
-    }
-
     return octets;
 }
 
 size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out) {
     /* Not checking arguments */
-
-    if (obufs->mutex) {
-        pthread_mutex_lock(obufs->mutex);
-    }
 
     size_t octets = 0;
     for(size_t i = 0; i < obufs->count; i++) {
@@ -171,10 +158,6 @@ size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out) 
             continue;
         }
         octets += written;
-    }
-
-    if (obufs->mutex) {
-        pthread_mutex_unlock(obufs->mutex);
     }
 
     return octets;

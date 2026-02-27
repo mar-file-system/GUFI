@@ -89,6 +89,7 @@ static const char DEFAULT_FORMAT[] = "%p\n";
 struct PoolArgs {
     struct input in;
     struct OutputBuffers obufs;
+    pthread_mutex_t *print_mutex;
     FILE **outfiles;
 };
 
@@ -311,21 +312,20 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
     }
 
     const size_t user_types = args->pa->in.filter_types;
-    const struct stat *st = &work->statuso;
     if (user_types) { /* if user_types was set, only process allowed types */
+        struct stat *st = &work->statuso;
         if (!(((user_types & FILTER_TYPE_DIR)  && S_ISDIR(st->st_mode))  ||
               ((user_types & FILTER_TYPE_FILE) && S_ISREG(st->st_mode))  ||
               ((user_types & FILTER_TYPE_LINK) && S_ISLNK(st->st_mode)))) {
             return 0;
         }
     }
-    /* if user_types was not set, process everything */
 
     struct PrintArgs print = {
         .output_buffer = &args->pa->obufs.buffers[args->id],
         .delim = '\0', /* not used */
         .newline = '\n',
-        .mutex = args->pa->obufs.mutex,
+        .mutex = args->pa->print_mutex,
         .outfile = args->pa->outfiles[args->id],
         .types = NULL,
         .suppress_newline = 1,
@@ -411,12 +411,16 @@ int main(int argc, char *argv[]) {
     }
 
     /* Initialize output buffers */
-    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    if (!OutputBuffers_init(&pa.obufs, pa.in.maxthreads, pa.in.output_buffer_size,
-                            (pa.in.output == STDOUT)?&mutex:NULL)) {
+    if (!OutputBuffers_init(&pa.obufs, pa.in.maxthreads, pa.in.output_buffer_size)) {
         fprintf(stderr, "Error: Could not initialize %zu output buffers\n", pa.in.maxthreads);
         rc = 1;
         goto close_outfiles;
+    }
+
+    pa.print_mutex = NULL;
+    if (pa.in.output == STDOUT) {
+        static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+        pa.print_mutex = &mutex;
     }
 
     /* create a queue per thread pool */
@@ -451,7 +455,10 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        if (S_ISREG(work->statuso.st_mode)) {
+        if (S_ISDIR(work->statuso.st_mode)) {
+            QPTPool_enqueue(ctx, processdir, work);
+        }
+        else if (S_ISREG(work->statuso.st_mode)) {
             struct enqueue_nondir_args qptp_vals = {
                 .ctx = ctx,
                 .id = 0,
@@ -459,9 +466,6 @@ int main(int argc, char *argv[]) {
             };
             process_output(work, NULL, &qptp_vals);
             free(work);
-        }
-        else if (S_ISDIR(work->statuso.st_mode)) {
-            QPTPool_enqueue(ctx, processdir, work);
         }
         else {
             fprintf(stderr, "Error: Unsupported type for \"%s\"\n", work->name);

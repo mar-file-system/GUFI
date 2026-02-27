@@ -65,7 +65,6 @@ OF SUCH DAMAGE.
 #ifndef OUTPUT_BUFFERS_H
 #define OUTPUT_BUFFERS_H
 
-#include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -100,12 +99,11 @@ void OutputBuffer_destroy(struct OutputBuffer *obuf);
 
 /* Buffers for all threads */
 struct OutputBuffers {
-    pthread_mutex_t *mutex;
     size_t count;
     struct OutputBuffer *buffers;
 };
 
-struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size_t count, const size_t capacity, pthread_mutex_t *global_mutex);
+struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size_t count, const size_t capacity);
 size_t OutputBuffers_flush_to_single(struct OutputBuffers *obufs, FILE *out);
 size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out);
 void OutputBuffers_destroy(struct OutputBuffers *obufs);
