@@ -76,6 +76,18 @@ Obtain a copy of the source code from GitHub: \\
 \indent \texttt{git clone}
 \href{https://github.com/mar-file-system/GUFI.git}{\texttt{https://github.com/mar-file-system/GUFI.git}}
 
+\subsection{RPMs}
+Alternatively, three pre-built RPMs are attached to the assets of
+\href{https://github.com/mar-file-system/GUFI/releases}{each release
+  on GitHub}. If proceeding with the RPMs, only download and install
+the RPM without \texttt{server} or \texttt{client} in its name. Note
+that Python library files required by the user facing tools
+(Section~\ref{sec:user_facing_tools}) will be installed into
+\texttt{/usr/lib}. Either add this path to \texttt{PYTHONPATH} or
+symlink \texttt{/usr/lib/gufi\_*.py} to somewhere visible to Python.
+
+Then, skip to Section~\ref{sec:usage}.
+
 \section{Dependencies}
 GUFI is known to build on Linux, macOS, and Windows (via cygwin).
 Most of the dependencies that GUFI requires are part of standard
@@ -127,13 +139,13 @@ Some particularly useful ones are listed here: \\
     build directory is deleted. \\
     \hline
     \texttt{SERVER\_CONFIG=<file path>} & Name of file used to
-    configure Python scripts on the server side (explained later). A
-    copy of \texttt{server.example} will be placed into the parent
-    directory of the provided path. Copy/rename this file to the
-    provided configuration file name. This is the GUFI configuration
-    file that is used in this guide. There is an additional
-    configuration file that is not necessary and not described
-    here. \\
+    configure user facing tools on the server side (explained
+    later). A copy of \texttt{server.example} will be placed into the
+    parent directory of the provided path. Copy/rename this file to
+    the provided configuration file name. This is the GUFI
+    configuration file that is used in this guide. There is an
+    additional configuration file that is not necessary and not
+    described here. \\
     \hline
   \end{tabularx}
 \end{table}
@@ -180,7 +192,7 @@ code does exist, but is not explained here.
 At this point, the parent directory of \texttt{SERVER\_CONFIG} should
 have a file called \texttt{server.example} that should be copied or
 renamed to \texttt{SERVER\_CONFIG} and updated before using the user
-facing scripts (Sec~\ref{sec:user_facing_scripts}).
+facing tools (Sec~\ref{sec:user_facing_tools}).
 
 \subsection{Environment Variables}
 If GUFI was installed, add
@@ -203,6 +215,7 @@ directory. \textbf{Always} use the files in the build or install
 directory.
 
 \section {Usage}
+\label{sec:usage}
 With GUFI installed, usage is grouped into 2 phases. The first,
 indexing, is normally only done by an administrator. Querying can be
 done by both administrators and users, and has been split into 2
@@ -226,16 +239,19 @@ a unified index location.
 
 \subsubsection{Post-Indexing Optimizations}
 There are a few operations that can be done after indexing a tree to
-help increase search performance. These operations are entirely
-optional. The executables used to do them are listed here, but are not
-elaborated upon: \gufitreesummary, \gufitreesummaryall, and
-\gufirollup.
+help increase search performance. Applying these operations is
+optional (there is one exception - see
+Section~\ref{sec:gufi_du_treesummary}). The executables used to do
+them are listed here, but are not elaborated upon: \gufitreesummary,
+\gufitreesummaryall, and \gufirollup.
 
 \subsection{Phase 2: Querying}
+Querying a GUFI tree is is done through either \gufiquery or the user
+facing tools.
+
 \subsubsection{\gufiquery}
 The primary command line tool for querying a GUFI tree is
-\gufiquery. There are others, but this is the primary one to know
-about.
+\gufiquery. There are others, but this is the one to know about.
 
 Using \gufiquery requires knowledge of the internals of GUFI (such as
 the schema of GUFI databases), and thus only ``advanced'' users are
@@ -297,19 +313,21 @@ can be replicated in GUFI like so: \\
 \gufivt is a \href{https://sqlite.org/loadext.html}{SQLite3 Run-Time
   Loadable Extension} that wraps \gufiquery and makes it accessible via
 the SQlite3 command line as well as via any language's SQLite3
-library. It can be found in \texttt{build/src} and, if GUFI was installed,
-\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{SERVER\_LIB\}}.
+library. It can be found in \texttt{build/src} and, if GUFI was
+installed, \texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{SERVER\_LIB\}}
+(\texttt{make install}) or \texttt{/usr/lib} (RPM).
 
-\subsubsection{User Facing Scripts}
-\label{sec:user_facing_scripts}
+\subsubsection{User Facing Tools}
+\label{sec:user_facing_tools}
 Because \gufiquery is very complex and requires detailed knowledge of
 the internals of GUFI, it is not the expected way most people will use
-to query indexes. Instead, there is a series of Python scripts that
-wrap \gufiquery (or one of the other binaries) to partially replicate
+to query indexes. They will instead use Python scripts that wrap
+\gufiquery (or one of the other binaries) that partially replicate
 common filesystem search functionality with GUFI. The tools are:
-\gufidu, \gufifind, \gufigetfattr, \gufils, and \gufistat.
+\gufidu, \gufifind, \gufigetfattr, \gufils, and \gufistat. There is
+also another tool called \gufistats that is not discussed here.
 
-Before running these scripts, the server configuration must be set
+Before running these tools, the server configuration must be set
 up. Look in the \texttt{SERVER\_CONFIG} parent directory. There should
 be a file called \texttt{server.example}. Copy this file to
 \texttt{SERVER\_CONFIG} and modify any values that need changing. At
@@ -340,4 +358,11 @@ Similarly, \\
 \gufils \texttt{-al c/d} \\
 
 will print all directories, files, and links immediately under
-\texttt{search/c/d} formatted similarly to \texttt{ls(1) -al}.
+\texttt{search/c/d} formatted similarly to \texttt{ls(1) -al}. \\
+
+Note that while all of the other user facing tools listed above will
+work immediately after indexing (and setting up the configuration
+file), \gufidu requires that the post-indexing optimization
+\gufitreesummaryall be applied to the index in order to function
+properly.
+\label{sec:gufi_du_treesummary}
