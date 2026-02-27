@@ -62,7 +62,7 @@
 
 configure_file(gufi_distributed.py gufi_distributed.py @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/gufi_distributed.py"
-  DESTINATION "${SERVER_LIB}"
+  DESTINATION "${PYTHON_SERVER_LIB}"
   COMPONENT Server)
 
 # GNU find with -printf "%P" is required

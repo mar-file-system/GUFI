@@ -216,6 +216,11 @@ endif()
 
 # Python3.9+ is required
 find_package(Python3 3.9 COMPONENTS Interpreter REQUIRED)
+message(STATUS "Python Interpreter: ${Python3_EXECUTABLE}")
+message(STATUS "Python site-packages: ${Python3_SITELIB}")
+
+# this is the first CPACK_RPM_PACKAGE_REQUIRES
+set(CPACK_RPM_PACKAGE_REQUIRES "python3-devel")
 
 # require find_program to return executables with -r+x permissions
 if (POLICY CMP0109)
@@ -270,7 +275,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
 # Detect and handle xattr.h platform specifics
 find_package(XATTR REQUIRED)
 message(STATUS "xattr headers located in ${XATTR_INCLUDEDIR}")
-set(CPACK_RPM_PACKAGE_REQUIRES "libattr")
+set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, libattr")
 if (XATTR_ATTR_XATTR_HEADER)
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_ATTR_XATTR_H")
@@ -295,8 +300,6 @@ find_package(Threads REQUIRED)
 
 # Need PCRE2 for linking only
 pkg_search_module(PCRE2 REQUIRED libpcre2-8)
-
-set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}")
 
 # Download and build all non-system dependencies
 set(DEP_DOWNLOAD_PREFIX    "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE PATH   "Location of dependency sources")
@@ -519,6 +522,19 @@ if (HAVE_STATX)
   message(STATUS "Using statx(2) for tree traversal")
 else()
   message(STATUS "statx(2) not found. Falling back to lstat(2).")
+endif()
+
+# place Python library files into appropriate site-packages
+if ("${Python3_SITELIB}" MATCHES "^/usr(/?.*)/lib(64)?/.*$")
+  string(REGEX REPLACE "/usr(/?.*)/lib(64)?/" "${SERVER_LIB}/" PYTHON_SERVER_LIB "${Python3_SITELIB}/GUFI")
+  if (CLIENT)
+    string(REGEX REPLACE "/usr(/?.*)/lib(64)?/" "${CLIENT_LIB}/" PYTHON_CLIENT_LIB "${Python3_SITELIB}/GUFI")
+  endif()
+else()
+  set(PYTHON_SERVER_LIB "${SERVER_LIB}")
+  if (CLIENT)
+    set(PYTHON_CLIENT_LIB "${CLIENT_LIB}")
+  endif()
 endif()
 
 # enable "make test"

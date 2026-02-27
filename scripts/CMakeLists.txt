@@ -124,6 +124,21 @@ install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs"
   DESTINATION "${SERVER_BIN}"
   COMPONENT Server)
 
+# turn the Python site-package to a module
+set(LIB_INIT "${CMAKE_CURRENT_BINARY_DIR}/__init__.py")
+file(REMOVE "${LIB_INIT}")
+file(TOUCH "${LIB_INIT}")
+install(FILES "${LIB_INIT}"
+  DESTINATION "${PYTHON_SERVER_LIB}"
+  COMPONENT Server
+  EXCLUDE_FROM_ALL)  # do not install if running 'make install'
+if (CLIENT)
+  install(FILES "${LIB_INIT}"
+    DESTINATION "${PYTHON_CLIENT_LIB}"
+    COMPONENT Client
+    EXCLUDE_FROM_ALL)  # do not install if running 'make install'
+endif()
+
 # python libraries installed into lib (server and client)
 set(LIBRARIES
   gufi_common.py # library only
@@ -135,7 +150,7 @@ foreach(LIBRARY ${LIBRARIES})
   configure_file("${LIBRARY}" "${LIBRARY}" @ONLY)
 
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}"
-    DESTINATION "${SERVER_LIB}"
+    DESTINATION "${PYTHON_SERVER_LIB}"
     COMPONENT Server)
 
   if (CLIENT)
@@ -143,7 +158,7 @@ foreach(LIBRARY ${LIBRARIES})
     set(CONFIG_FILE "${CLIENT_CONFIG}")
     configure_file("${LIBRARY}" "client_${LIBRARY}" @ONLY)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/client_${LIBRARY}"
-      DESTINATION "${CLIENT_LIB}"
+      DESTINATION "${PYTHON_CLIENT_LIB}"
       COMPONENT Client
       RENAME "${LIBRARY}"
       EXCLUDE_FROM_ALL)  # do not install libraries a second time if running 'make install'
