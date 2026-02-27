@@ -80,6 +80,10 @@ CURRENT_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
 . "${CURRENT_BINARY_DIR}/os_specific.sh"
 
 SRCDIR="prefix"
+# some realpath implementations don't allow for nonexistent paths
+mkdir -p "${SRCDIR}"
+SRCDIR_REALPATH="$(realpath ${SRCDIR})"
+rm -r "${SRCDIR}"
 BASENAME="$(basename ${SRCDIR})"
 THREADS=2
 
@@ -311,6 +315,7 @@ replace() {
     \%Started [0-9]* threads. Successfully completed [0-9]* threads.%d;
 
     s%${INDEXROOT}%${SRCDIR}%g;
+    s%${SRCDIR_REALPATH}%${SRCDIR}%g;
     s%${CONFIG}%/etc/GUFI/config%g;
     s%${PWD}/%%g;
 

@@ -66,11 +66,12 @@ set -e
 
 OUTPUT="gufi_query.out"
 
+OUTDB="outdb"
 SRC_CSV="${SRCDIR}/data.csv"
 IDX_CSV="${INDEXROOT}/data.csv"
 
 cleanup() {
-    rm -rf "${SRC_CSV}" "${IDX_CSV}"
+    rm -rf "${SRC_CSV}" "${IDX_CSV}" "${OUTDB}".*
 }
 
 cleanup_exit() {
@@ -164,8 +165,8 @@ run_no_sort "${GUFI_QUERY} \"${INDEXROOT}/baddirectory\""
 echo "# Path is a file"
 run_no_sort "${GUFI_QUERY} \"${INDEXROOT}/db.db\""
 
-echo "# Missing -I (outdb)"
-run_no_sort "${GUFI_QUERY} -O outdb \"${INDEXROOT}\""
+echo "# Missing -I (${OUTDB})"
+run_no_sort "${GUFI_QUERY} -O ${OUTDB} \"${INDEXROOT}\""
 
 echo "# Missing -I (aggregating, stdout)"
 run_no_sort "${GUFI_QUERY}                                                  -K \"create;\"              \"${INDEXROOT}\""
@@ -173,8 +174,8 @@ run_no_sort "${GUFI_QUERY}                                                  -K \
 echo "# Missing -I (aggregating, outfile)"
 run_no_sort "${GUFI_QUERY} -o outfile                                       -K \"create;\"              \"${INDEXROOT}\""
 
-echo "# Missing -I (aggregating, outdb)"
-run_no_sort "${GUFI_QUERY} -O outdb                                         -K \"create;\"              \"${INDEXROOT}\""
+echo "# Missing -I (aggregating, ${OUTDB})"
+run_no_sort "${GUFI_QUERY} -O ${OUTDB}                                         -K \"create;\"              \"${INDEXROOT}\""
 
 echo "# Missing -I (external databases)"
 run_no_sort "${GUFI_QUERY} -Q \"external\" \"user\" \"data\" \"base\"                                   \"${INDEXROOT}\""
@@ -185,8 +186,8 @@ run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\
 echo "# Missing -J (aggregate, outfile)"
 run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
 
-echo "# Missing -J (aggregate, outdb)"
-run_no_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\"              \"${INDEXROOT}\""
+echo "# Missing -J (aggregate, ${OUTDB})"
+run_no_sort "${GUFI_QUERY} -O ${OUTDB}   -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\"              \"${INDEXROOT}\""
 
 echo "# Missing -G (aggregate, stdout)"
 run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
@@ -219,8 +220,8 @@ run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\
 echo "# Have -J even though not aggregating (outfile)"
 run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\"              -J \"insert;\" \"${INDEXROOT}\""
 
-echo "# Have -J even though not aggregating (outdb)"
-run_no_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\"              -J \"insert;\" \"${INDEXROOT}\""
+echo "# Have -J even though not aggregating (${OUTDB})"
+run_no_sort "${GUFI_QUERY} -O ${OUTDB}   -I \"create\" -S \"insert;\" -E \"insert;\"              -J \"insert;\" \"${INDEXROOT}\""
 
 echo "# Have -G even though not aggregating (stdout)"
 run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\"              -G \"query;\"  \"${INDEXROOT}\""
@@ -228,8 +229,8 @@ run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\
 echo "# Have -G even though not aggregating (outfile)"
 run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\"              -G \"query;\"  \"${INDEXROOT}\""
 
-echo "# Have -G even though not aggregating (outdb)"
-run_no_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\"              -G \"query;\"  \"${INDEXROOT}\""
+echo "# Have -G even though not aggregating (${OUTDB})"
+run_no_sort "${GUFI_QUERY} -O ${OUTDB}   -I \"create\" -S \"insert;\" -E \"insert;\"              -G \"query;\"  \"${INDEXROOT}\""
 
 echo "#####################################"
 echo "# Modify Index                      #"

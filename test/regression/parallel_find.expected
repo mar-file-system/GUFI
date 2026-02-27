@@ -133,7 +133,7 @@ $ parallel_find -n 2 --format '\a\b\f\t\v\\\r\n\cshould not show\n' "prefix" | h
 00000008
 
 # print numeric % directives
-$ parallel_find -n 2 --format "%% %a %b %c %D %i %n %t\n" "prefix" | head -n 1 | sed 's%\b[0-9]\+\b%0%g;'
+$ parallel_find -n 2 --format "%% %a %b %c %D %i %n %t\n" "prefix" | head -n 1 | sed 's%[0-9]\+%0%g;'
 % 0 0 0 0 0 0 0
 
 # print uid % directives

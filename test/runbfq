@@ -109,7 +109,7 @@ $BFQ \
     $GUFI
 
 ls -l outq*
-for F in `ls outq*`; do echo; echo $F; cat $F; done
+for F in `ls outq*`; do echo; echo $F; cat $F; rm $F; done
 
 echo
 echo "query to screen, insert per-user size-summary into table 'sument' in outdb.<thread_no> ${GUFI}"

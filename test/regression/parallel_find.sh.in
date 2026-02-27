@@ -127,7 +127,7 @@ echo "# print escape characters"
 run_sort "${PARALLEL_FIND} -n ${THREADS} --format '\\a\\b\\f\\t\\v\\\\\\r\\n\\cshould not show\n' \"${SRCDIR}\" | head -n 1 | ${HEXLIFY}"
 
 echo "# print numeric % directives"
-run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%% %a %b %c %D %i %n %t\n\" \"${SRCDIR}\" | head -n 1 | @SED@ 's%\b[0-9]\+\b%0%g;'"
+run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%% %a %b %c %D %i %n %t\n\" \"${SRCDIR}\" | head -n 1 | @SED@ 's%[0-9]\+%0%g;'"
 
 echo "# print uid % directives"
 run_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%u %U\n\" \"${SRCDIR}\" | head -n 1" | @SED@ "s%${USER_NAME}%${TEST_USER_NAME}%g; s%${USER_ID}%${TEST_USER_ID}%g;"

@@ -83,6 +83,7 @@ BADDIR=$(mktemp -d "XXXXXX") # this gets removed instantly
 
 cleanup() {
     rm -rf "${INDEX_SNAPSHOT}" "${TREE_SNAPSHOT}" "${URD}" "${CREATED}" "${DIFF}" "${PARKING_LOT}" "${FULL_INDEX}" "${SUSPECT_FILE}" "${BADDIR}"
+    rm -f "${SRCDIR}/../db.db" # in-place update creates the parent db.db
 }
 
 cleanup_exit() {
