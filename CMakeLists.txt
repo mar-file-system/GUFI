@@ -270,7 +270,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
 # Detect and handle xattr.h platform specifics
 find_package(XATTR REQUIRED)
 message(STATUS "xattr headers located in ${XATTR_INCLUDEDIR}")
-set(CPACK_RPM_PACKAGE_REQUIRES "libattr")
+set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, libattr")
 if (XATTR_ATTR_XATTR_HEADER)
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_ATTR_XATTR_H")
@@ -295,8 +295,6 @@ find_package(Threads REQUIRED)
 
 # Need PCRE2 for linking only
 pkg_search_module(PCRE2 REQUIRED libpcre2-8)
-
-set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}")
 
 # Download and build all non-system dependencies
 set(DEP_DOWNLOAD_PREFIX    "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE PATH   "Location of dependency sources")
@@ -587,7 +585,7 @@ if (RPMBUILD)
     endif()
   endif()
 
-  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python3-pip, coreutils ${EXTRA_DEPS}")
+  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, coreutils ${EXTRA_DEPS}")
   set(CPACK_RPM_PACKAGE_RELOCATABLE On)
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
 
