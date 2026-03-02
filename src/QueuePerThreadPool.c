@@ -251,23 +251,56 @@ static inline void maybe_steal_work(QPTPool_t *pool, QPTPoolThreadData_t *tw, si
 
 /*
  * wait_for_work() -
- *     Assumes pool->mutex and tw->mutex are locked.
+ *     Assumes pool->mutex, tw->mutex, tw->claimed_mutex are locked.
  */
 static void wait_for_work(QPTPool_t *pool, QPTPoolThreadData_t *tw) {
     while (
-        /* running, but no work in pool or current thread */
-        ((pool->state == RUNNING) && ((!pool->incomplete && !pool->swapped) ||
-                                     !tw->waiting.size)) ||
-        /*
-         * not running and still have work in
-         * other threads, just not this one
-         */
-        ((pool->state == STOPPING) && (pool->incomplete || pool->swapped) &&
-         !tw->waiting.size)
+        (
+            /* running, so sit here while there is
+             *     - no work in the pool OR
+             *     - no work for this thread to process
+             */
+            (pool->state == RUNNING) &&
+            (
+                /* no work in pool */
+                (!pool->incomplete && !pool->swapped)
+
+                /*
+                 * Using OR here because AND would loop on
+                 * non-empty pool + no work for this thread
+                 */
+                ||
+
+                /* no claimed or waiting work in this thread */
+                (!tw->claimed.size && !tw->waiting.size)
+            )
+        )
+        ||
+        (
+            /*
+             * waiting to stop, but there is still work (that might
+             * spawn more work), so sit here until there is either
+             *     - no work across the pool OR
+             *     - work for this thread to process
+             */
+            (pool->state == STOPPING) &&
+            (
+                /* work somewhere in pool */
+                (pool->incomplete || pool->swapped) &&
+
+                /* no claimed work being processed by this thread */
+                !tw->claimed.size &&
+
+                /* no work for this thread to process (more might come in from other threads) */
+                !tw->waiting.size
+            )
+        )
         ) {
+        pthread_mutex_unlock(&tw->claimed_mutex);
         pthread_mutex_unlock(&pool->mutex);
         pthread_cond_wait(&tw->cv, &tw->mutex);
         pthread_mutex_lock(&pool->mutex);
+        pthread_mutex_lock(&tw->claimed_mutex);
     }
 }
 
@@ -336,7 +369,10 @@ static void *worker_function(void *args) {
         pthread_mutex_lock(&pool->mutex);
 
         maybe_steal_work(pool, tw, ctx->id);
+
+        pthread_mutex_lock(&tw->claimed_mutex); /* lock claimed_mutex after stealing work */
         wait_for_work(pool, tw);
+        pthread_mutex_unlock(&tw->claimed_mutex);
 
         /* if stopping and entire thread pool is empty, this thread can exit */
         if ((pool->state == STOPPING) && !pool->incomplete && !pool->swapped) {

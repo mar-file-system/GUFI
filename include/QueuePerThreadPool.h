@@ -65,7 +65,8 @@ OF SUCH DAMAGE.
 #ifndef QUEUE_PER_THREAD_POOL_H
 #define QUEUE_PER_THREAD_POOL_H
 
-#include <inttypes.h>
+#include <stddef.h> /* size_t */
+#include <stdint.h> /* uint64 */
 
 #ifdef __cplusplus
 extern "C" {
