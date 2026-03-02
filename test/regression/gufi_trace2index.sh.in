@@ -175,11 +175,7 @@ echo
     row=$(@GREP@ "^${SRCDIR}/old_file${DELIM}f${DELIM}" "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
 
     @GREP@ "^${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
-    for (( i = 0; i <= 100000; i++ )) # 100K + 1
-    do
-        echo -n "${SRCDIR}/${i}"
-        echo "${row}"
-    done
+    "${GEN_BIG_TRACE}" 100001 "${SRCDIR}" "${row}"
 ) > "${BIG_DIR_TRACE}"
 
 echo "# create index with a directory containing a lot of files "

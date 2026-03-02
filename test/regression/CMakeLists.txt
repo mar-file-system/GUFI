@@ -69,6 +69,7 @@ set(CORE
 
 # support scripts
 set(AUX
+  gen_big_trace.py
   hexlify.py
   sbatch.fake
   ssh.fake

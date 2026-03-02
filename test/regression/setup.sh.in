@@ -147,6 +147,7 @@ echo "directory" > "${SKIP}"
 
 # paths of all executables
 GUFI_TOOL="${CURRENT_BINARY_DIR}/gufi_tool.py"
+GEN_BIG_TRACE="${CURRENT_BINARY_DIR}/gen_big_trace.py"
 HEXLIFY="${CURRENT_BINARY_DIR}/hexlify.py"
 SQLITE3="@DEP_INSTALL_PREFIX@/sqlite3/bin/sqlite3"
 
@@ -240,6 +241,7 @@ chmod 666 "${CONFIG}"
 replace() {
     @SED@ "
     # GUFI_TOOL does not show up as itself
+    s%${GEN_BIG_TRACE}%gen_big_trace.py%g;
     s%${HEXLIFY}%hexlify.py%g;
     s%${SQLITE3}%sqlite3%g;
 
