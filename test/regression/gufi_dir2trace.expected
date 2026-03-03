@@ -106,7 +106,7 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          3
 Total Files:         5
 
-$ cat trace.0 trace.1 | awk -F '|' '{ print $1 }' | sort
+$ cat trace.0 trace.1 | awk -F '|' '{ print substr($1, 5) }' | sort
 prefix/directory
 prefix/directory/executable
 prefix/directory/readonly
@@ -131,7 +131,7 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          2
 Total Files:         3
 
-$ cat trace.0 trace.1 | awk -F '|' '{ print $1 }' | sort
+$ cat trace.0 trace.1 | awk -F '|' '{ print substr($1, 5) }' | sort
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
@@ -159,7 +159,7 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          1
 Total Files:         7
 
-$ cat trace.0 trace.1 first.* second.* | awk -F '|' '{ print $1 }' | sort
+$ cat trace.0 trace.1 first.* second.* | awk -F '|' '{ print substr($1, 5) }' | sort
 /external/db
 prefix
 prefix/.hidden
@@ -186,7 +186,7 @@ prefix/unusual#? directory ,/unusual, name?#
 # ######################################
 
 # write to stdout
-$ gufi_dir2trace -d "|" -n 2 -x "prefix" "-" 2>/dev/null | awk -F "|" '{ print $1, $2 }'
+$ gufi_dir2trace -d "|" -n 2 -x "prefix" "-" 2>/dev/null | awk -F "|" '{ print substr($1, 5), $2 }'
 /external/db e
 prefix d
 prefix/.hidden f
@@ -238,7 +238,7 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          4
 Total Files:         10
 
-$ cat trace.0 trace.1 | awk -F "|" '{print $1}' | sed '\%/external/db%d;'
+$ cat trace.0 trace.1 | awk -F "|" '{ print substr($1, 5) }' | sed '\%/external/db%d;'
 prefix
 prefix/.hidden
 prefix/1KB

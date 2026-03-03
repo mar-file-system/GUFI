@@ -247,6 +247,10 @@ extern "C" {
 #define FLAG_NO_PRINT_SQL_ON_ERR_LONG "no-print-sql-on-err"
 #define FLAG_NO_PRINT_SQL_ON_ERR {FLAG_NO_PRINT_SQL_ON_ERR_LONG, no_argument, NULL, FLAG_NO_PRINT_SQL_ON_ERR_SHORT}
 
+#define FLAG_OLD_TRACE_FORMAT_SHORT (FLAG_GROUP_MISC + 18)
+#define FLAG_OLD_TRACE_FORMAT_LONG "old-trace-format"
+#define FLAG_OLD_TRACE_FORMAT {FLAG_OLD_TRACE_FORMAT_LONG, no_argument, NULL, FLAG_OLD_TRACE_FORMAT_SHORT}
+
 /* memory utilization flags */
 
 #define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
@@ -487,6 +491,7 @@ struct input {
     int  suppress_newline;
     int  print_eacces;             /* if cannot open a path due to EACCES, print error message (default: off) */
     int  no_print_sql_on_err;      /* if there is an SQL error, do not print the SQL in the error message */
+    int  old_trace_format;         /* used to read old traces only - do not generate new traces with the old format */
     int  buildindex;
     size_t maxthreads;
     struct {

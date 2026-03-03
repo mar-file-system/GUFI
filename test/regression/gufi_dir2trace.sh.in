@@ -112,13 +112,13 @@ echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
 # count separators
 # shellcheck disable=SC2016
-columns=$(@SED@ "\%^.*${DELIM}e${DELIM}$%d; s%[^${DELIM}]%%g;" "${TRACES[@]}" | @AWK@ '{ print length }' | sort | uniq)
+columns=$(@SED@ "\%^.*${DELIM}e${DELIM}$%d;" "${TRACES[@]}" | tr -dc "^|\n" | @AWK@ '{ print length }' | sort | uniq)
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
 src=$(find "${SRCDIR}" | sort)
 # shellcheck disable=SC2016
-lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | @SED@ "\%/external/db%d;" | sort)
+lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print substr(\$1, 5) }" "${TRACES[@]}" | @SED@ "\%/external/db%d;" | sort)
 
 echo "Source Directory:"
 # shellcheck disable=SC2016
@@ -140,7 +140,7 @@ echo "# partial indexing (first half)"
 run_no_sort "cat \"${DISTRIBUTED_0}\""
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --path-list \"${DISTRIBUTED_0}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print \$1 }' | sort"
+run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print substr(\$1, 5) }' | sort"
 echo "# ######################################"
 echo
 echo "# ######################################"
@@ -148,7 +148,7 @@ echo "# partial indexing (second half)"
 run_no_sort "cat \"${DISTRIBUTED_1}\""
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --path-list \"${DISTRIBUTED_1}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print \$1 }' | sort"
+run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print substr(\$1, 5) }' | sort"
 echo "# ######################################"
 echo
 echo "# ######################################"
@@ -157,12 +157,12 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --path-list \"${DISTRIBUTE
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --path-list \"${DISTRIBUTED_1}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SECOND}\""
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --max-level 0 \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
-run_no_sort "cat ${TRACES[@]} ${FIRST}.* ${SECOND}.* | @AWK@ -F '|' '{ print \$1 }' | sort"
+run_no_sort "cat ${TRACES[@]} ${FIRST}.* ${SECOND}.* | @AWK@ -F '|' '{ print substr(\$1, 5) }' | sort"
 echo "# ######################################"
 echo
 
 echo "# write to stdout"
-run_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"-\" 2>/dev/null | @AWK@ -F \"${DELIM}\" '{ print \$1, \$2 }'"
+run_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"-\" 2>/dev/null | @AWK@ -F \"${DELIM}\" '{ print substr(\$1, 5), \$2 }'"
 
 echo "# source path is file"
 touch "${TRACE}"
@@ -180,7 +180,7 @@ echo "# skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} --skip-file \"${SKIP}\" \"${SRCDIR}\" \"${TRACE}\""
 
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}' | @SED@ '\%/external/db%d;'"
+run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{ print substr(\$1, 5) }' | @SED@ '\%/external/db%d;'"
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} --skip-file \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""

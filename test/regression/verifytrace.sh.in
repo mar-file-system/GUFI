@@ -97,13 +97,13 @@ order_tracefile "${TRACE}.0" > "${TRACE}"
 
 # replace the numeric fields in the trace with 0s
 # need the negative on macOS
-@SED@ -i 's%-\?[0-9]\+%0%g;' "${TRACE}"
+@SED@ -i "s%-\?[0-9]\+${DELIM}%0${DELIM}%g;" "${TRACE}"
 
 # replace some rows with fixed data
-@SED@ -i "s%^${DELIM}d${DELIM}.*$%${DELIM}d${DELIM}1${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}%g;" "${TRACE}"
-@SED@ -i "s%^leaf_directory${DELIM}d${DELIM}.*$%leaf_directory${DELIM}d${DELIM}4${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}%g;" "${TRACE}"
-@SED@ -i "s%^directory${DELIM}d${DELIM}.*$%directory${DELIM}d${DELIM}2${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}%g;" "${TRACE}"
-@SED@ -i "s%^directory/subdirectory${DELIM}d${DELIM}.*$%directory/subdirectory${DELIM}d${DELIM}3${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}2${DELIM}%g;" "${TRACE}"
+@SED@ -i "s%^\([0-9A-Fa-f]{4}\)${DELIM}d${DELIM}.*$%\1${DELIM}d${DELIM}1${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}%g;" "${TRACE}"
+@SED@ -i "s%^\([0-9A-Fa-f]{4}\)leaf_directory${DELIM}d${DELIM}.*$%\1leaf_directory${DELIM}d${DELIM}4${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}%g;" "${TRACE}"
+@SED@ -i "s%^\([0-9A-Fa-f]{4}\)directory${DELIM}d${DELIM}.*$%\1directory${DELIM}d${DELIM}2${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}%g;" "${TRACE}"
+@SED@ -i "s%^\([0-9A-Fa-f]{4}\)directory/subdirectory${DELIM}d${DELIM}.*$%\1directory/subdirectory${DELIM}d${DELIM}3${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}2${DELIM}%g;" "${TRACE}"
 
 echo "# not enough arguments"
 run_no_sort "${VERIFYTRACE}"
@@ -126,7 +126,7 @@ echo "# directory can't find delimiter"
 run_no_sort "${VERIFYTRACE} \"${BADDELIM}\" ${TRACE}"
 
 # get a file line, without the name
-file_line=$(@GREP@ "${DELIM}f${DELIM}" "${TRACE}" | sort | head -n 1)
+file_line=$(@GREP@ ".hidden${DELIM}f${DELIM}" "${TRACE}")
 without_name=$(echo "${file_line}" | cut -f2- -d "${DELIM}")
 
 echo "# directory too few columns"
@@ -200,7 +200,7 @@ echo "# non-directory too many columns"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
 echo "# directory followed by non-directory not in directory"
-dir_line=$(@GREP@ "${DELIM}d${DELIM}" "${TRACE}" | sort | tail -n 1)
+dir_line=$(@GREP@ "${SRCDIR}${DELIM}d${DELIM}" "${TRACE}")
 # shellcheck disable=SC2016
 dir_name=$(echo "${dir_line}" | @AWK@ -F "${DELIM}" '{ print $1 }')
 bad_name="${dir_name}/non-existant_dir/file${DELIM}${without_name}"
@@ -237,7 +237,7 @@ echo "# bad parent pinode"
 
 cat "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
-) 2>&1 | remove_indexing_time | tee "${OUTPUT}"
+) 2>&1 | remove_indexing_time | @SED@ 's%[0-9A-Fa-f]\{4\}\(.*\)$%\1%g;' | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytrace.expected "${OUTPUT}"
 rm "${OUTPUT}"

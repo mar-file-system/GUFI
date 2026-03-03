@@ -157,7 +157,7 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
     }
 
     // assume that the current directory was found
-    std::string parent = csa->tree + "/" + sa->line.substr(0, sa->first_delim);
+    std::string parent = csa->tree + "/" + sa->line.substr(PATH_PREFIX_LEN, sa->first_delim - PATH_PREFIX_LEN);
 
     // remove trailing /
     std::size_t parent_len = parent.size();
@@ -190,7 +190,7 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
         memcpy(buf, sa->line.c_str(), sa->line.size());
         struct work *work;
         struct entry_data ed;
-        linetowork(buf, sa->line.size(), csa->delim, &work, &ed);
+        linetowork(buf, sa->line.size(), csa->delim, &work, &ed, 0);
         xattrs_cleanup(&ed.xattrs);
 
         // make sure the permissions are correct
@@ -271,7 +271,7 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
         memcpy(buf, line.c_str(), line.size());
         struct work *work;
         struct entry_data ed;
-        linetowork(buf, line.size(), csa->delim, &work, &ed);
+        linetowork(buf, line.size(), csa->delim, &work, &ed, 0);
         xattrs_cleanup(&ed.xattrs);
 
         // extract the basename from the entry name

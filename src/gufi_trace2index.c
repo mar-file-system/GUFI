@@ -107,9 +107,11 @@ struct NonDirArgs {
 static void process_nondir(sqlite3 *db, char *line, const size_t len,
                            struct NonDirArgs *nda) {
     struct work *row = NULL;
-    struct entry_data row_ed;
+    struct entry_data row_ed = {0};
 
-    linetowork(line, len, nda->pa->in.delim, &row, &row_ed);
+    if (linetowork(line, len, nda->pa->in.delim, &row, &row_ed, nda->pa->in.old_trace_format) != 0) {
+        return;
+    }
 
     if (row_ed.type == 'e') {
         /* insert right here (instead of bulk inserting) since this is likely to be very rare */
@@ -155,13 +157,16 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     // TODO: based on following comment, can this be stack allocated?
     struct work *dir = NULL; /* name and name_len are not used */
-    struct entry_data ed;
+    struct entry_data ed = {0};
 
     /* parse the directory data */
-    linetowork(w->line, w->len, in->delim, &dir, &ed);
+    if (linetowork(w->line, w->len, in->delim, &dir, &ed, in->old_trace_format) != 0) {
+        row_destroy(&w);
+        return 1;
+    }
 
     /* create the directory */
-    nda.topath_len = nda.pa->index_parent.len + 1 + w->first_delim;
+    nda.topath_len = nda.pa->index_parent.len + 1 - PATH_PREFIX_LEN + w->first_delim;
 
     /*
      * allocate space for "/db.db" in topath
@@ -173,7 +178,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     SNFORMAT_S(nda.topath, topath_size, 4,
                nda.pa->index_parent.data, nda.pa->index_parent.len,
                "/", (size_t) 1,
-               w->line, w->first_delim,
+               w->line + PATH_PREFIX_LEN, w->first_delim - PATH_PREFIX_LEN,
                "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     /* have to dupdir here because directories can show up in any order */
@@ -182,6 +187,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 nda.topath, strerror(err), err);
         free(nda.topath);
+        free(dir);
         row_destroy(&w);
         return 1;
     }
@@ -239,17 +245,17 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
         /* find the basename of this path */
         w->line[w->first_delim] = '\x00';
-        const size_t basename_start = trailing_match_index(w->line, w->first_delim, "/", 1);
+        const size_t basename_start = trailing_match_index(w->line + PATH_PREFIX_LEN, w->first_delim, "/", 1);
 
-        insertsumdb(db, w->line + basename_start, dir, &ed, &nda.summary);
+        insertsumdb(db, w->line + PATH_PREFIX_LEN + basename_start, dir, &ed, &nda.summary);
         xattrs_cleanup(&ed.xattrs);
 
         closedb(db); /* don't set to nullptr */
     }
 
     free(nda.topath);
-    row_destroy(&w);
     free(dir);
+    row_destroy(&w);
 
     return !db;
 }
@@ -265,7 +271,7 @@ int main(int argc, char *argv[]) {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
         /* input flags */
-        FLAG_DELIM,
+        FLAG_DELIM, FLAG_OLD_TRACE_FORMAT,
 
         /* memory usage flags  */
         FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX,
@@ -362,7 +368,7 @@ int main(int argc, char *argv[]) {
     }
     else {
         enqueue_traces(&pa.in.pos.argv[0], traces, trace_count,
-                       pa.in.delim,
+                       pa.in.delim, pa.in.old_trace_format,
                        /* allow for some threads to start processing while reading */
                        (pa.in.maxthreads / 2) + !!(pa.in.maxthreads & 1),
                        ctx, processdir,

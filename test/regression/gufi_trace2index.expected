@@ -6,6 +6,7 @@ options:
   -v, --version                     version
   -n, --threads <n>                 number of threads
   -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x1E]
+      --old-trace-format            read old format traces
       --target-memory <bytes>       target memory utilization (soft limit)
       --swap-prefix <path>          File name prefix for swap files
 
@@ -300,6 +301,31 @@ prefix/unusual#? directory ,/unusual, name?#|uid|gid
 prefix/unusual#? directory ,|uid|gid
 prefix|uid|gid
 
+# paths containing a delimiter
+$ gufi_query -d "|" -n 4 -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" search
+search/pre|fix
+search/pre|fix/1MB
+
+# link containing a delimiter
+$ gufi_query -d "|" -n 4 -E "SELECT rpath(sname, sroll, name), linkname FROM vrpentries WHERE type == 'l';" search
+prefix/file_symlink|||||
+
+# xattr name containing a delimiter
+$ gufi_query -d "|" -n 4 -x -E "SELECT rpath(sname, sroll, name), xattr_name, xattr_value FROM vrxpentries;" search
+prefix/1MB|user.si|ze|1MB
+
+# xattr value containing a delimiter
+$ gufi_query -d "|" -n 4 -x -E "SELECT rpath(sname, sroll, name), xattr_name, xattr_value FROM vrxpentries;" search
+prefix/1MB|user.size|1|MB
+
+# osstext1 containing a delimiter
+$ gufi_query -d "|" -n 4 -E "SELECT rpath(sname, sroll, name), osstext1 FROM vrpentries;" search
+prefix/1MB|||||
+
+# osstext2 containing a delimiter
+$ gufi_query -d "|" -n 4 -E "SELECT rpath(sname, sroll, name), osstext2 FROM vrpentries;" search
+prefix/1MB|||||
+
 # bad trace path
 $ gufi_trace2index -d "|" -n 4 "" "search"
 Could not open "": No such file or directory (2)
@@ -308,7 +334,6 @@ Failed to open trace file for each thread
 # bad index path
 $ gufi_trace2index -d "|" -n 4 "trace" "prefix/1KB" 2> >(sort)
 Could not create directory prefix/1KB
-
 
 # empty trace (no error message)
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
@@ -319,7 +344,6 @@ Total:               0
 
 Total Dirs:          0
 Total Files:         0
-
 
 # trace with empty line at front
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
@@ -332,7 +356,6 @@ Total:               0
 Total Dirs:          0
 Total Files:         0
 
-
 # cannot find delimiter of first line
 $ gufi_trace2index -d "&" -n 4 "trace" "search"
 Creating GUFI tree search with 4 threads
@@ -343,7 +366,6 @@ Total:               0
 
 Total Dirs:          0
 Total Files:         0
-
 
 # first line does not start with a directory
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
@@ -356,18 +378,95 @@ Total:               0
 Total Dirs:          0
 Total Files:         0
 
-
 # file delimiter not found
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
 Creating GUFI tree search with 4 threads
-Error: Line at offset 48 does not have a delimiter
-Scout encountered bad line ending at "badtrace" offset 62
+Error: Line at offset 56 does not have a delimiter
+Scout encountered bad line ending at "badtrace" offset 74
 Dirs:                0 (0 empty)
 Files:               0
 Total:               0
 
 Total Dirs:          0
 Total Files:         0
+
+# declared path length invalid
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+First entry has a bad length "----"
+
+# declared path length partially valid
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+First entry has a bad length "00--"
+
+# declared path length too short
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Could not find the specified delimiter in "badtrace"
+
+# declared path length too long
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Could not find the specified delimiter in "badtrace"
+
+# declared path length does not go to delimiter
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Could not find the specified delimiter in "badtrace"
+
+# declared linkname length invalid
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: Bad linkname "----"
+
+# declared linkname length partially valid
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: Bad linkname "00--"
+
+# declared linkname length too short
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: linkname len 0 (0000) does not end at delimiter
+
+# declared linkname length too long
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: linkname length is too big
+
+# declared linkname length does not go to delimiter
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: linkname len 1 (0001) does not end at delimiter
+
+# declared osstext1 length invalid
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: Bad osstext1 "----"
+
+# declared osstext1 length partially valid
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: Bad osstext1 "00--"
+
+# declared osstext1 length too short
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+
+# declared osstext1 length too long
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: osstext1 length is too big: 65535 (max: 1023)
+
+# declared osstext1 length does not go to delimiter
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: osstext1 len 1 (0001) does not end at delimiter
+
+# declared osstext2 length invalid
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: Bad osstext2 "----"
+
+# declared osstext2 length partially valid
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: Bad osstext2 "00--"
+
+# declared osstext2 length too short
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+
+# declared osstext2 length too long
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: osstext2 length is too big: 65535 (max: 1023)
+
+# declared osstext2 length does not go to delimiter
+$ gufi_trace2index -d "|" -n 4 "badtrace" "search"
+Error: osstext2 len 1 (0001) does not end at delimiter
 
 # bad thread count
 $ gufi_trace2index -n 18446744073709551615 "prefix" "search"

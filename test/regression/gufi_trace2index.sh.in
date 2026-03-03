@@ -73,13 +73,14 @@ do
     TRACES+=("${TRACE}.${i}")
 done
 
+MODIFIED_TRACE="modified.trace"
 EMPTY_LAST_DIR_TRACE="empty_last_dir.trace"
 BIG_DIR_TRACE="big.dir.trace"
 BIG_DIR_INDEX="big.dir.index"
 DIFFERENT_OWNERS="different_owners.${TRACE}"
 
 cleanup() {
-    rm -rf "${TRACES[@]}" "${EMPTY_LAST_DIR_TRACE}" "${BIG_DIR_TRACE}" "${BIG_DIR_INDEX}" "${DIFFERENT_OWNERS}"
+    rm -rf "${TRACES[@]}" "${MODIFIED_TRACE}" "${EMPTY_LAST_DIR_TRACE}" "${BIG_DIR_TRACE}" "${BIG_DIR_INDEX}" "${DIFFERENT_OWNERS}"
 }
 
 cleanup_exit() {
@@ -105,7 +106,7 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"
 (
     cat "${TRACES[@]}"
     echo
-    echo "external_db${DELIM}e${DELIM}"
+    echo "000bexternal_db${DELIM}e${DELIM}"
 ) > "${TRACE}"
 
 echo "# generate the index"
@@ -172,9 +173,9 @@ echo
 # big directory (see gufi_trace2index.c)
 (
     # shellcheck disable=SC2016
-    row=$(@GREP@ "^${SRCDIR}/old_file${DELIM}f${DELIM}" "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
+    row=$(@GREP@ "^[0-9A-Fa-f]\{4\}${SRCDIR}/old_file${DELIM}f${DELIM}" "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" ; print }')
 
-    @GREP@ "^${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
+    @GREP@ "^[0-9A-Fa-f]\{4\}${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
     "${GEN_BIG_TRACE}" 100001 "${SRCDIR}" "${row}"
 ) > "${BIG_DIR_TRACE}"
 
@@ -185,15 +186,21 @@ run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT COUNT(*) FROM entries;\" \"${BIG
 
 (
     cat "${TRACE}"
-    @GREP@ "^.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | @SED@ 's%empty_directory%empty_directory2%g;'
+
+    # shellcheck disable=SC2016
+    len=$(@GREP@ "^[0-9A-Fa-f]\{4\}.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | @AWK@ -F "${DELIM}" '{ print length($1) }')
+    len_str=$(printf "%04zx" "$(( len - 4 + 1 ))") # len includes length prefix
+
+    @GREP@ "^[0-9A-Fa-f]\{4\}.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | @SED@ "s%^[0-9A-Fa-f]\{4\}\(.*\)/empty_directory%${len_str}\1/empty_directory2%g;"
 ) > "${EMPTY_LAST_DIR_TRACE}"
+
 echo "# create index from a trace file whose last item is an empty directory"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${EMPTY_LAST_DIR_TRACE}\" \"${SEARCH}\""
 
 # replace uid and gid with random values
 while IFS= read -r line
 do
-    echo "${line}" | @SED@ "s%$(id -u)${DELIM}$(id -g)%${RANDOM}${DELIM}${RANDOM}%g"
+    echo "${line}" | @SED@ "s%^\([0-9A-Fa-f]{4}.*${DELIM}\)$(id -u)${DELIM}$(id -g)%\1${RANDOM}${DELIM}${RANDOM}%g"
 done < "${TRACE}" > "${DIFFERENT_OWNERS}"
 echo "# Process trace with different owners"
 echo "# Should work when indexed as user and as root"
@@ -201,41 +208,157 @@ rm -rf "${SEARCH}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${DIFFERENT_OWNERS}\" \"${SEARCH}\"" | @SED@ "\%^Warning.*%d;"
 run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -S \"SELECT rpath(sname, sroll), uid, gid FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), uid, gid FROM vrpentries;\" ${INDEXROOT} | @AWK@ -F \"${DELIM}\" -v OFS=\"${DELIM}\" '{ \$2=\"uid\" ; \$3=\"gid\" ; print }'"
 
+echo "# paths containing a delimiter"
+(
+    @GREP@ "^0006prefix${DELIM}"     "${TRACE}" | @SED@ "s%0006prefix%0007pre|fix%g;"
+    @GREP@ "^000aprefix/1MB${DELIM}" "${TRACE}" | @SED@ "s%000aprefix%000bpre|fix%g;"
+) > "${MODIFIED_TRACE}"
+rm -rf "${SEARCH}"
+"${GUFI_TRACE2INDEX}" -d "${DELIM}" -n ${THREADS} "${MODIFIED_TRACE}" "${SEARCH}" > /dev/null 2>&1
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" ${SEARCH}"
+
+echo "# link containing a delimiter"
+(
+    @GREP@ "^0006prefix${DELIM}"              "${TRACE}"
+    @GREP@ "^0013prefix/file_symlink${DELIM}" "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" "{ \$14=\"0004${DELIM}${DELIM}${DELIM}${DELIM}\" ; print }"
+) > "${MODIFIED_TRACE}"
+rm -rf "${SEARCH}"
+"${GUFI_TRACE2INDEX}" -d "${DELIM}" -n ${THREADS} "${MODIFIED_TRACE}" "${SEARCH}" > /dev/null 2>&1
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -E \"SELECT rpath(sname, sroll, name), linkname FROM vrpentries WHERE type == 'l';\" ${SEARCH}"
+
+echo "# xattr name containing a delimiter"
+(
+    @GREP@ "^0006prefix${DELIM}"     "${TRACE}"
+    @GREP@ "^000aprefix/1MB${DELIM}" "${TRACE}" | @SED@ "s%00120001user.size%00130001user.si${DELIM}ze%;"
+) > "${MODIFIED_TRACE}"
+rm -rf "${SEARCH}"
+"${GUFI_TRACE2INDEX}" -d "${DELIM}" -n ${THREADS} "${MODIFIED_TRACE}" "${SEARCH}" > /dev/null 2>&1
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -x -E \"SELECT rpath(sname, sroll, name), xattr_name, xattr_value FROM vrxpentries;\" ${SEARCH}"
+
+echo "# xattr value containing a delimiter"
+(
+    @GREP@ "^0006prefix${DELIM}"     "${TRACE}"
+    @GREP@ "^000aprefix/1MB${DELIM}" "${TRACE}" | @SED@ "s%MB%${DELIM}MB%g; s%${DELIM}MB${DELIM}%MB${DELIM}%g; s%00120001user%00130001user%;"
+) > "${MODIFIED_TRACE}"
+rm -rf "${SEARCH}"
+"${GUFI_TRACE2INDEX}" -d "${DELIM}" -n ${THREADS} "${MODIFIED_TRACE}" "${SEARCH}" > /dev/null 2>&1
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -x -E \"SELECT rpath(sname, sroll, name), xattr_name, xattr_value FROM vrxpentries;\" ${SEARCH}"
+
+echo "# osstext1 containing a delimiter"
+(
+    @GREP@ "^0006prefix${DELIM}"     "${TRACE}"
+    @GREP@ "^000aprefix/1MB${DELIM}" "${TRACE}"
+) | @SED@ "s%0000\(${DELIM}0000${DELIM}[0-9]\+${DELIM}\)\$%0004${DELIM}${DELIM}${DELIM}${DELIM}\1%g;" > "${MODIFIED_TRACE}"
+rm -rf "${SEARCH}"
+"${GUFI_TRACE2INDEX}" -d "${DELIM}" -n ${THREADS} "${MODIFIED_TRACE}" "${SEARCH}" > /dev/null 2>&1
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -E \"SELECT rpath(sname, sroll, name), osstext1 FROM vrpentries;\" ${SEARCH}"
+
+echo "# osstext2 containing a delimiter"
+(
+    @GREP@ "^0006prefix${DELIM}"     "${TRACE}"
+    @GREP@ "^000aprefix/1MB${DELIM}" "${TRACE}"
+) | @SED@ "s%0000\(${DELIM}[0-9]\+${DELIM}\)\$%0004${DELIM}${DELIM}${DELIM}${DELIM}\1%g;" > "${MODIFIED_TRACE}"
+rm -rf "${SEARCH}"
+"${GUFI_TRACE2INDEX}" -d "${DELIM}" -n ${THREADS} "${MODIFIED_TRACE}" "${SEARCH}" > /dev/null 2>&1
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -E \"SELECT rpath(sname, sroll, name), osstext2 FROM vrpentries;\" ${SEARCH}"
+
 echo "# bad trace path"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"\" \"${SEARCH}\""
 
 echo "# bad index path"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${TRACE}\" \"${SRCDIR}/1KB\" 2> >(sort)"
-echo
 
 echo "# empty trace (no error message)"
 true > "${BADTRACE}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
-echo
 
 echo "# trace with empty line at front"
 echo > "${BADTRACE}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
-echo
 
 echo "# cannot find delimiter of first line"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n ${THREADS} \"${TRACE}\" \"${SEARCH}\"" | @SED@ '\%Error: Line at offset %d;'
-echo
 
 echo "# first line does not start with a directory"
 @GREP@ "^.*${DELIM}f${DELIM}" "${TRACE}" | tail -n -1 > "${BADTRACE}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
-echo
 
 # generate trace with good directory line and bad file line
 # only need the first delimiter to trigger error
 (
-    @GREP@ "^${SRCDIR}${DELIM}d${DELIM}.*" "${TRACE}" | @SED@ 's%[0-9]\+%0%g;'
-    echo "${SRCDIR}/1KB${BADDELIM}f${BADDELIM}"
+    @GREP@ "^[0-9A-Fa-f]\{4\}${SRCDIR}${DELIM}d${DELIM}.*" "${TRACE}" | @SED@ "s%[0-9]\+${DELIM}%0${DELIM}%g;"
+    path="${SRCDIR}/1KB"
+    len=$(printf "%04zx" "${#path}")
+    echo "${len}${path}${BADDELIM}f${BADDELIM}"
 ) > "${BADTRACE}"
 
 echo "# file delimiter not found"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\""
+
+(
+# titles[i] -> lens[i]
+# macOS + bash on GitHub Actions cannot create associative arrays
+titles=(
+    "invalid"
+    "partially valid"
+    "too short"
+    "too long"
+    "does not go to delimiter"
+)
+
+lens=(
+    "----"
+    "00--"
+    "0000"
+    "ffff"
+    "0001"
+)
+
+for (( i = 0; i < "${#titles[@]}"; i++ ))
+do
+    echo "# declared path length ${titles[${i}]}"
+    value=${lens["${i}"]}
+    (
+        @GREP@ "^[0-9A-Fa-f]\{4\}${SRCDIR}${DELIM}d${DELIM}" "${TRACE}" | @SED@ "s%^[0-9A-Fa-f]\{4\}%${value}%g;"
+    ) > "${BADTRACE}"
+    run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\"" | @SED@ '\%^$%d;'
+    echo
+done | @SED@ "s% (line length is [0-9]\+)%%g; s%Bad linkname \"${DELIM}.\{3\}\"\$%Bad linkname \"${DELIM}000\"%g;"
+
+for (( i = 0; i < "${#titles[@]}"; i++ ))
+do
+    echo "# declared linkname length ${titles[${i}]}"
+    value=${lens["${i}"]}
+    (
+        @GREP@ "${SRCDIR}${DELIM}d${DELIM}" "${TRACE}"
+        @GREP@ "file_symlink${DELIM}l${DELIM}" "${TRACE}" | @SED@ "s%${DELIM}[0-9A-Fa-f]\{4\}\(/.*\)${DELIM}%${DELIM}${value}\1%g;"
+    ) > "${BADTRACE}"
+    run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\"" | @SED@ '\%^$%d;'
+    echo
+done | @SED@ 's%: [0-9]\+ (max: [0-9]\+)%%g;'
+
+for (( i = 0; i < "${#titles[@]}"; i++ ))
+ do
+    echo "# declared osstext1 length ${titles[${i}]}"
+    value=${lens["${i}"]}
+    (
+        @GREP@ "${SRCDIR}${DELIM}d${DELIM}" "${TRACE}" | @SED@ "s%${DELIM}0000${DELIM}0000${DELIM}\([0-9]\+\)${DELIM}\$%${DELIM}${value}${DELIM}0000${DELIM}\1${DELIM}%g;"
+    ) > "${BADTRACE}"
+    run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\"" | @SED@ '\%^$%d;'
+    echo
+done
+
+for (( i = 0; i < "${#titles[@]}"; i++ ))
+do
+    echo "# declared osstext2 length ${titles[${i}]}"
+    value=${lens["${i}"]}
+    (
+        @GREP@ "${SRCDIR}${DELIM}d${DELIM}" "${TRACE}" | @SED@ "s%${DELIM}0000${DELIM}0000${DELIM}\([0-9]\+\)${DELIM}\$%${DELIM}0000${DELIM}${value}${DELIM}\1${DELIM}%g;"
+    ) > "${BADTRACE}"
+    run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n ${THREADS} \"${BADTRACE}\" \"${SEARCH}\"" | @SED@ '\%^$%d;'
+    echo
+done
+) | @SED@ '\%Creating%d; \%Dirs:%d; \%Files:%d; \%Total:%d;'
 
 echo "# bad thread count"
 run_no_sort "${GUFI_TRACE2INDEX} -n 18446744073709551615 \"${SRCDIR}\" \"${SEARCH}\""

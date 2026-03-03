@@ -120,7 +120,7 @@ echo
 (
     cat "${TRACES[@]}"
     echo
-    echo "${DELIM}e"
+    echo "0000${DELIM}e"
 ) > "${TRACE}"
 
 run_no_sort "rm -rf \"${DST}\""
@@ -140,7 +140,15 @@ run_no_sort "${GUFI_TRACE2DIR} ${TRACES[@]} \"${SRCDIR}/old_file\""
 # bad dupdir
 run_no_sort "rm -rf \"${DST}/${SRCDIR}/directory/readonly\""
 # shellcheck disable=SC2094
-head -n 1 "${TRACE}" | @SED@ "s%^.*${DELIM}d${DELIM}%${SRCDIR}/old_file/dir${DELIM}d${DELIM}%g;" >> "${TRACE}"
+(
+    line=$(@GREP@ "^.*${DELIM}d${DELIM}" "${TRACE}" | head -n 1)
+    # shellcheck disable=SC2016
+    orig=$(echo "${line}" | @AWK@ -F "${DELIM}" '{ print $1 }')
+    new="${SRCDIR}/old_file/dir"
+    new_len=$(printf "%04zx" "${#new}")
+    echo "${line}" | @SED@ "s%^${orig}${DELIM}d${DELIM}%${new_len}${new}${DELIM}d${DELIM}%g;"
+) >> "${TRACE}"
+
 run_no_sort "${GUFI_TRACE2DIR} -d \"${DELIM}\" ${TRACE} \"${DST}\""
 
 # shellcheck disable=SC2145

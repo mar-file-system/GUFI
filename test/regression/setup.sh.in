@@ -353,16 +353,16 @@ run_no_sort() {
 
 # somewhat force ordering of trace file
 order_tracefile() {
-    @GREP@ -a "^${SRCDIR}${DELIM}"              "$1"
-    @GREP@ -a "^${SRCDIR}/.hidden${DELIM}"      "$1"
-    @GREP@ -a "^${SRCDIR}/1KB${DELIM}"          "$1"
-    @GREP@ -a "^${SRCDIR}/1MB${DELIM}"          "$1"
-    @GREP@ -a "^${SRCDIR}/file_symlink${DELIM}" "$1"
-    @GREP@ -a "^${SRCDIR}/old_file${DELIM}"     "$1"
-    @GREP@ -a "^${SRCDIR}/repeat_name${DELIM}"  "$1"
-    @GREP@ -a "^${SRCDIR}/directory.*${DELIM}"  "$1"
-    @GREP@ -a "^${SRCDIR}/leaf.*${DELIM}"       "$1"
-    @GREP@ -a "^${SRCDIR}/unusual.*${DELIM}"    "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}${DELIM}"              "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/.hidden${DELIM}"      "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/1KB${DELIM}"          "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/1MB${DELIM}"          "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/file_symlink${DELIM}" "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/old_file${DELIM}"     "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/repeat_name${DELIM}"  "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/directory.*${DELIM}"  "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/leaf.*${DELIM}"       "$1"
+    @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/unusual.*${DELIM}"    "$1"
 }
 
 remove_indexing_time() {

@@ -34,22 +34,22 @@ trace.copy: Pass
 
 # directory can't find delimiter
 $ verifytrace "&" trace
-trace: Error: Stanza missing first delimiter: prefix|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+trace: Error: Stanza missing first delimiter: prefix|d|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|
 Fail
 
 # directory too few columns
 $ verifytrace "|" "badtrace"
-badtrace: Error: Not enough columns: f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+badtrace: Error: Not enough columns: f|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|
 Fail
 
 # directory too many columns
 $ verifytrace "|" "trace.copy"
-trace.copy: Warning: Too many columns: prefix|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0||
+trace.copy: Warning: Too many columns: prefix|d|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0||
 Pass
 
 # trace starts with a non-directory
 $ verifytrace "|" badtrace
-badtrace: Error: Expected a directory: file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+badtrace: Error: Expected a directory: file|f|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|
 Fail
 
 # directory extra slashes after name
@@ -58,7 +58,7 @@ trace.copy: Pass
 
 # directory bad pinode
 $ verifytrace "|" "badtrace"
-badtrace: Error: Bad parent pinode: prefix|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||bad_pinode|
+badtrace: Error: Bad parent pinode: prefix|d|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|bad_pinode|
 Fail
 
 # directory duplicate path
@@ -72,27 +72,27 @@ trace.copy: Pass
 
 # non-directory can't find delimiter
 $ verifytrace "|" badtrace
-badtrace: Error: Entry missing delimiter: prefix/.hidden&f&0&0&0&0&0&0&0&0&0&0&0&&&0&0&0&0&0&&&0&
+badtrace: Error: Entry missing delimiter: prefix/.hidden&f&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&
 Fail
 
 # non-directory too few columns
 $ verifytrace "|" badtrace
-badtrace: Error: Not enough columns: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0
+badtrace: Error: Not enough columns: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0
 Fail
 
 # non-directory too many columns
 $ verifytrace "|" badtrace
-badtrace: Warning: Too many columns: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0||
+badtrace: Warning: Too many columns: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0||
 Pass
 
 # directory followed by non-directory not in directory
 $ verifytrace "|" "badtrace"
-badtrace: Error: Bad child: prefix/non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+badtrace: Error: Bad child: prefix/non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|
 Fail
 
 # non-directory bad pinode
 $ verifytrace "|" "badtrace"
-badtrace: Error: Bad child pinode: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||1234|
+badtrace: Error: Bad child pinode: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|1234|
 Fail
 
 # missing parent
@@ -102,8 +102,8 @@ badtrace: Parent path of "prefix/non-existant_dir/non-existant_subdir" missing.
 Fail
 
 # bad parent pinode
-prefix|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
-prefix/directory|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||1234|
+prefix|d|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|
+prefix/directory|d|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|1234|
 $ verifytrace "|" "badtrace"
 badtrace: Parent inode does not match directory's pinode: "prefix/directory"
 1 directories either missing or mismatched

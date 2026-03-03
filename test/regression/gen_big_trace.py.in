@@ -67,7 +67,8 @@ import gufi_common
 
 def gen_files(count, prefix, contents):
     for i in range(count):
-        print('{0}/{1}{2}'.format(prefix, i, contents))
+        name = '{0}/{1}'.format(prefix, i)
+        print('{0:04x}{1}{2}'.format(len(name), name, contents))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Simple Trace File Generator for gufi_trace2index Regression Testing')

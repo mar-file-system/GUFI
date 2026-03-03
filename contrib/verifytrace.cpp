@@ -69,6 +69,8 @@ OF SUCH DAMAGE.
 #include <map>
 #include <string>
 
+#include "trace.h"
+
 // directory -> <inode, parent inode>
 typedef std::map <std::string, std::pair<std::string, std::string> > Tree;
 
@@ -111,7 +113,7 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
         len--;
     }
 
-    const std::string parent = line.substr(0, len);
+    const std::string parent = line.substr(PATH_PREFIX_LEN, len - PATH_PREFIX_LEN);
 
     // find the inode (1 column after type)
     const std::string::size_type second_delim = first_delim + 2;
@@ -184,15 +186,21 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
         }
 
         // check if the current path is a direct child of the parent path
+        std::string::size_type child_start = std::string::npos;
         std::string::size_type last_slash = line.find_last_of('/', child_first_delim);
 
         // entries in root directory don't have any slashes
         if (last_slash == std::string::npos) {
+            child_start = 0;
             last_slash = 0;
+        }
+        else {
+            child_start = PATH_PREFIX_LEN;
+            last_slash -= PATH_PREFIX_LEN;
         }
 
         if ((last_slash != parent.size()) ||
-            (line.substr(0, last_slash) != parent)) {
+            (line.substr(child_start, last_slash) != parent)) {
             std::cerr << "Error: Bad child: " << line << std::endl;
             return false;
         }

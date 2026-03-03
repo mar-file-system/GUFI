@@ -78,7 +78,8 @@ OF SUCH DAMAGE.
 #include "xattrs.h"
 
 int externaltofile(FILE *file, const char delim, const char *path) {
-    return fprintf(file, "%s%ce%c\n",
+    return fprintf(file, "%" PATH_PREFIX_FORMAT "%s%ce%c\n",
+                   strlen(path),
                    path,       delim,
                                delim);
 }
@@ -90,6 +91,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
 
     int count = 0;
 
+    count += fprintf(file, "%" PATH_PREFIX_FORMAT, work->name_len - prefix_len);
     count += fwrite(work->name + prefix_len, 1, work->name_len - prefix_len, file);
     count += fwrite(&delim, 1, 1, file);
     count += fwrite(&ed->type, 1, 1, file);
@@ -105,7 +107,12 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
     count += fprintf(file, "%ld%c",              work->statuso.st_atime,   delim);
     count += fprintf(file, "%ld%c",              work->statuso.st_mtime,   delim);
     count += fprintf(file, "%ld%c",              work->statuso.st_ctime,   delim);
-    count += fprintf(file, "%s%c",               ed->linkname,             delim);
+
+    const size_t linkname_len = strlen(ed->linkname);
+    count += fprintf(file, "%" PATH_PREFIX_FORMAT, linkname_len);
+    count += fwrite(ed->linkname, 1, linkname_len, file);
+    count += fwrite(&delim, 1, 1, file);
+
     count += xattrs_to_file(file, &ed->xattrs, XATTRDELIM);
     count += fprintf(file, "%c",                                           delim);
     count += fprintf(file, "%ld%c",              work->crtime,             delim);
@@ -113,8 +120,17 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
     count += fprintf(file, "%d%c",               ed->ossint2,              delim);
     count += fprintf(file, "%d%c",               ed->ossint3,              delim);
     count += fprintf(file, "%d%c",               ed->ossint4,              delim);
-    count += fprintf(file, "%s%c",               ed->osstext1,             delim);
-    count += fprintf(file, "%s%c",               ed->osstext2,             delim);
+
+    const size_t osstext1_len = strlen(ed->osstext1);
+    count += fprintf(file, "%" OSSTEXT_PREFIX_FORMAT, osstext1_len);
+    count += fwrite(ed->osstext1, 1, osstext1_len, file);
+    count += fwrite(&delim, 1, 1, file);
+
+    const size_t osstext2_len = strlen(ed->osstext2);
+    count += fprintf(file, "%" OSSTEXT_PREFIX_FORMAT, osstext2_len);
+    count += fwrite(ed->osstext2, 1, osstext2_len, file);
+    count += fwrite(&delim, 1, 1, file);
+
     count += fprintf(file, "%lld%c",             work->pinode,             delim);
     count += fprintf(file, "\n");
 
@@ -130,7 +146,9 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
 
     const size_t orig_offset = *offset;
 
+    write_with_resize(buf, size, offset, "%" PATH_PREFIX_FORMAT,  work->name_len - prefix_len);
     write_with_resize(buf, size, offset, "%s%c",               work->name + prefix_len,  delim);
+
     write_with_resize(buf, size, offset, "%c%c",               ed->type,                 delim);
     write_with_resize(buf, size, offset, "%" STAT_ino    "%c", work->statuso.st_ino,     delim);
     write_with_resize(buf, size, offset, "%" STAT_mode   "%c", work->statuso.st_mode,    delim);
@@ -143,7 +161,11 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
     write_with_resize(buf, size, offset, "%ld%c",              work->statuso.st_atime,   delim);
     write_with_resize(buf, size, offset, "%ld%c",              work->statuso.st_mtime,   delim);
     write_with_resize(buf, size, offset, "%ld%c",              work->statuso.st_ctime,   delim);
+
+
+    write_with_resize(buf, size, offset, "%" PATH_PREFIX_FORMAT, strlen(ed->linkname));
     write_with_resize(buf, size, offset, "%s%c",               ed->linkname,             delim);
+
     xattrs_to_buffer (buf, size, offset, &ed->xattrs, XATTRDELIM);
     write_with_resize(buf, size, offset, "%c",                                           delim);
     write_with_resize(buf, size, offset, "%ld%c",              work->crtime,             delim);
@@ -151,27 +173,110 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
     write_with_resize(buf, size, offset, "%d%c",               ed->ossint2,              delim);
     write_with_resize(buf, size, offset, "%d%c",               ed->ossint3,              delim);
     write_with_resize(buf, size, offset, "%d%c",               ed->ossint4,              delim);
+
+    write_with_resize(buf, size, offset, "%" OSSTEXT_PREFIX_FORMAT, strlen(ed->osstext1));
     write_with_resize(buf, size, offset, "%s%c",               ed->osstext1,             delim);
+
+    write_with_resize(buf, size, offset, "%" OSSTEXT_PREFIX_FORMAT, strlen(ed->osstext2));
     write_with_resize(buf, size, offset, "%s%c",               ed->osstext2,             delim);
+
     write_with_resize(buf, size, offset, "%lld%c",             work->pinode,             delim);
     write_with_resize(buf, size, offset, "\n");
 
     return *offset - orig_offset;
 }
 
+#define read_prefixed(name, buf, FMT, LEN)                                          \
+    size_t len = 0;                                                                 \
+    int chars = 0;                                                                  \
+    if ((sscanf(p, "%" FMT "%n", &len, &chars) != 1) ||                             \
+        (chars != LEN)) {                                                           \
+        fprintf(stderr, "Error: Bad %s \"%.*s\"\n", name, LEN, p);                  \
+        xattrs_cleanup(&ed->xattrs);                                                \
+        free(new_work);                                                             \
+        *work = NULL;                                                               \
+        return -1;                                                                  \
+    }                                                                               \
+                                                                                    \
+    q += LEN;                                                                       \
+                                                                                    \
+    if (len >= sizeof(buf)) {                                                       \
+        fprintf(stderr, "Error: %s length is too big: %zu (max: %zu)\n",            \
+                name, len, sizeof(buf) - 1);                                        \
+        xattrs_cleanup(&ed->xattrs);                                                \
+        free(new_work);                                                             \
+        *work = NULL;                                                               \
+        return -1;                                                                  \
+    }                                                                               \
+                                                                                    \
+    SNFORMAT_S(buf, sizeof(buf), 1,                                                 \
+               q, len);                                                             \
+    q += len;                                                                       \
+                                                                                    \
+    if (*q != delim) {                                                              \
+        fprintf(stderr, "Error: %s len %zu (%" FMT ") does not end at delimiter\n", \
+                name, len, len);                                                    \
+        xattrs_cleanup(&ed->xattrs);                                                \
+        free(new_work);                                                             \
+        *work = NULL;                                                               \
+        return -1;                                                                  \
+    }                                                                               \
+                                                                                    \
+    q++;
+
 int linetowork(char *line, const size_t len, const char delim,
-               struct work **work, struct entry_data *ed) {
+               struct work **work, struct entry_data *ed, const int old_format) {
     if (!line || !work || !ed) {
         return -1;
     }
 
     const char *end = line + len;
 
-    char *p;
-    char *q;
+    char *p = line;
+    char *q = NULL;
 
-    p=line; q = split(p, &delim, 1, end);
-    struct work *new_work = new_work_with_name(NULL, 0, p, q - p);
+    struct work *new_work = NULL;
+    *work = NULL;
+
+    if (old_format) {
+        q = split(p, &delim, 1, end);
+
+        new_work = new_work_with_name(NULL, 0, p, q - p - 1);
+    }
+    else {
+        size_t name_len = 0;
+        int chars = 0;
+        if ((sscanf(p, "%" PATH_PREFIX_FORMAT "%n", &name_len, &chars) != 1) ||
+            (chars != PATH_PREFIX_LEN)) {
+            fprintf(stderr, "Error: Bad name len \"%.*s\"\n", PATH_PREFIX_LEN, p);
+            free(new_work);
+            return -1;
+        }
+        q = p + PATH_PREFIX_LEN;
+
+        /* too long */
+        if (name_len > len) {
+            fprintf(stderr, "Error: Name len %zu (%" PATH_PREFIX_FORMAT ") too long (line length is %zu)\n",
+                    name_len, name_len, len);
+            free(new_work);
+            return -1;
+        }
+
+        new_work = new_work_with_name(NULL, 0, q, name_len);
+        q += name_len;
+
+        /* not at delimiter */
+        if (*q != delim) {
+            fprintf(stderr, "Error: Name len %zu (%" PATH_PREFIX_FORMAT ") does not end at delimiter\n",
+                    name_len, name_len);
+            free(new_work);
+            return -1;
+        }
+
+        /* end on type */
+        q++;
+    }
+
     *work = new_work;
 
     p = q;  q = split(p, &delim, 1, end); ed->type = *p;
@@ -191,16 +296,54 @@ int linetowork(char *line, const size_t len, const char delim,
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->statuso.st_atime);
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->statuso.st_mtime);
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->statuso.st_ctime);
-    p = q; q = split(p, &delim, 1, end); SNPRINTF(ed->linkname,MAXPATH, "%s", p);
-    p = q; q = split(p, &delim, 1, end); xattrs_from_line(p, q - 1, &ed->xattrs, XATTRDELIM);
+
+    p = q;
+    if (old_format) {
+        q = split(p, &delim, 1, end); SNFORMAT_S(ed->linkname, sizeof(ed->linkname), 1, p, q - p - 1);
+    }
+    else {
+        read_prefixed("linkname", ed->linkname, PATH_PREFIX_FORMAT, PATH_PREFIX_LEN);
+    }
+
+    p = q;
+    if (old_format) {
+        q = split(p, &delim, 1, end);
+        q = xattrs_from_line(p, q - 1, &ed->xattrs, XATTRDELIM, 1);
+    }
+    else {
+        q = xattrs_from_line(p, end,   &ed->xattrs, XATTRDELIM, 0);
+    }
+
+    if (!q) {
+        return -1;
+    }
+
+    /* xattrs_from_line returns delimiter, not start of next value */
+    q++;
+
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->crtime);
     p = q; q = split(p, &delim, 1, end); ed->ossint1 = atol(p);
     p = q; q = split(p, &delim, 1, end); ed->ossint2 = atol(p);
     p = q; q = split(p, &delim, 1, end); ed->ossint3 = atol(p);
     p = q; q = split(p, &delim, 1, end); ed->ossint4 = atol(p);
-    p = q; q = split(p, &delim, 1, end); SNPRINTF(ed->osstext1, MAXXATTR, "%s", p);
-    p = q; q = split(p, &delim, 1, end); SNPRINTF(ed->osstext2, MAXXATTR, "%s", p);
-    p = q;     split(p, &delim, 1, end); new_work->pinode = atol(p);
+
+    p = q;
+    if (old_format) {
+        q = split(p, &delim, 1, end); SNFORMAT_S(ed->osstext1, sizeof(ed->osstext1), 1, p, q - p - 1);
+    }
+    else {
+        read_prefixed("osstext1", ed->osstext1, OSSTEXT_PREFIX_FORMAT, OSSTEXT_PREFIX_LEN);
+    }
+
+    p = q;
+    if (old_format) {
+        q = split(p, &delim, 1, end); SNFORMAT_S(ed->osstext2, sizeof(ed->osstext2), 1, p, q - p - 1);
+    }
+    else {
+        read_prefixed("osstext2", ed->osstext2, OSSTEXT_PREFIX_FORMAT, OSSTEXT_PREFIX_LEN);
+    }
+
+    p = q; split(p, &delim, 1, end); new_work->pinode = atol(p);
 
     new_work->basename_len = new_work->name_len - trailing_match_index(new_work->name, new_work->name_len, "/", 1);
 
@@ -354,9 +497,30 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
         goto done;
     }
 
+    char *first_delim = NULL;
+    int delim_mismatch = 0;
+
     /* find a delimiter */
-    char *first_delim = memchr(line, sta->delim, len);
-    if (!first_delim) {
+    if (sta->old_format) {
+        first_delim = memchr(line, sta->delim, len);
+        delim_mismatch = !first_delim;
+    }
+    else {
+        size_t first_len = 0;
+        int chars = 0;
+        if ((sscanf(line, "%" PATH_PREFIX_FORMAT "%n", &first_len, &chars) != 1) ||
+            (chars != PATH_PREFIX_LEN)) {
+            fprintf(stderr, "First entry has a bad length \"%.*s\"\n", PATH_PREFIX_LEN, line);
+            rc = 1;
+            goto done;
+        }
+
+        first_delim = line + PATH_PREFIX_LEN + first_len;
+        delim_mismatch = (*first_delim != sta->delim);
+    }
+
+    /* delimiter mismatch */
+    if (delim_mismatch) {
         fprintf(stderr, "Could not find the specified delimiter in \"%s\"\n", sta->tracename);
         rc = 1;
         goto done;
@@ -384,14 +548,30 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
             continue;
         }
 
-        first_delim = memchr(line, sta->delim, len);
+        if (sta->old_format) {
+            first_delim = memchr(line, sta->delim, len);
+            delim_mismatch = !first_delim;
+        }
+        else {
+            size_t first_len = 0;
+            int chars = 0;
+            if ((sscanf(line, "%" PATH_PREFIX_FORMAT "%n", &first_len, &chars) != 1) ||
+                (chars != PATH_PREFIX_LEN)) {
+                fprintf(stderr, "First entry has a bad length \"%.*s\"\n", PATH_PREFIX_LEN, line);
+                rc = 1;
+                goto done;
+            }
+
+            first_delim = line + PATH_PREFIX_LEN + first_len;
+            delim_mismatch = (*first_delim != sta->delim);
+        }
 
         /*
          * if got bad line, have to stop here or else processdir will
          * not know where this directory ends and will try to parse
          * bad line
-         */
-        if (!first_delim) {
+             */
+        if (delim_mismatch) {
             row_destroy(&work);
             fprintf(stderr, "Scout encountered bad line ending at \"%s\" offset %jd\n",
                     sta->tracename, (intmax_t) offset);
@@ -606,7 +786,7 @@ static void *fill_scout_args(struct TraceRange *tr, void *args) {
 }
 
 size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count,
-                      const char delim, const size_t max_parts,
+                      const char delim, const int old_format, const size_t max_parts,
                       QPTPool_ctx_t *ctx, QPTPool_f func,
                       struct TraceStats *stats) {
     memset(stats, 0, sizeof(*stats));
@@ -628,6 +808,7 @@ size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count
         /* copied by fill_scout_args, freed by scout_trace */
         struct ScoutTraceArgs sta = {
             .delim = delim,
+            .old_format = old_format,
             .tracename = tracenames[i],
             .tr.fd = tracefds[i],
             .processdir = func,

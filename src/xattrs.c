@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <stdlib.h>
 
+#include "trace.h"
 #include "utils.h"
 #include "xattrs.h"
 
@@ -256,11 +257,16 @@ ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, 
  * <name>\x1F<value>\x1F ...
  */
 int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char delim) {
-    if (!xattrs->pairs) {
-        return 0;
-    }
-
     int written = 0;
+
+    /* names + values + separators + count */
+    written += fprintf(file, "%" XATTR_PREFIX_FORMAT, xattrs->len + 2 * xattrs->count + XATTR_PREFIX_LEN);
+
+    /* xattr pairs count */
+    written += fprintf(file, "%" XATTR_PREFIX_FORMAT, xattrs->count);
+
+    /* not checking xattrs->pairs */
+
     for(size_t i = 0; i < xattrs->count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
         written += fwrite(xattr->name, 1, xattr->name_len, file);
@@ -279,11 +285,16 @@ int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char delim) {
  */
 int xattrs_to_buffer(char **buf, size_t *size, size_t *offset,
                      const struct xattrs *xattrs, const char delim) {
-    if (!xattrs->pairs) {
-        return 0;
-    }
-
     int written = 0;
+
+    /* names + values + separators + count */
+    write_with_resize(buf, size, offset, "%" XATTR_PREFIX_FORMAT, xattrs->len + 2 * xattrs->count + XATTR_PREFIX_LEN);
+
+    /* xattr pairs count */
+    write_with_resize(buf, size, offset, "%" XATTR_PREFIX_FORMAT, xattrs->count);
+
+    /* not checking xattrs->pairs */
+
     for(size_t i = 0; i < xattrs->count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
         write_with_resize(buf, size, offset, "%s%c", xattr->name, delim);
@@ -294,36 +305,81 @@ int xattrs_to_buffer(char **buf, size_t *size, size_t *offset,
 }
 
 /* parse serialized xattrs */
-int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const char delim) {
+char *xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const char delim, const int old_format) {
     /* Not checking arguments */
 
     xattrs_setup(xattrs);
 
-    /* count NULL terminators */
-    for(char *curr = start; curr != end; curr++) {
-        if (*curr == delim) {
-            xattrs->count++;
+    if (old_format) {
+        /* count delimiters */
+        for(char *curr = start; curr != end; curr++) {
+            if (*curr == delim) {
+                xattrs->count++;
+            }
         }
+
+        /* 2 delimiters per pair */
+        xattrs->count >>= 1;
     }
-    xattrs->count >>= 1;
+    else {
+        size_t len = 0;
+        int chars = 0;
+        if ((sscanf(start, "%" XATTR_PREFIX_FORMAT "%n", &len, &chars) != 1) ||
+            (chars != XATTR_PREFIX_LEN)) {
+            fprintf(stderr, "Error: Bad xattr column length: \"%.*s\"\n", XATTR_PREFIX_LEN, start);
+            return NULL;
+        }
+
+        if (len > (size_t) (end - start)) {
+            fprintf(stderr, "Error: Bad length: %zu (\"%.*s\")\n", len, XATTR_PREFIX_LEN, start);
+            return NULL;
+        }
+
+        /* move past length */
+        start += XATTR_PREFIX_LEN;
+
+        /* get xattr pair count */
+        chars = 0;
+        if ((sscanf(start, "%" XATTR_PREFIX_FORMAT "%n", &xattrs->count, &chars) != 1) ||
+            (chars != XATTR_PREFIX_LEN)) {
+            fprintf(stderr, "Error: Bad xattr pairs count: \"%.*s\"\n", XATTR_PREFIX_LEN, start);
+            return NULL;
+        }
+
+        /* move past count */
+        start += XATTR_PREFIX_LEN;
+
+        /* reduce distance to search */
+        end = start + len - XATTR_PREFIX_LEN;
+    }
+
+    char *orig = start;
 
     xattrs_alloc(xattrs);
 
+    const size_t count = xattrs->count;
+    xattrs->count = 0;
+
     /* extract pairs */
-    char *next = split(start, &delim, 1, end);
-    for(size_t i = 0; i < xattrs->count; i++) {
+    for(size_t i = 0; i < count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
+
+        char *next = split(start, &delim, 1, end);
+        if (!next || !(next < end)) {
+            break;
+        }
 
         xattr->name_len = SNPRINTF(xattr->name, sizeof(xattr->name), "%s", start);
         start = next; next = split(start, &delim, 1, end);
-
         xattr->value_len = SNPRINTF(xattr->value, sizeof(xattr->value), "%s", start);
-        start = next; next = split(start, &delim, 1, end);
+        start = next;
 
         xattrs->name_len += xattr->name_len;
         xattrs->len += xattr->name_len + xattr->value_len;
+
+        xattrs->count++;
     }
 
-    return xattrs->count;
+    return orig + xattrs->len + 2 * xattrs->count;
 }
 /* ************************************************** */

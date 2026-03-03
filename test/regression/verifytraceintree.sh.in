@@ -150,7 +150,7 @@ echo "# path exists, but is not directory (Fail)"
     tail -n +3 "${TRACE}"
 ) > "${BADTRACE}"
 # shellcheck disable=SC2016
-filename=$(echo -n "${SEARCH}/"; head -n 1 "${BADTRACE}" | @AWK@ -F "${DELIM}" '{ printf $1 }')
+filename=$(echo -n "${SEARCH}/"; head -n 1 "${BADTRACE}" | @AWK@ -F "${DELIM}" '{ printf substr($1, 5) }')
 touch "${filename}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 rm "${filename}"
@@ -176,7 +176,9 @@ run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${SEARCH}\""
 mv "${INDEXROOT}/db.db.bak" "${INDEXROOT}/db.db"
 
 echo "# non-directory name mismatch (Fail)"
-@SED@ "s%old_file%an_old_file%g;" "${TRACE}" > "${BADTRACE}"
+new_name="${SRCDIR}/an_old_file"
+new_name_len=$(printf "%04zx" "${#new_name}")
+@SED@ "s%[0-9A-Fa-f]\{4\}${SRCDIR}/old_file%${new_name_len}${new_name}%g;" "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# non-directory permissions mismatch (Fail)"

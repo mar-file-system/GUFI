@@ -68,6 +68,7 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
+#include "trace.h"
 #include "xattrs.h"
 
 static const struct xattr EXPECTED_XATTR[] = {
@@ -133,13 +134,15 @@ TEST(xattrs, get) {
 }
 
 TEST(xattrs, get_names) {
-    const char EXPECTED_STR[MAXXATTR] = "user.key1\x1Fuser.key2\x1F";
-    const std::size_t EXPECTED_STR_LEN = 20;
+    const char EXPECTED_STR[] =
+        "user.key1\x1F"
+        "user.key2\x1F";
+    const std::size_t EXPECTED_STR_LEN = sizeof(EXPECTED_STR) - 1;
 
     EXPECT_EQ(EXPECTED_XATTRS.name_len + EXPECTED_XATTRS.count, EXPECTED_STR_LEN);
 
     char names[MAXXATTR];
-    EXPECT_EQ(xattr_get_names(&EXPECTED_XATTRS, names, MAXXATTR, XATTRDELIM),
+    EXPECT_EQ(xattr_get_names(&EXPECTED_XATTRS, names, sizeof(names), XATTRDELIM),
               (ssize_t) EXPECTED_STR_LEN);
     EXPECT_EQ(memcmp(names, EXPECTED_STR, EXPECTED_STR_LEN), 0);
 
@@ -149,34 +152,101 @@ TEST(xattrs, get_names) {
 }
 
 TEST(xattrs, to_file) {
-    const char EXPECTED_STR[MAXXATTR] = "user.key1\x1Fvalue1\x1Fuser.key2\x1Fvalue2\x1F";
-    const std::size_t EXPECTED_STR_LEN = 34;
+    const char EXPECTED_STR[] =
+        "0026"
+        "0002"
+        "user.key1\x1Fvalue1\x1F"
+        "user.key2\x1Fvalue2\x1F";
+    const std::size_t EXPECTED_STR_LEN = sizeof(EXPECTED_STR) - 1;
 
     char line[MAXXATTR];
     FILE *file = fmemopen(line, MAXXATTR, "wb");
 
-    // bad xattrs struct
-    struct xattrs bad_xattrs = EXPECTED_XATTRS;
-    bad_xattrs.pairs = nullptr;
-    EXPECT_EQ(xattrs_to_file(file, &bad_xattrs, XATTRDELIM), 0);
-
     EXPECT_EQ(xattrs_to_file(file, &EXPECTED_XATTRS, XATTRDELIM), (int) EXPECTED_STR_LEN);
-    fflush(file);
+    fclose(file);
 
     EXPECT_EQ(memcmp(line, EXPECTED_STR, EXPECTED_STR_LEN), 0);
-    fclose(file);
 }
 
 TEST(xattrs, from_line) {
-    char line[MAXXATTR];
-    const std::size_t line_len = snprintf(line, MAXXATTR, "user.key1\x1Fvalue1\x1Fuser.key2\x1Fvalue2\x1F");
-    EXPECT_EQ(line_len, EXPECTED_XATTRS.len + 2 * EXPECTED_XATTRS.count);
+    // old format
+    {
+        char line[] =
+            "user.key1\x1Fvalue1\x1F"
+            "user.key2\x1Fvalue2\x1F";
+        const std::size_t line_len = sizeof(line) - 1;
+        EXPECT_EQ(line_len, EXPECTED_XATTRS.len + 2 * EXPECTED_XATTRS.count);
 
-    struct xattrs xattrs;
-    EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, '\x1F'),
-              (int) EXPECTED_XATTRS.count);
+        struct xattrs xattrs;
+        EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, XATTRDELIM, 1),
+                  line + line_len);
 
-    check_contents(xattrs);
+        check_contents(xattrs);
 
-    xattrs_cleanup(&xattrs);
+        xattrs_cleanup(&xattrs);
+    }
+
+    // new format
+    {
+        const char orig[] =
+            "0026"
+            "0002"
+            "user.key1\x1Fvalue1\x1F"
+            "user.key2\x1Fvalue2\x1F";
+        char line[sizeof(orig)];
+        const std::size_t line_len = sizeof(orig) - 1;
+        EXPECT_EQ(line_len, XATTR_PREFIX_LEN + XATTR_PREFIX_LEN + EXPECTED_XATTRS.len + 2 * EXPECTED_XATTRS.count);
+
+        struct xattrs xattrs;
+
+        memcpy(line, orig, sizeof(orig));
+        EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, XATTRDELIM, 0),
+                  line + line_len);
+
+        check_contents(xattrs);
+
+        xattrs_cleanup(&xattrs);
+
+        // bad length
+        memcpy(line, orig, sizeof(orig));
+        line[0] = '?';
+        EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, XATTRDELIM, 0),
+                  nullptr);
+
+        // too short
+        memcpy(line, orig, sizeof(orig));
+        line[2] = '0';
+        line[3] = '0';
+        EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, XATTRDELIM, 0),
+                  line + XATTR_PREFIX_LEN + XATTR_PREFIX_LEN);
+        xattrs_cleanup(&xattrs);
+
+        // too long
+        memcpy(line, orig, sizeof(orig));
+        line[0] = 'f';
+        EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, XATTRDELIM, 0),
+                  nullptr);
+
+        // bad pair count
+        memcpy(line, orig, sizeof(orig));
+        line[4] = '?';
+        EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, XATTRDELIM, 0),
+                  nullptr);
+
+        // pair count too low
+        memcpy(line, orig, sizeof(orig));
+        line[7] = '0';
+        EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, XATTRDELIM, 0),
+                  line + XATTR_PREFIX_LEN + XATTR_PREFIX_LEN);
+        EXPECT_EQ(xattrs.count, (std::size_t) 0);
+        xattrs_cleanup(&xattrs);
+
+        // pair count too high
+        memcpy(line, orig, sizeof(orig));
+        line[4] = 'f';
+        EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, XATTRDELIM, 0),
+                  line + line_len);
+        EXPECT_EQ(xattrs.count, EXPECTED_XATTRS.count); // still got expected count
+        xattrs_cleanup(&xattrs);
+    }
 }

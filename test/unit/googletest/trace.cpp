@@ -89,13 +89,17 @@ static const struct xattr EXPECTED_XATTR[] = {
 
 static struct xattrs EXPECTED_XATTRS = {
     (struct xattr *) EXPECTED_XATTR,
-    0,
-    0,
+    20,
+    40,
     2,
 };
 
-static const char EXPECTED_XATTRS_STR[] = "xattr.key0\x1fxattr.val0\x1f"
-                                          "xattr.key1\x1fxattr.val1\x1f";
+static const char EXPECTED_XATTRS_STR[] =
+    "0030"
+    "0002"
+    "xattr.key0\x1fxattr.val0\x1f"
+    "xattr.key1\x1fxattr.val1\x1f";
+
 static const std::size_t EXPECTED_XATTRS_STR_LEN = sizeof(EXPECTED_XATTRS_STR) - 1;
 
 static struct work *get_work(struct entry_data *ed) {
@@ -113,10 +117,7 @@ static struct work *get_work(struct entry_data *ed) {
     new_work->statuso.st_atime   = 0x1234;
     new_work->statuso.st_mtime   = 0x5678;
     new_work->statuso.st_ctime   = 0x9abc;
-    ed->xattrs.pairs             = (struct xattr *) EXPECTED_XATTR;
-    ed->xattrs.name_len          = 0;
-    ed->xattrs.len               = 0;
-    ed->xattrs.count             = 2;
+    ed->xattrs                   = EXPECTED_XATTRS;
     new_work->crtime             = 0x9abc;
     ed->ossint1                  = 1;
     ed->ossint2                  = 2;
@@ -131,11 +132,12 @@ static struct work *get_work(struct entry_data *ed) {
 
 static int to_string(char *line, const std::size_t size, struct work *work, struct entry_data *ed) {
     const int part1 = snprintf(line, size,
+                               "%" PATH_PREFIX_FORMAT
                                "%s%c"
                                "%c%c"
                                "%" STAT_ino "%c"
                                "%d%c"
-                               "%" STAT_nlink"%c"
+                               "%" STAT_nlink "%c"
                                "%d%c"
                                "%d%c"
                                "%" STAT_size "%c"
@@ -144,7 +146,9 @@ static int to_string(char *line, const std::size_t size, struct work *work, stru
                                "%ld%c"
                                "%ld%c"
                                "%ld%c"
+                               "%" PATH_PREFIX_FORMAT
                                "%s%c",
+                               work->name_len,
                                work->name,               delim,
                                ed->type,                 delim,
                                work->statuso.st_ino,     delim,
@@ -158,6 +162,7 @@ static int to_string(char *line, const std::size_t size, struct work *work, stru
                                work->statuso.st_atime,   delim,
                                work->statuso.st_mtime,   delim,
                                work->statuso.st_ctime,   delim,
+                               strlen(ed->linkname),
                                ed->linkname,             delim);
 
     line += part1;
@@ -172,7 +177,9 @@ static int to_string(char *line, const std::size_t size, struct work *work, stru
                                "%d%c"
                                "%d%c"
                                "%d%c"
+                               "%" OSSTEXT_PREFIX_FORMAT
                                "%s%c"
+                               "%" OSSTEXT_PREFIX_FORMAT
                                "%s%c"
                                "%lld%c"
                                "\n",
@@ -182,7 +189,9 @@ static int to_string(char *line, const std::size_t size, struct work *work, stru
                                ed->ossint2,  delim,
                                ed->ossint3,  delim,
                                ed->ossint4,  delim,
+                               strlen(ed->osstext1),
                                ed->osstext1, delim,
+                               strlen(ed->osstext2),
                                ed->osstext2, delim,
                                work->pinode, delim);
 
@@ -257,29 +266,31 @@ TEST(trace, worktobuffer) {
     free(work);
 }
 
-#define COMPARE(src, src_ed, dst, dst_ed)                               \
-    EXPECT_STREQ(dst->name,              src->name);                    \
-    EXPECT_EQ(dst_ed.type,               src_ed.type);                  \
-    EXPECT_EQ(dst->statuso.st_ino,       src->statuso.st_ino);          \
-    EXPECT_EQ(dst->statuso.st_mode,      src->statuso.st_mode);         \
-    EXPECT_EQ(dst->statuso.st_nlink,     src->statuso.st_nlink);        \
-    EXPECT_EQ(dst->statuso.st_uid,       src->statuso.st_uid);          \
-    EXPECT_EQ(dst->statuso.st_gid,       src->statuso.st_gid);          \
-    EXPECT_EQ(dst->statuso.st_size,      src->statuso.st_size);         \
-    EXPECT_EQ(dst->statuso.st_blksize,   src->statuso.st_blksize);      \
-    EXPECT_EQ(dst->statuso.st_blocks,    src->statuso.st_blocks);       \
-    EXPECT_EQ(dst->statuso.st_atime,     src->statuso.st_atime);        \
-    EXPECT_EQ(dst->statuso.st_mtime,     src->statuso.st_mtime);        \
-    EXPECT_EQ(dst->statuso.st_ctime,     src->statuso.st_ctime);        \
-    EXPECT_STREQ(dst_ed.linkname,        src_ed.linkname);              \
-    EXPECT_EQ(dst->crtime,               src->crtime);                  \
-    EXPECT_EQ(dst_ed.ossint1,            src_ed.ossint1);               \
-    EXPECT_EQ(dst_ed.ossint2,            src_ed.ossint2);               \
-    EXPECT_EQ(dst_ed.ossint3,            src_ed.ossint3);               \
-    EXPECT_EQ(dst_ed.ossint4,            src_ed.ossint4);               \
-    EXPECT_STREQ(dst_ed.osstext1,        src_ed.osstext1);              \
-    EXPECT_STREQ(dst_ed.osstext2,        src_ed.osstext2);              \
-    EXPECT_EQ(dst->pinode,               src->pinode);                  \
+static void COMPARE(struct work *src, struct entry_data *src_ed,
+                    struct work *dst, struct entry_data *dst_ed) {
+    EXPECT_STREQ(dst->name,              src->name);
+    EXPECT_EQ(dst_ed->type,              src_ed->type);
+    EXPECT_EQ(dst->statuso.st_ino,       src->statuso.st_ino);
+    EXPECT_EQ(dst->statuso.st_mode,      src->statuso.st_mode);
+    EXPECT_EQ(dst->statuso.st_nlink,     src->statuso.st_nlink);
+    EXPECT_EQ(dst->statuso.st_uid,       src->statuso.st_uid);
+    EXPECT_EQ(dst->statuso.st_gid,       src->statuso.st_gid);
+    EXPECT_EQ(dst->statuso.st_size,      src->statuso.st_size);
+    EXPECT_EQ(dst->statuso.st_blksize,   src->statuso.st_blksize);
+    EXPECT_EQ(dst->statuso.st_blocks,    src->statuso.st_blocks);
+    EXPECT_EQ(dst->statuso.st_atime,     src->statuso.st_atime);
+    EXPECT_EQ(dst->statuso.st_mtime,     src->statuso.st_mtime);
+    EXPECT_EQ(dst->statuso.st_ctime,     src->statuso.st_ctime);
+    EXPECT_STREQ(dst_ed->linkname,       src_ed->linkname);
+    EXPECT_EQ(dst->crtime,               src->crtime);
+    EXPECT_EQ(dst_ed->ossint1,           src_ed->ossint1);
+    EXPECT_EQ(dst_ed->ossint2,           src_ed->ossint2);
+    EXPECT_EQ(dst_ed->ossint3,           src_ed->ossint3);
+    EXPECT_EQ(dst_ed->ossint4,           src_ed->ossint4);
+    EXPECT_STREQ(dst_ed->osstext1,       src_ed->osstext1);
+    EXPECT_STREQ(dst_ed->osstext2,       src_ed->osstext2);
+    EXPECT_EQ(dst->pinode,               src->pinode);
+}
 
 TEST(trace, linetowork) {
     struct entry_data src_ed;
@@ -292,11 +303,11 @@ TEST(trace, linetowork) {
     ASSERT_LT(rc, (int) sizeof(line));
 
     // read the string
-    struct work *work;
+    struct work *work = nullptr;
     struct entry_data ed;
-    EXPECT_EQ(linetowork(line, rc, delim, &work, &ed), 0);
+    EXPECT_EQ(linetowork(line, rc, delim, &work, &ed, 0), 0);
 
-    COMPARE(src, src_ed, work, ed);
+    COMPARE(src, &src_ed, work, &ed);
 
     EXPECT_STREQ(ed.xattrs.pairs[0].name,  EXPECTED_XATTRS.pairs[0].name);
     EXPECT_STREQ(ed.xattrs.pairs[0].value, EXPECTED_XATTRS.pairs[0].value);
@@ -307,9 +318,9 @@ TEST(trace, linetowork) {
     free(work);
     free(src);
 
-    EXPECT_EQ(linetowork(nullptr, rc, delim, &work, &ed),  -1);
-    EXPECT_EQ(linetowork(line, rc, delim, nullptr,  &ed),  -1);
-    EXPECT_EQ(linetowork(line, rc, delim, &work, nullptr), -1);
+    EXPECT_EQ(linetowork(nullptr, rc, delim, &work, &ed,  0), -1);
+    EXPECT_EQ(linetowork(line, rc, delim, nullptr,  &ed,  0), -1);
+    EXPECT_EQ(linetowork(line, rc, delim, &work, nullptr, 0), -1);
 }
 
 TEST(open_traces, too_many) {
@@ -342,6 +353,7 @@ TEST(scout, trace) {
 
     struct ScoutTraceArgs sta;
     sta.delim      = delim;
+    sta.old_format = 0;
     sta.tracename  = tracename;
     sta.tr.fd      = fd;
     sta.tr.start   = 0;
@@ -451,7 +463,7 @@ TEST(enqueue_traces, bad) {
     int tracefd = -1;
     struct TraceStats stats = {};
 
-    EXPECT_EQ(enqueue_traces(&tracenameptr, &tracefd, 1, '|', 10, nullptr, nullptr, &stats), (std::size_t) 0);
+    EXPECT_EQ(enqueue_traces(&tracenameptr, &tracefd, 1, '|', 10, 0, nullptr, nullptr, &stats), (std::size_t) 0);
 }
 
 TEST(scout, stream) {
@@ -480,6 +492,7 @@ TEST(scout, stream) {
     /* malloc sta because normally free branch is not triggered */
     struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) malloc(sizeof(*sta));
     sta->delim      = delim;
+    sta->old_format = 0;
     sta->tracename  = "-";
     sta->tr.fd      = fds[0];
     sta->tr.start   = 0;

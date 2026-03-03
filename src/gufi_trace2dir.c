@@ -135,18 +135,20 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     const int trace = w->trace;
 
     // TODO: see if there is a better way to do this
-    struct work *dir; /* name and name_len are not used */
-    struct entry_data ed;
+    struct work *dir = NULL; /* name and name_len are not used */
+    struct entry_data ed = {0};
 
     /* parse the directory data */
-    linetowork(w->line, w->len, in->delim, &dir, &ed);
+    if (linetowork(w->line, w->len, in->delim, &dir, &ed, in->old_trace_format) != 0) {
+        row_destroy(&w);
+    }
 
     /* create the directory */
     char topath[MAXPATH];
     SNFORMAT_S(topath, MAXPATH, 3,
                pa->tree_parent.data, pa->tree_parent.len,
                "/", (size_t) 1,
-               w->line, w->first_delim);
+               w->line + PATH_PREFIX_LEN, w->first_delim - PATH_PREFIX_LEN);
 
     /* have to dupdir here because directories can show up in any order */
     if (dupdir(topath, dir->statuso.st_mode, dir->statuso.st_uid, dir->statuso.st_gid)) {
@@ -167,11 +169,13 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
             break;
         }
 
-        struct work *row;
-        struct entry_data row_ed;
+        struct work *row = NULL;
+        struct entry_data row_ed = {0};
 
         // TODO: can linetowork be changed to use realloc to avoid malloc() + free() looping?
-        linetowork(line, len, in->delim, &row, &row_ed);
+        if (linetowork(line, len, in->delim, &row, &row_ed, in->old_trace_format) != 0) {
+            continue;
+        }
 
         if (row_ed.type == 'e') {
             xattrs_cleanup(&row_ed.xattrs);
@@ -247,7 +251,7 @@ int main(int argc, char *argv[]) {
     /* parse the trace files and enqueue work */
     struct TraceStats stats;
     enqueue_traces(&pa.in.pos.argv[0], traces, trace_count,
-                   pa.in.delim,
+                   pa.in.delim, pa.in.old_trace_format,
                    /* allow for some threads to start processing while reading */
                    (pa.in.maxthreads / 2) + !!(pa.in.maxthreads & 1),
                    ctx, processdir,

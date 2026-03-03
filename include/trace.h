@@ -77,6 +77,14 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+/* pad this many nibbles in front of strings to declare length */
+#define PATH_PREFIX_LEN       4
+#define OSSTEXT_PREFIX_LEN    4
+
+/* format for reading/writing length prefixes */
+#define PATH_PREFIX_FORMAT    "04zx"
+#define OSSTEXT_PREFIX_FORMAT "04zx"
+
 /* write a mapping from an external db path to an attach name */
 int externaltofile(FILE *file, const char delim, const char *path);
 
@@ -90,7 +98,7 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
 
 /* convert a formatted string to a work struct or attach name */
 int linetowork(char *line, const size_t len, const char delim,
-               struct work **work, struct entry_data *ed);
+               struct work **work, struct entry_data *ed, const int old_format);
 
 int *open_traces(char **trace_names, size_t trace_count);
 void close_traces(int *traces, size_t trace_count);
@@ -130,6 +138,7 @@ struct TraceStats {
 
 struct ScoutTraceArgs {
     char delim;
+    int old_format;
     const char *tracename;
     struct TraceRange tr;
 
@@ -146,7 +155,7 @@ struct ScoutTraceArgs {
 int scout_trace(QPTPool_ctx_t *ctx, void *data);
 
 size_t enqueue_traces(char **traceames, int *tracefds, const size_t trace_count,
-                      const char delim, const size_t max_parts,
+                      const char delim, const int old_format, const size_t max_parts,
                       QPTPool_ctx_t *ctx, QPTPool_f func,
                       struct TraceStats *stats);
 
