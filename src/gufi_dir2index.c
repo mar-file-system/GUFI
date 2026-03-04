@@ -198,6 +198,11 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     memset(&nda.ed, 0, sizeof(nda.ed));
     nda.ed.type    = 'd';
     nda.plugin_user_data = NULL;
+    nda.topath = (str_t) {
+        .data = NULL,
+        .len = 0,
+        .free = NULL,
+    };
 
     PCS_t pcs; /* references passed into plugin */
     memset(&pcs, 0, sizeof(pcs));
