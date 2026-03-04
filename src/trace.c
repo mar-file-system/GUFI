@@ -77,6 +77,49 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
+/*
+ * Trace files are sequences of directory "stanzas". A stanza is one
+ * line of directory metadata followed by zero or more lines of file
+ * and symlink metadata. Stanzas can appear in any order within in a
+ * single trace file and can appear in any per-thread trace file.
+ *
+ * Each line of a trace file contains the following columns the
+ * following order:
+ *
+ * Name        C Type         Comments
+ * --------------------------------------------------------------------
+ * name        char *         4 hex character big endian length + name of entry from the starting path
+ * type        char           d[irectory], f[ile], or [sym]l[ink]
+ * inode       ino_t          Stored into struct stat
+ * mode        mode_t         Stored into struct stat
+ * nlink       nlink_t        Stored into struct stat
+ * uid         uid_t          Stored into struct stat
+ * gid         gid_t          Stored into struct stat
+ * size        off_t          Stored into struct stat
+ * block size  blksize_t      Stored into struct stat
+ * blocks      blkcnt_t       Stored into struct stat
+ * atime       time_t         Stored into struct stat
+ * mtime       time_t         Stored into struct stat
+ * ctime       time_t         Stored into struct stat
+ * linkname    char[4096]     4 hex character big endian length + the linkname
+ * xattrs      struct xattrs  4 hex character big endian length + 4 hex character xattr pair count [+ xattr name + XATTRDELIM + xattr value + XATTRDELIM]...
+ * crtime      time_t         Creation Time, if available
+ * ossint1     int            OS Specific Integer
+ * ossint2     int            OS Specific Integer
+ * ossint3     int            OS Specific Integer
+ * ossint4     int            OS Specific Integer
+ * osstext1    char[1024]     OS Specific Text
+ *                            4 hex character big endian length + the string
+ * osstext2    char[1024]     OS Specific Text
+ *                            4 hex character big endian length + the string
+ * pinode      long long int  Parent inode of the current entry
+ *
+ *
+ * Note that the 4 hex characters do not count against the length of
+ * the string. An osstext1 can have a length of 1023 (-1 for the NULL
+ * terminator).
+ */
+
 int externaltofile(FILE *file, const char delim, const char *path) {
     return fprintf(file, "%" PATH_PREFIX_FORMAT "%s%ce%c\n",
                    strlen(path),
