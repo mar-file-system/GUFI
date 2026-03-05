@@ -212,11 +212,11 @@ $ gufi_stats --num-results 6 --order DESC gid-size "prefix"
 1001 12 prefix/leaf_directory/leaf_file2
 1001 11 prefix/leaf_directory/leaf_file1
 
-$ gufi_stats    extensions "prefix"
+$ gufi_stats    extensions "prefix" --order DESC
  5
 hidden 1
 
-$ gufi_stats -r extensions "prefix"
+$ gufi_stats -r extensions "prefix" --order DESC
 prefix  5
 prefix hidden 1
 prefix/directory  3
@@ -224,7 +224,7 @@ prefix/directory/subdirectory  2
 prefix/leaf_directory  2
 prefix/unusual#? directory ,  1
 
-$ gufi_stats -c extensions "prefix"
+$ gufi_stats -c extensions "prefix" --order DESC
  13
 hidden 1
 

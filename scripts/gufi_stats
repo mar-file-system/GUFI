@@ -240,42 +240,49 @@ def extensions(_config, args, where):
 
     with --recursive, groups results by path
     with --cumulative, sums all results
-
     '''
 
     path_create, E_path, path = path_sql(args)
 
+    order_by = ['freq {0}'.format(ORDER[args.order]),
+                'extension {0}'.format(SQLITE3_ASC)]
+    if args.recursive:
+        # always sort paths in ascending order
+        order_by = ['{0} {1}'.format(path[0], SQLITE3_ASC)] + order_by
+
     queries = [
-        '-I', build_create(INTERMEDIATE_NAME, path_create + ['extension {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
+        '-I', build_create(INTERMEDIATE_NAME, path_create + ['extension {0}'.format(SQLITE3_TEXT),
+                                                             'freq {0}'.format(SQLITE3_INTEGER)]),
 
         '-E', 'INSERT INTO {0} {1}'.format(INTERMEDIATE_NAME,
                                            # Adapted from answer by rayzinnz
                                            # https://stackoverflow.com/a/76040173
-                                           build_query(E_path + ['ext(name) AS extension', 'COUNT(*)'],
+                                           build_query(E_path + ['ext(name) AS extension', 'COUNT(*) as freq'],
                                                        [VRPENTRIES],
                                                        where,
                                                        path + ['extension'],
                                                        None,
-                                                       None,
+                                                       None, # not limiting to avoid inconsistent results due to weird grouping
                                                        None)),
 
-        '-K', build_create(AGGREGATE_NAME, path_create  + ['extension {0}'.format(SQLITE3_TEXT), 'count {0}'.format(SQLITE3_INTEGER)]),
+        '-K', build_create(AGGREGATE_NAME, path_create  + ['extension {0}'.format(SQLITE3_TEXT),
+                                                           'freq {0}'.format(SQLITE3_INTEGER)]),
 
         '-J', 'INSERT INTO {0} {1}'.format(AGGREGATE_NAME,
-                                           build_query(path + ['extension', 'SUM(count)'],
+                                           build_query(path + ['extension', 'SUM(freq)'],
                                                        [INTERMEDIATE_NAME],
                                                        None,
                                                        path + ['extension'],
                                                        None,
-                                                       None,
+                                                       None, # not limiting to avoid inconsistent results due to weird grouping
                                                        None)),
 
-        '-G', build_query(path + ['extension', 'SUM(count)'],
+        '-G', build_query(path + ['extension', 'SUM(freq) AS freq'],
                           [AGGREGATE_NAME],
                           None,
                           path + ['extension'],
-                          path,
-                          None,
+                          order_by,
+                          args.num_results,
                           None),
     ]
 
@@ -291,7 +298,6 @@ def extensions_hist(_config, args, where):
 
     with --recursive, groups results by path
     with --cumulative, sums all results
-
     '''
 
     path_create, E_path, path = path_sql(args)
