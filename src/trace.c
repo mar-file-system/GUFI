@@ -498,6 +498,30 @@ static void scout_end_print(struct TraceStats *stats) {
     fprintf(stderr, "\n");
 }
 
+static void find_first_delim(char *line, const size_t len,
+                             const char delim, const int old_format,
+                             char **first_delim, int *delim_mismatch) {
+    /* find a delimiter */
+    if (old_format) {
+        *first_delim = memchr(line, delim, len);
+        *delim_mismatch = !first_delim;
+    }
+    else {
+        size_t first_len = 0;
+        int chars = 0;
+        if ((sscanf(line, "%" PATH_PREFIX_FORMAT "%n", &first_len, &chars) != 1) ||
+            (chars != PATH_PREFIX_LEN)) {
+            fprintf(stderr, "First entry has a bad length \"%.*s\"\n", PATH_PREFIX_LEN, line);
+            *first_delim = NULL;
+            *delim_mismatch = 0;
+            return;
+        }
+
+        *first_delim = line + PATH_PREFIX_LEN + first_len;
+        *delim_mismatch = (**first_delim != delim);
+    }
+}
+
 /* Read ahead to figure out where files under directories start */
 int scout_trace(QPTPool_ctx_t *ctx, void *data) {
     struct start_end scouting;
@@ -542,27 +566,15 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
 
     char *first_delim = NULL;
     int delim_mismatch = 0;
+    find_first_delim(line, len,
+                     sta->delim, sta->old_format,
+                     &first_delim, &delim_mismatch);
 
-    /* find a delimiter */
-    if (sta->old_format) {
-        first_delim = memchr(line, sta->delim, len);
-        delim_mismatch = !first_delim;
-    }
-    else {
-        size_t first_len = 0;
-        int chars = 0;
-        if ((sscanf(line, "%" PATH_PREFIX_FORMAT "%n", &first_len, &chars) != 1) ||
-            (chars != PATH_PREFIX_LEN)) {
-            fprintf(stderr, "First entry has a bad length \"%.*s\"\n", PATH_PREFIX_LEN, line);
-            rc = 1;
-            goto done;
-        }
-
-        first_delim = line + PATH_PREFIX_LEN + first_len;
-        delim_mismatch = (*first_delim != sta->delim);
+    if (!first_delim) {
+        rc = 1;
+        goto done;
     }
 
-    /* delimiter mismatch */
     if (delim_mismatch) {
         fprintf(stderr, "Could not find the specified delimiter in \"%s\"\n", sta->tracename);
         rc = 1;
@@ -591,29 +603,21 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
             continue;
         }
 
-        if (sta->old_format) {
-            first_delim = memchr(line, sta->delim, len);
-            delim_mismatch = !first_delim;
-        }
-        else {
-            size_t first_len = 0;
-            int chars = 0;
-            if ((sscanf(line, "%" PATH_PREFIX_FORMAT "%n", &first_len, &chars) != 1) ||
-                (chars != PATH_PREFIX_LEN)) {
-                fprintf(stderr, "First entry has a bad length \"%.*s\"\n", PATH_PREFIX_LEN, line);
-                rc = 1;
-                goto done;
-            }
-
-            first_delim = line + PATH_PREFIX_LEN + first_len;
-            delim_mismatch = (*first_delim != sta->delim);
-        }
+        find_first_delim(line, len,
+                         sta->delim, sta->old_format,
+                         &first_delim, &delim_mismatch);
 
         /*
          * if got bad line, have to stop here or else processdir will
          * not know where this directory ends and will try to parse
          * bad line
-             */
+         */
+        if (!first_delim) {
+            row_destroy(&work);
+            rc = 1;
+            goto done;
+        }
+
         if (delim_mismatch) {
             row_destroy(&work);
             fprintf(stderr, "Scout encountered bad line ending at \"%s\" offset %jd\n",
@@ -714,7 +718,7 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
 int find_stanza_end(const int fd, off_t *end, void *args) {
     /* Not checking arguments */
 
-    const char delim = *(char *) args;
+    struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) args;
 
     char *line = NULL;
     size_t size = 0;
@@ -739,10 +743,19 @@ int find_stanza_end(const int fd, off_t *end, void *args) {
             return -!!len;
         }
 
-        const char *first_delim = memchr(line, delim, len);
+        char *first_delim = NULL;
+        int delim_mismatch = 0;
+        find_first_delim(line, len,
+                         sta->delim, sta->old_format,
+                         &first_delim, &delim_mismatch);
 
         /* no delimiter */
         if (!first_delim) {
+            free(line);
+            return -1;
+        }
+
+        if (delim_mismatch) {
             fprintf(stderr, "Error: Line at offset %jd does not have a delimiter\n", (intmax_t) before_read);
             free(line);
             return -1;
@@ -861,7 +874,7 @@ size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count
 
         /* chunks are not enqueued just yet */
         const ssize_t rc = split_file(tracenames[i], tracefds[i], max_parts,
-                                      find_stanza_end, (void *) &delim,
+                                      find_stanza_end, (void *) &sta,
                                       fill_scout_args, &sta,
                                       &chunks);
 
@@ -919,9 +932,18 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
         goto done;
     }
 
-    /* find a delimiter */
-    char *first_delim = memchr(line, sta->delim, len);
+    char *first_delim = NULL;
+    int delim_mismatch = 0;
+
+    find_first_delim(line, len,
+                     sta->delim, sta->old_format,
+                     &first_delim, &delim_mismatch);
     if (!first_delim) {
+        rc = 1;
+        goto done;
+    }
+
+    if (delim_mismatch) {
         fprintf(stderr, "Could not find the specified delimiter in \"%s\"\n", sta->tracename);
         rc = 1;
         goto done;
@@ -948,7 +970,9 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
             continue;
         }
 
-        first_delim = memchr(line, sta->delim, len);
+        find_first_delim(line, len,
+                         sta->delim, sta->old_format,
+                         &first_delim, &delim_mismatch);
 
         /*
          * if got bad line, have to stop here or else processdir will
@@ -956,6 +980,11 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
          * bad line
          */
         if (!first_delim) {
+            rc = 1;
+            goto done;
+        }
+
+        if (delim_mismatch) {
             row_destroy(&work);
             fprintf(stderr, "Scout encountered bad line ending at \"%s\"\n",
                     sta->tracename);
