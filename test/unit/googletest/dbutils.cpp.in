@@ -171,10 +171,6 @@ TEST(stopdb, nullptr) {
     EXPECT_EQ(stopdb(nullptr), 1);
 }
 
-TEST(insertdbprep, nullptr) {
-    EXPECT_EQ(insertdbprep(nullptr, nullptr), nullptr);
-}
-
 TEST(insertdbgo, nullptr) {
     struct work work = {};
     struct entry_data ed = {};

@@ -587,8 +587,7 @@ sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli)
     const char *tail = NULL;
     sqlite3_stmt *reso = NULL;
 
-    // WARNING: passing length-arg that is longer than SQL text
-    const int error = sqlite3_prepare_v2(db, sqli, MAXSQL, &reso, &tail);
+    const int error = sqlite3_prepare_v2(db, sqli, strlen(sqli), &reso, &tail);
     if (error != SQLITE_OK) {
         sqlite_print_err_and_free(NULL, stderr, "SQL error on insertdbprep: error %d %s err %s\n",
                                   error, sqli, sqlite3_errmsg(db));
