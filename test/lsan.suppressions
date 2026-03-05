@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,38 +60,8 @@
 
 
 
-# source this file and pass in the name of a function
-# that takes in 1 SQL statement as an argument
-run_tests() {
-    func="$1"
-
-    echo "# Generate treesummary tables in all directories"
-    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d'
-
-    echo "# Query treesummary"
-    "${func}" "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('${INDEXROOT}', ${THREADS}) ORDER BY minsize ASC, maxsize ASC;"
-
-    for name in summary entries pentries vrsummary vrpentries
-    do
-        echo "# Query ${name}"
-        "${func}" "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_${name}('${INDEXROOT}') ORDER BY name ASC, size ASC;"
-    done
-
-    echo "# Query with WHERE size < 10"
-    "${func}" "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size < 10 ORDER BY name ASC, size ASC;"
-
-    echo "# Query with WHERE size > 10"
-    "${func}" "SELECT name, size FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE size > 10 ORDER BY name ASC, size ASC;"
-
-    echo "# Paths"
-    "${func}" "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
-
-    echo "# Make sure all types work"
-    "${func}" "SELECT name, size, size * 1.0, CAST(name AS BLOB), NULL FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
-
-    echo "# Missing thread count (not an error)"
-    "${func}" "SELECT name FROM gufi_vt_pentries('${INDEXROOT}') ORDER BY name ASC, size ASC;"
-
-    echo "# NULL arguments (not an error)"
-    "${func}" "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL, NULL, NULL, NULL, NULL, NULL, NULL) ORDER BY name ASC, size ASC;"
-}
+leak:*python*
+leak:*sed*
+leak:*ssh*
+leak:sqlite3MemMalloc
+leak:sqlite3MemRealloc

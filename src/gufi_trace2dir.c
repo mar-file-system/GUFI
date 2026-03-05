@@ -140,7 +140,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     /* parse the directory data */
     if (linetowork(w->line, w->len, in->delim, &dir, &ed, in->old_trace_format) != 0) {
+        xattrs_cleanup(&ed.xattrs);
         row_destroy(&w);
+        return 1;
     }
 
     /* create the directory */
@@ -156,6 +158,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
         xattrs_cleanup(&ed.xattrs);
+        free(dir);
         row_destroy(&w);
         return 1;
     }
@@ -174,11 +177,14 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
         // TODO: can linetowork be changed to use realloc to avoid malloc() + free() looping?
         if (linetowork(line, len, in->delim, &row, &row_ed, in->old_trace_format) != 0) {
+            xattrs_cleanup(&row_ed.xattrs);
+            free(row);
             continue;
         }
 
         if (row_ed.type == 'e') {
             xattrs_cleanup(&row_ed.xattrs);
+            free(row);
             continue;
         }
 

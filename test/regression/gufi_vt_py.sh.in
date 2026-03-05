@@ -63,14 +63,13 @@
 
 set -e
 . @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+. @CMAKE_CURRENT_BINARY_DIR@/gufi_vt.common
 
 OUTPUT="gufi_vt_py.out"
 
 query_vt() {
-    PATH="@CMAKE_BINARY_DIR@/src:${PATH}" run_no_sort "${GUFI_VT_PY} \"${1}\""
+    PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${LD_PRELOAD}" run_no_sort "${GUFI_VT_PY} \"${1}\""
 }
-
-. "@CMAKE_CURRENT_BINARY_DIR@/gufi_vt.common"
 
 (
     # same tests as gufi_vt, minus the error cases

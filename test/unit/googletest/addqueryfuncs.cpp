@@ -1083,8 +1083,7 @@ TEST(addqueryfuncs_with_context, epath) {
 }
 
 TEST(addqueryfuncs_with_context, fpath) {
-    struct work *work = new_work_with_name(nullptr, 0, nullptr, 0);
-    work->name_len = SNPRINTF(work->name, MAXPATH, "/");
+    struct work *work = new_work_with_name(nullptr, 0, "/", 1);
     work->fullpath = nullptr;
 
     sqlite3 *db = nullptr;
@@ -1254,7 +1253,7 @@ TEST(addqueryfuncs_with_context, spath) {
 }
 
 TEST(addqueryfuncs_with_context, starting_point) {
-    struct work *work = new_work_with_name(nullptr, 0, nullptr, 0);
+    struct work *work = new_work_with_name(nullptr, 0, "", 0);
     work->orig_root = REFSTR("/index_root", 11);
 
     sqlite3 *db = nullptr;
@@ -1277,7 +1276,7 @@ TEST(addqueryfuncs_with_context, starting_point) {
 }
 
 TEST(addqueryfuncs_with_context, level) {
-    struct work *work = new_work_with_name(nullptr, 0, nullptr, 0);
+    struct work *work = new_work_with_name(nullptr, 0, "", 0);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
@@ -1305,7 +1304,7 @@ TEST(addqueryfuncs_with_context, level) {
 }
 
 TEST(addqueryfuncs_with_context, pinode) {
-    struct work *work = new_work_with_name(nullptr, 0, nullptr, 0);
+    struct work *work = new_work_with_name(nullptr, 0, "", 0);
     work->pinode = 0x12345;
 
     sqlite3 *db = nullptr;

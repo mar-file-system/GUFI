@@ -389,7 +389,7 @@ TEST(PoolArgs, bad_outfile) {
 TEST(PoolArgs, bad_output_buffer_size) {
     struct input in;
     setup_input(&in, STDOUT, false);
-    in.output_buffer_size = 0;
+    in.output_buffer_size = (std::size_t) -1;
 
     check_poolargs_init_failed(in, &mutex);
 }

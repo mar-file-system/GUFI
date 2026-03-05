@@ -75,6 +75,8 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+#define TLV_PREFIX "TLV"                  /* magic string (including NULL terminator) */
+
 /* sqlite3_exec callback argument data */
 typedef struct PrintArgs {
     struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */

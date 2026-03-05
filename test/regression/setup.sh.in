@@ -142,6 +142,24 @@ export LC_ALL="C"
 export PATH="${BINARY_DIR}/scripts:${PATH}"
 export PYTHONPATH="${BINARY_DIR}/scripts:${CURRENT_BINARY_DIR}:${PYTHONPATH}"
 
+# shellcheck disable=SC2157
+if [[ -n "@FSANITIZE@" ]]
+then
+    # Find libasan.so location
+    # Adapted from answer by yugr
+    # https://stackoverflow.com/a/54386573
+    # shellcheck disable=SC2034,SC2050
+    if [[ "@CMAKE_C_COMPILER@" =~ .*clang.* ]]
+    then
+        ASAN_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)
+    else
+        ASAN_PRELOAD=$(gcc -print-file-name=libasan.so)
+    fi
+    export ASAN_OPTIONS=allocator_may_return_null=1
+    export LSAN_OPTIONS="suppressions=${BINARY_DIR}/test/lsan.suppressions:print_suppressions=0"
+    export UBSAN_OPTIONS="suppressions=${BINARY_DIR}/test/ubsan.suppressions"
+fi
+
 # fill in skip file here (after setup_cleanup)
 echo "directory" > "${SKIP}"
 
@@ -332,6 +350,8 @@ replace() {
     s%wc -l | awk '{ print \$1 }'%wc -l%g;
 
     \%VmHWM:%d;
+
+    \%cannot be preloaded%d;
 
     s%[[:space:]]*\$%%g;
     "

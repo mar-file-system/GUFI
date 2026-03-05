@@ -377,10 +377,12 @@ int SNPRINTF(char *str, size_t size, const char *format, ...) {
     return n;
 }
 
-/* Equivalent to snprintf printing only strings. Variadic arguments
-   should be pairs of strings and their lengths (to try to prevent
-   unnecessary calls to strlen). Make sure to typecast the lengths
-   to size_t or weird bugs may occur */
+/*
+ * Equivalent to snprintf printing only strings. Variadic arguments
+ * should be pairs of strings and their lengths (to try to prevent
+ * unnecessary calls to strlen). Make sure to typecast the lengths to
+ * size_t or weird bugs may occur. Also, do not pass in NULL pointers.
+*/
 size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
     size_t max_len = dst_len - 1;
 
@@ -393,6 +395,7 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
         /* does not seem to fix it either */
         const size_t len = va_arg(args, unsigned int);
         const size_t copy_len = (len < max_len)?len:max_len;
+        /* not checking for NULL pointers */
         memcpy(dst, src, copy_len);
         dst += copy_len;
         max_len -= copy_len;
@@ -994,7 +997,14 @@ int write_with_resize(char **buf, size_t *size, size_t *offset,
     va_list args;
 
     va_start(args, fmt);
-    const int written = vsnprintf(*buf + *offset, *size - *offset, fmt, args);
+    int written = 0;
+    if (!*buf) {
+        /* do not offset into NULL pointer */
+        written = vsnprintf(*buf, *size, fmt, args);
+    }
+    else {
+        written = vsnprintf(*buf + *offset, *size - *offset, fmt, args);
+    }
     va_end(args);
 
     /* not enough space */

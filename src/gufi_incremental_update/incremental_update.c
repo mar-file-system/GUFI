@@ -71,11 +71,12 @@ OF SUCH DAMAGE.
 
 #include "gufi_incremental_update/incremental_update.h"
 
-#define ERRNO_NOT_ERR(op, msg, ...)                         \
+#define ERRNO_NOT_ERR(free_func, ptr, op, msg, ...)         \
     if (op != 0) {                                          \
         const int err = errno;                              \
         fprintf(stderr, msg ": %s (%d)\n",                  \
                 __VA_ARGS__, strerror(err), err);           \
+        free_func(ptr);                                     \
         return 0; /* do not stop query from continuing */   \
     }
 
@@ -382,8 +383,12 @@ static int apply_removes_and_move_outs_callback(void *args, int count, char **da
                    "/", (size_t) 1,
                    DBNAME, DBNAME_LEN);
 
-        ERRNO_NOT_ERR(unlink(dbname), "    Error: Could not delete " DBNAME " in \"%s\"", path);
-        ERRNO_NOT_ERR(rmdir(path),    "    Error: Could not rmdir \"%s\"", path);
+        ERRNO_NOT_ERR(free, NULL,
+                      unlink(dbname), "    Error: Could not delete " DBNAME " in \"%s\"",
+                      path);
+        ERRNO_NOT_ERR(free, NULL,
+                      rmdir(path),    "    Error: Could not rmdir \"%s\"",
+                      path);
 
         fprintf(stdout, "    Deleted directory \"%s\"\n", path);
     }
@@ -396,7 +401,8 @@ static int apply_removes_and_move_outs_callback(void *args, int count, char **da
                    "d.", (size_t) 2,
                    treeinode, strlen(treeinode));
 
-        ERRNO_NOT_ERR(rename(path, plname), "    Error: Could not move \"%s\" to parking lot \"%s\"",
+        ERRNO_NOT_ERR(free, NULL,
+                      rename(path, plname), "    Error: Could not move \"%s\" to parking lot \"%s\"",
                       path, plname);
 
         fprintf(stdout, "    Moved directory \"%s\" into parking lot \"%s\"\n", path, plname);
@@ -449,7 +455,9 @@ static int apply_creates_and_move_ins_callback(void *args, int count, char **dat
 
     /* create index directory */
     if (new == '1') {
-        ERRNO_NOT_ERR(mkdir(path, 0775), "    Error: Could not mkdir \"%s\"", path);
+        ERRNO_NOT_ERR(free, NULL,
+                      mkdir(path, 0775), "    Error: Could not mkdir \"%s\"",
+                      path);
 
         /* db.db is not created here */
 
@@ -464,7 +472,9 @@ static int apply_creates_and_move_ins_callback(void *args, int count, char **dat
                    "d.", (size_t) 2,
                    treeinode, strlen(treeinode));
 
-        ERRNO_NOT_ERR(rename(plname, path), "    Error: Could not move from parking lot \"%s\" to \"%s\"", plname, path);
+        ERRNO_NOT_ERR(free, NULL,
+                      rename(plname, path), "    Error: Could not move from parking lot \"%s\" to \"%s\"",
+                      plname, path);
 
         fprintf(stdout, "    Moved directory \"%s\" from parking lot to \"%s\"\n", plname, path);
     }
@@ -500,9 +510,14 @@ struct UpdateDir {
     str_t treeinode;
 };
 
+static void free_ud(struct UpdateDir *ud) {
+    str_free_existing(&ud->treeinode);
+    str_free_existing(&ud->treepath);
+    free(ud);
+}
+
 /* update a single directory by moving the <parking lot>/<dir inode> database file into the correct path */
 static int apply_update(QPTPool_ctx_t *ctx, void *data) {
-
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
     struct UpdateDir *ud = (struct UpdateDir *) data;
 
@@ -524,7 +539,9 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
      * it was not suspect, and thus not reindexed
      */
     struct stat st;
-    ERRNO_NOT_ERR(stat(plname, &st), "    Warning: Could not stat update " DBNAME " in parking lot \"%s\"", plname);
+    ERRNO_NOT_ERR(free_ud, ud,
+                  stat(plname, &st), "    Warning: Could not stat update " DBNAME " in parking lot \"%s\"",
+                  plname);
 
     /* destination of the database file */
     char dbname[MAXPATH];
@@ -533,8 +550,8 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
                "/", (size_t) 1,
                DBNAME, DBNAME_LEN);
 
-    ERRNO_NOT_ERR(rename(plname, dbname),
-                  "    Error: Could not move updated db.db from parking lot \"%s\" to \"%s\"\n",
+    ERRNO_NOT_ERR(free_ud, ud,
+                  rename(plname, dbname), "    Error: Could not move updated db.db from parking lot \"%s\" to \"%s\"\n",
                   plname, path);
 
     fprintf(stdout, "    Update db \"%s\" moved to \"%s\"\n",
@@ -543,6 +560,7 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
     /* open the updated db */
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
     if (!db) {
+        free(ud);
         return 0; /* do not stop query from continuing */
     }
 
@@ -552,24 +570,29 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
                      get_permissions_callback, &perms, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Could not get permissions from \"%s\": %s\n", dbname, err);
         closedb(db);
+        free(ud);
         return 0; /* do not stop query from continuing */
     }
 
     closedb(db);
 
-    ERRNO_NOT_ERR(chmod(path, perms.mode & (S_IRWXU | S_IRWXG | S_IRWXO)),
+    ERRNO_NOT_ERR(free_ud, ud,
+                  chmod(path, perms.mode & (S_IRWXU | S_IRWXG | S_IRWXO)),
                   "    Error: Could not change permission of directory \"%s\" to %3o",
                   path, perms.mode & (S_IRWXU | S_IRWXG | S_IRWXO));
 
-    ERRNO_NOT_ERR(chown(path, perms.uid, perms.gid),
+    ERRNO_NOT_ERR(free_ud, ud,
+                  chown(path, perms.uid, perms.gid),
                   "    Error: Could not change owners of directory \"%s\" to %" STAT_uid ":%" STAT_gid "\n",
                   path, perms.uid, perms.gid);
 
-    ERRNO_NOT_ERR(chmod(dbname, perms.mode & (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)),
+    ERRNO_NOT_ERR(free_ud, ud,
+                  chmod(dbname, perms.mode & (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)),
                   "    Error: Could not change permission of database \"%s\" to %3o",
                   dbname, perms.mode & (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH));
 
-    ERRNO_NOT_ERR(chown(dbname, perms.uid, perms.gid),
+    ERRNO_NOT_ERR(free_ud, ud,
+                  chown(dbname, perms.uid, perms.gid),
                   "    Error: Could not change owners of directory \"%s\" to %" STAT_uid ":%" STAT_gid "\n",
                   path, perms.uid, perms.gid);
 

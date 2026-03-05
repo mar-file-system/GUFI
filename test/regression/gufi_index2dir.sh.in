@@ -103,7 +103,7 @@ then
     echo "Did not find any xattrs in ${SRCDIR}"
     exit 1
 fi
-if [[ "${dst}" -eq 0 ]]
+if [[ "${#dst}" -eq 0 ]]
 then
     echo "Did not find any xattrs in ${DST}"
     exit 1

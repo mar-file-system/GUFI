@@ -217,6 +217,39 @@ jobs:
       working-directory: ${{ github.workspace }}/build
       run:  ctest --output-on-failure
 
+  fsanitize:
+    needs: [ShellCheck, Pylint]
+    runs-on: ubuntu-latest
+    env:
+      CC: gcc
+      CXX: g++
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - uses: actions/cache@v4
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-fsanitize
+
+    - name: Ubuntu Prerequisites
+      run:  sudo contrib/CI/ubuntu.sh
+
+    - name: Install Python Packages
+      run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Configure CMake
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DFSANITIZE="address,leak,pointer-compare,pointer-subtract,undefined"
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build
+      run:  ctest --output-on-failure
+
   Memcheck:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest

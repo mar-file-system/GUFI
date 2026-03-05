@@ -68,10 +68,9 @@ set(CONTRIB_SOURCES
 if (CMAKE_CXX_COMPILER)
   list(APPEND CONTRIB_SOURCES
     make_testindex.cpp    # a more complex index generator
+    verifytrace.cpp
     verifytraceintree.cpp
   )
-
-  add_executable(verifytrace verifytrace.cpp)
 endif()
 
 # build C/C++ sources that depend on libGUFI
@@ -80,6 +79,7 @@ foreach(SOURCE ${CONTRIB_SOURCES})
   get_filename_component(TARGET "${SOURCE}" NAME_WE)
   add_executable("${TARGET}" "${SOURCE}")
   target_link_libraries("${TARGET}" ${COMMON_LIBRARIES})
+  add_dependencies("${TARGET}" install_dependencies)
 endforeach()
 
 set(CHECKSTYLE)

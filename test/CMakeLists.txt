@@ -65,6 +65,12 @@ set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory t
 execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}"
     COMMAND_ERROR_IS_FATAL ANY)
 
+# LeakSanitizer suppressions
+configure_file("lsan.suppressions" "lsan.suppressions" COPYONLY)
+
+# UndefinedBehaviorSanitizer suppressions
+configure_file("ubsan.suppressions" "ubsan.suppressions" COPYONLY)
+
 if (ALLOW_DB_WRITES)
   # copy test scripts into the test directory within the build directory
   # list these explicitly to prevent random garbage from getting in

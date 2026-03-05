@@ -188,8 +188,8 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
         // parse the line to check other values
         char buf[MAXPATH] = {};
         memcpy(buf, sa->line.c_str(), sa->line.size());
-        struct work *work;
-        struct entry_data ed;
+        struct work *work = nullptr;
+        struct entry_data ed = {};
         linetowork(buf, sa->line.size(), csa->delim, &work, &ed, 0);
         xattrs_cleanup(&ed.xattrs);
 
@@ -197,6 +197,7 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
         if (st.st_mode != work->statuso.st_mode) {
             std::cerr << "Permission mismatch on directory: " << parent << std::endl;
             csa->correct = false;
+            free(work);
             delete sa;
             return 1;
         }
@@ -205,6 +206,7 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
         if (st.st_uid != work->statuso.st_uid) {
             std::cerr << "UID mismatch on directory: " << parent << std::endl;
             csa->correct = false;
+            free(work);
             delete sa;
             return 1;
         }
@@ -213,9 +215,12 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
         if (st.st_gid != work->statuso.st_gid) {
             std::cerr << "GID mismatch on directory: " << parent << std::endl;
             csa->correct = false;
+            free(work);
             delete sa;
             return 1;
         }
+
+        free(work);
     }
 
     const std::string db_name = parent + "/db.db";
@@ -231,6 +236,7 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
     if (sqlite3_open_v2(db_name.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK) {
         std::cerr << "Could not open database file: " << db_name << std::endl;
         csa->correct = false;
+        closedb(db); // clean up failed open
         delete sa;
         return 1;
     }
@@ -269,8 +275,8 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
         // parse the line
         char buf[MAXPATH] = {};
         memcpy(buf, line.c_str(), line.size());
-        struct work *work;
-        struct entry_data ed;
+        struct work *work = nullptr;
+        struct entry_data ed = {};
         linetowork(buf, line.size(), csa->delim, &work, &ed, 0);
         xattrs_cleanup(&ed.xattrs);
 
@@ -285,32 +291,39 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
         if (sqlite3_exec(db, sql, callback, &ca, &err) != SQLITE_OK) {
             std::cerr << "SQLite error: " << err << ": " << sql << std::endl;
             sqlite3_free(err);
+            free(work);
             continue;
         }
 
         if (ca.count != 1) {
             std::cerr << "Did not find entry with name \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
+            free(work);
             continue;
         }
 
         if (ca.st.st_mode != work->statuso.st_mode) {
             std::cerr << "Permission mismatch on entry \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
+            free(work);
             continue;
         }
 
         if (ca.st.st_uid != work->statuso.st_uid) {
             std::cerr << "UID mismatch on entry \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
+            free(work);
             continue;
         }
 
         if (ca.st.st_gid != work->statuso.st_gid) {
             std::cerr << "GID mismatch on entry \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
+            free(work);
             continue;
         }
+
+        free(work);
 
         entries++;
     }

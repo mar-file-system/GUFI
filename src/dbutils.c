@@ -443,7 +443,7 @@ int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
 
     const char *sqlstmt = ts_str[ts];
     sqlite3_stmt *res = NULL;
-    if (sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, NULL) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db, sqlstmt, -1, &res, NULL) != SQLITE_OK) {
         sqlite_print_err_and_free(NULL, stderr, "SQL error on query: %s: %s, err: %s\n",
                                   sqlstmt, name, sqlite3_errmsg(db));
         return 1;
@@ -587,7 +587,7 @@ sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli)
     const char *tail = NULL;
     sqlite3_stmt *reso = NULL;
 
-    const int error = sqlite3_prepare_v2(db, sqli, strlen(sqli), &reso, &tail);
+    const int error = sqlite3_prepare_v2(db, sqli, -1, &reso, &tail);
     if (error != SQLITE_OK) {
         sqlite_print_err_and_free(NULL, stderr, "SQL error on insertdbprep: error %d %s err %s\n",
                                   error, sqli, sqlite3_errmsg(db));

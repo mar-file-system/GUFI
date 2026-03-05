@@ -249,6 +249,7 @@ log_hist_t *log_hist_parse(const char *str) {
     log_hist_t *hist = calloc(1, sizeof(*hist));
     int read = 0;
     if ((sscanf(str, "%zu;%zu;%zu;%zu;%n", &hist->base, &hist->count, &hist->lt, &hist->ge, &read) != 4) ||
+        (read == 0) ||
         (str[read - 1] != ';')) {
         log_hist_free(hist);
         return NULL;
@@ -390,6 +391,7 @@ mode_hist_t *mode_hist_parse(const char *str) {
         size_t count;
         int read = 0;
         if ((sscanf(str + total_read, "%03o:%zu;%n", &bucket, &count, &read) != 2) ||
+            (read == 0) ||
             (str[total_read + read - 1] != ';')) {
             mode_hist_free(hist);
             return NULL;
@@ -506,6 +508,7 @@ time_hist_t *time_hist_parse(const char *str) {
     size_t ref = 0;
     int read = 0;
     if ((sscanf(str, "%zu;%n", &ref, &read) != 1) ||
+        (read == 0) ||
         (str[read - 1] != ';')) {
         time_hist_free(hist);
         return NULL;
@@ -763,6 +766,7 @@ category_hist_t *category_hist_parse(const char *str) {
 
     int total_read = 0;
     if ((sscanf(str, "%zu;%n", &hist->count, &total_read) != 1) ||
+        (total_read == 0) ||
         (str[total_read - 1] != ';')) {
         category_hist_free(hist);
         return NULL;
@@ -1009,6 +1013,7 @@ mode_count_t *mode_count_parse(const char *str) {
 
     int read = 0;
     if ((sscanf(str, "%zu:%n", &mc.len, &read) != 1) ||
+        (read == 0) ||
         (str[read - 1] != ':')) {
         return NULL;
     }

@@ -105,7 +105,7 @@ TEST(parse_path, list) {
     in.min_level = 1;
 
     // this gets freed by process_path_list
-    struct work *root = new_work_with_name(ROOT, strlen(ROOT), nullptr, 0);
+    struct work *root = new_work_with_name(nullptr, 0, ROOT, strlen(ROOT));
     ASSERT_NE(root, nullptr);
 
     QPTPool_ctx_t *ctx = QPTPool_init(1, nullptr);

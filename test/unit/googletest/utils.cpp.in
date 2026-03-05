@@ -166,9 +166,8 @@ TEST(summary, sumit_file) {
     struct sum summary;
     ASSERT_EQ(zeroit(&summary), 0);
 
-    struct work *pwork = new_work_with_name(nullptr, 0, nullptr, 0);
-    struct entry_data ed;
-    memset(&ed, 0, sizeof(ed));
+    struct work *pwork = new_work_with_name(nullptr, 0, "", 0);
+    struct entry_data ed = {};
 
     ed.type                  = 'f';
     pwork->statuso.st_uid    = dist(gen);
@@ -247,9 +246,8 @@ TEST(summary, sumit_link) {
     struct sum summary;
     ASSERT_EQ(zeroit(&summary), 0);
 
-    struct work *pwork = new_work_with_name(nullptr, 0, nullptr, 0);
-    struct entry_data ed;
-    memset(&ed, 0, sizeof(ed));
+    struct work *pwork = new_work_with_name(nullptr, 0, "", 0);
+    struct entry_data ed = {};
 
     ed.type                  = 'l';
     pwork->statuso.st_uid    = dist(gen);
@@ -1179,7 +1177,7 @@ TEST(write_read, size) {
 
 TEST(stat_wrapper, bad) {
     const char name[] = "@CMAKE_CURRENT_BINARY_DIR@/utils.cpp/";
-    struct work *work = new_work_with_name(name, strlen(name), nullptr, 0);
+    struct work *work = new_work_with_name(nullptr, 0, name, strlen(name));
 
     for(int print_err : {0, 1}) {
         for(int print_eacces: {0, 1}) {
@@ -1202,7 +1200,7 @@ TEST(stat_wrapper, bad) {
 
 TEST(lstat_wrapper, bad) {
     const char name[] = "@CMAKE_CURRENT_BINARY_DIR@/utils.cpp/";
-    struct work *work = new_work_with_name(name, strlen(name), nullptr, 0);
+    struct work *work = new_work_with_name(nullptr, 0, name, strlen(name));
 
     for(int print_err : {0, 1}) {
         for(int print_eacces: {0, 1}) {
@@ -1225,8 +1223,8 @@ TEST(lstat_wrapper, bad) {
 
 TEST(fstatat_wrapper, bad) {
     const char name[] = "@CMAKE_CURRENT_BINARY_DIR@/utils.cpp/";
-    struct work *work = new_work_with_name(name, strlen(name), nullptr, 0);
-    struct entry_data ed;
+    struct work *work = new_work_with_name(nullptr, 0, name, strlen(name));
+    struct entry_data ed = {};
     ed.parent_fd = -1;
 
     for(int print_err : {0, 1}) {

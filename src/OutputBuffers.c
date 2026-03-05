@@ -94,7 +94,9 @@ size_t OutputBuffer_write(struct OutputBuffer *obuf, const void *buf, const size
 }
 
 size_t OutputBuffer_flush(struct OutputBuffer *obuf, FILE *out) {
-    /* Not checking arguments */
+    if (!obuf || !obuf->buf || !out) {
+        return 0;
+    }
 
     const size_t rc = fwrite(obuf->buf, sizeof(char), obuf->filled, out);
     if (rc == obuf->filled) {

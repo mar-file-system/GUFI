@@ -984,6 +984,11 @@ static int rollup_ascend(void *args) {
             }
         }
     }
+    else if (in->dont_reprocess && dir->rolledup) {
+        ds->score = 1;
+        ds->success = 1;
+        sll_push_back(&stats[id].rolled_up, ds);
+    }
 
     closedb(dst);
 

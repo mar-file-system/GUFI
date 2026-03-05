@@ -117,5 +117,8 @@ if (CMAKE_CXX_COMPILER)
 
   add_test(NAME unit_tests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/unit_tests" --gtest_shuffle
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
+  if (FSANITIZE)
+    set_tests_properties(unit_tests PROPERTIES ENVIRONMENT "ASAN_OPTIONS=allocator_may_return_null=1")
+  endif()
   set_tests_properties(unit_tests PROPERTIES LABELS "unit")
 endif()

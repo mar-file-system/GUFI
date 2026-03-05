@@ -363,6 +363,22 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
 }
 
 struct work *validate_inputs(struct PoolArgs *pa) {
+    if (!pa->index.data || !pa->index.len) {
+        fprintf(stderr, "Error: GUFI_tree path is empty\n");
+        return NULL;
+    }
+
+    if (!pa->dir.data || !pa->dir.len) {
+        fprintf(stderr, "Error: dir path is empty\n");
+        return NULL;
+    }
+
+    pa->index.len = trailing_non_match_index(pa->index.data, pa->index.len - 1, "/", 1) + 1;
+    pa->dir.len   = trailing_non_match_index(pa->dir.data,   pa->dir.len   - 1, "/", 1) + 1;
+
+    pa->index_dirname_len = dirname_len(pa->index.data,
+                                        pa->index.len - (pa->index.data[pa->index.len - 1] == '/'));
+
     char expathin[MAXPATH];
     char expathout[MAXPATH];
     char expathtst[MAXPATH];
@@ -385,11 +401,6 @@ struct work *validate_inputs(struct PoolArgs *pa) {
     // check that the source path is a directory
     if (!S_ISDIR(src_st.st_mode)) {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", pa->index.data);
-        return NULL;
-    }
-
-    if (!pa->dir.len) {
-        fprintf(stderr, "No output path specified\n");
         return NULL;
     }
 
@@ -443,12 +454,6 @@ int main(int argc, char * argv[]) {
     INSTALL_STR(&pa.index, pa.in.pos.argv[0]);
     INSTALL_STR(&pa.dir,   pa.in.pos.argv[1]);
 
-    pa.index.len = trailing_non_match_index(pa.index.data, pa.index.len - 1, "/", 1) + 1;
-    pa.dir.len   = trailing_non_match_index(pa.dir.data,   pa.dir.len   - 1, "/", 1) + 1;
-
-    pa.index_dirname_len = dirname_len(pa.index.data,
-                                       pa.index.len - (pa.index.data[pa.index.len - 1] == '/'));
-
     // get first work item by validating inputs
     struct work *root = validate_inputs(&pa);
     if (!root) {
@@ -462,6 +467,7 @@ int main(int argc, char * argv[]) {
     if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(ctx);
+        free(root);
         rc = EXIT_FAILURE;
         goto cleanup;
     }

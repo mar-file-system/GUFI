@@ -292,7 +292,6 @@ int linetowork(char *line, const size_t len, const char delim,
         if ((sscanf(p, "%" PATH_PREFIX_FORMAT "%n", &name_len, &chars) != 1) ||
             (chars != PATH_PREFIX_LEN)) {
             fprintf(stderr, "Error: Bad name len \"%.*s\"\n", PATH_PREFIX_LEN, p);
-            free(new_work);
             return -1;
         }
         q = p + PATH_PREFIX_LEN;
@@ -301,7 +300,6 @@ int linetowork(char *line, const size_t len, const char delim,
         if (name_len > len) {
             fprintf(stderr, "Error: Name len %zu (%" PATH_PREFIX_FORMAT ") too long (line length is %zu)\n",
                     name_len, name_len, len);
-            free(new_work);
             return -1;
         }
 
@@ -517,6 +515,14 @@ static void find_first_delim(char *line, const size_t len,
             return;
         }
 
+        if (first_len > (len - PATH_PREFIX_LEN)) {
+            fprintf(stderr, "First entry length is too long %zu (\"%.*s\")\n",
+                    first_len, PATH_PREFIX_LEN, line);
+            *first_delim = NULL;
+            *delim_mismatch = 0;
+            return;
+        }
+
         *first_delim = line + PATH_PREFIX_LEN + first_len;
         *delim_mismatch = (**first_delim != delim);
     }
@@ -536,6 +542,9 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
     size_t dir_count = 0;
     size_t empty = 0;
     size_t external = 0;
+
+    char *first_delim = NULL;
+    int delim_mismatch = 0;
 
     /*
      * keep current directory while finding next directory
@@ -564,8 +573,6 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
         goto done;
     }
 
-    char *first_delim = NULL;
-    int delim_mismatch = 0;
     find_first_delim(line, len,
                      sta->delim, sta->old_format,
                      &first_delim, &delim_mismatch);
@@ -915,6 +922,9 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
     size_t empty = 0;
     size_t external = 0;
 
+    char *first_delim = NULL;
+    int delim_mismatch = 0;
+
     /*
      * keep current directory while finding next directory
      * in order to find out whether or not the current
@@ -931,9 +941,6 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
         rc = 1;
         goto done;
     }
-
-    char *first_delim = NULL;
-    int delim_mismatch = 0;
 
     find_first_delim(line, len,
                      sta->delim, sta->old_format,

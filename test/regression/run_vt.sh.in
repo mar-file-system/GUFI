@@ -85,7 +85,7 @@ run_vt() {
         echo "${LOAD}"
         echo "CREATE VIRTUAL TABLE temp.output USING run_vt(${args});"
         echo "${select}"
-    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" "${SQLITE3}" 2>&1
+    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${LD_PRELOAD}" "${SQLITE3}" 2>&1
     echo
 }
 

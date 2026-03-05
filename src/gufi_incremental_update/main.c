@@ -101,7 +101,6 @@ static int validate_source(struct PoolArgs *pa, struct work **tree, struct work 
     new_tree->root_parent.data = pa->tree.path.data;
     new_tree->root_parent.len = pa->tree.parent_len;
     new_tree->statuso = tree_st;
-    *tree = new_tree;
 
     if (!strcmp(pa->tree.path.data, pa->index.path.data)) {
         fprintf(stderr,"You are putting the index dbs in input directory\n");
@@ -113,12 +112,14 @@ static int validate_source(struct PoolArgs *pa, struct work **tree, struct work 
             const int err = errno;
             fprintf(stderr, "Could not stat index \"%s\": %s (%d)\n",
                     pa->index.path.data, strerror(err), err);
+            free(new_tree);
             return 1;
         }
 
         /* check that the index path is a directory */
         if (!S_ISDIR(index_st.st_mode)) {
             fprintf(stderr, "Index path is not a directory \"%s\"\n", pa->index.path.data);
+            free(new_tree);
             return 1;
         }
 
@@ -130,6 +131,8 @@ static int validate_source(struct PoolArgs *pa, struct work **tree, struct work 
         new_index->statuso = index_st;
         *index = new_index;
     }
+
+    *tree = new_tree;
 
     return 0;
 }

@@ -404,7 +404,7 @@ Could not find the specified delimiter in "badtrace"
 
 # declared path length too long
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
-Could not find the specified delimiter in "badtrace"
+First entry length is too long 65535 ("ffff")
 
 # declared path length does not go to delimiter
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"

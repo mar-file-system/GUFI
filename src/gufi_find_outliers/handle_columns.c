@@ -446,8 +446,8 @@ typedef struct {
 
 static const Group_t GROUPS[] = {
     { REFSTR("T_ONLYS", 7), T_ONLYS, },
-    { REFSTR("MINS",    5), MINS,    },
-    { REFSTR("MAXS",    5), MAXS,    },
+    { REFSTR("MINS",    4), MINS,    },
+    { REFSTR("MAXS",    4), MAXS,    },
     { REFSTR("MINMAXS", 7), MINMAXS, },
     { REFSTR("TOTS",    4), TOTS,    },
     { REFSTR("TIMES",   5), TIMES,   },

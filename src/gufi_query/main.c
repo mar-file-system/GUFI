@@ -148,15 +148,13 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_ctx_t *ctx) {
         /* remove trailing slashes (+ 1 to keep at least 1 character) */
         subtree_root->work.basename_len = subtree_root->work.name_len - (trailing_match_index(subtree_root->work.name + 1, subtree_root->work.name_len - 1, "/", 1) + 1);
 
-        if (in->min_level) {
-            /* keep original user input */
-            subtree_root->work.orig_root = root->work.orig_root;
+        /* keep original user input */
+        subtree_root->work.orig_root = root->work.orig_root;
 
-            /* parent of the input path, not the subtree root */
-            subtree_root->work.root_parent = root->work.root_parent;
+        /* parent of the input path, not the subtree root */
+        subtree_root->work.root_parent = root->work.root_parent;
 
-            subtree_root->work.root_basename_len = root->work.basename_len;
-        }
+        subtree_root->work.root_basename_len = root->work.basename_len;
 
         /* go directly to --min-level */
         subtree_root->work.level = in->min_level;

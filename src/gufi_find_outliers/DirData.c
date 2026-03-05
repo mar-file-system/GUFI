@@ -77,6 +77,7 @@ DirData_t *DirData_create(const str_t *path,
                               path->data, path->len,
                               "/", (size_t) 1,
                               subdir, subdir_len);
+    dd->path.free = free;
 
     return dd;
 }

@@ -30,7 +30,7 @@ $ gufi_index2dir -n 2 "prefix/db.db" "reconstructed"
 Source path is not a directory "prefix/db.db"
 
 $ gufi_index2dir -n 2 "prefix" ""
-No output path specified
+Error: dir path is empty
 
 $ gufi_index2dir -n 18446744073709551615 "prefix" "reconstructed"
 Error: Failed to start thread pool

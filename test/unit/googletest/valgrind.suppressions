@@ -113,6 +113,23 @@
 }
 {
    <insert_a_suppression_name_here>
+   Memcheck:FishyValue
+   malloc(size)
+   fun:malloc
+   fun:OutputBuffer_init
+   fun:PoolArgs_init
+   fun:_ZL26check_poolargs_init_failedR5inputP15pthread_mutex_t
+   fun:_ZN36PoolArgs_bad_output_buffer_size_Test8TestBodyEv
+   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
+   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
+   fun:_ZN7testing4Test3RunEv
+   fun:_ZN7testing8TestInfo3RunEv
+   fun:_ZN7testing9TestSuite3RunEv
+   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
+   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
+}
+{
+   <insert_a_suppression_name_here>
    Memcheck:Param
    write(buf)
    fun:__libc_write

@@ -77,6 +77,7 @@ SQLITE_EXTENSION_INIT1
 #include "bf.h"
 #include "dbutils.h"
 #include "popen_argv.h"
+#include "print.h"
 #include "utils.h"
 
 /*
@@ -376,15 +377,28 @@ static const size_t TL = sizeof(char) + sizeof(size_t);
 
 /* read TLV rows terminated by newline - this only works because type is in the range [1, 5] */
 static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
+    char tlv_prefix[sizeof(TLV_PREFIX)];
     size_t row_len = 0;
     int count = 0;
-    static const size_t ROW_PREFIX = sizeof(row_len) + sizeof(count);
+    static const size_t ROW_PREFIX = sizeof(tlv_prefix) + sizeof(row_len) + sizeof(count);
 
     char *buf = NULL;
     char *curr = buf;
     size_t *starts = NULL; /* index of where each column starts in buf */
 
     const int fd = popen_argv_fd(pCur->output);
+
+    /* tlv prefix */
+    if (read_size(fd, &tlv_prefix, sizeof(tlv_prefix)) != sizeof(tlv_prefix)) {
+        /* not setting zErrMsg - SQL logic error makes more sense for users */
+        goto error;
+    }
+
+    if (strncmp(tlv_prefix, TLV_PREFIX, sizeof(TLV_PREFIX)) != 0) {
+        /* probably got the help menu */
+        /* not setting zErrMsg - SQL logic error makes more sense for users */
+        goto error;
+    }
 
     /* row length */
     if (read_size(fd, &row_len, sizeof(row_len)) != sizeof(row_len)) {
@@ -1038,6 +1052,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         if (sqlite3_exec(tempdb, cmd.setup_res_col_type.data, NULL, NULL, &err) != SQLITE_OK) {
             *pzErr = sqlite3_mprintf("Setting up results table with '%s' failed: %s",
                                      cmd.setup_res_col_type.data, err);
+            if (in.plugin_ops->ctx_exit) {
+                in.plugin_ops->ctx_exit(tempdb, plugin_user_data);
+            }
             gq_cmd_destroy(&cmd);
             sqlite3_free(err);
             return SQLITE_CONSTRAINT;
@@ -1130,7 +1147,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     free(types);
 
     if (in.plugin_ops->ctx_exit) {
-        in.plugin_ops->ctx_exit(db, plugin_user_data);
+        in.plugin_ops->ctx_exit(tempdb, plugin_user_data);
     }
 
     if (in.plugin_ops->global_exit) {
@@ -1322,7 +1339,11 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
     pCur->len = 0;
 
     /* wait for first row */
-    gufi_query_read_row(pCur);
+    if (gufi_query_read_row(pCur) != 0) {
+        popen_argv_close(pCur->output);
+        pCur->output = NULL;
+        return SQLITE_ERROR;
+    }
 
     return SQLITE_OK;
 }

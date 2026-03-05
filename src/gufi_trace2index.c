@@ -349,20 +349,22 @@ int main(int argc, char *argv[]) {
     /* parse the trace files and enqueue work */
     struct TraceStats stats = {0};
     stats.mutex = &print_mutex; /* debug.h */
-    if (traces[0] == STDIN_FILENO) {
-        struct ScoutTraceArgs sta = {
-            .delim = pa.in.delim,
-            .tracename = "-",
-            .tr = {
-                .fd = STDIN_FILENO,
-                .start = 0,
-                .end = (off_t) -1,
-            },
-            .processdir = processdir,
-            .free = NULL,
-            .stats = &stats,
-        };
 
+    /* FIXME: this needs better scoping */
+    struct ScoutTraceArgs sta = {
+        .delim = pa.in.delim,
+        .tracename = "-",
+        .tr = {
+            .fd = STDIN_FILENO,
+            .start = 0,
+            .end = (off_t) -1,
+        },
+        .processdir = processdir,
+        .free = NULL,
+        .stats = &stats,
+    };
+
+    if (traces[0] == STDIN_FILENO) {
         /* one scout thread */
         QPTPool_enqueue(ctx, scout_stream, &sta);
     }
