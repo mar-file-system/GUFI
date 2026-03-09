@@ -1287,8 +1287,8 @@ def run_query(gqglobal,gqapps,cursor,gqformin,queryin_window):
   deepdebug+='%s\n' % outline
   print(outline)
 
-  qrformin_q='drop table qrformintable'
-  cursor.execute(qrformin_q)
+  #qrformin_q='drop table qrformintable'
+  #cursor.execute(qrformin_q)
 
   # this is the query we build up
   vq=f""
@@ -1455,6 +1455,56 @@ def run_query(gqglobal,gqapps,cursor,gqformin,queryin_window):
     if qw.find("{where}") != -1:
       qw = qw.replace("{where}","")
 
+    if qw.find("{conditional1}") != -1:
+      condq = "select conditional_query,conditional_string from conditionals where appscname=\'%s\' and conditional_ent=\'conditional1\'"  % rq_appname
+      print('************ conditional1 processing **********')
+      print(condq)
+      cursor.execute(condq)
+      condrows = cursor.fetchall()
+      for condrow in condrows:
+        qcq=condrow[0]
+        qcs=condrow[1]
+        print(condrow)
+      num_condrows = 0
+      num_condrows = len(condrows)
+      if num_condrows == 0:
+        qw = qw.replace("{conditional1}","")
+      else:
+        cursor.execute(qcq)
+        condqrows = cursor.fetchall()
+        num_condqrows = 0
+        num_condqrows = len(condqrows)
+        if num_condqrows==0:
+          qw = qw.replace("{conditional1}","")
+        else:
+          print(condqrows)
+          qw = qw.replace("{conditional1}",qcs)
+
+    if qw.find("{conditional2}") != -1:
+      condq = "select conditional_query,conditional_string from conditionals where appscname=\'%s\' and conditional_ent=\'conditional2\'"  % rq_appname
+      print('************ conditional2 processing **********')
+      print(condq)
+      cursor.execute(condq)
+      condrows = cursor.fetchall()
+      for condrow in condrows:
+        qcq=condrow[0]
+        qcs=condrow[1]
+        print(condrow)
+      num_condrows = 0
+      num_condrows = len(condrows)
+      if num_condrows == 0:
+        qw = qw.replace("{conditional2}","")
+      else:
+        cursor.execute(qcq)
+        condqrows = cursor.fetchall()
+        num_condqrows = 0
+        num_condqrows = len(condqrows)
+        if num_condqrows==0:
+          qw = qw.replace("{conditional2}","")
+        else:
+          print(condqrows)
+          qw = qw.replace("{conditional2}",qcs)
+
     outline='run_query: processqueries: qtype = %s query = %s' % (qtype,qw)
     print(outline)
 
@@ -1470,6 +1520,9 @@ def run_query(gqglobal,gqapps,cursor,gqformin,queryin_window):
           vq += "verbose=%s," % (qw)
       else:
         vq += "%s=\"%s\"," % (qtype,qw)
+
+  #vrformin_q='drop table qrformintable'
+  #cursor.execute(qrformin_q)
 
   # and this finishes up the query
   vfq = "%s)" % (vq[:-1])

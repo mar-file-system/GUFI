@@ -81,11 +81,8 @@ insert into appsqueries values (NULL,'vrxpentriesallremote','V','1',1);
 /* these statements are used for running remote gufi
 insert into appsqueries values (NULL,'vrxpentriesallremote','R','/tmp/runit',1);
 #insert into appsqueries values (NULL,'vrxpentriesallremote','A','REMOTEHOST',1);
-insert into appsqueries values (NULL,'vrxpentriesallremote','R','/tmp/runit',1);
-insert into appsqueries values (NULL,'vrxpentriesallremote','R','ssh',1);
 */
-insert into appsqueries values (NULL,'vrxpentriesallremote','R','ssh',1);
-insert into appsqueries values (NULL,'vrxpentriesallremote','A','REMOTEHOST',1);
+insert into appsqueries values (NULL,'vrxpentriesallremote','R','/tmp/runit',1);
 
 insert into appsqueries values (NULL,'vrxpentriesallremote','I','create table intermediate ({interimcreateselected})',1);
 insert into appsqueries values (NULL,'vrxpentriesallremote','K','create table aggregate ({interimcreateselected})',1);

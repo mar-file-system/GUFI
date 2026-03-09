@@ -68,7 +68,6 @@ delete from apppart where apppartname='vrxpentriesentries';
 delete from appforminfo where appfname='vrxpentriesentries';
 delete from appformd where appdname='vrxpentriesentries';
 delete from appformdtree where appdtname='vrxpentriesentries';
-delete from conditionals where appscname='vrxpentriesentries';
 
 -- you may want to change 'http://localhost:8001',1,1,'gufi_vt',30,'/LOCALSEARCHPATH','/LOCALSOURCEPATH','http://localhost:8000/search');
 insert into apps values (NULL,'vrxpentriesentries','files and directory summaries (entriesvar) (local) with Traversal Control','Query of local File Entries Information with Traversal Control','http://localhost:8001',1,1,'gufi_vt',30,'/LOCALSEARCHPATH','/LOCALSOURCEPATH','http://localhost:8000/search');
@@ -87,10 +86,8 @@ insert into appsqueries values (NULL,'vrxpentriesentries','I','create table inte
 insert into appsqueries values (NULL,'vrxpentriesentries','K','create table aggregate ({interimcreateselected})',1);
 insert into appsqueries values (NULL,'vrxpentriesentries','J','insert into aggregate select {interimselected} from intermediate {orderbyselected} {limitrec}',1);
 insert into appsqueries values (NULL,'vrxpentriesentries','G','select {interimselected} from aggregate {orderbyselected} {limitrec}',1);
-insert into appsqueries values (NULL,'vrxpentriesentries','E','insert into intermediate select {selectonly} from vrxpentries {where} {whereonly} {orderbyselected} {groupbyonly} {limitrec};{conditional1}',1);
+insert into appsqueries values (NULL,'vrxpentriesentries','E','insert into intermediate select {selectonly} from vrxpentries {where} {whereonly} {orderbyselected} {groupbyonly} {limitrec}',1);
 insert into appsqueries values (NULL,'vrxpentriesentries','Z','select {displayselected} from vtmp {orderbyselected} {groupbyonly} {limitrec}',1);
-
-insert into conditionals values (NULL,'vrxpentriesentries','select joinnm,val from qrformintable where val!='''' and val!=''None''and joinnm like ''%mode%'';','-- found joinnm mode','conditional1');
 
 insert into apppart values (NULL,'vrxpentriesentries',0,'travcontrol','Local Traversal Control','Optionally specify traversal control','',1,2,0);
 insert into apppart values (NULL,'vrxpentriesentries',1,'treelist','Path Options','Optionally select search path','',1,2,0);

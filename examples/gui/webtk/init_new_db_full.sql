@@ -77,3 +77,5 @@ drop table if exists appformd;
 create table appformd (id integer primary key,appdname text, appdpartnum int64, appdinterimnm text, appdshortnm text, appdorder int64,appddiff int64,appdtp text);
 drop table if exists appformdtree;
 create table appformdtree (id integer primary key,appdtname text, appdtpartnum int64, appdtparttreeitem text, appdtpartparm text);
+drop table if exists conditionals;
+create table conditionals (id integer primary key,appscname text, conditional_query text, conditional_string text,conditional_ent text);
