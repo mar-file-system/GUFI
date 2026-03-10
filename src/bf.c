@@ -766,6 +766,13 @@ int parse_cmd_line(int                  argc,
         retval = -(in->min_level > in->max_level);
     }
 
+    if (in->types.print_tlv) {
+        if (in->output != STDOUT) {
+            fprintf(stderr, "--print-tlv cannot be combined with -O or -o\n");
+            retval = -1;
+        }
+    }
+
     in->pos.argc = argc - optind;
     in->pos.argv = &argv[optind];
 

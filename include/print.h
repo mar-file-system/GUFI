@@ -75,7 +75,7 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-#define TLV_PREFIX "TLV"                  /* magic string (including NULL terminator) */
+#define TLV_PREFIX "GUFI_QUERY_TLV\0"     /* magic string (2 NULL terminators) */
 
 /* sqlite3_exec callback argument data */
 typedef struct PrintArgs {

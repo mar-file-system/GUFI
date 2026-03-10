@@ -719,6 +719,60 @@ TEST(parse_cmd_line, output_arguments) {
     }
 }
 
+TEST(parse_cmd_line, print_tlv) {
+    const struct option opt[] = {
+        FLAG_PRINT_TLV,
+        FLAG_OUTPUT_FILE,
+        FLAG_OUTPUT_DB,
+        FLAG_END
+    };
+
+    // good
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            print_tlv.c_str(),
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), argc);
+        EXPECT_EQ(in.types.print_tlv, 1);
+        input_fini(&in);
+    }
+
+    // with -o
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            print_tlv.c_str(),
+            o.c_str(), o_arg.c_str(),
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
+        input_fini(&in);
+    }
+
+    // with -O
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            print_tlv.c_str(),
+            O.c_str(), O_arg.c_str(),
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
+        input_fini(&in);
+    }
+}
+
 TEST(parse_cmd_line, positional) {
     const struct option opt[] = { FLAG_END };
     const std::string pos1 = "positional1";

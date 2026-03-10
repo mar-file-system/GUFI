@@ -86,8 +86,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
     }
 
     if (types) {
-        /* TLV output is prefixed with a magic string, the row length and the column count */
-        row_len += sizeof(TLV_PREFIX);
+        /* TLV output is prefixed with the row length and the column count */
         row_len += sizeof(row_len);
         row_len += sizeof(count);
 
@@ -122,9 +121,6 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         }
 
         if (types) {
-            /* write tlv prefix */
-            fwrite(TLV_PREFIX, sizeof(char), sizeof(TLV_PREFIX), print->outfile);
-
             /* write total row length */
             fwrite(&row_len, sizeof(char), sizeof(row_len), print->outfile);
 
@@ -179,10 +175,6 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         size_t filled = ob->filled;
 
         if (types) {
-            /* write tlv prefix */
-            memcpy(&buf[filled], TLV_PREFIX, sizeof(TLV_PREFIX));
-            filled += sizeof(TLV_PREFIX);
-
             /* write row length */
             memcpy(&buf[filled], &row_len, sizeof(row_len));
             filled += sizeof(row_len);

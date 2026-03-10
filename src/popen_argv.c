@@ -123,7 +123,7 @@ popen_argv_t *popen_argv(const char **argv) {
 }
 
 int popen_argv_fd(popen_argv_t *ret) {
-    return ret->fd;
+    return ret?ret->fd:-1;
 }
 
 int popen_argv_close(popen_argv_t *ret) {

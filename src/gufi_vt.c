@@ -372,40 +372,58 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     return SQLITE_OK;
 }
 
+/* wait for and read the first few octets of output */
+static int gufi_query_read_tlv_header(gufi_vtab_cursor *pCur) {
+    const int fd = popen_argv_fd(pCur->output);
+
+    char tlv_prefix[sizeof(TLV_PREFIX)];
+
+    /* read the first few octets */
+    if (read_size(fd, &tlv_prefix, sizeof(tlv_prefix)) != sizeof(tlv_prefix)) {
+        /* not setting zErrMsg - SQL logic error makes more sense for users */
+        return -1;
+    }
+
+    /* see if it is the expected header */
+    if (strncmp(tlv_prefix, TLV_PREFIX, sizeof(TLV_PREFIX)) != 0) {
+        /* probably got the help menu */
+        /* not setting zErrMsg - SQL logic error makes more sense for users */
+        return -1;
+    }
+
+    return 0;
+}
+
 /* space taken up by type and length */
 static const size_t TL = sizeof(char) + sizeof(size_t);
 
 /* read TLV rows terminated by newline - this only works because type is in the range [1, 5] */
 static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
-    char tlv_prefix[sizeof(TLV_PREFIX)];
     size_t row_len = 0;
     int count = 0;
-    static const size_t ROW_PREFIX = sizeof(tlv_prefix) + sizeof(row_len) + sizeof(count);
+    static const size_t ROW_PREFIX = sizeof(row_len) + sizeof(count);
 
     char *buf = NULL;
     char *curr = buf;
-    size_t *starts = NULL; /* index of where each column starts in buf */
+    size_t *starts = NULL;    /* index of where each column starts in buf */
 
     const int fd = popen_argv_fd(pCur->output);
 
-    /* tlv prefix */
-    if (read_size(fd, &tlv_prefix, sizeof(tlv_prefix)) != sizeof(tlv_prefix)) {
-        /* not setting zErrMsg - SQL logic error makes more sense for users */
-        goto error;
-    }
-
-    if (strncmp(tlv_prefix, TLV_PREFIX, sizeof(TLV_PREFIX)) != 0) {
-        /* probably got the help menu */
-        /* not setting zErrMsg - SQL logic error makes more sense for users */
-        goto error;
-    }
-
     /* row length */
-    if (read_size(fd, &row_len, sizeof(row_len)) != sizeof(row_len)) {
-        const int err = errno;
-        pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not read row length: %s (%d)",
-                                                    strerror(err), err);
-        goto error;
+    switch (read_size(fd, &row_len, sizeof(row_len))) {
+        case sizeof(row_len): /* good */
+            break;
+        case -1:              /* error */
+        default:              /* not sizeof(row_len) */
+            {
+                const int err = errno;
+                pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not read row length: %s (%d)",
+                                                            strerror(err), err);
+            }
+            /* fallthrough */
+        case 0:               /* eof */
+            pCur->len = 0;
+            goto error;
     }
 
     /* column count */
@@ -1230,6 +1248,8 @@ static int gufi_vtClose(sqlite3_vtab_cursor *cur) {
     return SQLITE_OK;
 }
 
+static int gufi_vtEof(sqlite3_vtab_cursor *cur);
+
 static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
                          int idxNum, const char *idxStr,
                          int argc, sqlite3_value **argv) {
@@ -1338,10 +1358,15 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
     pCur->row = NULL;
     pCur->len = 0;
 
-    /* wait for first row */
+    /* wait for header */
+    if (gufi_query_read_tlv_header(pCur) != 0) {
+        gufi_vtEof(cur);
+        return SQLITE_ERROR;
+    }
+
+    /* if the header is good, read the first line */
     if (gufi_query_read_row(pCur) != 0) {
-        popen_argv_close(pCur->output);
-        pCur->output = NULL;
+        gufi_vtEof(cur);
         return SQLITE_ERROR;
     }
 

@@ -350,23 +350,20 @@ int main(int argc, char *argv[]) {
     struct TraceStats stats = {0};
     stats.mutex = &print_mutex; /* debug.h */
 
-    /* FIXME: this needs better scoping */
-    struct ScoutTraceArgs sta = {
-        .delim = pa.in.delim,
-        .tracename = "-",
-        .tr = {
-            .fd = STDIN_FILENO,
-            .start = 0,
-            .end = (off_t) -1,
-        },
-        .processdir = processdir,
-        .free = NULL,
-        .stats = &stats,
-    };
-
     if (traces[0] == STDIN_FILENO) {
+        struct ScoutTraceArgs *sta = malloc(sizeof(*sta));
+        sta->delim = pa.in.delim;
+        sta->old_format = pa.in.old_trace_format;
+        sta->tracename = "-";
+        sta->tr.fd = STDIN_FILENO;
+        sta->tr.start = 0;
+        sta->tr.end = (off_t) -1,
+        sta->processdir = processdir;
+        sta->free = free;
+        sta->stats = &stats;
+
         /* one scout thread */
-        QPTPool_enqueue(ctx, scout_stream, &sta);
+        QPTPool_enqueue(ctx, scout_stream, sta);
     }
     else {
         enqueue_traces(&pa.in.pos.argv[0], traces, trace_count,

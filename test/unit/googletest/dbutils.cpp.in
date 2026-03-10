@@ -302,6 +302,7 @@ TEST(get_rollupscore, nullptr) {
 }
 
 TEST(bottomup_collect_treesummary, nullptr) {
+    // fail at top
     EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", nullptr, ROLLUPSCORE_KNOWN_YES), 1);
 
     char dirname[] = "XXXXXX";
@@ -309,12 +310,32 @@ TEST(bottomup_collect_treesummary, nullptr) {
 
     sll_t sll;
     sll_init(&sll);
-    sll_push_back(&sll, dirname);
+    sll_push_back(&sll, dirname);    // fail to open
+    sll_push_back(&sll, (char *) ":memory:");
 
     EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", &sll, ROLLUPSCORE_KNOWN_YES), 1);
 
     sll_destroy(&sll, nullptr);
     EXPECT_EQ(rmdir(dirname), 0);
+
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI, nullptr), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    // break at deleting old treesummary rows becase the table does not exist
+    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ROLLUPSCORE_KNOWN_YES), 1);
+
+    // create tables with a bad schemas that will run the delete
+    EXPECT_EQ(sqlite3_exec(db, "CREATE TABLE summary (inode, isroot);", nullptr, nullptr, nullptr), SQLITE_OK);
+    EXPECT_EQ(sqlite3_exec(db, "CREATE TABLE treesummary (inode);",     nullptr, nullptr, nullptr), SQLITE_OK);
+
+    // rollupscore=1 fail to insert
+    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ROLLUPSCORE_KNOWN_YES), 1);
+
+    // rollupscore=0 fail querytsdb
+    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ROLLUPSCORE_KNOWN_NO), 1);
+
+    sqlite3_close(db);
 }
 
 static const char CREATE_TABLE_TEST[] = "CREATE TABLE test(i INT, f FLOAT, t TEXT, b BLOB, n NULL, d DATE);";

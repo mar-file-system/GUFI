@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "compress.h"
+#include "print.h"
 #include "utils.h"
 
 #include "gufi_query/aggregate.h"
@@ -346,6 +347,14 @@ int main(int argc, char *argv[])
         aggregate_fin(&aggregate, &in);
         PoolArgs_fin(&pa, in.maxthreads);
         return EXIT_FAILURE;
+    }
+
+    /* initial set up done, can start processing and printing results */
+
+    /* print the tlv header to indicate that the output is results and not the help output */
+    if (in.types.print_tlv) {
+        /* --print-tlv can only go to stdout */
+        fwrite(TLV_PREFIX, sizeof(char), sizeof(TLV_PREFIX), stdout);
     }
 
     if (doing_partial_walk(&in, root_count)) {

@@ -122,6 +122,8 @@ run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}/db.db\" \"${DST}\""
 
 run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"${INDEXROOT}\" \"\""
 
+run_no_sort "${GUFI_INDEX2DIR} -n ${THREADS} \"\" \"${DST}\""
+
 run_no_sort "${GUFI_INDEX2DIR} -n 18446744073709551615 \"${INDEXROOT}\" \"${DST}\""
 ) | tee "${OUTPUT}"
 

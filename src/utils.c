@@ -992,6 +992,7 @@ int doing_partial_walk(struct input *in, const size_t root_count) {
         );
 }
 
+/* if buf == NULL, size and offset must be null too */
 int write_with_resize(char **buf, size_t *size, size_t *offset,
                       const char *fmt, ...) {
     va_list args;
@@ -1000,7 +1001,7 @@ int write_with_resize(char **buf, size_t *size, size_t *offset,
     int written = 0;
     if (!*buf) {
         /* do not offset into NULL pointer */
-        written = vsnprintf(*buf, *size, fmt, args);
+        written = vsnprintf(*buf, 0, fmt, args);
     }
     else {
         written = vsnprintf(*buf + *offset, *size - *offset, fmt, args);

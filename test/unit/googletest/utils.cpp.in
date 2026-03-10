@@ -1243,6 +1243,43 @@ TEST(fstatat_wrapper, bad) {
     free(work);
 }
 
+TEST(partial_walk, bad) {
+    struct input in = {};
+
+    for(std::size_t root_count : {1, 2}) {
+        in.path_list.data = nullptr;
+        in.path_list.len = 0;
+        EXPECT_EQ(bad_partial_walk(&in, root_count), 0);
+
+        in.path_list.data = (char *) &in;
+        in.path_list.len = 0;
+        EXPECT_EQ(bad_partial_walk(&in, root_count), 0);
+
+        in.path_list.data = nullptr;
+        in.path_list.len = 1;
+        EXPECT_EQ(bad_partial_walk(&in, root_count), 0);
+    }
+
+    in.path_list.data = (char *) &in;
+    in.path_list.len = 1;
+    EXPECT_EQ(bad_partial_walk(&in, 1), 0);
+
+    in.path_list.data = (char *) &in;
+    in.path_list.len = 1;
+    EXPECT_EQ(bad_partial_walk(&in, 2), 1);
+}
+
+TEST(partial_walk, doing) {
+    struct input in = {};
+    for(void *ptr : {(void *) nullptr, (void *) &in}) {
+        for(std::size_t len : {0, 1}) {
+            in.path_list.data = (char *) ptr;
+            in.path_list.len = len;
+            EXPECT_EQ(doing_partial_walk(&in, 0), ptr && len);
+        }
+    }
+}
+
 TEST(write_with_resize, good) {
     std::size_t size = 2;
     char *buf = (char *) malloc(size);
