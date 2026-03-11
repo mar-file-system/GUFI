@@ -66,30 +66,6 @@ set -e
 
 OUTPUT="parallel_find.out"
 
-OUTFILE_PREFIX="parallel_find_output"
-OUTFILES=()
-for (( i = 0; i < THREADS; i++ ))
-do
-    OUTFILES+=("${OUTFILE_PREFIX}.${i}")
-done
-PARENT="$(mktemp -d XXXXXX)"
-
-OUTPUTDIR_PREFIX="parallel_find_outputdir"
-OUTPUTDIR="${OUTPUTDIR_PREFIX}.0"
-
-cleanup() {
-    rm -rf "${OUTFILES[@]}" "${PARENT}" "${OUTPUTDIR}"
-}
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
-cleanup
-
 "${GENERATETREE}" "${SRCDIR}"
 
 (
@@ -149,14 +125,6 @@ run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}////\""
 echo "# multiple starting paths"
 run_sort "${PARALLEL_FIND} -n ${THREADS} \"${SRCDIR}/directory/\" \"${SRCDIR}/directory/subdirectory\""
 
-echo "# write to output files"
-run_no_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTFILE_PREFIX}\" \"${SRCDIR}\""
-# shellcheck disable=SC2145
-run_sort "cat ${OUTFILES[@]}"
-
-echo "# write to same output files"
-run_no_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTFILE_PREFIX}\" \"${SRCDIR}\""
-
 echo "# small output buffer"
 run_sort "${PARALLEL_FIND} -n ${THREADS} --output-buffer-size 16 \"${SRCDIR}\""
 
@@ -182,13 +150,6 @@ run_no_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%Q\\n\" \"${SRCDIR}\" | h
 
 echo "# bad format"
 run_no_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%\" \"${SRCDIR}\" 2>&1 | head -n 1"
-
-echo "# bad output file (missing parent directories)"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${PARENT}/non/existant/path/${OUTFILE_PREFIX}\" \"${SRCDIR}\"" | @SED@ "s%${PARENT}/%%g"
-
-echo "# bad output file (actually a directory)"
-mkdir "${OUTPUTDIR}"
-run_sort "${PARALLEL_FIND} -n ${THREADS} -o \"${OUTPUTDIR_PREFIX}\" \"${SRCDIR}\""
 
 echo "# bad output buffer size"
 run_sort "${PARALLEL_FIND} -n ${THREADS} --output-buffer-size 18446744073709551615 \"${SRCDIR}\"" | @SED@ '\%AddressSanitizer failed to allocate%d;'

@@ -135,7 +135,7 @@ generate_queries_sql() {
 }
 
 query_vt() {
-    LD_PRELOAD="${ASAN_PRELOAD}:${LD_PRELOAD}" run_no_sort "${PUGSQL} \"${QUERIES}\" \"${1}\""
+    LD_PRELOAD="${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}" run_no_sort "${PUGSQL} \"${QUERIES}\" \"${1}\""
 }
 
 (
@@ -153,7 +153,7 @@ query_vt() {
         echo
 
         name=$(basename "${path}" | @SED@ 's%\.sql%%g;')
-        LD_PRELOAD="${ASAN_PRELOAD}:${LD_PRELOAD}" run_no_sort "${PUGSQL} \"${QUERIES}\" \"${name}\""
+        LD_PRELOAD="${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}" run_no_sort "${PUGSQL} \"${QUERIES}\" \"${name}\""
     done < <(find "${QUERIES}" -name "*.sql" | sort)
     echo "------------------------------------------------"
 ) | tee "${OUTPUT}"

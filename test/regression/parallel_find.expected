@@ -9,7 +9,6 @@ options:
       --max-level <n>               maximum level to go down
   -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')
       --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
-  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
       --output-buffer-size <bytes>  size of each thread's output buffer in bytes
 
 input_dir...      walk one or more trees to search files
@@ -26,7 +25,6 @@ options:
       --max-level <n>               maximum level to go down
   -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')
       --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT
-  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
       --output-buffer-size <bytes>  size of each thread's output buffer in bytes
 
 input_dir...      walk one or more trees to search files
@@ -209,36 +207,6 @@ prefix/directory/subdirectory
 prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/repeat_name
 
-# write to output files
-$ parallel_find -n 2 -o "parallel_find_output" "prefix"
-
-$ cat parallel_find_output.0 parallel_find_output.1
-prefix
-prefix/.hidden
-prefix/1KB
-prefix/1MB
-prefix/directory
-prefix/directory/executable
-prefix/directory/readonly
-prefix/directory/subdirectory
-prefix/directory/subdirectory/directory_symlink
-prefix/directory/subdirectory/repeat_name
-prefix/directory/writable
-prefix/empty_directory
-prefix/file_symlink
-prefix/leaf_directory
-prefix/leaf_directory/leaf_file1
-prefix/leaf_directory/leaf_file2
-prefix/old_file
-prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
-
-# write to same output files
-$ parallel_find -n 2 -o "parallel_find_output" "prefix"
-"parallel_find_output.0" Already exists!
-"parallel_find_output.1" Already exists!
-
 # small output buffer
 $ parallel_find -n 2 --output-buffer-size 16 "prefix"
 prefix
@@ -290,22 +258,13 @@ $ parallel_find -n 2 --format "%Q\n" "prefix" | head -n 1
 $ parallel_find -n 2 --format "%" "prefix" 2>&1 | head -n 1
 Error: bad format sequence at end
 
-# bad output file (missing parent directories)
-$ parallel_find -n 2 -o "non/existant/path/parallel_find_output" "prefix"
-Could not open output file non/existant/path/parallel_find_output.0
-
-# bad output file (actually a directory)
-$ parallel_find -n 2 -o "parallel_find_outputdir" "prefix"
-"parallel_find_outputdir.0" Already exists!
-Destination path is not a file "parallel_find_outputdir.0"
-
 # bad output buffer size
 $ parallel_find -n 2 --output-buffer-size 18446744073709551615 "prefix"
 Error: Could not initialize 2 output buffers
 
 # bad thread count
 $ parallel_find -n 18446744073709551615 "prefix"
-Could not allocate space for 18446744073709551615 files
+Error: Could not initialize 18446744073709551615 output buffers
 
 # bad input file type
 $ parallel_find -n 2 "/dev/null"

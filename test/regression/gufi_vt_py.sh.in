@@ -68,7 +68,7 @@ set -e
 OUTPUT="gufi_vt_py.out"
 
 query_vt() {
-    PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${LD_PRELOAD}" run_no_sort "${GUFI_VT_PY} \"${1}\""
+    PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}" run_no_sort "${GUFI_VT_PY} \"${1}\""
 }
 
 (

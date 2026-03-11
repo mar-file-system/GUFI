@@ -142,21 +142,37 @@ export LC_ALL="C"
 export PATH="${BINARY_DIR}/scripts:${PATH}"
 export PYTHONPATH="${BINARY_DIR}/scripts:${CURRENT_BINARY_DIR}:${PYTHONPATH}"
 
-# shellcheck disable=SC2157
-if [[ -n "@FSANITIZE@" ]]
+FSANITIZE="@FSANITIZE@"
+if [[ -n "${FSANITIZE}" ]]
 then
-    # Find libasan.so location
-    # Adapted from answer by yugr
-    # https://stackoverflow.com/a/54386573
-    # shellcheck disable=SC2034,SC2050
-    if [[ "@CMAKE_C_COMPILER@" =~ .*clang.* ]]
+    if [[ "${FSANITIZE}" =~ .*thread.* ]]
     then
-        ASAN_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)
-    else
-        ASAN_PRELOAD=$(gcc -print-file-name=libasan.so)
+        # Find libtsan.so location
+        # Adapted from answer by yugr
+        # https://stackoverflow.com/a/54386573
+        # shellcheck disable=SC2034,SC2050
+        if [[ "@CMAKE_C_COMPILER@" =~ .*clang.* ]]
+        then
+            TSAN_PRELOAD=$(clang -print-file-name=libclang_rt.tsan-x86_64.so)
+        else
+            TSAN_PRELOAD=$(gcc -print-file-name=libtsan.so)
+        fi
+        export TSAN_OPTIONS="allocator_may_return_null=1"
+    else # always run this if TSAN is not being used
+        # Find libasan.so location
+        # Adapted from answer by yugr
+        # https://stackoverflow.com/a/54386573
+        # shellcheck disable=SC2034,SC2050
+        if [[ "@CMAKE_C_COMPILER@" =~ .*clang.* ]]
+        then
+            ASAN_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)
+        else
+            ASAN_PRELOAD=$(gcc -print-file-name=libasan.so)
+        fi
+        export ASAN_OPTIONS="allocator_may_return_null=1:detect_invalid_pointer_pairs=1"
+        export LSAN_OPTIONS="suppressions=${BINARY_DIR}/test/lsan.suppressions:print_suppressions=0"
     fi
-    export ASAN_OPTIONS=allocator_may_return_null=1
-    export LSAN_OPTIONS="suppressions=${BINARY_DIR}/test/lsan.suppressions:print_suppressions=0"
+
     export UBSAN_OPTIONS="suppressions=${BINARY_DIR}/test/ubsan.suppressions"
 fi
 

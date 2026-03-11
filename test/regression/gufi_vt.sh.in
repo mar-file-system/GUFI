@@ -94,7 +94,7 @@ query_vt() {
     (
         echo "${LOAD}"
         echo "${sql}"
-    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${LD_PRELOAD}" "${SQLITE3}" 2>&1
+    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}" "${SQLITE3}" 2>&1
     echo
 }
 
@@ -418,7 +418,7 @@ echo ") | ${SQLITE3}"
 (
     echo "${LOAD}"
     echo "${query}"
-) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${LD_PRELOAD}" "${SQLITE3}" 2>&1 | sort # query_vt does not sort
+) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}" "${SQLITE3}" 2>&1 | sort # query_vt does not sort
 echo
 
 echo "# Bad verbose (path_list == NULL is not an error)"

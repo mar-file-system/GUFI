@@ -290,10 +290,10 @@ else()
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_GNU_XATTRS")
 endif()
 
-set(FSANITIZE "" CACHE STRING "Comma separated -fsanitize list. Do not pass in 'thread'.")
+set(FSANITIZE "" CACHE STRING "Comma separated -fsanitize list")
 if (FSANITIZE)
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=${FSANITIZE}")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=${FSANITIZE}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=${FSANITIZE}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=${FSANITIZE}")
 endif()
 
 # Need pthread

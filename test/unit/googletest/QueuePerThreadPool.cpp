@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <atomic>
 #include <inttypes.h>
 #include <pthread.h> // macOS doesn't seem to like std::mutex
 
@@ -84,7 +85,7 @@ static int return_data(QPTPool_ctx_t *, void *data) {
 }
 
 static int increment_counter(QPTPool_ctx_t *, void *data) {
-    std::size_t *counter = static_cast<std::size_t *>(data);
+    std::atomic_uint64_t *counter = static_cast<std::atomic_uint64_t *>(data);
     (*counter)++;
     return 0;
 }
@@ -600,7 +601,7 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
             {}
 
         std::size_t tid; // which thread is processing this work item
-        std::size_t counter;
+        std::atomic_uint64_t counter;
     };
 
     work_item w{};
@@ -693,7 +694,7 @@ TEST(QueuePerThreadPool, steal_waiting) {
 
 TEST(QueuePerThreadPool, steal_claimed) {
     struct work_item {
-        work_item(std::size_t &counter)
+        work_item(std::atomic_uint64_t &counter)
             :  mutex(PTHREAD_MUTEX_INITIALIZER),
                tid(0),
                counter(counter)
@@ -702,11 +703,11 @@ TEST(QueuePerThreadPool, steal_claimed) {
         // macOS doesn't seem to like std::mutex
         pthread_mutex_t mutex;
         std::size_t tid;
-        std::size_t &counter;
+        std::atomic_uint64_t &counter;
     };
 
-    std::size_t counter = 0;
-    work_item wi[2] = {counter, counter};
+    std::atomic_uint64_t counter = 0;
+    work_item wi[] = {counter, counter};
 
     QPTPool_ctx_t *ctx = QPTPool_init(2, nullptr);
     ASSERT_NE(ctx, nullptr);

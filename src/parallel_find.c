@@ -79,7 +79,6 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "descend.h"
-#include "outfiles.h"
 #include "print.h"
 #include "utils.h"
 
@@ -90,7 +89,6 @@ struct PoolArgs {
     struct input in;
     struct OutputBuffers obufs;
     pthread_mutex_t *print_mutex;
-    FILE **outfiles;
 };
 
 struct enqueue_nondir_args {
@@ -184,13 +182,51 @@ static int format_output(struct work *work, struct entry_data *ed,
                 /* case 'F': */
                 case 'g':
                     {
-                        struct group *group = getgrgid(work->statuso.st_gid);
-                        if (group) {
-                            out += SNPRINTF(out, rem, "%s", group->gr_name);
+                        /*
+                         * adapted from question by Tyler DiBartolo
+                         * https://stackoverflow.com/q/47462890
+                         */
+
+                        const long init_len = sysconf(_SC_GETGR_R_SIZE_MAX);
+                        size_t len = 1024;
+                        if (init_len != -1) {
+                            len = init_len;
+                        }
+
+                        void *buf = malloc(len);
+
+                        struct group grp;
+                        struct group *res = NULL;
+                        int rc = 0;
+                        while ((rc = getgrgid_r(work->statuso.st_gid, &grp, buf, len, &res)) == ERANGE) {
+                            void *new_buf = realloc(buf, len * 2);
+
+                            if (!new_buf) {
+                                const int err = errno;
+                                fprintf(stderr, "Error: realloc(3): %s (%d)\n", strerror(err), err);
+                                free(buf);
+                                return 1;
+                            }
+
+                            buf = new_buf;
+                            len *= 2;
+                        }
+
+                        if (rc != 0) {
+                            const int err = errno;
+                            fprintf(stderr, "Error: getgrgid_r(3): %s (%d)\n", strerror(err), err);
+                            free(buf);
+                            return 1;
+                        }
+
+                        if (res) {
+                            out += SNPRINTF(out, rem, "%s", res->gr_name);
                         }
                         else {
                             out += SNPRINTF(out, rem, "%" STAT_gid, work->statuso.st_gid);
                         }
+
+                        free(buf);
                     }
                     break;
                 case 'G':
@@ -241,13 +277,51 @@ static int format_output(struct work *work, struct entry_data *ed,
                 /* case 'T': */
                 case 'u':
                     {
-                        struct passwd *passwd = getpwuid(work->statuso.st_uid);
-                        if (passwd) {
-                            out += SNPRINTF(out, rem, "%s", passwd->pw_name);
+                        /*
+                         * adapted from question by Tyler DiBartolo
+                         * https://stackoverflow.com/q/47462890
+                         */
+
+                        const long init_len = sysconf(_SC_GETPW_R_SIZE_MAX);
+                        size_t len = 1024;
+                        if (init_len != -1) {
+                            len = init_len;
+                        }
+
+                        void *buf = malloc(len);
+
+                        struct passwd pwd;
+                        struct passwd *res = NULL;
+                        int rc = 0;
+                        while ((rc = getpwuid_r(work->statuso.st_uid, &pwd, buf, len, &res)) == ERANGE) {
+                            void *new_buf = realloc(buf, len * 2);
+
+                            if (!new_buf) {
+                                const int err = errno;
+                                fprintf(stderr, "Error: realloc(3): %s (%d)\n", strerror(err), err);
+                                free(buf);
+                                return 1;
+                            }
+
+                            buf = new_buf;
+                            len *= 2;
+                        }
+
+                        if (rc != 0) {
+                            const int err = errno;
+                            fprintf(stderr, "Error: getpwuid_r(3): %s (%d)\n", strerror(err), err);
+                            free(buf);
+                            return 1;
+                        }
+
+                        if (res) {
+                            out += SNPRINTF(out, rem, "%s", res->pw_name);
                         }
                         else {
                             out += SNPRINTF(out, rem, "%" STAT_uid, work->statuso.st_uid);
                         }
+
+                        free(buf);
                     }
                     break;
                 case 'U':
@@ -326,7 +400,7 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
         .delim = '\0', /* not used */
         .newline = '\n',
         .mutex = args->pa->print_mutex,
-        .outfile = args->pa->outfiles[args->id],
+        .outfile = stdout,
         .types = NULL,
         .suppress_newline = 1,
     };
@@ -342,18 +416,16 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     int rc = 0;
 
-    struct entry_data ed;
+    struct entry_data ed = {0};
     ed.type = 'd';
 
-    // TODO: update this name
     struct enqueue_nondir_args nondir_args = {
         .ctx = ctx,
         .id = QPTPool_get_id(ctx),
         .pa = pa,
     };
 
-    process_output(work, &ed, &nondir_args);
-
+    /* enqueue more work before processing this directory */
     DIR *dir = opendir_wrapper(work->name, 1);
     if (!dir) {
         rc = 1;
@@ -361,11 +433,32 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     else {
         descend(ctx, &pa->in,
                 work, dir, 0, processdir,
-                process_output,
-                &nondir_args, NULL);
+                process_output, &nondir_args,
+                NULL);
     }
 
+    rc |= process_output(work, &ed, &nondir_args);
+
     closedir(dir);
+    free(work);
+    return rc;
+}
+
+static int processfile(QPTPool_ctx_t *ctx, void *data) {
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
+    struct work *work = (struct work *) data;
+
+    struct entry_data ed = {0};
+    ed.type = 'f';
+
+    struct enqueue_nondir_args nondir_args = {
+        .ctx = ctx,
+        .id = QPTPool_get_id(ctx),
+        .pa = pa,
+    };
+
+    const int rc = process_output(work, &ed, &nondir_args);
+
     free(work);
     return rc;
 }
@@ -383,7 +476,7 @@ int main(int argc, char *argv[]) {
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_FILTER_TYPE,
 
         /* output flags */
-        FLAG_FORMAT, FLAG_OUTPUT_FILE,
+        FLAG_FORMAT,
 
         /* memory usage flags */
         FLAG_OUTPUT_BUFFER_SIZE,
@@ -402,26 +495,15 @@ int main(int argc, char *argv[]) {
         pa.in.format.free = NULL;
     }
 
-    const str_t STDOUT_NAME = REFSTR("-", 1);
-
-    pa.outfiles = outfiles_init((pa.in.output == STDOUT)?&STDOUT_NAME:&pa.in.outname, pa.in.maxthreads);
-    if (!pa.outfiles) {
-        rc = 1;
-        goto cleanup_exit;
-    }
-
     /* Initialize output buffers */
     if (!OutputBuffers_init(&pa.obufs, pa.in.maxthreads, pa.in.output_buffer_size)) {
         fprintf(stderr, "Error: Could not initialize %zu output buffers\n", pa.in.maxthreads);
         rc = 1;
-        goto close_outfiles;
+        goto cleanup_exit;
     }
 
-    pa.print_mutex = NULL;
-    if (pa.in.output == STDOUT) {
-        static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-        pa.print_mutex = &mutex;
-    }
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    pa.print_mutex = &mutex;
 
     /* create a queue per thread pool */
     QPTPool_ctx_t *ctx = QPTPool_init(pa.in.maxthreads, &pa);
@@ -459,13 +541,7 @@ int main(int argc, char *argv[]) {
             QPTPool_enqueue(ctx, processdir, work);
         }
         else if (S_ISREG(work->statuso.st_mode)) {
-            struct enqueue_nondir_args qptp_vals = {
-                .ctx = ctx,
-                .id = 0,
-                .pa = &pa,
-            };
-            process_output(work, NULL, &qptp_vals);
-            free(work);
+            QPTPool_enqueue(ctx, processfile, work);
         }
         else {
             fprintf(stderr, "Error: Unsupported type for \"%s\"\n", work->name);
@@ -482,11 +558,8 @@ int main(int argc, char *argv[]) {
   cleanup_qptp:
     QPTPool_destroy(ctx);
 
-    OutputBuffers_flush_to_multiple(&pa.obufs, pa.outfiles);
+    OutputBuffers_flush_to_single(&pa.obufs, stdout);
     OutputBuffers_destroy(&pa.obufs);
-
-  close_outfiles:
-    outfiles_fin(pa.outfiles, pa.in.maxthreads);
 
   cleanup_exit:
     input_fini(&pa.in);

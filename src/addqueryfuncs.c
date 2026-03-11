@@ -131,6 +131,7 @@ static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
         char errmsg[1024];
         const size_t errmsg_len = SNPRINTF(errmsg, sizeof(errmsg), "getpwuid: %s (%d)\n", strerror(err), err);
         sqlite3_result_error(context, errmsg, errmsg_len);
+        free(buf);
         return;
     }
 
@@ -195,6 +196,7 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
         char errmsg[1024];
         const size_t errmsg_len = SNPRINTF(errmsg, sizeof(errmsg), "getgrgid: %s (%d)\n", strerror(err), err);
         sqlite3_result_error(context, errmsg, errmsg_len);
+        free(buf);
         return;
     }
 
