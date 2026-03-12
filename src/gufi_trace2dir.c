@@ -150,7 +150,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     SNFORMAT_S(topath, MAXPATH, 3,
                pa->tree_parent.data, pa->tree_parent.len,
                "/", (size_t) 1,
-               w->line + PATH_PREFIX_LEN, w->first_delim - PATH_PREFIX_LEN);
+               dir->name, dir->name_len);
 
     /* have to dupdir here because directories can show up in any order */
     if (dupdir(topath, dir->statuso.st_mode, dir->statuso.st_uid, dir->statuso.st_gid)) {
