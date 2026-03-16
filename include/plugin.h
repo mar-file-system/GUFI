@@ -82,6 +82,17 @@ typedef enum {
     PLUGIN_INCREMENTAL = 3,
 } plugin_type;
 
+typedef enum {
+    // No action specified / default value
+    PLUGIN_PROCESS_NONE = 0,
+    // Process this directory and allow normal traversal
+    PLUGIN_PROCESS_DIR = 1,
+    // Do not process this directory, but still allow traversal into subdirectories
+    PLUGIN_NO_PROCESS_DIR = 2,
+    // Do not process this directory and do not descend into its subdirectories
+    PLUGIN_NO_PROCESS_NO_DESCEND_DIR = 3,
+} plugin_process_action;
+
 /*
  * Operations for a user-defined plugin library, allowing the user to make custom
  * modifications to the databases as GUFI runs.
@@ -97,6 +108,9 @@ struct plugin_operations {
      * If the plugin does SQLite 3 operations, should call sqlite3_initialize()
      */
     int (*global_init)(void *global);
+
+    /* Pre-process a directory */
+    plugin_process_action (*pre_process_dir)(void *ptr, void *user_data);
 
     /*
      * Give the user an opportunity to initialize any state for the
