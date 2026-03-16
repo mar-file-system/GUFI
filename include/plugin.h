@@ -82,6 +82,13 @@ typedef enum {
     PLUGIN_INCREMENTAL = 3,
 } plugin_type;
 
+typedef enum { 
+    PROCESS_NONE                = 0,
+    PROCESS_DIR                 = 1,
+    NO_PROCESS_DIR              = 2, 
+    NO_PROCESS_NO_DESCEND_DIR   = 3,
+} process_action;
+
 /*
  * Operations for a user-defined plugin library, allowing the user to make custom
  * modifications to the databases as GUFI runs.
@@ -107,6 +114,9 @@ struct plugin_operations {
 
     /* Process a directory */
     void (*process_dir)(void *ptr, void *user_data);
+
+    /* Pre-process a directory */
+    process_action (*pre_process_dir)(void *ptr, void *user_data);
 
     /* Process a file */
     void (*process_file)(void *ptr, void *user_data);
