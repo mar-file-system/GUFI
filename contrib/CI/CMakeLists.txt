@@ -60,5 +60,8 @@
 
 
 
-configure_file(generic_rpm.sh.in generic_rpm.sh @ONLY)
-configure_file(rpms.sh.in        rpms.sh        @ONLY)
+configure_file(rpm_post_install.sh.in  rpm_post_install.sh  @ONLY)
+configure_file(rpm_pre_uninstall.sh.in rpm_pre_uninstall.sh @ONLY)
+
+configure_file(generic_rpm.sh.in       generic_rpm.sh       @ONLY)
+configure_file(rpms.sh.in              rpms.sh              @ONLY)

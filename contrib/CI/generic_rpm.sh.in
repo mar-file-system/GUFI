@@ -81,5 +81,10 @@ dnf install -y gufi-*.rpm
 # compare the configuration files
 @DIFF@ server.example "$(dirname @SERVER_CONFIG@)/server.example"
 
-# remove the configuration file
-rm -r "$(dirname @SERVER_CONFIG@)"
+# make sure the Python3 library files can be imported
+python3 -c "import gufi_common, gufi_config"
+
+# make sure server programs work
+gufi_query --help
+cp /etc/GUFI/server.example /etc/GUFI/config
+gufi_find --help

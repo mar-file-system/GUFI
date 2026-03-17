@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env sh
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,100 +61,10 @@
 
 
 
-import argparse
-import os
-import subprocess
-import sys
+# Copied from answer by Peterino
+# https://stackoverflow.com/a/46071447
+site=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
 
-import gufi_common
-import gufi_config
-
-# location of this file
-PATH = os.path.realpath(__file__)
-
-def parse_args():
-    # parse the arguments
-    parser = argparse.ArgumentParser('gufi_stat', description='GUFI version of stat', add_help=False)
-
-    gufi_common.add_help_version(parser)
-
-    # parser.add_argument('-L', '--dereference'
-    #                     action='set_true',
-    #                     help='follow links')
-
-    # parser.add_argument('-f', '--file-system'
-    #                     action='set_true',
-    #                     help='display file system status instead of file status')
-
-    parser.add_argument('-c', '--format',
-                        metavar='FORMAT',
-                        type=str,
-                        help='use the specified FORMAT instead of the default; output a newline after each use of FORMAT')
-
-    # parser.add_argument('--printf',
-    #                     metavar='FORMAT',
-    #                     type=str,
-    #                     help='like --format but interpret backslash escapes, and do not output a mandatory trailing newline; if you want a newline, include \n in FORMAT')
-
-    parser.add_argument('-t', '--terse',
-                        action='store_true',
-                        help='print the information in terse form')
-
-    parser.add_argument('paths',
-                        metavar='FILE',
-                        nargs='+')
-
-    # does not call gufi_query, so need custom verbose flag
-    parser.add_argument('-V', '--verbose',
-                        action='store_true',
-                        help='Show the actual command being run')
-
-    return parser
-
-# argv[0] should be the command name
-def run(argv, config_path):
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
-
-    parser = parse_args()
-    args = parser.parse_args(argv[1:])
-
-    # create the stat command
-    stat_cmd = [config.stat]
-
-    if args.format is not None:
-        stat_cmd += ['--format', args.format]
-
-    if args.terse is True:
-        stat_cmd += ['--terse']
-
-    paths = []
-    for path in args.paths:
-        prefixed_path = os.path.sep.join([config.indexroot, path])
-
-        if not gufi_common.in_index(prefixed_path, config.indexroot, path):
-            continue
-
-        paths += [prefixed_path]
-
-    if len(paths) == 0:
-        return 1
-
-    if args.verbose:
-        gufi_common.print_query(stat_cmd + paths)
-
-    stat = subprocess.Popen(stat_cmd + paths,          # pylint: disable=consider-using-with
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    out, err = stat.communicate()                      # block until stat finishes
-
-    if err:
-        sys.stderr.write(err.decode().replace(os.path.join(config.indexroot, ''), ''))
-
-    if len(out):
-        sys.stdout.write(out.decode().replace(os.path.join(config.indexroot, ''), ''))
-
-    return stat.returncode
-
-if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.PATH))
+mkdir -p "${site}"
+mv "/usr/@SERVER_LIB@/gufi_common.py" "${site}/gufi_common.py"
+mv "/usr/@SERVER_LIB@/gufi_config.py" "${site}/gufi_config.py"

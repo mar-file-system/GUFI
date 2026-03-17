@@ -80,11 +80,10 @@ Obtain a copy of the source code from GitHub: \\
 Alternatively, three pre-built RPMs are attached to the assets of
 \href{https://github.com/mar-file-system/GUFI/releases}{each release
   on GitHub}. If proceeding with the RPMs, only download and install
-the RPM without \texttt{server} or \texttt{client} in its name. Note
-that Python library files required by the user facing tools
-(Section~\ref{sec:user_facing_tools}) will be installed into
-\texttt{/usr/lib}. Either add this path to \texttt{PYTHONPATH} or
-symlink \texttt{/usr/lib/gufi\_*.py} to somewhere visible to Python.
+the RPM without \texttt{server} or \texttt{client} in its name. The
+Python3 library files required by the user facing tools
+(Section~\ref{sec:user_facing_tools}) will be installed into the
+site-packages directory.
 
 Then, skip to Section~\ref{sec:usage}.
 

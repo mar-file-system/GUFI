@@ -217,6 +217,9 @@ endif()
 # Python3.9+ is required
 find_package(Python3 3.9 COMPONENTS Interpreter REQUIRED)
 
+# this is the first CPACK_RPM_PACKAGE_REQUIRES
+set(CPACK_RPM_PACKAGE_REQUIRES "python3 >= 3.9")
+
 # require find_program to return executables with -r+x permissions
 if (POLICY CMP0109)
   cmake_policy(SET CMP0109 NEW)
@@ -301,6 +304,7 @@ find_package(Threads REQUIRED)
 
 # Need PCRE2 for linking only
 pkg_search_module(PCRE2 REQUIRED libpcre2-8)
+set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, pcre2")
 
 # Download and build all non-system dependencies
 set(DEP_DOWNLOAD_PREFIX    "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE PATH   "Location of dependency sources")
@@ -580,6 +584,8 @@ if (RPMBUILD)
   set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
   set(CPACK_RPM_PACKAGE_VENDOR "LANL")
   set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
+  set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_post_install.sh")
+  set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_pre_uninstall.sh")
 
   if (DEP_AI)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -591,19 +597,22 @@ if (RPMBUILD)
     endif()
   endif()
 
-  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, coreutils ${EXTRA_DEPS}")
+  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES} ${EXTRA_DEPS}")
   set(CPACK_RPM_PACKAGE_RELOCATABLE On)
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
 
   set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
   set(CPACK_RPM_Server_PACKAGE_AUTOREQ Off)
   set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
+  set(CPACK_RPM_Server_POST_INSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_post_install.sh")
+  set(CPACK_RPM_Server_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_pre_uninstall.sh")
 
   if (CLIENT)
     set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
-    # python libraries are installed through pip, and won't be found by rpm
-    set(CPACK_RPM_Client_PACKAGE_REQUIRES "python3, python3-pip, openssh")
+    set(CPACK_RPM_Client_PACKAGE_REQUIRES "python3 >= 3.9, openssh")
     set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
+    set(CPACK_RPM_Client_POST_INSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_post_install.sh")
+    set(CPACK_RPM_Client_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_pre_uninstall.sh")
   endif()
 
   # Turn off build-id link creation by RPM to manually control

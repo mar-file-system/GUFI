@@ -117,10 +117,27 @@ get_filename_component(SERVER_CONFIG_PARENT "${SERVER_CONFIG}" DIRECTORY)
 
 # server config
 # copy the hard coded server example file
+set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 configure_file(server.example.in "${CMAKE_BINARY_DIR}/server.example" @ONLY)
+unset(INSTALL_PREFIX)
 
-# make install and rpm
+# make install
 install(FILES "${CMAKE_BINARY_DIR}/server.example"
-        DESTINATION "${SERVER_CONFIG_PARENT}"
-        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-        COMPONENT Server)
+  DESTINATION "${SERVER_CONFIG_PARENT}"
+  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
+  COMPONENT Server)
+
+if (RPMBUILD)
+  # copy the hard coded server example file
+  set(INSTALL_PREFIX "/usr") # this should be CPACK_PACKAGING_INSTALL_PREFIX, but it's not set yet
+  configure_file(server.example.in "${CMAKE_BINARY_DIR}/rpm_server.example" @ONLY)
+  unset(INSTALL_PREFIX)
+
+  # overwrite make install version of server.example
+  install(FILES "${CMAKE_BINARY_DIR}/rpm_server.example"
+          RENAME "server.example"
+          DESTINATION "${SERVER_CONFIG_PARENT}"
+          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
+          COMPONENT Server
+          EXCLUDE_FROM_ALL)
+endif()

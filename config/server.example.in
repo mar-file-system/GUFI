@@ -67,15 +67,15 @@ Threads=@CORES@
 
 # absolute path to gufi_query
 # single path string
-Query=@CMAKE_INSTALL_PREFIX@/bin/gufi_query
+Query=@INSTALL_PREFIX@/@SERVER_BIN@/gufi_query
 
 # absolute path to gufi_sqlite3
 # single path string
-Sqlite3=@CMAKE_INSTALL_PREFIX@/bin/gufi_sqlite3
+Sqlite3=@INSTALL_PREFIX@/@SERVER_BIN@/gufi_sqlite3
 
 # absolute path to gufi_stat_bin
 # single path string
-Stat=@CMAKE_INSTALL_PREFIX@/bin/gufi_stat_bin
+Stat=@INSTALL_PREFIX@/@SERVER_BIN@/gufi_stat_bin
 
 # directory where all GUFI trees are placed under
 # single path string

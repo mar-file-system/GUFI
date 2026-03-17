@@ -617,13 +617,13 @@ int parse_cmd_line(int         argc,
 #define process_args_and_maybe_exit(flags, n_positional, positional, in)          \
     int idx = parse_cmd_line(argc, argv, flags, n_positional, positional, (in));  \
                                                                                   \
-    if ((in)->printed_version) {                                                  \
-        input_fini((in));                                                         \
-        return EXIT_SUCCESS;                                                      \
-    }                                                                             \
-                                                                                  \
     if ((in)->helped) {                                                           \
         sub_help();                                                               \
+    }                                                                             \
+                                                                                  \
+    if ((in)->helped || (in)->printed_version) {                                  \
+        input_fini((in));                                                         \
+        return EXIT_SUCCESS;                                                      \
     }                                                                             \
                                                                                   \
     if (idx < 0) {                                                                \

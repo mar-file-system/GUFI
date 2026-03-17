@@ -84,6 +84,14 @@ dnf install -y gufi-server-*.rpm
 # compare the configuration files
 @DIFF@ server.example "$(dirname @SERVER_CONFIG@)/server.example"
 
+# make sure the Python3 library files can be imported
+python3 -c "import gufi_common, gufi_config"
+
+# make sure server programs work
+gufi_query --help
+cp /etc/GUFI/server.example /etc/GUFI/config
+gufi_find --help
+
 # uninstall GUFI-Server
 dnf autoremove -y GUFI-Server
 
@@ -95,3 +103,6 @@ dnf install -y gufi-client-*.rpm
 
 # compare the configuration files
 @DIFF@ client.example "$(dirname @CLIENT_CONFIG@)/client.example"
+
+# make sure the Python3 library files can be imported
+python3 -c "import gufi_common, gufi_config"
