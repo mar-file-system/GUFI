@@ -183,10 +183,7 @@ static int gen_types(struct input *in) {
             }
         }
 
-        void *plugin_user_data = NULL;
-        if (in->plugin_ops->ctx_init) {
-            plugin_user_data = in->plugin_ops->ctx_init(db);
-        }
+        plugins_ctx_init(&in->plugins, db, 0);
 
         if (in->sql.setup_res_col_types.data && in->sql.setup_res_col_types.len) {
             char *err = NULL;
@@ -240,9 +237,7 @@ static int gen_types(struct input *in) {
             }
         }
 
-        if (in->plugin_ops->ctx_exit) {
-            in->plugin_ops->ctx_exit(db, plugin_user_data);
-        }
+        plugins_ctx_exit(&in->plugins, db, 0);
 
         closedb(db);
     }
@@ -250,6 +245,7 @@ static int gen_types(struct input *in) {
     return 0;
 
   error:
+    plugins_ctx_exit(&in->plugins, db, 0);
     closedb(db);
     return -1;
 }

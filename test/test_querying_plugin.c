@@ -72,9 +72,10 @@ OF SUCH DAMAGE.
 
 #include "plugin.h"
 
-static void global_init(void *global) {
+static int global_init(void *global) {
     (void) global;
     sqlite3_initialize();
+    return 0;
 }
 
 static void *db_init(void *ptr) {
@@ -109,7 +110,7 @@ static void global_exit(void *global) {
     sqlite3_shutdown();
 }
 
-struct plugin_operations GUFI_PLUGIN_SYMBOL = {
+struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_QUERY,
     .global_init = global_init,
     .ctx_init = db_init,

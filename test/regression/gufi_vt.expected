@@ -1015,17 +1015,17 @@ Runtime error near line 2: Unknown key: ab (19)
 # Bad plugin
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="indexing_plugin");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="gufi_plugin_operations:indexing_plugin");SELECT * FROM gufi;"
 ) | sqlite3
-Error: Bad plugin type. Expected 2. Got: 1
+Error: "indexing_plugin" has bad plugin type. Expected 2. Got: 1
 Runtime error near line 2: vtable constructor failed: gufi (19)
 
 # Bad plugin
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="prefix");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="gufi_plugin_operations:prefix");SELECT * FROM gufi;"
 ) | sqlite3
-Could not open plugin library
+Error: Could not open plugin library
 Runtime error near line 2: vtable constructor failed: gufi (19)
 
 # Bad Column Type Setup
@@ -1033,5 +1033,5 @@ $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Setting up results table with 'CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));' failed: near "plugin_query_view": syntax error (19)
+Runtime error near line 2: Setting up results table with 'CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));' failed: near "plugin_query_view": syntax error
 

@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <sys/types.h>
 
+#include "SinglyLinkedList.h"
 #include "bf.h"
 #include "config.h"
 #include "descend.h"
@@ -201,10 +202,11 @@ int write_with_resize(char **buf, size_t *size, size_t *offset,
 /* check if the current directory should be processed */
 int dir_match(struct input *in, struct stat *st);
 
-int check_plugin(const struct plugin_operations *ops, const plugin_type accepted);
-
 /* common opendir code wrapper */
 DIR *opendir_wrapper(const char *name, const int print_eacces);
+
+/* convert aggregated list of --plugin strings to a struct plugins */
+size_t args_to_plugins(sll_t *args, struct plugins *plugins, const size_t nthreads);
 
 #ifdef __cplusplus
 }

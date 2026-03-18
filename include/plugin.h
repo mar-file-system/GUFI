@@ -63,6 +63,8 @@ OF SUCH DAMAGE.
 #ifndef PLUGIN_H
 #define PLUGIN_H
 
+#include <stddef.h>
+
 #include <sqlite3.h>
 
 #ifdef __cplusplus
@@ -70,16 +72,8 @@ extern "C" {
 #endif
 
 /* forward declarations */
-struct input;
 struct work;
 struct entry_data;
-
-/*
- * Plugins should create a `struct plugin_operations` with this name to be exported to the
- * GUFI code.
-  */
-#define GUFI_PLUGIN_SYMBOL gufi_plugin_operations
-#define GUFI_PLUGIN_SYMBOL_STR "gufi_plugin_operations"
 
 typedef enum {
     PLUGIN_NONE        = 0,
@@ -98,9 +92,11 @@ struct plugin_operations {
     /*
      * One-time initialization
      *
+     * Return 0 for success, non-0 for error
+     *
      * If the plugin does SQLite 3 operations, should call sqlite3_initialize()
      */
-    void (*global_init)(void *global);
+    int (*global_init)(void *global);
 
     /*
      * Give the user an opportunity to initialize any state for the
@@ -126,10 +122,63 @@ struct plugin_operations {
     void (*global_exit)(void *global);
 };
 
-extern const struct plugin_operations null_plugin_ops;
+/* none of these pointers can be NULL */
+struct plugin {
+    /* reference; for debugging */
+    const char *filename;
 
-int load_plugin_library(struct input *in, const char *plugin_name);
-void unload_plugin_library(struct input *in);
+    /* dlopen(3) handle to a plugin shared library */
+    void *handle;
+
+    /* Holds pointers to plugin functions for running custom user code to manipulate the databases. */
+    const struct plugin_operations *ops;
+};
+
+/* plugin_arg is modified */
+struct plugin *load_plugin_library(char *plugin_arg, const size_t len);
+/* not exposing unload_plugin_library() */
+
+struct plugins {
+    struct plugin **plugins; /* list of struct plugin *; need array to go forward and backwards */
+    size_t count;
+    size_t initialized;      /* number of plugins to call global_exit() on */
+    size_t nthreads;
+    void ***user_data;       /* user_data[thread id][plugin index] */
+};
+
+/* DOES NOT call load_plugin_library() */
+struct plugins *plugins_init(struct plugins *plugins, const size_t count, const size_t nthreads);
+
+/* calls unload_plugin_library() */
+void plugins_destroy(struct plugins *plugins);
+
+/*
+ * Make sure all plugins have the correct type
+ *
+ * This should be called before plugins_global_init()
+ *
+ * @return success: return plugins->count
+ *         error:   return the index where the type is bad
+ */
+size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted);
+
+/*
+ * Run same plugin op for all plugins in the correct order
+ *
+ * @param global      single global object passed to global init/exit
+ * @param ctx         single common ctx across all plugins
+ * @param user_data   address of void * array
+ *
+ * plugins_global_init()
+ * @return plugins->initialized
+ *         on error, plugins_global_exit() is automatically called
+ */
+size_t plugins_global_init (struct plugins *plugins, void *global);
+void   plugins_ctx_init    (struct plugins *plugins, void *ctx, const size_t tid);
+void   plugins_process_dir (struct plugins *plugins, void *ctx, const size_t tid);
+void   plugins_process_file(struct plugins *plugins, void *ctx, const size_t tid);
+void   plugins_ctx_exit    (struct plugins *plugins, void *ctx, const size_t tid);
+void   plugins_global_exit (struct plugins *plugins, void *global);
 
 /* common plugin ptr struct (don't have to use; here to reduce duplicate struct definitions) */
 typedef struct PluginCommonStruct {

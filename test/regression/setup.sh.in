@@ -249,6 +249,10 @@ GUFI_UNROLLUP_DISTRIBUTED="${BINARY_DIR}/scripts/distributed/gufi_unrollup"
 # this is created and deleted by the test
 TEST_GUFI_JAIL="${CURRENT_BINARY_DIR}/gufi_jail"
 
+# not replaced
+# shellcheck disable=SC2034
+GUFI_PLUGIN_OPS="gufi_plugin_operations"
+
 AWK="@AWK@"
 COLUMN="@COLUMN@"
 DIFF="@DIFF@"

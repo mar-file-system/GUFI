@@ -105,6 +105,7 @@ struct NonDirArgs {
     str_t *index_parent;
 
     /* thread args */
+    size_t id;
     struct template_db *temp_db;
     struct template_db *temp_xattr;
     struct work *work;
@@ -126,12 +127,6 @@ struct NonDirArgs {
 
     /* list of xattr dbs */
     sll_t xattr_db_list;
-
-    /*
-     * an optional opaque pointer to user data for a plugin. if the plugin's ctx_init() function
-     * creates and returns a pointer, then the later plugin functions can use it to store state.
-     */
-    void *plugin_user_data;
 };
 
 static int process_external(struct input *in, void *args,
@@ -170,14 +165,13 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     /* add entry + xattr names into bulk insert */
     insertdbgo(entry, ed, nda->entries_res);
 
-    if (in->plugin_ops->process_file) {
-        PCS_t pcs = {
-            .db = nda->db,
-            .work = entry,
-            .ed = ed,
-        };
-        in->plugin_ops->process_file(&pcs, nda->plugin_user_data);
-    }
+    PCS_t pcs = {
+        .db = nda->db,
+        .work = entry,
+        .ed = ed,
+    };
+
+    plugins_process_file(&nda->in->plugins, &pcs, nda->id);
 
 out:
     return rc;
@@ -192,17 +186,13 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     struct NonDirArgs nda;
     nda.in         = &pa->in;
+    nda.id         = QPTPool_get_id(ctx);
     nda.temp_db    = &pa->db;
     nda.temp_xattr = &pa->xattr;
     nda.work       = NULL;
     memset(&nda.ed, 0, sizeof(nda.ed));
     nda.ed.type    = 'd';
-    nda.plugin_user_data = NULL;
-    nda.topath = (str_t) {
-        .data = NULL,
-        .len = 0,
-        .free = NULL,
-    };
+    nda.topath     = (str_t) REFSTR(NULL, 0);
 
     PCS_t pcs; /* references passed into plugin */
     memset(&pcs, 0, sizeof(pcs));
@@ -295,9 +285,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         startdb(nda.db);
 
         /* run light-weight plugin setup */
-        if (pa->in.plugin_ops->ctx_init) {
-            nda.plugin_user_data = pa->in.plugin_ops->ctx_init(&pcs);
-        }
+        plugins_ctx_init(&pa->in.plugins, &pcs, nda.id);
    }
 
     struct descend_counters ctrs;
@@ -336,17 +324,13 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                     nda.work, &nda.ed, &nda.summary);
 
         /* run plugin before destroying data */
-        if (pa->in.plugin_ops->process_dir) {
-            pa->in.plugin_ops->process_dir(&pcs, nda.plugin_user_data);
-        }
+        plugins_process_dir(&pa->in.plugins, &pcs, nda.id);
 
         if (nda.in->process_xattrs) {
             xattrs_cleanup(&nda.ed.xattrs);
         }
 
-        if (pa->in.plugin_ops->ctx_exit) {
-            pa->in.plugin_ops->ctx_exit(&pcs, nda.plugin_user_data);
-        }
+        plugins_ctx_exit(&pa->in.plugins, &pcs, nda.id);
 
         closedb(nda.db);
         nda.db = NULL;
@@ -540,13 +524,14 @@ int main(int argc, char *argv[]) {
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 1, "dir... GUFI_tree_parent", &pa.in);
 
-    if (check_plugin(pa.in.plugin_ops, PLUGIN_INDEX) != 1) {
+    if (plugins_check_type(&pa.in.plugins, PLUGIN_INDEX) != pa.in.plugins.count) {
         input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
-    if (pa.in.plugin_ops->global_init) {
-        pa.in.plugin_ops->global_init(&pa.in);
+    if (plugins_global_init(&pa.in.plugins, &pa.in) != pa.in.plugins.count) {
+        input_fini(&pa.in);
+        return EXIT_FAILURE;
     }
 
     /* parse positional args, following the options */
@@ -680,9 +665,7 @@ int main(int argc, char *argv[]) {
     close_template_db(&pa.db);
 
   cleanup:
-    if (pa.in.plugin_ops->global_exit) {
-        pa.in.plugin_ops->global_exit(&pa.in);
-    }
+    plugins_global_exit(&pa.in.plugins, &pa.in);
 
     input_fini(&pa.in);
 

@@ -1056,16 +1056,6 @@ int dir_match(struct input *in, struct stat *st) {
     return rc;
 }
 
-int check_plugin(const struct plugin_operations *ops, const plugin_type accepted) {
-    if ((ops->type != PLUGIN_NONE) &&
-        (ops->type != accepted)) {
-        fprintf(stderr, "Error: Bad plugin type. Expected %d. Got: %d\n",
-                accepted, ops->type);
-        return 0;
-    }
-    return 1;
-}
-
 DIR *opendir_wrapper(const char *name, const int print_eacces) {
     DIR *dir = opendir(name);
     if (!dir) {
@@ -1078,4 +1068,35 @@ DIR *opendir_wrapper(const char *name, const int print_eacces) {
     }
 
     return dir;
+}
+
+/*
+ * convert aggregated list of --plugin strings to a struct plugins
+ *
+ * on error, the plugins will be unloaded and the struct cleaned up (all or none)
+ * returns number of sucessfully loaded plugins
+ */
+size_t args_to_plugins(sll_t *args, struct plugins *plugins, const size_t nthreads) {
+    const size_t count = sll_get_size(args);
+
+    if (plugins_init(plugins, count, nthreads) != plugins) {
+        return 0;
+    }
+
+    size_t i = 0;
+    sll_loop(args, node) {
+        char *arg = (char *) sll_node_data(node);
+
+        struct plugin *plugin = load_plugin_library(arg, strlen(arg));
+        if (plugin) {
+            plugins->plugins[i++] = plugin;
+        }
+        else {
+            plugins->count = i;
+            plugins_destroy(plugins);
+            return i;
+        }
+    }
+
+    return count;
 }

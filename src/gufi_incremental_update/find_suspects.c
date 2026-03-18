@@ -220,7 +220,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     /* reindex the directory if it needs to be reindexed */
     if (ed.suspect == 1) {
-        reindex_dir(pa, work, &ed, dir);
+        reindex_dir(pa, work, &ed, dir, id);
     }
 
     closedir(dir);

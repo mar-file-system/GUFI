@@ -74,7 +74,7 @@ OF SUCH DAMAGE.
 /* reindex the source directory */
 int reindex_dir(struct PoolArgs *pa,
                 struct work *work, struct entry_data *ed,
-                DIR *dir) {
+                DIR *dir, const size_t id) {
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
                       &work->stat_called, 1, 1) != 0) {
         return 1;
@@ -120,10 +120,7 @@ int reindex_dir(struct PoolArgs *pa,
     };
 
     /* run light-weight plugin setup before information is available */
-    void *plugin_user_data = NULL;
-    if (pa->in.plugin_ops->ctx_init) {
-        plugin_user_data = pa->in.plugin_ops->ctx_init(&pcs);
-    }
+    plugins_ctx_init(&pa->in.plugins, &pcs, id);
 
     /*
      * loop over dirents, if link push it on the queue, if file or
@@ -194,14 +191,12 @@ int reindex_dir(struct PoolArgs *pa,
         sumit(&summary, child, &child_ed);
         insertdbgo(child, &child_ed, res);
 
-        if (pa->in.plugin_ops->process_file) {
-            PCS_t child_pcs = {
-                .db = db,
-                .work = child,
-                .ed = &child_ed,
-            };
-            pa->in.plugin_ops->process_file(&child_pcs, plugin_user_data);
-        }
+        PCS_t child_pcs = {
+            .db = db,
+            .work = child,
+            .ed = &child_ed,
+        };
+        plugins_process_file(&pa->in.plugins, &child_pcs, id);
 
         if (pa->in.process_xattrs) {
             xattrs_cleanup(&child_ed.xattrs);
@@ -216,17 +211,13 @@ int reindex_dir(struct PoolArgs *pa,
     insertsumdb(db, work->name, work, ed, &summary);
 
     /* run plugin before destroying data */
-    if (pa->in.plugin_ops->process_dir) {
-        pa->in.plugin_ops->process_dir(&pcs, plugin_user_data);
-    }
+    plugins_process_dir(&pa->in.plugins, &pcs, id);
 
     if (pa->in.process_xattrs) {
         xattrs_cleanup(&ed->xattrs);
     }
 
-    if (pa->in.plugin_ops->ctx_exit) {
-        pa->in.plugin_ops->ctx_exit(&pcs, plugin_user_data);
-    }
+    plugins_ctx_exit(&pa->in.plugins, &pcs, id);
 
     closedb(db);
 

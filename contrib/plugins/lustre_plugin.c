@@ -423,7 +423,7 @@ static void db_exit(void *ptr, void *user_data) {
     destroy_stripe_tracker(state);
 };
 
-struct plugin_operations GUFI_PLUGIN_SYMBOL = {
+struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_INDEX,
     .global_init = NULL,
     .ctx_init = db_init,

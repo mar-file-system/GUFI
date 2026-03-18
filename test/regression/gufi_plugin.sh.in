@@ -89,25 +89,45 @@ cleanup
 rm -rf "${SEARCH}"
 
 # generate the index
-run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_INDEXING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
+echo "# index with a plugin"
+run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
 
-echo
 echo "# test plugin summary output:"
 
 # make sure the querying plugin "did some set up with" plugin_test_summary and is accessible
-run_sort "${GUFI_QUERY} -d \" \" --plugin \"${GUFI_QUERYING_PLUGIN}\" -E \"SELECT * FROM plugin_query_view;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" --plugin \"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\" -E \"SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;\" \"${INDEXROOT}\" | sort -k1,1 -k2n"
+
+rm -rf "${SEARCH}"
+
+# generate the index
+echo "# index with two plugins"
+run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}\" --plugin \"${GUFI_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
+
+echo "# test plugin summary output:"
+
+# make sure the querying plugin "did some set up with" plugin_test_summary and is accessible
+run_no_sort "${GUFI_QUERY} -d \" \" --plugin \"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\" -E \"SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;\" \"${INDEXROOT}\" | sort -k1,1 -k2n"
 
 echo "# index with querying plugin"
-run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_QUERYING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\""
 
 echo "# query with indexing plugin"
-run_sort "${GUFI_QUERY} -d \" \" --plugin \"${GUFI_INDEXING_PLUGIN}\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" --plugin \"${GUFI_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}\" \"${INDEXROOT}\""
 
 echo "# bad plugin"
-run_no_sort "${GUFI_DIR2INDEX} --plugin \"${EMPTY_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 > /dev/null | @GREP@ -oh \"Could not open plugin library\""
+run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_PLUGIN_OPS}:${EMPTY_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 > /dev/null | @GREP@ -oh \"Could not open plugin library\""
+
+echo "# missing entry point"
+run_no_sort "${GUFI_DIR2INDEX} --plugin \":${GUFI_QUERYING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 | @GREP@ \"Error: \""
+
+echo "# missing file"
+run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_PLUGIN_OPS}:\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 | @GREP@ \"Error: \""
+
+echo "# plugin file not found"
+run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_PLUGIN_OPS}:${RUN_VT}.bad_ext\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 | @GREP@ \"Error: \"" | @SED@ 's%plugin library.*%plugin library%g;'
 
 echo "# plugin entry point not found"
-run_no_sort "${GUFI_DIR2INDEX} --plugin \"${RUN_VT}.@EXT@\" -x \"${SRCDIR}\" \"${SEARCH}\" > /dev/null 2>&1" | @SED@ "s%.@EXT@%%g;"
+run_no_sort "${GUFI_DIR2INDEX} --plugin \"${GUFI_PLUGIN_OPS}2:${GUFI_INDEXING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 | @GREP@ \"Error: \"" | @SED@ "s%plugin library.*%plugin library%g; s%.@EXT@%%g;"
 ) | remove_indexing_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_plugin.expected "${OUTPUT}"

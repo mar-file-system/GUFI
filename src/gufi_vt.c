@@ -137,7 +137,7 @@ typedef struct gufi_query_cmd {
 
     str_t path_list;    /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
     str_t p;            /* source path */
-    str_t plugin;       /* gufi_query plugin library path */
+    sll_t plugins;      /* gufi_query plugin library paths */
 
     sll_t indexroots;   /* list of index roots to pass to gufi_query */
 } gq_cmd_t;
@@ -145,11 +145,13 @@ typedef struct gufi_query_cmd {
 static void gq_cmd_init(gq_cmd_t *cmd) {
     memset(cmd, 0, sizeof(*cmd));
     sll_init(&cmd->remote_args);
+    sll_init(&cmd->plugins);
     sll_init(&cmd->indexroots);
 }
 
 static void gq_cmd_destroy(gq_cmd_t *cmd) {
     sll_destroy(&cmd->indexroots, NULL);  /* list of references to argv[i] */
+    sll_destroy(&cmd->plugins, NULL);     /* list of references to argv[i] */
     sll_destroy(&cmd->remote_args, free); /* list of allocated str_t */
     /* not freeing cmd here */
 }
@@ -254,7 +256,12 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         flatten_argv(argc, argv, "-G",                    cmd->G);
         flatten_argv(argc, argv, "-F",                    cmd->F);
         flatten_argv(argc, argv, "-p",                    cmd->p);
-        flatten_argv(argc, argv, "--plugin",              cmd->plugin);
+
+        sll_loop(&cmd->plugins, node) {
+            const char *plugin = (char *) sll_node_data(node);
+            write_with_resize(&flat, &size, &len,
+                              "--plugin '%s' ", plugin);
+        }
 
         sll_loop(&cmd->indexroots, node) {
             const char *indexroot = (char *) sll_node_data(node);
@@ -267,7 +274,8 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     else {
         /* can keep arguments separate */
 
-        max_argc = 37; /* 5 fixed args, 15 pairs of flags, 2 single argv flags */
+        max_argc = 35; /* 5 fixed args, 14 pairs of flags, 2 single argv flags */
+        max_argc += sll_get_size(&cmd->plugins) * 2;
         max_argc += sll_get_size(&cmd->indexroots);
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
@@ -333,7 +341,12 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         set_argv(argc, argv, "-G",                    cmd->G);
         set_argv(argc, argv, "-F",                    cmd->F);
         set_argv(argc, argv, "-p",                    cmd->p);
-        set_argv(argc, argv, "--plugin",              cmd->plugin);
+
+        sll_loop(&cmd->plugins, node) {
+            const char *plugin = (char *) sll_node_data(node);
+            argv[argc++] = "--plugin";
+            argv[argc++] = plugin;
+        }
 
         sll_loop(&cmd->indexroots, node) {
             const char *indexroot = (char *) sll_node_data(node);
@@ -782,6 +795,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     - If there are duplicate arguments, the right-most duplicate will be used
  *           - The following are exceptions and all values will be used in the order they appear:
  *                 - remote_arg
+ *                 - plugin
  *                 - index
  *     - At least one of T, S, or E must be passed in
  *     - When determining the virtual table's schema, there are two separate cases:
@@ -945,7 +959,10 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             sll_push_back(&cmd.indexroots, (char *) ir.data);
         }
         else if (strncmp(key, "plugin", 7) == 0) {
-            set_refstr(&cmd.plugin, value);
+            /* clean up plugin */
+            str_t plugin;
+            set_refstr(&plugin, value);
+            sll_push_back(&cmd.plugins, (char *) plugin.data);
         }
         else if (strncmp(key, "threads", 8) == 0) {
             /* let gufi_query check value */
@@ -1004,21 +1021,26 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         return SQLITE_CONSTRAINT;
     }
 
-    struct input in;
-    in.plugin_ops = &null_plugin_ops;
-    in.plugin_handle = NULL;
+    struct input in = {0};
 
-    if (cmd.plugin.len) {
-        if (load_plugin_library(&in, cmd.plugin.data) != 0) {
-            gq_cmd_destroy(&cmd);
-            return SQLITE_CONSTRAINT;
-        }
+    /* convert aggregated list of --plugin strings to a struct plugins */
+    if (args_to_plugins(&cmd.plugins, &in.plugins, 1) != sll_get_size(&cmd.plugins)) {
+        gq_cmd_destroy(&cmd);
+        input_fini(&in);
+        return SQLITE_CONSTRAINT;
+    }
 
-        if (check_plugin(in.plugin_ops, PLUGIN_QUERY) != 1) {
-            unload_plugin_library(&in);
-            gq_cmd_destroy(&cmd);
-            return SQLITE_CONSTRAINT;
-        }
+    if (plugins_check_type(&in.plugins, PLUGIN_QUERY) != in.plugins.count) {
+        plugins_destroy(&in.plugins);
+        gq_cmd_destroy(&cmd);
+        input_fini(&in);
+        return SQLITE_CONSTRAINT;
+    }
+
+    if (plugins_global_init(&in.plugins, &in) != in.plugins.count) {
+        plugins_destroy(&in.plugins);
+        gq_cmd_destroy(&cmd);
+        return SQLITE_CONSTRAINT;
     }
 
     /* get result column types */
@@ -1032,9 +1054,8 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
     in.process_xattrs = 1;
     in.source_prefix = cmd.p;
-    struct work work; /* unused */
-    memset(&work, 0, sizeof(work));
-    size_t count = 0; /* unused */
+    struct work work = {0}; /* unused */
+    size_t count = 0;       /* unused */
     setup_xattrs_views(&in, tempdb, &work, &count);
 
     int cols = 0;
@@ -1055,14 +1076,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         create_table_wrapper(SQLITE_MEMORY, tempdb, TREESUMMARY, TREESUMMARY_CREATE);
     }
 
-    if (in.plugin_ops->global_init) {
-        in.plugin_ops->global_init(&in);
-    }
-
-    void *plugin_user_data = NULL;
-    if (in.plugin_ops->ctx_init) {
-        plugin_user_data = in.plugin_ops->ctx_init(tempdb);
-    }
+    plugins_ctx_init(&in.plugins, tempdb, 0);
 
     /* before getting the column types, set up tables that don't exist yet in this temporary space */
     if (cmd.setup_res_col_type.len) {
@@ -1070,12 +1084,8 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         if (sqlite3_exec(tempdb, cmd.setup_res_col_type.data, NULL, NULL, &err) != SQLITE_OK) {
             *pzErr = sqlite3_mprintf("Setting up results table with '%s' failed: %s",
                                      cmd.setup_res_col_type.data, err);
-            if (in.plugin_ops->ctx_exit) {
-                in.plugin_ops->ctx_exit(tempdb, plugin_user_data);
-            }
-            gq_cmd_destroy(&cmd);
             sqlite3_free(err);
-            return SQLITE_CONSTRAINT;
+            goto error;
         }
     }
 
@@ -1140,15 +1150,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     free(names);
     free(types);
 
-    if (in.plugin_ops->ctx_exit) {
-        in.plugin_ops->ctx_exit(tempdb, plugin_user_data);
-    }
-
-    if (in.plugin_ops->global_exit) {
-        in.plugin_ops->global_exit(&in);
-    }
-
-    unload_plugin_library(&in);
+    plugins_ctx_exit(&in.plugins, tempdb, 0);
+    plugins_global_exit(&in.plugins, &in);
+    plugins_destroy(&in.plugins);
 
     closedb(tempdb);
 
@@ -1164,15 +1168,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     }
     free(types);
 
-    if (in.plugin_ops->ctx_exit) {
-        in.plugin_ops->ctx_exit(tempdb, plugin_user_data);
-    }
-
-    if (in.plugin_ops->global_exit) {
-        in.plugin_ops->global_exit(&in);
-    }
-
-    unload_plugin_library(&in);
+    plugins_ctx_exit(&in.plugins, tempdb, 0);
+    plugins_global_exit(&in.plugins, &in);
+    plugins_destroy(&in.plugins);
 
     closedb(tempdb);
     gq_cmd_destroy(&cmd);

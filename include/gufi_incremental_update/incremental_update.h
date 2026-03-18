@@ -110,7 +110,7 @@ int gen_index_snapshot(struct PoolArgs *pa, struct work *work); /* TODO: reuse g
  */
 int reindex_dir(struct PoolArgs *pa,
                 struct work *work, struct entry_data *ed,
-                DIR *dir);
+                DIR *dir, const size_t id);
 
 /* walk the current index and generate a readdirplus table in <snapshot>.tree */
 size_t gen_tree_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size);

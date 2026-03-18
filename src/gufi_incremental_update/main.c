@@ -168,14 +168,16 @@ int main(int argc, char *argv[]) {
     process_args_and_maybe_exit(options, 4, "GUFI_tree dir snapshotdb parking_lot", &pa.in);
 
     /* fail early */
-    if (check_plugin(pa.in.plugin_ops, PLUGIN_INCREMENTAL) != 1) {
+    if (plugins_check_type(&pa.in.plugins, PLUGIN_QUERY) != pa.in.plugins.count) {
         input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
     /* actually initialize after suspect file has been read */
-    if (pa.in.plugin_ops->global_init) {
-        pa.in.plugin_ops->global_init(&pa.in);
+
+    if (plugins_global_init(&pa.in.plugins, &pa.in) != pa.in.plugins.count) {
+        input_fini(&pa.in);
+        return EXIT_FAILURE;
     }
 
     /* parse positional args, following the options */

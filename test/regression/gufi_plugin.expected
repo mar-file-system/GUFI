@@ -1,11 +1,11 @@
-$ gufi_dir2index --plugin "indexing_plugin" -x "prefix" "search"
+# index with a plugin
+$ gufi_dir2index --plugin "gufi_plugin_operations:indexing_plugin" -x "prefix" "search"
 Creating GUFI tree search with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      14
 
-
 # test plugin summary output:
-$ gufi_query -d " " --plugin "querying_plugin" -E "SELECT * FROM plugin_query_view;" "prefix"
+$ gufi_query -d " " --plugin "gufi_plugin_operations:querying_plugin" -E "SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;" "prefix" | sort -k1,1 -k2n
 directory 1
 directory 1
 directory 1
@@ -19,18 +19,52 @@ file 2
 file 3
 file 6
 
+# index with two plugins
+$ gufi_dir2index --plugin "gufi_plugin_operations:indexing_plugin" --plugin "gufi_plugin_operations:indexing_plugin" -x "prefix" "search"
+Creating GUFI tree search with 1 threads
+Total Dirs:          6
+Total Non-Dirs:      14
+
+# test plugin summary output:
+$ gufi_query -d " " --plugin "gufi_plugin_operations:querying_plugin" -E "SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;" "prefix" | sort -k1,1 -k2n
+directory 2
+directory 2
+directory 2
+directory 2
+directory 2
+directory 2
+file 0
+file 2
+file 4
+file 4
+file 6
+file 12
+
 # index with querying plugin
-$ gufi_dir2index --plugin "querying_plugin" -x "prefix" "search"
-Error: Bad plugin type. Expected 1. Got: 2
+$ gufi_dir2index --plugin "gufi_plugin_operations:querying_plugin" -x "prefix" "search"
+Error: "querying_plugin" has bad plugin type. Expected 1. Got: 2
 
 # query with indexing plugin
-$ gufi_query -d " " --plugin "indexing_plugin" "prefix"
-Error: Bad plugin type. Expected 2. Got: 1
+$ gufi_query -d " " --plugin "gufi_plugin_operations:indexing_plugin" "prefix"
+Error: "indexing_plugin" has bad plugin type. Expected 2. Got: 1
 
 # bad plugin
-$ gufi_dir2index --plugin "empty_plugin" -x "prefix" "search" 2>&1 > /dev/null | grep -oh "Could not open plugin library"
+$ gufi_dir2index --plugin "gufi_plugin_operations:empty_plugin" -x "prefix" "search" 2>&1 > /dev/null | grep -oh "Could not open plugin library"
 Could not open plugin library
 
+# missing entry point
+$ gufi_dir2index --plugin ":querying_plugin" -x "prefix" "search" 2>&1 | grep "Error: "
+Error: Bad plugin filename
+
+# missing file
+$ gufi_dir2index --plugin "gufi_plugin_operations:" -x "prefix" "search" 2>&1 | grep "Error: "
+Error: Bad plugin filename
+
+# plugin file not found
+$ gufi_dir2index --plugin "gufi_plugin_operations:run_vt.bad_ext" -x "prefix" "search" 2>&1 | grep "Error: "
+Error: Could not open plugin library
+
 # plugin entry point not found
-$ gufi_dir2index --plugin "run_vt" -x "prefix" "search" > /dev/null 2>&1
+$ gufi_dir2index --plugin "gufi_plugin_operations2:indexing_plugin" -x "prefix" "search" 2>&1 | grep "Error: "
+Error: Could not find exported operations "gufi_plugin_operations2" in the plugin library
 

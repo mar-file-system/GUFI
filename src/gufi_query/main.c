@@ -296,19 +296,18 @@ int main(int argc, char *argv[])
     struct input in;
     process_args_and_maybe_exit(options, 0, "GUFI_tree...", &in);
 
-    if (check_plugin(in.plugin_ops, PLUGIN_QUERY) != 1) {
+    if (plugins_check_type(&in.plugins, PLUGIN_QUERY) != in.plugins.count) {
         input_fini(&in);
         return EXIT_FAILURE;
     }
 
-    if (in.plugin_ops->global_init) {
-        in.plugin_ops->global_init(&in);
+    if (plugins_global_init(&in.plugins, &in) != in.plugins.count) {
+        input_fini(&in);
+        return EXIT_FAILURE;
     }
 
     if (handle_sql(&in) != 0) {
-        if (in.plugin_ops->global_exit) {
-            in.plugin_ops->global_exit(&in);
-        }
+        plugins_global_exit(&in.plugins, &in);
         input_fini(&in);
         return EXIT_FAILURE;
     }
@@ -316,9 +315,7 @@ int main(int argc, char *argv[])
     const size_t root_count = in.pos.argc;
 
     if (bad_partial_walk(&in, root_count)) {
-        if (in.plugin_ops->global_exit) {
-            in.plugin_ops->global_exit(&in);
-        }
+        plugins_global_exit(&in.plugins, &in);
         input_fini(&in);
         return EXIT_FAILURE;
     }
@@ -327,6 +324,7 @@ int main(int argc, char *argv[])
     pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
     PoolArgs_t pa;
     if (PoolArgs_init(&pa, &in, &global_mutex) != 0) {
+        plugins_global_exit(&in.plugins, &in);
         return EXIT_FAILURE;
     }
 

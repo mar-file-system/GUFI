@@ -136,9 +136,6 @@ struct input *input_init(struct input *in) {
         in->swap_prefix.data = (char *) DEFAULT_SWAP_PREFIX;
         in->swap_prefix.len  = 0;
         in->swap_prefix.free = NULL;
-
-        in->plugin_ops = &null_plugin_ops;
-        in->plugin_handle = NULL;
     }
 
     return in;
@@ -155,7 +152,7 @@ void input_fini(struct input *in) {
         free(in->types.tsum);
         sll_destroy(&in->external_attach, free);
         trie_free(in->skip);
-        unload_plugin_library(in);
+        plugins_destroy(&in->plugins);
     }
     sqlite3_shutdown();
 }
@@ -249,7 +246,7 @@ void print_help(const char* prog_name,
             case FLAG_KEEP_MATIME_SHORT:             printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
             case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
             case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
-            case FLAG_PLUGIN_SHORT:                  printf("      --plugin <library_name>       plugin library for modifying tree processing"); break;
+            case FLAG_PLUGIN_SHORT:                  printf("      --plugin <entrypoint>:<path>  plugin library for modifying tree processing"); break;
             case FLAG_PATH_LIST_SHORT:               printf("      --path-list <filename>        File containing paths at single level to walk (not including starting path). If --min-level > 0, prepend each line of the file with the index path."); break;
             case FLAG_FORMAT_SHORT:                  printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
             case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
@@ -333,6 +330,11 @@ void show_input(struct input* in, int retval) {
     printf("in.keep_matime              = %d\n",            in->keep_matime);
     printf("in.skip_count               = %zu\n",           in->skip_count);
     printf("in.dry_run                  = %d\n",            in->dry_run);
+
+    for(i = 0; i < in->plugins.count; i++) {
+        printf("in.plugins[%zu]         = '%s'\n",          i, in->plugins.plugins[i]->filename);
+    }
+
     printf("in.path_list                = '%s'\n",          in->path_list.data);
     printf("in.format_set               = %d\n",            in->format_set);
     printf("in.format                   = '%s'\n",          in->format.data);
@@ -425,6 +427,11 @@ int parse_cmd_line(int                  argc,
                    const char*          positional_args_help_str,
                    struct input*        in) {
     input_init(in);
+
+    /* list of plugins strings to be converted to array of plugin instances */
+    sll_t plugins;
+    sll_init(&plugins);
+
     char *getopt_str = build_getopt_str(options);
 
     int show                    = 0;
@@ -616,9 +623,7 @@ int parse_cmd_line(int                  argc,
                 break;
 
             case FLAG_PLUGIN_SHORT:
-                if (load_plugin_library(in, optarg)) {
-                    retval = -1;
-                }
+                sll_push_back(&plugins, optarg);
                 break;
 
             case FLAG_PATH_LIST_SHORT:
@@ -759,6 +764,14 @@ int parse_cmd_line(int                  argc,
         };
     }
     free(getopt_str);
+
+    /* convert aggregated list of --plugin strings to a struct plugins */
+    if (retval == 0) {
+        retval = -(args_to_plugins(&plugins, &in->plugins, in->maxthreads) != sll_get_size(&plugins));
+    }
+
+    /* original list of plugin strings is no longer needed */
+    sll_destroy(&plugins, NULL);
 
     // if there were no other errors,
     // make sure min_level <= max_level

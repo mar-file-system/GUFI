@@ -136,9 +136,7 @@ int PoolArgs_init(struct PoolArgs *pa) {
 void PoolArgs_fini(struct PoolArgs *pa) {
     QPTPool_stop(pa->ctx);
     QPTPool_destroy(pa->ctx);
-    if (pa->in.plugin_ops && pa->in.plugin_ops->global_exit) {
-        pa->in.plugin_ops->global_exit(&pa->in);
-    }
+    plugins_global_exit(&pa->in.plugins, &pa->in);
     trie_free(pa->suspects.fl.inodes);
     trie_free(pa->suspects.dir.inodes);
     input_fini(&pa->in);

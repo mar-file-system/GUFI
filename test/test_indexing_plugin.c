@@ -99,9 +99,9 @@ static void *db_init(void *ptr) {
     struct state *state = new_state();
 
     const char *text =
-        "CREATE TABLE plugin_test_files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT);"
-        "CREATE TABLE plugin_test_directories (id INTEGER PRIMARY KEY AUTOINCREMENT, dirname TEXT);"
-        "CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));";
+        "CREATE TABLE IF NOT EXISTS plugin_test_files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT);"
+        "CREATE TABLE IF NOT EXISTS plugin_test_directories (id INTEGER PRIMARY KEY AUTOINCREMENT, dirname TEXT);"
+        "CREATE TABLE IF NOT EXISTS plugin_test_summary (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));";
     char *error = NULL;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
@@ -179,7 +179,7 @@ static void process_dir(void *ptr, void *user_data) {
     sqlite3_free(error);
 }
 
-struct plugin_operations GUFI_PLUGIN_SYMBOL = {
+struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_INDEX,
     .global_init = NULL,
     .ctx_init = db_init,

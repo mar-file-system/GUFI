@@ -575,14 +575,7 @@ struct input {
      */
     int dont_reprocess;
 
-    /*
-     * Holds pointers to plugin functions for running custom user code to manipulate the databases.
-     * These will be NULL if no plugin was specified.
-     */
-    const struct plugin_operations *plugin_ops;
-
-    /* A handle to a plugin shared library, or NULL if no plugin is being used. */
-    void *plugin_handle;
+    struct plugins plugins;
 
     /* only used by parallel_find */
     int filter_types;
