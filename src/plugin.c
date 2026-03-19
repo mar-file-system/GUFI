@@ -76,6 +76,10 @@ OF SUCH DAMAGE.
  * Returns 0 on success or 1 on failure.
  */
 struct plugin *load_plugin_library(char *plugin_arg, const size_t len) {
+    if (!plugin_arg || !len) {
+        return NULL;
+    }
+
     const char *end = plugin_arg + len;
     char *filename = NULL;
     char *entrypoint = strtok_r(plugin_arg, ":", &filename);
@@ -113,11 +117,25 @@ struct plugin *load_plugin_library(char *plugin_arg, const size_t len) {
 }
 
 static void unload_plugin_library(struct plugin *plugin) {
-    dlclose(plugin->handle);
+    /* Not checking argument */
+
+    /*
+     * this null check is only useful for testing
+     *
+     * this function is only called if the plugin valid
+     */
+    if (plugin->handle) {
+        dlclose(plugin->handle);
+    }
     free(plugin);
 }
 
 struct plugins *plugins_init(struct plugins *plugins, const size_t count, const size_t nthreads) {
+    /* nthreads cannot be 0 */
+    if (!plugins || !nthreads) {
+        return NULL;
+    }
+
     memset(plugins, 0, sizeof(*plugins));
 
     void ***user_data = calloc(nthreads, sizeof(*plugins->user_data));
@@ -130,9 +148,9 @@ struct plugins *plugins_init(struct plugins *plugins, const size_t count, const 
             user_data[i] = calloc(count, sizeof(**user_data));
             if (!user_data[i]) {
                 for(size_t j = 0; j < i; j++) {
-                    free(plugins->user_data[j]);
+                    free(user_data[j]);
                 }
-                free(plugins->user_data);
+                free(user_data);
                 return NULL;
             }
         }
@@ -148,6 +166,8 @@ struct plugins *plugins_init(struct plugins *plugins, const size_t count, const 
 }
 
 void plugins_destroy(struct plugins *plugins) {
+    /* Not checking arguments */
+
     /* stack unwind */
     for(size_t i = plugins->count; i > 0; i--) {
         unload_plugin_library(plugins->plugins[i - 1]);
@@ -166,6 +186,8 @@ void plugins_destroy(struct plugins *plugins) {
 }
 
 static int plugin_check_type(struct plugin *plugin, const plugin_type accepted) {
+    /* Not checking arguments */
+
     if ((plugin->ops->type != PLUGIN_NONE) &&
         (plugin->ops->type != accepted)) {
         fprintf(stderr, "Error: \"%s\" has bad plugin type. Expected %d. Got: %d\n",
@@ -176,6 +198,8 @@ static int plugin_check_type(struct plugin *plugin, const plugin_type accepted) 
 }
 
 size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted) {
+    /* Not checking arguments */
+
     for(size_t i = 0; i < plugins->count; i++) {
         if (!plugin_check_type(plugins->plugins[i], accepted)) {
             return i;
@@ -185,6 +209,8 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted) {
 }
 
 size_t plugins_global_init(struct plugins *plugins, void *global) {
+    /* Not checking arguments */
+
     for(size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->global_init) {
             if (plugins->plugins[i]->ops->global_init(global) != 0) {
@@ -199,6 +225,8 @@ size_t plugins_global_init(struct plugins *plugins, void *global) {
 }
 
 void plugins_ctx_init(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
     for(size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->ctx_init) {
             plugins->user_data[tid][i] = plugins->plugins[i]->ops->ctx_init(ctx);
@@ -207,6 +235,8 @@ void plugins_ctx_init(struct plugins *plugins, void *ctx, const size_t tid) {
 }
 
 void plugins_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
     for(size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->process_dir) {
             plugins->plugins[i]->ops->process_dir(ctx, plugins->user_data[tid][i]);
@@ -215,6 +245,8 @@ void plugins_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
 }
 
 void plugins_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
     for(size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->process_file) {
             plugins->plugins[i]->ops->process_file(ctx, plugins->user_data[tid][i]);
@@ -223,6 +255,8 @@ void plugins_process_file(struct plugins *plugins, void *ctx, const size_t tid) 
 }
 
 void plugins_ctx_exit(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
     /* stack unwind */
     for(size_t i = plugins->count; i > 0; i--) {
         if (plugins->plugins[i - 1]->ops->ctx_exit) {
@@ -234,6 +268,8 @@ void plugins_ctx_exit(struct plugins *plugins, void *ctx, const size_t tid) {
 }
 
 void plugins_global_exit(struct plugins *plugins, void *global) {
+    /* Not checking arguments */
+
     /* stack unwind */
     for(size_t i = plugins->initialized; i > 0; i--) {
         if (plugins->plugins[i - 1]->ops->global_exit) {
