@@ -592,7 +592,7 @@ static int revert_marfs_index(void) {
 }
 
 // marfs_indexing_global_init reads the marfs config and adds the namespaces to a global state.
-static void marfs_indexing_global_init(void* global) {
+static int marfs_indexing_global_init(void* global) {
     struct input* in = (struct input*)global;
     pthread_mutex_t marfs_erasurelock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -603,7 +603,7 @@ static void marfs_indexing_global_init(void* global) {
     // marfs configs
     if (in->pos.argc != 2) {
         fprintf(stderr, "Error: Marfs plugin requires exactly 2 paths\n");
-        exit(EXIT_FAILURE);
+        return ret;
     }
 
     // add index parent and root namespace to global state
@@ -676,8 +676,9 @@ static void marfs_indexing_global_init(void* global) {
 cleanup:
     if (ret != 0) {
         marfs_plugin_cleanup();
-        exit(EXIT_FAILURE);
     }
+
+    return ret;
 }
 
 // simple check to determine if a provided file path is a namespace in the marfs config
@@ -706,9 +707,8 @@ static int is_namespace(str_t path) {
 
 // marfs_pre_processing_dir checks if we're about to process a marfs specific directory (MDAL_reference, MDAL_subspaces)
 // or a namespace that is no longer active in the marfs config
-static plugin_process_action marfs_pre_processing_dir(void* ptr, void* user_data) {
+static plugin_process_action marfs_pre_processing_dir(void* ptr) {
     PCS_t* pcs = (PCS_t*)ptr;
-    (void)user_data;
 
     if (!pcs || !pcs->work || !pcs->work->name) {
         fprintf(stderr, "Error: gufi pcs is NULL\n");
