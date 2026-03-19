@@ -235,7 +235,7 @@ plugin_process_action plugins_pre_process_dir(struct plugins* plugins, void* ctx
         if (plugins->plugins[i]->ops->pre_process_dir) {
             plugin_process_action ppa = plugins->plugins[i]->ops->pre_process_dir(ctx);
 
-            // return the result from whichever plugin has the highest restriction
+            // choose the most restrictive action returned by any plugin
             if (ppa > ret) {
                 ret = ppa;
             }
