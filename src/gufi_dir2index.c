@@ -219,11 +219,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     plugin_process_action process_dir = PLUGIN_NO_PROCESS_DIR;
 
     if (pa->in.min_level <= nda.work->level && nda.work->level <= pa->in.max_level) {
-        if (pa->in.plugin_ops->pre_process_dir) {
-            process_dir = pa->in.plugin_ops->pre_process_dir(&pcs, &nda.plugin_user_data);
-        } else {
-            process_dir = PLUGIN_PROCESS_DIR;
-        }
+        process_dir = plugins_pre_process_dir(&pa->in.plugins, &pcs);
     }
 
     /* offset by work->root_len to remove prefix */

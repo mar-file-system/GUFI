@@ -228,6 +228,23 @@ size_t plugins_global_init(struct plugins *plugins, void *global) {
     return plugins->initialized;
 }
 
+plugin_process_action plugins_pre_process_dir(struct plugins* plugins, void* ctx) {
+    plugin_process_action ret = PLUGIN_PROCESS_DIR;
+
+    for (size_t i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->pre_process_dir) {
+            plugin_process_action ppa = plugins->plugins[i]->ops->pre_process_dir(ctx);
+
+            // return the result from whichever plugin has the highest restriction
+            if (ppa > ret) {
+                ret = ppa;
+            }
+        }
+    }
+
+    return ret;
+}
+
 void plugins_ctx_init(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 

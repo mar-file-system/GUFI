@@ -110,7 +110,7 @@ struct plugin_operations {
     int (*global_init)(void *global);
 
     /* Pre-process a directory */
-    plugin_process_action (*pre_process_dir)(void *ptr, void *user_data);
+    plugin_process_action (*pre_process_dir)(void *ptr);
 
     /*
      * Give the user an opportunity to initialize any state for the
@@ -187,12 +187,13 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted);
  *         on error, stop, call plugins_global_exit() for previously
  *         successfully initialized plugins, and return error
  */
-size_t plugins_global_init (struct plugins *plugins, void *global);
-void   plugins_ctx_init    (struct plugins *plugins, void *ctx, const size_t tid);
-void   plugins_process_dir (struct plugins *plugins, void *ctx, const size_t tid);
-void   plugins_process_file(struct plugins *plugins, void *ctx, const size_t tid);
-void   plugins_ctx_exit    (struct plugins *plugins, void *ctx, const size_t tid);
-void   plugins_global_exit (struct plugins *plugins, void *global);
+size_t                plugins_global_init    (struct plugins* plugins, void* global);
+plugin_process_action plugins_pre_process_dir(struct plugins* plugins, void* ctx);
+void                  plugins_ctx_init       (struct plugins* plugins, void* ctx, const size_t tid);
+void                  plugins_process_dir    (struct plugins* plugins, void* ctx, const size_t tid);
+void                  plugins_process_file   (struct plugins* plugins, void* ctx, const size_t tid);
+void                  plugins_ctx_exit       (struct plugins* plugins, void* ctx, const size_t tid);
+void                  plugins_global_exit    (struct plugins* plugins, void* global);
 
 /* common plugin ptr struct (don't have to use; here to reduce duplicate struct definitions) */
 typedef struct PluginCommonStruct {
