@@ -39,6 +39,12 @@ GUFI query is
 $ gufi_stat --terse "prefix/.hidden"
 prefix/.hidden 10 0 81b4 1001 1001 ? 10 1 0 0 10 10 10 0 0
 
+$ gufi_stat 'prefix/*/' | grep 'File: '
+  File: 'prefix/directory/'
+  File: 'prefix/empty_directory/'
+  File: 'prefix/leaf_directory/'
+  File: 'prefix/unusual#? directory ,/'
+
 $ gufi_stat prefix/bad/directory
 Cannot open database: prefix/bad/db.db unable to open database file rc 14
 gufi_stat: cannot stat 'prefix/bad/directory': No such file or directory

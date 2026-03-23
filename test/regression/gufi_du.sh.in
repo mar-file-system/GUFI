@@ -105,7 +105,7 @@ set -e
 echo "#####################################"
 echo "# Run gufi_du without treesummary data"
 echo
-do_tests "${SRCDIR}"
+do_tests "${BASENAME}"
 echo "#####################################"
 echo
 echo "#####################################"
@@ -113,18 +113,18 @@ echo "# Generate treesummary in only one directory"
 echo
 run_no_sort "${GUFI_TREESUMMARY} ${INDEXROOT}/directory" | @SED@ '\%.*uid.*%d; \%.*ctime.*%d; s%crtime [0-9]\+%crtime 0%g; \%.*blocks*%d;'
 echo "# Run gufi_du on that the single directory that has treesummary data (success)"
-run_no_sort "${GUFI_DU} --apparent-size --block-size 1 ${SRCDIR}/directory"
+run_no_sort "${GUFI_DU} --apparent-size --block-size 1 ${BASENAME}/directory"
 echo "# Run gufi_du on the parent directory (only prints size of path with treesummary data)"
-run_no_sort "${GUFI_DU} --apparent-size --block-size 1 ${SRCDIR}"
+run_no_sort "${GUFI_DU} --apparent-size --block-size 1 ${BASENAME}"
 echo "# Summarize the subtree starting at the parent (fails)"
-run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --summarize ${SRCDIR}"
+run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --summarize ${BASENAME}"
 echo "#####################################"
 echo
 echo "#####################################"
 echo "# Generate treesummary in all directories"
 echo
 run_no_sort "${GUFI_TREESUMMARY_ALL} ${SEARCH}"
-treesummary=$(do_tests "${SRCDIR}")
+treesummary=$(do_tests "${BASENAME}")
 echo "${treesummary}"
 echo "#####################################"
 echo
@@ -132,7 +132,7 @@ echo "#####################################"
 echo "# Run gufi_du from rolled up tree"
 echo
 run_no_sort "${GUFI_ROLLUP} \"${SEARCH}\" > /dev/null 2>&1"
-rollup=$(do_tests "${SRCDIR}")
+rollup=$(do_tests "${BASENAME}")
 echo "${rollup}"
 echo "#####################################"
 echo
@@ -143,8 +143,13 @@ echo
 echo "#####################################"
 echo
 echo "#####################################"
+echo "# Run gufi_du with a glob"
+do_tests "${BASENAME}/*/"
+echo "#####################################"
+echo
+echo "#####################################"
 echo "# Run gufi_du on a file path"
-do_tests "${SRCDIR}/1MB" "${SRCDIR}/1KB"
+do_tests "${BASENAME}/1MB" "${BASENAME}/1KB"
 echo "#####################################"
 echo
 echo "#####################################"
@@ -156,8 +161,8 @@ echo "# Non-existent path is discovered"
 run_no_sort "${GUFI_DU} \"non/existent/path\""
 echo "# Outside of index"
 run_no_sort "${GUFI_DU} \"..\""
-run_no_sort "${GUFI_DU} --inodes --apparent-size \"${SRCDIR}\" | sort -k 2"
-run_no_sort "${GUFI_DU} --inodes --block-size 1  \"${SRCDIR}\" | sort -k 2"
+run_no_sort "${GUFI_DU} --inodes --apparent-size \"${BASENAME}\" | sort -k 2"
+run_no_sort "${GUFI_DU} --inodes --block-size 1  \"${BASENAME}\" | sort -k 2"
 echo "# Verbose Output"
 # shellcheck disable=SC2145
 run_no_sort "${GUFI_DU} --apparent-size --block-size 1 --total --summarize --verbose ${paths[@]}"

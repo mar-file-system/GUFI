@@ -552,6 +552,9 @@ prefix/unusual#? directory , 31536000;31536000:1;
 $ gufi_stats -c --reftime 31536000 dir-age-ctime-hist "prefix"
 31536000;31536000:1;
 
+$ gufi_stats -c total-filesize "prefix/*/"
+49
+
 $ gufi_stats -c depth "prefix"
 --cumulative/-c has no effect on "depth" statistic
 1

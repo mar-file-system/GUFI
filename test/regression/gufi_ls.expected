@@ -380,6 +380,15 @@ $ gufi_ls -l --block-size=1KiB prefix/1KB
 $ gufi_ls -lh prefix/old_file
 -rw-rw-r-- 1 user group 0.0 Jan   1  1970 old_file
 
+$ gufi_ls 'prefix/*/'
+executable
+leaf_file1
+leaf_file2
+readonly
+subdirectory
+unusual, name?#
+writable
+
 $ gufi_ls --block-size=YiB 2>&1 | tail -n 1
 gufi_ls: error: argument --block-size: Invalid --block-size argument: 'YiB'
 

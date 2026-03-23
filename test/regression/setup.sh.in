@@ -79,7 +79,7 @@ CURRENT_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
 
 . "${CURRENT_BINARY_DIR}/os_specific.sh"
 
-SRCDIR="prefix"
+SRCDIR="prefix" # DO NOT use this in user facing script tests
 # some realpath implementations don't allow for nonexistent paths
 mkdir -p "${SRCDIR}"
 SRCDIR_REALPATH="$(realpath ${SRCDIR})"

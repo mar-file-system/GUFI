@@ -222,14 +222,8 @@ def run(argv, config_path):
 
     # process one input arg at a time
     # not sure if it makes sense/is possible to process all at once
-    for path in args.path:
-        dirname = config.indexroot
-        if path != '.':
-            dirname = os.path.join(config.indexroot, path.rstrip('/'))
-
-        # keep only paths that are subdirectories of the index root
-        if not gufi_common.in_index(dirname, config.indexroot, path):
-            continue
+    for path in gufi_common.clean_paths(config, args.path):
+        dirname = path[:]
 
         processed_paths += 1
 

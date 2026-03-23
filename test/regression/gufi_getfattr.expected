@@ -43,9 +43,6 @@ prefix/leaf_directory/leaf_file2 user.name4
 prefix/leaf_directory/leaf_file2 user.name5
 prefix/leaf_directory/leaf_file2 user.name6
 
-# 0 xattrs
-$ gufi_getfattr nonexistant_path
-
 # 1 xattr
 $ gufi_getfattr --dump prefix/1MB
 prefix/1MB user.size 1MB

@@ -281,23 +281,17 @@ def run(argv, config_path):
     # if treesummary is found, will not include rounding up
     total_blocks = 0
 
-    for path in args.paths[0]:
+    for path in gufi_common.clean_paths(config, args.paths[0]):
         # track how many rows were returned
         # if rows == 0, index might not have treesummary
         rows = 0
 
-        # prepend the provided paths with the index root
-        fullpath = os.path.normpath(os.path.sep.join([config.indexroot, path]))
-
-        # keep only paths that are subdirectories of the index root
-        if not gufi_common.in_index(fullpath, config.indexroot, path):
-            continue
-
+        fullpath = path[:]
         basename = None
         if not os.path.isdir(fullpath):
             fullpath, basename = fullpath.rsplit(os.path.sep, 1)
             if not os.path.isdir(fullpath):
-                sys.stderr.write('"{0}" is not a path\n'.format(path))
+                sys.stderr.write('"{0}" is not a path\n'.format(path[len(config.indexroot) + 1:]))
                 continue
 
         processed_paths += 1
@@ -378,7 +372,7 @@ def run(argv, config_path):
 
         if rows == 0:
             sys.stderr.write('Warning: Did not get any results from gufi_query.\n')
-            sys.stderr.write('Does "{0}" have treesummary data?\n'.format(path))
+            sys.stderr.write('Does "{0}" have treesummary data?\n'.format(path[len(config.indexroot) + 1:]))
 
     # print total size of all input directories
     if args.total:

@@ -62,6 +62,7 @@
 
 
 import argparse
+import glob
 import grp
 import os
 import pwd
@@ -435,3 +436,26 @@ def in_index(path, indexroot, orig, severity='Warning'):
         sys.stderr.write('{0}: Ignoring path "{1}", which is not under index root "{2}"\n'.format(severity, orig, indexroot))
         return False
     return True
+
+# convert input paths to index paths
+def clean_paths(config, paths, severity='Warning'):
+    cleaned = []
+
+    for path in paths:
+        # prepend input path with indexroot
+        if path in ['', '.']:
+            prepended = config.indexroot
+        else:
+            prepended = os.path.sep.join([config.indexroot, path])
+
+        # expand any globs found
+        expanded = glob.glob(prepended)
+
+        if len(expanded) == 0:
+            cleaned += [prepended]
+        else:
+            for e in expanded:
+                if in_index(e, config.indexroot, path, severity):
+                    cleaned += [e]
+
+    return cleaned

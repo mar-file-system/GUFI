@@ -256,21 +256,14 @@ def run(argv, config_path):
     # make sure at least one path was processed
     processed_paths = 0
 
-    for path in args.paths[0]:
-        # prepend the provided paths with the index root
-        fullpath = os.path.normpath(os.path.sep.join([config.indexroot, path]))
-
-        # keep only paths that are subdirectories of the index root
-        if not gufi_common.in_index(fullpath, config.indexroot, path):
-            continue
-
+    for path in gufi_common.clean_paths(config, args.paths[0]):
         processed_paths += 1
 
         match_name = None
 
-        if not os.path.isdir(fullpath):
+        if not os.path.isdir(path):
             # split the path up for matching
-            fullpath, match_name = os.path.split(fullpath)
+            path, match_name = os.path.split(path)
 
         # create the base command
         query_cmd = [
@@ -433,9 +426,9 @@ def run(argv, config_path):
             query_cmd += ['--skip-file', args.skip]
 
         if args.verbose:
-            gufi_common.print_query(query_cmd + [fullpath])
+            gufi_common.print_query(query_cmd + [path])
 
-        query = subprocess.Popen(query_cmd + [fullpath]) # pylint: disable=consider-using-with
+        query = subprocess.Popen(query_cmd + [path]) # pylint: disable=consider-using-with
         query.communicate()                              # block until query finishes
 
         if query.returncode != 0:

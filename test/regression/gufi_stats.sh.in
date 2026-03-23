@@ -219,6 +219,9 @@ run_no_sort "${GUFI_STATS}    --reftime 31536000 dir-age-ctime-hist \"${BASENAME
 run_no_sort "${GUFI_STATS} -r --reftime 31536000 dir-age-ctime-hist \"${BASENAME}\""
 run_no_sort "${GUFI_STATS} -c --reftime 31536000 dir-age-ctime-hist \"${BASENAME}\""
 
+# glob
+run "${GUFI_STATS} -c total-filesize \"${BASENAME}/*/\""
+
 # bad flags
 run "${GUFI_STATS} -c depth \"${BASENAME}\""
 run "${GUFI_STATS} -r total-filesize \"${BASENAME}\""

@@ -175,6 +175,9 @@ run_no_sort "${GUFI_LS} --block-size=1KiB ${BASENAME}/1KB"
 
 ) | @SED@ "s%${USER_NAME} ${GROUP_NAME}%${TEST_USER_NAME} ${TEST_GROUP_NAME}%g; s%${USER_NAME}%${TEST_USER_NAME}%g;"
 
+# glob
+run_sort "${GUFI_LS} '${BASENAME}/*/'"
+
 # bad blocksizes
 run_no_sort "${GUFI_LS} --block-size=YiB 2>&1 | tail -n 1"
 run_no_sort "${GUFI_LS} --block-size=- 2>&1 | tail -n 1"

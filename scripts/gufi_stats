@@ -63,7 +63,6 @@
 
 from collections import OrderedDict
 import argparse
-import os
 import subprocess
 import sys
 import time
@@ -1597,7 +1596,7 @@ def run(argv, config_path):
                         help='statistic to get')
     parser.add_argument('path',
                         type=str,
-                        nargs='?',
+                        nargs='+',
                         default='')
 
     gufi_common.add_common_flags(parser)
@@ -1612,11 +1611,7 @@ def run(argv, config_path):
     if (args.recursive or args.cumulative) and (args.stat in [key for key, _ in OTHERS]):
         sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{0}" statistic\n'.format(args.stat))
 
-    # prepend the provided paths with the GUFI root path
-    prefixed_path = os.path.sep.join([config.indexroot, args.path])
-
-    if not gufi_common.in_index(prefixed_path, config.indexroot, args.path, 'Error'):
-        return 1
+    paths = gufi_common.clean_paths(config, args.path, 'Error')
 
     # create the query command
     query_cmd = [
@@ -1631,10 +1626,10 @@ def run(argv, config_path):
         query_cmd += ['--skip-file', args.skip]
 
     if args.verbose:
-        gufi_common.print_query(query_cmd + [prefixed_path])
+        gufi_common.print_query(query_cmd + paths)
 
-    query = subprocess.Popen(query_cmd + [prefixed_path]) # pylint: disable=consider-using-with
-    query.communicate()                                   # block until query finishes
+    query = subprocess.Popen(query_cmd + paths) # pylint: disable=consider-using-with
+    query.communicate()                         # block until query finishes
 
     return query.returncode
 

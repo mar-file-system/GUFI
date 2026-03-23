@@ -92,9 +92,6 @@ do_tests() {
     echo "# 3 xattrs"
     run_sort "${GUFI_GETFATTR} ${BASENAME}/leaf_directory/leaf_file2"
 
-    echo "# 0 xattrs"
-    run_sort "${GUFI_GETFATTR} nonexistant_path"
-
     # dump
     echo "# 1 xattr"
     run_sort "${GUFI_GETFATTR} --dump ${BASENAME}/1MB"

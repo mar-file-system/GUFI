@@ -441,6 +441,21 @@ $ gufi_find -print0 | hexlify.py | grep -o -e " 00[0-9a-f][0-9a-f] " -e " [0-9a-
 
 $ gufi_find -printf ''
 
+$ gufi_find 'prefix/*/'
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/empty_directory
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
 $ gufi_find -printf '\141 \142 \143\n' | head -n 1
 a b c
 

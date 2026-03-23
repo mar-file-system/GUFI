@@ -809,21 +809,7 @@ def run(argv, config_path):
 
     # all arguments afterwards are parsed as expressions
 
-    # prepend the provided paths with the GUFI root path
-    prefixed_paths = [os.path.sep.join([config.indexroot, path])
-                      for path in paths]
-
-    # keep only paths that are subdirectories of the index root
-    used_paths = []
-    for i, prefixed_path in enumerate(prefixed_paths):
-        norm_path = os.path.normpath(prefixed_path)
-
-        if not gufi_common.in_index(norm_path, config.indexroot, paths[i]):
-            continue
-
-        used_paths += [norm_path]
-
-    paths = used_paths
+    paths = gufi_common.clean_paths(config, paths)
 
     try:
         # parse expressions without the 'real' and path arguments
@@ -862,7 +848,7 @@ def run(argv, config_path):
         query_cmd += ['--compress']
 
     # constants only used here
-    INDEXROOT_LEN = len(config.indexroot) + 2                                        # pylint: disable=invalid-name
+    INDEXROOT_LEN   = len(config.indexroot) + 2                                      # pylint: disable=invalid-name
     VRSUMMARY_NAME  = 'substr(rpath(sname, sroll), {0})'.format(INDEXROOT_LEN)       # pylint: disable=invalid-name
     VRPENTRIES_NAME = 'substr(rpath(sname, sroll, name), {0})'.format(INDEXROOT_LEN) # pylint: disable=invalid-name
 

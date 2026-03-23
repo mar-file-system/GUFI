@@ -128,14 +128,7 @@ def run(argv, config_path):
     if args.terse is True:
         stat_cmd += ['--terse']
 
-    paths = []
-    for path in args.paths:
-        prefixed_path = os.path.sep.join([config.indexroot, path])
-
-        if not gufi_common.in_index(prefixed_path, config.indexroot, path):
-            continue
-
-        paths += [prefixed_path]
+    paths = gufi_common.clean_paths(config, args.paths)
 
     if len(paths) == 0:
         return 1
