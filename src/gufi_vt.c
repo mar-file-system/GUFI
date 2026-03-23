@@ -104,6 +104,13 @@ SQLITE_EXTENSION_INIT1
  * See the respective comments below for details.
  */
 
+typedef struct {
+    str_t basename;
+    str_t table;
+    str_t template;
+    str_t view;
+} extdb_t;
+
 typedef struct gufi_query_cmd {
     str_t remote_cmd;   /* command to send this run to a remote host (i.e. ssh); prefixes gufi_query command */
     sll_t remote_args;  /* list of str_t that are single arguments to remote_cmd (i.e. user@remote) */
@@ -139,6 +146,8 @@ typedef struct gufi_query_cmd {
     str_t p;            /* source path */
     sll_t plugins;      /* gufi_query plugin library paths */
 
+    sll_t extdbs;       /* list of external database args */
+
     sll_t indexroots;   /* list of index roots to pass to gufi_query */
 } gq_cmd_t;
 
@@ -147,9 +156,11 @@ static void gq_cmd_init(gq_cmd_t *cmd) {
     sll_init(&cmd->remote_args);
     sll_init(&cmd->plugins);
     sll_init(&cmd->indexroots);
+    sll_init(&cmd->extdbs);
 }
 
 static void gq_cmd_destroy(gq_cmd_t *cmd) {
+    sll_destroy(&cmd->extdbs, free);      /* list of allocated extdb_t */
     sll_destroy(&cmd->indexroots, NULL);  /* list of references to argv[i] */
     sll_destroy(&cmd->plugins, NULL);     /* list of references to argv[i] */
     sll_destroy(&cmd->remote_args, free); /* list of allocated str_t */
@@ -263,6 +274,16 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--plugin '%s' ", plugin);
         }
 
+        sll_loop(&cmd->extdbs, node) {
+            extdb_t *extdb = (extdb_t *) sll_node_data(node);
+            write_with_resize(&flat, &size, &len,
+                              "-Q '%s' '%s' '%s' '%s' ",
+                              extdb->basename.data,
+                              extdb->table.data,
+                              extdb->template.data,
+                              extdb->view.data);
+        }
+
         sll_loop(&cmd->indexroots, node) {
             const char *indexroot = (char *) sll_node_data(node);
             write_with_resize(&flat, &size, &len,
@@ -276,6 +297,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
 
         max_argc = 35; /* 5 fixed args, 14 pairs of flags, 2 single argv flags */
         max_argc += sll_get_size(&cmd->plugins) * 2;
+        max_argc += sll_get_size(&cmd->extdbs) * 5;
         max_argc += sll_get_size(&cmd->indexroots);
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
@@ -346,6 +368,15 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             const char *plugin = (char *) sll_node_data(node);
             argv[argc++] = "--plugin";
             argv[argc++] = plugin;
+        }
+
+        sll_loop(&cmd->extdbs, node) {
+            extdb_t *extdb = (extdb_t *) sll_node_data(node);
+            argv[argc++] = "-Q";
+            argv[argc++] = extdb->basename.data;
+            argv[argc++] = extdb->table.data;
+            argv[argc++] = extdb->template.data;
+            argv[argc++] = extdb->view.data;
         }
 
         sll_loop(&cmd->indexroots, node) {
@@ -887,6 +918,29 @@ static int get_cols(sqlite3 *db, str_t *sql, int **types,
     return (type_cols != *cols);
 }
 
+/* parse Q='<basename> <table> <template.table> <view>' */
+static int parse_extdb(sll_t *extdbs, char *arg) {
+    char *saveptr  = NULL;
+    char *basename = strtok_r(arg,  " ", &saveptr);
+    char *table    = strtok_r(NULL, " ", &saveptr);
+    char *template = strtok_r(NULL, " ", &saveptr);
+    char *view     = strtok_r(NULL, " ", &saveptr);
+
+    if (!basename || !table || !template || !view) {
+        return -1;
+    }
+
+    extdb_t *extdb = calloc(1, sizeof(*extdb));
+    set_refstr(&extdb->basename, basename);
+    set_refstr(&extdb->table,    table);
+    set_refstr(&extdb->template, template);
+    set_refstr(&extdb->view,     view);
+
+    sll_push_back(extdbs, extdb);
+
+    return 0;
+}
+
 static int gufi_vtpu_xConnect(sqlite3 *db,
                               void *pAux,
                               int argc, const char * const *argv,
@@ -948,6 +1002,14 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                     break;
                 case 'p':
                     set_refstr(&cmd.p, value);
+                    break;
+                case 'Q':
+                    if (parse_extdb(&cmd.extdbs, value) != 0) {
+                        *pzErr = sqlite3_mprintf("Bad external database args");
+                        gq_cmd_destroy(&cmd);
+                        return SQLITE_MISUSE;
+                    }
+                    break;
                 default:
                     break;
             }
