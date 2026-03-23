@@ -563,7 +563,7 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
                           sqlite3_vtab **ppVtab,
                           char **pzErr,
                           const char *schema,
-                          const gq_cmd_t *cmd,  /* reference to struct of pointers */
+                          gq_cmd_t *cmd,  /* reference to struct of pointers */
                           const int fixed_schema) {
     (void) pAux; (void) pzErr;
     (void) argc; (void) argv;
@@ -577,9 +577,12 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
         pNew->cmd = *cmd; /* ownership is transferred */
         pNew->fixed_schema = fixed_schema;
         /* sqlite3_vtab_config(db, SQLITE_VTAB_DIRECTONLY); */
+        *ppVtab = &pNew->base;
+    }
+    else {
+        gq_cmd_destroy(cmd);
     }
 
-    *ppVtab = &pNew->base;
     return rc;
 }
 
@@ -1011,7 +1014,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                     }
                     break;
                 default:
-                    break;
+                    *pzErr = sqlite3_mprintf("Unknown argument: %c", *key);
+                    gq_cmd_destroy(&cmd);
+                    return SQLITE_MISUSE;
             }
         }
         else if (strncmp(key, "index", 6) == 0) {

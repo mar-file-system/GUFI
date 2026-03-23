@@ -1427,6 +1427,9 @@ static trie_t *sqlite3_types(void) {
 
     trie_insert(types, "INT",     3, (void *) (uintptr_t) SQLITE_INTEGER, NULL);
     trie_insert(types, "INTEGER", 7, (void *) (uintptr_t) SQLITE_INTEGER, NULL);
+    trie_insert(types, "INT8",    4, (void *) (uintptr_t) SQLITE_INTEGER, NULL);
+    trie_insert(types, "INT16",   5, (void *) (uintptr_t) SQLITE_INTEGER, NULL);
+    trie_insert(types, "INT32",   5, (void *) (uintptr_t) SQLITE_INTEGER, NULL);
     trie_insert(types, "INT64",   5, (void *) (uintptr_t) SQLITE_INTEGER, NULL);
 
     trie_insert(types, "FLOAT",   5, (void *) (uintptr_t) SQLITE_FLOAT,   NULL);
@@ -1489,6 +1492,7 @@ int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols) {
             (*types)[i] = (uintptr_t) sql_type;
         }
         else {
+            fprintf(stderr, "Error: Got unknown type '%s'\n", type);
             (*types)[i] = 0; /* unknown type */
         }
     }

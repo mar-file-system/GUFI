@@ -767,6 +767,26 @@ Each line is one argv[i]:
 2|prefix/directory/subdirectory/directory_symlink
 2|prefix/directory/subdirectory/repeat_name
 
+# Good Q and I but nothing actually happens (no template db is attached)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT name FROM vrpentries;", Q="basename tablename template.tablename view");SELECT * FROM gufi ORDER BY name;"
+) | sqlite3
+.hidden
+1KB
+1MB
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
 # ######################################
 # errors
 # Missing indexroot
@@ -991,6 +1011,13 @@ $ (
 ) | sqlite3
 Runtime error near line 2: Bad verbose value: 'a' (21)
 
+# Bad 1 character key
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', ?='');"
+) | sqlite3
+Runtime error near line 2: Unknown argument: ? (21)
+
 # Bad 5 character key (only 'index' is recognized)
 $ (
     echo ".load gufi_vt"
@@ -1027,6 +1054,21 @@ $ (
 ) | sqlite3
 Error: Could not open plugin library
 Runtime error near line 2: vtable constructor failed: gufi (19)
+
+# Bad Q (Missing I)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT * FROM vrxpentries;", Q="basename table template.table view");SELECT * FROM gufi;"
+) | sqlite3
+External databases require template files attached with -I
+Runtime error near line 2: SQL logic error
+
+# Bad Q (not enough arguments)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", Q="basename");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Bad external database args (21)
 
 # Bad Column Type Setup
 $ (
