@@ -134,8 +134,7 @@ struct plugin {
     const struct plugin_operations *ops;
 };
 
-/* plugin_arg is modified */
-struct plugin *load_plugin_library(char *plugin_arg, const size_t len);
+struct plugin *load_plugin_library(const char *plugin_arg, const size_t len);
 /* not exposing unload_plugin_library() */
 
 struct plugins {

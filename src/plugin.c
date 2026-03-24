@@ -73,24 +73,27 @@ OF SUCH DAMAGE.
 /*
  * Load a plugin passed in with --plugin <entrypoint>:<path>
  *
- * Returns 0 on success or 1 on failure.
+ * Returns a struct plugin pointer on success or NULL on failure
  */
-struct plugin *load_plugin_library(char *plugin_arg, const size_t len) {
+struct plugin *load_plugin_library(const char *plugin_arg, const size_t len) {
     if (!plugin_arg || !len) {
         return NULL;
     }
 
-    const char *end = plugin_arg + len;
+    char *arg = strndup(plugin_arg, len);
+    const char *end = arg + len;
     char *filename = NULL;
-    char *entrypoint = strtok_r(plugin_arg, ":", &filename);
+    char *entrypoint = strtok_r(arg, ":", &filename);
 
     if (!entrypoint || !strlen(entrypoint)) {
         fprintf(stderr, "Error: Bad plugin entrypoint\n");
+        free(arg);
         return NULL;
     }
 
     if (!filename || (filename == end)) {
         fprintf(stderr, "Error: Bad plugin filename\n");
+        free(arg);
         return NULL;
     }
 
@@ -98,6 +101,7 @@ struct plugin *load_plugin_library(char *plugin_arg, const size_t len) {
     if (!lib) {
         fprintf(stderr, "Error: Could not open plugin library %s\n",
                 dlerror());
+        free(arg);
         return NULL;
     }
 
@@ -106,24 +110,24 @@ struct plugin *load_plugin_library(char *plugin_arg, const size_t len) {
         fprintf(stderr, "Error: Could not find exported operations \"%s\" in the plugin library: %s\n",
                 entrypoint, dlerror());
         dlclose(lib);
+        free(arg);
         return NULL;
     }
 
     struct plugin *plugin = malloc(sizeof(*plugin));
-    plugin->filename = filename;
+    plugin->filename = plugin_arg + (filename - arg);
     plugin->handle = lib;
     plugin->ops = user_plugin_ops;
+
+    free(arg);
+
     return plugin;
 }
 
 static void unload_plugin_library(struct plugin *plugin) {
     /* Not checking argument */
 
-    /*
-     * this null check is only useful for testing
-     *
-     * this function is only called if the plugin valid
-     */
+    /* this null check is only useful for testing */
     if (plugin->handle) {
         dlclose(plugin->handle);
     }

@@ -787,6 +787,26 @@ repeat_name
 unusual, name?#
 writable
 
+# Good Q and I but nothing actually happens (no template db is attached) + remote
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT name FROM vrpentries;", Q="basename tablename template.tablename view", remote_cmd="ssh", remote_arg="remote");SELECT * FROM gufi ORDER BY name;"
+) | sqlite3
+.hidden
+1KB
+1MB
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
 # ######################################
 # errors
 # Missing indexroot
@@ -1039,7 +1059,7 @@ $ (
 ) | sqlite3
 Runtime error near line 2: Unknown key: ab (19)
 
-# Bad plugin
+# Bad plugin (using indexing plugin for querying)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="gufi_plugin_operations:indexing_plugin");SELECT * FROM gufi;"
@@ -1047,7 +1067,7 @@ $ (
 Error: "indexing_plugin" has bad plugin type. Expected 2. Got: 1
 Runtime error near line 2: vtable constructor failed: gufi (19)
 
-# Bad plugin
+# Bad plugin (plugin path is directory)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="gufi_plugin_operations:prefix");SELECT * FROM gufi;"

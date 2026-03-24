@@ -334,6 +334,13 @@ query=$(
 )
 query_vt "${query}"
 
+echo "# Good Q and I but nothing actually happens (no template db is attached) + remote"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT name FROM vrpentries;\", Q=\"basename tablename template.tablename view\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT * FROM gufi ORDER BY name;"
+)
+query_vt "${query}"
+
 echo "# ######################################"
 echo "# errors"
 
@@ -446,14 +453,14 @@ query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', abcdefg='');"
 echo "# Bad key length"
 query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', ab='');"
 
-echo "# Bad plugin"
+echo "# Bad plugin (using indexing plugin for querying)"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
 
-echo "# Bad plugin"
+echo "# Bad plugin (plugin path is directory)"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_PLUGIN_OPS}:${INDEXROOT}\");"
     echo -n "SELECT * FROM gufi;"
@@ -480,8 +487,6 @@ query=$(
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
-
-set -e
 ) | replace | tee "${OUTPUT}"
 
 # FIXME: cygwin is having trouble with plugin tests.
@@ -490,7 +495,7 @@ set -e
 
 (
 rm -rf "${SEARCH}"
-"${GUFI_DIR2INDEX}" --plugin "${GUFI_INDEXING_PLUGIN}" "${SRCDIR}" "${SEARCH}" > /dev/null 2>&1
+"${GUFI_DIR2INDEX}" --plugin "${GUFI_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}" "${SRCDIR}" "${SEARCH}" > /dev/null
 
 echo "# Plugin without aggregation"
 query=$(
@@ -499,9 +504,23 @@ query=$(
 )
 query_vt "${query}"
 
+echo "# Plugin without aggregation + remote"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT * FROM gufi ORDER BY filetype ASC, count ASC;"
+)
+query_vt "${query}"
+
 echo "# Plugin with aggregation"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Plugin with aggregation + remote"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
