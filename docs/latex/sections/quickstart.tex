@@ -87,6 +87,13 @@ site-packages directory.
 
 Then, skip to Section~\ref{sec:usage}.
 
+Note that the RPMs on GitHub are specific to those releases/commits
+and do not get updated. To get the latest changes into RPM(s),
+configure and build GUFI from source. However, instead of running
+\texttt{make install}, install \texttt{rpmbuild}, rerun CMake so that
+\texttt{rpmbuild} is picked up, and run \texttt{make package}. The
+RPM(s) will be placed the build directory.
+
 \section{Dependencies}
 GUFI is known to build on Linux, macOS, and Windows (via cygwin).
 Most of the dependencies that GUFI requires are part of standard
