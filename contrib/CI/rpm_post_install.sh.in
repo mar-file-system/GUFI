@@ -61,10 +61,14 @@
 
 
 
-# Copied from answer by Peterino
-# https://stackoverflow.com/a/46071447
-site=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+# if Python3 library files were installed under /usr/@SERVER_LIB, move them to site-packages
+if [ -f "/usr/@SERVER_LIB@/gufi_common.py" ]
+then
+    # Copied from answer by Peterino
+    # https://stackoverflow.com/a/46071447
+    site=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
 
-mkdir -p "${site}"
-mv "/usr/@SERVER_LIB@/gufi_common.py" "${site}/gufi_common.py"
-mv "/usr/@SERVER_LIB@/gufi_config.py" "${site}/gufi_config.py"
+    mkdir -p "${site}"
+    mv "/usr/@SERVER_LIB@/gufi_common.py" "${site}/gufi_common.py"
+    mv "/usr/@SERVER_LIB@/gufi_config.py" "${site}/gufi_config.py"
+fi

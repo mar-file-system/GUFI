@@ -73,7 +73,11 @@ fi
 # https://stackoverflow.com/a/46071447
 site=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
 
-# move Python3 library files back to installed location so that rpm
-# does not print errors about missing files
-mv "${site}/gufi_common.py" "/usr/@SERVER_LIB@/gufi_common.py"
-mv "${site}/gufi_config.py" "/usr/@SERVER_LIB@/gufi_config.py"
+# if Python3 library files were installed under in site-packages, move
+# them files back to installed location so that rpm does not print
+# errors about missing files
+if [ -f "${site}/gufi_common.py" ]
+then
+    mv "${site}/gufi_common.py" "/usr/@SERVER_LIB@/gufi_common.py"
+    mv "${site}/gufi_config.py" "/usr/@SERVER_LIB@/gufi_config.py"
+fi

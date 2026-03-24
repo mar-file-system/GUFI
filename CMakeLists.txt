@@ -218,7 +218,7 @@ endif()
 find_package(Python3 3.9 COMPONENTS Interpreter REQUIRED)
 
 # this is the first CPACK_RPM_PACKAGE_REQUIRES
-set(CPACK_RPM_PACKAGE_REQUIRES "python3 >= 3.9")
+set(CPACK_RPM_PACKAGE_REQUIRES "python(abi) >= 3.9")
 
 # require find_program to return executables with -r+x permissions
 if (POLICY CMP0109)
@@ -496,14 +496,14 @@ option(QPTPOOL_SWAP "Whether or not to enable swapping in QueuePerThreadPool" On
 
 option(ALLOW_DB_WRITES "Whether or not to allow gufi_query to write to databases" On)
 
-set(SERVER_BIN "bin"       CACHE PATH "Directory to install executables at")
-set(SERVER_LIB "lib"       CACHE PATH "Directory to install libraries at")
-set(SERVER_MAN "share/man" CACHE PATH "Directory to install man pages at")
+set(SERVER_BIN "bin"       CACHE STRING "Directory to install executables at")
+set(SERVER_LIB "lib"       CACHE STRING "Directory to install libraries at")
+set(SERVER_MAN "share/man" CACHE STRING "Directory to install man pages at")
 
 if (CLIENT)
-  set(CLIENT_BIN "${SERVER_BIN}" CACHE PATH "Directory to install client executables at")
-  set(CLIENT_LIB "${SERVER_LIB}" CACHE PATH "Directory to install client libraries at")
-  set(CLIENT_MAN "${SERVER_MAN}" CACHE PATH "Directory to install client man pages at")
+  set(CLIENT_BIN "${SERVER_BIN}" CACHE STRING "Directory to install client executables at")
+  set(CLIENT_LIB "${SERVER_LIB}" CACHE STRING "Directory to install client libraries at")
+  set(CLIENT_MAN "${SERVER_MAN}" CACHE STRING "Directory to install client man pages at")
 endif()
 
 # dynamically loaded module extension
@@ -609,7 +609,7 @@ if (RPMBUILD)
 
   if (CLIENT)
     set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
-    set(CPACK_RPM_Client_PACKAGE_REQUIRES "python3 >= 3.9, openssh")
+    set(CPACK_RPM_Client_PACKAGE_REQUIRES "python(abi) >= 3.9, openssh")
     set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
     set(CPACK_RPM_Client_POST_INSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_post_install.sh")
     set(CPACK_RPM_Client_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_pre_uninstall.sh")
