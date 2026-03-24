@@ -62,9 +62,15 @@
 
 
 sqlite3 gufigeneric.db < init_new_db_full.sql
+sqlite3 gufigeneric.db < generic_fullapps/vrxpentries_simple.sql
+sqlite3 gufigeneric.db < generic_fullapps/vrxpentries_simple_groupby.sql
+sqlite3 gufigeneric.db < generic_fullapps/treesummary_simple.sql
+sqlite3 gufigeneric.db < generic_fullapps/vrxpentries_simple_text.sql
 sqlite3 gufigeneric.db < generic_fullapps/vrxpentries_all.sql
 sqlite3 gufigeneric.db < generic_fullapps/vrxpentries_entries.sql
 sqlite3 gufigeneric.db < generic_fullapps/vrxpentries_all_groupby.sql
 sqlite3 gufigeneric.db < generic_fullapps/vrsummary_all.sql
 sqlite3 gufigeneric.db < generic_fullapps/vrsummary_all_groupby.sql
 sqlite3 gufigeneric.db < generic_fullapps/treesummary_all.sql
+sqlite3 gufigeneric.db < generic_fullapps/vrxpentries_entries_remote.sql
+sqlite3 gufigeneric.db < generic_fullapps/vrxpentries_all_groupby_remote.sql

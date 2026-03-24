@@ -32,12 +32,12 @@ to generate the database file `gufigeneric.db`.
 
 ### Web Interface
 ```bash
-webtk.py gufigeneric.db gufi_vt.so web
+webtk.py path/to/gufigeneric.db path/to/gufi_vt.so web
 ```
 
 Then in a browser, go to `localhost:8080`
 
 ### tkinter GUI
 ```bash
-webtk.py gufigeneric.db gufi_vt.so tk
+webtk.py path/to/gufigeneric.db path/to/gufi_vt.so tk
 ```

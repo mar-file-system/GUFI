@@ -86,6 +86,8 @@ global global_logoplist
 global_logoplist=['lor','land']
 global global_textoplist
 global_textoplist=['like','=']
+global global_ftsoplist
+global_ftsoplist='match'
 global global_ogoplist
 global_ogoplist=['asc','desc']
 
@@ -1590,17 +1592,30 @@ def queryin_processvarinput(cursor,rowcnt,rowmod,colcnt,gqapppart,gqappforminfo,
   # adjust the validation, width, and op type based on appftype and appfitype
   if gqappforminfo.appftype=='text':
     if queryin_window!='':
-      gqformin[varcnt].op.set('like')
+      if gqappforminfo.appfitype==20:
+        gqformin[varcnt].op.set('match')
+      else:
+        gqformin[varcnt].op.set('like')
     else:
       gqformin[varcnt].op='like'
 
     if queryin_window!='':
-      option_menu = tk.OptionMenu(queryin_frame[partcnt] , gqformin[varcnt].op, *global_textoplist,command=handle_pulldown).grid(row=rowmod,column=localcol,sticky=tk.W)
+      if gqappforminfo.appfitype==0:
+        option_menu = tk.OptionMenu(queryin_frame[partcnt] , gqformin[varcnt].op, *global_textoplist,command=handle_pulldown).grid(row=rowmod,column=localcol,sticky=tk.W)
+      if gqappforminfo.appfitype==20:
+        option_menu = tk.OptionMenu(queryin_frame[partcnt] , gqformin[varcnt].op, global_ftsoplist,command=handle_pulldown).grid(row=rowmod,column=localcol,sticky=tk.W)
     else:
       #localhtml+=global_textoplist[0]
+      #print('******* setting textoplist *****')
+      #print(gqappforminfo.appfjoin)
+      #print(gqappforminfo.appfitype)
+
       localhtml += "<select id=\"%s\" name=\"op_%s\">" % (gqappforminfo.appfinterimnm,varcnt)
-      for vl in global_textoplist:
-        localhtml += "<option value=\"%s\">%s</option>" % (vl,vl)
+      if gqappforminfo.appfitype==0:
+        for vl in global_textoplist:
+          localhtml += "<option value=\"%s\">%s</option>" % (vl,vl)
+      if gqappforminfo.appfitype==20:
+        localhtml += "<option value=\"%s\">%s</option>" % (global_ftsoplist,global_ftsoplist)
       localhtml += "</select>"
 
   if gqappforminfo.appftype=='int64':
