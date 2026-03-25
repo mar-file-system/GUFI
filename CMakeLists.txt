@@ -216,6 +216,7 @@ endif()
 
 # Python3.9+ is required
 find_package(Python3 3.9 COMPONENTS Interpreter REQUIRED)
+set(Python3_SHEBANG "/usr/bin/env python3" CACHE STRING "Set Python3 shebang")
 
 # this is the first CPACK_RPM_PACKAGE_REQUIRES
 set(CPACK_RPM_PACKAGE_REQUIRES "python(abi) >= 3.9")
