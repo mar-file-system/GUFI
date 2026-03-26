@@ -58,6 +58,9 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
+*/
+
+
 
 /*
  * MarFS GUFI indexing plugin
@@ -102,28 +105,20 @@ OF SUCH DAMAGE.
  *
  * build instruction:
  *
- * cd contrib
+ * mkdir build && cd build
  *
- * gcc -g -c -fPIC plugins/marfs_plugin.c \
- *   -I../include \
- *   -I../build/deps/sqlite3/include \
- *   -I/path/to/marfs/install/include \
- *   -I/path/to/marfs/src/marfs/src \
- *   -I/usr/include/libxml2
+ * cmake .. -DMARFS_PREFIX=/path/to/marfs/install/ -DMARFS_SRC=/path/to/marfs/
  *
- * gcc -shared -o marfs_plugin.so marfs_plugin.o \
- *   ../build/src/libGUFI.a \
- *   -L/path/to/marfs/install/lib \
- *   -lmarfs \
- *   -lxml2 \
- *   -Wl,-rpath,/path/to/marfs/install/lib
+ * make
+ *
+ * (sudo) make install
  *
  * run example:
  * MARFS_CONFIG_PATH=/path/to/marfs/install/etc/marfs-config.xml \
- *   ./build/src/gufi_dir2index \
- *   --plugin ./contrib/marfs_plugin.so \
+ *   src/gufi_dir2index \
+ *   --plugin "GUFI_MARFS_PLUGIN:contrib/plugins/libmarfs_plugin.so" \
  *   /path/to/mdal-root/sec-root /home/$USER/gufi-index-dir
-*/
+ */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -134,9 +129,11 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <unistd.h>
 
-#include "bf.h"
+/* marfs */
 #include "config/config.h"
 #include "hash/hash.h"
+
+#include "bf.h"
 #include "plugin.h"
 #include "str.h"
 #include "utils.h"
@@ -149,7 +146,8 @@ static const size_t MARFS_SUBSPACES_NAME_LEN = sizeof(MARFS_SUBSPACES_NAME) - 1;
 static const char MARFS_XATTR_NAME[] = "user.MDAL_MARFS-FILE";
 static const size_t MARFS_XATTR_NAME_LEN = sizeof(MARFS_XATTR_NAME) - 1;
 static const size_t ROOT_NAMESPACE_LEVEL = 0;
-static const mode_t MARFS_DIR_MODE = 0701;
+// marfs dir mode used for temporary additions of marfs specific directories during re-indexing
+static const mode_t MARFS_DIR_MODE = S_IRWXU | S_IXOTH;
 
 static const char* MARFS_CONFIG_ENV = "MARFS_CONFIG_PATH";
 
@@ -237,6 +235,8 @@ struct marfs_plugin {
     str_t index_parent;  // actual index is placed at <index parent>/$(basename <src>)
     str_t marfs_mountpoint;
     str_t root_namespace;
+
+    marfs_config* marfs_cfg;
 };
 
 static struct marfs_plugin g_state;
@@ -256,6 +256,10 @@ static void marfs_plugin_cleanup(void) {
 
     g_state.namespaces = NULL;
     g_state.namespaces_count = 0;
+
+    // cleanup marfs config
+    config_term(g_state.marfs_cfg);
+    g_state.marfs_cfg = NULL;
 }
 
 // count the number of namespace paths in the marfs config
@@ -382,9 +386,9 @@ cleanup:
     return ret;
 }
 
-// cleanup_marfs_index will go through each namesapce defined in the marfs config, move it up a directory, and delete
+// cleanup_marfs_index will go through each namespace defined in the marfs config, move it up a directory, and delete
 // the empty MDAL_subspaces that remains. It also removes any empty MDAL_subspaces that exist within the namespace as
-// well as renaming the root directory to the basename of the specified moutnpoint in the marfs config
+// well as renaming the root directory to the basename of the specified mountpoint in the marfs config
 static int cleanup_marfs_index(void) {
     int ret = 0;
 
@@ -518,7 +522,16 @@ static int revert_marfs_index(void) {
         return -1;
     }
 
-    rename(mm_path, rn_path);
+    if (rename(mm_path, rn_path) != 0) {
+        // if we failed to rename the root ns, then don't worry about the rest of the namespaces
+        if (errno != ENOENT) {
+            fprintf(stderr, "rename('%s' -> '%s') failed: %s\n", mm_path, rn_path, strerror(errno));
+            ret = -1;
+        }
+        free(mm_path);
+        free(rn_path);
+        return ret;
+    }
 
     free(mm_path);
     free(rn_path);
@@ -553,7 +566,8 @@ static int revert_marfs_index(void) {
         {
             // parent is a slice, so make a real C string before mkdir()
             if (parent.len > 1) {
-                parent_path = malloc(parent.len + 1);
+                size_t parent_path_size = parent.len + 1;
+                parent_path = malloc(parent_path_size);
                 if (!parent_path) {
                     fprintf(stderr, "malloc failed for parent_path\n");
                     free(indexed_path);
@@ -561,8 +575,7 @@ static int revert_marfs_index(void) {
                     continue;
                 }
 
-                memcpy(parent_path, parent.data, parent.len);
-                parent_path[parent.len] = '\0';
+                snprintf(parent_path, parent_path_size, "%.*s", (int)parent.len, parent.data);
 
                 if (mkdir(parent_path, MARFS_DIR_MODE) != 0) {
                     if (errno != ENOTEMPTY && errno != EEXIST) {
@@ -599,8 +612,7 @@ static int marfs_indexing_global_init(void* global) {
     size_t config_index = 0;
     int ret = -1;
 
-    // We can only allow for a single dir to be indexed at a time. this is because we have no way to taking in multiple
-    // marfs configs
+    // We can only allow for a single dir to be indexed at a time. this is because we do not read multiple marfs configs
     if (in->pos.argc != 2) {
         fprintf(stderr, "Error: Marfs plugin requires exactly 2 paths\n");
         return ret;
@@ -617,17 +629,17 @@ static int marfs_indexing_global_init(void* global) {
     }
 
     errno = 0;
-    marfs_config* cfg = config_init(marfs_config_path, &marfs_erasurelock);
-    if (!cfg) {
-        int e = errno;
-        fprintf(stderr, "marfs config_init returned NULL (errno=%d)\n", e);
+    g_state.marfs_cfg = config_init(marfs_config_path, &marfs_erasurelock);
+    if (!g_state.marfs_cfg) {
+        fprintf(stderr, "marfs config_init returned NULL (errno=%d: %s) (%s=%s)\n", errno, strerror(errno),
+                MARFS_CONFIG_ENV, marfs_config_path);
         goto cleanup;
     }
 
     // add marfs config mountpoint to global state
-    INSTALL_STR(&g_state.marfs_mountpoint, cfg->mountpoint);
+    INSTALL_STR(&g_state.marfs_mountpoint, g_state.marfs_cfg->mountpoint);
 
-    g_state.namespaces_count = count_ns_paths(cfg->rootns);
+    g_state.namespaces_count = count_ns_paths(g_state.marfs_cfg->rootns);
 
     if (g_state.namespaces_count == 0) {
         fprintf(stderr, "Error: no namespaces found in MarFS config\n");
@@ -644,8 +656,8 @@ static int marfs_indexing_global_init(void* global) {
         const str_t rn_base = get_basename(g_state.root_namespace);
         const str_t empty = REFSTR("", 0);
 
-        if (collect_ns_paths(cfg->rootns, empty, g_state.namespaces, &config_index, g_state.root_namespace,
-                             g_state.index_parent, rn_base) != 0) {
+        if (collect_ns_paths(g_state.marfs_cfg->rootns, empty, g_state.namespaces, &config_index,
+                             g_state.root_namespace, g_state.index_parent, rn_base) != 0) {
             fprintf(stderr, "Error: collect_ns_paths failed\n");
             goto cleanup;
         }
@@ -660,7 +672,9 @@ static int marfs_indexing_global_init(void* global) {
     sort_namespace_pairs(g_state.namespaces, g_state.namespaces_count);
 
     if (!validate_sec_root()) {
-        fprintf(stderr, "Error: provided dir is not the root of the parent marfs namespace\n");
+        fprintf(stderr,
+                "Error: provided dir (%s) is not the root of the parent marfs namespace or marfs_config is incorrect\n",
+                g_state.root_namespace.data);
         goto cleanup;
     }
 
@@ -697,7 +711,7 @@ static int is_namespace(str_t path) {
             continue;
         }
 
-        if (str_cmp(&ns, &path) == 0) {
+        if (strncmp(ns.data, path.data, ns.len) == 0) {
             return 1;
         }
     }
@@ -707,7 +721,7 @@ static int is_namespace(str_t path) {
 
 // marfs_pre_processing_dir checks if we're about to process a marfs specific directory (MDAL_reference, MDAL_subspaces)
 // or a namespace that is no longer active in the marfs config
-static plugin_process_action marfs_pre_processing_dir(void* ptr) {
+static plugin_dir_action marfs_dir_action(void* ptr) {
     PCS_t* pcs = (PCS_t*)ptr;
 
     if (!pcs || !pcs->work || !pcs->work->name) {
@@ -767,7 +781,9 @@ struct marfs_ctx {
     sqlite3_stmt* delete_entry;
     sqlite3_stmt* decrement_nlink;
     sqlite3_stmt* update_xattr_names;
+    sqlite3_stmt* remove_xattrs;
     sqlite3_stmt* update_summary_name;
+    sqlite3_stmt* update_summary_pinode;
 };
 
 static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
@@ -790,8 +806,16 @@ static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
         sqlite3_finalize(ctx->update_xattr_names);
     }
 
+    if (ctx->remove_xattrs) {
+        sqlite3_finalize(ctx->remove_xattrs);
+    }
+
     if (ctx->update_summary_name) {
         sqlite3_finalize(ctx->update_summary_name);
+    }
+
+    if (ctx->update_summary_pinode) {
+        sqlite3_finalize(ctx->update_summary_pinode);
     }
 
     free(ctx);
@@ -846,12 +870,33 @@ static void* marfs_ctx_init(void* ptr) {
     }
 
     rc = sqlite3_prepare_v2(db,
+                            "DELETE FROM xattrs_pwd "
+                            "WHERE inode = ?2 AND name = ?1;",
+                            -1, &ctx->remove_xattrs, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: remove xattrs failed: %s\n", sqlite3_errmsg(db));
+        marfs_ctx_exit(ptr, ctx);
+        return NULL;
+    }
+
+    rc = sqlite3_prepare_v2(db,
                             "UPDATE summary "
                             "SET name = ?2 "
                             "WHERE name = ?1;",
                             -1, &ctx->update_summary_name, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: prepare summary update failed: %s\n", sqlite3_errmsg(db));
+        marfs_ctx_exit(ptr, ctx);
+        return NULL;
+    }
+
+    rc = sqlite3_prepare_v2(db,
+                            "UPDATE summary "
+                            "SET pinode = ?1 "
+                            "WHERE name = ?2;",
+                            -1, &ctx->update_summary_pinode, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: prepare summary pinode update failed: %s\n", sqlite3_errmsg(db));
         marfs_ctx_exit(ptr, ctx);
         return NULL;
     }
@@ -890,7 +935,6 @@ static sqlite3_int64 build_xattr_names_filtered(struct entry_data* ed, char* out
 // any marfs specific xattrs
 static void marfs_process_file(void* ptr, void* user_data) {
     PCS_t* pcs = (PCS_t*)ptr;
-    sqlite3* db = pcs->db;
     struct entry_data* ed = pcs->ed;
     struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
 
@@ -968,7 +1012,7 @@ static void marfs_process_file(void* ptr, void* user_data) {
         sqlite3_clear_bindings(stmt);
     }
 
-    // remove marfs xattr
+    // remove marfs xattr name from entries
     {
         sqlite3_stmt* stmt = ctx->update_xattr_names;
 
@@ -1002,10 +1046,42 @@ static void marfs_process_file(void* ptr, void* user_data) {
         sqlite3_reset(stmt);
         sqlite3_clear_bindings(stmt);
     }
+
+    // remove marfs xattr from xattr_pwd
+    {
+        sqlite3_stmt* stmt = ctx->remove_xattrs;
+
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
+
+        rc = sqlite3_bind_blob(stmt, 1, MARFS_XATTR_NAME, (int)MARFS_XATTR_NAME_LEN, SQLITE_STATIC);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "plugin: bind xattr remove name failed for %.*s: %s\n", (int)basename.len, basename.data,
+                    sqlite3_errmsg(ctx->db));
+            return;
+        }
+
+        rc = sqlite3_bind_int64(stmt, 2, (sqlite3_int64)pcs->work->statuso.st_ino);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "plugin: bind xattr remove inode failed for %lu: %s\n", pcs->work->statuso.st_ino,
+                    sqlite3_errmsg(ctx->db));
+            return;
+        }
+
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            fprintf(stderr, "plugin: remove xattrs_pwd failed for %.*s: %s\n", (int)basename.len, basename.data,
+                    sqlite3_errmsg(ctx->db));
+        }
+
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
+    }
 }
 
 // marfs_process_dir renames the root namespace in the gufi db summary table to match the mountpoint in the marfs
-// config. The actual dir gets renamed in cleanup_marfs_index
+// config. The actual dir gets renamed in cleanup_marfs_index. It also fixes pinode values for directories whose
+// parent is an MDAL_subspaces directory that will be removed from the final index.
 static void marfs_process_dir(void* ptr, void* user_data) {
     PCS_t* pcs = (PCS_t*)ptr;
     struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
@@ -1014,12 +1090,63 @@ static void marfs_process_dir(void* ptr, void* user_data) {
         return;
     }
 
+    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
+    const str_t basename = get_basename(path);
+    const str_t parent = get_parent(path);
+    const str_t parent_basename = get_basename(parent);
+
+    // Fix pinode for directories whose parent is MDAL_subspaces (which will be removed)
+    // The pinode currently points to the MDAL_subspaces inode, but should point to the grandparent
+    if (parent_basename.data && str_t_eq_cstr(parent_basename, MARFS_SUBSPACES_NAME, MARFS_SUBSPACES_NAME_LEN)) {
+        const str_t grandparent = get_parent(parent);
+
+        if (grandparent.data && grandparent.len > 0) {
+            size_t gp_path_size = grandparent.len + 1;
+            char* gp_path = malloc(gp_path_size);
+            if (gp_path) {
+                snprintf(gp_path, gp_path_size, "%.*s", (int)grandparent.len, grandparent.data);
+
+                struct stat st;
+                if (stat(gp_path, &st) == 0) {
+                    sqlite3_stmt* stmt = ctx->update_summary_pinode;
+                    int rc;
+
+                    sqlite3_reset(stmt);
+                    sqlite3_clear_bindings(stmt);
+
+                    rc = sqlite3_bind_int64(stmt, 1, (sqlite3_int64)st.st_ino);
+                    if (rc == SQLITE_OK) {
+                        rc = sqlite3_bind_text(stmt, 2, basename.data, (int)basename.len, SQLITE_STATIC);
+                    }
+
+                    if (rc == SQLITE_OK) {
+                        rc = sqlite3_step(stmt);
+                        if (rc != SQLITE_DONE) {
+                            fprintf(stderr, "plugin: update pinode failed for %.*s: %s\n", (int)basename.len,
+                                    basename.data, sqlite3_errmsg(ctx->db));
+                        }
+                    } else {
+                        fprintf(stderr, "plugin: bind pinode failed for %.*s: %s\n", (int)basename.len, basename.data,
+                                sqlite3_errmsg(ctx->db));
+                    }
+
+                    sqlite3_reset(stmt);
+                    sqlite3_clear_bindings(stmt);
+                } else {
+                    fprintf(stderr, "plugin: stat('%s') failed: %s\n", gp_path, strerror(errno));
+                }
+
+                free(gp_path);
+            } else {
+                fprintf(stderr, "malloc failed for gp_path\n");
+            }
+        }
+    }
+
     // determine if this is the root namespace dir
     if (ROOT_NAMESPACE_LEVEL == pcs->work->level &&
         str_t_eq_cstr(g_state.root_namespace, pcs->work->name, pcs->work->name_len)) {
-        // rename this to the marfs mountpoint in the database
-        const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
-        const str_t basename = get_basename(path);
+        // Rename root namespace to mountpoint in database
         const str_t mountpoint = get_basename(g_state.marfs_mountpoint);
 
         sqlite3_stmt* stmt = ctx->update_summary_name;
@@ -1068,14 +1195,15 @@ static void marfs_indexing_global_exit(void* global) {
     if (cleanup_marfs_index() != 0) {
         fprintf(stderr, "Warning: cleanup_marfs_index failed\n");
     }
+
     marfs_plugin_cleanup();
 }
 
-struct plugin_operations GUFI_PLUGIN_SYMBOL = {
+struct plugin_operations GUFI_MARFS_PLUGIN = {
     .type = PLUGIN_INDEX,
     .global_init = marfs_indexing_global_init,
+    .dir_action = marfs_dir_action,
     .ctx_init = marfs_ctx_init,
-    .pre_process_dir = marfs_pre_processing_dir,
     .process_dir = marfs_process_dir,
     .process_file = marfs_process_file,
     .ctx_exit = marfs_ctx_exit,

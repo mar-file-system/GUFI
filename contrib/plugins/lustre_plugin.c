@@ -426,6 +426,7 @@ static void db_exit(void *ptr, void *user_data) {
 struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_INDEX,
     .global_init = NULL,
+    .dir_action = NULL,
     .ctx_init = db_init,
     .process_dir = process_dir,
     .process_file = process_file,

@@ -280,6 +280,7 @@ static void dsi_querying_global_exit(void *global) {
 struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_QUERY,
     .global_init = dsi_querying_global_init,
+    .dir_action = NULL,
     .ctx_init = dsi_querying_ctx_init,
     .process_dir = NULL,
     .process_file = NULL,
