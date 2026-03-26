@@ -98,3 +98,29 @@ target_link_libraries(dsi_querying
 add_dependencies(dsi_querying install_dependencies)
 install(TARGETS dsi_querying DESTINATION "${SERVER_LIB}" COMPONENT Server)
 install(TARGETS dsi_querying DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
+
+# marfs plugin
+set(MARFS_PREFIX "" CACHE PATH "MarFS install prefix")
+set(MARFS_SRC    "" CACHE PATH "MarFS source")
+if (MARFS_PREFIX AND MARFS_SRC)
+  find_package(LibXml2 REQUIRED)
+  message(STATUS "MARFS_PREFIX: ${MARFS_PREFIX}")
+  message(STATUS "MARFS_SRC: ${MARFS_SRC}")
+  message(STATUS "Building marfs plugin.")
+  add_library(marfs_plugin SHARED
+    marfs_plugin.c
+    "${CMAKE_SOURCE_DIR}/src/SinglyLinkedList.c"
+    "${CMAKE_SOURCE_DIR}/src/bf.c"
+    "${CMAKE_SOURCE_DIR}/src/plugin.c"
+    "${CMAKE_SOURCE_DIR}/src/str.c"
+    "${CMAKE_SOURCE_DIR}/src/trie.c"
+    "${CMAKE_SOURCE_DIR}/src/utils"
+    "${CMAKE_SOURCE_DIR}/src/xattrs.c"
+  )
+  target_include_directories(marfs_plugin SYSTEM PUBLIC "${MARFS_PREFIX}" "${MARFS_SRC}/src" "${LIBXML2_INCLUDE_DIRS}")
+  target_link_libraries(marfs_plugin PUBLIC marfs)
+  target_link_directories(marfs_plugin PUBLIC "${MARFS_PREFIX}/lib")
+  add_dependencies(marfs_plugin install_dependencies)
+else()
+  message(STATUS "MARFS_PREFIX and MARFS_SRC not set. Not building marfs plugin.")
+endif()
