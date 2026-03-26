@@ -134,9 +134,11 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <unistd.h>
 
-#include "bf.h"
+/* marfs */
 #include "config/config.h"
 #include "hash/hash.h"
+
+#include "bf.h"
 #include "plugin.h"
 #include "str.h"
 #include "utils.h"
@@ -620,7 +622,7 @@ static int marfs_indexing_global_init(void* global) {
     marfs_config* cfg = config_init(marfs_config_path, &marfs_erasurelock);
     if (!cfg) {
         int e = errno;
-        fprintf(stderr, "marfs config_init returned NULL (errno=%d)\n", e);
+        fprintf(stderr, "marfs config_init returned NULL (errno=%d) (%s=%s)\n", e, MARFS_CONFIG_ENV, marfs_config_path);
         goto cleanup;
     }
 
@@ -697,7 +699,7 @@ static int is_namespace(str_t path) {
             continue;
         }
 
-        if (str_cmp(&ns, &path) == 0) {
+        if (strncmp(ns.data, path.data, ns.len) == 0) {
             return 1;
         }
     }
