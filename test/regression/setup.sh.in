@@ -424,6 +424,23 @@ partial_indexing_setup() {
     echo
 }
 
+# run gufi_vt via sqlite3
+gufi_vt() {
+    sql="$1"
+
+    LOAD=".load ${GUFI_VT}"
+
+    echo "$ ("
+    echo "    echo \"${LOAD}\""
+    echo "    echo \"${sql}\""
+    echo ") | ${SQLITE3}"
+    (
+        echo "${LOAD}"
+        echo "${sql}"
+    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}" "${SQLITE3}"
+    echo
+}
+
 pull_ug_summary_columns() {
     UG="$1"
     RELATION="$2"

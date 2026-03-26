@@ -83,19 +83,8 @@ trap cleanup_exit EXIT
 
 cleanup
 
-LOAD=".load ${GUFI_VT}"
-
 query_vt() {
-    sql="$1"
-    echo "$ ("
-    echo "    echo \"${LOAD}\""
-    echo "    echo \"${sql}\""
-    echo ") | ${SQLITE3}"
-    (
-        echo "${LOAD}"
-        echo "${sql}"
-    ) | PATH="@CMAKE_BINARY_DIR@/src:${PATH}" LD_PRELOAD="${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}" "${SQLITE3}" 2>&1
-    echo
+    gufi_vt "$@" 2>&1
 }
 
 (

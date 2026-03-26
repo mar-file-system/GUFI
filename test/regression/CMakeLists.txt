@@ -240,6 +240,7 @@ endforeach()
 foreach(NAME ${OTHERS})
   set_tests_properties("${NAME}" PROPERTIES LABELS "regression")
 endforeach()
+set_tests_properties("dsi_plugins"          PROPERTIES LABELS "regression;gufi_vt;binary")
 
 foreach(NAME ${PYTHON})
   set_tests_properties("${NAME}" PROPERTIES LABELS "regression;python")

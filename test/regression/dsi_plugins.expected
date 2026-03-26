@@ -47,6 +47,27 @@ prefix/leaf_directory/leaf_file2|dsi data
 prefix/old_file|dsi data
 prefix/repeat_name|dsi data
 
+# query collection1 with gufi_vt
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection1'; CREATE TABLE collection1.data (uuid TEXT, info1 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+prefix/1KB|dsi data
+prefix/1MB|dsi data
+prefix/directory/executable|dsi data
+prefix/directory/writable|dsi data
+
+# query collection2 with gufi_vt
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection2'; CREATE TABLE collection2.data (uuid TEXT, info2 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN collection2.data ON (dsi_collection_name(xattr_name) == 'collection2') AND (dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+prefix/.hidden|dsi data
+prefix/leaf_directory/leaf_file1|dsi data
+prefix/leaf_directory/leaf_file2|dsi data
+prefix/old_file|dsi data
+prefix/repeat_name|dsi data
+
 #####################################
 
 # delete collection dbs
@@ -56,3 +77,9 @@ $ find "prefix" -name "*collection*" -delete
 $ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;" "prefix" 2>&1 | sort | head -n 1
 Error: Could not attach local copy of collection db for collection "collection1" (original file: "collection1.db") at "prefix"
 
+# gufi_vt fail due to missing collection dbs
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection1'; CREATE TABLE collection1.data (uuid TEXT, info1 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+Runtime error near line 2: SQL logic error

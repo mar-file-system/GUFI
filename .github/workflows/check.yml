@@ -278,7 +278,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure -E vt
+      run:  ctest --output-on-failure -E "vt|dsi"
 
   Memcheck:
     needs: [ShellCheck, Pylint]

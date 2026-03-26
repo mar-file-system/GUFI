@@ -174,6 +174,20 @@ cleanup
     echo "# query collection2"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid;\" \"${INDEXROOT}\" 2>/dev/null"
 
+    echo "# query collection1 with gufi_vt"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION1}'; CREATE TABLE ${COLLECTION1}.data (uuid TEXT, info1 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN ${COLLECTION1}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION1}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
+        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+    )
+    gufi_vt "${query}" | replace
+
+    echo "# query collection2 with gufi_vt"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION2}'; CREATE TABLE ${COLLECTION2}.data (uuid TEXT, info2 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN ${COLLECTION2}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION2}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
+        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+    )
+    gufi_vt "${query}" | replace
+
     echo "#####################################"
     echo
 
@@ -182,6 +196,15 @@ cleanup
 
     echo "# fail due to missing collection dbs"
     run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;\" \"${INDEXROOT}\" 2>&1 | sort | head -n 1" | @SED@ "s%${COLLECTION1_DB}%${COLLECTION1}.db%g;"
+
+    echo "# gufi_vt fail due to missing collection dbs"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION1}'; CREATE TABLE ${COLLECTION1}.data (uuid TEXT, info1 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN ${COLLECTION1}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION1}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
+        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+    )
+    out=$(gufi_vt "${query}" 2>&1 | replace)
+    echo "${out}" | head -n 4
+    echo "${out}" | @GREP@ "Runtime error"
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/dsi_plugins.expected "${OUTPUT}"
