@@ -77,6 +77,9 @@ case "@CMAKE_SYSTEM_NAME@" in
         GUFI_INDEXING_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_indexing_plugin.dylib"
         GUFI_QUERYING_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_querying_plugin.dylib"
 
+        DSI_INDEXING_PLUGIN="@CMAKE_BINARY_DIR@/contrib/plugins/libdsi_indexing.dylib"
+        DSI_QUERYING_PLUGIN="@CMAKE_BINARY_DIR@/contrib/plugins/libdsi_querying.dylib"
+
         os_setfattr() {
             @XATTR@ -w "$1" "$2" "$3"
         }
@@ -119,6 +122,9 @@ case "@CMAKE_SYSTEM_NAME@" in
     "Linux" | "CYGWIN")
         GUFI_INDEXING_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_indexing_plugin.so"
         GUFI_QUERYING_PLUGIN="@CMAKE_BINARY_DIR@/test/libtest_querying_plugin.so"
+
+        DSI_INDEXING_PLUGIN="@CMAKE_BINARY_DIR@/contrib/plugins/libdsi_indexing.so"
+        DSI_QUERYING_PLUGIN="@CMAKE_BINARY_DIR@/contrib/plugins/libdsi_querying.so"
 
         os_setfattr() {
             @SETFATTR@ -n "$1" -v "$2" "$3"

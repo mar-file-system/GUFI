@@ -346,6 +346,9 @@ replace() {
     s%${GUFI_INDEXING_PLUGIN}%indexing_plugin%g;
     s%${GUFI_QUERYING_PLUGIN}%querying_plugin%g;
 
+    s%${DSI_INDEXING_PLUGIN}%dsi_indexing_plugin%g;
+    s%${DSI_QUERYING_PLUGIN}%dsi_querying_plugin%g;
+
     s%${TEST_GUFI_JAIL}%gufi_jail%g;
 
     s%&vfs=.* as % as %g;

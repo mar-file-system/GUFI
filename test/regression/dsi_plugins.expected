@@ -1,0 +1,58 @@
+# generate collection db for collection1
+$ sqlite3 "collection1.db" "SELECT '<uuid>', info1 FROM data ORDER BY info1;"
+<uuid>|dsi data
+<uuid>|dsi data
+<uuid>|dsi data
+<uuid>|dsi data
+<uuid>|dsi data
+
+# generate collection db for collection2
+$ sqlite3 "collection2.db" "SELECT '<uuid>', info2 FROM data ORDER BY info2;"
+<uuid>|dsi data
+<uuid>|dsi data
+<uuid>|dsi data
+<uuid>|dsi data
+<uuid>|dsi data
+
+# generate the source tree but don't index just yet
+$ generatetree "prefix"
+
+# mark files as belonging to collections (two collections in one index, with one file belonging to both)
+# index updated tree with DSI plugin
+$ gufi_dir2index -x --plugin "gufi_plugin_operations:dsi_indexing_plugin" "prefix" "search"
+Creating GUFI tree search with 1 threads
+Total Dirs:          6
+Total Non-Dirs:      14
+
+# directories with collections should have copies of the collectiondbs they are associated with
+$ find "prefix" -name "*collection*"
+prefix/collection1.db
+prefix/collection2.db
+prefix/directory/collection1.db
+prefix/leaf_directory/collection2.db
+
+# query collection1
+$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;" "prefix" 2>/dev/null
+prefix/1KB|dsi data
+prefix/1MB|dsi data
+prefix/directory/executable|dsi data
+prefix/directory/writable|dsi data
+prefix/repeat_name|dsi data
+
+# query collection2
+$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid;" "prefix" 2>/dev/null
+prefix/.hidden|dsi data
+prefix/leaf_directory/leaf_file1|dsi data
+prefix/leaf_directory/leaf_file2|dsi data
+prefix/old_file|dsi data
+prefix/repeat_name|dsi data
+
+#####################################
+
+# delete collection dbs
+$ find "prefix" -name "*collection*" -delete
+
+# fail due to missing collection dbs
+$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;" "prefix" 2>&1 | sort | head -n 1
+Error: Could not attach local copy of collection db for collection "collection1" (original file: "collection1.db") at "prefix"
+

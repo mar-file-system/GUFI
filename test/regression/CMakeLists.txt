@@ -163,6 +163,7 @@ set(EXAMPLES
 
 set(OTHERS
   deploy
+  dsi_plugins
   external_databases
   gufi_distributed
   gufi_find_outliers

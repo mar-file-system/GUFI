@@ -147,7 +147,7 @@ static int dsi_querying_global_init(void *global) {
 }
 
 /* attach collection dbs once using the directory's xattrs instead of once per file/link */
-const char ATTACH_COLLECTIONDB_SQL[] = "SELECT rpath(sname, sroll), xattr_name FROM vrxsummary "
+const char ATTACH_COLLECTIONDB_SQL[] = "SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary "
                                        "WHERE xattr_name IS NOT NULL;";
 static int attach_collectiondb_cb(void *args, int count, char **data, char **columns) {
     struct DSI_Querying_State *dsiqs = (struct DSI_Querying_State *) args;
@@ -194,13 +194,17 @@ static int attach_collectiondb_cb(void *args, int count, char **data, char **col
              collection_dbname, attach_name);
 
     if (sqlite3_exec(dsiqs->db, attach_sql, NULL, NULL, NULL) != SQLITE_OK) {
+        /*
+         * collection db not existing or not readable is an error even
+         * if the specific collection is not being used at the moment
+         */
+        const char *xattr_value = data[2];
+        const char *orig_db     = xattr_value + DSI_VALUE_PREFIX_LEN;
+        fprintf(stderr, "Error: Could not attach local copy of collection db for collection \"%s\" (original file: \"%s\") at \"%s\"\n",
+                collection_name, orig_db, pwd); /* not printing actual error message */
         free(attach_name);
         free(collection_dbname);
-        /*
-         * Not an error - could not attach for some reason (probably
-         * permissions, or does not exist) - so be it
-         */
-        return 0;
+        return 1;
     }
 
     /* keep attach name for detaching */

@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+
+OUTPUT="dsi_plugins.out"
+
+COLLECTION1="collection1"
+# some realpath implementations don't allow for nonexistent paths
+COLLECTION1_DB="${COLLECTION1}.db"
+touch "${COLLECTION1_DB}" # gets deleted during initial cleanup
+COLLECTION1_DB=$(realpath "${COLLECTION1_DB}")
+
+COLLECTION2="collection2"
+# some realpath implementations don't allow for nonexistent paths
+COLLECTION2_DB="${COLLECTION2}.db"
+touch "${COLLECTION2_DB}" # gets deleted during initial cleanup
+COLLECTION2_DB=$(realpath "${COLLECTION2_DB}")
+
+cleanup() {
+    rm -f "${COLLECTION1_DB}" "${COLLECTION2_DB}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+(
+    uuid() {
+        python3 -c "import uuid; print(uuid.uuid4())" # Version 4 (random UUIDs)
+    }
+
+    UUIDS=(
+        # collection1
+        "$(uuid)" # 1KB
+        "$(uuid)" # 1MB
+        "$(uuid)" # directory/executable
+        "$(uuid)" # directory/writable
+
+        # collection2
+        "$(uuid)" # .hidden
+        "$(uuid)" # old_file
+        "$(uuid)" # leaf_directory/leaf_file1
+        "$(uuid)" # leaf_directory/leaf_file2
+
+        # both collections
+        "$(uuid)" # repeat_name
+    )
+
+    echo "# generate collection db for collection1"
+    (
+        echo "CREATE TABLE data(uuid TEXT, info1 TEXT);"
+        echo "INSERT INTO  data VALUES ('${UUIDS[0]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[1]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[2]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[3]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', 'dsi data');"
+    ) | "${SQLITE3}" "${COLLECTION1_DB}"
+    run_no_sort "${SQLITE3} \"${COLLECTION1_DB}\" \"SELECT '<uuid>', info1 FROM data ORDER BY info1;\"" | @SED@ "s%${COLLECTION1_DB}%${COLLECTION1}.db%g;"
+
+    echo "# generate collection db for collection2"
+    (
+        echo "CREATE TABLE data(uuid TEXT, info2 TEXT);" # different info column name
+        echo "INSERT INTO  data VALUES ('${UUIDS[4]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[5]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[6]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[7]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', 'dsi data');"
+    ) | "${SQLITE3}" "${COLLECTION2_DB}"
+    run_no_sort "${SQLITE3} \"${COLLECTION2_DB}\" \"SELECT '<uuid>', info2 FROM data ORDER BY info2;\"" | @SED@ "s%${COLLECTION2_DB}%${COLLECTION2}.db%g;"
+
+    echo "# generate the source tree but don't index just yet"
+    run_no_sort "${GENERATETREE} \"${SRCDIR}\""
+
+    echo "# mark files as belonging to collections (two collections in one index, with one file belonging to both)"
+
+    # mark files as belonging to DSI collection 1
+    os_setfattr "user.COL.file.collection1" "${UUIDS[0]}.${COLLECTION1_DB}" "${SRCDIR}/1KB"
+    os_setfattr "user.COL.file.collection1" "${UUIDS[1]}.${COLLECTION1_DB}" "${SRCDIR}/1MB"
+    os_setfattr "user.COL.file.collection1" "${UUIDS[2]}.${COLLECTION1_DB}" "${SRCDIR}/directory/executable"
+    os_setfattr "user.COL.file.collection1" "${UUIDS[3]}.${COLLECTION1_DB}" "${SRCDIR}/directory/writable"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[8]}.${COLLECTION1_DB}" "${SRCDIR}/repeat_name"
+
+    # mark files as belonging to DSI collection 2
+    os_setfattr "user.COL.file.collection2" "${UUIDS[4]}.${COLLECTION2_DB}" "${SRCDIR}/.hidden"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[5]}.${COLLECTION2_DB}" "${SRCDIR}/old_file"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[6]}.${COLLECTION2_DB}" "${SRCDIR}/leaf_directory/leaf_file1"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[7]}.${COLLECTION2_DB}" "${SRCDIR}/leaf_directory/leaf_file2"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[8]}.${COLLECTION2_DB}" "${SRCDIR}/repeat_name"
+
+    # have to mark directories as containing DSI collections
+    # these uuids don't matter
+    # ${SRCDIR} contains 2 collections
+    os_setfattr "user.COL.file.collection1" "$(uuid).${COLLECTION1_DB}" "${SRCDIR}"
+    os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_DB}" "${SRCDIR}"
+    os_setfattr "user.COL.file.collection1" "$(uuid).${COLLECTION1_DB}" "${SRCDIR}/directory"
+    os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_DB}" "${SRCDIR}/leaf_directory"
+
+    echo "# index updated tree with DSI plugin"
+    run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"gufi_plugin_operations:${DSI_INDEXING_PLUGIN}\" \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
+
+    echo "# directories with collections should have copies of the collectiondbs they are associated with"
+    run_sort "find \"${INDEXROOT}\" -name \"*collection*\""
+
+    echo "# query collection1"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;\" \"${INDEXROOT}\" 2>/dev/null"
+
+    echo "# query collection2"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid;\" \"${INDEXROOT}\" 2>/dev/null"
+
+    echo "#####################################"
+    echo
+
+    echo "# delete collection dbs"
+    run_sort "find \"${INDEXROOT}\" -name \"*collection*\" -delete"
+
+    echo "# fail due to missing collection dbs"
+    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;\" \"${INDEXROOT}\" 2>&1 | sort | head -n 1" | @SED@ "s%${COLLECTION1_DB}%${COLLECTION1}.db%g;"
+) | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/dsi_plugins.expected "${OUTPUT}"
+rm "${OUTPUT}"
