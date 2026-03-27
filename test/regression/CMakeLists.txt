@@ -218,32 +218,31 @@ foreach(NAME ${SH_AND_EXPECTED})
 
   add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
+  set_property(TEST "${NAME}" APPEND PROPERTY LABELS "regression")
 endforeach()
+set_property(TEST "gufi_plugin" APPEND PROPERTY LABELS "plugin")
 
 foreach(NAME ${BINARIES})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;binary")
+  set_property(TEST "${NAME}" APPEND PROPERTY LABELS "binary")
 endforeach()
 
-set_tests_properties("gufi_vt"              PROPERTIES LABELS "regression;gufi_vt;binary")
-set_tests_properties("gufi_vt_py"           PROPERTIES LABELS "regression;gufi_vt;python")
+set_property(TEST "gufi_vt"              APPEND PROPERTY LABELS "gufi_vt;binary")
+set_property(TEST "gufi_vt_py"           APPEND PROPERTY LABELS "gufi_vt;python")
 if (SQLALCHEMY_RC EQUAL 0)
-  set_tests_properties("gufi_vt_sqlalchemy" PROPERTIES LABELS "regression;gufi_vt;python")
+  set_property(TEST "gufi_vt_sqlalchemy" APPEND PROPERTY LABELS "gufi_vt;python")
   if (PUGSQL_RC EQUAL 0)
-    set_tests_properties("gufi_vt_pugsql"   PROPERTIES LABELS "regression;gufi_vt;python")
+    set_property(TEST "gufi_vt_pugsql"   APPEND PROPERTY LABELS "gufi_vt;python")
   endif()
 endif()
 
 foreach(NAME ${EXAMPLES})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;examples")
+  set_property(TEST "${NAME}" APPEND PROPERTY LABELS "examples")
 endforeach()
 
-foreach(NAME ${OTHERS})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression")
-endforeach()
-set_tests_properties("dsi_plugins"          PROPERTIES LABELS "regression;gufi_vt;binary")
+set_property(TEST "dsi_plugins" APPEND PROPERTY LABELS "gufi_vt;binary;plugin")
 
 foreach(NAME ${PYTHON})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;python")
+  set_property(TEST "${NAME}" APPEND PROPERTY LABELS "python")
 endforeach()
 
 find_program(SUDO sudo)
@@ -277,14 +276,11 @@ if (SUDO)
 
       add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
         WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
+      set_property(TEST "${NAME}" APPEND PROPERTY LABELS "regression;sudo")
     endforeach()
 
     foreach(NAME ${SUDO_BINARIES})
-      set_tests_properties("${NAME}" PROPERTIES LABELS "regression;sudo;binary")
-    endforeach()
-
-    foreach(NAME ${SUDO_OTHERS})
-      set_tests_properties("${NAME}" PROPERTIES LABELS "regression;sudo")
+      set_property(TEST "${NAME}" APPEND PROPERTY LABELS "binary")
     endforeach()
   endif()
 else()
