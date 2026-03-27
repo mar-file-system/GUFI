@@ -493,7 +493,8 @@ size_t trailing_non_match_index(const char *str, size_t len,
  * result = /home/search/
  */
 size_t dirname_len(const char *path, size_t len) {
-    return trailing_match_index(path, len, "/", 1);
+    const size_t without_trailing = trailing_non_match_index(path, len, "/", 1);
+    return trailing_match_index(path, without_trailing, "/", 1);
 }
 
 /* strstr/strtok replacement */

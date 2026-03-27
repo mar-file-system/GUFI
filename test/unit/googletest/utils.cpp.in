@@ -794,6 +794,28 @@ TEST(trailing_non_match_index, paths) {
     EXPECT_EQ(trailing_non_match_index(nullptr, 10,              match, match_len), (size_t) 0);
 }
 
+TEST(dirname, len) {
+    const char        parent[]   = "parent";
+    const std::size_t parent_len = sizeof(parent) - 1;
+    const char        child[]    = "child";
+    const std::size_t child_len  = sizeof(child) - 1;
+
+    char path[parent_len + 1 + child_len + 1];
+    std::size_t len = 0;
+
+    // child is removed
+    len = snprintf(path, sizeof(path), "%s/%s", parent, child);
+    EXPECT_EQ(dirname_len(path, len), parent_len + 1);
+
+    // parent and trailing slashes are removed
+    len = snprintf(path, sizeof(path), "%s///", parent);
+    EXPECT_EQ(dirname_len(path, len), (std::size_t) 0);
+
+    // parent is removed
+    len = snprintf(path, sizeof(path), "%s", parent);
+    EXPECT_EQ(dirname_len(path, len), (std::size_t) 0);
+}
+
 TEST(split, delims) {
     const char delims[] = "\xfe\xff";
     char line[MAXPATH];
