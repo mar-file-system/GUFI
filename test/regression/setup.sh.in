@@ -251,7 +251,9 @@ TEST_GUFI_JAIL="${CURRENT_BINARY_DIR}/gufi_jail"
 
 # not replaced
 # shellcheck disable=SC2034
-GUFI_PLUGIN_OPS="gufi_plugin_operations"
+TEST_QUERYING_PLUGIN_OPS="test_querying_plugin_ops"
+# shellcheck disable=SC2034
+TEST_INDEXING_PLUGIN_OPS="test_indexing_plugin_ops"
 
 AWK="@AWK@"
 COLUMN="@COLUMN@"

@@ -444,17 +444,24 @@ query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', ab='');"
 
 echo "# Bad plugin (using indexing plugin for querying)"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${TEST_INDEXING_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
 
 echo "# Bad plugin (plugin path is directory)"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_PLUGIN_OPS}:${INDEXROOT}\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${TEST_QUERYING_PLUGIN_OPS}:${INDEXROOT}\");"
     echo -n "SELECT * FROM gufi;"
 )
-query_vt "${query}" | @SED@ 's%plugin library.*%plugin library%g; s%file descriptor [0-9]*%file descriptor%g;'
+query_vt "${query}" | @SED@ 's%plugin library.*%plugin library%g;'
+
+echo "# Bad plugin (global_init fails)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"test_querying_plugin_bad_ops:${GUFI_QUERYING_PLUGIN}\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
 
 echo "# Bad Q (Missing I)"
 query=$(
@@ -484,32 +491,32 @@ query_vt "${query}"
 
 (
 rm -rf "${SEARCH}"
-"${GUFI_DIR2INDEX}" --plugin "${GUFI_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}" "${SRCDIR}" "${SEARCH}" > /dev/null
+"${GUFI_DIR2INDEX}" --plugin "${TEST_INDEXING_PLUGIN_OPS}:${GUFI_INDEXING_PLUGIN}" "${SRCDIR}" "${SEARCH}" > /dev/null
 
 echo "# Plugin without aggregation"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${TEST_QUERYING_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi ORDER BY filetype ASC, count ASC;"
 )
 query_vt "${query}"
 
 echo "# Plugin without aggregation + remote"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_test_summary (filetype TEXT PRIMARY KEY, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"${TEST_QUERYING_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
     echo -n "SELECT * FROM gufi ORDER BY filetype ASC, count ASC;"
 )
 query_vt "${query}"
 
 echo "# Plugin with aggregation"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${TEST_QUERYING_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
 
 echo "# Plugin with aggregation + remote"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${GUFI_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${TEST_QUERYING_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"

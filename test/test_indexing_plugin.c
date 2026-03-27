@@ -179,7 +179,7 @@ static void process_dir(void *ptr, void *user_data) {
     sqlite3_free(error);
 }
 
-struct plugin_operations gufi_plugin_operations = {
+struct plugin_operations test_indexing_plugin_ops = {
     .type = PLUGIN_INDEX,
     .global_init = NULL,
     .ctx_init = db_init,

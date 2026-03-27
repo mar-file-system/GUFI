@@ -1062,7 +1062,7 @@ Runtime error near line 2: Unknown key: ab (19)
 # Bad plugin (using indexing plugin for querying)
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="gufi_plugin_operations:indexing_plugin");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_indexing_plugin_ops:indexing_plugin");SELECT * FROM gufi;"
 ) | sqlite3
 Error: "indexing_plugin" has bad plugin type. Expected 2. Got: 1
 Runtime error near line 2: vtable constructor failed: gufi (19)
@@ -1070,9 +1070,17 @@ Runtime error near line 2: vtable constructor failed: gufi (19)
 # Bad plugin (plugin path is directory)
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="gufi_plugin_operations:prefix");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_querying_plugin_ops:prefix");SELECT * FROM gufi;"
 ) | sqlite3
 Error: Could not open plugin library
+Runtime error near line 2: vtable constructor failed: gufi (19)
+
+# Bad plugin (global_init fails)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_querying_plugin_bad_ops:querying_plugin");SELECT * FROM gufi;"
+) | sqlite3
+Error: test_querying_plugin: Bad global initialization
 Runtime error near line 2: vtable constructor failed: gufi (19)
 
 # Bad Q (Missing I)

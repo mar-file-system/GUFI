@@ -1226,14 +1226,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
                           schema, &cmd, 0);
   error:
-    free(lens);
-    if (names) {
-        for(int c = 0; c < cols; c++) {
-            free(names[c]);
-        }
-        free(names);
-    }
-    free(types);
+    /* if here, types, names, and lens are NULL, so not freeing */
 
     plugins_ctx_exit(&in.plugins, tempdb, 0);
     plugins_global_exit(&in.plugins, &in);

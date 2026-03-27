@@ -78,6 +78,13 @@ static int global_init(void *global) {
     return 0;
 }
 
+static int global_bad_init(void *global) {
+    (void) global;
+    fprintf(stderr, "Error: test_querying_plugin: Bad global initialization\n");
+    /* no sqlite3_initialize() because sqlite3_shutdown() will not be called */
+    return 1;
+}
+
 static void *db_init(void *ptr) {
     sqlite3 *db = (sqlite3 *) ptr;
 
@@ -110,12 +117,22 @@ static void global_exit(void *global) {
     sqlite3_shutdown();
 }
 
-struct plugin_operations gufi_plugin_operations = {
+struct plugin_operations test_querying_plugin_ops = {
     .type = PLUGIN_QUERY,
     .global_init = global_init,
     .ctx_init = db_init,
     .process_dir = NULL,
     .process_file = NULL,
     .ctx_exit = db_exit,
+    .global_exit = global_exit,
+};
+
+struct plugin_operations test_querying_plugin_bad_ops = {
+    .type = PLUGIN_QUERY,
+    .global_init = global_bad_init,
+    .ctx_init = NULL,
+    .process_dir = NULL,
+    .process_file = NULL,
+    .ctx_exit = NULL,
     .global_exit = global_exit,
 };
