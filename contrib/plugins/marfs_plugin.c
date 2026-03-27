@@ -239,6 +239,8 @@ struct marfs_plugin {
     str_t index_parent;  // actual index is placed at <index parent>/$(basename <src>)
     str_t marfs_mountpoint;
     str_t root_namespace;
+
+    marfs_config* marfs_cfg;
 };
 
 static struct marfs_plugin g_state;
@@ -619,17 +621,17 @@ static int marfs_indexing_global_init(void* global) {
     }
 
     errno = 0;
-    marfs_config* cfg = config_init(marfs_config_path, &marfs_erasurelock);
-    if (!cfg) {
-        int e = errno;
-        fprintf(stderr, "marfs config_init returned NULL (errno=%d) (%s=%s)\n", e, MARFS_CONFIG_ENV, marfs_config_path);
+    g_state.marfs_cfg = config_init(marfs_config_path, &marfs_erasurelock);
+    if (!g_state.marfs_cfg) {
+        fprintf(stderr, "marfs config_init returned NULL (errno=%d: %s) (%s=%s)\n", e, strerror(e), MARFS_CONFIG_ENV,
+                marfs_config_path);
         goto cleanup;
     }
 
     // add marfs config mountpoint to global state
-    INSTALL_STR(&g_state.marfs_mountpoint, cfg->mountpoint);
+    INSTALL_STR(&g_state.marfs_mountpoint, g_state.marfs_cfg->mountpoint);
 
-    g_state.namespaces_count = count_ns_paths(cfg->rootns);
+    g_state.namespaces_count = count_ns_paths(g_state.marfs_cfg->rootns);
 
     if (g_state.namespaces_count == 0) {
         fprintf(stderr, "Error: no namespaces found in MarFS config\n");
@@ -646,8 +648,8 @@ static int marfs_indexing_global_init(void* global) {
         const str_t rn_base = get_basename(g_state.root_namespace);
         const str_t empty = REFSTR("", 0);
 
-        if (collect_ns_paths(cfg->rootns, empty, g_state.namespaces, &config_index, g_state.root_namespace,
-                             g_state.index_parent, rn_base) != 0) {
+        if (collect_ns_paths(g_state.marfs_cfg->rootns, empty, g_state.namespaces, &config_index,
+                             g_state.root_namespace, g_state.index_parent, rn_base) != 0) {
             fprintf(stderr, "Error: collect_ns_paths failed\n");
             goto cleanup;
         }
@@ -769,6 +771,7 @@ struct marfs_ctx {
     sqlite3_stmt* delete_entry;
     sqlite3_stmt* decrement_nlink;
     sqlite3_stmt* update_xattr_names;
+    sqlite3_stmt* remove_xattrs;
     sqlite3_stmt* update_summary_name;
 };
 
@@ -790,6 +793,10 @@ static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
 
     if (ctx->update_xattr_names) {
         sqlite3_finalize(ctx->update_xattr_names);
+    }
+
+    if (ctx->remove_xattrs) {
+        sqlite3_finalize(ctx->remove_xattrs);
     }
 
     if (ctx->update_summary_name) {
@@ -843,6 +850,16 @@ static void* marfs_ctx_init(void* ptr) {
                             -1, &ctx->update_xattr_names, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: prepare xattr update failed: %s\n", sqlite3_errmsg(db));
+        marfs_ctx_exit(ptr, ctx);
+        return NULL;
+    }
+
+    rc = sqlite3_prepare_v2(db,
+                            "DELETE FROM xattrs_pwd "
+                            "WHERE inode = ?2 AND name = ?1;",
+                            -1, &ctx->remove_xattrs, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: remove xattrs failed: %s\n", sqlite3_errmsg(db));
         marfs_ctx_exit(ptr, ctx);
         return NULL;
     }
@@ -970,7 +987,7 @@ static void marfs_process_file(void* ptr, void* user_data) {
         sqlite3_clear_bindings(stmt);
     }
 
-    // remove marfs xattr
+    // remove marfs xattr name from entries
     {
         sqlite3_stmt* stmt = ctx->update_xattr_names;
 
@@ -998,6 +1015,37 @@ static void marfs_process_file(void* ptr, void* user_data) {
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_DONE) {
             fprintf(stderr, "plugin: update xattr_names failed for %.*s: %s\n", (int)basename.len, basename.data,
+                    sqlite3_errmsg(ctx->db));
+        }
+
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
+    }
+
+    // remove marfs xattr from xattr_pwd
+    {
+        sqlite3_stmt* stmt = ctx->remove_xattrs;
+
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
+
+        rc = sqlite3_bind_blob(stmt, 1, MARFS_XATTR_NAME, (int)MARFS_XATTR_NAME_LEN, SQLITE_STATIC);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "plugin: bind xattr remove name failed for %.*s: %s\n", (int)basename.len, basename.data,
+                    sqlite3_errmsg(ctx->db));
+            return;
+        }
+
+        rc = sqlite3_bind_int64(stmt, 2, (sqlite3_int64)pcs->work->statuso.st_ino);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "plugin: bind xattr remove inode failed for %lu: %s\n", pcs->work->statuso.st_ino,
+                    sqlite3_errmsg(ctx->db));
+            return;
+        }
+
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            fprintf(stderr, "plugin: remove xattrs_pwd failed for %.*s: %s\n", (int)basename.len, basename.data,
                     sqlite3_errmsg(ctx->db));
         }
 
@@ -1070,6 +1118,11 @@ static void marfs_indexing_global_exit(void* global) {
     if (cleanup_marfs_index() != 0) {
         fprintf(stderr, "Warning: cleanup_marfs_index failed\n");
     }
+
+    // cleanup marfs config
+    config_term(g_state.marfs_cfg);
+    g_state.marfs_cfg = NULL;
+
     marfs_plugin_cleanup();
 }
 
