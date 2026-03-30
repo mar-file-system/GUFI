@@ -944,6 +944,11 @@ static int parse_extdb(sll_t *extdbs, char *arg) {
     return 0;
 }
 
+/* placeholder pcre2 extension REGEXP function */
+static void fake_regexp(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
+    (void) ctx; (void) argc; (void) argv;
+}
+
 static int gufi_vtpu_xConnect(sqlite3 *db,
                               void *pAux,
                               int argc, const char * const *argv,
@@ -1115,7 +1120,10 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     /* make sure all setup tables are placed into a different db */
     /* this should never fail */
     sqlite3 *tempdb = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-                             0, 0, create_dbdb_tables, NULL);
+                             0, 0, create_dbdb_tables, NULL); /* not initializing extensions here */
+
+    /* fake REGEXP here - calling the real one will segfault */
+    sqlite3_create_function_v2(tempdb, "REGEXP", 2, SQLITE_UTF8, NULL, fake_regexp, NULL, NULL, NULL);
 
     create_xattr_tables(SQLITE_MEMORY, tempdb, NULL);
 

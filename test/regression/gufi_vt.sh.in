@@ -330,10 +330,31 @@ query=$(
 )
 query_vt "${query}"
 
-echo "# No results (not an error)"
+echo "# LIKE"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT name FROM vrpentries WHERE name LIKE '%no_match%';\");"
-    echo -n "SELECT * FROM gufi ORDER BY name;"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%file%';\");"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+)
+query_vt "${query}"
+
+echo "# No results with LIKE (not an error)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%no_match%';\");"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC"
+)
+query_vt "${query}"
+
+echo "# REGEXP"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*file.*';\");"
+    echo -n "SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+)
+query_vt "${query}"
+
+echo "# No results with REGEXP (not an error)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*no_match.*';\");"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC"
 )
 query_vt "${query}"
 

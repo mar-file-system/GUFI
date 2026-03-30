@@ -807,10 +807,36 @@ repeat_name
 unusual, name?#
 writable
 
-# No results (not an error)
+# LIKE
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT name FROM vrpentries WHERE name LIKE '%no_match%';");SELECT * FROM gufi ORDER BY name;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%file%';");SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+prefix/file_symlink
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+
+# No results with LIKE (not an error)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%no_match%';");SELECT * FROM gufi ORDER BY fullpath ASC"
+) | sqlite3
+
+# REGEXP
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*file.*';");SELECT size, fullpath FROM gufi ORDER BY size ASC, fullpath ASC;"
+) | sqlite3
+0|prefix/old_file
+9|prefix/file_symlink
+11|prefix/leaf_directory/leaf_file1
+12|prefix/leaf_directory/leaf_file2
+
+# No results with REGEXP (not an error)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*no_match.*';");SELECT * FROM gufi ORDER BY fullpath ASC"
 ) | sqlite3
 
 # ######################################
