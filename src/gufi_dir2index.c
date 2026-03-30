@@ -201,6 +201,15 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     decompress_work(&nda.work, data);
 
+    pcs.work = nda.work;
+
+    // if we're in the min-max range use the result of the plugins "dir_traversal_action" to determine process_dir
+    plugin_process_action process_dir = PLUGIN_NO_PROCESS_DIR;
+
+    if (pa->in.min_level <= nda.work->level && nda.work->level <= pa->in.max_level) {
+        process_dir = plugins_dir_traversal_action(&pa->in.plugins, &pcs);
+    }
+
     dir = opendir_wrapper(nda.work->name, 1);
     if (!dir) {
         rc = 1;
@@ -211,15 +220,6 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                       &nda.work->stat_called, 1, 1) != 0) {
         rc = 1;
         goto close_dir;
-    }
-
-    pcs.work = nda.work;
-
-    // if we're in the min-max range use the result of the plugins "pre_process_dir" to determine process_dir
-    plugin_process_action process_dir = PLUGIN_NO_PROCESS_DIR;
-
-    if (pa->in.min_level <= nda.work->level && nda.work->level <= pa->in.max_level) {
-        process_dir = plugins_dir_traversal_action(&pa->in.plugins, &pcs);
     }
 
     /* offset by work->root_len to remove prefix */
