@@ -116,24 +116,24 @@ cleanup
     echo "# generate collection db for collection1"
     (
         echo "CREATE TABLE data(uuid TEXT, info1 TEXT);"
-        echo "INSERT INTO  data VALUES ('${UUIDS[0]}', 'dsi data');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[1]}', 'dsi data');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[2]}', 'dsi data');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[3]}', 'dsi data');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[0]}', '0');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[1]}', '1');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[2]}', '2');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[3]}', '3');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', '4');"
     ) | "${SQLITE3}" "${COLLECTION1_DB}"
-    run_no_sort "${SQLITE3} \"${COLLECTION1_DB}\" \"SELECT '<uuid>', info1 FROM data ORDER BY info1;\"" | @SED@ "s%${COLLECTION1_DB}%${COLLECTION1}.db%g;"
+    run_no_sort "${SQLITE3} \"${COLLECTION1_DB}\" \"SELECT uuid, info1 FROM data ORDER BY info1;\"" | @SED@ "s%[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}%<uuid>%g; s%${COLLECTION1_DB}%${COLLECTION1}.db%g;"
 
     echo "# generate collection db for collection2"
     (
         echo "CREATE TABLE data(uuid TEXT, info2 TEXT);" # different info column name
-        echo "INSERT INTO  data VALUES ('${UUIDS[4]}', 'dsi data');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[5]}', 'dsi data');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[6]}', 'dsi data');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[7]}', 'dsi data');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', 'dsi data');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[4]}', '5');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[5]}', '6');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[6]}', '7');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[7]}', '8');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', '9');"
     ) | "${SQLITE3}" "${COLLECTION2_DB}"
-    run_no_sort "${SQLITE3} \"${COLLECTION2_DB}\" \"SELECT '<uuid>', info2 FROM data ORDER BY info2;\"" | @SED@ "s%${COLLECTION2_DB}%${COLLECTION2}.db%g;"
+    run_no_sort "${SQLITE3} \"${COLLECTION2_DB}\" \"SELECT uuid, info2 FROM data ORDER BY info2;\"" | @SED@ "s%[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}%<uuid>%g; s%${COLLECTION2_DB}%${COLLECTION2}.db%g;"
 
     echo "# generate the source tree but don't index just yet"
     run_no_sort "${GENERATETREE} \"${SRCDIR}\""
@@ -145,7 +145,7 @@ cleanup
     os_setfattr "user.COL.file.collection1" "${UUIDS[1]}.${COLLECTION1_DB}" "${SRCDIR}/1MB"
     os_setfattr "user.COL.file.collection1" "${UUIDS[2]}.${COLLECTION1_DB}" "${SRCDIR}/directory/executable"
     os_setfattr "user.COL.file.collection1" "${UUIDS[3]}.${COLLECTION1_DB}" "${SRCDIR}/directory/writable"
-    os_setfattr "user.COL.file.collection2" "${UUIDS[8]}.${COLLECTION1_DB}" "${SRCDIR}/repeat_name"
+    os_setfattr "user.COL.file.collection1" "${UUIDS[8]}.${COLLECTION1_DB}" "${SRCDIR}/repeat_name"
 
     # mark files as belonging to DSI collection 2
     os_setfattr "user.COL.file.collection2" "${UUIDS[4]}.${COLLECTION2_DB}" "${SRCDIR}/.hidden"
@@ -162,17 +162,19 @@ cleanup
     os_setfattr "user.COL.file.collection1" "$(uuid).${COLLECTION1_DB}" "${SRCDIR}/directory"
     os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_DB}" "${SRCDIR}/leaf_directory"
 
+    echo
+
     echo "# index updated tree with DSI plugin"
     run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"gufi_plugin_operations:${DSI_INDEXING_PLUGIN}\" \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
 
-    echo "# directories with collections should have copies of the collectiondbs they are associated with"
+    echo "# directories with collections should have copies of the collection dbs they are associated with"
     run_sort "find \"${INDEXROOT}\" -name \"*collection*\""
 
     echo "# query collection1"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;\" \"${INDEXROOT}\" 2>/dev/null"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);\" \"${INDEXROOT}\" 2>/dev/null"
 
     echo "# query collection2"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid;\" \"${INDEXROOT}\" 2>/dev/null"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid);\" \"${INDEXROOT}\" 2>/dev/null"
 
     echo "# query collection1 with gufi_vt"
     query=$(

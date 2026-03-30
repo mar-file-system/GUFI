@@ -1,30 +1,31 @@
 # generate collection db for collection1
-$ sqlite3 "collection1.db" "SELECT '<uuid>', info1 FROM data ORDER BY info1;"
-<uuid>|dsi data
-<uuid>|dsi data
-<uuid>|dsi data
-<uuid>|dsi data
-<uuid>|dsi data
+$ sqlite3 "collection1.db" "SELECT uuid, info1 FROM data ORDER BY info1;"
+<uuid>|0
+<uuid>|1
+<uuid>|2
+<uuid>|3
+<uuid>|4
 
 # generate collection db for collection2
-$ sqlite3 "collection2.db" "SELECT '<uuid>', info2 FROM data ORDER BY info2;"
-<uuid>|dsi data
-<uuid>|dsi data
-<uuid>|dsi data
-<uuid>|dsi data
-<uuid>|dsi data
+$ sqlite3 "collection2.db" "SELECT uuid, info2 FROM data ORDER BY info2;"
+<uuid>|5
+<uuid>|6
+<uuid>|7
+<uuid>|8
+<uuid>|9
 
 # generate the source tree but don't index just yet
 $ generatetree "prefix"
 
 # mark files as belonging to collections (two collections in one index, with one file belonging to both)
+
 # index updated tree with DSI plugin
 $ gufi_dir2index -x --plugin "gufi_plugin_operations:dsi_indexing_plugin" "prefix" "search"
 Creating GUFI tree search with 1 threads
 Total Dirs:          6
 Total Non-Dirs:      14
 
-# directories with collections should have copies of the collectiondbs they are associated with
+# directories with collections should have copies of the collection dbs they are associated with
 $ find "prefix" -name "*collection*"
 prefix/collection1.db
 prefix/collection2.db
@@ -32,41 +33,42 @@ prefix/directory/collection1.db
 prefix/leaf_directory/collection2.db
 
 # query collection1
-$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;" "prefix" 2>/dev/null
-prefix/1KB|dsi data
-prefix/1MB|dsi data
-prefix/directory/executable|dsi data
-prefix/directory/writable|dsi data
-prefix/repeat_name|dsi data
+$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);" "prefix" 2>/dev/null
+prefix/1KB|0
+prefix/1MB|1
+prefix/directory/executable|2
+prefix/directory/writable|3
+prefix/repeat_name|4
 
 # query collection2
-$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid;" "prefix" 2>/dev/null
-prefix/.hidden|dsi data
-prefix/leaf_directory/leaf_file1|dsi data
-prefix/leaf_directory/leaf_file2|dsi data
-prefix/old_file|dsi data
-prefix/repeat_name|dsi data
+$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON (dsi_collection_name(xattr_name) == 'collection2') AND (dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid);" "prefix" 2>/dev/null
+prefix/.hidden|5
+prefix/leaf_directory/leaf_file1|7
+prefix/leaf_directory/leaf_file2|8
+prefix/old_file|6
+prefix/repeat_name|9
 
 # query collection1 with gufi_vt
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection1'; CREATE TABLE collection1.data (uuid TEXT, info1 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
 ) | sqlite3
-prefix/1KB|dsi data
-prefix/1MB|dsi data
-prefix/directory/executable|dsi data
-prefix/directory/writable|dsi data
+prefix/1KB|0
+prefix/1MB|1
+prefix/directory/executable|2
+prefix/directory/writable|3
+prefix/repeat_name|4
 
 # query collection2 with gufi_vt
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection2'; CREATE TABLE collection2.data (uuid TEXT, info2 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN collection2.data ON (dsi_collection_name(xattr_name) == 'collection2') AND (dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
 ) | sqlite3
-prefix/.hidden|dsi data
-prefix/leaf_directory/leaf_file1|dsi data
-prefix/leaf_directory/leaf_file2|dsi data
-prefix/old_file|dsi data
-prefix/repeat_name|dsi data
+prefix/.hidden|5
+prefix/leaf_directory/leaf_file1|7
+prefix/leaf_directory/leaf_file2|8
+prefix/old_file|6
+prefix/repeat_name|9
 
 #####################################
 
