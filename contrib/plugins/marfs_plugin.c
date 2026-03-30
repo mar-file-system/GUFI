@@ -58,6 +58,7 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
+*/
 
 /*
  * MarFS GUFI indexing plugin
@@ -102,28 +103,20 @@ OF SUCH DAMAGE.
  *
  * build instruction:
  *
- * cd contrib
+ * mkdir build && cd build
+ * 
+ * cmake .. -DMARFS_PREFIX=/path/to/marfs/install/ -DMARFS_SRC=/path/to/marfs/
  *
- * gcc -g -c -fPIC plugins/marfs_plugin.c \
- *   -I../include \
- *   -I../build/deps/sqlite3/include \
- *   -I/path/to/marfs/install/include \
- *   -I/path/to/marfs/src/marfs/src \
- *   -I/usr/include/libxml2
- *
- * gcc -shared -o marfs_plugin.so marfs_plugin.o \
- *   ../build/src/libGUFI.a \
- *   -L/path/to/marfs/install/lib \
- *   -lmarfs \
- *   -lxml2 \
- *   -Wl,-rpath,/path/to/marfs/install/lib
+ * make
+ * 
+ * (sudo) make install
  *
  * run example:
  * MARFS_CONFIG_PATH=/path/to/marfs/install/etc/marfs-config.xml \
- *   ./build/src/gufi_dir2index \
- *   --plugin ./contrib/marfs_plugin.so \
+ *   src/gufi_dir2index \
+ *   --plugin "GUFI_MARFS_PLUGIN:contrib/plugins/libmarfs_plugin.so" \
  *   /path/to/mdal-root/sec-root /home/$USER/gufi-index-dir
-*/
+ */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -151,7 +144,8 @@ static const size_t MARFS_SUBSPACES_NAME_LEN = sizeof(MARFS_SUBSPACES_NAME) - 1;
 static const char MARFS_XATTR_NAME[] = "user.MDAL_MARFS-FILE";
 static const size_t MARFS_XATTR_NAME_LEN = sizeof(MARFS_XATTR_NAME) - 1;
 static const size_t ROOT_NAMESPACE_LEVEL = 0;
-static const mode_t MARFS_DIR_MODE = 0701;
+// marfs dir mode used for temporary additions of marfs specific directories during re-indexing
+static const mode_t MARFS_DIR_MODE = S_IRWXU | S_IXOTH;
 
 static const char* MARFS_CONFIG_ENV = "MARFS_CONFIG_PATH";
 
@@ -386,9 +380,9 @@ cleanup:
     return ret;
 }
 
-// cleanup_marfs_index will go through each namesapce defined in the marfs config, move it up a directory, and delete
+// cleanup_marfs_index will go through each namespace defined in the marfs config, move it up a directory, and delete
 // the empty MDAL_subspaces that remains. It also removes any empty MDAL_subspaces that exist within the namespace as
-// well as renaming the root directory to the basename of the specified moutnpoint in the marfs config
+// well as renaming the root directory to the basename of the specified mountpoint in the marfs config
 static int cleanup_marfs_index(void) {
     int ret = 0;
 
@@ -522,7 +516,16 @@ static int revert_marfs_index(void) {
         return -1;
     }
 
-    rename(mm_path, rn_path);
+    if (rename(mm_path, rn_path) != 0) {
+        // if we failed to rename the root ns, then don't worry about the rest of the namespaces
+        if (errno != ENOENT) {
+            fprintf(stderr, "rename('%s' -> '%s') failed: %s\n", mm_path, rn_path, strerror(errno));
+            ret = -1;
+        }
+        free(mm_path);
+        free(rn_path);
+        return ret;
+    }
 
     free(mm_path);
     free(rn_path);
@@ -557,7 +560,8 @@ static int revert_marfs_index(void) {
         {
             // parent is a slice, so make a real C string before mkdir()
             if (parent.len > 1) {
-                parent_path = malloc(parent.len + 1);
+                size_t parent_path_size = parent.len + 1;
+                parent_path = malloc(parent_path_size);
                 if (!parent_path) {
                     fprintf(stderr, "malloc failed for parent_path\n");
                     free(indexed_path);
@@ -565,8 +569,7 @@ static int revert_marfs_index(void) {
                     continue;
                 }
 
-                memcpy(parent_path, parent.data, parent.len);
-                parent_path[parent.len] = '\0';
+                snprintf(parent_path, parent_path_size, "%.*s", (int)parent.len, parent.data);
 
                 if (mkdir(parent_path, MARFS_DIR_MODE) != 0) {
                     if (errno != ENOTEMPTY && errno != EEXIST) {
@@ -603,8 +606,7 @@ static int marfs_indexing_global_init(void* global) {
     size_t config_index = 0;
     int ret = -1;
 
-    // We can only allow for a single dir to be indexed at a time. this is because we have no way to taking in multiple
-    // marfs configs
+    // We can only allow for a single dir to be indexed at a time. this is because we do not read multiple marfs configs
     if (in->pos.argc != 2) {
         fprintf(stderr, "Error: Marfs plugin requires exactly 2 paths\n");
         return ret;
@@ -623,7 +625,7 @@ static int marfs_indexing_global_init(void* global) {
     errno = 0;
     g_state.marfs_cfg = config_init(marfs_config_path, &marfs_erasurelock);
     if (!g_state.marfs_cfg) {
-        fprintf(stderr, "marfs config_init returned NULL (errno=%d: %s) (%s=%s)\n", e, strerror(e), MARFS_CONFIG_ENV,
+        fprintf(stderr, "marfs config_init returned NULL (errno=%d: %s) (%s=%s)\n", errno, strerror(errno), MARFS_CONFIG_ENV,
                 marfs_config_path);
         goto cleanup;
     }
@@ -711,7 +713,7 @@ static int is_namespace(str_t path) {
 
 // marfs_pre_processing_dir checks if we're about to process a marfs specific directory (MDAL_reference, MDAL_subspaces)
 // or a namespace that is no longer active in the marfs config
-static plugin_process_action marfs_pre_processing_dir(void* ptr) {
+static plugin_process_action marfs_dir_traversal_action(void* ptr) {
     PCS_t* pcs = (PCS_t*)ptr;
 
     if (!pcs || !pcs->work || !pcs->work->name) {
@@ -1126,11 +1128,11 @@ static void marfs_indexing_global_exit(void* global) {
     marfs_plugin_cleanup();
 }
 
-struct plugin_operations GUFI_PLUGIN_SYMBOL = {
+struct plugin_operations GUFI_MARFS_PLUGIN = {
     .type = PLUGIN_INDEX,
     .global_init = marfs_indexing_global_init,
     .ctx_init = marfs_ctx_init,
-    .pre_process_dir = marfs_pre_processing_dir,
+    .dir_traversal_action = marfs_dir_traversal_action,
     .process_dir = marfs_process_dir,
     .process_file = marfs_process_file,
     .ctx_exit = marfs_ctx_exit,

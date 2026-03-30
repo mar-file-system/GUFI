@@ -109,13 +109,7 @@ if (MARFS_PREFIX AND MARFS_SRC)
   message(STATUS "Building marfs plugin.")
   add_library(marfs_plugin SHARED
     marfs_plugin.c
-    "${CMAKE_SOURCE_DIR}/src/SinglyLinkedList.c"
-    "${CMAKE_SOURCE_DIR}/src/bf.c"
-    "${CMAKE_SOURCE_DIR}/src/plugin.c"
     "${CMAKE_SOURCE_DIR}/src/str.c"
-    "${CMAKE_SOURCE_DIR}/src/trie.c"
-    "${CMAKE_SOURCE_DIR}/src/utils"
-    "${CMAKE_SOURCE_DIR}/src/xattrs.c"
   )
   target_include_directories(marfs_plugin SYSTEM PUBLIC "${MARFS_PREFIX}" "${MARFS_SRC}/src" "${LIBXML2_INCLUDE_DIRS}")
   target_link_libraries(marfs_plugin PUBLIC marfs)

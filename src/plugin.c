@@ -228,12 +228,12 @@ size_t plugins_global_init(struct plugins *plugins, void *global) {
     return plugins->initialized;
 }
 
-plugin_process_action plugins_pre_process_dir(struct plugins* plugins, void* ctx) {
+plugin_process_action plugins_dir_traversal_action(struct plugins* plugins, void* ctx) {
     plugin_process_action ret = PLUGIN_PROCESS_DIR;
 
     for (size_t i = 0; i < plugins->count; i++) {
-        if (plugins->plugins[i]->ops->pre_process_dir) {
-            plugin_process_action ppa = plugins->plugins[i]->ops->pre_process_dir(ctx);
+        if (plugins->plugins[i]->ops->dir_traversal_action) {
+            plugin_process_action ppa = plugins->plugins[i]->ops->dir_traversal_action(ctx);
 
             // choose the most restrictive action returned by any plugin
             if (ppa > ret) {
