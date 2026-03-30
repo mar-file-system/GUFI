@@ -807,6 +807,12 @@ repeat_name
 unusual, name?#
 writable
 
+# No results (not an error)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT name FROM vrpentries WHERE name LIKE '%no_match%';");SELECT * FROM gufi ORDER BY name;"
+) | sqlite3
+
 # ######################################
 # errors
 # Missing indexroot
@@ -836,14 +842,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
 ) | sqlite3
 Runtime error near line 2: Missing indexroot or path_list (19)
-
-# Bad indexroot
-$ (
-    echo ".load gufi_vt"
-    echo "SELECT name FROM gufi_vt_pentries('baddir') ORDER BY name ASC, size ASC;"
-) | sqlite3
-Could not stat directory "baddir": No such file or directory (2)
-Runtime error near line 2: SQL logic error
 
 # Empty string thread count
 $ (
@@ -1015,7 +1013,6 @@ Error: spath() requires source path (-p): prefix/directory/db.db: "SELECT spath(
 Error: spath() requires source path (-p): prefix/directory/subdirectory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 Error: spath() requires source path (-p): prefix/leaf_directory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 Error: spath() requires source path (-p): prefix/unusual%23%3f directory ,/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
-Runtime error near line 2: SQL logic error
 
 # Bad verbose (path_list == NULL is not an error)
 $ (

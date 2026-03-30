@@ -204,7 +204,7 @@ cleanup
     )
     out=$(gufi_vt "${query}" 2>&1 | replace)
     echo "${out}" | head -n 4
-    echo "${out}" | @GREP@ "Runtime error"
+    echo "${out}" | sort | @GREP@ "local copy" | head -n 1
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/dsi_plugins.expected "${OUTPUT}"

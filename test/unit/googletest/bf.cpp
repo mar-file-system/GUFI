@@ -299,7 +299,7 @@ TEST(parse_cmd_line, help) {
     EXPECT_EQ(close(STDOUT_FILENO), 0);
 
     struct input in;
-    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -2);
 
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
@@ -410,12 +410,12 @@ TEST(parse_cmd_line, debug) {
     close(STDOUT_FILENO);
 
     struct input in;
-    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -2);
 
     ASSERT_EQ(dup(fd), STDOUT_FILENO);
     EXPECT_EQ(close(fd), 0);
 
-    check_input(argc, argv, &in, true, false, true, true, RUN_TSE);
+    check_input(argc, argv, &in, false, false, true, true, RUN_TSE);
 
     input_fini(&in);
 }

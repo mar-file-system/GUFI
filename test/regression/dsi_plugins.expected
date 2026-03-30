@@ -82,4 +82,4 @@ $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection1'; CREATE TABLE collection1.data (uuid TEXT, info1 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
 ) | sqlite3
-Runtime error near line 2: SQL logic error
+Error: Could not attach local copy of collection db for collection "collection1" (original file: "collection1.db") at "prefix"

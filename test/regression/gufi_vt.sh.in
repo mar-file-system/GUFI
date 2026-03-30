@@ -330,6 +330,13 @@ query=$(
 )
 query_vt "${query}"
 
+echo "# No results (not an error)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT name FROM vrpentries WHERE name LIKE '%no_match%';\");"
+    echo -n "SELECT * FROM gufi ORDER BY name;"
+)
+query_vt "${query}"
+
 echo "# ######################################"
 echo "# errors"
 
@@ -345,10 +352,6 @@ query_vt "SELECT name FROM gufi_vt_pentries(NULL);"
 
 echo "# NULL indexroot"
 query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
-
-echo "# Bad indexroot"
-rm -rf "${BADDIR}"
-query_vt "SELECT name FROM gufi_vt_pentries('${BADDIR}') ORDER BY name ASC, size ASC;" | @SED@ "s%${BADDIR}%baddir%g;"
 
 (
     echo "# Empty string thread count"

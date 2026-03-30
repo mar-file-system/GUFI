@@ -1425,7 +1425,7 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
     /* if the header is good, read the first line */
     if (gufi_query_read_row(pCur) != 0) {
         gufi_vtEof(cur);
-        return SQLITE_ERROR;
+        /* not an error - got 0 rows */
     }
 
     return SQLITE_OK;

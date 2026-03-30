@@ -614,12 +614,13 @@ int parse_cmd_line(int         argc,
         sub_help();                                                               \
     }                                                                             \
                                                                                   \
-    if ((in)->helped || (in)->printed_version) {                                  \
+    if (((in)->helped && (idx == -2)) ||                                          \
+        (in)->printed_version) {                                                  \
         input_fini((in));                                                         \
         return EXIT_SUCCESS;                                                      \
     }                                                                             \
                                                                                   \
-    if (idx < 0) {                                                                \
+    if (idx == -1) {                                                              \
         input_fini((in));                                                         \
         return EXIT_FAILURE;                                                      \
     }

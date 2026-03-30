@@ -446,12 +446,12 @@ int parse_cmd_line(int                  argc,
             case FLAG_HELP_SHORT:               // help
                 print_help(argv[0], options, positional_args_help_str);
                 in->helped = 1;
-                retval = -1;
+                retval = -2;
                 break;
 
             case FLAG_DEBUG_SHORT:               // show parsed inputs
                 show = 1;
-                retval = -1;
+                retval = -2;
                 break;
 
             case FLAG_VERSION_SHORT:
@@ -797,7 +797,7 @@ int parse_cmd_line(int                  argc,
     // <optind> is the number of argv[] values that were recognized as options.
     // NOTE: caller may have custom options ovf their own, so returning a
     //       value > n_positional is okay (?)
-    if (retval
+    if ((retval == -1)
         || ((argc - optind) < n_positional)) {
         if (!in->helped && !bad_skipfile) {
             print_help(argv[0], options, positional_args_help_str);

@@ -127,10 +127,14 @@ int popen_argv_fd(popen_argv_t *ret) {
 }
 
 int popen_argv_close(popen_argv_t *ret) {
+    if (!ret) {
+        return 0;
+    }
+
     int rc = -1;
 
     int status = 0;
-    if (waitpid(ret->pid, &status, 0) == 0) {
+    if (waitpid(ret->pid, &status, 0) != 0) {
         if (WIFEXITED(status)) {
             rc = WEXITSTATUS(status);
         }
