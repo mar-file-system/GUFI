@@ -60,6 +60,8 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 */
 
+
+
 /*
  * MarFS GUFI indexing plugin
  *
@@ -104,11 +106,11 @@ OF SUCH DAMAGE.
  * build instruction:
  *
  * mkdir build && cd build
- * 
+ *
  * cmake .. -DMARFS_PREFIX=/path/to/marfs/install/ -DMARFS_SRC=/path/to/marfs/
  *
  * make
- * 
+ *
  * (sudo) make install
  *
  * run example:
@@ -625,8 +627,8 @@ static int marfs_indexing_global_init(void* global) {
     errno = 0;
     g_state.marfs_cfg = config_init(marfs_config_path, &marfs_erasurelock);
     if (!g_state.marfs_cfg) {
-        fprintf(stderr, "marfs config_init returned NULL (errno=%d: %s) (%s=%s)\n", errno, strerror(errno), MARFS_CONFIG_ENV,
-                marfs_config_path);
+        fprintf(stderr, "marfs config_init returned NULL (errno=%d: %s) (%s=%s)\n", errno, strerror(errno),
+                MARFS_CONFIG_ENV, marfs_config_path);
         goto cleanup;
     }
 
@@ -713,7 +715,7 @@ static int is_namespace(str_t path) {
 
 // marfs_pre_processing_dir checks if we're about to process a marfs specific directory (MDAL_reference, MDAL_subspaces)
 // or a namespace that is no longer active in the marfs config
-static plugin_process_action marfs_dir_traversal_action(void* ptr) {
+static plugin_dir_action marfs_dir_action(void* ptr) {
     PCS_t* pcs = (PCS_t*)ptr;
 
     if (!pcs || !pcs->work || !pcs->work->name) {
@@ -911,7 +913,6 @@ static sqlite3_int64 build_xattr_names_filtered(struct entry_data* ed, char* out
 // any marfs specific xattrs
 static void marfs_process_file(void* ptr, void* user_data) {
     PCS_t* pcs = (PCS_t*)ptr;
-    sqlite3* db = pcs->db;
     struct entry_data* ed = pcs->ed;
     struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
 
@@ -1131,8 +1132,8 @@ static void marfs_indexing_global_exit(void* global) {
 struct plugin_operations GUFI_MARFS_PLUGIN = {
     .type = PLUGIN_INDEX,
     .global_init = marfs_indexing_global_init,
+    .dir_action = marfs_dir_action,
     .ctx_init = marfs_ctx_init,
-    .dir_traversal_action = marfs_dir_traversal_action,
     .process_dir = marfs_process_dir,
     .process_file = marfs_process_file,
     .ctx_exit = marfs_ctx_exit,

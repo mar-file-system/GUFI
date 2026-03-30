@@ -91,7 +91,7 @@ typedef enum {
     PLUGIN_NO_PROCESS_DIR = 2,
     // Do not process this directory and do not descend into its subdirectories
     PLUGIN_NO_PROCESS_NO_DESCEND_DIR = 3,
-} plugin_process_action;
+} plugin_dir_action;
 
 /*
  * Operations for a user-defined plugin library, allowing the user to make custom
@@ -113,7 +113,7 @@ struct plugin_operations {
      * Returns whether a directory should be processed and/or 
      * descended into
      */
-    plugin_process_action (*dir_traversal_action)(void *ptr);
+    plugin_dir_action (*dir_action)(void *ptr);
 
     /*
      * Give the user an opportunity to initialize any state for the
@@ -190,13 +190,13 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted);
  *         on error, stop, call plugins_global_exit() for previously
  *         successfully initialized plugins, and return error
  */
-size_t                plugins_global_init    (struct plugins* plugins, void* global);
-plugin_process_action plugins_dir_traversal_action(struct plugins* plugins, void* ctx);
-void                  plugins_ctx_init       (struct plugins* plugins, void* ctx, const size_t tid);
-void                  plugins_process_dir    (struct plugins* plugins, void* ctx, const size_t tid);
-void                  plugins_process_file   (struct plugins* plugins, void* ctx, const size_t tid);
-void                  plugins_ctx_exit       (struct plugins* plugins, void* ctx, const size_t tid);
-void                  plugins_global_exit    (struct plugins* plugins, void* global);
+size_t            plugins_global_init (struct plugins* plugins, void* global);
+plugin_dir_action plugins_dir_action  (struct plugins* plugins, void* ctx);
+void              plugins_ctx_init    (struct plugins* plugins, void* ctx, const size_t tid);
+void              plugins_process_dir (struct plugins* plugins, void* ctx, const size_t tid);
+void              plugins_process_file(struct plugins* plugins, void* ctx, const size_t tid);
+void              plugins_ctx_exit    (struct plugins* plugins, void* ctx, const size_t tid);
+void              plugins_global_exit (struct plugins* plugins, void* global);
 
 /* common plugin ptr struct (don't have to use; here to reduce duplicate struct definitions) */
 typedef struct PluginCommonStruct {

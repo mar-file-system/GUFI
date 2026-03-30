@@ -101,7 +101,7 @@ install(TARGETS dsi_querying DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUD
 
 # marfs plugin
 set(MARFS_PREFIX "" CACHE PATH "MarFS install prefix")
-set(MARFS_SRC    "" CACHE PATH "MarFS source")
+set(MARFS_SRC    "" CACHE PATH "MarFS source root")
 if (MARFS_PREFIX AND MARFS_SRC)
   find_package(LibXml2 REQUIRED)
   message(STATUS "MARFS_PREFIX: ${MARFS_PREFIX}")
