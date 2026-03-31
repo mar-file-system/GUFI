@@ -166,11 +166,12 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted);
  *
  * @param global      single global object passed to global init/exit
  * @param ctx         single common ctx across all plugins
- * @param user_data   address of void * array
+ * @param tid         QPTPool thread id
  *
  * plugins_global_init()
  * @return plugins->initialized
- *         on error, plugins_global_exit() is automatically called
+ *         on error, stop, call plugins_global_exit() for previously
+ *         successfully initialized plugins, and return error
  */
 size_t plugins_global_init (struct plugins *plugins, void *global);
 void   plugins_ctx_init    (struct plugins *plugins, void *ctx, const size_t tid);

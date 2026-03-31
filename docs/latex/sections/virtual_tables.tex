@@ -137,53 +137,63 @@ The \gufivt arguments are mostly the same as those of \gufivtstar. The
 difference are:
 
 \begin{itemize}
-\item Argument order does not matter
-\item The right most argument is the value used
 \item Arguments are \texttt{key=value} pairs
+\item Order of arguments with different keys does not matter
+\item Unless otherwise noted, arguments with duplicate keys results in
+  the rightmost argument being used
 \item There are a few arguments that \gufivtstar does not have
 \end{itemize}
 
 The ordering of the following table is different from the \gufivtstar
 argument table in order to better reflect the command that is run.
 
-\begin{table}[H]
-  \centering
-  \begin{tabularx}{\textwidth}{| l | c | X |}
-    \hline
-    Argument & Type & Notes \\
-    \hline
-    remote\_cmd & String & Command to forward this run of \gufiquery
-    to a remote (e.g. \texttt{ssh}) \\
-    \hline
-    remote\_arg & String & Single \texttt{argv[i]} passed to
-    \texttt{remote\_cmd} before \gufiquery (e.g. \texttt{user@remote})
-    \\
-    & & \\
-    & & Multiple \texttt{remote\_arg} passed in to \gufivt will not
-    overwrite each other (this is an exception to the differences
-    listed above) \\
-    \hline
-    \# of threads & Positive integer & \\
-    \hline
-    min\_level & Non-negative integer & \\
-    \hline
-    dir\_match\_uid & UID & Not found in \gufivtstar \\
-    \hline
-    dir\_match\_gid & GID & Not found in \gufivtstar \\
-    \hline
-    I, T, S, E, K, J, G, F & String & SQL forwarded to \gufiquery \\
-    \hline
-    path\_list & String & File path \\
-    \hline
-    p & String & Source path for use with \texttt{spath()} \\
-    \hline
-    index & String & Arguments without keys are treated as the index
-    path (this is an exception to the differences listed above) \\
-    \hline
-    verbose or VERBOSE & 0 or 1 & Print command before running it \\
-    \hline
-  \end{tabularx}
-\end{table}
+\begin{longtable}{| l | c | p{0.35\linewidth} |}
+  \hline
+  Key & Value Type & Notes \\
+  \hline
+  remote\_cmd & String & Command to forward this run of \gufiquery
+  to a remote (e.g. \texttt{ssh}) \\
+  \hline
+  remote\_arg & String & Single \texttt{argv[i]} passed to
+  \texttt{remote\_cmd} before \gufiquery (e.g. \texttt{user@remote})
+  \\
+  & & \\
+  & & Multiple are allowed \\
+  \hline
+  \# of threads & Positive Integer & \\
+  \hline
+  min\_level & Non-negative Integer & \\
+  \hline
+  dir\_match\_uid & UID & Not available in \gufivtstar \\
+  \hline
+  dir\_match\_gid & GID & Not available in \gufivtstar \\
+  \hline
+  setup\_res\_col\_type & SQL & Set up temporary environment to make
+  namespaces/tables/columns available for getting result column
+  types \\
+  \hline
+  I, T, S, E, K, J, G, F & SQL & Forwarded to \gufiquery \\
+  \hline
+  path\_list & File Path & \\
+  \hline
+  p & Directory Path & Source path for use with \texttt{spath()} \\
+  \hline
+  plugin & Formatted String & \textless
+  entrypoint\textgreater:\textless gufi\_query plugin library
+  path\textgreater \\
+  & & \\
+  & & Multiple are allowed \\
+  & & \\
+  & & Not available in \gufivtstar \\
+  \hline
+  index & Directory Path & Arguments without keys are also treated
+  as the index path \\
+  & & \\
+  & & Multiple are allowed \\
+  \hline
+  verbose or VERBOSE & 0 or 1 & Print command before running it \\
+  \hline
+\end{longtable}
 
 Example Usage:
 \begin{verbatim}

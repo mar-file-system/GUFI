@@ -815,7 +815,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     F                       = '<SQL>'
  *     path_list               = '<file path>'
  *     p                       = '<source path for use with spath()>'
- *     plugin                  = '<gufi_query plugin library path>'
+ *     plugin                  = '<entrypoint>:<gufi_query plugin library path>'
  *     index                   = '<path>' (can also pass in without the key)
  *     verbose/VERBOSE         =  <0|1>
  *

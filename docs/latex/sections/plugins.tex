@@ -60,9 +60,46 @@
 
 
 
-\section{Utility Tools}
+\subsection{Plugins}
+In addition to indexing and querying filesystems verbatim, it is also
+possible to make indexes contain or present modified information via
+the plugin interface.
 
-\input{sections/distributed}
-\input{sections/reconstruct}
-\input{sections/incremental_update}
-\input{sections/plugins}
+Plugins are implemented as shared library files that are
+\texttt{dlopen(3)}-ed. Each plugin source contains one or more
+definitions of the \texttt{plugin\_operations} structure found in
+\texttt{include/plugin.h}:
+
+\begin{verbatim}
+              struct plugin_operations plugin_ops = {
+                  ...
+              };
+\end{verbatim}
+
+After being compiled, plugins are passed to GUFI tools with formated
+strings containing the entrypoint (name of the
+\texttt{struct~plugin\_operations} definition to be used) and the path
+to the plugin library file, separated by a colon:
+\begin{verbatim}
+              <entrypoint>:<path>
+\end{verbatim}
+\begin{verbatim}
+      e.g.:
+              plugin_ops:/path/to/plugin.so
+\end{verbatim}
+
+(Currently) \gufidirindex, \gufiquery, and \gufiincrementalupdate have
+the \texttt{-{}-plugin} flag and \gufivt has the \texttt{plugin}
+argument.
+
+Multiple plugins may be passed into the tools that can handle
+plugins. They will be initialized (at two places:
+\texttt{global\_init} in \texttt{main} and then \texttt{ctx\_init} at
+each directory) in the order they are passed into the tool and will
+destruct in reverse order. Note that if \texttt{global\_init} for a
+plugin errors, the destructors of all previously initialized plugins
+will be called (but not for that plugin, as it did not successfully
+initialize), and error.
+
+Example plugins may be found in \texttt{contrib/plugins} and
+\texttt{test/test\_*\_plugin.c}.

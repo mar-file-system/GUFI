@@ -242,7 +242,7 @@ void print_help(const char* prog_name,
             case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <n>               minimum level to go down"); break;
             case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <n>               maximum level to go down"); break;
             case FLAG_PRINT_TLV_SHORT:               printf("      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
-            case FLAG_SETUP_RES_COL_TYPES_SHORT:     printf("      --setup-res-col-types <SQL>   Single SQL statement to create a table to determine result column types when calling --print-tlv"); break;
+            case FLAG_SETUP_RES_COL_TYPES_SHORT:     printf("      --setup-res-col-types <SQL>   SQL statement(s) for setting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv"); break;
             case FLAG_KEEP_MATIME_SHORT:             printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
             case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
             case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;

@@ -132,6 +132,8 @@ Source path prefix for %s in SQL
 query xattrs
 .It Fl Q\ <basename>\ <table>\ <template.table>\ <view>
 External database file basename, per-attach table name, template + table name, and the resultant view
+.It Fl -plugin\ <entrypoint>:<path>
+plugin library for modifying tree processing
 .It Fl w, -read-write
 open the database files in read-write mode instead of read only mode
 .It Fl -keep-matime
@@ -150,6 +152,8 @@ output file (one-per-thread, with thread-id suffix)
 output DB
 .It Fl -print-tlv
 prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
+.It Fl -setup-res-col-types\ <SQL>
+SQL statement(s) for seting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv
 .It Fl -terse
 print the information in terse form
 .It Fl -output-buffer-size\ <bytes>

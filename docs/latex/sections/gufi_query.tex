@@ -133,6 +133,8 @@ may call \gufiquery, but might not be able to use it properly.
   \ \ \ \textless template\textgreater.\textless table\textgreater & template + table name, \\
   \ \ \ \textless view\textgreater & and the resultant view \\
   \hline
+  -{}-plugin \textless entrypoint\textgreater:\textless path\textgreater & plugin library for modifying db entries \\
+  \hline
   -w, -{}-read-write & open the database files in read-write mode instead of read only mode \\
   \hline
   -{}-keep-matime & Keep mtime and atime same on the database files \\
@@ -150,6 +152,11 @@ may call \gufiquery, but might not be able to use it properly.
   -O, -{}-output-db \textless out\_DB\textgreater & output DB \\
   \hline
   -{}-print-tlv & prefix row with 1 int column count and each column with 1 octet type and 1 size\_t length \\
+  \hline
+  -{}-setup-res-col-types \textless SQL\textgreater & SQL statement(s)
+  for seting up temporary environment to make
+  namespaces/tables/columns available for getting result column types
+  when calling --print-tlv \\
   \hline
   -{}-terse & print the information in terse form \\
   \hline

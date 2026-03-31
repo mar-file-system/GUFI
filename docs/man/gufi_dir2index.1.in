@@ -97,8 +97,8 @@ index xattrs
 file containing directory names to skip
 .It Fl q
 check that external databases are valid before tracking during indexing
-.It Fl -plugin\ <library_name>
-plugin library for modifying db entries
+.It Fl -plugin\ <entrypoint>:<path>
+plugin library for modifying tree processing
 .It Fl -target-memory\ <bytes>
 target memory utilization (soft limit)
 .It Fl -subdir-limit\ <count>
