@@ -256,6 +256,10 @@ static void marfs_plugin_cleanup(void) {
 
     g_state.namespaces = NULL;
     g_state.namespaces_count = 0;
+
+    // cleanup marfs config
+    config_term(g_state.marfs_cfg);
+    g_state.marfs_cfg = NULL;
 }
 
 // count the number of namespace paths in the marfs config
@@ -1121,10 +1125,6 @@ static void marfs_indexing_global_exit(void* global) {
     if (cleanup_marfs_index() != 0) {
         fprintf(stderr, "Warning: cleanup_marfs_index failed\n");
     }
-
-    // cleanup marfs config
-    config_term(g_state.marfs_cfg);
-    g_state.marfs_cfg = NULL;
 
     marfs_plugin_cleanup();
 }
