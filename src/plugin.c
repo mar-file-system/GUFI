@@ -236,7 +236,7 @@ plugin_dir_action plugins_dir_action(struct plugins* plugins, void* ctx) {
             plugin_dir_action pda = plugins->plugins[i]->ops->dir_action(ctx);
 
             // choose the most restrictive action returned by any plugin
-            if (pda > ret) {
+            if (pda < ret) {
                 ret = pda;
             }
         }
