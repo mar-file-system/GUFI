@@ -407,15 +407,15 @@ endif()
 # Find GPFS
 find_library(GPFS_LIB gpfs PATH "/usr/lpp/mmfs/lib")
 if (GPFS_LIB)
-  message(STATUS "GPFS libraries found; building gpfs-scan-tool")
+  message(STATUS "GPFS libraries found")
   option(GPFS_BUILD "Build GPFS GUFI tools" ON)
   if (GPFS_BUILD)
     set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, gpfs.base")
   else()
-    message(STATUS "GPFS libraries found but not building gpfs-scan-tool")
+    message(STATUS "GPFS libraries found but not building gpfs code")
   endif()
 else()
-  message(STATUS "GPFS libraries not found; not building gpfs-scan-tool")
+  message(STATUS "GPFS libraries not found; not building gpfs code")
 endif()
 
 # Find DB2
