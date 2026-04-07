@@ -69,5 +69,8 @@ set -e
 # this script is only needed to set up the index
 "${GUFI_TREESUMMARY_ALL}" "${SEARCH}" > /dev/null 2>&1
 
+# gufi_query needs to be available in remotes
+export PATH="${BINARY_DIR}/src:${PATH}"
+
 # this is the actual test
-"${CURRENT_BINARY_DIR}/import.py" -v
+LD_PRELOAD="${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}" "${CURRENT_BINARY_DIR}/import.py" -v

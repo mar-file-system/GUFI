@@ -71,6 +71,7 @@ set(CORE
 set(AUX
   gen_big_trace.py
   hexlify.py
+  pdsh.fake
   sbatch.fake
   ssh.fake
 )
@@ -147,6 +148,10 @@ if (CLIENT)
     gufi_query.py
   )
 endif()
+
+list(APPEND PYTHON
+  gufi_query_multiple_remotes
+)
 
 set(EXAMPLES
   deluidgidsummaryrecs
@@ -250,6 +255,7 @@ endforeach()
 foreach(NAME ${PYTHON})
   set_property(TEST "${NAME}" APPEND PROPERTY LABELS "python")
 endforeach()
+set_property(TEST "gufi_query_multiple_remotes" APPEND PROPERTY LABELS "gufi_vt")
 
 # OTHERS
 set_property(TEST "dsi_plugins" APPEND PROPERTY LABELS "gufi_vt;binary;plugin")

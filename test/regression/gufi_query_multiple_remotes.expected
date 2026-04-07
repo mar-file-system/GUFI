@@ -1,0 +1,74 @@
+# Basic Usage with ssh (2 copies of each path)
+$ gufi_query_multiple_remotes -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "gufi_vt" ssh --remote-cmd "ssh" remote1 "search" remote2 "search"
+prefix/.hidden
+prefix/.hidden
+prefix/1KB
+prefix/1KB
+prefix/1MB
+prefix/1MB
+prefix/directory/executable
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/readonly
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/directory/writable
+prefix/file_symlink
+prefix/file_symlink
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/old_file
+prefix/repeat_name
+prefix/repeat_name
+prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? directory ,/unusual, name?#
+
+# Modify Aggregated Results with ssh
+$ gufi_query_multiple_remotes -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" --extra-sql "ORDER BY fullpath ASC LIMIT 3" "gufi_vt" ssh --remote-cmd "ssh" remote1 "search" remote2 "search"
+prefix/.hidden
+prefix/.hidden
+prefix/1KB
+
+# Basic Usage with pdsh (2 copies of each path)
+$ gufi_query_multiple_remotes -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "gufi_vt" pdsh --remote-cmd "pdsh" remote1 remote2 "search"
+prefix/.hidden
+prefix/.hidden
+prefix/1KB
+prefix/1KB
+prefix/1MB
+prefix/1MB
+prefix/directory/executable
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/readonly
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/directory/writable
+prefix/file_symlink
+prefix/file_symlink
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/old_file
+prefix/repeat_name
+prefix/repeat_name
+prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? directory ,/unusual, name?#
+
+# Modify Aggregated Results with pdsh
+$ gufi_query_multiple_remotes -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" --extra-sql "ORDER BY fullpath ASC LIMIT 3" "gufi_vt" pdsh --remote-cmd "pdsh" remote1 remote2 "search"
+prefix/.hidden
+prefix/.hidden
+prefix/1KB
+

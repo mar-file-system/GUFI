@@ -63,7 +63,6 @@
 
 import os
 import subprocess
-import sys
 import unittest
 
 from gufi_tool import *
@@ -101,6 +100,23 @@ class TestImportingUserFacingScripts(unittest.TestCase):
     def test_gufi_query(self):
         indexroot = gufi_config.Server(CONFIG_PATH).indexroot
         self.expect_stdout('query.py', ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;', indexroot])
+
+    def test_gufi_query_multiple_remotes(self):
+        indexroot = gufi_config.Server(CONFIG_PATH).indexroot
+        self.expect_stdout('query_multiple_remotes',
+                           ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;',
+                            '@CMAKE_BINARY_DIR@/src/gufi_vt',
+                            'ssh',
+                            '--remote-cmd', '@CMAKE_CURRENT_BINARY_DIR@/ssh.fake',
+                            'remote1', indexroot,
+                            'remote2', indexroot])
+        self.expect_stdout('query_multiple_remotes',
+                           ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;',
+                            '@CMAKE_BINARY_DIR@/src/gufi_vt',
+                            'pdsh',
+                            '--remote-cmd', '@CMAKE_CURRENT_BINARY_DIR@/pdsh.fake',
+                            'remote1', 'remote2',
+                            indexroot])
 
     def test_gufi_stat(self):
         self.expect_stdout('stat', [self.path])

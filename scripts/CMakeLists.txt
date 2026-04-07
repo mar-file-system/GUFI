@@ -112,6 +112,20 @@ if (CLIENT)
     EXCLUDE_FROM_ALL)   # do not overwrite the gufi_query binary if running 'make install'
 endif()
 
+# install gufi_query_multiple_remotes script to server
+configure_file(gufi_query_multiple_remotes gufi_query_multiple_remotes @ONLY)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_query_multiple_remotes"
+  DESTINATION "${SERVER_BIN}"
+  COMPONENT Server)
+
+if (CLIENT)
+  # install the script into the client RPM because it uses gufi_vt
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_query_multiple_remotes"
+    DESTINATION "${CLIENT_BIN}"
+    COMPONENT Client
+    EXCLUDE_FROM_ALL)
+endif()
+
 # gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
 configure_file(gufi_jail gufi_jail @ONLY)
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail"

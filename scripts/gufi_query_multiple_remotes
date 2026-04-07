@@ -1,0 +1,237 @@
+#!@Python3_SHEBANG@
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+import argparse
+import sqlite3
+import sys
+
+import gufi_common
+
+SQL_FLAGS = ['I', 'T', 'S', 'E', 'K', 'J', 'G']
+
+def build_arg_parser():
+    parser = argparse.ArgumentParser('gufi_query_multiple_remotes',
+                                     description='run gufi_query (via gufi_vt) across multiple remotes and join results',
+                                     add_help=False)
+
+    gufi_common.add_help_version(parser)
+
+    # gufi_query/gufi_vt flags
+    gufi_common.add_delim_flag(parser)
+    parser.add_argument('-n', '--threads',
+                        type=gufi_common.get_positive,
+                        default=1)
+    for flag in SQL_FLAGS:
+        parser.add_argument('-{0}'.format(flag), type=str, metavar='SQL')
+    gufi_common.add_verbose_flag(parser)
+
+    parser.add_argument('--extra-sql',
+                        type=str,
+                        metavar='SQL',
+                        help='add SQL to modify the final results (GROUP BY, ORDER BY, LIMIT, etc.)')
+
+    parser.add_argument('gufi_vt',
+                        type=str,
+                        help='path to gufi_vt extension file')
+
+    subparsers = parser.add_subparsers(dest='remote_type',
+                                       help='method for running on remotes')
+
+    ssh_parser = subparsers.add_parser('ssh')
+    ssh_parser.add_argument('--remote-cmd',
+                            type=str,
+                            metavar='cmd',
+                            default='ssh',
+                            help='path to ssh')
+
+    ssh_parser.add_argument('uri_index',
+                            nargs='+',
+                            metavar='uri index',
+                            help='space separated pairs of URI and index path')
+
+    pdsh_parser = subparsers.add_parser('pdsh')
+    pdsh_parser.add_argument('--remote-cmd',
+                             type=str,
+                             metavar='path',
+                             default='pdsh',
+                             help='path to pdsh')
+
+    pdsh_parser.add_argument('uri',
+                            nargs='+',
+                            help='remote URI')
+
+    pdsh_parser.add_argument('index',
+                            metavar='index',
+                            help='common index path across all remotes')
+
+    return parser
+
+# run when each invocation of gufi_vt goes to one remote
+# such as with ssh
+#
+# this has the downside of running on remotes sequentially
+# instead of in parallel (limitation of SQLite 3)
+def ssh(conn, parser, args):
+    if len(args.uri_index) % 2:
+        parser.error('Missing index path')
+
+    # build CREATE VIRTUAL TABLE SQL
+    common_sql = 'CREATE VIRTUAL TABLE vt{{0}} USING gufi_vt(threads={0}, '.format(args.threads)
+
+    for flag in SQL_FLAGS:
+        if getattr(args, flag):
+            common_sql += '{0}=\'{1}\', '.format(flag, getattr(args, flag))
+
+    if args.verbose:
+        common_sql += 'verbose=1, '
+
+    # set up virtual tables
+    i = 0
+    for i, [uri, index] in enumerate(zip(args.uri_index[::2], args.uri_index[1::2])):
+        sql = ', '.join([common_sql[:-2].format(i),
+                         'index=\'{0}\''.format(index),
+                         'remote_cmd=\'{0}\''.format(args.remote_cmd),
+                         'remote_arg=\'{0}\''.format(uri)
+                         ]) + ');'
+        conn.execute(sql)
+
+    max_vt = i
+
+    # create SQL to join all results into a temporary table
+    combined = ' UNION ALL '.join(['SELECT * FROM vt{0}'.format(i) for i in range(max_vt + 1)])
+
+    # add extra SQL from command line
+    sql = 'SELECT * FROM ({0}) {1};'.format(combined, args.extra_sql)
+
+    return conn.execute(sql), sql
+
+# run gufi_vt with pdsh, which sends commands to all remotes in parallel
+def pdsh(conn, _parser, args):
+    # build CREATE VIRTUAL TABLE SQL
+    common_sql = 'CREATE VIRTUAL TABLE vt USING gufi_vt(threads={0}, '.format(args.threads)
+
+    for flag in SQL_FLAGS:
+        if getattr(args, flag):
+            common_sql += '{0}=\'{1}\', '.format(flag, getattr(args, flag))
+
+    if args.verbose:
+        common_sql += 'verbose=1, '
+
+    # set up virtual tables
+    sql = ', '.join([common_sql[:-2],
+                     'index=\'{0}\''.format(args.index),
+                     'remote_cmd=\'{0}\''.format(args.remote_cmd),
+                     'remote_arg=\'-R\'',
+                     'remote_arg=\'ssh\'',
+                     'remote_arg=\'-w\'',
+                     'remote_arg=\'{0}\''.format(','.join(args.uri)),
+                     'remote_arg=\'-N\'', # don't prefix lines with hostname
+                     ]) + ');'
+
+    conn.execute(sql)
+
+    # add limitations from command line
+    sql = 'SELECT * FROM vt {0};'.format(args.extra_sql)
+
+    return conn.execute(sql), sql
+
+def run(argv, _config=None, stdout=None, stderr=None):
+    parser = build_arg_parser()
+    args = parser.parse_args(argv[1:])
+
+    stdout_results = ''
+    stderr_results = ''
+
+    with sqlite3.connect(":memory:") as conn:
+        conn.enable_load_extension(True)
+        conn.load_extension(args.gufi_vt)
+        conn.enable_load_extension(False)
+
+        func = ssh
+        if args.remote_type == 'pdsh':
+            func = pdsh
+
+        res, sql = func(conn, parser, args)
+
+        # have to call here because gufi_vt(verbose=1) does not print
+        # until SELECT is run, so this would print first if placed
+        # before conn.execute()
+        if args.verbose:
+            verbose = 'Aggregate results with:\n    {0}\n'.format(sql)
+            if stderr is None:
+                print(verbose, file=sys.stderr)
+            else:
+                stderr_results += verbose + '\n'
+
+        # print results
+        if stdout is None:
+            for row in res.fetchall():
+                print(*row, sep=args.delim)
+        else:
+            for row in res.fetchall():
+                stdout_results += args.delim.join(row)
+
+    return 0, stdout_results, stderr_results
+
+if __name__ == '__main__':
+    sys.exit(run(sys.argv)[0])

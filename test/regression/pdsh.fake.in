@@ -1,4 +1,4 @@
-#!@Python3_SHEBANG@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,58 +61,40 @@
 
 
 
-import argparse
-import os
-import sys
+set -e
 
-RTESTS = '@CMAKE_CURRENT_BINARY_DIR@'
+# remove pdsh flags
 
-# test config file name
-CONFIG_PATH = os.path.join(RTESTS, 'config.test')
+w=""
 
-SCRIPTS = os.path.join('@CMAKE_BINARY_DIR@', 'scripts')
+# https://stackoverflow.com/a/14203146
+# Bruno Bronosky
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
 
-TOOLS = {
-    'du'                     : [1, os.path.join(SCRIPTS, 'gufi_du')],
-    'find'                   : [1, os.path.join(SCRIPTS, 'gufi_find')],
-    'getfattr'               : [1, os.path.join(SCRIPTS, 'gufi_getfattr')],
-    'ls'                     : [1, os.path.join(SCRIPTS, 'gufi_ls')],
-    'pugsql'                 : [0, os.path.join(RTESTS,  'gufi_vt_pugsql.py')],
-    'query.py'               : [1, os.path.join(SCRIPTS, 'gufi_query.py')],
-    'query_multiple_remotes' : [1, os.path.join(SCRIPTS, 'gufi_query_multiple_remotes')],
-    'querydbs'               : [0, os.path.join(SCRIPTS, 'querydbs')],
-    'stat'                   : [1, os.path.join(SCRIPTS, 'gufi_stat')],
-    'stats'                  : [1, os.path.join(SCRIPTS, 'gufi_stats')],
-    'sqlalchemy'             : [0, os.path.join(RTESTS,  'gufi_vt_sqlalchemy.py')],
-}
+case $key in
+    -R)
+        shift # past module
+        ;;
+    -w)
+        w="$2"
+        shift # past hosts
+        ;;
+    -N)
+        ;;
+    *)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        ;;
+esac
+    shift # past flag
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
 
-# import a tool by path (default: the scripts directory)
-# needed for duplicate filenames or files without the .py extension
-def import_tool(tool, filename):
-    # https://csatlas.com/python-import-file-module/
-    # pylint: disable=import-outside-toplevel
-    import importlib.machinery
-    import importlib.util
-    from pathlib import Path
+IFS="," read -r -a hosts <<< "${w}"
 
-    # Import mymodule
-    loader = importlib.machinery.SourceFileLoader(tool, filename)
-    spec = importlib.util.spec_from_loader(tool, loader)
-    script = importlib.util.module_from_spec(spec)
-    loader.exec_module(script)
-    return script
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='GUFI Testing Tool Selector', add_help=False)
-    parser.add_argument('tool', choices=TOOLS.keys())
-
-    args, tool_args = parser.parse_known_args()
-
-    can_capture_output, path = TOOLS[args.tool]
-    gufi_tool = import_tool(args.tool, path)
-
-    out = gufi_tool.run([args.tool] + tool_args, CONFIG_PATH)
-
-    if can_capture_output:
-        sys.exit(out[0])
-    sys.exit(out)
+for _ in "${hosts[@]}"
+do
+    echo "$@" | bash
+done

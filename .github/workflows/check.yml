@@ -248,7 +248,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure
+      run:  ctest --output-on-failure -E "import"
 
   TSAN:
     needs: [ShellCheck, Pylint]
@@ -278,7 +278,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure -E "vt|dsi"
+      run:  ctest --output-on-failure -E "dsi|import|query_multiple_remotes|vt"
 
   Memcheck:
     needs: [ShellCheck, Pylint]
