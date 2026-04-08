@@ -349,12 +349,6 @@ int main(int argc, char *argv[])
 
     /* initial set up done, can start processing and printing results */
 
-    /* print the tlv header to indicate that the output is results and not the help output */
-    if (in.types.print_tlv) {
-        /* --print-tlv can only go to stdout */
-        fwrite(TLV_PREFIX, sizeof(char), sizeof(TLV_PREFIX), stdout);
-    }
-
     if (doing_partial_walk(&in, root_count)) {
         if (root_count == 0) {
             gqw_process_path_list(&in, NULL, ctx);

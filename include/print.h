@@ -75,7 +75,16 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-#define TLV_PREFIX "GUFI_QUERY_TLV\0"     /* magic string (2 NULL terminators) */
+/*
+ * hex chars; if lengths of rows or individual columns
+ * are larger than 2^(4 * len), there are other issues
+ */
+#define TLV_ROW_LEN_LEN         8
+#define TLV_COL_COUNT_LEN       4
+
+#define TLV_ROW_LEN_READ_FMT    "%8zx"
+#define TLV_COL_COUNT_READ_FMT  "%4x"
+#define TLV_COL_LEN_READ_FMT    "%zx"
 
 /* sqlite3_exec callback argument data */
 typedef struct PrintArgs {

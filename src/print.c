@@ -68,6 +68,26 @@ OF SUCH DAMAGE.
 
 #include "print.h"
 
+/* fixed length */
+#define TLV_ROW_LEN_WRITE_FMT   "%.8zx"
+#define TLV_COL_COUNT_WRITE_FMT "%.4x"
+
+/* dynamic length */
+#define TLV_SIZE_WRITE_FMT "%zx"
+
+static char len_of_len(size_t len) {
+    len >>= 4;
+    char c = 1; /* even if length is 0, there is still 1 digit */
+
+    while ((c < 8) && /* max hex digits - if more are needed, there is too much data (https://www.sqlite.org/limits.html#max_length) */
+           len) {
+        c++;
+        len >>= 4;
+    }
+
+    return c; /* add '0' to this later */
+}
+
 int print_parallel(void *args, int count, char **data, char **columns) {
     (void) columns;
 
@@ -76,6 +96,11 @@ int print_parallel(void *args, int count, char **data, char **columns) {
     const int *types = print->types;
 
     size_t *lens = malloc(count * sizeof(size_t));
+    char *len_of_lens = NULL;
+    if (types) {
+        len_of_lens = malloc(count * sizeof(char));
+    }
+
     size_t row_len = 0;
     for(int i = 0; i < count; i++) {
         lens[i] = 0;
@@ -83,14 +108,18 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             lens[i] = strlen(data[i]);
             row_len += lens[i];
         }
+
+        if (types) {
+            len_of_lens[i] = len_of_len(lens[i]);
+            row_len += sizeof(char);                  /* type */
+            row_len += sizeof(char) + len_of_lens[i]; /* length */
+        }
     }
 
     if (types) {
-        /* TLV output is prefixed with the row length and the column count */
-        row_len += sizeof(row_len);
-        row_len += sizeof(count);
-
-        row_len += count * (sizeof(char) + sizeof(size_t));  /* type and length per column */
+        /* TLV output is prefixed with the row length (including itself) and the column count */
+        row_len += TLV_ROW_LEN_LEN;
+        row_len += TLV_COL_COUNT_LEN;
     }
     else {
         row_len += count - 1; /* one delimiter per column except last column */
@@ -122,18 +151,24 @@ int print_parallel(void *args, int count, char **data, char **columns) {
 
         if (types) {
             /* write total row length */
-            fwrite(&row_len, sizeof(char), sizeof(row_len), print->outfile);
+            fprintf(print->outfile, TLV_ROW_LEN_WRITE_FMT, row_len);
 
             /* write column count */
-            fwrite(&count, sizeof(char), sizeof(count), print->outfile);
+            fprintf(print->outfile, TLV_COL_COUNT_WRITE_FMT, count);
         }
 
         for(int i = 0; i < last; i++) {
             if (types) {
-                const char col_type = types[i];
+                /* write column type */
+                const char col_type = types[i] + '0';
                 fwrite(&col_type, sizeof(char), sizeof(col_type), print->outfile);
 
-                fwrite(&lens[i], sizeof(char), sizeof(lens[i]), print->outfile);
+                /* write length of column length */
+                const char col_len_of_len = len_of_lens[i] + '0';
+                fwrite(&col_len_of_len, sizeof(char), sizeof(col_len_of_len), print->outfile);
+
+                /* write column length */
+                fprintf(print->outfile, TLV_SIZE_WRITE_FMT, lens[i]);
             }
 
             if (data[i]) {
@@ -148,10 +183,16 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         /* print last column with no follow up delimiter */
 
         if (types) {
-            const char col_type = types[last];
+            /* last column type */
+            const char col_type = types[last] + '0';
             fwrite(&col_type, sizeof(char), sizeof(col_type), print->outfile);
 
-            fwrite(&lens[last], sizeof(char), sizeof(lens[last]), print->outfile);
+            /* length of last column length */
+            const char col_len_of_len = len_of_lens[last] + '0';
+            fwrite(&col_len_of_len, sizeof(char), sizeof(col_len_of_len), print->outfile);
+
+            /* last column length */
+            fprintf(print->outfile, TLV_SIZE_WRITE_FMT, lens[last]);
         }
 
         if (data[last]) {
@@ -176,21 +217,27 @@ int print_parallel(void *args, int count, char **data, char **columns) {
 
         if (types) {
             /* write row length */
-            memcpy(&buf[filled], &row_len, sizeof(row_len));
-            filled += sizeof(row_len);
+            snprintf(&buf[filled], ob->capacity - filled, TLV_ROW_LEN_WRITE_FMT, row_len);
+            filled += TLV_ROW_LEN_LEN;
 
             /* write column count */
-            memcpy(&buf[filled], &count, sizeof(count));
-            filled += sizeof(count);
+            snprintf(&buf[filled], ob->capacity - filled, TLV_COL_COUNT_WRITE_FMT, count);
+            filled += TLV_COL_COUNT_LEN;
         }
 
         for(int i = 0; i < last; i++) {
             if (types) {
-                buf[filled] = types[i];
+                /* write column type */
+                buf[filled] = types[i] + '0';
                 filled++;
 
-                memcpy(&buf[filled], &lens[i], sizeof(lens[i]));
-                filled += sizeof(lens[i]);
+                /* write length of column length */
+                buf[filled] = len_of_lens[i] + '0';
+                filled++;
+
+                /* write column length */
+                snprintf(&buf[filled], ob->capacity - filled, TLV_SIZE_WRITE_FMT, lens[i]);
+                filled += len_of_lens[i];
             }
 
             if (data[i]) {
@@ -207,11 +254,17 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         /* print last column with no follow up delimiter */
 
         if (types) {
-            buf[filled] = types[last];
+            /* last column type */
+            buf[filled] = types[last] + '0';
             filled++;
 
-            memcpy(&buf[filled], &lens[last], sizeof(lens[last]));
-            filled += sizeof(lens[last]);
+            /* write length of last column length */
+            buf[filled] = len_of_lens[last] + '0';
+            filled++;
+
+            /* last column length */
+            snprintf(&buf[filled], ob->capacity - filled, TLV_SIZE_WRITE_FMT, lens[last]);
+            filled += len_of_lens[last];
         }
 
         if (data[last]) {
@@ -229,6 +282,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         ob->count++;
     }
 
+    free(len_of_lens);
     free(lens);
 
     print->rows++;

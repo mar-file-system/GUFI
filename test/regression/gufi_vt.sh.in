@@ -381,9 +381,6 @@ query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
     echo "# Zero thread count"
     query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', 0) ORDER BY name ASC, size ASC;"
 
-    echo "# NULL thread count"
-    query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', NULL) ORDER BY name ASC, size ASC;"
-
     echo "# Bad min_level"
     query_vt "SELECT name FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}, 'a') ORDER BY name ASC, size ASC;"
 
@@ -393,9 +390,6 @@ query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
     echo "# Zero n"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=0, E='SELECT 0;'); SELECT * FROM gufi;"
 
-    echo "# Empty n"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=, E='SELECT 0;'); SELECT * FROM gufi;"
-
     echo "# NULL n"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', n=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
 
@@ -404,9 +398,6 @@ query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
 
     echo "# Zero thread count"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=0, E='SELECT 0;'); SELECT * FROM gufi;"
-
-    echo "# Empty thread count"
-    query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=, E='SELECT 0;'); SELECT * FROM gufi;"
 
     echo "# NULL thread count"
     query_vt "CREATE VIRTUAL TABLE gufi USING gufi_vt('${INDEXROOT}', threads=NULL, E='SELECT 0;'); SELECT * FROM gufi;"

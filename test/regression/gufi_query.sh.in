@@ -133,10 +133,10 @@ echo "# limit tree traversal to some directories under level 1 (only prefix/dire
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --min-level ${DISTRIBUTED_LEVEL} --path-list \"${DISTRIBUTED_0}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\""
 
 echo "# Output TLV columns (no aggregation)"
-run_no_sort "${GUFI_QUERY} --print-tlv -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\" | ${HEXLIFY}"
+run_no_sort "${GUFI_QUERY} --print-tlv -n ${THREADS} -E \"SELECT name, size FROM vrpentries WHERE name == '.hidden';\" \"${INDEXROOT}\""
 
 echo "# Output TLV columns (with aggregation)"
-run_no_sort "${GUFI_QUERY} --print-tlv -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll, name), size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\" | ${HEXLIFY}"
+run_no_sort "${GUFI_QUERY} --print-tlv -d \" \" -n ${THREADS} -a 1 -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll, name), size FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;\" \"${INDEXROOT}\""
 
 echo "# run_vt with {s} (source directory) and {i} (index directory)"
 (

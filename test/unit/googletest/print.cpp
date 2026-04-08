@@ -214,12 +214,13 @@ static void print_parallel_tlv_actual(const bool use_len) {
     };
 
     const std::size_t total_len =
-        sizeof(std::size_t) +       // row length
-        sizeof(int) +               // number of columns
+        TLV_ROW_LEN_LEN +           // row length
+        TLV_COL_COUNT_LEN +         // number of columns
         INTEGER.size() + FLOAT.size() + TEXT.size() +
         BLOB.size() + NULL_.size() + DATE.size() +
         COL_COUNT +                 // 1 octet types
-        COL_COUNT * sizeof(size_t)  // lengths
+        COL_COUNT +                 // 1 octet length of lengths
+        COL_COUNT                   // 1 hex digit lengths (for this particular test)
         ;
 
     struct OutputBuffer ob;
@@ -232,7 +233,7 @@ static void print_parallel_tlv_actual(const bool use_len) {
     PrintArgs pa;
     pa.output_buffer = &ob;
     pa.delim = '|';                 // ignored
-    pa.newline = '\n';
+    pa.newline = '\n';              // ignored
     pa.mutex = nullptr;
     pa.outfile = file;
     pa.rows = 0;
@@ -248,27 +249,46 @@ static void print_parallel_tlv_actual(const bool use_len) {
     char *curr = buf;
 
     // row length
-    EXPECT_EQ((std::size_t) * (int *) curr, total_len);
-    curr += sizeof(std::size_t);
+    std::size_t row_len = 0;
+    EXPECT_EQ(sscanf(curr, TLV_ROW_LEN_READ_FMT, &row_len), 1);
+    EXPECT_EQ(row_len, total_len);
+    curr += TLV_ROW_LEN_LEN;
 
-    // column_count
-    EXPECT_EQ((std::size_t) * (int *) curr, COL_COUNT);
-    curr += sizeof(int);
+    // column count
+    int col_count = 0;
+    EXPECT_EQ(sscanf(curr, TLV_COL_COUNT_READ_FMT, (unsigned int *) &col_count), 1);
+    EXPECT_EQ((std::size_t) col_count, COL_COUNT);
+    curr += TLV_COL_COUNT_LEN;
 
     for(std::size_t i = 0; i < COL_COUNT; i++) {
         // type
-        EXPECT_EQ(*curr, (char) TYPES[i]);
+        const char type = *curr - '0';
+        EXPECT_EQ(type, (char) TYPES[i]);
         curr++;
 
+        // length of length
+        const char len_of_len = *curr - '0';
+        curr++;
+
+        curr += len_of_len;
+        const char restore = *curr;
+        *curr = '\0';
+        curr -= len_of_len;
+
         // length
-        const std::size_t len = * (std::size_t *) curr;
-        curr += sizeof(size_t);
+        std::size_t len = 0;
+        EXPECT_EQ(sscanf(curr, TLV_COL_LEN_READ_FMT, &len), 1);
+        curr += len_of_len;
+
+        *curr = restore;
 
         // value
         EXPECT_EQ(len, strlen(DATA[i]));
         EXPECT_EQ(std::string(curr, len), DATA[i]);
         curr += len;
     }
+
+    EXPECT_EQ((std::size_t) (curr - buf), row_len);
 
     fclose(file);
     delete [] buf;

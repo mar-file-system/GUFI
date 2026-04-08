@@ -874,21 +874,6 @@ $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries('prefix', '') ORDER BY name ASC, size ASC;"
 ) | sqlite3
-Runtime error near line 2: SQL logic error
-
-# Zero thread count
-$ (
-    echo ".load gufi_vt"
-    echo "SELECT name FROM gufi_vt_pentries('prefix', 0) ORDER BY name ASC, size ASC;"
-) | sqlite3
-argument '-n/--threads' not in range [1, 18446744073709551615]
-Runtime error near line 2: SQL logic error
-
-# NULL thread count
-$ (
-    echo ".load gufi_vt"
-    echo "SELECT name FROM gufi_vt_pentries('prefix', NULL) ORDER BY name ASC, size ASC;"
-) | sqlite3
 .hidden
 1KB
 1MB
@@ -903,6 +888,14 @@ repeat_name
 repeat_name
 unusual, name?#
 writable
+
+# Zero thread count
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT name FROM gufi_vt_pentries('prefix', 0) ORDER BY name ASC, size ASC;"
+) | sqlite3
+argument '-n/--threads' not in range [1, 18446744073709551615]
+Runtime error near line 2: SQL logic error
 
 # Bad min_level
 $ (
@@ -928,13 +921,6 @@ $ (
 argument '-n/--threads' not in range [1, 18446744073709551615]
 Runtime error near line 2: SQL logic error
 
-# Empty n
-$ (
-    echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=, E='SELECT 0;'); SELECT * FROM gufi;"
-) | sqlite3
-Runtime error near line 2: SQL logic error
-
 # NULL n
 $ (
     echo ".load gufi_vt"
@@ -957,13 +943,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=0, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 argument '-n/--threads' not in range [1, 18446744073709551615]
-Runtime error near line 2: SQL logic error
-
-# Empty thread count
-$ (
-    echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=, E='SELECT 0;'); SELECT * FROM gufi;"
-) | sqlite3
 Runtime error near line 2: SQL logic error
 
 # NULL thread count

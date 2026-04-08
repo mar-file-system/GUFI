@@ -287,21 +287,11 @@ prefix/directory/writable
 prefix/empty_directory
 
 # Output TLV columns (no aggregation)
-$ gufi_query --print-tlv -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix" | hexlify.py
-00000000 4755 4649 5f51 5545 5259 5f54 4c56 0000
-00000001 2700 0000 0000 0000 0200 0000 0307 0000
-00000002 0000 0000 002e 6869 6464 656e 0102 0000
-00000003 0000 0000 0031 30
-00000037
-
+$ gufi_query --print-tlv -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix"
+0000001b0002317.hidden11210
 # Output TLV columns (with aggregation)
-$ gufi_query --print-tlv -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll, name), size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix" | hexlify.py
-00000000 4755 4649 5f51 5545 5259 5f54 4c56 0000
-00000001 2d00 0000 0000 0000 0200 0000 030d 0000
-00000002 0000 0000 0073 6561 7263 682f 7072 6566
-00000003 6978 0102 0000 0000 0000 0031 37
-0000003d
-
+$ gufi_query --print-tlv -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll, name), size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix"
+00000021000231dprefix11217
 # run_vt with {s} (source directory) and {i} (index directory)
 $ gufi_query -d " " -p "prefix" -S "CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \"{s}\" \"{i}\" -maxdepth 1 -name \"*.csv\" -exec cat \"{}\" \\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;" "prefix"
 0 1 2 3
