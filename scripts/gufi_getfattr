@@ -172,8 +172,8 @@ def getfattr(args, indexroot, dirname, nondirname):
 
     return query_args + [dirname]
 
-def run(argv, config_path):
-    # pylint: disable=invalid-name
+def run(argv, config_path, stdout=None, stderr=None):
+    # pylint: disable=invalid-name,too-many-locals
 
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
@@ -220,6 +220,9 @@ def run(argv, config_path):
     # make sure at least one path was processed
     processed_paths = 0
 
+    stdout_results = ''
+    stderr_results = ''
+
     # process one input arg at a time
     # not sure if it makes sense/is possible to process all at once
     for path in gufi_common.clean_paths(config, args.path):
@@ -249,16 +252,24 @@ def run(argv, config_path):
         if args.verbose:
             gufi_common.print_query(query_cmd)
 
-        query = subprocess.Popen(query_cmd) # pylint: disable=consider-using-with
-        query.communicate()                 # block until query finishes
+        query = subprocess.Popen(query_cmd, # pylint: disable=consider-using-with
+                                 stdout=stdout,
+                                 stderr=stderr,
+                                 text=True)
+        out, err = query.communicate()      # block until query finishes
 
         if query.returncode:
             rc = query.returncode
 
-    if processed_paths == 0:
-        return 1
+        if stdout is not None:
+            stdout_results += out
+        if stderr is not None:
+            stderr_results += err
 
-    return rc
+    if processed_paths == 0:
+        return 1, '', ''
+
+    return rc, stdout_results, stderr_results
 
 if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.PATH))
+    sys.exit(run(sys.argv, gufi_config.PATH)[0])

@@ -1,4 +1,4 @@
-#!@Python3_SHEBANG@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,100 +61,13 @@
 
 
 
-import argparse
-import os
-import subprocess
-import sys
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-import gufi_common
-import gufi_config
+# no output/expected
 
-# location of this file
-PATH = os.path.realpath(__file__)
+# this script is only needed to set up the index
+"${GUFI_TREESUMMARY_ALL}" "${SEARCH}" > /dev/null 2>&1
 
-def parse_args():
-    # parse the arguments
-    parser = argparse.ArgumentParser('gufi_stat', description='GUFI version of stat', add_help=False)
-
-    gufi_common.add_help_version(parser)
-
-    # parser.add_argument('-L', '--dereference'
-    #                     action='set_true',
-    #                     help='follow links')
-
-    # parser.add_argument('-f', '--file-system'
-    #                     action='set_true',
-    #                     help='display file system status instead of file status')
-
-    parser.add_argument('-c', '--format',
-                        metavar='FORMAT',
-                        type=str,
-                        help='use the specified FORMAT instead of the default; output a newline after each use of FORMAT')
-
-    # parser.add_argument('--printf',
-    #                     metavar='FORMAT',
-    #                     type=str,
-    #                     help='like --format but interpret backslash escapes, and do not output a mandatory trailing newline; if you want a newline, include \n in FORMAT')
-
-    parser.add_argument('-t', '--terse',
-                        action='store_true',
-                        help='print the information in terse form')
-
-    parser.add_argument('paths',
-                        metavar='FILE',
-                        nargs='+')
-
-    # does not call gufi_query, so need custom verbose flag
-    parser.add_argument('-V', '--verbose',
-                        action='store_true',
-                        help='Show the actual command being run')
-
-    return parser
-
-# argv[0] should be the command name
-def run(argv, config_path, stdout=None, stderr=None):
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
-
-    parser = parse_args()
-    args = parser.parse_args(argv[1:])
-
-    # create the stat command
-    stat_cmd = [config.stat]
-
-    if args.format is not None:
-        stat_cmd += ['--format', args.format]
-
-    if args.terse is True:
-        stat_cmd += ['--terse']
-
-    paths = gufi_common.clean_paths(config, args.paths)
-
-    if len(paths) == 0:
-        return 1, '', ''
-
-    if args.verbose:
-        gufi_common.print_query(stat_cmd + paths)
-
-    stat = subprocess.Popen(stat_cmd + paths,          # pylint: disable=consider-using-with
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            text=True)
-    out, err = stat.communicate()                      # block until stat finishes
-
-    if err:
-        err = err.replace(os.path.join(config.indexroot, ''), '')
-        if stderr is None:
-            sys.stderr.write(err)
-            err = None
-
-    if len(out):
-        out = out.replace(os.path.join(config.indexroot, ''), '')
-        if stdout is None:
-            sys.stdout.write(out)
-            out = None
-
-    return stat.returncode, out, err
-
-if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.PATH)[0])
+# this is the actual test
+"${CURRENT_BINARY_DIR}/import.py" -v

@@ -245,8 +245,15 @@ def human_readable_size(size):
 
     return '{0:.1f}{1}'.format(size, suffix)
 
+def stream_or_cache(pipe, stream, results, data):
+    if pipe is None:
+        stream.write(data)
+    else:
+        results += data
+    return results
+
 # argv[0] should be the command name
-def run(argv, config_path):
+def run(argv, config_path, stdout=None, stderr=None):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
     # find and parse the configuration file first
@@ -280,6 +287,9 @@ def run(argv, config_path):
     # total blocks of all input paths for -c (including rounding up)
     # if treesummary is found, will not include rounding up
     total_blocks = 0
+
+    stdout_results = ''
+    stderr_results = ''
 
     for path in gufi_common.clean_paths(config, args.paths[0]):
         # track how many rows were returned
@@ -321,7 +331,9 @@ def run(argv, config_path):
             gufi_common.print_query(query_cmd)
 
         query = subprocess.Popen(query_cmd,              # pylint: disable=consider-using-with
-                                 stdout=subprocess.PIPE) # capture stdout
+                                 stdout=subprocess.PIPE, # capture stdout
+                                 stderr=stderr,
+                                 text=True)
 
         # number of blocks used by the current input path (including rounding up)
         dir_size = 0
@@ -332,7 +344,7 @@ def run(argv, config_path):
                 break
 
             # if line exists, there is content
-            line = line.strip().decode()
+            line = line.strip()
             level, isroot, raw, name = line.split(DELIM, 3)
 
             rows += 1
@@ -353,7 +365,8 @@ def run(argv, config_path):
                 entry_size = size
                 if args.human_readable:
                     entry_size = human_readable_size(entry_size)
-                print('{0} {1}'.format(entry_size, name[INDEXROOT_LEN:]))
+                stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results,
+                                                 '{0} {1}\n'.format(entry_size, name[INDEXROOT_LEN:]))
 
             dir_size += size
 
@@ -361,29 +374,39 @@ def run(argv, config_path):
                 if args.separate_dirs or ((not args.separate_dirs) and (level == '0') and (isroot == '1')):
                     total_blocks += size
 
+        out, err = query.communicate() # block until query finishes
+        if out:
+            stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results, out)
+        if err:
+            stderr_results = stream_or_cache(stderr, sys.stderr, stderr_results, err)
+
         # -s/--summarize prints a combined size at the end of the current input path
         if args.summarize:
             if args.human_readable:
                 dir_size = human_readable_size(dir_size)
-            print('{0} {1}'.format(dir_size, path))
+            stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results,
+                                             '{0} {1}\n'.format(dir_size, path))
 
         if query.returncode != 0:
             rc = query.returncode
 
         if rows == 0:
-            sys.stderr.write('Warning: Did not get any results from gufi_query.\n')
-            sys.stderr.write('Does "{0}" have treesummary data?\n'.format(path[len(config.indexroot) + 1:]))
+            stderr_results = stream_or_cache(stderr, sys.stderr, stderr_results,
+                                             'Warning: Did not get any results from gufi_query.\n')
+            stderr_results = stream_or_cache(stderr, sys.stderr, stderr_results,
+                                             'Does "{0}" have treesummary data?\n'.format(path[len(config.indexroot) + 1:]))
 
     # print total size of all input directories
     if args.total:
         if args.human_readable:
             total_blocks = human_readable_size(total_blocks)
-        print('{0} total'.format(total_blocks))
+        stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results,
+                                         '{0} total\n'.format(total_blocks))
 
     if processed_paths == 0:
         rc = 1
 
-    return rc
+    return rc, stdout_results, stderr_results
 
 if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.PATH))
+    sys.exit(run(sys.argv, gufi_config.PATH)[0])

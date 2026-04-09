@@ -776,7 +776,7 @@ or by sending an email to <gufi-lanl@lanl.gov>'''
     return parser
 
 # argv[0] should be the command name
-def run(argv, config_path):
+def run(argv, config_path, stdout=None, stderr=None):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
@@ -820,7 +820,7 @@ def run(argv, config_path):
         sys.exit(1)
 
     if len(paths) == 0:
-        return 1
+        return 1, '', ''
 
     if len(unknown) > 0:
         raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
@@ -953,10 +953,13 @@ def run(argv, config_path):
         with open(args.fprint, 'wb') as out:
             query = subprocess.Popen(query_cmd + paths, stdout=out)
     else:
-        query = subprocess.Popen(query_cmd + paths) # pylint: disable=consider-using-with
-    query.communicate()                             # block until query finishes
+        query = subprocess.Popen(query_cmd + paths, # pylint: disable=consider-using-with
+                                 stdout=stdout,
+                                 stderr=stderr,
+                                 text=True)
+    out, err = query.communicate()                  # block until query finishes
 
-    return query.returncode
+    return query.returncode, out, err
 
 if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.PATH))
+    sys.exit(run(sys.argv, gufi_config.PATH)[0])

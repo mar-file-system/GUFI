@@ -175,7 +175,7 @@ def build_order_by(args):
     return order_by
 
 # argv[0] should be the command name
-def run(argv, config_path):
+def run(argv, config_path, stdout=None, stderr=None):
     # pylint: disable=too-many-statements,too-many-locals,too-many-branches,invalid-name
 
     # find and parse the configuration file first
@@ -255,6 +255,9 @@ def run(argv, config_path):
 
     # make sure at least one path was processed
     processed_paths = 0
+
+    stdout_results = ''
+    stderr_results = ''
 
     for path in gufi_common.clean_paths(config, args.paths[0]):
         processed_paths += 1
@@ -428,16 +431,24 @@ def run(argv, config_path):
         if args.verbose:
             gufi_common.print_query(query_cmd + [path])
 
-        query = subprocess.Popen(query_cmd + [path]) # pylint: disable=consider-using-with
-        query.communicate()                              # block until query finishes
+        query = subprocess.Popen(query_cmd + [path], # pylint: disable=consider-using-with
+                                 stdout=stdout,
+                                 stderr=stderr,
+                                 text=True)
+        out, err = query.communicate()               # block until query finishes
 
         if query.returncode != 0:
             rc = 2
 
-    if processed_paths == 0:
-        return 2
+        if stdout is not None:
+            stdout_results += out
+        if stderr is not None:
+            stderr_results += err
 
-    return rc
+    if processed_paths == 0:
+        return 2, '', ''
+
+    return rc, stdout_results, stderr_results
 
 if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.PATH))
+    sys.exit(run(sys.argv, gufi_config.PATH)[0])

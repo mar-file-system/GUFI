@@ -204,23 +204,31 @@ configure_file(gufi_tool.py.in gufi_tool.py @ONLY)
 configure_file(gufi_vt.common gufi_vt.common @ONLY)
 
 # .sh and .expected
-set(SH_AND_EXPECTED
-  ${BINARIES}
-  ${GUFI_VT}
-  ${PYTHON}
-  ${EXAMPLES}
-  ${OTHERS}
-)
+function(sh_and_expected)
+  foreach(NAME ${ARGN})
+    configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
+    configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
-foreach(NAME ${SH_AND_EXPECTED})
-  configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
+    add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
+      WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
+    set_property(TEST "${NAME}" APPEND PROPERTY LABELS "regression")
+  endforeach()
+endfunction()
 
-  add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
-    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-  set_property(TEST "${NAME}" APPEND PROPERTY LABELS "regression")
-endforeach()
-set_property(TEST "gufi_plugin" APPEND PROPERTY LABELS "plugin")
+sh_and_expected(${BINARIES})
+sh_and_expected(${GUFI_VT})
+sh_and_expected(${PYTHON})
+
+# add import test
+# import test does not have a .expected file
+configure_file(import.py.in import.py @ONLY)
+configure_file(import.sh.in import.sh @ONLY)
+add_test(NAME "import" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/import.sh"
+  WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
+set_property(TEST "import" APPEND PROPERTY LABELS "regression;python")
+
+sh_and_expected(${EXAMPLES})
+sh_and_expected(${OTHERS})
 
 foreach(NAME ${BINARIES})
   set_property(TEST "${NAME}" APPEND PROPERTY LABELS "binary")
@@ -239,11 +247,13 @@ foreach(NAME ${EXAMPLES})
   set_property(TEST "${NAME}" APPEND PROPERTY LABELS "examples")
 endforeach()
 
-set_property(TEST "dsi_plugins" APPEND PROPERTY LABELS "gufi_vt;binary;plugin")
-
 foreach(NAME ${PYTHON})
   set_property(TEST "${NAME}" APPEND PROPERTY LABELS "python")
 endforeach()
+
+# OTHERS
+set_property(TEST "dsi_plugins" APPEND PROPERTY LABELS "gufi_vt;binary;plugin")
+set_property(TEST "gufi_plugin" APPEND PROPERTY LABELS "plugin")
 
 find_program(SUDO sudo)
 if (SUDO)

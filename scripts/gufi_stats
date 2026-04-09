@@ -1556,7 +1556,7 @@ OTHERS = [
 ]
 
 # argv[0] should be the command name
-def run(argv, config_path):
+def run(argv, config_path, stdout=None, stderr=None):
     stats = OrderedDict(RECURSIVE + CUMULATIVE + BOTH + OTHERS)
 
     # find and parse the configuration file first
@@ -1628,10 +1628,14 @@ def run(argv, config_path):
     if args.verbose:
         gufi_common.print_query(query_cmd + paths)
 
-    query = subprocess.Popen(query_cmd + paths) # pylint: disable=consider-using-with
-    query.communicate()                         # block until query finishes
+    query = subprocess.Popen(query_cmd + paths, # pylint: disable=consider-using-with
+                             stdout=stdout,
+                             stderr=stderr,
+                             text=True)
 
-    return query.returncode
+    out, err = query.communicate()              # block until query finishes
+
+    return query.returncode, out, err
 
 if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.PATH))
+    sys.exit(run(sys.argv, gufi_config.PATH)[0])

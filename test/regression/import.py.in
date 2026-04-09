@@ -61,100 +61,52 @@
 
 
 
-import argparse
 import os
 import subprocess
 import sys
+import unittest
 
-import gufi_common
+from gufi_tool import *
 import gufi_config
 
-# location of this file
-PATH = os.path.realpath(__file__)
+# not really a unit test
+class TestImportingUserFacingScripts(unittest.TestCase):
+    def setUp(self):
+        self.path = 'prefix'
 
-def parse_args():
-    # parse the arguments
-    parser = argparse.ArgumentParser('gufi_stat', description='GUFI version of stat', add_help=False)
+    def expect_stdout(self, tool, args):
+        tool = import_tool('', TOOLS[tool][1])
+        rc, out, err = tool.run([''] + args, CONFIG_PATH,
+                                subprocess.PIPE, subprocess.PIPE)
+        self.assertEqual(rc, 0)
+        self.assertEqual(type(out), str)
+        self.assertNotEqual(out, '')     # stdout is not empty
+        print()
+        print(out)
+        self.assertEqual(type(err), str)
+        self.assertEqual(err, '')        # nothing in stderr
 
-    gufi_common.add_help_version(parser)
+    def test_gufi_du(self):
+        self.expect_stdout('du', [self.path])
 
-    # parser.add_argument('-L', '--dereference'
-    #                     action='set_true',
-    #                     help='follow links')
+    def test_gufi_find(self):
+        self.expect_stdout('find', [self.path])
 
-    # parser.add_argument('-f', '--file-system'
-    #                     action='set_true',
-    #                     help='display file system status instead of file status')
+    def test_gufi_getfattr(self):
+        self.expect_stdout('getfattr', ['-d', '-m', '.*', os.path.join(self.path, '1MB')])
 
-    parser.add_argument('-c', '--format',
-                        metavar='FORMAT',
-                        type=str,
-                        help='use the specified FORMAT instead of the default; output a newline after each use of FORMAT')
+    def test_gufi_ls(self):
+        self.expect_stdout('ls', ['-al', self.path])
 
-    # parser.add_argument('--printf',
-    #                     metavar='FORMAT',
-    #                     type=str,
-    #                     help='like --format but interpret backslash escapes, and do not output a mandatory trailing newline; if you want a newline, include \n in FORMAT')
+    def test_gufi_query(self):
+        indexroot = gufi_config.Server(CONFIG_PATH).indexroot
+        self.expect_stdout('query.py', ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;', indexroot])
 
-    parser.add_argument('-t', '--terse',
-                        action='store_true',
-                        help='print the information in terse form')
+    def test_gufi_stat(self):
+        self.expect_stdout('stat', [self.path])
 
-    parser.add_argument('paths',
-                        metavar='FILE',
-                        nargs='+')
-
-    # does not call gufi_query, so need custom verbose flag
-    parser.add_argument('-V', '--verbose',
-                        action='store_true',
-                        help='Show the actual command being run')
-
-    return parser
-
-# argv[0] should be the command name
-def run(argv, config_path, stdout=None, stderr=None):
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
-
-    parser = parse_args()
-    args = parser.parse_args(argv[1:])
-
-    # create the stat command
-    stat_cmd = [config.stat]
-
-    if args.format is not None:
-        stat_cmd += ['--format', args.format]
-
-    if args.terse is True:
-        stat_cmd += ['--terse']
-
-    paths = gufi_common.clean_paths(config, args.paths)
-
-    if len(paths) == 0:
-        return 1, '', ''
-
-    if args.verbose:
-        gufi_common.print_query(stat_cmd + paths)
-
-    stat = subprocess.Popen(stat_cmd + paths,          # pylint: disable=consider-using-with
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            text=True)
-    out, err = stat.communicate()                      # block until stat finishes
-
-    if err:
-        err = err.replace(os.path.join(config.indexroot, ''), '')
-        if stderr is None:
-            sys.stderr.write(err)
-            err = None
-
-    if len(out):
-        out = out.replace(os.path.join(config.indexroot, ''), '')
-        if stdout is None:
-            sys.stdout.write(out)
-            out = None
-
-    return stat.returncode, out, err
+    def test_gufi_stats(self):
+        self.expect_stdout('stats', ['--recursive', 'depth', self.path])
 
 if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.PATH)[0])
+    unittest.main()
