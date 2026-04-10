@@ -62,11 +62,11 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-SCR=$DIR/../examples
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+SCR="${DIR}/../examples"
 
 #echo "runnig rungroupfilespacehog SCR is $SCR"
 #pwd
 rm -f outdb*
-$SCR/groupfilespacehog $1 $2
+"${SCR}/groupfilespacehog" "$1" "$2"

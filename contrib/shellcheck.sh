@@ -63,10 +63,11 @@
 
 set -e
 
-BUILD="$(realpath $1)"
-
-for file in $(find "${BUILD}" \( -name "*.sh" -o -name "*.sh.in" \) -not -path "*/contrib/debug/*"; grep -rl "#!/usr/bin/env bash" "${BUILD}/examples" "${BUILD}/scripts" | sort -u)
+while IFS= read -r -d $'\0' path
 do
-    echo "${file}"
-    shellcheck -s bash -e SC1090,SC1091,SC2086 "${file}"
-done
+    if head -n 1 "${path}" | grep -l --null -e "^#!.*\(ba\)\?sh" > /dev/null
+    then
+        echo "${path}"
+        shellcheck -e SC1090,SC1091,SC2086 -- "${path}"
+    fi
+done < <(find "$@" -type f \( -not -path "*/.git/*" -a -not -path "*/examples/*" \) -print0 | sort -zu)

@@ -155,11 +155,12 @@ def generate_level(out, root, dir_count, file_count, max_level, rs = chr(0x1e)):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Trace Generator')
-    parser.add_argument('output',      type=argparse.FileType('w+b'), help='output file')
+    parser.add_argument('output',      type=str,                      help='output file')
     parser.add_argument('directories', type=int,                      help='number of directories per directory')
     parser.add_argument('files',       type=int,                      help='number of files per directory')
     parser.add_argument('depth',       type=int,                      help='number of levels')
     parser.add_argument('--separator', type=str, default=chr(0x1e),   help='record separator')
     args = parser.parse_args()
 
-    generate_level(args.output, '/', args.directories, args.files, args.depth, args.separator)
+    with open(args.output, mode='w', encoding='utf-8') as output:
+        generate_level(output, '/', args.directories, args.files, args.depth, args.separator)

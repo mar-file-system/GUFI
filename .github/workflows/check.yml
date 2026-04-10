@@ -87,30 +87,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        fetch-tags: true
 
-    - uses: actions/cache@v4
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-pylint
+    - name: Install pip
+      run:  sudo apt install -y python3-pip
 
-    - name: Ubuntu Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
-
-    - name: Install Python Packages
-      run:  python3 -m pip install -r contrib/CI/requirements.txt
-
-    - name: Install Extra Python Packages
+    - name: Install Pylint
       run:  python3 -m pip install pylint
 
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
-
-    - name: Run Python3 Pylint
-      working-directory: ${{ github.workspace }}/build
-      run:  make pylint
+    - name: Run Pylint
+      run:  contrib/pylint.sh ${{ github.workspace }}
 
   Older_CMake:
     needs: [ShellCheck, Pylint]

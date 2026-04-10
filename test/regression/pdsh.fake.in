@@ -96,5 +96,5 @@ IFS="," read -r -a hosts <<< "${w}"
 
 for _ in "${hosts[@]}"
 do
-    echo "$@" | bash
+    bash -c "$@"
 done

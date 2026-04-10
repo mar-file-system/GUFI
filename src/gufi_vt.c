@@ -1456,13 +1456,13 @@ static int gufi_vtFilter(sqlite3_vtab_cursor *cur,
 
     /* wait for the first line */
     if (gufi_query_read_row(pCur) != 0) {
-        const int rc = popen_argv_close(pCur->output);
+        const int ret = popen_argv_close(pCur->output);
         pCur->output = NULL;
         sqlite3_free(vtab->base.zErrMsg);
         vtab->base.zErrMsg = NULL;
 
         /* gufi_query returned non-zero value */
-        if (rc) {
+        if (ret) {
             return SQLITE_ERROR;
         }
 

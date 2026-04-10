@@ -62,9 +62,9 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-SCR=$DIR/../examples
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+SCR="${DIR}/../examples"
 
 rm -f outdb*
-$SCR/groupfilespacehogusesummary $1 $2
+"${SCR}/groupfilespacehogusesummary" "$1" "$2"

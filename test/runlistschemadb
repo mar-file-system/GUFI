@@ -62,8 +62,8 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-SCR=$DIR/../examples
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+SCR="${DIR}/../examples"
 
-$SCR/listschemadb $1/db.db
+"${SCR}/listschemadb" "$1/db.db"

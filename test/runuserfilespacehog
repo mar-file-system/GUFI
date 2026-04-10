@@ -62,10 +62,9 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-SCR=$DIR/../examples
-BFQ=$DIR/../src/gufi_query
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+SCR="${DIR}/../examples"
 
 rm -f outdb*
-$SCR/userfilespacehog $1 $2
+"${SCR}/userfilespacehog" "$1" "$2"

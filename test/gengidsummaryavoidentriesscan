@@ -62,9 +62,9 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-BFQ=$DIR/../bfq
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+BFQ="${DIR}/../src/gufi_query"
 
 echo "create gid summary records in summary tables in $1"
 

@@ -62,10 +62,10 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-BFQ=$DIR/../bfq
-QUERYDBS=$DIR/../querydbs
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+BFQ="${DIR}/../src/gufi_query"
+QUERYDBS="${DIR}/../scripts/querydbs"
 
 echo "query to create db insert recs from entry query into out db group file space hog use group summary"
 rm -f outdb*

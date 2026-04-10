@@ -65,8 +65,8 @@ import os
 import subprocess
 import unittest
 
-from gufi_tool import *
 import gufi_config
+import gufi_tool
 
 # not really a unit test
 class TestImportingUserFacingScripts(unittest.TestCase):
@@ -74,8 +74,8 @@ class TestImportingUserFacingScripts(unittest.TestCase):
         self.path = 'prefix'
 
     def expect_stdout(self, tool, args):
-        tool = import_tool('', TOOLS[tool][1])
-        rc, out, err = tool.run([''] + args, CONFIG_PATH,
+        tool = gufi_tool.import_tool('', gufi_tool.TOOLS[tool][1])
+        rc, out, err = tool.run([''] + args, gufi_tool.CONFIG_PATH,
                                 subprocess.PIPE, subprocess.PIPE)
         self.assertEqual(rc, 0)
         self.assertEqual(type(out), str)
@@ -98,11 +98,11 @@ class TestImportingUserFacingScripts(unittest.TestCase):
         self.expect_stdout('ls', ['-al', self.path])
 
     def test_gufi_query(self):
-        indexroot = gufi_config.Server(CONFIG_PATH).indexroot
+        indexroot = gufi_config.Server(gufi_tool.CONFIG_PATH).indexroot
         self.expect_stdout('query.py', ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;', indexroot])
 
     def test_gufi_query_multiple_remotes(self):
-        indexroot = gufi_config.Server(CONFIG_PATH).indexroot
+        indexroot = gufi_config.Server(gufi_tool.CONFIG_PATH).indexroot
         self.expect_stdout('query_multiple_remotes',
                            ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;',
                             '@CMAKE_BINARY_DIR@/src/gufi_vt',

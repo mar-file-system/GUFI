@@ -62,10 +62,10 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-DIR2TRACE=$DIR/../src/gufi_dir2trace
-DIR2INDEX=$DIR/../src/gufi_dir2index
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+DIR2TRACE="${DIR}/../src/gufi_dir2trace"
+DIR2INDEX="${DIR}/../src/gufi_dir2index"
 
 
 # NOTE: The destination GUFI-tree is optional
@@ -94,10 +94,11 @@ DIR2INDEX=$DIR/../src/gufi_dir2index
 usage() {
     PROG=$1
     echo "Usage: $PROG <source_tree> [ <GUFI_tree> ]"
-    exit -1
+    exit 1
 }
 
 if (( $# < 1 || $# > 2 )); then
+    # shellcheck disable=SC2145
     echo "[$@]"
     usage $0
 elif [ ! -d $SOURCE ]; then

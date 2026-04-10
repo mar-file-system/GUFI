@@ -65,11 +65,11 @@ import argparse
 import sqlite3
 
 def l2(lhs, rhs):
-    return sum([(pair[0] - pair[1]) ** 2 for pair in zip(lhs, rhs)]) ** 0.5
+    return sum((pair[0] - pair[1]) ** 2 for pair in zip(lhs, rhs)) ** 0.5
 
 def cosine(lhs, rhs):
-    top = sum([(pair[0] * pair[1]) for pair in zip(lhs, rhs)])
-    bot = sum([val ** 2 for val in lhs]) ** 0.5 * sum([val ** 2 for val in rhs]) ** 0.5
+    top = sum(pair[0] * pair[1] for pair in zip(lhs, rhs))
+    bot = sum(val ** 2 for val in lhs) ** 0.5 * sum(val ** 2 for val in rhs) ** 0.5
     return top / bot
 
 COMPARE = {

@@ -15,6 +15,7 @@ set -- ${SSH_ORIGINAL_COMMAND}
 
 # remove surrounding quotes required to pass command
 # to ssh from client without breaking the command
+# shellcheck disable=SC2124
 cmd="$@"
 cmd="${cmd#\'}"
 cmd="${cmd%\'}"
@@ -28,4 +29,5 @@ case "$1" in
         exit 1
 esac
 
+# shellcheck disable=SC2294
 eval "$@"

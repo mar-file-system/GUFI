@@ -61,6 +61,8 @@
 
 
 
+# shellcheck shell=dash
+
 set -e
 
 apk update

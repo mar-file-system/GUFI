@@ -63,24 +63,11 @@
 
 set -e
 
-BUILD="$(realpath $1)"
-
-# shellcheck disable=SC2155
-export PYTHONPATH="${BUILD}/contrib:${BUILD}/scripts:${BUILD}/test:${PYTHONPATH}"
-
-PATHS=(
-    "${BUILD}/contrib"
-    "${BUILD}/scripts"
-    "${BUILD}/scripts/distributed"
-    "${BUILD}/test"
-)
-
-# shellcheck disable=SC2044
 while IFS= read -r -d $'\0' path
 do
-    if [[ "$(head -n 1 ${path} | strings)" =~ ^#!.*python3.*$ ]]
+    if head -n 1 "${path}" | grep -l --null -e "^#!.*[Pp]ython3" > /dev/null
     then
         echo "${path}"
-        pylint --disable=too-many-lines,line-too-long,missing-docstring,consider-using-f-string,invalid-name -- "${path}"
+        pylint --disable=consider-using-f-string,import-error,invalid-name,line-too-long,missing-docstring,too-many-lines -- "${path}"
     fi
-done < <(find "${PATHS[@]}" -mindepth 1 -maxdepth 1 -type f -print0)
+done < <(find "$@" -type f \( -not -path "*/.git/*" -a -not -path "*/examples/*" \) -print0 | sort -zu)

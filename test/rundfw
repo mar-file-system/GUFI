@@ -62,11 +62,11 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-DFW=$DIR/../src/dfw
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+DFW="${DIR}/../src/dfw"
 
 # cc -DBSDXATTRS dfw.c -o dfw
 #cc dfw.c -o dfw
 echo "---> ./dfw $1 (just walk with readdir)"
-$DFW $1
+"${DFW}" "$1"

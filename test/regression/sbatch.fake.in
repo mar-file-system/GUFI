@@ -105,7 +105,7 @@ out="${prefix}${jobid}${suffix}"
 
 if [[ "$1" == "/dev/stdin" ]]
 then
-    $(</dev/stdin)
+    bash </dev/stdin
 else
     "$@"
 fi > "${out}" || true # always return a job id

@@ -93,7 +93,6 @@ def import_tool(tool, filename):
     # pylint: disable=import-outside-toplevel
     import importlib.machinery
     import importlib.util
-    from pathlib import Path
 
     # Import mymodule
     loader = importlib.machinery.SourceFileLoader(tool, filename)

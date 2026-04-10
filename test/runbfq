@@ -62,15 +62,15 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-BFQ=$DIR/../src/gufi_query
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+BFQ="${DIR}/../src/gufi_query"
 
 
 usage() {
     PROG=$1
     echo "Usage: $PROG <GUFI_tree>"
-    exit -1
+    exit 1
 }
 
 
@@ -82,7 +82,7 @@ elif [ ! -d $GUFI ]; then
     usage $0
 elif [ ! -e $GUFI/db.db ]; then
     echo "$GUFI/db.db does not exist.  Need the root of a GUFI tree."
-    exit -1
+    exit 1
 fi
 
 echo
@@ -109,7 +109,7 @@ $BFQ \
     $GUFI
 
 ls -l outq*
-for F in `ls outq*`; do echo; echo $F; cat $F; rm $F; done
+for F in outq*; do echo; echo $F; cat $F; rm $F; done
 
 echo
 echo "query to screen, insert per-user size-summary into table 'sument' in outdb.<thread_no> ${GUFI}"
