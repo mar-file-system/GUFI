@@ -73,4 +73,4 @@ set -e
 export PATH="${BINARY_DIR}/src:${PATH}"
 
 # this is the actual test
-LD_PRELOAD="${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}" "${CURRENT_BINARY_DIR}/import.py" -v
+${GUFI_PYTHON_TEST_COVERAGE} "${CURRENT_BINARY_DIR}/import.py" -v

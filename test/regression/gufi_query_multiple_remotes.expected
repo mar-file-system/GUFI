@@ -72,3 +72,37 @@ prefix/.hidden
 prefix/.hidden
 prefix/1KB
 
+# ssh with Verbose
+$ gufi_query_multiple_remotes -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" --extra-sql "ORDER BY fullpath ASC LIMIT 1" --verbose "gufi_vt" ssh --remote-cmd "ssh" remote1 "search" remote2 "search"
+Each line is one argv[i]:
+    ssh \
+        remote1 \
+        gufi_query --print-tlv -x --threads 1 -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" search
+Each line is one argv[i]:
+    ssh \
+        remote2 \
+        gufi_query --print-tlv -x --threads 1 -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" search
+Aggregate results with:
+    SELECT * FROM (SELECT * FROM vt0 UNION ALL SELECT * FROM vt1) ORDER BY fullpath ASC LIMIT 1;
+
+prefix/.hidden
+
+# pdsh with Verbose
+$ gufi_query_multiple_remotes -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" --extra-sql "LIMIT 1" --verbose "gufi_vt" pdsh --remote-cmd "pdsh" remote1 remote2 "search"
+Each line is one argv[i]:
+    pdsh \
+        -R \
+        ssh \
+        -w \
+        remote1,remote2 \
+        -N \
+        gufi_query --print-tlv -x --threads 1 -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" search
+Aggregate results with:
+    SELECT * FROM vt LIMIT 1;
+
+prefix/.hidden
+
+# Bad ssh URI + Index Path Pair
+$ gufi_query_multiple_remotes -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" --extra-sql "ORDER BY fullpath ASC LIMIT 1" --verbose "gufi_vt" ssh --remote-cmd "ssh" remote1 "search" remote2 2>&1 | grep "error:"
+gufi_query_multiple_remotes: error: Missing index path
+

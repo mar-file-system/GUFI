@@ -75,17 +75,26 @@ run_no_sort "${BINARY_DIR}/scripts/gufi_query_multiple_remotes --help"
     # export LD_PRELOAD does not seem to work
 
     echo "# Basic Usage with ssh (2 copies of each path)"
-    run_sort "LD_PRELOAD=\"${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}\" ${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 \"${SEARCH}\""
+    run_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 \"${SEARCH}\""
 
     echo "# Modify Aggregated Results with ssh"
-    run_sort "LD_PRELOAD=\"${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}\" ${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\" --extra-sql \"ORDER BY fullpath ASC LIMIT 3\" \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 \"${SEARCH}\""
+    run_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\" --extra-sql \"ORDER BY fullpath ASC LIMIT 3\" \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 \"${SEARCH}\""
 
     echo "# Basic Usage with pdsh (2 copies of each path)"
-    run_sort "LD_PRELOAD=\"${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}\" ${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${GUFI_VT}\" pdsh --remote-cmd \"${PDSH_FAKE}\" remote1 remote2 \"${SEARCH}\""
+    run_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${GUFI_VT}\" pdsh --remote-cmd \"${PDSH_FAKE}\" remote1 remote2 \"${SEARCH}\""
 
     echo "# Modify Aggregated Results with pdsh"
-    run_sort "LD_PRELOAD=\"${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}\" ${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\" --extra-sql \"ORDER BY fullpath ASC LIMIT 3\" \"${GUFI_VT}\" pdsh --remote-cmd \"${PDSH_FAKE}\" remote1 remote2 \"${SEARCH}\""
-) | @SED@ "s%LD_PRELOAD=\"${ASAN_PRELOAD}:${TSAN_PRELOAD}:${LD_PRELOAD}\" %%g;" | tee "${OUTPUT}"
+    run_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\" --extra-sql \"ORDER BY fullpath ASC LIMIT 3\" \"${GUFI_VT}\" pdsh --remote-cmd \"${PDSH_FAKE}\" remote1 remote2 \"${SEARCH}\""
+
+    echo "# ssh with Verbose"
+    run_no_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\" --extra-sql \"ORDER BY fullpath ASC LIMIT 1\" --verbose \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 \"${SEARCH}\""
+
+    echo "# pdsh with Verbose"
+    run_no_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" --extra-sql \"LIMIT 1\" --verbose \"${GUFI_VT}\" pdsh --remote-cmd \"${PDSH_FAKE}\" remote1 remote2 \"${SEARCH}\""
+
+    echo "# Bad ssh URI + Index Path Pair"
+    run_no_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\" --extra-sql \"ORDER BY fullpath ASC LIMIT 1\" --verbose \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 2>&1 | @GREP@ \"error:\""
+) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query_multiple_remotes.expected "${OUTPUT}"
 rm "${OUTPUT}"

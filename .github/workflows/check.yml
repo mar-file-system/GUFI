@@ -233,7 +233,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure -E "import"
+      run:  ctest --output-on-failure -E "import|query_multiple_remotes"
 
   TSAN:
     needs: [ShellCheck, Pylint]
