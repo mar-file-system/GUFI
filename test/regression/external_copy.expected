@@ -1,0 +1,71 @@
+# Add external database prefix/ext1.db
+$ sqlite3 "prefix/ext1.db" "SELECT * FROM tab;"
+data00|0
+data01|10
+data02|14
+data03|1024
+data04|1048576
+
+# Add external databases to prefix/directory/ext1.db
+$ sqlite3 "prefix/directory/ext1.db" "SELECT * FROM tab;"
+data05|1
+data06|2
+data07|3
+
+# Add external database prefix/directory/subdirectory/ext2.db
+$ sqlite3 "prefix/directory/subdirectory/ext2.db" "SELECT * FROM tab;"
+data08|4
+data09|5
+
+# Add external database prefix/leaf_directory/ext2.db
+$ sqlite3 "prefix/leaf_directory/ext2.db" "SELECT * FROM tab;"
+data10|11
+data11|12
+
+# Copy ext1.db
+$ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy "ext1\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" "prefix"
+data00|prefix/old_file
+data01|prefix/.hidden
+data02|prefix/repeat_name
+data03|prefix/1KB
+data04|prefix/1MB
+data05|prefix/directory/executable
+data06|prefix/directory/readonly
+data07|prefix/directory/writable
+
+# Copy ext2.db
+$ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy "ext2\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" "prefix"
+data08|prefix/directory/subdirectory/directory_symlink
+data09|prefix/directory/subdirectory/repeat_name
+data10|prefix/leaf_directory/leaf_file1
+data11|prefix/leaf_directory/leaf_file2
+
+# Copy both ext1.db and ext2.db
+$ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy "ext.*\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" "prefix"
+data00|prefix/old_file
+data01|prefix/.hidden
+data02|prefix/repeat_name
+data03|prefix/1KB
+data04|prefix/1MB
+data05|prefix/directory/executable
+data06|prefix/directory/readonly
+data07|prefix/directory/writable
+data08|prefix/directory/subdirectory/directory_symlink
+data09|prefix/directory/subdirectory/repeat_name
+data10|prefix/leaf_directory/leaf_file1
+data11|prefix/leaf_directory/leaf_file2
+
+#####################################
+
+# Bad pattern
+$ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy "*" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode;" "prefix" 2>&1 | grep "Error:"
+Error: Basename pattern "*" compilation failed at offset 0: quantifier does not follow a repeatable item
+
+# Bad SQL
+$ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy ".*\.db" "INSERT INTO SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode;" "prefix" 2>&1 | head -n 1
+Warning: Could not copy external database data "prefix/ext1.db" using "INSERT INTO SELECT * FROM tab;": near "SELECT": syntax error
+
+# Missing -I
+$ gufi_query -d "|" --external-copy ".*\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode;" "prefix"
+Copying external databases require tables created with -I
+

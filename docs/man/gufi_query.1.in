@@ -132,6 +132,8 @@ Source path prefix for %s in SQL
 query xattrs
 .It Fl Q, -external-attach\ <basename>\ <table>\ <template.table>\ <view>
 External database file basename, per-attach table name, template + table name, and the resultant view
+.It Fl -external-copy\ <basename pattern>\ <SQL>
+Copy data from external databases in current directory into an in-memory table created in -I
 .It Fl -plugin\ <entrypoint>:<path>
 plugin library for modifying tree processing
 .It Fl w, -read-write

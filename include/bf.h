@@ -326,6 +326,10 @@ extern "C" {
 #define FLAG_EXTERNAL_ATTACH_LONG "external-attach"
 #define FLAG_EXTERNAL_ATTACH {FLAG_EXTERNAL_ATTACH_LONG, required_argument, NULL, FLAG_EXTERNAL_ATTACH_SHORT}
 
+#define FLAG_EXTERNAL_COPY_SHORT (FLAG_GROUP_EXTDB + 0)
+#define FLAG_EXTERNAL_COPY_LONG "external-copy"
+#define FLAG_EXTERNAL_COPY {FLAG_EXTERNAL_COPY_LONG, required_argument, NULL, FLAG_EXTERNAL_COPY_SHORT}
+
 /* required at the end of every flag list */
 #define FLAG_END {NULL, 0, NULL, 0}
 
@@ -567,6 +571,10 @@ struct input {
         /* used when querying (-Q/--external-attach) */
         sll_t setup;     /* list of eus_t */
     } external_attach;
+
+    struct {
+        sll_t setup;     /* list of ecs_t */
+    } external_copy;
 
     /* prefix of swap files */
     str_t swap_prefix;

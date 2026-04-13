@@ -76,6 +76,7 @@ set(GUFI_SOURCES
   debug.c
   descend.c
   external_attach.c
+  external_copy.c
   gufi_vt.c
   histogram.c
   outfiles.c
@@ -233,6 +234,7 @@ add_library(gufi_vt MODULE
   dbutils.c
   debug.c
   external_attach.c
+  external_copy.c
   histogram.c
   path_list.c
   plugin.c
@@ -260,6 +262,7 @@ endif()
 target_link_libraries(gufi_vt
   "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
   "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
+  pcre2-8
 )
 add_dependencies(gufi_vt install_dependencies)
 install(TARGETS gufi_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)

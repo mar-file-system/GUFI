@@ -145,6 +145,14 @@ static int validate(struct input *in) {
         }
     }
 
+    /* --external-copy requires -I */
+    if (sll_get_size(&in->external_copy.setup)) {
+        if (!in->sql.init.len) {
+            fprintf(stderr, "Copying external databases require tables created with -I\n");
+            return -1;
+        }
+    }
+
     return 0;
 }
 

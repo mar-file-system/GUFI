@@ -77,6 +77,7 @@ SQLITE_EXTENSION_INIT1
 #include "bf.h"
 #include "dbutils.h"
 #include "external_attach.h"
+#include "external_copy.h"
 #include "popen_argv.h"
 #include "print.h"
 #include "utils.h"
@@ -141,6 +142,7 @@ typedef struct gufi_query_cmd {
     sll_t plugins;            /* gufi_query plugin library paths */
 
     sll_t external_attach;    /* list of external attach database args */
+    sll_t external_copy;      /* list of external copy database args */
 
     sll_t indexroots;         /* list of index roots to pass to gufi_query */
 } gq_cmd_t;
@@ -151,9 +153,11 @@ static void gq_cmd_init(gq_cmd_t *cmd) {
     sll_init(&cmd->plugins);
     sll_init(&cmd->indexroots);
     sll_init(&cmd->external_attach);
+    sll_init(&cmd->external_copy);
 }
 
 static void gq_cmd_destroy(gq_cmd_t *cmd) {
+    sll_destroy(&cmd->external_copy, ecs_free);    /* list of allocated ecs_t */
     sll_destroy(&cmd->external_attach, free);      /* list of allocated eus_t */
     sll_destroy(&cmd->indexroots, NULL);           /* list of references to argv[i] */
     sll_destroy(&cmd->plugins, NULL);              /* list of references to argv[i] */
@@ -298,6 +302,14 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               eus->view.data);
         }
 
+        sll_loop(&cmd->external_copy, node) {
+            ecs_t *ecs = (ecs_t *) sll_node_data(node);
+            write_with_resize(&flat, &size, &len,
+                              "--external-copy '%s' '%s' ",
+                              ecs->basename_pattern.data,
+                              ecs->sql.data);
+        }
+
         sll_loop(&cmd->indexroots, node) {
             const char *indexroot = (char *) sll_node_data(node);
             write_with_resize(&flat, &size, &len,
@@ -312,6 +324,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         max_argc = 35; /* 3 fixed args, 15 pairs of flags, 2 single argv flags */
         max_argc += sll_get_size(&cmd->plugins) * 2;
         max_argc += sll_get_size(&cmd->external_attach) * 5;
+        max_argc += sll_get_size(&cmd->external_copy) * 3;
         max_argc += sll_get_size(&cmd->indexroots);
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
@@ -388,6 +401,13 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = eus->table.data;
             argv[argc++] = eus->template_table.data;
             argv[argc++] = eus->view.data;
+        }
+
+        sll_loop(&cmd->external_copy, node) {
+            ecs_t *ecs = (ecs_t *) sll_node_data(node);
+            argv[argc++] = "--external-copy";
+            argv[argc++] = ecs->basename_pattern.data;
+            argv[argc++] = ecs->sql.data;
         }
 
         sll_loop(&cmd->indexroots, node) {
@@ -843,6 +863,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     path_list               = '<file path>'
  *     p                       = '<source path for use with spath()>'
  *     Q or external_attach    = '<basename> <table> <template>.<table> <view>'
+ *     external_copy           = '<basename pattern> <SQL>'
  *     plugin                  = '<entrypoint>:<gufi_query plugin library path>'
  *     index                   = '<path>' (can also pass in without the key)
  *     verbose/VERBOSE         =  <0|1>
@@ -859,6 +880,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *                 - remote_arg
  *                 - plugin
  *                 - Q or external_attach
+ *                 - external_copy
  *                 - index
  *     - At least one of T, S, or E must be passed in
  *     - When determining the virtual table's schema, there are two separate cases:
@@ -969,6 +991,25 @@ static int parse_external_attach_args(sll_t *external_attach, char *arg) {
     set_refstr(&eus->view,           view);
 
     sll_push_back(external_attach, eus);
+
+    return 0;
+}
+
+/* parse external_copy='<basename patter> <SQL>' */
+static int parse_external_copy_args(sll_t *external_copy, char *arg) {
+    char *saveptr          = NULL;
+    char *basename_pattern = strtok_r(arg,  " ", &saveptr);
+    char *sql              = strtok_r(NULL, " ", &saveptr);
+
+    if (!basename_pattern || !sql) {
+        return -1;
+    }
+
+    ecs_t *ecs = calloc(1, sizeof(*ecs));
+    set_refstr(&ecs->basename_pattern, basename_pattern);
+    set_refstr(&ecs->sql,              sql);
+
+    sll_push_back(external_copy, ecs);
 
     return 0;
 }
@@ -1105,6 +1146,13 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             /* let gufi_query check value */
             set_refstr(&cmd.dir_match_gid, value);
             cmd.dir_match_gid_set = 1;
+        }
+        else if (strncmp(key, "external_copy", 14) == 0) {
+            if (parse_external_copy_args(&cmd.external_copy, value) != 0) {
+                *pzErr = sqlite3_mprintf("Bad external copy database args");
+                gq_cmd_destroy(&cmd);
+                return SQLITE_MISUSE;
+            }
         }
         else if (strncmp(key, "external_attach", 16) == 0) {
             if (parse_external_attach_args(&cmd.external_attach, value) != 0) {

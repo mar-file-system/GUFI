@@ -78,6 +78,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "debug.h"
 #include "external_attach.h"
+#include "external_copy.h"
 #include "plugin.h"
 #include "utils.h"
 
@@ -132,6 +133,7 @@ struct input *input_init(struct input *in) {
         trie_insert(in->skip, "..", 2, NULL, NULL);
 
         sll_init(&in->external_attach.setup);
+        sll_init(&in->external_copy.setup);
 
         in->swap_prefix.data = (char *) DEFAULT_SWAP_PREFIX;
         in->swap_prefix.len  = 0;
@@ -150,6 +152,7 @@ void input_fini(struct input *in) {
         free(in->types.ent);
         free(in->types.sum);
         free(in->types.tsum);
+        sll_destroy(&in->external_copy.setup,   ecs_free);
         sll_destroy(&in->external_attach.setup, free);
         trie_free(in->skip);
         plugins_destroy(&in->plugins);
@@ -282,6 +285,9 @@ void print_help(const char* prog_name,
                                                                 "        <table>\n"
                                                                 "        <template>.<table>\n"
                                                                 "        <view>                      External database file basename, per-attach table name, template + table name, and the resultant view"); break;
+            case FLAG_EXTERNAL_COPY_SHORT:               printf("      --external-copy \n"
+                                                                "        <basename pattern>\n"
+                                                                "        <SQL>                       Copy data from external databases in current directory into an in-memory table created in -I"); break;
 
             default:                                     printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
@@ -375,6 +381,13 @@ void show_input(struct input* in, int retval) {
         eus_t *eus = (eus_t *) sll_node_data(node);
         printf("in.external_attach.setup[%zu] = ('%s', '%s', '%s', '%s')\n",
                i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
+    }
+    printf("\n");
+
+    sll_loop(&in->external_copy.setup, node) {
+        ecs_t *ecs = (ecs_t *) sll_node_data(node);
+        printf("in.external_copy.setup[%zu]   = ('%s', '%s')\n",
+               i++, ecs->basename_pattern.data, ecs->sql.data);
     }
     printf("\n");
 
@@ -744,22 +757,43 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_EXTERNAL_ATTACH_SHORT:
                 {
-                    eus_t *user = calloc(1, sizeof(*user));
+                    eus_t *eus = calloc(1, sizeof(*eus));
 
-                    INSTALL_STR(&user->basename, optarg);
+                    INSTALL_STR(&eus->basename, optarg);
 
                     optarg = argv[optind];
-                    INSTALL_STR(&user->table, optarg);
+                    INSTALL_STR(&eus->table, optarg);
 
                     optarg = argv[++optind];
-                    INSTALL_STR(&user->template_table, optarg);
+                    INSTALL_STR(&eus->template_table, optarg);
 
                     optarg = argv[++optind];
-                    INSTALL_STR(&user->view, optarg);
+                    INSTALL_STR(&eus->view, optarg);
 
                     optarg = argv[++optind];
 
-                    sll_push_back(&in->external_attach.setup, user);
+                    sll_push_back(&in->external_attach.setup, eus);
+                }
+                break;
+
+            case FLAG_EXTERNAL_COPY_SHORT:
+                {
+                    ecs_t *ecs = calloc(1, sizeof(*ecs));
+
+                    INSTALL_STR(&ecs->basename_pattern, optarg);
+
+                    optarg = argv[optind];
+                    INSTALL_STR(&ecs->sql, optarg);
+
+                    optarg = argv[++optind];
+
+                    if (ecs_compile(ecs) == 0) {
+                        sll_push_back(&in->external_copy.setup, ecs);
+                    }
+                    else {
+                        retval = -1;
+                        free(ecs);
+                    }
                 }
                 break;
 

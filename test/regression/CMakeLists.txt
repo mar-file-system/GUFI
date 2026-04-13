@@ -170,6 +170,7 @@ set(OTHERS
   deploy
   dsi_plugins
   external_attach
+  external_copy
   gufi_distributed
   gufi_find_outliers
   gufi_incremental_update

@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "external_attach.h"
+#include "external_copy.h"
 
 static const std::string exec = "exec"; // argv[0]
 
@@ -131,6 +132,9 @@ static const std::string external_attach_arg0        = "extdb";
 static const std::string external_attach_arg1        = "table";
 static const std::string external_attach_arg2        = "template.table";
 static const std::string external_attach_arg3        = "view";
+static const std::string external_copy               = "--external-copy";
+static const std::string external_copy_arg0          = ".*";
+static const std::string external_copy_arg1          = "INSERT INTO ext SELECT 1;";
 
 static bool operator==(const str_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -237,14 +241,25 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_NE(in->path_list.data,                         nullptr);
         EXPECT_EQ(in->path_list.len,                          path_list_arg.size());
 
-        sll_node_t *head = sll_head_node(&in->external_attach.setup);
-        EXPECT_NE(head,                                       nullptr);
-        eus_t *eus = (eus_t *) sll_node_data(head);
-        EXPECT_NE(eus,                                        nullptr);
-        EXPECT_EQ(eus->basename.data,                         external_attach_arg0);
-        EXPECT_EQ(eus->table.data,                            external_attach_arg1);
-        EXPECT_EQ(eus->template_table.data,                   external_attach_arg2);
-        EXPECT_EQ(eus->view.data,                             external_attach_arg3);
+        {
+            sll_node_t *head = sll_head_node(&in->external_attach.setup);
+            ASSERT_NE(head,                                   nullptr);
+            eus_t *eus = (eus_t *) sll_node_data(head);
+            ASSERT_NE(eus,                                    nullptr);
+            EXPECT_EQ(eus->basename.data,                     external_attach_arg0);
+            EXPECT_EQ(eus->table.data,                        external_attach_arg1);
+            EXPECT_EQ(eus->template_table.data,               external_attach_arg2);
+            EXPECT_EQ(eus->view.data,                         external_attach_arg3);
+        }
+
+        {
+            sll_node_t *head = sll_head_node(&in->external_copy.setup);
+            ASSERT_NE(head,                                   nullptr);
+            ecs_t *ecs = (ecs_t *) sll_node_data(head);
+            ASSERT_NE(ecs,                                    nullptr);
+            EXPECT_EQ(ecs->basename_pattern.data,             external_copy_arg0);
+            EXPECT_EQ(ecs->sql.data,                          external_copy_arg1);
+        }
     }
     else {
         const std::string empty = "";
@@ -282,6 +297,7 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->path_list.data,                         nullptr);
         EXPECT_EQ(in->path_list.len,                          (std::size_t) 0);
         EXPECT_EQ(sll_get_size(&in->external_attach.setup),   (std::size_t) 0);
+        EXPECT_EQ(sll_get_size(&in->external_copy.setup),     (std::size_t) 0);
     }
 }
 
@@ -354,7 +370,7 @@ TEST(parse_cmd_line, debug) {
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
-        FLAG_EXTERNAL_ATTACH_VALIDATE, FLAG_EXTERNAL_ATTACH,
+        FLAG_EXTERNAL_ATTACH_VALIDATE, FLAG_EXTERNAL_ATTACH, FLAG_EXTERNAL_COPY,
         FLAG_END
     };
 
@@ -404,6 +420,7 @@ TEST(parse_cmd_line, debug) {
         path_list.c_str(), path_list_arg.c_str(),
         external_attach_validate.c_str(),
         external_attach.c_str(), external_attach_arg0.c_str(), external_attach_arg1.c_str(), external_attach_arg2.c_str(), external_attach_arg3.c_str(),
+        external_copy.c_str(), external_copy_arg0.c_str(), external_copy_arg1.c_str(),
         nullptr,
     };
 
@@ -476,7 +493,7 @@ TEST(parse_cmd_line, options) {
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_OUTPUT_BUFFER_SIZE, FLAG_FORMAT,
         FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE,
         FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_SWAP_PREFIX,
-        FLAG_PATH_LIST, FLAG_EXTERNAL_ATTACH,
+        FLAG_PATH_LIST, FLAG_EXTERNAL_ATTACH, FLAG_EXTERNAL_COPY,
         FLAG_END
     };
 
@@ -511,6 +528,7 @@ TEST(parse_cmd_line, options) {
         swap_prefix.c_str(), swap_prefix_arg.c_str(),
         path_list.c_str(), path_list_arg.c_str(),
         external_attach.c_str(), external_attach_arg0.c_str(), external_attach_arg1.c_str(), external_attach_arg2.c_str(), external_attach_arg3.c_str(),
+        external_copy.c_str(), external_copy_arg0.c_str(), external_copy_arg1.c_str(),
         nullptr,
     };
 

@@ -268,7 +268,8 @@ int main(int argc, char *argv[])
         /* SQL processing/tree walk flags */
         FLAG_DIR_MATCH_UID, FLAG_DIR_MATCH_GID, FLAG_PROCESS_SQL,
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST,
-        FLAG_PATH, FLAG_XATTRS, FLAG_QUERY_XATTRS, FLAG_EXTERNAL_ATTACH,
+        FLAG_PATH, FLAG_XATTRS, FLAG_QUERY_XATTRS,
+        FLAG_EXTERNAL_ATTACH, FLAG_EXTERNAL_COPY,
         FLAG_PLUGIN,
 
         /* miscellaneous flags */

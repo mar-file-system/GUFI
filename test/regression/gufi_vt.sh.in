@@ -344,6 +344,20 @@ query=$(
 )
 query_vt "${query}"
 
+echo "# Good external_copy and I but nothing actually happens"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE ext(i INTEGER);\", E=\"SELECT name FROM vrpentries; DELETE FROM ext;\", external_copy=\"basename 'INSERT INTO ext SELECT 0;'\");"
+    echo -n "SELECT * FROM gufi ORDER BY name;"
+)
+query_vt "${query}"
+
+echo "# Good external_copy and I but nothing actually happens + remote"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE ext(i INTEGER);\", E=\"SELECT name FROM vrpentries;\", external_copy=\"basename 'INSERT INTO ext SELECT 0; DELETE FROM ext;'\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT * FROM gufi ORDER BY name;"
+)
+query_vt "${query}"
+
 echo "# LIKE"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%file%';\");"
@@ -516,6 +530,27 @@ query_vt "${query}"
 echo "# Bad external_attach (not enough arguments)"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", external_attach=\"basename\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Bad external_copy (Missing I)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT * FROM vrxpentries;\", external_copy=\"basename 'INSERT INTO ext SELECT 0;'\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Bad external_copy (no arguments)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE ext(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", external_copy=\"\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Bad external_copy (not enough arguments)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE ext(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", external_copy=\"basename\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"

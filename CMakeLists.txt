@@ -303,8 +303,8 @@ endif()
 # Need pthread
 find_package(Threads REQUIRED)
 
-# Need PCRE2 for linking only
 pkg_search_module(PCRE2 REQUIRED libpcre2-8)
+add_definitions(-DPCRE2_CODE_UNIT_WIDTH=8) # needed by external_copy.h
 set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, pcre2")
 
 # Download and build all non-system dependencies
@@ -437,6 +437,7 @@ endif()
 set(COMMON_INCLUDES
   ${CMAKE_SOURCE_DIR}/include
   ${XATTR_INCLUDEDIR}
+  ${PCRE2_INCLUDEDIR}
   "${DEP_INSTALL_PREFIX}/sqlite3/include"
   "${DEP_INSTALL_PREFIX}/sqlite3-pcre"
 )

@@ -134,6 +134,10 @@ may call \gufiquery, but might not be able to use it properly.
   \ \ \ \textless template\textgreater.\textless table\textgreater & template + table name, \\
   \ \ \ \textless view\textgreater & and the resultant view \\
   \hline
+  -{}-external-copy & Copy data from external databases in \\
+  \ \ \ \textless basename pattern\textgreater & current directory into an in-memory \\
+  \ \ \ \textless SQL\textgreater & table created in -I \\
+  \hline
   -{}-plugin \textless entrypoint\textgreater:\textless path\textgreater & plugin library for modifying db entries \\
   \hline
   -w, -{}-read-write & open the database files in read-write mode instead of read only mode \\
@@ -402,6 +406,45 @@ Multiple External Databases Example:
 \textbf{Important Note}: SQLite 3 has an \texttt{ATTACH} limit of
 125. This has been increased to 254 in GUFI. However, 254 \texttt{ATTACH}es
 may still not be enough, so be careful with external attached databases.
+
+\subsubsection{Copied External Databases}
+Another way to pull in external data is with the copied external
+database mechanism. This exists as an alternative to attached external
+databases, which is limited to 254 attaches per database
+instance. This method does not have that limitation, with the tradeoff
+being potentially large amounts of data being copied into memory.
+
+After indexing, external database files should be placed directly into
+the index\footnote{Currently, this method does not use the external
+database tables and views shared by the attached external database and
+extended attribute mechanisms.}. When querying, users pass in regular
+expression (\texttt{PCRE2}) patterns to match against the basenames of
+those external database files and a SQL string for copying the
+external database file contents into memory. Each file or symlink
+basename match will be \texttt{ATTACH}ed, have its data copied using
+the user provided SQL, and \texttt{DETACH}ed, resulting in a total of
+one extra attach at any given time.
+
+As with attached external databases, \texttt{-I} is required, but in
+this case to create a table for copying data into. Multiple tables may
+be created in \texttt{-I}. Multiple \texttt{-{}-external-copy} flags
+may be passed in. Additionally, \texttt{DELETE FROM \textless
+ name\textgreater ;} should appear at the end of one of \texttt{-S}
+or \texttt{-E} for each table to clear out memory between directories.
+\\\\
+Example Usage:
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ll}
+    \gufiquery & \texttt{-I "CREATE TABLE ext(...);"} \\
+               & \texttt{-{}-external-copy "ext.*\textbackslash .db"} \\
+               & \texttt{\ \ \ \ "INSERT INTO ext SELECT * FROM ...;" } \\
+               & \texttt{-E "SELECT * FROM vrpentries} \\
+               & \texttt{\ \ \ \ LEFT JOIN ext ON ...;} \\
+               & \texttt{\ \ \ \ DELETE FROM ext;"} \\
+               & \indexroot \\
+  \end{tabular}
+\end{table}
 
 \subsubsection{Aggregation}
 There are cases where independent per-thread results are not

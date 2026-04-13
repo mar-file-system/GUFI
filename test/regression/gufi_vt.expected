@@ -847,6 +847,46 @@ repeat_name
 unusual, name?#
 writable
 
+# Good external_copy and I but nothing actually happens
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE ext(i INTEGER);", E="SELECT name FROM vrpentries; DELETE FROM ext;", external_copy="basename 'INSERT INTO ext SELECT 0;'");SELECT * FROM gufi ORDER BY name;"
+) | sqlite3
+.hidden
+1KB
+1MB
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
+# Good external_copy and I but nothing actually happens + remote
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE ext(i INTEGER);", E="SELECT name FROM vrpentries;", external_copy="basename 'INSERT INTO ext SELECT 0; DELETE FROM ext;'", remote_cmd="ssh", remote_arg="remote");SELECT * FROM gufi ORDER BY name;"
+) | sqlite3
+.hidden
+1KB
+1MB
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
 # LIKE
 $ (
     echo ".load gufi_vt"
@@ -1154,6 +1194,28 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", external_attach="basename");SELECT * FROM gufi;"
 ) | sqlite3
 Runtime error near line 2: Bad external attach database args (21)
+
+# Bad external_copy (Missing I)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT * FROM vrxpentries;", external_copy="basename 'INSERT INTO ext SELECT 0;'");SELECT * FROM gufi;"
+) | sqlite3
+Copying external databases require tables created with -I
+Runtime error near line 2: SQL logic error
+
+# Bad external_copy (no arguments)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE ext(i INTEGER);", E="SELECT * FROM vrpentries;", external_copy="");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Bad external copy database args (21)
+
+# Bad external_copy (not enough arguments)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE ext(i INTEGER);", E="SELECT * FROM vrpentries;", external_copy="basename");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Bad external copy database args (21)
 
 # Bad Column Type Setup
 $ (

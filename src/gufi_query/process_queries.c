@@ -65,8 +65,10 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 #include <string.h>
 
+#include "SinglyLinkedList.h"
 #include "dbutils.h"
 #include "external_attach.h"
+#include "external_copy.h"
 #include "print.h"
 #include "str.h"
 #include "utils.h"
@@ -85,13 +87,57 @@ static int gqw_serialize_and_free(const int fd, QPTPool_f func, void *work, size
 }
 #endif
 
+/*
+ * basename is entry->d_name
+ * path is the current directory + basename
+ */
+static void maybe_copy_external(sqlite3 *db, struct input *in,
+                                const char *basename, const size_t len,
+                                const char *path) {
+    /* constant namespace/alias of the external database being attached in each loop */
+    static const char EXTDB[] = "extdb";
+
+    /* find a basename pattern match */
+    str_t *sql = NULL;
+    sll_loop(&in->external_copy.setup, node) {
+        ecs_t *ecs = (ecs_t *) sll_node_data(node);
+        if (ecs_match(ecs, basename, len) == 1) {
+            sql = &ecs->sql;
+        }
+    }
+
+    if (!sql) {
+        return;
+    }
+
+    if (attachdb(path, db, EXTDB, SQLITE_OPEN_READONLY, 1, in->print_eacces)) {
+        char *err = NULL;
+
+        /* run user provided SQL */
+        if (sqlite3_exec(db, sql->data, NULL, NULL, &err) != SQLITE_OK) {
+            if (!in->no_print_sql_on_err) {
+                fprintf(stderr, "Warning: Could not copy external database data \"%s\" using \"%s\": %s\n",
+                        path, sql->data, err);
+            }
+            else {
+                fprintf(stderr, "Warning: Could not copy external database data \"%s\": %s\n",
+                        path, err);
+            }
+            sqlite3_free(err);
+        }
+
+        detachdb(path, db, EXTDB, 1, in->print_eacces);
+    }
+}
+
 /* Push the subdirectories in the current directory onto the queue */
-static size_t descend2(QPTPool_ctx_t *ctx,
-                       struct input *in,
-                       gqw_t *gqw,
-                       DIR *dir,
-                       trie_t *skip_names,
-                       QPTPool_f func) {
+static size_t gq_descend(QPTPool_ctx_t *ctx,
+                         struct input *in,
+                         sqlite3 *db,
+                         gqw_t *gqw,
+                         DIR *dir,
+                         trie_t *skip_names,
+                         QPTPool_f func) {
     /* Not checking arguments */
 
     size_t pushed = 0;
@@ -102,9 +148,12 @@ static size_t descend2(QPTPool_ctx_t *ctx,
         while ((entry = readdir(dir))) {
             const size_t len = strlen(entry->d_name);
 
-            /* if this entry's name is found, skip this entry */
-            const int skip = (trie_search(skip_names, entry->d_name, len, NULL) ||
-                             (strncmp(entry->d_name + len - 3, ".db", 3) == 0));
+            const int skip = (
+                /* if this entry's name is found, skip this entry */
+                trie_search(skip_names, entry->d_name, len, NULL) ||
+                /* skip db.db (not *.db) */
+                ((len == 5) && (strncmp(entry->d_name, "db.db", 5) == 0))
+            );
 
             if (skip) {
                 continue;
@@ -172,6 +221,13 @@ static size_t descend2(QPTPool_ctx_t *ctx,
 
                 pushed++;
             }
+            else if (S_ISREG(child->work.statuso.st_mode) ||
+                     S_ISLNK(child->work.statuso.st_mode)) {
+                /* db.db and ignored basenames are not processed here */
+                maybe_copy_external(db, in, entry->d_name, len, child->work.name);
+
+                free(child);
+            }
             else {
                 free(child);
             }
@@ -228,7 +284,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
         /* push subdirectories into the queue */
         if (rollupscore == 0) {
             *subdirs_walked_count =
-                descend2(ctx, in, gqw, dir, in->skip, processdir);
+                gq_descend(ctx, in, db, gqw, dir, in->skip, processdir);
         }
     }
 
