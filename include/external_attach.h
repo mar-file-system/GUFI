@@ -62,15 +62,15 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef EXTERNAL_H
-#define EXTERNAL_H
+#ifndef EXTERNAL_ATTACH_H
+#define EXTERNAL_ATTACH_H
 
 #include <stdlib.h>
 
 #include "SinglyLinkedList.h"
 #include "bf.h"
 #include "dbutils.h"
-#include "trie.h"
+#include "str.h"
 
 #ifdef __cplusplus
 extern "C" {

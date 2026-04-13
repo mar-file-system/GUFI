@@ -89,6 +89,8 @@ extern "C" {
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
 #define GETLINE_DEFAULT_SIZE 750 /* magic number */
 
+/* DO NOT use -Q and -q */
+
 #define FLAG_HELP_SHORT 'h'
 #define FLAG_HELP_LONG "help"
 #define FLAG_HELP {FLAG_HELP_LONG, no_argument, NULL, FLAG_HELP_SHORT}
@@ -151,12 +153,6 @@ extern "C" {
 #define FLAG_READ_WRITE_LONG "read-write"
 #define FLAG_READ_WRITE {FLAG_READ_WRITE_LONG, no_argument, NULL, FLAG_READ_WRITE_SHORT}
 
-#define FLAG_CHECK_EXTDB_VALID_SHORT 'q'
-#define FLAG_CHECK_EXTDB_VALID {"", no_argument, NULL, FLAG_CHECK_EXTDB_VALID_SHORT}
-
-#define FLAG_EXTERNAL_ATTACH_SHORT 'Q'
-#define FLAG_EXTERNAL_ATTACH {"", required_argument, NULL, FLAG_EXTERNAL_ATTACH_SHORT}
-
 #define FLAG_PATH_SHORT 'p'
 #define FLAG_PATH_LONG "path"
 #define FLAG_PATH {FLAG_PATH_LONG, required_argument, NULL, FLAG_PATH_SHORT}
@@ -172,6 +168,7 @@ extern "C" {
 #define FLAG_GROUP_XATTRS  3000
 #define FLAG_GROUP_INC     4000
 #define FLAG_GROUP_ROLLUP  5000
+#define FLAG_GROUP_EXTDB   6000
 
 /* miscellaneous flags */
 
@@ -318,6 +315,16 @@ extern "C" {
 #define FLAG_ROLLUP_DELETE_BELOW_SHORT (FLAG_GROUP_ROLLUP + 1)
 #define FLAG_ROLLUP_DELETE_BELOW_LONG "delete-below"
 #define FLAG_ROLLUP_DELETE_BELOW {FLAG_ROLLUP_DELETE_BELOW_LONG, required_argument, NULL, FLAG_ROLLUP_DELETE_BELOW_SHORT}
+
+/* external database flags */
+
+#define FLAG_EXTERNAL_ATTACH_VALIDATE_SHORT 'q'
+#define FLAG_EXTERNAL_ATTACH_VALIDATE_LONG "external-attach-validate"
+#define FLAG_EXTERNAL_ATTACH_VALIDATE {FLAG_EXTERNAL_ATTACH_VALIDATE_LONG, no_argument, NULL, FLAG_EXTERNAL_ATTACH_VALIDATE_SHORT}
+
+#define FLAG_EXTERNAL_ATTACH_SHORT 'Q'
+#define FLAG_EXTERNAL_ATTACH_LONG "external-attach"
+#define FLAG_EXTERNAL_ATTACH {FLAG_EXTERNAL_ATTACH_LONG, required_argument, NULL, FLAG_EXTERNAL_ATTACH_SHORT}
 
 /* required at the end of every flag list */
 #define FLAG_END {NULL, 0, NULL, 0}
@@ -553,11 +560,13 @@ struct input {
     /* compress work items (if compression library was found) */
     int compress;
 
-    /* check if a listed external db is valid when indexing (-q) */
-    int check_extdb_valid;
+    struct {
+        /* check if a listed external db is valid when indexing (-q) */
+        int validate;
 
-    /* used when querying (-Q) */
-    sll_t external_attach;     /* list of eus_t */
+        /* used when querying (-Q/--external-attach) */
+        sll_t setup;     /* list of eus_t */
+    } external_attach;
 
     /* prefix of swap files */
     str_t swap_prefix;

@@ -64,7 +64,7 @@
 set -e
 . @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
-OUTPUT="external_databases.out"
+OUTPUT="external_attach.out"
 
 EXTERNAL_GUFI="external.gufi"
 
@@ -161,12 +161,12 @@ setup() {
 
 direct_index() {
     # generate index directly from source tree
-    "${GUFI_DIR2INDEX}" -q -x "${SRCDIR}" "${SEARCH}" > /dev/null 2>&1
+    "${GUFI_DIR2INDEX}" --external-attach-validate -x "${SRCDIR}" "${SEARCH}" > /dev/null 2>&1
 }
 
 indirect_index() {
     # test with index generate with trace files
-    "${GUFI_DIR2TRACE}"   -d "${DELIM}" -q -x "${SRCDIR}"  "${TRACE}"  > /dev/null 2>&1
+    "${GUFI_DIR2TRACE}"   -d "${DELIM}" --external-attach-validate -x "${SRCDIR}"  "${TRACE}"  > /dev/null 2>&1
     "${GUFI_TRACE2INDEX}" -d "${DELIM}"       "${TRACE}.0" "${SEARCH}" > /dev/null 2>&1
 }
 
@@ -203,7 +203,7 @@ do_tests() {
     run_sort "${GUFI_QUERY}" \
              "-d '|'" \
              "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
+             "--external-attach \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
              "-S \"SELECT rpath(evrsummary.sname, evrsummary.sroll), evrsummary.type, ${FACTION1_VIEW}.data FROM evrsummary LEFT JOIN ${FACTION1_VIEW} ON (evrsummary.name == ${FACTION1_VIEW}.name) AND (evrsummary.type == ${FACTION1_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrpentries.sname, evrpentries.sroll) || '/' || evrpentries.name, evrpentries.type, ${FACTION1_VIEW}.data FROM evrpentries LEFT JOIN ${FACTION1_VIEW} ON (evrpentries.name == ${FACTION1_VIEW}.name) AND (evrpentries.type == ${FACTION1_VIEW}.type);\"" \
              "\"${SEARCH}\""
@@ -214,7 +214,7 @@ do_tests() {
              "-x" \
              "-d '|'" \
              "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
+             "--external-attach \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
              "-S \"SELECT rpath(evrxsummary.sname, evrxsummary.sroll), evrxsummary.type, evrxsummary.xattr_name, evrxsummary.xattr_value, ${FACTION1_VIEW}.data FROM evrxsummary LEFT JOIN ${FACTION1_VIEW} ON (evrxsummary.name == ${FACTION1_VIEW}.name) AND (evrxsummary.type == ${FACTION1_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrxpentries.sname, evrxpentries.sroll) || '/' || evrxpentries.name, evrxpentries.type, evrxpentries.xattr_name, evrxpentries.xattr_value, ${FACTION1_VIEW}.data FROM evrxpentries LEFT JOIN ${FACTION1_VIEW} ON (evrxpentries.name == ${FACTION1_VIEW}.name) AND (evrxpentries.type == ${FACTION1_VIEW}.type);\"" \
              "\"${SEARCH}\""
@@ -224,7 +224,7 @@ do_tests() {
     run_sort "${GUFI_QUERY}" \
              "-d '|'" \
              "-I \"ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
+             "--external-attach \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
              "-S \"SELECT rpath(evrsummary.sname, evrsummary.sroll), evrsummary.type, ${FACTION2_VIEW}.data FROM evrsummary LEFT JOIN ${FACTION2_VIEW} ON (evrsummary.name == ${FACTION2_VIEW}.name) AND (evrsummary.type == ${FACTION2_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrpentries.sname, evrpentries.sroll) || '/' || evrpentries.name, evrpentries.type, ${FACTION2_VIEW}.data FROM evrpentries LEFT JOIN ${FACTION2_VIEW} ON (evrpentries.name == ${FACTION2_VIEW}.name) AND (evrpentries.type == ${FACTION2_VIEW}.type);\"" \
              "\"${SEARCH}\""
@@ -235,7 +235,7 @@ do_tests() {
              "-x" \
              "-d '|'" \
              "-I \"ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
+             "--external-attach \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
              "-S \"SELECT rpath(evrxsummary.sname, evrxsummary.sroll), evrxsummary.type, evrxsummary.xattr_name, evrxsummary.xattr_value, ${FACTION2_VIEW}.data FROM evrxsummary LEFT JOIN ${FACTION2_VIEW} ON (evrxsummary.name == ${FACTION2_VIEW}.name) AND (evrxsummary.type == ${FACTION2_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrxpentries.sname, evrxpentries.sroll) || '/' || evrxpentries.name, evrxpentries.type, evrxpentries.xattr_name, evrxpentries.xattr_value, ${FACTION2_VIEW}.data FROM evrxpentries LEFT JOIN ${FACTION2_VIEW} ON (evrxpentries.name == ${FACTION2_VIEW}.name) AND (evrxpentries.type == ${FACTION2_VIEW}.type);\"" \
              "\"${SEARCH}\""
@@ -245,7 +245,7 @@ do_tests() {
     run_sort "${GUFI_QUERY}" \
              "-d '|'" \
              "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}'; ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" -Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
+             "--external-attach \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" --external-attach \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
              "-S \"SELECT rpath(evrsummary.sname, evrsummary.sroll), evrsummary.type, ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrsummary LEFT JOIN ${FACTION1_VIEW} ON (evrsummary.name == ${FACTION1_VIEW}.name) AND (evrsummary.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrsummary.name == ${FACTION2_VIEW}.name) AND (evrsummary.type == ${FACTION2_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrpentries.sname, evrpentries.sroll) || '/' || evrpentries.name, evrpentries.type, ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrpentries LEFT JOIN ${FACTION1_VIEW} ON (evrpentries.name == ${FACTION1_VIEW}.name) AND (evrpentries.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrpentries.name == ${FACTION2_VIEW}.name) AND (evrpentries.type == ${FACTION2_VIEW}.type);\"" \
              "\"${SEARCH}\""
@@ -255,7 +255,7 @@ do_tests() {
     run_sort "${GUFI_QUERY}" \
              "-x" \
              "-d '|'" \
-             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}'; ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\" -Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" -Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
+             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}'; ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\" --external-attach \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" --external-attach \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
              "-S \"SELECT rpath(evrxsummary.sname, evrxsummary.sroll), evrxsummary.type, evrxsummary.xattr_name, evrxsummary.xattr_value, ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrxsummary LEFT JOIN ${FACTION1_VIEW} ON (evrxsummary.name == ${FACTION1_VIEW}.name) AND (evrxsummary.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrxsummary.name == ${FACTION2_VIEW}.name) AND (evrxsummary.type == ${FACTION2_VIEW}.type);\"" \
              "-E \"SELECT rpath(evrxpentries.sname, evrxpentries.sroll) || '/' || evrxpentries.name, evrxpentries.type, evrxpentries.xattr_name, evrxpentries.xattr_value,  ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrxpentries LEFT JOIN ${FACTION1_VIEW} ON (evrxpentries.name == ${FACTION1_VIEW}.name) AND (evrxpentries.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrxpentries.name == ${FACTION2_VIEW}.name) AND (evrxpentries.type == ${FACTION2_VIEW}.type);\"" \
              "\"${SEARCH}\""
@@ -278,7 +278,7 @@ rollup() {
     do_tests
 ) 2>&1 | tee "${OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/external_databases.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/external_attach.expected "${OUTPUT}"
 rm "${OUTPUT}"
 
 (
@@ -290,5 +290,5 @@ rm "${OUTPUT}"
     do_tests
 ) 2>&1 | tee "${OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/external_databases.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/external_attach.expected "${OUTPUT}"
 rm "${OUTPUT}"

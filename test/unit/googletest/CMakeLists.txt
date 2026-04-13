@@ -102,7 +102,7 @@ if (CMAKE_CXX_COMPILER)
     aggregate.cpp
     dbutils.cpp
     descend.cpp
-    external.cpp
+    external_attach.cpp
     path_list.cpp
     utils.cpp
   )

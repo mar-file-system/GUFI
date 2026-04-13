@@ -128,7 +128,8 @@ may call \gufiquery, but might not be able to use it properly.
   \hline
   -x, -{}-query-xattrs & query xattrs \\
   \hline
-  -Q \textless basename\textgreater & External database file basename, \\
+  -Q, -{}-external-attach & \\
+  \ \ \ \textless basename\textgreater & External database file basename, \\
   \ \ \ \textless table\textgreater & per-attach table name, \\
   \ \ \ \textless template\textgreater.\textless table\textgreater & template + table name, \\
   \ \ \ \textless view\textgreater & and the resultant view \\
@@ -322,7 +323,7 @@ perform joins themselves. They are \entries, \pentries, \summary,
 Note that entries with multiple extended attributes will return
 multiple times in this view.
 
-\subsubsection{External Databases}
+\subsubsection{Attached External Databases}
 Attaching external data to GUFI allows for arbitrary data to be
 associated with filesystem data. In order to remain flexible and not
 prescribe schema requirements, using this feature is more complex than
@@ -333,14 +334,14 @@ to a table in the template database file. When a directory does not
 have a database file specified for attaching to a given view, the view
 is comprised of only the table from the template file.
 
-Pass \texttt{-I} and \texttt{-Q} to \gufiquery. \texttt{-Q} has 4
-positional arguments:
+Pass \texttt{-I} and \texttt{-Q}/\texttt{-{}-external-attach} to
+\gufiquery. \texttt{-Q}/\texttt{-{}-external-attach} has 4 positional arguments:
 
 \begin{table}[h!]
   \centering
   \begin{tabular}{|l|l|}
     \hline
-    \texttt{-Q} Argument & Explanation \\
+    Argument & Explanation \\
     \hline
     \texttt{basename} & The basename of the database file in the current directory \\
                       & to attach \\
@@ -368,7 +369,7 @@ Example Usage:
   \centering
   \begin{tabular}{ll}
     \gufiquery & \texttt{-I "ATTACH template.db AS template;"} \\
-               & \texttt{-Q "external.db" "table" "template.table" "ext"} \\
+               & \texttt{-{}-external-attach "external.db" "table" "template.table" "ext"} \\
                & \texttt{-E "SELECT * FROM evrpentries} \\
                & \texttt{\ \ \ \ LEFT JOIN ext ON (evrpentries.name == ext.name)} \\
                & \texttt{\ \ \ \ AND (evrpentries.type == ext.type);"} \\
@@ -387,8 +388,8 @@ Multiple External Databases Example:
   \begin{tabular}{ll}
     \gufiquery & \texttt{-I "ATTACH template1.db AS template1;} \\
                & \texttt{\ \ \ \ ATTACH template2.db AS template2;"} \\
-               & \texttt{-Q "externall.db" "table" "template1.table" "ext1"} \\
-               & \texttt{-Q "external2.db" "table" "template2.table" "ext2"} \\
+               & \texttt{-{}-external-attach "externall.db" "table" "template1.table" "ext1"} \\
+               & \texttt{-{}-external-attach "external2.db" "table" "template2.table" "ext2"} \\
                & \texttt{-E "SELECT * FROM evrpentries} \\
                & \texttt{\ \ \ \ LEFT JOIN ext1 ON (evrpentries.name == ext1.name)} \\
                & \texttt{\ \ \ \ AND (evrpentries.type == ext1.type)} \\
@@ -397,6 +398,10 @@ Multiple External Databases Example:
                & \indexroot \\
   \end{tabular}
 \end{table}
+
+\textbf{Important Note}: SQLite 3 has an \texttt{ATTACH} limit of
+125. This has been increased to 254 in GUFI. However, 254 \texttt{ATTACH}es
+may still not be enough, so be careful with external attached databases.
 
 \subsubsection{Aggregation}
 There are cases where independent per-thread results are not

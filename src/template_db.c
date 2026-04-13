@@ -70,7 +70,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "dbutils.h"
-#include "external.h"
+#include "external_attach.h"
 #include "template_db.h"
 #include "utils.h"
 #include "xattrs.h"

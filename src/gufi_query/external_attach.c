@@ -62,9 +62,9 @@ OF SUCH DAMAGE.
 
 
 
-#include "external.h"
+#include "external_attach.h"
 
-#include "gufi_query/external.h"
+#include "gufi_query/external_attach.h"
 
 void attach_extdbs(struct input *in, sqlite3 *db,
                    const char *dir_inode, const size_t dir_inode_len,
@@ -78,7 +78,7 @@ void attach_extdbs(struct input *in, sqlite3 *db,
      * assumes there won't be more than 254 attaches in total
      * if necessary, change this to attach+query+detach one at a time
      */
-    sll_loop(&in->external_attach, node) {
+    sll_loop(&in->external_attach.setup, node) {
         eus_t *user = (eus_t *) sll_node_data(node);
 
         char basename_comp[MAXSQL];
@@ -171,7 +171,7 @@ void detach_extdbs(struct input *in, sqlite3 *db,
                    const char *dir_inode, const size_t dir_inode_len,
                    size_t *extdb_count) {
     /* detach each external db */
-    sll_loop(&in->external_attach, node) {
+    sll_loop(&in->external_attach.setup, node) {
         eus_t *user = (eus_t *) sll_node_data(node);
 
         /* drop user defined view */

@@ -75,7 +75,7 @@ set(GUFI_SOURCES
   dbutils.c
   debug.c
   descend.c
-  external.c
+  external_attach.c
   gufi_vt.c
   histogram.c
   outfiles.c
@@ -189,7 +189,7 @@ endif()
 add_library(gufi_query_lib OBJECT
   gufi_query/PoolArgs.c
   gufi_query/aggregate.c
-  gufi_query/external.c
+  gufi_query/external_attach.c
   gufi_query/gqw.c
   gufi_query/handle_sql.c
   gufi_query/process_queries.c
@@ -232,7 +232,7 @@ add_library(gufi_vt MODULE
   bf.c
   dbutils.c
   debug.c
-  external.c
+  external_attach.c
   histogram.c
   path_list.c
   plugin.c

@@ -74,7 +74,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "debug.h"
-#include "external.h"
+#include "external_attach.h"
 #include "template_db.h"
 #include "utils.h"
 

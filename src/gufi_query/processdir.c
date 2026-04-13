@@ -77,13 +77,13 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "compress.h"
 #include "dbutils.h"
-#include "external.h"
+#include "external_attach.h"
 #include "plugin.h"
 #include "print.h"
 #include "utils.h"
 
 #include "gufi_query/PoolArgs.h"
-#include "gufi_query/external.h"
+#include "gufi_query/external_attach.h"
 #include "gufi_query/gqw.h"
 #include "gufi_query/process_queries.h"
 #include "gufi_query/processdir.h"
@@ -302,7 +302,7 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
             const size_t xattr_db_count = extdb_count;
 
             /* set up external user databases for use with -S and -E */
-            if (sll_get_size(&in->external_attach)) {
+            if (sll_get_size(&in->external_attach.setup)) {
                 char *err = NULL;
 
                 /* get list of directory inodes in the current directory */

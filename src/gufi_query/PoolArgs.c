@@ -73,7 +73,7 @@ OF SUCH DAMAGE.
 #include "plugin.h"
 
 #include "gufi_query/PoolArgs.h"
-#include "gufi_query/external.h"
+#include "gufi_query/external_attach.h"
 
 /*
  * udf that allows for user to name SQL values that can be used for string replacement
@@ -228,7 +228,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
          *
          * No need to drop.
          */
-        if (sll_get_size(&in->external_attach) == 0) {
+        if (sll_get_size(&in->external_attach.setup) == 0) {
             if (create_extdb_views_noiter(ta->outdb) != 0) {
                 break;
             }

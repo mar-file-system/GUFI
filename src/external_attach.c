@@ -68,7 +68,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "dbutils.h"
-#include "external.h"
+#include "external_attach.h"
 
 /*
  * attachname, mode, uid, and gid are not strictly necessary but can be useful
@@ -250,7 +250,7 @@ size_t external_read_file(struct input *in,
             extdb_path = extdb_path_stack;
         }
 
-        if (check_is_db(in->check_extdb_valid, extdb_path) == 1){
+        if (check_is_db(in->external_attach.validate, extdb_path) == 1){
             rc += !func(in, args, child->pinode, extdb_path);
         }
 

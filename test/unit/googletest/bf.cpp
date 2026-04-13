@@ -69,7 +69,7 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "dbutils.h"
-#include "external.h"
+#include "external_attach.h"
 
 static const std::string exec = "exec"; // argv[0]
 
@@ -92,44 +92,45 @@ static const std::string J = "-J"; static const std::string J_arg = "J arg";
 static const std::string K = "-K"; static const std::string K_arg = "K arg";
 static const std::string G = "-G"; static const std::string G_arg = "G arg";
 static const std::string w = "-w";
-static const std::string q = "-q";
-static const std::string Q = "-Q"; static const std::string Q_arg0 = "extdb";
-                                   static const std::string Q_arg1 = "table";
-                                   static const std::string Q_arg2 = "template.table";
-                                   static const std::string Q_arg3 = "view";
 
-static const std::string path                = "--path"; static const std::string path_arg = "path arg";
-static const std::string filter_type         = "--filter-type"; static const std::string filter_type_arg = "dfl";
-static const std::string min_level           = "--min-level"; static const std::string min_level_arg = "1";
-static const std::string max_level           = "--max-level"; static const std::string max_level_arg = "1";
-static const std::string print_tlv           = "--print-tlv";
-static const std::string setup_res_col_types = "--setup-res-col-types"; static const std::string setup_res_col_types_arg = "setup-res-col-types arg";
-static const std::string keep_matime         = "--keep-matime";
-static const std::string skip_file           = "--skip-file"; static const std::string skip_file_arg = "file name";
-static const std::string dry_run             = "--dry-run";
-static const std::string path_list           = "--path-list"; static const std::string path_list_arg = "file name";
-static const std::string format              = "--format"; static const std::string format_arg = "f arg";
-static const std::string terse               = "--terse";
-static const std::string dont_reprocess      = "--dont-reprocess";
-static const std::string dir_match_uid       = "--dir-match-uid"; static const std::string dir_match_uid_arg = "1";
-static const std::string dir_match_gid       = "--dir-match-gid"; static const std::string dir_match_gid_arg = "1";
-static const std::string print_eacces        = "--print-eacces";
-static const std::string no_print_sql_on_err = "--no-print-sql-on-err";
+static const std::string path                        = "--path"; static const std::string path_arg = "path arg";
+static const std::string filter_type                 = "--filter-type"; static const std::string filter_type_arg = "dfl";
+static const std::string min_level                   = "--min-level"; static const std::string min_level_arg = "1";
+static const std::string max_level                   = "--max-level"; static const std::string max_level_arg = "1";
+static const std::string print_tlv                   = "--print-tlv";
+static const std::string setup_res_col_types         = "--setup-res-col-types"; static const std::string setup_res_col_types_arg = "setup-res-col-types arg";
+static const std::string keep_matime                 = "--keep-matime";
+static const std::string skip_file                   = "--skip-file"; static const std::string skip_file_arg = "file name";
+static const std::string dry_run                     = "--dry-run";
+static const std::string path_list                   = "--path-list"; static const std::string path_list_arg = "file name";
+static const std::string format                      = "--format"; static const std::string format_arg = "f arg";
+static const std::string terse                       = "--terse";
+static const std::string dont_reprocess              = "--dont-reprocess";
+static const std::string dir_match_uid               = "--dir-match-uid"; static const std::string dir_match_uid_arg = "1";
+static const std::string dir_match_gid               = "--dir-match-gid"; static const std::string dir_match_gid_arg = "1";
+static const std::string print_eacces                = "--print-eacces";
+static const std::string no_print_sql_on_err         = "--no-print-sql-on-err";
 
-static const std::string output_buffer_size  = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
-static const std::string target_memory       = "--target-memory"; static const std::string target_memory_arg = "1";
-static const std::string subdir_limit        = "--subdir-limit"; static const std::string subdir_limit_arg = "1";
+static const std::string output_buffer_size          = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
+static const std::string target_memory               = "--target-memory"; static const std::string target_memory_arg = "1";
+static const std::string subdir_limit                = "--subdir-limit"; static const std::string subdir_limit_arg = "1";
 #if HAVE_ZLIB
-static const std::string compress            = "--compress";
+static const std::string compress                    = "--compress";
 #endif
-static const std::string swap_prefix         = "--swap-prefix"; static const std::string swap_prefix_arg  = "swap/prefix";
+static const std::string swap_prefix                 = "--swap-prefix"; static const std::string swap_prefix_arg = "swap/prefix";
 
-static const std::string suspect_file        = "--suspect-file";   static const std::string suspect_file_arg = "suspect file arg";
-static const std::string suspect_method      = "--suspect-method"; static const std::string suspect_method_arg = "1";
-static const std::string suspect_time        = "--suspect-time";   static const std::string suspect_time_arg = "1";
-static const std::string suspect_stat        = "--suspect-stat";
-static const std::string rollup_limit        = "--limit"; static const std::string rollup_limit_arg = "1";
-static const std::string rollup_delete_below = "--delete-below"; static const std::string rollup_delete_below_arg = "1";
+static const std::string suspect_file                = "--suspect-file";   static const std::string suspect_file_arg = "suspect file arg";
+static const std::string suspect_method              = "--suspect-method"; static const std::string suspect_method_arg = "1";
+static const std::string suspect_time                = "--suspect-time";   static const std::string suspect_time_arg = "1";
+static const std::string suspect_stat                = "--suspect-stat";
+static const std::string rollup_limit                = "--limit"; static const std::string rollup_limit_arg = "1";
+static const std::string rollup_delete_below         = "--delete-below"; static const std::string rollup_delete_below_arg = "1";
+static const std::string external_attach_validate    = "--external-attach-validate";
+static const std::string external_attach             = "--external-attach";
+static const std::string external_attach_arg0        = "extdb";
+static const std::string external_attach_arg1        = "table";
+static const std::string external_attach_arg2        = "template.table";
+static const std::string external_attach_arg3        = "view";
 
 static bool operator==(const str_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -175,112 +176,112 @@ TEST(build_getopt_str, optional) {
 static void check_input(const int /* argc */, const char **argv,
                         struct input *in, const bool helped, const bool version,
                         const bool flags, const bool options, AFlag_t process_sql) {
-    EXPECT_EQ(in->helped,                             static_cast<int>(helped));
+    EXPECT_EQ(in->helped,                                     static_cast<int>(helped));
 
-    EXPECT_EQ(in->printed_version,                    version);
+    EXPECT_EQ(in->printed_version,                            version);
 
-    EXPECT_NE(in->pos.argv,                           &argv[in->pos.argc]);
-    EXPECT_EQ(in->process_xattrs,                     flags);
-    EXPECT_EQ(in->printdir,                           flags);
-    EXPECT_EQ(in->types.print_tlv,                    flags);
-    EXPECT_EQ(in->suspectstat,                        flags);
-    EXPECT_EQ(in->keep_matime,                        flags);
-    EXPECT_EQ(in->open_flags,                         flags?SQLITE_OPEN_READWRITE:SQLITE_OPEN_READONLY);
-    EXPECT_EQ(in->terse,                              flags);
-    EXPECT_EQ(in->dry_run,                            flags);
-    EXPECT_EQ(in->dont_reprocess,                     flags);
-    EXPECT_EQ(in->dir_match.on,                       DIR_MATCH_NONE);
-    EXPECT_EQ(in->dir_match.uid,                      geteuid());
-    EXPECT_EQ(in->dir_match.gid,                      getegid());
-    EXPECT_EQ(in->print_eacces,                       flags);
-    EXPECT_EQ(in->no_print_sql_on_err,                flags);
+    EXPECT_NE(in->pos.argv,                                   &argv[in->pos.argc]);
+    EXPECT_EQ(in->process_xattrs,                             flags);
+    EXPECT_EQ(in->printdir,                                   flags);
+    EXPECT_EQ(in->types.print_tlv,                            flags);
+    EXPECT_EQ(in->suspectstat,                                flags);
+    EXPECT_EQ(in->keep_matime,                                flags);
+    EXPECT_EQ(in->open_flags,                                 flags?SQLITE_OPEN_READWRITE:SQLITE_OPEN_READONLY);
+    EXPECT_EQ(in->terse,                                      flags);
+    EXPECT_EQ(in->dry_run,                                    flags);
+    EXPECT_EQ(in->dont_reprocess,                             flags);
+    EXPECT_EQ(in->dir_match.on,                               DIR_MATCH_NONE);
+    EXPECT_EQ(in->dir_match.uid,                              geteuid());
+    EXPECT_EQ(in->dir_match.gid,                              getegid());
+    EXPECT_EQ(in->print_eacces,                               flags);
+    EXPECT_EQ(in->no_print_sql_on_err,                        flags);
     #if HAVE_ZLIB
-    EXPECT_EQ(in->compress,                           flags);
+    EXPECT_EQ(in->compress,                                   flags);
     #endif
-    EXPECT_EQ(in->check_extdb_valid,                  flags);
+    EXPECT_EQ(in->external_attach.validate,                   flags);
 
     if (options) {
-        EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);
-        EXPECT_EQ(in->process_sql,                    process_sql);
-        EXPECT_EQ(in->delim,                          '|');
+        EXPECT_EQ(in->maxthreads,                             (std::size_t) 1);
+        EXPECT_EQ(in->process_sql,                            process_sql);
+        EXPECT_EQ(in->delim,                                  '|');
         // not checking -o and -O here
-        EXPECT_EQ(in->sql.setup_res_col_types,        setup_res_col_types_arg);
-        EXPECT_EQ(in->sql.init,                       I_arg);
-        EXPECT_EQ(in->sql.tsum,                       T_arg);
-        EXPECT_EQ(in->sql.sum,                        S_arg);
-        EXPECT_EQ(in->sql.ent,                        E_arg);
-        EXPECT_EQ(in->sql.intermediate,               J_arg);
-        EXPECT_EQ(in->sql.init_agg,                   K_arg);
-        EXPECT_EQ(in->sql.agg,                        G_arg);
-        EXPECT_EQ(in->sql.fin,                        F_arg);
-        EXPECT_EQ(in->insuspect,                      suspect_file_arg);
-        EXPECT_EQ(in->suspectfile,                    1);
-        EXPECT_EQ(in->suspectmethod,                  1);
-        EXPECT_EQ(in->suspecttime,                    1);
-        EXPECT_EQ(in->source_prefix.data,             path_arg);
-        EXPECT_EQ(in->filter_types,                   FILTER_TYPE_DIR | FILTER_TYPE_FILE | FILTER_TYPE_LINK);
-        EXPECT_EQ(in->min_level,                      (std::size_t) 1);
-        EXPECT_EQ(in->max_level,                      (std::size_t) 1);
-        EXPECT_EQ(in->output_buffer_size,             (std::size_t) 1);
-        EXPECT_EQ(in->format,                         format_arg);
-        EXPECT_EQ(in->rollup.entries_limit,           (std::size_t) 1);
-        EXPECT_EQ(in->rollup.delete_below,            (std::size_t) 1);
-        EXPECT_EQ(in->rollup.attach_flag,             SQLITE_OPEN_READWRITE);
-        EXPECT_NE(in->skip,                           nullptr);
-        EXPECT_EQ(in->target_memory,                  (std::size_t) 1);
-        EXPECT_EQ(in->subdir_limit,                   (std::size_t) 1);
-        EXPECT_EQ(sll_get_size(&in->external_attach), (std::size_t) 1);
+        EXPECT_EQ(in->sql.setup_res_col_types,                setup_res_col_types_arg);
+        EXPECT_EQ(in->sql.init,                               I_arg);
+        EXPECT_EQ(in->sql.tsum,                               T_arg);
+        EXPECT_EQ(in->sql.sum,                                S_arg);
+        EXPECT_EQ(in->sql.ent,                                E_arg);
+        EXPECT_EQ(in->sql.intermediate,                       J_arg);
+        EXPECT_EQ(in->sql.init_agg,                           K_arg);
+        EXPECT_EQ(in->sql.agg,                                G_arg);
+        EXPECT_EQ(in->sql.fin,                                F_arg);
+        EXPECT_EQ(in->insuspect,                              suspect_file_arg);
+        EXPECT_EQ(in->suspectfile,                            1);
+        EXPECT_EQ(in->suspectmethod,                          1);
+        EXPECT_EQ(in->suspecttime,                            1);
+        EXPECT_EQ(in->source_prefix.data,                     path_arg);
+        EXPECT_EQ(in->filter_types,                           FILTER_TYPE_DIR | FILTER_TYPE_FILE | FILTER_TYPE_LINK);
+        EXPECT_EQ(in->min_level,                              (std::size_t) 1);
+        EXPECT_EQ(in->max_level,                              (std::size_t) 1);
+        EXPECT_EQ(in->output_buffer_size,                     (std::size_t) 1);
+        EXPECT_EQ(in->format,                                 format_arg);
+        EXPECT_EQ(in->rollup.entries_limit,                   (std::size_t) 1);
+        EXPECT_EQ(in->rollup.delete_below,                    (std::size_t) 1);
+        EXPECT_EQ(in->rollup.attach_flag,                     SQLITE_OPEN_READWRITE);
+        EXPECT_NE(in->skip,                                   nullptr);
+        EXPECT_EQ(in->target_memory,                          (std::size_t) 1);
+        EXPECT_EQ(in->subdir_limit,                           (std::size_t) 1);
+        EXPECT_EQ(sll_get_size(&in->external_attach.setup),   (std::size_t) 1);
 
-        sll_node_t *head = sll_head_node(&in->external_attach);
-        EXPECT_NE(head,                               nullptr);
+        EXPECT_EQ(in->swap_prefix.data,                       swap_prefix_arg);
+
+        EXPECT_NE(in->path_list.data,                         nullptr);
+        EXPECT_EQ(in->path_list.len,                          path_list_arg.size());
+
+        sll_node_t *head = sll_head_node(&in->external_attach.setup);
+        EXPECT_NE(head,                                       nullptr);
         eus_t *eus = (eus_t *) sll_node_data(head);
-        EXPECT_NE(eus,                                nullptr);
-        EXPECT_EQ(eus->basename.data,                 Q_arg0);
-        EXPECT_EQ(eus->table.data,                    Q_arg1);
-        EXPECT_EQ(eus->template_table.data,           Q_arg2);
-        EXPECT_EQ(eus->view.data,                     Q_arg3);
-
-        EXPECT_EQ(in->swap_prefix.data,               swap_prefix_arg);
-
-        EXPECT_NE(in->path_list.data,                 nullptr);
-        EXPECT_EQ(in->path_list.len,                  path_list_arg.size());
+        EXPECT_NE(eus,                                        nullptr);
+        EXPECT_EQ(eus->basename.data,                         external_attach_arg0);
+        EXPECT_EQ(eus->table.data,                            external_attach_arg1);
+        EXPECT_EQ(eus->template_table.data,                   external_attach_arg2);
+        EXPECT_EQ(eus->view.data,                             external_attach_arg3);
     }
     else {
         const std::string empty = "";
 
-        EXPECT_EQ(in->maxthreads,                     (std::size_t) 1);
-        EXPECT_EQ(in->delim,                          fielddelim);
-        EXPECT_EQ(in->output,                         STDOUT);
-        EXPECT_EQ(in->outname,                        empty);
-        EXPECT_EQ(in->sql.setup_res_col_types,        empty);
-        EXPECT_EQ(in->sql.init,                       empty);
-        EXPECT_EQ(in->sql.tsum,                       empty);
-        EXPECT_EQ(in->sql.sum,                        empty);
-        EXPECT_EQ(in->sql.ent,                        empty);
-        EXPECT_EQ(in->sql.intermediate,               empty);
-        EXPECT_EQ(in->sql.init_agg,                   empty);
-        EXPECT_EQ(in->sql.agg,                        empty);
-        EXPECT_EQ(in->sql.fin,                        empty);
-        EXPECT_EQ(in->insuspect.data,                 nullptr);
-        EXPECT_EQ(in->suspectfile,                    0);
-        EXPECT_EQ(in->suspectmethod,                  0);
-        EXPECT_NE(in->suspecttime,                    0);
-        EXPECT_EQ(in->source_prefix,                  empty);
-        EXPECT_EQ(in->filter_types,                   0);
-        EXPECT_EQ(in->min_level,                      (std::size_t) 0);
-        EXPECT_EQ(in->max_level,                      (std::size_t) -1);
-        EXPECT_EQ(in->output_buffer_size,             (std::size_t) 4096);
-        EXPECT_EQ(in->format,                         empty);
-        EXPECT_EQ(in->rollup.entries_limit,           (std::size_t) 0);
-        EXPECT_EQ(in->rollup.delete_below,            (std::size_t) -1);
-        EXPECT_EQ(in->rollup.attach_flag,             SQLITE_OPEN_READONLY);
-        EXPECT_NE(in->skip,                           nullptr);
-        EXPECT_EQ(in->target_memory,                  (std::size_t) 0);
-        EXPECT_EQ(in->subdir_limit,                   (std::size_t) 0);
-        EXPECT_EQ(sll_get_size(&in->external_attach), (std::size_t) 0);
-        EXPECT_NE(in->swap_prefix.data,               nullptr); /* default exists */
-        EXPECT_EQ(in->path_list.data,                 nullptr);
-        EXPECT_EQ(in->path_list.len,                  (std::size_t) 0);
+        EXPECT_EQ(in->maxthreads,                             (std::size_t) 1);
+        EXPECT_EQ(in->delim,                                  fielddelim);
+        EXPECT_EQ(in->output,                                 STDOUT);
+        EXPECT_EQ(in->outname,                                empty);
+        EXPECT_EQ(in->sql.setup_res_col_types,                empty);
+        EXPECT_EQ(in->sql.init,                               empty);
+        EXPECT_EQ(in->sql.tsum,                               empty);
+        EXPECT_EQ(in->sql.sum,                                empty);
+        EXPECT_EQ(in->sql.ent,                                empty);
+        EXPECT_EQ(in->sql.intermediate,                       empty);
+        EXPECT_EQ(in->sql.init_agg,                           empty);
+        EXPECT_EQ(in->sql.agg,                                empty);
+        EXPECT_EQ(in->sql.fin,                                empty);
+        EXPECT_EQ(in->insuspect.data,                         nullptr);
+        EXPECT_EQ(in->suspectfile,                            0);
+        EXPECT_EQ(in->suspectmethod,                          0);
+        EXPECT_NE(in->suspecttime,                            0);
+        EXPECT_EQ(in->source_prefix,                          empty);
+        EXPECT_EQ(in->filter_types,                           0);
+        EXPECT_EQ(in->min_level,                              (std::size_t) 0);
+        EXPECT_EQ(in->max_level,                              (std::size_t) -1);
+        EXPECT_EQ(in->output_buffer_size,                     (std::size_t) 4096);
+        EXPECT_EQ(in->format,                                 empty);
+        EXPECT_EQ(in->rollup.entries_limit,                   (std::size_t) 0);
+        EXPECT_EQ(in->rollup.delete_below,                    (std::size_t) -1);
+        EXPECT_EQ(in->rollup.attach_flag,                     SQLITE_OPEN_READONLY);
+        EXPECT_NE(in->skip,                                   nullptr);
+        EXPECT_EQ(in->target_memory,                          (std::size_t) 0);
+        EXPECT_EQ(in->subdir_limit,                           (std::size_t) 0);
+        EXPECT_NE(in->swap_prefix.data,                       nullptr); /* default exists */
+        EXPECT_EQ(in->path_list.data,                         nullptr);
+        EXPECT_EQ(in->path_list.len,                          (std::size_t) 0);
+        EXPECT_EQ(sll_get_size(&in->external_attach.setup),   (std::size_t) 0);
     }
 }
 
@@ -290,9 +291,10 @@ TEST(parse_cmd_line, help) {
     const char *argv[] = {
         exec.c_str(),
         h.c_str(),
+        nullptr,
     };
 
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
     const int fd = dup(STDOUT_FILENO);
     ASSERT_NE(fd, -1);
@@ -315,9 +317,10 @@ TEST(parse_cmd_line, version) {
     const char *argv[] = {
         exec.c_str(),
         v.c_str(),
+        nullptr,
     };
 
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
     const int fd = dup(STDOUT_FILENO);
     ASSERT_NE(fd, -1);
@@ -347,11 +350,11 @@ TEST(parse_cmd_line, debug) {
         FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW,
         FLAG_SKIP_FILE, FLAG_DONT_REPROCESS, FLAG_PRINT_EACCES,
         FLAG_NO_PRINT_SQL_ON_ERR, FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT,
-        FLAG_CHECK_EXTDB_VALID, FLAG_EXTERNAL_ATTACH, FLAG_SWAP_PREFIX,
-        FLAG_PATH_LIST,
+        FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
+        FLAG_EXTERNAL_ATTACH_VALIDATE, FLAG_EXTERNAL_ATTACH,
         FLAG_END
     };
 
@@ -397,13 +400,14 @@ TEST(parse_cmd_line, debug) {
         #ifdef HAVE_ZLIB
         compress.c_str(),
         #endif
-        q.c_str(),
-        Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
         swap_prefix.c_str(), swap_prefix_arg.c_str(),
         path_list.c_str(), path_list_arg.c_str(),
+        external_attach_validate.c_str(),
+        external_attach.c_str(), external_attach_arg0.c_str(), external_attach_arg1.c_str(), external_attach_arg2.c_str(), external_attach_arg3.c_str(),
+        nullptr,
     };
 
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
     const int fd = dup(STDOUT_FILENO);
     ASSERT_NE(fd, -1);
@@ -429,7 +433,7 @@ TEST(parse_cmd_line, flags) {
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
-        FLAG_CHECK_EXTDB_VALID,
+        FLAG_EXTERNAL_ATTACH_VALIDATE,
         FLAG_END
     };
 
@@ -449,10 +453,11 @@ TEST(parse_cmd_line, flags) {
         #ifdef HAVE_ZLIB
         compress.c_str(),
         #endif
-        q.c_str(),
+        external_attach_validate.c_str(),
+        nullptr,
     };
 
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -470,8 +475,8 @@ TEST(parse_cmd_line, options) {
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_OUTPUT_BUFFER_SIZE, FLAG_FORMAT,
         FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE,
-        FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_EXTERNAL_ATTACH,
-        FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
+        FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_SWAP_PREFIX,
+        FLAG_PATH_LIST, FLAG_EXTERNAL_ATTACH,
         FLAG_END
     };
 
@@ -503,12 +508,13 @@ TEST(parse_cmd_line, options) {
         // skip_file.c_str(), skip_file_arg.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
-        Q.c_str(), Q_arg0.c_str(), Q_arg1.c_str(), Q_arg2.c_str(), Q_arg3.c_str(),
         swap_prefix.c_str(), swap_prefix_arg.c_str(),
         path_list.c_str(), path_list_arg.c_str(),
+        external_attach.c_str(), external_attach_arg0.c_str(), external_attach_arg1.c_str(), external_attach_arg2.c_str(), external_attach_arg3.c_str(),
+        nullptr,
     };
 
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -527,9 +533,10 @@ TEST(parse_cmd_line, delimiter) {
         const char *argv[] = {
             exec.c_str(),
             d.c_str(), dx,
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -545,9 +552,10 @@ TEST(parse_cmd_line, delimiter) {
         const char *argv[] = {
             exec.c_str(),
             d.c_str(), dpipe,
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -564,9 +572,10 @@ TEST(parse_cmd_line, dir_match) {
     {
         const char *argv[] = {
             exec.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -580,9 +589,10 @@ TEST(parse_cmd_line, dir_match) {
         const char *argv[] = {
             exec.c_str(),
             dir_match_uid.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -596,9 +606,10 @@ TEST(parse_cmd_line, dir_match) {
         const char *argv[] = {
             exec.c_str(),
             dir_match_gid.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -616,9 +627,10 @@ TEST(parse_cmd_line, dir_match) {
             exec.c_str(),
             uid.c_str(),
             gid.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -637,9 +649,10 @@ TEST(parse_cmd_line, output_arguments) {
     {
         const char *argv[] = {
             exec.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -653,9 +666,10 @@ TEST(parse_cmd_line, output_arguments) {
         const char *argv[] = {
             exec.c_str(),
             o.c_str(), o_arg.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -670,9 +684,10 @@ TEST(parse_cmd_line, output_arguments) {
         const char *argv[] = {
             exec.c_str(),
             O.c_str(), O_arg.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -688,9 +703,10 @@ TEST(parse_cmd_line, output_arguments) {
             exec.c_str(),
             o.c_str(), o_arg.c_str(),
             O.c_str(), O_arg.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -706,9 +722,10 @@ TEST(parse_cmd_line, output_arguments) {
             exec.c_str(),
             O.c_str(), O_arg.c_str(),
             o.c_str(), o_arg.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) -1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
@@ -732,9 +749,10 @@ TEST(parse_cmd_line, print_tlv) {
         const char *argv[] = {
             exec.c_str(),
             print_tlv.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), argc);
@@ -748,9 +766,10 @@ TEST(parse_cmd_line, print_tlv) {
             exec.c_str(),
             print_tlv.c_str(),
             o.c_str(), o_arg.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
@@ -763,9 +782,10 @@ TEST(parse_cmd_line, print_tlv) {
             exec.c_str(),
             print_tlv.c_str(),
             O.c_str(), O_arg.c_str(),
+            nullptr,
         };
 
-        int argc = sizeof(argv) / sizeof(argv[0]);
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
@@ -782,9 +802,10 @@ TEST(parse_cmd_line, positional) {
         exec.c_str(),
         pos1.c_str(),
         pos2.c_str(),
+        nullptr,
     };
 
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
     struct input in;
     // 1, since no options were read
@@ -807,9 +828,10 @@ TEST(parse_cmd_line, unused) {
     const char *argv[] = {
         exec.c_str(),
         unused_opt,
+        nullptr,
     };
 
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
@@ -831,9 +853,10 @@ TEST(parse_cmd_line, invalid) {
     const char *argv[] = {
         exec.c_str(),
         invalid_opt,
+        nullptr,
     };
 
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
 
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);

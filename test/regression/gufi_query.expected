@@ -23,10 +23,11 @@ options:
       --path-list <filename>        File containing paths at single level to walk (not including starting path). If --min-level > 0, prepend each line of the file with the index path.
   -p, --path <path>                 Source path prefix for %s in SQL
   -x, --query-xattrs                query xattrs
-  -Q <basename>
-     <table>
-     <template>.<table>
-     <view>                         External database file basename, per-attach table name, template + table name, and the resultant view
+  -Q, --external-attach
+        <basename>
+        <table>
+        <template>.<table>
+        <view>                      External database file basename, per-attach table name, template + table name, and the resultant view
       --plugin <entrypoint>:<path>  plugin library for modifying tree processing
   -w, --read-write                  open the database files in read-write mode instead of read only mode
       --keep-matime                 Keep mtime and atime same on the database files
@@ -353,7 +354,7 @@ Error: Missing -I
 
 # Missing -I (external databases)
 $ gufi_query -Q "external" "user" "data" "base"                                   "prefix"
-External databases require template files attached with -I
+Attaching external databases require template files attached with -I
 
 # Missing -J (aggregate, stdout)
 $ gufi_query            -I "create" -S "insert;" -E "insert;" -K "create;" -G "query;"  "prefix"

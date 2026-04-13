@@ -130,7 +130,7 @@ File containing paths at single level to index (not including starting path). Mu
 Source path prefix for %s in SQL
 .It Fl x, -query-xattrs
 query xattrs
-.It Fl Q\ <basename>\ <table>\ <template.table>\ <view>
+.It Fl Q, -external-attach\ <basename>\ <table>\ <template.table>\ <view>
 External database file basename, per-attach table name, template + table name, and the resultant view
 .It Fl -plugin\ <entrypoint>:<path>
 plugin library for modifying tree processing

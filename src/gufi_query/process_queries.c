@@ -66,7 +66,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #include "dbutils.h"
-#include "external.h"
+#include "external_attach.h"
 #include "print.h"
 #include "str.h"
 #include "utils.h"

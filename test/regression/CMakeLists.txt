@@ -169,7 +169,7 @@ set(EXAMPLES
 set(OTHERS
   deploy
   dsi_plugins
-  external_databases
+  external_attach
   gufi_distributed
   gufi_find_outliers
   gufi_incremental_update

@@ -89,7 +89,7 @@ set(gufi_developer_inputs
     sections/rollup.tex
     sections/treesummary.tex
     sections/xattrs.tex
-    sections/external_databases.tex
+    sections/external_attach.tex
     sections/querying.tex
     sections/gufi_query.tex
     sections/gufi_sqlite3.tex
@@ -125,7 +125,7 @@ set(gufi_administrator_inputs
     sections/rollup.tex
     sections/treesummary.tex
     sections/xattrs.tex
-    sections/external_databases.tex
+    sections/external_attach.tex
     sections/querying.tex
     sections/gufi_query.tex
     sections/gufi_sqlite3.tex

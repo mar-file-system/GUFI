@@ -69,12 +69,12 @@ OF SUCH DAMAGE.
 
 #include "SinglyLinkedList.h"
 #include "dbutils.h"
-#include "external.h"
+#include "external_attach.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "gufi_query/external.h"
+#include "gufi_query/external_attach.h"
 #ifdef __cplusplus
 }
 #endif
@@ -158,7 +158,7 @@ TEST(external, read_file) {
     work->basename_len = work->name_len;
 
     // skip checking path is valid db
-    in.check_extdb_valid = false;
+    in.external_attach.validate = false;
     EXPECT_EQ(external_read_file(&in, work,
                                  [](struct input *, void *,
                                     const long long int,
@@ -167,7 +167,7 @@ TEST(external, read_file) {
               (std::size_t) 4);
 
     // check that path is valid db
-    in.check_extdb_valid = true;
+    in.external_attach.validate = true;
     EXPECT_EQ(external_read_file(&in, work,
                                  [](struct input *, void *,
                                     const long long int,
@@ -310,12 +310,12 @@ TEST(gufi_query_external, NULL_db) {
     eus.view = REFSTR("testview", 8);
 
     struct input in;
-    sll_init(&in.external_attach);
-    sll_push_back(&in.external_attach, &eus);
+    sll_init(&in.external_attach.setup);
+    sll_push_back(&in.external_attach.setup, &eus);
 
     std::size_t extdb_count = 0;
     detach_extdbs(&in, nullptr, nullptr, 0, &extdb_count);
     EXPECT_EQ(extdb_count, (std::size_t) 0);
 
-    sll_destroy(&in.external_attach, nullptr);
+    sll_destroy(&in.external_attach.setup, nullptr);
 }

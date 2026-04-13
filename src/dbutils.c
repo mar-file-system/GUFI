@@ -74,7 +74,7 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 #include "dbutils.h"
-#include "external.h"
+#include "external_attach.h"
 #include "histogram.h"
 #include "trie.h"
 

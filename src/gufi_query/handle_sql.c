@@ -137,10 +137,10 @@ static int validate(struct input *in) {
         /* -G can be called when aggregating, but is not necessary */
     }
 
-    /* -Q requires -I */
-    if (sll_get_size(&in->external_attach)) {
+    /* -Q/--external-attach requires -I */
+    if (sll_get_size(&in->external_attach.setup)) {
         if (!in->sql.init.len) {
-            fprintf(stderr, "External databases require template files attached with -I\n");
+            fprintf(stderr, "Attaching external databases require template files attached with -I\n");
             return -1;
         }
     }

@@ -77,7 +77,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "debug.h"
-#include "external.h"
+#include "external_attach.h"
 #include "plugin.h"
 #include "utils.h"
 
@@ -131,7 +131,7 @@ struct input *input_init(struct input *in) {
         trie_insert(in->skip, ".",  1, NULL, NULL);
         trie_insert(in->skip, "..", 2, NULL, NULL);
 
-        sll_init(&in->external_attach);
+        sll_init(&in->external_attach.setup);
 
         in->swap_prefix.data = (char *) DEFAULT_SWAP_PREFIX;
         in->swap_prefix.len  = 0;
@@ -150,7 +150,7 @@ void input_fini(struct input *in) {
         free(in->types.ent);
         free(in->types.sum);
         free(in->types.tsum);
-        sll_destroy(&in->external_attach, free);
+        sll_destroy(&in->external_attach.setup, free);
         trie_free(in->skip);
         plugins_destroy(&in->plugins);
     }
@@ -207,80 +207,83 @@ void print_help(const char* prog_name,
 
     while (options && options->name != NULL) {
         switch (options->val) {
-            case FLAG_HELP_SHORT:                    printf("  -h, --help                        help"); break;
-            case FLAG_DEBUG_SHORT:                   printf("  -H, --debug                       show assigned input values (debugging)"); break;
-            case FLAG_VERSION_SHORT:                 printf("  -v, --version                     version"); break;
-            case FLAG_PRINTDIR_SHORT:                printf("  -P                                print directories as they are encountered"); break;
-            case FLAG_DIR_MATCH_UID_SHORT:           printf("  --dir-match-uid[=uid]             only traverse directories that are owned by uid (optional; default: euid)"); break;
-            case FLAG_DIR_MATCH_GID_SHORT:           printf("  --dir-match-gid[=gid]             only traverse directories that are owned by gid (optional; default: egid)"); break;
-            case FLAG_PROCESS_SQL_SHORT:             printf("  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
+            case FLAG_HELP_SHORT:                        printf("  -h, --help                        help"); break;
+            case FLAG_DEBUG_SHORT:                       printf("  -H, --debug                       show assigned input values (debugging)"); break;
+            case FLAG_VERSION_SHORT:                     printf("  -v, --version                     version"); break;
+            case FLAG_PRINTDIR_SHORT:                    printf("  -P                                print directories as they are encountered"); break;
+            case FLAG_DIR_MATCH_UID_SHORT:               printf("  --dir-match-uid[=uid]             only traverse directories that are owned by uid (optional; default: euid)"); break;
+            case FLAG_DIR_MATCH_GID_SHORT:               printf("  --dir-match-gid[=gid]             only traverse directories that are owned by gid (optional; default: egid)"); break;
+            case FLAG_PROCESS_SQL_SHORT:                 printf("  -a <0|1|2>                        0 - if returned row, run next SQL, else stop (continue descent) (default)\n"
                                                             "                                    1 - skip T, run S and E whether or not a row was returned (old -a)\n"
                                                             "                                    2 - run T, S, and E whether or not a row was returned"); break;
-            case FLAG_THREADS_SHORT:                 printf("  -n, --threads <n>                 number of threads"); break;
-            case FLAG_DELIM_SHORT:                   printf("  -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
-            case FLAG_OUTPUT_FILE_SHORT:             printf("  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)"); break;
-            case FLAG_OUTPUT_DB_SHORT:               printf("  -O, --output-db <out_DB>          output DB"); break;
-            case FLAG_SQL_INIT_SHORT:                printf("  -I <SQL_init>                     SQL init"); break;
-            case FLAG_SQL_TSUM_SHORT:                printf("  -T <SQL_tsum>                     SQL for tree-summary table"); break;
-            case FLAG_SQL_SUM_SHORT:                 printf("  -S <SQL_sum>                      SQL for summary table"); break;
-            case FLAG_SQL_ENT_SHORT:                 printf("  -E <SQL_ent>                      SQL for entries table"); break;
-            case FLAG_SQL_INTERM_SHORT:              printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
-            case FLAG_SQL_CREATE_AGG_SHORT:          printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
-            case FLAG_SQL_AGG_SHORT:                 printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
-            case FLAG_SQL_FIN_SHORT:                 printf("  -F <SQL_fin>                      SQL cleanup"); break;
-            case FLAG_READ_WRITE_SHORT:              printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
-            case FLAG_CHECK_EXTDB_VALID_SHORT:       printf("  -q                                check that external databases are valid before tracking during indexing"); break;
-            case FLAG_EXTERNAL_ATTACH_SHORT:         printf("  -Q <basename>\n"
-                                                            "     <table>\n"
-                                                            "     <template>.<table>\n"
-                                                            "     <view>                         External database file basename, per-attach table name, template + table name, and the resultant view"); break;
-            case FLAG_PATH_SHORT:                    printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
-            case FLAG_FILTER_TYPE_SHORT:             printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
+            case FLAG_THREADS_SHORT:                     printf("  -n, --threads <n>                 number of threads"); break;
+            case FLAG_DELIM_SHORT:                       printf("  -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
+            case FLAG_OUTPUT_FILE_SHORT:                 printf("  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)"); break;
+            case FLAG_OUTPUT_DB_SHORT:                   printf("  -O, --output-db <out_DB>          output DB"); break;
+            case FLAG_SQL_INIT_SHORT:                    printf("  -I <SQL_init>                     SQL init"); break;
+            case FLAG_SQL_TSUM_SHORT:                    printf("  -T <SQL_tsum>                     SQL for tree-summary table"); break;
+            case FLAG_SQL_SUM_SHORT:                     printf("  -S <SQL_sum>                      SQL for summary table"); break;
+            case FLAG_SQL_ENT_SHORT:                     printf("  -E <SQL_ent>                      SQL for entries table"); break;
+            case FLAG_SQL_INTERM_SHORT:                  printf("  -J <SQL_interm>                   SQL for intermediate results"); break;
+            case FLAG_SQL_CREATE_AGG_SHORT:              printf("  -K <create aggregate>             SQL to create the final aggregation table"); break;
+            case FLAG_SQL_AGG_SHORT:                     printf("  -G <SQL_aggregate>                SQL for aggregated results"); break;
+            case FLAG_SQL_FIN_SHORT:                     printf("  -F <SQL_fin>                      SQL cleanup"); break;
+            case FLAG_READ_WRITE_SHORT:                  printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
+            case FLAG_PATH_SHORT:                        printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
+            case FLAG_FILTER_TYPE_SHORT:                 printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
 
             /* no typable short flags */
 
-            case FLAG_MIN_LEVEL_SHORT:               printf("      --min-level <n>               minimum level to go down"); break;
-            case FLAG_MAX_LEVEL_SHORT:               printf("      --max-level <n>               maximum level to go down"); break;
-            case FLAG_PRINT_TLV_SHORT:               printf("      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
-            case FLAG_SETUP_RES_COL_TYPES_SHORT:     printf("      --setup-res-col-types <SQL>   SQL statement(s) for setting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv"); break;
-            case FLAG_KEEP_MATIME_SHORT:             printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
-            case FLAG_SKIP_FILE_SHORT:               printf("      --skip-file <filename>        file containing directory names to skip"); break;
-            case FLAG_DRY_RUN_SHORT:                 printf("      --dry-run                     Dry run"); break;
-            case FLAG_PLUGIN_SHORT:                  printf("      --plugin <entrypoint>:<path>  plugin library for modifying tree processing"); break;
-            case FLAG_PATH_LIST_SHORT:               printf("      --path-list <filename>        File containing paths at single level to walk (not including starting path). If --min-level > 0, prepend each line of the file with the index path."); break;
-            case FLAG_FORMAT_SHORT:                  printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
-            case FLAG_TERSE_SHORT:                   printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
-            case FLAG_DONT_REPROCESS_SHORT:          printf("      --dont-reprocess              if a directory was previously processed, skip descending the subtree"); break;
-            case FLAG_NEWLINE_SHORT:                 printf("      --newline <c>                 character used to separate lines (default: '\\n') [use 0 for NULL character]"); break;
-            case FLAG_SUPPRESS_NEWLINE_SHORT:        printf("      --suppress-newline            do not print the line separator"); break;
-            case FLAG_PRINT_EACCES_SHORT:            printf("      --print-eacces                print messages when errno is EACCES"); break;
-            case FLAG_NO_PRINT_SQL_ON_ERR_SHORT:     printf("      --no-print-sql-on-err         do not print SQL with error messages"); break;
-            case FLAG_OLD_TRACE_FORMAT_SHORT:        printf("      --old-trace-format            read old format traces"); break;
+            case FLAG_MIN_LEVEL_SHORT:                   printf("      --min-level <n>               minimum level to go down"); break;
+            case FLAG_MAX_LEVEL_SHORT:                   printf("      --max-level <n>               maximum level to go down"); break;
+            case FLAG_PRINT_TLV_SHORT:                   printf("      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
+            case FLAG_SETUP_RES_COL_TYPES_SHORT:         printf("      --setup-res-col-types <SQL>   SQL statement(s) for setting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv"); break;
+            case FLAG_KEEP_MATIME_SHORT:                 printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
+            case FLAG_SKIP_FILE_SHORT:                   printf("      --skip-file <filename>        file containing directory names to skip"); break;
+            case FLAG_DRY_RUN_SHORT:                     printf("      --dry-run                     Dry run"); break;
+            case FLAG_PLUGIN_SHORT:                      printf("      --plugin <entrypoint>:<path>  plugin library for modifying tree processing"); break;
+            case FLAG_PATH_LIST_SHORT:                   printf("      --path-list <filename>        File containing paths at single level to walk (not including starting path). If --min-level > 0, prepend each line of the file with the index path."); break;
+            case FLAG_FORMAT_SHORT:                      printf("      --format <FORMAT>             use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
+            case FLAG_TERSE_SHORT:                       printf("      --terse                       print the information in terse form"); break; /* output from stat --help */
+            case FLAG_DONT_REPROCESS_SHORT:              printf("      --dont-reprocess              if a directory was previously processed, skip descending the subtree"); break;
+            case FLAG_NEWLINE_SHORT:                     printf("      --newline <c>                 character used to separate lines (default: '\\n') [use 0 for NULL character]"); break;
+            case FLAG_SUPPRESS_NEWLINE_SHORT:            printf("      --suppress-newline            do not print the line separator"); break;
+            case FLAG_PRINT_EACCES_SHORT:                printf("      --print-eacces                print messages when errno is EACCES"); break;
+            case FLAG_NO_PRINT_SQL_ON_ERR_SHORT:         printf("      --no-print-sql-on-err         do not print SQL with error messages"); break;
+            case FLAG_OLD_TRACE_FORMAT_SHORT:            printf("      --old-trace-format            read old format traces"); break;
 
             /* memory usage flags */
-            case FLAG_OUTPUT_BUFFER_SIZE_SHORT:      printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
-            case FLAG_TARGET_MEMORY_SHORT:           printf("      --target-memory <bytes>       target memory utilization (soft limit)"); break;
-            case FLAG_SUBDIR_LIMIT_SHORT:            printf("      --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially"); break;
-            case FLAG_COMPRESS_SHORT:                printf("      --compress                    compress work items"); break;
-            case FLAG_SWAP_PREFIX_SHORT:             printf("      --swap-prefix <path>          File name prefix for swap files"); break;
+            case FLAG_OUTPUT_BUFFER_SIZE_SHORT:          printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
+            case FLAG_TARGET_MEMORY_SHORT:               printf("      --target-memory <bytes>       target memory utilization (soft limit)"); break;
+            case FLAG_SUBDIR_LIMIT_SHORT:                printf("      --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially"); break;
+            case FLAG_COMPRESS_SHORT:                    printf("      --compress                    compress work items"); break;
+            case FLAG_SWAP_PREFIX_SHORT:                 printf("      --swap-prefix <path>          File name prefix for swap files"); break;
 
             /* xattr flags */
-            case FLAG_XATTRS_SHORT:                  options++; continue;
-            case FLAG_INDEX_XATTRS_SHORT:            printf("  -x, --index-xattrs                index xattrs"); break;
-            case FLAG_QUERY_XATTRS_SHORT:            printf("  -x, --query-xattrs                query xattrs"); break;
-            case FLAG_SET_XATTRS_SHORT:              printf("  -x, --set-xattrs                  set xattrs"); break;
+            case FLAG_XATTRS_SHORT:                      options++; continue;
+            case FLAG_INDEX_XATTRS_SHORT:                printf("  -x, --index-xattrs                index xattrs"); break;
+            case FLAG_QUERY_XATTRS_SHORT:                printf("  -x, --query-xattrs                query xattrs"); break;
+            case FLAG_SET_XATTRS_SHORT:                  printf("  -x, --set-xattrs                  set xattrs"); break;
 
             /* gufi_incremental_update flags */
-            case FLAG_SUSPECT_FILE_SHORT:            printf("      --suspect-file <path>         suspect input file"); break;
-            case FLAG_SUSPECT_METHOD_SHORT:          printf("      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)"); break;
-            case FLAG_SUSPECT_TIME_SHORT:            printf("      --suspect-time <s>            time in seconds since epoch for suspect comparision"); break;
-            case FLAG_SUSPECT_STAT_SHORT:            printf("      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime"); break;
+            case FLAG_SUSPECT_FILE_SHORT:                printf("      --suspect-file <path>         suspect input file"); break;
+            case FLAG_SUSPECT_METHOD_SHORT:              printf("      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)"); break;
+            case FLAG_SUSPECT_TIME_SHORT:                printf("      --suspect-time <s>            time in seconds since epoch for suspect comparision"); break;
+            case FLAG_SUSPECT_STAT_SHORT:                printf("      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime"); break;
 
             /* gufi_rollup flags */
-            case FLAG_ROLLUP_LIMIT_SHORT:            printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
-            case FLAG_ROLLUP_DELETE_BELOW_SHORT:     printf("      --delete-below <level>        Delete rollup data under (not including) this level"); break;
+            case FLAG_ROLLUP_LIMIT_SHORT:                printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
+            case FLAG_ROLLUP_DELETE_BELOW_SHORT:         printf("      --delete-below <level>        Delete rollup data under (not including) this level"); break;
 
-            default:                                 printf("print_help(): unrecognized option '%c'", (char)options->val); break;
+            /* external database flags */
+            case FLAG_EXTERNAL_ATTACH_VALIDATE_SHORT:    printf("  -q, --external-attach-validate    check that external databases are valid before tracking during indexing"); break;
+            case FLAG_EXTERNAL_ATTACH_SHORT:             printf("  -Q, --external-attach \n"
+                                                                "        <basename>\n"
+                                                                "        <table>\n"
+                                                                "        <template>.<table>\n"
+                                                                "        <view>                      External database file basename, per-attach table name, template + table name, and the resultant view"); break;
+
+            default:                                     printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
         options++;
         printf("\n");
@@ -311,14 +314,6 @@ void show_input(struct input* in, int retval) {
     printf("in.sql.agg                  = '%s'\n",          in->sql.agg.data);
     printf("in.sql.fin                  = '%s'\n",          in->sql.fin.data);
     printf("in.open_flags               = %d\n",            in->open_flags);
-    printf("in.check_extdb_valid        = %d\n",            in->check_extdb_valid);
-    size_t i = 0;
-    sll_loop(&in->external_attach, node) {
-        eus_t *eus = (eus_t *) sll_node_data(node);
-        printf("in.external_attach[%zu] = ('%s', '%s', '%s', '%s')\n",
-               i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
-    }
-    printf("\n");
     printf("in.source_prefix            = '%s'\n",          in->source_prefix.data);
     printf("in.filter_types             = %d\n",            in->filter_types);
 
@@ -331,7 +326,7 @@ void show_input(struct input* in, int retval) {
     printf("in.skip_count               = %zu\n",           in->skip_count);
     printf("in.dry_run                  = %d\n",            in->dry_run);
 
-    for(i = 0; i < in->plugins.count; i++) {
+    for(size_t i = 0; i < in->plugins.count; i++) {
         printf("in.plugins[%zu]         = '%s'\n",          i, in->plugins.plugins[i]->filename);
     }
 
@@ -359,6 +354,7 @@ void show_input(struct input* in, int retval) {
     printf("in.process_xattrs           = %d\n",            in->process_xattrs);
 
     /* gufi_incremental_update flags */
+
     printf("in.insuspect                = '%s'\n",          in->insuspect.data);
     printf("in.suspectfile              = '%d'\n",          in->suspectfile);
     printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
@@ -366,9 +362,21 @@ void show_input(struct input* in, int retval) {
     printf("in.suspectstat              = '%d'\n",          in->suspectstat);
 
     /* gufi_rollup flags */
+
     printf("in.rollup.entries_limit     = %zu\n",           in->rollup.entries_limit);
     printf("in.rollup.delete_below      = %zu\n",           in->rollup.delete_below);
     printf("in.rollup.attach_flag       = %d\n",            in->rollup.attach_flag);
+
+    /* external database flags */
+
+    printf("in.external_attach.validate = %d\n",            in->external_attach.validate);
+    size_t i = 0;
+    sll_loop(&in->external_attach.setup, node) {
+        eus_t *eus = (eus_t *) sll_node_data(node);
+        printf("in.external_attach.setup[%zu] = ('%s', '%s', '%s', '%s')\n",
+               i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
+    }
+    printf("\n");
 
     printf("retval                      = %d\n",            retval);
     printf("\n");
@@ -528,31 +536,6 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_READ_WRITE_SHORT:
                 in->open_flags = SQLITE_OPEN_READWRITE;
-                break;
-
-            case FLAG_CHECK_EXTDB_VALID_SHORT:
-                in->check_extdb_valid = 1;
-                break;
-
-            case FLAG_EXTERNAL_ATTACH_SHORT:
-                {
-                    eus_t *user = calloc(1, sizeof(*user));
-
-                    INSTALL_STR(&user->basename, optarg);
-
-                    optarg = argv[optind];
-                    INSTALL_STR(&user->table, optarg);
-
-                    optarg = argv[++optind];
-                    INSTALL_STR(&user->template_table, optarg);
-
-                    optarg = argv[++optind];
-                    INSTALL_STR(&user->view, optarg);
-
-                    optarg = argv[++optind];
-
-                    sll_push_back(&in->external_attach, user);
-                }
                 break;
 
             case FLAG_PATH_SHORT:
@@ -751,6 +734,33 @@ int parse_cmd_line(int                  argc,
                 INSTALL_SIZE(&in->rollup.delete_below, optarg, (size_t) 0, (size_t) -1,
                              "--" FLAG_ROLLUP_DELETE_BELOW_LONG, &retval);
                 in->rollup.attach_flag = SQLITE_OPEN_READWRITE;
+                break;
+
+            /* external database flags */
+
+            case FLAG_EXTERNAL_ATTACH_VALIDATE_SHORT:
+                in->external_attach.validate = 1;
+                break;
+
+            case FLAG_EXTERNAL_ATTACH_SHORT:
+                {
+                    eus_t *user = calloc(1, sizeof(*user));
+
+                    INSTALL_STR(&user->basename, optarg);
+
+                    optarg = argv[optind];
+                    INSTALL_STR(&user->table, optarg);
+
+                    optarg = argv[++optind];
+                    INSTALL_STR(&user->template_table, optarg);
+
+                    optarg = argv[++optind];
+                    INSTALL_STR(&user->view, optarg);
+
+                    optarg = argv[++optind];
+
+                    sll_push_back(&in->external_attach.setup, user);
+                }
                 break;
 
             case '?':

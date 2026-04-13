@@ -77,7 +77,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "debug.h"
-#include "external.h"
+#include "external_attach.h"
 #include "outfiles.h"
 #include "path_list.h"
 #include "str.h"
@@ -272,7 +272,7 @@ int main(int argc, char *argv[]) {
         FLAG_INDEX_XATTRS, FLAG_SKIP_FILE,
 
         /* miscellaneous flags */
-        FLAG_CHECK_EXTDB_VALID,
+        FLAG_EXTERNAL_ATTACH_VALIDATE,
 
         /* output flags */
         FLAG_DELIM,

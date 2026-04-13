@@ -74,7 +74,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
-#include "external.h"
+#include "external_attach.h"
 #include "str.h"
 #include "utils.h"
 #include "xattrs.h"

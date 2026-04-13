@@ -76,6 +76,7 @@ SQLITE_EXTENSION_INIT1
 #include "addqueryfuncs.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "external_attach.h"
 #include "popen_argv.h"
 #include "print.h"
 #include "utils.h"
@@ -104,22 +105,15 @@ SQLITE_EXTENSION_INIT1
  * See the respective comments below for details.
  */
 
-typedef struct {
-    str_t basename;
-    str_t table;
-    str_t template;
-    str_t view;
-} extdb_t;
-
 typedef struct gufi_query_cmd {
-    str_t remote_cmd;   /* command to send this run to a remote host (i.e. ssh); prefixes gufi_query command */
-    sll_t remote_args;  /* list of str_t that are single arguments to remote_cmd (i.e. user@remote) */
-    int verbose;        /* print gufi_query command */
+    str_t remote_cmd;         /* command to send this run to a remote host (i.e. ssh); prefixes gufi_query command */
+    sll_t remote_args;        /* list of str_t that are single arguments to remote_cmd (i.e. user@remote) */
+    int verbose;              /* print gufi_query command */
 
-    str_t threads;      /* number of threads in string form to avoid converting back and forth */
-    str_t a;            /* gufi_query -a <0|1|2> */
-    str_t min_level;    /* defaults to 0; set to non-0 if index root should be used with path list */
-    str_t max_level;    /* defaults to (uint64_t) -1 */
+    str_t threads;            /* number of threads in string form to avoid converting back and forth */
+    str_t a;                  /* gufi_query -a <0|1|2> */
+    str_t min_level;          /* defaults to 0; set to non-0 if index root should be used with path list */
+    str_t max_level;          /* defaults to (uint64_t) -1 */
     str_t dir_match_uid;
     int dir_match_uid_set;
     str_t dir_match_gid;
@@ -142,13 +136,13 @@ typedef struct gufi_query_cmd {
     str_t G;
     str_t F;
 
-    str_t path_list;    /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
-    str_t p;            /* source path */
-    sll_t plugins;      /* gufi_query plugin library paths */
+    str_t path_list;          /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
+    str_t p;                  /* source path */
+    sll_t plugins;            /* gufi_query plugin library paths */
 
-    sll_t extdbs;       /* list of external database args */
+    sll_t external_attach;    /* list of external attach database args */
 
-    sll_t indexroots;   /* list of index roots to pass to gufi_query */
+    sll_t indexroots;         /* list of index roots to pass to gufi_query */
 } gq_cmd_t;
 
 static void gq_cmd_init(gq_cmd_t *cmd) {
@@ -156,14 +150,14 @@ static void gq_cmd_init(gq_cmd_t *cmd) {
     sll_init(&cmd->remote_args);
     sll_init(&cmd->plugins);
     sll_init(&cmd->indexroots);
-    sll_init(&cmd->extdbs);
+    sll_init(&cmd->external_attach);
 }
 
 static void gq_cmd_destroy(gq_cmd_t *cmd) {
-    sll_destroy(&cmd->extdbs, free);      /* list of allocated extdb_t */
-    sll_destroy(&cmd->indexroots, NULL);  /* list of references to argv[i] */
-    sll_destroy(&cmd->plugins, NULL);     /* list of references to argv[i] */
-    sll_destroy(&cmd->remote_args, free); /* list of allocated str_t */
+    sll_destroy(&cmd->external_attach, free);      /* list of allocated eus_t */
+    sll_destroy(&cmd->indexroots, NULL);           /* list of references to argv[i] */
+    sll_destroy(&cmd->plugins, NULL);              /* list of references to argv[i] */
+    sll_destroy(&cmd->remote_args, free);          /* list of allocated str_t */
     /* not freeing cmd here */
 }
 
@@ -294,14 +288,14 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--plugin '%s' ", plugin);
         }
 
-        sll_loop(&cmd->extdbs, node) {
-            extdb_t *extdb = (extdb_t *) sll_node_data(node);
+        sll_loop(&cmd->external_attach, node) {
+            eus_t *eus = (eus_t *) sll_node_data(node);
             write_with_resize(&flat, &size, &len,
-                              "-Q '%s' '%s' '%s' '%s' ",
-                              extdb->basename.data,
-                              extdb->table.data,
-                              extdb->template.data,
-                              extdb->view.data);
+                              "--external-attach '%s' '%s' '%s' '%s' ",
+                              eus->basename.data,
+                              eus->table.data,
+                              eus->template_table.data,
+                              eus->view.data);
         }
 
         sll_loop(&cmd->indexroots, node) {
@@ -317,7 +311,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
 
         max_argc = 35; /* 3 fixed args, 15 pairs of flags, 2 single argv flags */
         max_argc += sll_get_size(&cmd->plugins) * 2;
-        max_argc += sll_get_size(&cmd->extdbs) * 5;
+        max_argc += sll_get_size(&cmd->external_attach) * 5;
         max_argc += sll_get_size(&cmd->indexroots);
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
@@ -387,13 +381,13 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = plugin;
         }
 
-        sll_loop(&cmd->extdbs, node) {
-            extdb_t *extdb = (extdb_t *) sll_node_data(node);
-            argv[argc++] = "-Q";
-            argv[argc++] = extdb->basename.data;
-            argv[argc++] = extdb->table.data;
-            argv[argc++] = extdb->template.data;
-            argv[argc++] = extdb->view.data;
+        sll_loop(&cmd->external_attach, node) {
+            eus_t *eus = (eus_t *) sll_node_data(node);
+            argv[argc++] = "--external-attach";
+            argv[argc++] = eus->basename.data;
+            argv[argc++] = eus->table.data;
+            argv[argc++] = eus->template_table.data;
+            argv[argc++] = eus->view.data;
         }
 
         sll_loop(&cmd->indexroots, node) {
@@ -848,6 +842,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     F                       = '<SQL>'
  *     path_list               = '<file path>'
  *     p                       = '<source path for use with spath()>'
+ *     Q or external_attach    = '<basename> <table> <template>.<table> <view>'
  *     plugin                  = '<entrypoint>:<gufi_query plugin library path>'
  *     index                   = '<path>' (can also pass in without the key)
  *     verbose/VERBOSE         =  <0|1>
@@ -863,6 +858,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *           - The following are exceptions and all values will be used in the order they appear:
  *                 - remote_arg
  *                 - plugin
+ *                 - Q or external_attach
  *                 - index
  *     - At least one of T, S, or E must be passed in
  *     - When determining the virtual table's schema, there are two separate cases:
@@ -955,7 +951,7 @@ static int get_cols(sqlite3 *db, str_t *sql, int **types,
 }
 
 /* parse Q='<basename> <table> <template.table> <view>' */
-static int parse_extdb(sll_t *extdbs, char *arg) {
+static int parse_external_attach_args(sll_t *external_attach, char *arg) {
     char *saveptr  = NULL;
     char *basename = strtok_r(arg,  " ", &saveptr);
     char *table    = strtok_r(NULL, " ", &saveptr);
@@ -966,13 +962,13 @@ static int parse_extdb(sll_t *extdbs, char *arg) {
         return -1;
     }
 
-    extdb_t *extdb = calloc(1, sizeof(*extdb));
-    set_refstr(&extdb->basename, basename);
-    set_refstr(&extdb->table,    table);
-    set_refstr(&extdb->template, template);
-    set_refstr(&extdb->view,     view);
+    eus_t *eus = calloc(1, sizeof(*eus));
+    set_refstr(&eus->basename,       basename);
+    set_refstr(&eus->table,          table);
+    set_refstr(&eus->template_table, template);
+    set_refstr(&eus->view,           view);
 
-    sll_push_back(extdbs, extdb);
+    sll_push_back(external_attach, eus);
 
     return 0;
 }
@@ -1045,8 +1041,8 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                     set_refstr(&cmd.p, value);
                     break;
                 case 'Q':
-                    if (parse_extdb(&cmd.extdbs, value) != 0) {
-                        *pzErr = sqlite3_mprintf("Bad external database args");
+                    if (parse_external_attach_args(&cmd.external_attach, value) != 0) {
+                        *pzErr = sqlite3_mprintf("Bad external attach database args");
                         gq_cmd_destroy(&cmd);
                         return SQLITE_MISUSE;
                     }
@@ -1109,6 +1105,13 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             /* let gufi_query check value */
             set_refstr(&cmd.dir_match_gid, value);
             cmd.dir_match_gid_set = 1;
+        }
+        else if (strncmp(key, "external_attach", 16) == 0) {
+            if (parse_external_attach_args(&cmd.external_attach, value) != 0) {
+                *pzErr = sqlite3_mprintf("Bad external attach database args");
+                gq_cmd_destroy(&cmd);
+                return SQLITE_MISUSE;
+            }
         }
         else if (strncmp(key, "setup_res_col_type", 19) == 0) {
             set_refstr(&cmd.setup_res_col_type, value);
