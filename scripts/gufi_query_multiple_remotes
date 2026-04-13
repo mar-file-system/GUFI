@@ -126,6 +126,18 @@ def build_arg_parser():
 
     return parser
 
+def common_vt_flags(args):
+    flags = ['threads={0}'.format(args.threads)]
+
+    for flag in SQL_FLAGS:
+        if getattr(args, flag):
+            flags += ['{0}=\'{1}\''.format(flag, getattr(args, flag))]
+
+    if args.verbose:
+        flags += ['verbose=1']
+
+    return flags
+
 # run when each invocation of gufi_vt goes to one remote
 # such as with ssh
 #
@@ -136,23 +148,19 @@ def ssh(conn, parser, args):
         parser.error('Missing index path')
 
     # build CREATE VIRTUAL TABLE SQL
-    common_sql = 'CREATE VIRTUAL TABLE vt{{0}} USING gufi_vt(threads={0}, '.format(args.threads)
+    create_vt = 'CREATE VIRTUAL TABLE vt{0} USING gufi_vt('
 
-    for flag in SQL_FLAGS:
-        if getattr(args, flag):
-            common_sql += '{0}=\'{1}\', '.format(flag, getattr(args, flag))
-
-    if args.verbose:
-        common_sql += 'verbose=1, '
+    flags = common_vt_flags(args)
 
     # set up virtual tables
     i = 0
     for i, [uri, index] in enumerate(zip(args.uri_index[::2], args.uri_index[1::2])):
-        sql = ', '.join([common_sql[:-2].format(i),
-                         'index=\'{0}\''.format(index),
-                         'remote_cmd=\'{0}\''.format(args.remote_cmd),
-                         'remote_arg=\'{0}\''.format(uri)
-                         ]) + ');'
+        sql = create_vt.format(i) + ', '.join(flags + [
+            'index=\'{0}\''.format(index),
+            'remote_cmd=\'{0}\''.format(args.remote_cmd),
+            'remote_arg=\'{0}\''.format(uri)
+        ]) + ');'
+
         conn.execute(sql)
 
     max_vt = i
@@ -168,25 +176,20 @@ def ssh(conn, parser, args):
 # run gufi_vt with pdsh, which sends commands to all remotes in parallel
 def pdsh(conn, _parser, args):
     # build CREATE VIRTUAL TABLE SQL
-    common_sql = 'CREATE VIRTUAL TABLE vt USING gufi_vt(threads={0}, '.format(args.threads)
+    create_vt = 'CREATE VIRTUAL TABLE vt USING gufi_vt('
 
-    for flag in SQL_FLAGS:
-        if getattr(args, flag):
-            common_sql += '{0}=\'{1}\', '.format(flag, getattr(args, flag))
-
-    if args.verbose:
-        common_sql += 'verbose=1, '
+    flags = common_vt_flags(args)
 
     # set up virtual tables
-    sql = ', '.join([common_sql[:-2],
-                     'index=\'{0}\''.format(args.index),
-                     'remote_cmd=\'{0}\''.format(args.remote_cmd),
-                     'remote_arg=\'-R\'',
-                     'remote_arg=\'ssh\'',
-                     'remote_arg=\'-w\'',
-                     'remote_arg=\'{0}\''.format(','.join(args.uri)),
-                     'remote_arg=\'-N\'', # don't prefix lines with hostname
-                     ]) + ');'
+    sql = create_vt + ', '.join(flags + [
+        'index=\'{0}\''.format(args.index),
+        'remote_cmd=\'{0}\''.format(args.remote_cmd),
+        'remote_arg=\'-R\'',
+        'remote_arg=\'ssh\'',
+        'remote_arg=\'-w\'',
+        'remote_arg=\'{0}\''.format(','.join(args.uri)),
+        'remote_arg=\'-N\'', # don't prefix lines with hostname
+    ]) + ');'
 
     conn.execute(sql)
 
