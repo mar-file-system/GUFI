@@ -121,8 +121,14 @@ OUTPUT="external_copy.out"
     echo "# Copy ext2.db"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"CREATE TABLE ${COPY_NAME}(data TEXT, inode TEXT);\" --external-copy \"ext2\\.db\" \"INSERT INTO ${COPY_NAME} SELECT * FROM ${TABLE};\" -E \"SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ${COPY_NAME} ON vrpentries.inode == ${COPY_NAME}.inode; DELETE FROM ${COPY_NAME};\" \"${INDEXROOT}\""
 
-    echo "# Copy both ext1.db and ext2.db"
+    echo "# Copy both ext1.db and ext2.db with one pattern"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"CREATE TABLE ${COPY_NAME}(data TEXT, inode TEXT);\" --external-copy \"ext.*\\.db\" \"INSERT INTO ${COPY_NAME} SELECT * FROM ${TABLE};\" -E \"SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ${COPY_NAME} ON vrpentries.inode == ${COPY_NAME}.inode; DELETE FROM ${COPY_NAME};\" \"${INDEXROOT}\""
+
+    echo "# Copy both ext1.db and ext2.db with separate patterns into one table"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"CREATE TABLE ${COPY_NAME}(data TEXT, inode TEXT);\" --external-copy \"ext1\\.db\" \"INSERT INTO ${COPY_NAME} SELECT * FROM ${TABLE};\" --external-copy \"ext2\\.db\" \"INSERT INTO ${COPY_NAME} SELECT * FROM ${TABLE};\" -E \"SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ${COPY_NAME} ON vrpentries.inode == ${COPY_NAME}.inode; DELETE FROM ${COPY_NAME};\" \"${INDEXROOT}\""
+
+    echo "# Copy both ext1.db and ext2.db with one pattern into two tables but only select from one of them"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"CREATE TABLE ${COPY_NAME}1(data TEXT, inode TEXT); CREATE TABLE ${COPY_NAME}2(data TEXT, inode TEXT);\" --external-copy \"ext.*\\.db\" \"INSERT INTO ${COPY_NAME}1 SELECT * FROM ${TABLE}; INSERT INTO ${COPY_NAME}2 SELECT * FROM ${TABLE};\" -E \"SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ${COPY_NAME}1 ON vrpentries.inode == ${COPY_NAME}1.inode; DELETE FROM ${COPY_NAME}1; DELETE FROM ${COPY_NAME}2;\" \"${INDEXROOT}\""
 
     echo "#####################################"
     echo

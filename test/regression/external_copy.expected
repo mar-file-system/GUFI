@@ -40,8 +40,38 @@ data09|prefix/directory/subdirectory/repeat_name
 data10|prefix/leaf_directory/leaf_file1
 data11|prefix/leaf_directory/leaf_file2
 
-# Copy both ext1.db and ext2.db
+# Copy both ext1.db and ext2.db with one pattern
 $ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy "ext.*\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" "prefix"
+data00|prefix/old_file
+data01|prefix/.hidden
+data02|prefix/repeat_name
+data03|prefix/1KB
+data04|prefix/1MB
+data05|prefix/directory/executable
+data06|prefix/directory/readonly
+data07|prefix/directory/writable
+data08|prefix/directory/subdirectory/directory_symlink
+data09|prefix/directory/subdirectory/repeat_name
+data10|prefix/leaf_directory/leaf_file1
+data11|prefix/leaf_directory/leaf_file2
+
+# Copy both ext1.db and ext2.db with separate patterns into one table
+$ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy "ext1\.db" "INSERT INTO ext SELECT * FROM tab;" --external-copy "ext2\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" "prefix"
+data00|prefix/old_file
+data01|prefix/.hidden
+data02|prefix/repeat_name
+data03|prefix/1KB
+data04|prefix/1MB
+data05|prefix/directory/executable
+data06|prefix/directory/readonly
+data07|prefix/directory/writable
+data08|prefix/directory/subdirectory/directory_symlink
+data09|prefix/directory/subdirectory/repeat_name
+data10|prefix/leaf_directory/leaf_file1
+data11|prefix/leaf_directory/leaf_file2
+
+# Copy both ext1.db and ext2.db with one pattern into two tables but only select from one of them
+$ gufi_query -d "|" -I "CREATE TABLE ext1(data TEXT, inode TEXT); CREATE TABLE ext2(data TEXT, inode TEXT);" --external-copy "ext.*\.db" "INSERT INTO ext1 SELECT * FROM tab; INSERT INTO ext2 SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext1 ON vrpentries.inode == ext1.inode; DELETE FROM ext1; DELETE FROM ext2;" "prefix"
 data00|prefix/old_file
 data01|prefix/.hidden
 data02|prefix/repeat_name
