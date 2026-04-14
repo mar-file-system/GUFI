@@ -67,7 +67,7 @@ import sys
 
 import gufi_common
 
-SQL_FLAGS = ['I', 'T', 'S', 'E', 'K', 'J', 'G']
+SQL_FLAGS = ['I', 'T', 'S', 'E', 'K', 'J', 'G', 'F']
 
 def build_arg_parser():
     parser = argparse.ArgumentParser('gufi_query_multiple_remotes',
@@ -79,10 +79,51 @@ def build_arg_parser():
     # gufi_query/gufi_vt flags
     gufi_common.add_delim_flag(parser)
     parser.add_argument('-n', '--threads',
-                        type=gufi_common.get_positive,
-                        default=1)
+                        type=gufi_common.get_positive)
+
+    parser.add_argument('-a',
+                        type=int,
+                        choices=[1, 2, 3])
+
+    parser.add_argument('--min-level',
+                        type=gufi_common.get_non_negative)
+
+    parser.add_argument('--max_level',
+                        type=gufi_common.get_non_negative)
+
+    parser.add_argument('--dir-match-uid',
+                        type=lambda s: int(s) if s != '' else '',
+                        nargs='?')
+
+    parser.add_argument('--dir-match-gid',
+                        # type=int,
+                        nargs='?',
+                        # default=None,
+                        const=-1)
+
+    parser.add_argument('--setup-res-col-type',
+                        type=str)
+
     for flag in SQL_FLAGS:
         parser.add_argument('-{0}'.format(flag), type=str, metavar='SQL')
+
+    parser.add_argument('--path-list',
+                        type=str)
+
+    parser.add_argument('-p',
+                        type=str)
+
+    parser.add_argument('-Q', '--external-attach',
+                        type=str,
+                        nargs=4)
+
+    parser.add_argument('--external-copy',
+                        type=str,
+                        nargs=2)
+
+    parser.add_argument('--plugin',
+                        type=str)
+
     gufi_common.add_verbose_flag(parser)
 
     parser.add_argument('--extra-sql',
@@ -127,11 +168,25 @@ def build_arg_parser():
     return parser
 
 def common_vt_flags(args):
-    flags = ['threads={0}'.format(args.threads)]
+    flags = []
 
-    for flag in SQL_FLAGS:
-        if getattr(args, flag):
+    # flags with unquoted values (could just quote all values)
+    for flag in ['threads', 'a', 'min_level', 'max_level', 'dir_match_uid', 'dir_match_gid']:
+        if getattr(args, flag) is not None:
+            flags += ['{0}={1}'.format(flag, getattr(args, flag))]
+
+    # flags with quoted values
+    for flag in SQL_FLAGS + ['setup_res_col_type', 'path_list', 'p', 'plugin']:
+        if getattr(args, flag) is not None:
             flags += ['{0}=\'{1}\''.format(flag, getattr(args, flag))]
+
+    # flags with special handling
+
+    if args.external_attach:
+        flags = ['external_attach=\'{0} {1} {2} {3}\''.format(*args.external_attach)]
+
+    if args.external_copy:
+        flags = ['external_copy=\'{0} {1}\''.format(*args.external_copy)]
 
     if args.verbose:
         flags += ['verbose=1']

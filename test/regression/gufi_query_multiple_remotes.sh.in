@@ -94,6 +94,9 @@ run_no_sort "${BINARY_DIR}/scripts/gufi_query_multiple_remotes --help"
 
     echo "# Bad ssh URI + Index Path Pair"
     run_no_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\" --extra-sql \"ORDER BY fullpath ASC LIMIT 1\" --verbose \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 2>&1 | @GREP@ \"error:\""
+
+    echo "# Use flags to do nothing"
+    run_no_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -a 1 -I \"\" -T \"\" -S \"\" -E \"\" -K \"\" -J \"\" -G \"\" -F \"\" --verbose \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 \"${SEARCH}\" 2>&1 | @GREP@ \"Error\""
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query_multiple_remotes.expected "${OUTPUT}"
