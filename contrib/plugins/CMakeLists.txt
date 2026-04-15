@@ -85,7 +85,6 @@ add_library(dsi_indexing SHARED
   $<TARGET_OBJECTS:dsi>
 )
 add_dependencies(dsi_indexing install_dependencies)
-
 install(TARGETS dsi_indexing DESTINATION "${SERVER_LIB}" COMPONENT Server)
 
 # DSI querying plugin
@@ -98,3 +97,4 @@ target_link_libraries(dsi_querying
 )
 add_dependencies(dsi_querying install_dependencies)
 install(TARGETS dsi_querying DESTINATION "${SERVER_LIB}" COMPONENT Server)
+install(TARGETS dsi_querying DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
