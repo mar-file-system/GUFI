@@ -72,30 +72,49 @@ set -e
 
 lembed_name="sqlite-lembed"
 lembed_prefix="${INSTALL_DIR}/${lembed_name}"
+llama_name="llama.cpp"
+llama_prefix="${INSTALL_DIR}/${llama_name}"
 if [[ ! -d "${lembed_prefix}" ]]; then
-    lembed_build="${BUILD_DIR}/sqlite-lembed"
-
-    # not providing tarball in order to get submodules
+    lembed_build="${BUILD_DIR}/sqlite-lembed-main"
     if [[ ! -d "${lembed_build}" ]]; then
-        git clone --recurse-submodule --shallow-submodules https://github.com/asg017/sqlite-lembed.git "${lembed_build}"
+        lembed_tarball="${DOWNLOAD_DIR}/sqlite-lembed.tar.gz"
+        if [[ ! -f "${lembed_tarball}" ]]; then
+            wget https://github.com/asg017/sqlite-lembed/archive/refs/heads/main.tar.gz -O "${lembed_tarball}"
+        fi
+
+        tar -xf "${lembed_tarball}" -C "${BUILD_DIR}"
         patch -p1 -d "${lembed_build}" < "${SCRIPT_PATH}/sqlite-lembed.patch"
+
+        rm -r "${lembed_build}/vendor/llama.cpp"
     fi
 
-    # build llama.cpp submodule
-    llama_install="${INSTALL_DIR}/llama.cpp"
-    if [[ ! -d "${llama_install}" ]]; then
-        cd "${lembed_build}/vendor/llama.cpp"
-        mkdir -p build
-        cd build
-        CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_install}" -DCMAKE_INSTALL_LIBDIR=lib -DLLAMA_METAL=OFF
-        make -j "${THREADS}"
-        make -j "${THREADS}" install
+    llama_build="${lembed_build}/vendor/llama.cpp"
+    if [[ ! -f "${llama_build}/Makefile" ]]; then
+        llama_tarball="${DOWNLOAD_DIR}/llama.cpp-2b33896.tar.gz"
+        if [[ ! -f "${llama_tarball}" ]]; then
+            wget https://github.com/ggml-org/llama.cpp/archive/2b3389677a833cee0880226533a1768b1a9508d2.tar.gz -O "${llama_tarball}"
+            tar -xf "${llama_tarball}" -C "${lembed_build}/vendor/"
+            mv "${lembed_build}/vendor/llama.cpp-2b3389677a833cee0880226533a1768b1a9508d2" "${llama_build}"
+        else
+            mkdir -p "${llama_build}"
+            tar -xf "${llama_tarball}" -C "${llama_build}"
+        fi
     fi
+
+    cd "${llama_build}"
+    mkdir -p build
+    cd build
+    CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_prefix}" -DCMAKE_INSTALL_LIBDIR=lib -DLLAMA_METAL=OFF
+    make -j "${THREADS}"
+    make -j "${THREADS}" install
 
     cd "${lembed_build}"
+    sed -i "s%@DEP_INSTALL_PREFIX@%${INSTALL_DIR}%g;" CMakeLists.txt
+
     make sqlite-lembed.h
-    make static
+    make static loadable
     mkdir -p "${lembed_prefix}/include" "${lembed_prefix}/lib"
     cp sqlite-lembed.h "${lembed_prefix}/include"
     cp dist/libsqlite_lembed0.a "${lembed_prefix}/lib"
+    cp dist/libsqlite_lembed0.* dist/lembed0.* "${lembed_prefix}/lib"
 fi

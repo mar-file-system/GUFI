@@ -86,8 +86,8 @@ if [[ ! -d "${vec_prefix}" ]]; then
     fi
 
     cd "${vec_build}"
-    make -j "${THREADS}" static
+    make -j "${THREADS}" static loadable
     mkdir -p "${vec_prefix}/include" "${vec_prefix}/lib"
     cp -f sqlite-vec.h "${vec_prefix}/include"
-    cp -f dist/libsqlite_vec0.a "${vec_prefix}/lib"
+    cp -f dist/libsqlite_vec0.* dist/vec0.* "${vec_prefix}/lib"
 fi
