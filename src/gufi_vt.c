@@ -1196,6 +1196,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     if (plugins_global_init(&in.plugins, &in) != in.plugins.count) {
         plugins_destroy(&in.plugins);
         gq_cmd_destroy(&cmd);
+        input_fini(&in);
         return SQLITE_CONSTRAINT;
     }
 
@@ -1314,6 +1315,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     plugins_destroy(&in.plugins);
 
     closedb(tempdb);
+    input_fini(&in);
 
     return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
                           schema, &cmd, 0);
@@ -1325,6 +1327,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     plugins_destroy(&in.plugins);
 
     closedb(tempdb);
+    input_fini(&in);
     gq_cmd_destroy(&cmd);
     return SQLITE_ERROR;
 }
