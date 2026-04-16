@@ -107,6 +107,9 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    /* allow SELECT load_extension(); */
+    sqlite3_enable_load_extension(db, 1);
+
     /* this calls addqueryfuncs */
     sqlite3_gufivt_init(db, NULL, NULL);
 
