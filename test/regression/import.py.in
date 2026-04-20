@@ -73,56 +73,66 @@ class TestImportingUserFacingScripts(unittest.TestCase):
     def setUp(self):
         self.path = 'prefix'
 
-    def expect_stdout(self, tool, args):
+    def expect(self, tool, args, stdout_eq=None, stderr_ne=None):
         tool = gufi_tool.import_tool('', gufi_tool.TOOLS[tool][1])
         rc, out, err = tool.run([''] + args, gufi_tool.CONFIG_PATH,
                                 subprocess.PIPE, subprocess.PIPE)
         self.assertEqual(rc, 0)
         self.assertEqual(type(out), str)
-        self.assertNotEqual(out, '')     # stdout is not empty
+        if stdout_eq is None:
+            self.assertNotEqual(out, '')          # default: stdout is not empty
+        else:
+            self.assertEqual(out, stdout_eq)
         print()
         print(out)
         self.assertEqual(type(err), str)
-        self.assertEqual(err, '')        # nothing in stderr
+        if stderr_ne is None:
+            self.assertEqual(err, '')             # default: nothing in stderr
+        else:
+            self.assertNotEqual(err, stderr_ne)
 
     def test_gufi_du(self):
-        self.expect_stdout('du', [self.path])
+        self.expect('du', [self.path])
 
     def test_gufi_find(self):
-        self.expect_stdout('find', [self.path])
+        self.expect('find', [self.path])
 
     def test_gufi_getfattr(self):
-        self.expect_stdout('getfattr', ['-d', '-m', '.*', os.path.join(self.path, '1MB')])
+        self.expect('getfattr', ['-d', '-m', '.*', os.path.join(self.path, '1MB')])
 
     def test_gufi_ls(self):
-        self.expect_stdout('ls', ['-al', self.path])
+        self.expect('ls', ['-al', self.path])
 
     def test_gufi_query(self):
         indexroot = gufi_config.Server(gufi_tool.CONFIG_PATH).indexroot
-        self.expect_stdout('query.py', ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;', indexroot])
+        self.expect('query.py', ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;', indexroot])
 
     def test_gufi_query_multiple_remotes(self):
         indexroot = gufi_config.Server(gufi_tool.CONFIG_PATH).indexroot
-        self.expect_stdout('query_multiple_remotes',
+        self.expect('query_multiple_remotes',
                            ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;',
+                            '--verbose',
                             '@CMAKE_BINARY_DIR@/src/gufi_vt',
                             'ssh',
                             '--remote-cmd', '@CMAKE_CURRENT_BINARY_DIR@/ssh.fake',
                             'remote1', indexroot,
-                            'remote2', indexroot])
-        self.expect_stdout('query_multiple_remotes',
+                            'remote2', indexroot],
+                           stderr_ne='')
+        self.expect('query_multiple_remotes',
                            ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;',
+                            '--verbose',
                             '@CMAKE_BINARY_DIR@/src/gufi_vt',
                             'pdsh',
                             '--remote-cmd', '@CMAKE_CURRENT_BINARY_DIR@/pdsh.fake',
                             'remote1', 'remote2',
-                            indexroot])
+                            indexroot],
+                           stderr_ne='')
 
     def test_gufi_stat(self):
-        self.expect_stdout('stat', [self.path])
+        self.expect('stat', [self.path])
 
     def test_gufi_stats(self):
-        self.expect_stdout('stats', ['--recursive', 'depth', self.path])
+        self.expect('stats', ['--recursive', 'depth', self.path])
 
 if __name__ == '__main__':
     unittest.main()

@@ -107,6 +107,6 @@ $ gufi_query_multiple_remotes -E "SELECT rpath(sname, sroll, name) AS fullpath F
 gufi_query_multiple_remotes: error: Missing index path
 
 # Use flags to do nothing
-$ gufi_query_multiple_remotes -a 1 -I "" -T "" -S "" -E "" -K "" -J "" -G "" -F "" --verbose "gufi_vt" ssh --remote-cmd "ssh" remote1 "search" remote2 "search" 2>&1 | grep "Error"
+$ gufi_query_multiple_remotes -a 1 -I "" -T "" -S "" -E "" -K "" -J "" -G "" -F "" --external-attach "^$" "tab" "template.tab" "v" --external-copy "\^$" "SELECT 0;" --verbose "gufi_vt" ssh --remote-cmd "ssh" remote1 "search" remote2 "search" 2>&1 | grep "Error"
 sqlite3.OperationalError: Need at least one of T/S/E when not aggregating
 

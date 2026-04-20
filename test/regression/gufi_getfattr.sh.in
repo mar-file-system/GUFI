@@ -212,8 +212,11 @@ do_tests() {
 
     # ##############################
 
-    echo "# bad path"
+    echo "# bad path (outside of index)"
     run_sort "${GUFI_GETFATTR} .. ${BASENAME}/../.."
+
+    echo "# bad path (invalid path segments)"
+    run_no_sort "${GUFI_GETFATTR} ${BASENAME}/not/a/valid/path 2>&1 | @GREP@ \"NotADirectoryError:\""
 }
 
 # run actual script here instead of wrapper

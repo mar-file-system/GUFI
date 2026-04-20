@@ -222,8 +222,12 @@ $ gufi_getfattr --only-values --dump --name user.name --match .*user.* prefix/1M
 $ gufi_getfattr --only-values --dump --name user.size --match .*name.* prefix/1MB
 1MB
 
-# bad path
+# bad path (outside of index)
 $ gufi_getfattr .. prefix/../..
 Warning: Ignoring path "..", which is not under index root "search"
 Warning: Ignoring path "prefix/../..", which is not under index root "search"
+
+# bad path (invalid path segments)
+$ gufi_getfattr prefix/not/a/valid/path 2>&1 | grep "NotADirectoryError:"
+NotADirectoryError: [Errno 20] "prefix/not/a/valid" is not a directory.
 

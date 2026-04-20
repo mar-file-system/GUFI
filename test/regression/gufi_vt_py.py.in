@@ -78,7 +78,7 @@ def run(gufi_vt_path, argv):
             res = cur.fetchall()
             if res is not None and len(res) != 0:
                 for row in res:
-                    print('|'.join([str(val) for val in row]))
+                    print(*row, sep='|')
 
 if __name__ == '__main__':
     run('@CMAKE_BINARY_DIR@/src/gufi_vt', sys.argv)

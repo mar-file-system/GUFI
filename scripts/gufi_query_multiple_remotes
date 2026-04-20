@@ -96,10 +96,8 @@ def build_arg_parser():
                         nargs='?')
 
     parser.add_argument('--dir-match-gid',
-                        # type=int,
-                        nargs='?',
-                        # default=None,
-                        const=-1)
+                        type=lambda s: int(s) if s != '' else '',
+                        nargs='?')
 
     parser.add_argument('--setup-res-col-type',
                         type=str)
@@ -183,10 +181,10 @@ def common_vt_flags(args):
     # flags with special handling
 
     if args.external_attach:
-        flags = ['external_attach=\'{0} {1} {2} {3}\''.format(*args.external_attach)]
+        flags += ['external_attach=\'{0} {1} {2} {3}\''.format(*args.external_attach)]
 
     if args.external_copy:
-        flags = ['external_copy=\'{0} {1}\''.format(*args.external_copy)]
+        flags += ['external_copy=\'{0} {1}\''.format(*args.external_copy)]
 
     if args.verbose:
         flags += ['verbose=1']
@@ -224,7 +222,7 @@ def ssh(conn, parser, args):
     combined = ' UNION ALL '.join(['SELECT * FROM vt{0}'.format(i) for i in range(max_vt + 1)])
 
     # add extra SQL from command line
-    sql = 'SELECT * FROM ({0}) {1};'.format(combined, args.extra_sql)
+    sql = 'SELECT * FROM ({0}) {1};'.format(combined, args.extra_sql if args.extra_sql else '')
 
     return conn.execute(sql), sql
 
@@ -249,7 +247,7 @@ def pdsh(conn, _parser, args):
     conn.execute(sql)
 
     # add limitations from command line
-    sql = 'SELECT * FROM vt {0};'.format(args.extra_sql)
+    sql = 'SELECT * FROM vt {0};'.format(args.extra_sql if args.extra_sql else '')
 
     return conn.execute(sql), sql
 
@@ -287,7 +285,7 @@ def run(argv, _config=None, stdout=None, stderr=None):
                 print(*row, sep=args.delim)
         else:
             for row in res.fetchall():
-                stdout_results += args.delim.join(row)
+                stdout_results += args.delim.join(row) + '\n'
 
     return 0, stdout_results, stderr_results
 

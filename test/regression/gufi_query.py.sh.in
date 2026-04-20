@@ -66,9 +66,10 @@ set -e
 
 OUTPUT="gufi_query.py.out"
 
-(
-run_no_sort "${GUFI_QUERY_PY} --help"
+# run actual script here instead of wrapper
+run_no_sort "${BINARY_DIR}/scripts/gufi_query.py --help"
 
+(
 echo "# Walk without returning results"
 run_sort "${GUFI_QUERY_PY}"
 
