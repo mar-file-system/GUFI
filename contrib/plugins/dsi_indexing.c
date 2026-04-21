@@ -140,7 +140,7 @@ static void dsi_indexing_dir(void *ptr, void *user_data) {
             const int err = errno;
             fprintf(stderr, "Error: Could not copy collection db \"%s\" to \"%s\": %s (%d)\n",
                     collectiondb, dstpath, strerror(err), err);
-            goto close_dst;
+            /* keep going and change ownership even if copy failed */
         }
 
         /* change ownership */
@@ -151,7 +151,6 @@ static void dsi_indexing_dir(void *ptr, void *user_data) {
             /* fallthrough */
         }
 
-      close_dst:
         close(dst);
       free_dstpath:
         free(dstpath);
