@@ -84,6 +84,8 @@ BUILD_CXX="false"
 PATCH_SQLITE3_OPEN="false"
 JEMALLOC="false"
 AI="false"
+CYGWIN="false"
+OMP_FLAGS=""
 
 # https://stackoverflow.com/a/14203146
 # Bruno Bronosky
@@ -108,6 +110,13 @@ case $key in
         ;;
     --AI)
         AI="true"
+        ;;
+    --cygwin)
+        CYGWIN="true"
+        ;;
+    --OMP)
+        OMP_FLAGS="$2"
+        shift
         ;;
     *)    # unknown option
         POSITIONAL+=("$1") # save it in an array for later
@@ -160,7 +169,7 @@ if [[ "${AI}" == "true" ]]; then
     source "${SCRIPT_PATH}/sqlite-vec.sh"
 
     echo "Installing SQLite3 lembed"
-    source "${SCRIPT_PATH}/sqlite-lembed.sh"
+    source "${SCRIPT_PATH}/sqlite-lembed.sh" "${CYGWIN}" "${OMP_FLAGS}"
 fi
 
 if [[ "${JEMALLOC}" == "true" ]]; then

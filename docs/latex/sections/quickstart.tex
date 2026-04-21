@@ -134,8 +134,8 @@ Some particularly useful ones are listed here: \\
     \hline
     \texttt{DEP\_AI=<ON|OFF>} & Enable or disable building sqlite-vec,
     sqlite-lembed, llama.cpp, and other AI related files. \\
-    & Note that llama.cpp is not bundled with GUFI, and is downloaded
-    during the dependency build step. \\
+    & Note that OpenMP is left enabled in llama.cpp and thus required
+    by GUFI when enabled. \\
     \hline
     \texttt{DEP\_BUILD\_THREADS=<thread count>} & Build dependencies with
     this many threads to speed up builds. \\

@@ -164,10 +164,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   endif()
 endif()
 
-if (CYGWIN)
-  set(DEP_AI OFF)
-else()
-  set(DEP_AI ON CACHE BOOL "Whether or not to build and link with SQLite AI modules")
+set(DEP_AI ON CACHE BOOL "Whether or not to build and link with SQLite AI modules")
+if (DEP_AI)
+  message(STATUS "AI dependencies enabled")
 endif()
 
 # Only enable C++ if support is found or if llama.cpp is rquired
@@ -348,6 +347,9 @@ if (DEP_USE_JEMALLOC)
 endif()
 if (DEP_AI)
   set(DEP_OPTIONS ${DEP_OPTIONS} --AI)
+  if (CYGWIN)
+    set(DEP_OPTIONS ${DEP_OPTIONS} --cygwin --OMP "-DOpenMP_C_FLAGS=\"${OpenMP_C_FLAGS}\" -DOpenMP_C_LIB_NAMES=\"${OpenMP_C_LIB_NAMES}\" -DOpenMP_libgomp_LIBRARY=\"${OpenMP_libgomp_LIBRARY}\"")
+  endif()
 endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}" "${CMAKE_VERSION}" "${CMAKE_SYSTEM_NAME}")
 
@@ -471,7 +473,13 @@ if (DEP_AI)
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/libsqlite_lembed0.a"
     -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama -lstdc++ ${OpenMP_C_FLAGS}
     -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
-  )
+    )
+
+  if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    list(APPEND COMMON_LIBRARIES
+      omp
+    )
+  endif()
 endif()
 
 if (ZLIB_FOUND)

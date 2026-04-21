@@ -41,13 +41,23 @@ index 8fdef01..9ba607b 100644
  target_include_directories(sqlite_lembed_static PRIVATE ${LLAMA_CPP_DIR})
  target_compile_definitions(sqlite_lembed_static PRIVATE SQLITE_CORE)
 diff --git a/Makefile b/Makefile
-index b11db35..14818f8 100644
+index b11db35..247970f 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -79,18 +79,20 @@ endif
- else
+@@ -69,28 +69,21 @@ $(BUILD_DIR):
+ 	cmake -B $@ $(LLAMA_CMAKE_FLAGS)
+ 
+ 
+-ifdef CONFIG_WINDOWS
+-ifdef release
+-BUILT_LOADABLE_PATH=$(BUILD_DIR)/Release/lembed0.$(LOADABLE_EXTENSION)
+-EXTRA_CMAKE_BUILD=--config Release
+-else
+-BUILT_LOADABLE_PATH=$(BUILD_DIR)/Debug/lembed0.$(LOADABLE_EXTENSION)
+-endif
+-else
  BUILT_LOADABLE_PATH=$(BUILD_DIR)/lembed0.$(LOADABLE_EXTENSION)
- endif
+-endif
 +BUILT_STATIC_PATH=$(BUILD_DIR)/libsqlite_lembed0.a
  
  $(TARGET_LOADABLE): sqlite-lembed.c sqlite-lembed.h $(BUILD_DIR) $(prefix)

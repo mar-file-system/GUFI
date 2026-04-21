@@ -65,6 +65,9 @@
 
 set -e
 
+CYGWIN="$1"
+OMP_FLAGS="$2"
+
 # install sqlite3 first
 "${SCRIPT_PATH}/sqlite3.sh"
 
@@ -98,13 +101,16 @@ if [[ ! -d "${lembed_prefix}" ]]; then
         else
             mkdir -p "${llama_build}"
             tar -xf "${llama_tarball}" -C "${llama_build}"
+            if [[ "${CYGWIN}" == "true" ]]; then
+                patch -p1 -d "${llama_build}" < "${SCRIPT_PATH}/llama.cpp-2b33896.patch"
+            fi
         fi
     fi
 
     cd "${llama_build}"
     mkdir -p build
     cd build
-    CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_prefix}" -DCMAKE_INSTALL_LIBDIR=lib -DLLAMA_METAL=OFF
+    CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_prefix}" -DCMAKE_INSTALL_LIBDIR=lib -DLLAMA_METAL=OFF ${OMP_FLAGS} # not quoting OMP_FLAGS
     make -j "${THREADS}"
     make -j "${THREADS}" install
 
@@ -115,6 +121,5 @@ if [[ ! -d "${lembed_prefix}" ]]; then
     make static loadable
     mkdir -p "${lembed_prefix}/include" "${lembed_prefix}/lib"
     cp sqlite-lembed.h "${lembed_prefix}/include"
-    cp dist/libsqlite_lembed0.a "${lembed_prefix}/lib"
     cp dist/libsqlite_lembed0.* dist/lembed0.* "${lembed_prefix}/lib"
 fi
