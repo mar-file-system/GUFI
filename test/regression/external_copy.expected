@@ -85,6 +85,17 @@ data09|prefix/directory/subdirectory/repeat_name
 data10|prefix/leaf_directory/leaf_file1
 data11|prefix/leaf_directory/leaf_file2
 
+# Multiple matches on the same basename
+$ gufi_query -d "|" -I "CREATE TABLE ext1(data TEXT, inode TEXT); CREATE TABLE ext2(data TEXT, inode TEXT);" --external-copy "1\.db" "INSERT INTO ext1 SELECT * FROM tab;" --external-copy "ext1\." "INSERT INTO ext2 SELECT * FROM tab;" -E "SELECT ext1.data, ext2.data, rpath(sname, sroll, name) FROM vrpentries JOIN ext1 ON vrpentries.inode == ext1.inode JOIN ext2 ON ext1.inode == ext2.inode; DELETE FROM ext1; DELETE FROM ext2;" "prefix"
+data00|data00|prefix/old_file
+data01|data01|prefix/.hidden
+data02|data02|prefix/repeat_name
+data03|data03|prefix/1KB
+data04|data04|prefix/1MB
+data05|data05|prefix/directory/executable
+data06|data06|prefix/directory/readonly
+data07|data07|prefix/directory/writable
+
 #####################################
 
 # Bad pattern

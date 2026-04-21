@@ -98,35 +98,32 @@ static void maybe_copy_external(sqlite3 *db, struct input *in,
     static const char EXTDB[] = "extdb";
 
     /* find a basename pattern match */
-    str_t *sql = NULL;
     sll_loop(&in->external_copy.setup, node) {
         ecs_t *ecs = (ecs_t *) sll_node_data(node);
         if (ecs_match(ecs, basename, len) == 1) {
-            sql = &ecs->sql;
-        }
-    }
+            str_t *sql = &ecs->sql;
 
-    if (!sql) {
-        return;
-    }
+            if (attachdb(path, db, EXTDB, SQLITE_OPEN_READONLY, 1, in->print_eacces)) {
+                char *err = NULL;
 
-    if (attachdb(path, db, EXTDB, SQLITE_OPEN_READONLY, 1, in->print_eacces)) {
-        char *err = NULL;
+                /* run user provided SQL */
+                if (sqlite3_exec(db, sql->data, NULL, NULL, &err) != SQLITE_OK) {
+                    if (!in->no_print_sql_on_err) {
+                        fprintf(stderr, "Warning: Could not copy external database data \"%s\" using \"%s\": %s\n",
+                                path, sql->data, err);
+                    }
+                    else {
+                        fprintf(stderr, "Warning: Could not copy external database data \"%s\": %s\n",
+                                path, err);
+                    }
+                    sqlite3_free(err);
+                }
 
-        /* run user provided SQL */
-        if (sqlite3_exec(db, sql->data, NULL, NULL, &err) != SQLITE_OK) {
-            if (!in->no_print_sql_on_err) {
-                fprintf(stderr, "Warning: Could not copy external database data \"%s\" using \"%s\": %s\n",
-                        path, sql->data, err);
+                detachdb(path, db, EXTDB, 1, in->print_eacces);
             }
-            else {
-                fprintf(stderr, "Warning: Could not copy external database data \"%s\": %s\n",
-                        path, err);
-            }
-            sqlite3_free(err);
-        }
 
-        detachdb(path, db, EXTDB, 1, in->print_eacces);
+            /* do not break - might have multiple matches */
+        }
     }
 }
 
