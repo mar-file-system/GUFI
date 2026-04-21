@@ -144,7 +144,7 @@ jobs:
         key:  ${{ matrix.os }}
 
     - name: macOS Prerequisites
-      run:  contrib/CI/macos.sh
+      run:  contrib/CI/macos.sh | tail -n 1 >> "${GITHUB_PATH}"
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
