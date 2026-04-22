@@ -672,7 +672,9 @@ static int marfs_indexing_global_init(void* global) {
     sort_namespace_pairs(g_state.namespaces, g_state.namespaces_count);
 
     if (!validate_sec_root()) {
-        fprintf(stderr, "Error: provided dir is not the root of the parent marfs namespace\n");
+        fprintf(stderr,
+                "Error: provided dir (%s) is not the root of the parent marfs namespace or marfs_config is incorrect\n",
+                g_state.root_namespace.data);
         goto cleanup;
     }
 
@@ -781,6 +783,7 @@ struct marfs_ctx {
     sqlite3_stmt* update_xattr_names;
     sqlite3_stmt* remove_xattrs;
     sqlite3_stmt* update_summary_name;
+    sqlite3_stmt* update_summary_pinode;
 };
 
 static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
@@ -809,6 +812,10 @@ static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
 
     if (ctx->update_summary_name) {
         sqlite3_finalize(ctx->update_summary_name);
+    }
+
+    if (ctx->update_summary_pinode) {
+        sqlite3_finalize(ctx->update_summary_pinode);
     }
 
     free(ctx);
@@ -879,6 +886,17 @@ static void* marfs_ctx_init(void* ptr) {
                             -1, &ctx->update_summary_name, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: prepare summary update failed: %s\n", sqlite3_errmsg(db));
+        marfs_ctx_exit(ptr, ctx);
+        return NULL;
+    }
+
+    rc = sqlite3_prepare_v2(db,
+                            "UPDATE summary "
+                            "SET pinode = ?1 "
+                            "WHERE name = ?2;",
+                            -1, &ctx->update_summary_pinode, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: prepare summary pinode update failed: %s\n", sqlite3_errmsg(db));
         marfs_ctx_exit(ptr, ctx);
         return NULL;
     }
@@ -1062,7 +1080,8 @@ static void marfs_process_file(void* ptr, void* user_data) {
 }
 
 // marfs_process_dir renames the root namespace in the gufi db summary table to match the mountpoint in the marfs
-// config. The actual dir gets renamed in cleanup_marfs_index
+// config. The actual dir gets renamed in cleanup_marfs_index. It also fixes pinode values for directories whose
+// parent is an MDAL_subspaces directory that will be removed from the final index.
 static void marfs_process_dir(void* ptr, void* user_data) {
     PCS_t* pcs = (PCS_t*)ptr;
     struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
@@ -1071,12 +1090,63 @@ static void marfs_process_dir(void* ptr, void* user_data) {
         return;
     }
 
+    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
+    const str_t basename = get_basename(path);
+    const str_t parent = get_parent(path);
+    const str_t parent_basename = get_basename(parent);
+
+    // Fix pinode for directories whose parent is MDAL_subspaces (which will be removed)
+    // The pinode currently points to the MDAL_subspaces inode, but should point to the grandparent
+    if (parent_basename.data && str_t_eq_cstr(parent_basename, MARFS_SUBSPACES_NAME, MARFS_SUBSPACES_NAME_LEN)) {
+        const str_t grandparent = get_parent(parent);
+
+        if (grandparent.data && grandparent.len > 0) {
+            size_t gp_path_size = grandparent.len + 1;
+            char* gp_path = malloc(gp_path_size);
+            if (gp_path) {
+                snprintf(gp_path, gp_path_size, "%.*s", (int)grandparent.len, grandparent.data);
+
+                struct stat st;
+                if (stat(gp_path, &st) == 0) {
+                    sqlite3_stmt* stmt = ctx->update_summary_pinode;
+                    int rc;
+
+                    sqlite3_reset(stmt);
+                    sqlite3_clear_bindings(stmt);
+
+                    rc = sqlite3_bind_int64(stmt, 1, (sqlite3_int64)st.st_ino);
+                    if (rc == SQLITE_OK) {
+                        rc = sqlite3_bind_text(stmt, 2, basename.data, (int)basename.len, SQLITE_STATIC);
+                    }
+
+                    if (rc == SQLITE_OK) {
+                        rc = sqlite3_step(stmt);
+                        if (rc != SQLITE_DONE) {
+                            fprintf(stderr, "plugin: update pinode failed for %.*s: %s\n", (int)basename.len,
+                                    basename.data, sqlite3_errmsg(ctx->db));
+                        }
+                    } else {
+                        fprintf(stderr, "plugin: bind pinode failed for %.*s: %s\n", (int)basename.len, basename.data,
+                                sqlite3_errmsg(ctx->db));
+                    }
+
+                    sqlite3_reset(stmt);
+                    sqlite3_clear_bindings(stmt);
+                } else {
+                    fprintf(stderr, "plugin: stat('%s') failed: %s\n", gp_path, strerror(errno));
+                }
+
+                free(gp_path);
+            } else {
+                fprintf(stderr, "malloc failed for gp_path\n");
+            }
+        }
+    }
+
     // determine if this is the root namespace dir
     if (ROOT_NAMESPACE_LEVEL == pcs->work->level &&
         str_t_eq_cstr(g_state.root_namespace, pcs->work->name, pcs->work->name_len)) {
-        // rename this to the marfs mountpoint in the database
-        const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
-        const str_t basename = get_basename(path);
+        // Rename root namespace to mountpoint in database
         const str_t mountpoint = get_basename(g_state.marfs_mountpoint);
 
         sqlite3_stmt* stmt = ctx->update_summary_name;
