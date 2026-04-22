@@ -119,6 +119,9 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
     - name: Uninstall CMake from package manager
       run:  yum -y autoremove cmake3
 
@@ -132,7 +135,7 @@ jobs:
       run:  |
             mkdir -p build
             cd build
-            cmake .. ${{ env.COMMON_CONFIG }}
+            cmake .. ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
 
     - name: Build
       working-directory: ${{ github.workspace }}/build
@@ -162,8 +165,11 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY=/tmp
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY=/tmp -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -192,8 +198,11 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DALLOW_DB_WRITES=Off
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DALLOW_DB_WRITES=Off -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -225,8 +234,11 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DFSANITIZE="address,leak,pointer-compare,pointer-subtract,undefined"
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DFSANITIZE="address,leak,pointer-compare,pointer-subtract,undefined" -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -255,9 +267,11 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DFSANITIZE="thread"
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
+    - name: Configure CMake
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DFSANITIZE="thread" -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
 
@@ -288,8 +302,11 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -317,8 +334,11 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DDEP_USE_JEMALLOC=Off -DTEST_WORKING_DIRECTORY="$(pwd)"
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DDEP_USE_JEMALLOC=Off -DTEST_WORKING_DIRECTORY="$(pwd)" -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j

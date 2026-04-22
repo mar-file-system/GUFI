@@ -93,4 +93,15 @@ dnf -y install \
     sudo
 
 # SQLAlchemy needs Python.h
-yum -y install python3-devel
+dnf -y install python3-devel
+
+# packages for marfs
+dnf -y --enablerepo=crb install \
+    automake \
+    environment-modules \
+    fuse-devel \
+    libtool \
+    libxml2-devel \
+    nasm \
+    openmpi-devel \
+    readline-devel

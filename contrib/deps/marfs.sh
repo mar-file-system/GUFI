@@ -1,4 +1,4 @@
-#!/usr/bin/env ash
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,43 +61,59 @@
 
 
 
-# shellcheck shell=dash
-
 set -e
 
-apk update
+BUILD_DIR="$1"
+INSTALL_DIR="$2"
+THREADS="${3:-1}"
 
-# install libraries
-apk add \
-    attr-dev \
-    fuse3-dev \
-    jemalloc-dev \
-    jemalloc-static \
-    linux-headers \
-    openmp-dev \
-    pcre2-dev \
-    zlib-dev
+isal_name="isa-l"
+isal_version="master"
+isal_build="${BUILD_DIR}/${isal_name}-${isal_version}"
+isal_prefix="${INSTALL_DIR}/${isal_name}-${isal_version}"
 
-# install required packages
-apk add \
-    attr \
-    autoconf \
-    bash \
-    bash-completion \
-    clang20 \
-    cmake \
-    diffutils \
-    findutils \
-    gettext-envsubst \
-    git \
-    grep \
-    make \
-    patch \
-    pkgconf \
-    py3-pip \
-    python3 \
-    sudo \
-    util-linux-misc
+marfs_name="marfs"
+marfs_build="${BUILD_DIR}/${marfs_name}"
+marfs_prefix="${INSTALL_DIR}/${marfs_name}"
 
-ln -sf /usr/bin/clang-20   /usr/bin/clang
-ln -sf /usr/bin/clang++-20 /usr/bin/clang++
+if [[ ! -d "${marfs_prefix}" ]]; then
+    if [[ ! -d "${isal_prefix}" ]]; then
+        # build and install isa-l
+        if [[ ! -d "${isal_build}" ]]; then
+            # Clone ISA-L repository
+            git clone --depth 1 --branch "${isal_version}" https://github.com/intel/isa-l.git "${isal_build}"
+        fi
+
+        cd "${isal_build}"
+
+        ./autogen.sh
+        ./configure --prefix="${isal_prefix}"
+        make -j "${THREADS}"
+        make install
+    fi
+
+    # build and install marfs
+    if [[ ! -d "${marfs_build}" ]]; then
+        # Clone MarFS repository
+        git clone --depth 1 --branch master https://github.com/mar-file-system/marfs.git "${marfs_build}"
+    fi
+
+    cd "${marfs_build}"
+
+    export LD_LIBRARY_PATH="${marfs_prefix}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+    if grep -e "Rocky" -e "alma" /etc/os-release > /dev/null ; then
+        source /etc/profile.d/modules.sh
+        module load mpi
+    fi
+
+    ./autogen.sh
+
+    CC=mpicc \
+    CPPFLAGS="-I${isal_prefix}/include ${CPPFLAGS:-}" \
+    LDFLAGS="-L${isal_prefix}/lib -Wl,-rpath,${isal_prefix}/lib ${LDFLAGS:-}" \
+    ./configure --prefix="${marfs_prefix}"
+
+    make -j "${THREADS}"
+    make install
+fi

@@ -555,11 +555,11 @@ add_subdirectory(scripts)
 # build documentation
 add_subdirectory(docs)
 
-# recurse down into the test subdirectory
-add_subdirectory(test)
-
 # build contrib executables
 add_subdirectory(contrib)
+
+# recurse down into the test subdirectory
+add_subdirectory(test)
 
 # copy examples
 add_subdirectory(examples)

@@ -107,7 +107,7 @@ OF SUCH DAMAGE.
  *
  * mkdir build && cd build
  *
- * cmake .. -DMARFS_PREFIX=/path/to/marfs/install/ -DMARFS_SRC=/path/to/marfs/
+ * cmake .. -DMARFS_PREFIX=/path/to/marfs/install/
  *
  * make
  *
@@ -130,8 +130,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 /* marfs */
-#include "config/config.h"
-#include "hash/hash.h"
+#include "include/config.h"
 
 #include "bf.h"
 #include "plugin.h"

@@ -74,7 +74,7 @@ yum -y install epel-release
 yum -y install fuse-devel libattr libidn pcre2-devel zlib-devel
 
 # install required packages
-yum -y install attr autoconf clang cmake3 diffutils fuse gettext git make patch pkgconfig python3 sudo
+yum -y install attr autoconf automake clang cmake3 diffutils fuse gettext git libtool make nasm patch pkgconfig python3 sudo
 
 # SQLAlchemy needs Python.h
 yum -y install python3-devel
