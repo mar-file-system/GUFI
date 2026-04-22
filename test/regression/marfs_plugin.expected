@@ -1,0 +1,171 @@
+# create mock MarFS namespace structure
+$ find "prefix/var/marfs/mdal-root/sec-root" -type f -o -type d | sort
+prefix/var/marfs/mdal-root/sec-root
+prefix/var/marfs/mdal-root/sec-root/MDAL_reference
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/MDAL_reference
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/MDAL_subspaces
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/MDAL_reference
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile1.txt
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile2.txt
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/userdir
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/userdir/userfile3.txt
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/userfile1.txt
+prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/userfile2.txt
+
+
+# create MarFS config XML
+Created MarFS config at marfs_test_config.xml
+
+# test: index MarFS structure with plugin
+# This should:
+#   - Filter out MDAL_reference files
+#   - Filter out MDAL_MARFS-FILE xattrs
+#   - Preserve MDAL_subspaces structure during indexing
+#   - Rename root namespace to mountpoint in final index
+$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "prefix/var/marfs/mdal-root/sec-root" "search"
+Creating GUFI tree search with 1 threads
+Total Dirs:          4
+Total Non-Dirs:      8
+
+
+# verify index structure
+# Root should be renamed from 'sec-root' to 'marfs' (mountpoint basename)
+# MDAL_subspaces directories should be removed from final structure
+$ find "search" -type d | sort
+search
+search/marfs
+search/marfs/namespace1
+search/marfs/namespace1/namespace2
+search/marfs/namespace1/userdir
+
+
+# query indexed files
+# MarFS internal files (MDAL_reference) should not appear in results
+$ gufi_query -d "|" -S "SELECT rpath(sname, sroll) || '/' || name FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search"
+search/marfs/marfs
+search/marfs/namespace1/namespace1
+search/marfs/namespace1/namespace2/namespace2
+search/marfs/namespace1/namespace2/nestedfile1.txt
+search/marfs/namespace1/namespace2/nestedfile2.txt
+search/marfs/namespace1/userdir/userdir
+search/marfs/namespace1/userdir/userfile3.txt
+search/marfs/namespace1/userfile1.txt
+search/marfs/namespace1/userfile2.txt
+
+
+# query file counts per directory
+$ gufi_query -d "|" -S "SELECT rpath(sname, sroll) || '/' || name, totfiles FROM vrsummary WHERE totfiles > 0 ORDER BY name;" "search"
+search/marfs/marfs|1
+search/marfs/namespace1/namespace1|3
+search/marfs/namespace1/namespace2/namespace2|3
+search/marfs/namespace1/userdir/userdir|1
+
+
+# verify xattrs
+# MarFS xattrs (user.MDAL_MARFS-FILE) should be filtered out
+# User xattrs (user.myattr) should be preserved
+$ gufi_query -d "|" -x -E "SELECT rpath(sname, sroll, name), xattr_name FROM vrxpentries WHERE xattr_name != '' ORDER BY name;" "search" 2>/dev/null
+search/marfs/namespace1/userfile1.txt|user.myattr
+
+
+# verify nlink decrement
+# All file nlink counts should be decremented by 1 (MarFS metadata link removed)
+$ gufi_query -d "|" -E "SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;" "search"
+search/marfs/namespace1/namespace2/nestedfile1.txt|0
+search/marfs/namespace1/namespace2/nestedfile2.txt|0
+search/marfs/namespace1/userdir/userfile3.txt|0
+search/marfs/namespace1/userfile1.txt|0
+search/marfs/namespace1/userfile2.txt|0
+
+
+# test: verify root namespace rename in summary table
+$ gufi_query -d "|" -S "SELECT name FROM summary WHERE name == 'marfs';" "search"
+marfs
+
+
+# test: re-index over existing index
+# Plugin should handle existing index structure correctly
+$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "prefix/var/marfs/mdal-root/sec-root" "search"
+"search" Already exists!
+Creating GUFI tree search with 1 threads
+Total Dirs:          4
+Total Non-Dirs:      8
+
+
+# verify structure after re-indexing
+$ find "search" -type d | sort
+search
+search/marfs
+search/marfs/namespace1
+search/marfs/namespace1/namespace2
+search/marfs/namespace1/userdir
+
+
+# test: error handling - missing config
+# Should fail with appropriate error message
+$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "prefix/var/marfs/mdal-root/sec-root" "search_fail" 2>&1 | head -n 1
+Error: MARFS_CONFIG_PATH is not set
+
+
+# test: error handling - invalid path
+# Should fail when path is not a MarFS sec-root
+$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "/tmp" "search_fail2" 2>&1 | grep -i 'error' | head -n 1
+Error: provided dir (/tmp) is not the root of the parent marfs namespace or marfs_config is incorrect
+
+
+# test: verify inode/pinode relationships
+# Check that all child directories have pinode matching parent's inode
+# This ensures the plugin correctly maintains parent-child relationships
+$ gufi_query \
+        -n 1 \
+        -d '|' \
+        -I "CREATE TABLE intermediate(
+               dir        TEXT,
+               parent_dir TEXT,
+               inode      TEXT,
+               pinode     TEXT
+            );" \
+        -S "INSERT INTO intermediate
+            SELECT
+                path() AS dir,
+                CASE
+                    WHEN level() = 0 THEN NULL
+                    WHEN level() = 1 THEN ''
+                    ELSE substr(path(), 1, length(path()) - length(epath()) - 1)
+                END AS parent_dir,
+                inode,
+                pinode
+            FROM vrsummary;" \
+        -K "CREATE TABLE aggregate(
+               dir            TEXT,
+               parent_dir     TEXT,
+               inode          TEXT,
+               pinode         TEXT,
+               expected_inode TEXT
+            );" \
+        -J "INSERT INTO aggregate
+            SELECT
+                child.dir,
+                child.parent_dir,
+                child.inode,
+                child.pinode,
+                parent.inode AS expected_inode
+            FROM intermediate AS child
+            LEFT JOIN intermediate AS parent
+              ON child.parent_dir = parent.dir;" \
+        -G "SELECT
+                dir,
+                parent_dir,
+                inode,
+                pinode,
+                expected_inode
+            FROM aggregate
+            WHERE parent_dir != ''
+              AND (expected_inode IS NULL OR pinode != expected_inode)
+            ORDER BY dir;" \
+        "search"
+
+# If above query returns no results, all inode/pinode relationships are correct

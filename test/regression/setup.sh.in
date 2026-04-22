@@ -358,6 +358,8 @@ replace() {
     s%${DSI_INDEXING_PLUGIN}%dsi_indexing_plugin%g;
     s%${DSI_QUERYING_PLUGIN}%dsi_querying_plugin%g;
 
+    s%${MARFS_INDEXING_PLUGIN}%marfs_indexing_plugin%g;
+
     s%${TEST_GUFI_JAIL}%gufi_jail%g;
 
     s%&vfs=.* as % as %g;
