@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- MarFS Test Configuration -->
+<marfs_config version="2025-09-25">
+   <!-- Mount Point -->
+   <mnt_top>/marfs</mnt_top>
+
+   <!-- Test Repo Definition -->
+   <repo name="TestRepo">
+
+      <!-- Per-Repo Data Scheme -->
+      <data>
+
+         <!-- Erasure Protection -->
+         <protection>
+            <N>3</N>
+            <E>1</E>
+            <PSZ>1048572</PSZ>
+         </protection>
+
+         <!-- Packing -->
+         <packing enabled="yes">
+            <max_files>4096</max_files>
+         </packing>
+
+         <!-- Chunking -->
+         <chunking enabled="yes">
+            <max_size>4G</max_size>
+         </chunking>
+
+         <!-- Object Distribution -->
+         <distribution>
+            <pods cnt="1"/>
+            <caps cnt="1"/>
+            <scatters cnt="1024"/>
+         </distribution>
+
+         <!-- DAL Definition -->
+         <DAL type="posix">
+            <dir_template>pod{p}/block{b}/cap{c}/scat{s}/</dir_template>
+            <sec_root>DAL_ROOT_PLACEHOLDER</sec_root>
+         </DAL>
+
+      </data>
+
+      <!-- Per-Repo Metadata Scheme -->
+      <meta>
+
+         <!-- Direct Data -->
+         <direct read="yes"/>
+
+         <!-- MDAL Definition -->
+         <MDAL type="posix">
+            <ns_root>NS_ROOT_PLACEHOLDER</ns_root>
+         </MDAL>
+
+         <!-- Namespace Definitions -->
+         <namespaces rbreadth="40" rdepth="3" rdigits="3">
+
+            <!-- Root Namespace -->
+            <ns name="root">
+
+               <!-- Quota Limits for this NS -->
+               <quotas>
+                  <data>10T</data>
+               </quotas>
+
+               <!-- Permission Settings for this NS -->
+               <perms>
+                  <interactive>RM,RD</interactive>
+                  <batch>RM,RD</batch>
+               </perms>
+
+               <!-- Test Subspace -->
+               <ns name="namespace1">
+                  <quotas>
+                     <data>5T</data>
+                  </quotas>
+                  <perms>
+                     <interactive>RM,WM,RD</interactive>
+                     <batch>RM,WM,RD,WD</batch>
+                  </perms>
+                  
+                  <!-- Nested Subspace -->
+                  <ns name="namespace2">
+                     <quotas>
+                        <data>2T</data>
+                     </quotas>
+                     <perms>
+                        <interactive>RM,WM,RD</interactive>
+                        <batch>RM,WM,RD,WD</batch>
+                     </perms>
+                  </ns>
+               </ns>
+
+            </ns>
+
+         </namespaces>
+
+      </meta>
+
+   </repo>
+
+</marfs_config>

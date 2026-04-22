@@ -177,6 +177,7 @@ set(OTHERS
   gufi_jail
   gufi_plugin
   longitudinal_snapshot
+  marfs_plugin
   parallel_cpr
   parallel_find
   parallel_rmr
@@ -252,6 +253,9 @@ endif()
 foreach(NAME ${EXAMPLES})
   set_property(TEST "${NAME}" APPEND PROPERTY LABELS "examples")
 endforeach()
+
+set_property(TEST "dsi_plugins" APPEND PROPERTY LABELS "gufi_vt;binary;plugin")
+set_property(TEST "marfs_plugin" APPEND PROPERTY LABELS "binary;plugin")
 
 foreach(NAME ${PYTHON})
   set_property(TEST "${NAME}" APPEND PROPERTY LABELS "python")
