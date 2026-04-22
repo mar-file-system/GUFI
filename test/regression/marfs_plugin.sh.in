@@ -66,14 +66,7 @@ set -e
 
 OUTPUT="marfs_plugin.out"
 
-# Check if MarFS plugin is available
-if [[ ! -f "${MARFS_INDEXING_PLUGIN}" ]]; then
-    echo "MarFS plugin not found at ${MARFS_INDEXING_PLUGIN}, skipping test"
-    exit 0
-fi
-
 MARFS_CONFIG="marfs_test_config.xml"
-MARFS_MOUNTPOINT="/marfs"
 
 MARFS_BASE="${SRCDIR}/var/marfs"
 MARFS_DAL_ROOT="${MARFS_BASE}/dal-root"
@@ -81,7 +74,7 @@ MARFS_MDAL_ROOT="${MARFS_BASE}/mdal-root"
 MARFS_SEC_ROOT="${MARFS_MDAL_ROOT}/sec-root"
 
 cleanup() {
-    rm -rf "${MARFS_BASE}" "${SEARCH}" "${MARFS_CONFIG}"
+    rm -rf "${MARFS_BASE}" "${MARFS_CONFIG}"
 }
 
 cleanup_exit() {
@@ -100,10 +93,6 @@ cleanup
     mkdir -p "${MARFS_DAL_ROOT}"
     
     # Create mdal-root and sec-root (metadata abstraction layer)
-    mkdir -p "${MARFS_SEC_ROOT}"
-    mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces"
-    mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1"
-    mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces"
     mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2"
     
     # Create user files in namespaces
@@ -121,22 +110,18 @@ cleanup
     echo "reference ns2" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/MDAL_reference"
     
     # Add MarFS xattrs to files (these should be filtered out)
-    if command -v setfattr &> /dev/null; then
-        setfattr -n user.MDAL_MARFS-FILE -v "marfs_metadata" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt" 2>/dev/null || true
-        setfattr -n user.MDAL_MARFS-FILE -v "marfs_metadata" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile1.txt" 2>/dev/null || true
-    fi
+    os_setfattr user.MDAL_MARFS-FILE "marfs_metadata" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt" 2>/dev/null || true
+    os_setfattr user.MDAL_MARFS-FILE "marfs_metadata" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile1.txt" 2>/dev/null || true
     
     # Add user xattrs (these should be preserved)
-    if command -v setfattr &> /dev/null; then
-        setfattr -n user.myattr -v "myvalue" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt" 2>/dev/null || true
-    fi
+    os_setfattr user.myattr "myvalue" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt" 2>/dev/null || true
     
-    run_no_sort "find \"${MARFS_SEC_ROOT}\" -type f -o -type d | sort"
+    run_sort "find \"${MARFS_SEC_ROOT}\" -type f -o -type d"
     
     echo
     echo "# create MarFS config XML"
-    cp "@CMAKE_CURRENT_SOURCE_DIR@/marfs_plugin_config.xml.in" "${MARFS_CONFIG}"
-        
+    cp "@CMAKE_CURRENT_BINARY_DIR@/marfs_plugin_config.xml" "${MARFS_CONFIG}"
+
     # Replace placeholders with actual paths
     @SED@ -i "s|DAL_ROOT_PLACEHOLDER|${MARFS_DAL_ROOT}|g" "${MARFS_CONFIG}"
     @SED@ -i "s|NS_ROOT_PLACEHOLDER|${MARFS_SEC_ROOT}|g" "${MARFS_CONFIG}"
@@ -156,16 +141,16 @@ cleanup
     echo "# verify index structure"
     echo "# Root should be renamed from 'sec-root' to 'marfs' (mountpoint basename)"
     echo "# MDAL_subspaces directories should be removed from final structure"
-    run_no_sort "find \"${SEARCH}\" -type d | sort"
+    run_sort "find \"${SEARCH}\" -type d"
     
     echo
     echo "# query indexed files"
     echo "# MarFS internal files (MDAL_reference) should not appear in results"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) || '/' || name FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${SEARCH}\""
-    
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${SEARCH}\""
+
     echo
     echo "# query file counts per directory"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) || '/' || name, totfiles FROM vrsummary WHERE totfiles > 0 ORDER BY name;\" \"${SEARCH}\""
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) AS name, totfiles FROM vrsummary WHERE totfiles > 0 ORDER BY name;\" \"${SEARCH}\""
     
     echo
     echo "# verify xattrs"
@@ -176,11 +161,11 @@ cleanup
     echo
     echo "# verify nlink decrement"
     echo "# All file nlink counts should be decremented by 1 (MarFS metadata link removed)"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -E \"SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;\" \"${SEARCH}\""
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), nlink FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;\" \"${SEARCH}\""
     
     echo
     echo "# test: verify root namespace rename in summary table"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT name FROM summary WHERE name == 'marfs';\" \"${SEARCH}\""
+    run_sort "${SQLITE3} \"${SEARCH}/marfs/db.db\" \"SELECT name FROM summary;\""
     
     echo
     echo "# test: re-index over existing index"
@@ -189,7 +174,7 @@ cleanup
     
     echo
     echo "# verify structure after re-indexing"
-    run_no_sort "find \"${SEARCH}\" -type d | sort"
+    run_sort "find \"${SEARCH}\" -type d"
     
     echo
     echo "# test: error handling - missing config"

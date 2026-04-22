@@ -81,7 +81,6 @@ apt -y install \
 apt -y install \
     attr \
     autoconf \
-    automake \
     bsdmainutils \
     clang \
     cmake \
@@ -92,3 +91,13 @@ apt -y install \
     python3 \
     python3-pip \
     sudo
+
+# extra packages for marfs
+apt -y install \
+    automake \
+    libfuse-dev \
+    libopenmpi-dev \
+    libreadline-dev \
+    libtool \
+    libxml2-dev \
+    nasm

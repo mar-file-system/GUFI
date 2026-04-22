@@ -177,7 +177,6 @@ set(OTHERS
   gufi_jail
   gufi_plugin
   longitudinal_snapshot
-  marfs_plugin
   parallel_cpr
   parallel_find
   parallel_rmr
@@ -209,6 +208,19 @@ configure_file(gufi_tool.py.in gufi_tool.py @ONLY)
 
 # gufi_vt.common is always required by gufi_vt test
 configure_file(gufi_vt.common gufi_vt.common @ONLY)
+
+if (TARGET marfs_plugin)
+  # marfs_plugin test config
+  configure_file(
+    marfs_plugin_config.xml.in
+    marfs_plugin_config.xml
+    @ONLY
+  )
+
+  list(APPEND OTHERS
+    marfs_plugin
+  )
+endif()
 
 # .sh and .expected
 function(sh_and_expected)
@@ -254,9 +266,6 @@ foreach(NAME ${EXAMPLES})
   set_property(TEST "${NAME}" APPEND PROPERTY LABELS "examples")
 endforeach()
 
-set_property(TEST "dsi_plugins" APPEND PROPERTY LABELS "gufi_vt;binary;plugin")
-set_property(TEST "marfs_plugin" APPEND PROPERTY LABELS "binary;plugin")
-
 foreach(NAME ${PYTHON})
   set_property(TEST "${NAME}" APPEND PROPERTY LABELS "python")
 endforeach()
@@ -265,6 +274,9 @@ set_property(TEST "gufi_query_multiple_remotes" APPEND PROPERTY LABELS "gufi_vt"
 # OTHERS
 set_property(TEST "dsi_plugins" APPEND PROPERTY LABELS "gufi_vt;binary;plugin")
 set_property(TEST "gufi_plugin" APPEND PROPERTY LABELS "plugin")
+if (TARGET marfs_plugin)
+  set_property(TEST "marfs_plugin" APPEND PROPERTY LABELS "binary;plugin")
+endif()
 
 find_program(SUDO sudo)
 if (SUDO)

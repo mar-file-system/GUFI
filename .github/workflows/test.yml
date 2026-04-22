@@ -116,8 +116,17 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Install Marfs & ISA-L
+      if:   matrix.img != 'alpine:edge'
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
     - name: Configure CMake
+      if:   matrix.img == 'alpine:edge'
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+
+    - name: Configure CMake
+      if:   matrix.img != 'alpine:edge'
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j

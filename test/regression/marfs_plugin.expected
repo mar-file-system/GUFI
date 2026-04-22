@@ -1,5 +1,5 @@
 # create mock MarFS namespace structure
-$ find "prefix/var/marfs/mdal-root/sec-root" -type f -o -type d | sort
+$ find "prefix/var/marfs/mdal-root/sec-root" -type f -o -type d
 prefix/var/marfs/mdal-root/sec-root
 prefix/var/marfs/mdal-root/sec-root/MDAL_reference
 prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces
@@ -34,7 +34,7 @@ Total Non-Dirs:      8
 # verify index structure
 # Root should be renamed from 'sec-root' to 'marfs' (mountpoint basename)
 # MDAL_subspaces directories should be removed from final structure
-$ find "search" -type d | sort
+$ find "search" -type d
 search
 search/marfs
 search/marfs/namespace1
@@ -44,24 +44,24 @@ search/marfs/namespace1/userdir
 
 # query indexed files
 # MarFS internal files (MDAL_reference) should not appear in results
-$ gufi_query -d "|" -S "SELECT rpath(sname, sroll) || '/' || name FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search"
-search/marfs/marfs
-search/marfs/namespace1/namespace1
-search/marfs/namespace1/namespace2/namespace2
+$ gufi_query -d "|" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "search"
+search/marfs
+search/marfs/namespace1
+search/marfs/namespace1/namespace2
 search/marfs/namespace1/namespace2/nestedfile1.txt
 search/marfs/namespace1/namespace2/nestedfile2.txt
-search/marfs/namespace1/userdir/userdir
+search/marfs/namespace1/userdir
 search/marfs/namespace1/userdir/userfile3.txt
 search/marfs/namespace1/userfile1.txt
 search/marfs/namespace1/userfile2.txt
 
 
 # query file counts per directory
-$ gufi_query -d "|" -S "SELECT rpath(sname, sroll) || '/' || name, totfiles FROM vrsummary WHERE totfiles > 0 ORDER BY name;" "search"
-search/marfs/marfs|1
-search/marfs/namespace1/namespace1|3
-search/marfs/namespace1/namespace2/namespace2|3
-search/marfs/namespace1/userdir/userdir|1
+$ gufi_query -d "|" -S "SELECT rpath(sname, sroll) AS name, totfiles FROM vrsummary WHERE totfiles > 0 ORDER BY name;" "search"
+search/marfs/namespace1/namespace2|3
+search/marfs/namespace1/userdir|1
+search/marfs/namespace1|3
+search/marfs|1
 
 
 # verify xattrs
@@ -73,16 +73,20 @@ search/marfs/namespace1/userfile1.txt|user.myattr
 
 # verify nlink decrement
 # All file nlink counts should be decremented by 1 (MarFS metadata link removed)
-$ gufi_query -d "|" -E "SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;" "search"
+$ gufi_query -d "|" -S "SELECT rpath(sname, sroll), nlink FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;" "search"
 search/marfs/namespace1/namespace2/nestedfile1.txt|0
 search/marfs/namespace1/namespace2/nestedfile2.txt|0
+search/marfs/namespace1/namespace2|2
 search/marfs/namespace1/userdir/userfile3.txt|0
+search/marfs/namespace1/userdir|2
 search/marfs/namespace1/userfile1.txt|0
 search/marfs/namespace1/userfile2.txt|0
+search/marfs/namespace1|4
+search/marfs|3
 
 
 # test: verify root namespace rename in summary table
-$ gufi_query -d "|" -S "SELECT name FROM summary WHERE name == 'marfs';" "search"
+$ sqlite3 "search/marfs/db.db" "SELECT name FROM summary;"
 marfs
 
 
@@ -96,7 +100,7 @@ Total Non-Dirs:      8
 
 
 # verify structure after re-indexing
-$ find "search" -type d | sort
+$ find "search" -type d
 search
 search/marfs
 search/marfs/namespace1

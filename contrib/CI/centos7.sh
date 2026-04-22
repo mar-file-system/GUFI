@@ -70,7 +70,7 @@ yum -y install epel-release centos-release-scl
 yum -y install fuse-devel libattr-devel pcre2-devel zlib-devel
 
 # install required packages
-yum -y install attr autoconf cmake3 fuse git llvm-toolset-7 make patch pkgconfig python3 sudo
+yum -y install attr autoconf automake cmake3 fuse git libtool llvm-toolset-7 make nasm patch pkgconfig python3 sudo
 
 # make sure 'cmake' and 'ctest' are valid commands
 ln -sf /usr/bin/cmake3 /usr/bin/cmake
