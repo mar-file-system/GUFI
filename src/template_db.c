@@ -146,38 +146,63 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
     return !tdb->size;
 }
 
-/* create the initial xattrs database file to copy from */
-int create_xattrs_template(struct template_db *tdb) {
-    char name[] = "XXXXXX";
+static char *template_path(const str_t *dir) {
+    char *name = NULL;
 
+    if (dir) {
+        const size_t name_len = dir->len + 1 + 6;
+        name = malloc(name_len + 1);
+        SNFORMAT_S(name, name_len + 1, 2,
+                   dir->data, dir->len,
+                   "/XXXXXX", (size_t) 7);
+    }
+    else {
+        name = malloc(6 + 1);
+        SNFORMAT_S(name, 6 + 1, 1,
+                   "XXXXXX", (size_t) 6);
+    }
+
+    return name;
+}
+
+/* create the initial xattrs database file to copy from */
+int create_xattrs_template(struct template_db *tdb, const str_t *dir) {
+    char *name = template_path(dir);
     const int fd = mkstemp(name); /* duplicate open */
+
     if (fd < 0) {
         const int err = errno;
         fprintf(stderr, "Error: Could not create temporary xattrs db: %s (%d)\n",
                 strerror(err), err);
         remove(name);             /* file is possibly created */
+        free(name);
         return -1;
     }
     close(fd);
 
-    return create_template(tdb, create_xattr_tables, name);
+    const int rc = create_template(tdb, create_xattr_tables, name);
+    free(name);
+    return rc;
 }
 
 /* create the initial main database file to copy from */
-int create_dbdb_template(struct template_db *tdb) {
-    char name[] = "XXXXXX";
-
+int create_dbdb_template(struct template_db *tdb, const str_t *dir) {
+    char *name = template_path(dir);
     const int fd = mkstemp(name); /* duplicate open */
+
     if (fd < 0) {
         const int err = errno;
         fprintf(stderr, "Error: Could not create temporary db.db: %s (%d)\n",
                 strerror(err), err);
         remove(name);             /* file is possibly created */
+        free(name);
         return -1;
     }
     close(fd);
 
-    return create_template(tdb, create_dbdb_tables, name);
+    const int rc = create_template(tdb, create_dbdb_tables, name);
+    free(name);
+    return rc;
 }
 
 /* copy the template file instead of creating a new database and new tables for each work item */

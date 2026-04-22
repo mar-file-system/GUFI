@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 
 #include "bf.h"
+#include "str.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,10 +86,10 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
                     const char *name);
 
 int create_xattr_tables(const char *name, sqlite3 *db, void *args);
-int create_xattrs_template(struct template_db *tdb);
+int create_xattrs_template(struct template_db *tdb, const str_t *dir);
 
 int create_dbdb_tables(const char *name, sqlite3 *db, void *args);
-int create_dbdb_template(struct template_db *tdb);
+int create_dbdb_template(struct template_db *tdb, const str_t *dir);
 
 int close_template_db(struct template_db *tdb);
 

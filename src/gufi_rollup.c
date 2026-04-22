@@ -1019,7 +1019,7 @@ int main(int argc, char *argv[]) {
     process_args_and_maybe_exit(options, 1, "GUFI_tree ...", &pa.in);
 
     init_template_db(&pa.xattr_template);
-    if (create_xattrs_template(&pa.xattr_template) != 0) {
+    if (create_xattrs_template(&pa.xattr_template, NULL) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
         input_fini(&pa.in);
         return EXIT_FAILURE;

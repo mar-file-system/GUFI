@@ -162,8 +162,8 @@ TEST(create_temporary_template, not_enough_fds) {
 
     // mkstemp should fail
     struct template_db tdb;
-    EXPECT_EQ(create_dbdb_template(&tdb), -1);
-    EXPECT_EQ(create_xattrs_template(&tdb), -1);
+    EXPECT_EQ(create_dbdb_template(&tdb, nullptr), -1);
+    EXPECT_EQ(create_xattrs_template(&tdb, nullptr), -1);
 
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
 }

@@ -554,7 +554,7 @@ int main(int argc, char *argv[]) {
     }
 
     init_template_db(&pa.db);
-    if (create_dbdb_template(&pa.db) != 0) {
+    if (create_dbdb_template(&pa.db, &pa.index_parent) != 0) {
         fprintf(stderr, "Could not create template file\n");
         rc = EXIT_FAILURE;
         goto cleanup;
@@ -571,7 +571,7 @@ int main(int argc, char *argv[]) {
     }
 
     init_template_db(&pa.xattr);
-    if (create_xattrs_template(&pa.xattr) != 0) {
+    if (create_xattrs_template(&pa.xattr, &pa.index_parent) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
         rc = EXIT_FAILURE;
         goto free_db;

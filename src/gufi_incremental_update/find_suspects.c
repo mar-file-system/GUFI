@@ -245,7 +245,7 @@ int find_suspects(struct PoolArgs *pa, struct work *work) {
 
     /* set up template db.db for copying instead of running SQL to create each table */
     init_template_db(&pa->db);
-    if (create_dbdb_template(&pa->db) != 0) {
+    if (create_dbdb_template(&pa->db, NULL) != 0) {
         fprintf(stderr, "Could not create template file\n");
         aggregate_fin(&pa->tree.agg, pa->in.maxthreads);
         free(work);

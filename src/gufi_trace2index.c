@@ -297,15 +297,15 @@ int main(int argc, char *argv[]) {
 
     int rc = EXIT_SUCCESS;
 
-    init_template_db(&pa.db);
-    if (create_dbdb_template(&pa.db) != 0) {
-        fprintf(stderr, "Could not create template file\n");
+    if (dupdir(pa.index_parent.data, S_IRWXU | S_IRWXG | S_IRWXO, geteuid(), getegid())) {
+        fprintf(stderr, "Could not create directory %s\n", pa.index_parent.data);
         rc = EXIT_FAILURE;
         goto free_traces;
     }
 
-    if (dupdir(pa.index_parent.data, S_IRWXU | S_IRWXG | S_IRWXO, geteuid(), getegid())) {
-        fprintf(stderr, "Could not create directory %s\n", pa.index_parent.data);
+    init_template_db(&pa.db);
+    if (create_dbdb_template(&pa.db, &pa.index_parent) != 0) {
+        fprintf(stderr, "Could not create template file\n");
         rc = EXIT_FAILURE;
         goto free_traces;
     }
@@ -321,7 +321,7 @@ int main(int argc, char *argv[]) {
     }
 
     init_template_db(&pa.xattr);
-    if (create_xattrs_template(&pa.xattr) != 0) {
+    if (create_xattrs_template(&pa.xattr, &pa.index_parent) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
         rc = EXIT_FAILURE;
         goto free_db;
