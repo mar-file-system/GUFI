@@ -73,7 +73,7 @@ OF SUCH DAMAGE.
 
 TEST(popen_argv, cant_pipe) {
     struct rlimit orig_fds;
-    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &orig_fds),  0);
 
     struct rlimit fewer_fds = orig_fds;
     fewer_fds.rlim_cur = 3;
@@ -81,7 +81,7 @@ TEST(popen_argv, cant_pipe) {
 
     EXPECT_EQ(popen_argv(nullptr), nullptr);
 
-    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds),  0);
 }
 
 TEST(popen_argv, bad_command) {
@@ -90,6 +90,8 @@ TEST(popen_argv, bad_command) {
     popen_argv_t *ret = popen_argv(argv);
     EXPECT_NE(ret, nullptr); // fork succeeds
 
-    EXPECT_GT(popen_argv_fd(ret), -1);
-    EXPECT_NE(popen_argv_close(ret), 0);
+    EXPECT_GT(popen_argv_fd(ret),       -1);
+    EXPECT_NE(popen_argv_close(ret),     0);
+
+    EXPECT_EQ(popen_argv_close(nullptr), 0);
 }
