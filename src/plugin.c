@@ -228,6 +228,23 @@ size_t plugins_global_init(struct plugins *plugins, void *global) {
     return plugins->initialized;
 }
 
+plugin_dir_action plugins_dir_action(struct plugins* plugins, void* ctx) {
+    plugin_dir_action ret = PLUGIN_PROCESS_DIR;
+
+    for (size_t i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->dir_action) {
+            plugin_dir_action pda = plugins->plugins[i]->ops->dir_action(ctx);
+
+            // choose the most restrictive action returned by any plugin
+            if (pda < ret) {
+                ret = pda;
+            }
+        }
+    }
+
+    return ret;
+}
+
 void plugins_ctx_init(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 

@@ -116,6 +116,36 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Clone and Build ISA-L
+      run:  |
+            # Clone ISA-L repository (MarFS dependency)
+            git clone --depth 1 --branch v2.31.0 https://github.com/intel/isa-l.git /tmp/isa-l
+            cd /tmp/isa-l
+            
+            # Build and install ISA-L
+            ./autogen.sh
+            ./configure --prefix=/usr/local
+            make -j
+            make install
+
+    - name: Clone and Build MarFS
+      run:  |
+            # Clone MarFS repository
+            git clone --depth 1 --branch master https://github.com/mar-file-system/marfs.git /tmp/marfs
+            cd /tmp/marfs
+            
+            # Set environment variables to help MarFS find ISA-L
+            export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}"
+            export LDFLAGS="-L/usr/local/lib ${LDFLAGS}"
+            export CPPFLAGS="-I/usr/local/include ${CPPFLAGS}"
+            export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
+            
+            # Build and install MarFS with ISA-L
+            ./autogen.sh
+            ./configure --prefix=/usr/local --with-isal=/usr/local
+            make -j
+            make install
+
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
 
@@ -148,6 +178,36 @@ jobs:
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Clone and Build ISA-L
+      run:  |
+            # Clone ISA-L repository (MarFS dependency)
+            git clone --depth 1 --branch v2.31.0 https://github.com/intel/isa-l.git /tmp/isa-l
+            cd /tmp/isa-l
+            
+            # Build and install ISA-L
+            ./autogen.sh
+            ./configure --prefix=/usr/local
+            make -j
+            sudo make install
+
+    - name: Clone and Build MarFS
+      run:  |
+            # Clone MarFS repository
+            git clone --depth 1 --branch master https://github.com/mar-file-system/marfs.git /tmp/marfs
+            cd /tmp/marfs
+            
+            # Set environment variables to help MarFS find ISA-L
+            export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}"
+            export LDFLAGS="-L/usr/local/lib ${LDFLAGS}"
+            export CPPFLAGS="-I/usr/local/include ${CPPFLAGS}"
+            export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
+            
+            # Build and install MarFS with ISA-L
+            ./autogen.sh
+            ./configure --prefix=/usr/local --with-isal=/usr/local
+            make -j
+            sudo make install
 
     - name: Configure CMake
       run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_OSX_SYSROOT=macosx -DOpenMP_C_LIB_NAMES="libomp" -DOpenMP_C_FLAGS="-fopenmp" -DOpenMP_C_INCLUDE_DIRS="$(brew --prefix libomp)/include" -DOpenMP_libomp_LIBRARY="$(brew --prefix libomp)/lib/libomp.dylib"

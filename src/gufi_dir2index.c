@@ -202,8 +202,14 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     decompress_work(&nda.work, data);
 
-    const int process_dir = ((pa->in.min_level <= nda.work->level) &&
-                             (nda.work->level <= pa->in.max_level));
+    pcs.work = nda.work;
+
+    // if we're in the min-max range use the result of the plugins "dir_action" to determine process_dir
+    plugin_dir_action process_dir = PLUGIN_NO_PROCESS_DIR;
+
+    if (pa->in.min_level <= nda.work->level && nda.work->level <= pa->in.max_level) {
+        process_dir = plugins_dir_action(&pa->in.plugins, &pcs);
+    }
 
     dir = opendir_wrapper(nda.work->name, 1);
     if (!dir) {
@@ -235,7 +241,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     /* don't need recursion because parent is guaranteed to exist */
-    if (mkdir(nda.topath.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+    if (process_dir != PLUGIN_NO_PROCESS_NO_DESCEND_DIR && mkdir(nda.topath.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
         const int err = errno;
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath.data, err, strerror(err));
@@ -248,7 +254,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
      * set up for processing, but keep to minimum to quickly hit
      * descend (and enqueue more work, keeping queues fed)
      */
-    if (process_dir) {
+    if (process_dir == PLUGIN_PROCESS_DIR) {
         /* restore "/db.db" */
         nda.topath.data[nda.topath.len] = '/';
 
@@ -290,14 +296,17 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
    }
 
     struct descend_counters ctrs;
-    descend(ctx, nda.in, nda.work, dir, 1,
-            processdir, process_dir?process_nondir:NULL, &nda, &ctrs);
+
+    if (process_dir != PLUGIN_NO_PROCESS_NO_DESCEND_DIR){
+        descend(ctx, nda.in, nda.work, dir, 1,
+            processdir, process_dir == PLUGIN_PROCESS_DIR?process_nondir:NULL, &nda, &ctrs);
+    }
 
     /*
      * now that subdirectories have been enqueued,
      * do slower processing on this directory
      */
-    if (process_dir) {
+    if (process_dir == PLUGIN_PROCESS_DIR) {
         stopdb(nda.db);
 
         /* entries and xattrs have been inserted */
@@ -345,7 +354,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     closedir(dir);
 
   cleanup:
-    if (process_dir) {
+    if (process_dir == PLUGIN_PROCESS_DIR) {
         const size_t id = QPTPool_get_id(ctx);
         pa->total_dirs[id]++;
         pa->total_nondirs[id] += ctrs.nondirs_processed;

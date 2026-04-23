@@ -265,6 +265,7 @@ static void dsi_indexing_dir(void *ptr, void *user_data) {
 struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_INDEX,
     .global_init = dsi_indexing_global_init,
+    .dir_action = NULL,
     .ctx_init = NULL,
     .process_dir = dsi_indexing_dir,
     .process_file = NULL,

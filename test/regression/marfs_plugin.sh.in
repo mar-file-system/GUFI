@@ -1,0 +1,263 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+
+OUTPUT="marfs_plugin.out"
+
+# Check if MarFS plugin is available
+if [[ ! -f "${MARFS_INDEXING_PLUGIN}" ]]; then
+    echo "MarFS plugin not found at ${MARFS_INDEXING_PLUGIN}, skipping test"
+    exit 0
+fi
+
+MARFS_CONFIG="marfs_test_config.xml"
+MARFS_MOUNTPOINT="/marfs"
+
+MARFS_BASE="${SRCDIR}/var/marfs"
+MARFS_DAL_ROOT="${MARFS_BASE}/dal-root"
+MARFS_MDAL_ROOT="${MARFS_BASE}/mdal-root"
+MARFS_SEC_ROOT="${MARFS_MDAL_ROOT}/sec-root"
+
+cleanup() {
+    rm -rf "${MARFS_BASE}" "${SEARCH}" "${MARFS_CONFIG}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+(
+    echo "# create mock MarFS namespace structure"
+    
+    # Create dal-root (data abstraction layer - empty but must exist)
+    mkdir -p "${MARFS_DAL_ROOT}"
+    
+    # Create mdal-root and sec-root (metadata abstraction layer)
+    mkdir -p "${MARFS_SEC_ROOT}"
+    mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces"
+    mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1"
+    mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces"
+    mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2"
+    
+    # Create user files in namespaces
+    echo "user file 1" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt"
+    echo "user file 2" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile2.txt"
+    mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userdir"
+    echo "user file 3" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userdir/userfile3.txt"
+    
+    echo "nested file 1" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile1.txt"
+    echo "nested file 2" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile2.txt"
+    
+    # Create MarFS internal files (these should be filtered out)
+    echo "reference" > "${MARFS_SEC_ROOT}/MDAL_reference"
+    echo "reference ns1" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_reference"
+    echo "reference ns2" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/MDAL_reference"
+    
+    # Add MarFS xattrs to files (these should be filtered out)
+    if command -v setfattr &> /dev/null; then
+        setfattr -n user.MDAL_MARFS-FILE -v "marfs_metadata" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt" 2>/dev/null || true
+        setfattr -n user.MDAL_MARFS-FILE -v "marfs_metadata" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile1.txt" 2>/dev/null || true
+    fi
+    
+    # Add user xattrs (these should be preserved)
+    if command -v setfattr &> /dev/null; then
+        setfattr -n user.myattr -v "myvalue" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt" 2>/dev/null || true
+    fi
+    
+    run_no_sort "find \"${MARFS_SEC_ROOT}\" -type f -o -type d | sort"
+    
+    echo
+    echo "# create MarFS config XML"
+    cp "@CMAKE_CURRENT_SOURCE_DIR@/marfs_plugin_config.xml.in" "${MARFS_CONFIG}"
+        
+    # Replace placeholders with actual paths
+    @SED@ -i "s|DAL_ROOT_PLACEHOLDER|${MARFS_DAL_ROOT}|g" "${MARFS_CONFIG}"
+    @SED@ -i "s|NS_ROOT_PLACEHOLDER|${MARFS_SEC_ROOT}|g" "${MARFS_CONFIG}"
+    
+    echo "Created MarFS config at ${MARFS_CONFIG}"
+    
+    echo
+    echo "# test: index MarFS structure with plugin"
+    echo "# This should:"
+    echo "#   - Filter out MDAL_reference files"
+    echo "#   - Filter out MDAL_MARFS-FILE xattrs"
+    echo "#   - Preserve MDAL_subspaces structure during indexing"
+    echo "#   - Rename root namespace to mountpoint in final index"
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}\"" 2>&1 | remove_indexing_time
+    
+    echo
+    echo "# verify index structure"
+    echo "# Root should be renamed from 'sec-root' to 'marfs' (mountpoint basename)"
+    echo "# MDAL_subspaces directories should be removed from final structure"
+    run_no_sort "find \"${SEARCH}\" -type d | sort"
+    
+    echo
+    echo "# query indexed files"
+    echo "# MarFS internal files (MDAL_reference) should not appear in results"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) || '/' || name FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${SEARCH}\""
+    
+    echo
+    echo "# query file counts per directory"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) || '/' || name, totfiles FROM vrsummary WHERE totfiles > 0 ORDER BY name;\" \"${SEARCH}\""
+    
+    echo
+    echo "# verify xattrs"
+    echo "# MarFS xattrs (user.MDAL_MARFS-FILE) should be filtered out"
+    echo "# User xattrs (user.myattr) should be preserved"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x -E \"SELECT rpath(sname, sroll, name), xattr_name FROM vrxpentries WHERE xattr_name != '' ORDER BY name;\" \"${SEARCH}\" 2>/dev/null" || echo "No xattrs found"
+    
+    echo
+    echo "# verify nlink decrement"
+    echo "# All file nlink counts should be decremented by 1 (MarFS metadata link removed)"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -E \"SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;\" \"${SEARCH}\""
+    
+    echo
+    echo "# test: verify root namespace rename in summary table"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT name FROM summary WHERE name == 'marfs';\" \"${SEARCH}\""
+    
+    echo
+    echo "# test: re-index over existing index"
+    echo "# Plugin should handle existing index structure correctly"
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}\"" 2>&1 | remove_indexing_time
+    
+    echo
+    echo "# verify structure after re-indexing"
+    run_no_sort "find \"${SEARCH}\" -type d | sort"
+    
+    echo
+    echo "# test: error handling - missing config"
+    echo "# Should fail with appropriate error message"
+    unset MARFS_CONFIG_PATH
+    run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}_fail\" 2>&1 | head -n 1" || true
+    
+    echo
+    echo "# test: error handling - invalid path"
+    echo "# Should fail when path is not a MarFS sec-root"
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"/tmp\" \"${SEARCH}_fail2\" 2>&1 | @GREP@ -i 'error' | head -n 1" || true
+    
+    echo
+    echo "# test: verify inode/pinode relationships"
+    echo "# Check that all child directories have pinode matching parent's inode"
+    echo "# This ensures the plugin correctly maintains parent-child relationships"
+    run_no_sort "${GUFI_QUERY} \\
+        -n 1 \\
+        -d '|' \\
+        -I \"CREATE TABLE intermediate(
+               dir        TEXT,
+               parent_dir TEXT,
+               inode      TEXT,
+               pinode     TEXT
+            );\" \\
+        -S \"INSERT INTO intermediate
+            SELECT
+                path() AS dir,
+                CASE
+                    WHEN level() = 0 THEN NULL
+                    WHEN level() = 1 THEN ''
+                    ELSE substr(path(), 1, length(path()) - length(epath()) - 1)
+                END AS parent_dir,
+                inode,
+                pinode
+            FROM vrsummary;\" \\
+        -K \"CREATE TABLE aggregate(
+               dir            TEXT,
+               parent_dir     TEXT,
+               inode          TEXT,
+               pinode         TEXT,
+               expected_inode TEXT
+            );\" \\
+        -J \"INSERT INTO aggregate
+            SELECT
+                child.dir,
+                child.parent_dir,
+                child.inode,
+                child.pinode,
+                parent.inode AS expected_inode
+            FROM intermediate AS child
+            LEFT JOIN intermediate AS parent
+              ON child.parent_dir = parent.dir;\" \\
+        -G \"SELECT
+                dir,
+                parent_dir,
+                inode,
+                pinode,
+                expected_inode
+            FROM aggregate
+            WHERE parent_dir != ''
+              AND (expected_inode IS NULL OR pinode != expected_inode)
+            ORDER BY dir;\" \\
+        \"${SEARCH}\""
+    
+    echo "# If above query returns no results, all inode/pinode relationships are correct"
+    
+) | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/marfs_plugin.expected "${OUTPUT}"
+rm "${OUTPUT}"
