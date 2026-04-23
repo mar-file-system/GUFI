@@ -196,6 +196,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     PCS_t pcs; /* references passed into plugin */
     memset(&pcs, 0, sizeof(pcs));
+    void *plugin_data[] = {&nda.topath, &pa->index_parent};
 
     DIR *dir = NULL;
 
@@ -264,7 +265,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         pcs.db = nda.db;
         pcs.work = nda.work;
         pcs.ed = &nda.ed;
-        pcs.data = &nda.topath;
+        pcs.data = plugin_data;
 
         /* prepare to insert into the database */
         zeroit(&nda.summary);
@@ -477,6 +478,8 @@ static int validate_source(str_t *index_parent, const char *path, struct work **
     new_work->level = 0;
     new_work->basename_len = new_work->name_len - new_work->root_parent.len;
     new_work->root_basename_len = new_work->basename_len;
+    new_work->orig_root.data = (char *) path;
+    new_work->orig_root.len = strlen(new_work->orig_root.data);
 
     char expathin[MAXPATH];
     char expathout[MAXPATH];

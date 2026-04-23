@@ -66,20 +66,30 @@ set -e
 
 OUTPUT="dsi_plugins.out"
 
+# collection database must be within the index,
+# at or above the first reference to it
+mkdir "${SRCDIR}"
+
 COLLECTION1="collection1"
 # some realpath implementations don't allow for nonexistent paths
-COLLECTION1_DB="${COLLECTION1}.db"
+COLLECTION1_DB="${SRCDIR}/${COLLECTION1}.db"
 touch "${COLLECTION1_DB}" # gets deleted during initial cleanup
 COLLECTION1_DB=$(realpath "${COLLECTION1_DB}")
 
 COLLECTION2="collection2"
 # some realpath implementations don't allow for nonexistent paths
-COLLECTION2_DB="${COLLECTION2}.db"
+COLLECTION2_DB="${SRCDIR}/${COLLECTION2}.db"
 touch "${COLLECTION2_DB}" # gets deleted during initial cleanup
 COLLECTION2_DB=$(realpath "${COLLECTION2_DB}")
 
+COLLECTION3="collection3"
+# some realpath implementations don't allow for nonexistent paths
+COLLECTION3_DB="${COLLECTION3}.db" # this db is outside the collection
+touch "${COLLECTION3_DB}" # gets deleted during initial cleanup
+COLLECTION3_DB=$(realpath "${COLLECTION3_DB}")
+
 cleanup() {
-    rm -f "${COLLECTION1_DB}" "${COLLECTION2_DB}"
+    rm -f "${COLLECTION1_DB}" "${COLLECTION2_DB}" "${COLLECTION3_DB}"
 }
 
 cleanup_exit() {
@@ -92,6 +102,9 @@ trap cleanup_exit EXIT
 cleanup
 
 (
+    echo "# generate the source tree but don't index just yet"
+    run_no_sort "${GENERATETREE} \"${SRCDIR}\""
+
     uuid() {
         python3 -c "import uuid; print(uuid.uuid4())" # Version 4 (random UUIDs)
     }
@@ -111,34 +124,44 @@ cleanup
 
         # both collections
         "$(uuid)" # repeat_name
+
+        # collection3
+        "$(uuid)" # unusual#? directory ,/unusual, name?#
     )
 
     echo "# generate collection db for collection1"
     (
         echo "CREATE TABLE data(uuid TEXT, info1 TEXT);"
-        echo "INSERT INTO  data VALUES ('${UUIDS[0]}', '0');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[1]}', '1');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[2]}', '2');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[3]}', '3');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', '4');"
+        echo "INSERT INTO  data VALUES ('${UUIDS[0]}', '0');"    # 1KB
+        echo "INSERT INTO  data VALUES ('${UUIDS[1]}', '1');"    # 1MB
+        echo "INSERT INTO  data VALUES ('${UUIDS[2]}', '2');"    # directory/executable
+        echo "INSERT INTO  data VALUES ('${UUIDS[3]}', '3');"    # directory/writable
+        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', '4');"    # repeat_name
     ) | "${SQLITE3}" "${COLLECTION1_DB}"
     run_no_sort "${SQLITE3} \"${COLLECTION1_DB}\" \"SELECT uuid, info1 FROM data ORDER BY info1;\"" | @SED@ "s%[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}%<uuid>%g; s%${COLLECTION1_DB}%${COLLECTION1}.db%g;"
 
     echo "# generate collection db for collection2"
     (
-        echo "CREATE TABLE data(uuid TEXT, info2 TEXT);" # different info column name
-        echo "INSERT INTO  data VALUES ('${UUIDS[4]}', '5');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[5]}', '6');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[6]}', '7');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[7]}', '8');"
-        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', '9');"
+        echo "CREATE TABLE data(uuid TEXT, info2 TEXT);"         # different column name
+        echo "INSERT INTO  data VALUES ('${UUIDS[4]}', '5');"    # .hidden
+        echo "INSERT INTO  data VALUES ('${UUIDS[5]}', '6');"    # leaf_directory/leaf_file1
+        echo "INSERT INTO  data VALUES ('${UUIDS[6]}', '7');"    # leaf_directory/leaf_file2
+        echo "INSERT INTO  data VALUES ('${UUIDS[7]}', '8');"    # old_file
+        echo "INSERT INTO  data VALUES ('${UUIDS[8]}', '9');"    # repeat_name
     ) | "${SQLITE3}" "${COLLECTION2_DB}"
     run_no_sort "${SQLITE3} \"${COLLECTION2_DB}\" \"SELECT uuid, info2 FROM data ORDER BY info2;\"" | @SED@ "s%[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}%<uuid>%g; s%${COLLECTION2_DB}%${COLLECTION2}.db%g;"
 
-    echo "# generate the source tree but don't index just yet"
-    run_no_sort "${GENERATETREE} \"${SRCDIR}\""
+    echo "# generate collection db for collection3"
+    (
+        echo "CREATE TABLE data(uuid TEXT, info3 TEXT);"         # different column name
+        echo "INSERT INTO  data VALUES ('${UUIDS[9]}', '10');"   # unusual#? directory ,/unusual, name?#
+    ) | "${SQLITE3}" "${COLLECTION3_DB}"
+    run_no_sort "${SQLITE3} \"${COLLECTION3_DB}\" \"SELECT uuid, info3 FROM data ORDER BY info3;\"" | @SED@ "s%[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}%<uuid>%g; s%${COLLECTION3_DB}%${COLLECTION3}.db%g;"
 
-    echo "# mark files as belonging to collections (two collections in one index, with one file belonging to both)"
+    echo "# mark files as belonging to collections"
+    echo "#     three collections in one index"
+    echo "#         two good collections (1 and 2), with one file belonging to both"
+    echo "#         and one file with an unprocessed collection (3) db"
 
     # mark files as belonging to DSI collection 1
     os_setfattr "user.COL.file.collection1" "${UUIDS[0]}.${COLLECTION1_DB}" "${SRCDIR}/1KB"
@@ -154,6 +177,9 @@ cleanup
     os_setfattr "user.COL.file.collection2" "${UUIDS[7]}.${COLLECTION2_DB}" "${SRCDIR}/leaf_directory/leaf_file2"
     os_setfattr "user.COL.file.collection2" "${UUIDS[8]}.${COLLECTION2_DB}" "${SRCDIR}/repeat_name"
 
+    # mark files as belonging to DSI collection 3
+    os_setfattr "user.COL.file.collection3" "${UUIDS[9]}.${COLLECTION3_DB}" "${SRCDIR}/unusual#? directory ,/unusual, name?#"
+
     # have to mark directories as containing DSI collections
     # these uuids don't matter
     # ${SRCDIR} contains 2 collections
@@ -161,14 +187,15 @@ cleanup
     os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_DB}" "${SRCDIR}"
     os_setfattr "user.COL.file.collection1" "$(uuid).${COLLECTION1_DB}" "${SRCDIR}/directory"
     os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_DB}" "${SRCDIR}/leaf_directory"
+    os_setfattr "user.COL.file.collection3" "$(uuid).${COLLECTION3_DB}" "${SRCDIR}/unusual#? directory ,"
 
     echo
 
     echo "# index updated tree with DSI plugin"
     run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"gufi_plugin_operations:${DSI_INDEXING_PLUGIN}\" \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
 
-    echo "# directories with collections should have copies of the collection dbs they are associated with"
-    run_sort "find \"${INDEXROOT}\" -name \"*collection*\""
+    echo "# directories with collections should have copies of the collection dbs they are associated with or symlinks to the copies"
+    run_sort "find \"${INDEXROOT}\" -name \"*collection*\" -printf \"%p %y %l\n\""
 
     echo "# query collection1"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);\" \"${INDEXROOT}\" 2>/dev/null"
@@ -176,19 +203,29 @@ cleanup
     echo "# query collection2"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid);\" \"${INDEXROOT}\" 2>/dev/null"
 
+    echo "# query collection3"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection3.data ON (dsi_collection_name(xattr_name) == '${COLLECTION3}') AND (dsi_uuid(xattr_name, xattr_value) == collection3.data.uuid);\" \"${INDEXROOT}\" 2>/dev/null"
+
     echo "# query collection1 with gufi_vt"
     query=$(
         echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION1}'; CREATE TABLE ${COLLECTION1}.data (uuid TEXT, info1 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN ${COLLECTION1}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION1}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
         echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
     )
-    gufi_vt "${query}" | replace
+    gufi_vt "${query}" | replace # do not capture or hide stderr
 
     echo "# query collection2 with gufi_vt"
     query=$(
         echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION2}'; CREATE TABLE ${COLLECTION2}.data (uuid TEXT, info2 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN ${COLLECTION2}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION2}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
         echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
     )
-    gufi_vt "${query}" | replace
+    gufi_vt "${query}" | replace # do not capture or hide stderr
+
+    echo "# query collection3 with gufi_vt"
+    query=$(
+        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION3}'; CREATE TABLE ${COLLECTION3}.data (uuid TEXT, info2 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN ${COLLECTION3}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION3}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION3}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
+        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+    )
+    gufi_vt "${query}" | replace # do not capture or hide stderr
 
     echo "#####################################"
     echo

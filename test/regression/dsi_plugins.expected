@@ -1,5 +1,8 @@
+# generate the source tree but don't index just yet
+$ generatetree "prefix"
+
 # generate collection db for collection1
-$ sqlite3 "collection1.db" "SELECT uuid, info1 FROM data ORDER BY info1;"
+$ sqlite3 "prefix/collection1.db" "SELECT uuid, info1 FROM data ORDER BY info1;"
 <uuid>|0
 <uuid>|1
 <uuid>|2
@@ -7,30 +10,35 @@ $ sqlite3 "collection1.db" "SELECT uuid, info1 FROM data ORDER BY info1;"
 <uuid>|4
 
 # generate collection db for collection2
-$ sqlite3 "collection2.db" "SELECT uuid, info2 FROM data ORDER BY info2;"
+$ sqlite3 "prefix/collection2.db" "SELECT uuid, info2 FROM data ORDER BY info2;"
 <uuid>|5
 <uuid>|6
 <uuid>|7
 <uuid>|8
 <uuid>|9
 
-# generate the source tree but don't index just yet
-$ generatetree "prefix"
+# generate collection db for collection3
+$ sqlite3 "collection3.db" "SELECT uuid, info3 FROM data ORDER BY info3;"
+<uuid>|10
 
-# mark files as belonging to collections (two collections in one index, with one file belonging to both)
+# mark files as belonging to collections
+#     three collections in one index
+#         two good collections (1 and 2), with one file belonging to both
+#         and one file with an unprocessed collection (3) db
 
 # index updated tree with DSI plugin
 $ gufi_dir2index -x --plugin "gufi_plugin_operations:dsi_indexing_plugin" "prefix" "search"
 Creating GUFI tree search with 1 threads
+Error: Collection db "collection3.db" is outside the index. Not processing collection "collection3".
 Total Dirs:          6
-Total Non-Dirs:      14
+Total Non-Dirs:      16
 
-# directories with collections should have copies of the collection dbs they are associated with
-$ find "prefix" -name "*collection*"
-prefix/collection1.db
-prefix/collection2.db
-prefix/directory/collection1.db
-prefix/leaf_directory/collection2.db
+# directories with collections should have copies of the collection dbs they are associated with or symlinks to the copies
+$ find "prefix" -name "*collection*" -printf "%p %y %l\n"
+prefix/collection1.db f
+prefix/collection2.db f
+prefix/directory/collection1.db l prefix/collection1.db
+prefix/leaf_directory/collection2.db l prefix/collection2.db
 
 # query collection1
 $ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);" "prefix" 2>/dev/null
@@ -47,6 +55,9 @@ prefix/leaf_directory/leaf_file1|7
 prefix/leaf_directory/leaf_file2|8
 prefix/old_file|6
 prefix/repeat_name|9
+
+# query collection3
+$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection3.data ON (dsi_collection_name(xattr_name) == 'collection3') AND (dsi_uuid(xattr_name, xattr_value) == collection3.data.uuid);" "prefix" 2>/dev/null
 
 # query collection1 with gufi_vt
 $ (
@@ -70,6 +81,12 @@ prefix/leaf_directory/leaf_file2|8
 prefix/old_file|6
 prefix/repeat_name|9
 
+# query collection3 with gufi_vt
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection3'; CREATE TABLE collection3.data (uuid TEXT, info2 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN collection3.data ON (dsi_collection_name(xattr_name) == 'collection3') AND (dsi_uuid(xattr_name, xattr_value) == collection3.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+
 #####################################
 
 # delete collection dbs
@@ -77,11 +94,11 @@ $ find "prefix" -name "*collection*" -delete
 
 # fail due to missing collection dbs
 $ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;" "prefix" 2>&1 | sort | head -n 1
-Error: Could not attach local copy of collection db for collection "collection1" (original file: "collection1.db") at "prefix"
+Error: Could not attach local copy of collection db for collection "collection1" (original file: "prefix/collection1.db") at "prefix"
 
 # gufi_vt fail due to missing collection dbs
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection1'; CREATE TABLE collection1.data (uuid TEXT, info1 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
 ) | sqlite3
-Error: Could not attach local copy of collection db for collection "collection1" (original file: "collection1.db") at "prefix"
+Error: Could not attach local copy of collection db for collection "collection1" (original file: "prefix/collection1.db") at "prefix"

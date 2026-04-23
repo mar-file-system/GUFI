@@ -80,11 +80,98 @@ static int dsi_indexing_global_init(void *global) {
     return 0;
 }
 
+static void copy_collection_db(const char *srcpath, const char *dstpath) {
+    /* open+create the copied collection db first to see if it already exists */
+    const int dst = open(dstpath, O_WRONLY | O_CREAT | O_TRUNC | O_EXCL,
+                         S_IWUSR | S_IWGRP | S_IWOTH);
+
+    /* if another thread created this file already, this thread should not do anything */
+    if (dst < 0) {
+        const int err = errno;
+        if (err != EEXIST) {
+            fprintf(stderr, "Error: Could not create collection db copy \"%s\": %s (%d)\n",
+                    dstpath, strerror(err), err);
+        }
+        return;
+    }
+
+    const int src = open(srcpath, O_RDONLY);
+    if (src < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not open original collection db \"%s\": %s (%d)\n",
+                srcpath, strerror(err), err);
+        close(dst);
+        return;
+    }
+
+    struct stat st;
+    if (fstat(src, &st) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not fstat original collection db \"%s\": %s (%d)\n",
+                srcpath, strerror(err), err);
+        close(src);
+        close(dst);
+        return;
+    }
+
+    /* do the copy */
+    const ssize_t copied = copyfd(src, 0, dst, 0, st.st_size);
+    if (copied != (ssize_t) st.st_size) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not copy collection db \"%s\" to \"%s\": %s (%d)\n",
+                srcpath, dstpath, strerror(err), err);
+        /* keep going even if copy failed */
+    }
+
+    /* change ownership */
+    if (fchown(dst, st.st_uid, st.st_gid) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not fchown collection db copy \"%s\": %s (%d)\n",
+                dstpath, strerror(err), err);
+        /* fallthrough */
+    }
+
+    /* change permission bits */
+    if (fchmod(dst, st.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not fchmod collection db copy \"%s\": %s (%d)\n",
+                dstpath, strerror(err), err);
+        /* fallthrough */
+    }
+
+    close(src);
+    close(dst);
+}
+
 static void dsi_indexing_dir(void *ptr, void *user_data) {
     PCS_t *pcs = (PCS_t *) ptr;
     struct entry_data *ed = pcs->ed;
-    str_t *topath = (str_t *) pcs->data;
+    void **plugin_data = (void **) pcs->data;
+    str_t *topath = (str_t *) plugin_data[0];
+    str_t *index_parent = (str_t *) plugin_data[1];
     (void) user_data;
+
+    /* need the absolute path to use with the DSI xattr */
+    char *orig_fullpath = realpath(pcs->work->orig_root.data, NULL);
+    if (!orig_fullpath) {
+        const int err = errno;
+        fprintf(stderr, "Error: Failed to resolve path of \"%s\": %s (%d)\n",
+                pcs->work->orig_root.data, strerror(err), err);
+        return;
+    }
+
+    /*
+     * get the parent directory of the starting path to get where
+     * the specific index starts under the top directory
+     *
+     * This includes the trailing /, so don't add 1
+     *
+     * This needs to be calculated at each directory because each
+     * thread may have a different starting path. Doing lookups is
+     * possible, but requires setup.
+     */
+    const size_t parent_len = dirname_len(orig_fullpath, strlen(orig_fullpath));
+    free(orig_fullpath); /* only need length */
 
     /* find DSI xattrs and copy collection dbs into current directory */
     for(size_t i = 0; i < ed->xattrs.count; i++) {
@@ -96,66 +183,82 @@ static void dsi_indexing_dir(void *ptr, void *user_data) {
 
         /* get collection db name */
         const char *collectiondb = xattr->value + DSI_VALUE_PREFIX_LEN;
+        const size_t collectiondb_len = xattr->value_len - DSI_VALUE_PREFIX_LEN;
 
-        const int src = open(collectiondb, O_RDONLY);
-        if (src < 0) {
-            const int err = errno;
-            fprintf(stderr, "Error: Could not open original collection db \"%s\": %s (%d)\n",
-                    collectiondb, strerror(err), err);
+        /* get the directory containing the collection db */
+        const size_t collectiondb_dir_len = dirname_len(collectiondb, collectiondb_len);
+
+        if (collectiondb_dir_len <= parent_len) {
+            fprintf(stderr, "Error: Collection db \"%s\" is outside the index. Not processing collection \"%s\".\n",
+                    collectiondb, xattr->name + DSI_NAME_PREFIX_LEN);
             continue;
         }
 
-        struct stat st;
-        if (lstat(collectiondb, &st) != 0) {
-            const int err = errno;
-            fprintf(stderr, "Error: Could not lstat original collection db \"%s\": %s (%d)\n",
-                    collectiondb, strerror(err), err);
-            goto close_src;
-        }
+        /*
+         * Copy the collection db to its corresponding location in the
+         * index.
+         *     - Remove the parts of the path above the path being indexed
+         *     - Remove the collection db name itself
+         *     - Copied collection db is <remaining path>/<collection name>.db
+         *         - Renaming to collection name since collection names are
+         *           unique but collection db file names are not
+         *
+         * IMPORTANT: This assumes that the collection db is in an
+         * source directory that is indexed and is at or above the
+         * directory where it is first referenced.
+         */
+        const size_t dstpath_len = index_parent->len + 1 +
+            (collectiondb_dir_len - parent_len) +
+            xattr->name_len - DSI_NAME_PREFIX_LEN + 3;
+        char *dstpath = malloc(dstpath_len + 1);
+        SNFORMAT_S(dstpath, dstpath_len + 1, 5,
+                   index_parent->data, index_parent->len,
+                   "/", (size_t) 1,
+                   /* already has / */
+                   collectiondb + parent_len, collectiondb_dir_len - parent_len,
+                   xattr->name + DSI_NAME_PREFIX_LEN, xattr->name_len - DSI_NAME_PREFIX_LEN,
+                   ".db", (size_t) 3);
+
+        copy_collection_db(collectiondb, dstpath);
 
         /*
-         * Renaming to collection name since collection names are
-         * unique but collection db file names are not
+         * whether:
+         *     - this thread did not create the collection db file
+         *     - this thread created the collection db file, whether or not the copy succeeded
+         *
+         * create a symlink in this index directory to point to the
+         * copy of the collection db in the index
          */
-        const size_t dstpath_len = topath->len + 1 + xattr->name_len - DSI_NAME_PREFIX_LEN + 3;
-        char *dstpath = malloc(dstpath_len + 1);
-        SNFORMAT_S(dstpath, dstpath_len + 1, 4,
+        const size_t sym_len = topath->len + 1 + xattr->name_len - DSI_NAME_PREFIX_LEN + 3;
+        char *sym = malloc(sym_len + 1);
+        SNFORMAT_S(sym, sym_len + 1, 4,
                    topath->data, topath->len,
                    "/", (size_t) 1,
                    xattr->name + DSI_NAME_PREFIX_LEN, xattr->name_len - DSI_NAME_PREFIX_LEN,
                    ".db", (size_t) 3);
 
-        const int dst = open(dstpath, O_WRONLY | O_CREAT | O_TRUNC,
-                             st.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO));
-        if (dst < 0) {
+        /* no relative paths in the symlink */
+        char *fullpath = realpath(dstpath, NULL);
+        if (!fullpath) {
             const int err = errno;
-            fprintf(stderr, "Error: Could not create collection db copy \"%s\": %s (%d)\n",
+            fprintf(stderr, "Error: Unable to get real path of %s: %s (%d)\n",
                     dstpath, strerror(err), err);
-            goto free_dstpath;
+            free(dstpath);
+            continue;
         }
 
-        /* do the copy */
-        const ssize_t copied = copyfd(src, 0, dst, 0, st.st_size);
-        if (copied != (ssize_t) st.st_size) {
+        if (symlink(fullpath, sym) != 0) {
             const int err = errno;
-            fprintf(stderr, "Error: Could not copy collection db \"%s\" to \"%s\": %s (%d)\n",
-                    collectiondb, dstpath, strerror(err), err);
-            /* keep going and change ownership even if copy failed */
+            /* if the symlink path is also the collection db path, not an error */
+            if (!((err == EEXIST) && (dstpath_len == sym_len) && !strncmp(dstpath, sym, sym_len))) {
+                fprintf(stderr, "Error: Symlink \"%s\" -> \"%s\" failed: %s (%d)\n",
+                        sym, fullpath, strerror(err), err);
+            }
         }
 
-        /* change ownership */
-        if (fchown(dst, st.st_uid, st.st_gid) != 0) {
-            const int err = errno;
-            fprintf(stderr, "Error: Could not fchown collection db copy \"%s\": %s (%d)\n",
-                    dstpath, strerror(err), err);
-            /* fallthrough */
-        }
-
-        close(dst);
-      free_dstpath:
+        free(fullpath);
+        free(sym);
         free(dstpath);
-      close_src:
-        close(src);
     }
 }
 
