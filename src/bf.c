@@ -378,9 +378,9 @@ void show_input(struct input* in, int retval) {
     printf("in.external_attach.validate = %d\n",            in->external_attach.validate);
     size_t i = 0;
     sll_loop(&in->external_attach.setup, node) {
-        eus_t *eus = (eus_t *) sll_node_data(node);
+        eas_t *eas = (eas_t *) sll_node_data(node);
         printf("in.external_attach.setup[%zu] = ('%s', '%s', '%s', '%s')\n",
-               i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
+               i++, eas->basename.data, eas->table.data, eas->template_table.data, eas->view.data);
     }
     printf("\n");
 
@@ -757,22 +757,22 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_EXTERNAL_ATTACH_SHORT:
                 {
-                    eus_t *eus = calloc(1, sizeof(*eus));
+                    eas_t *eas = calloc(1, sizeof(*eas));
 
-                    INSTALL_STR(&eus->basename, optarg);
+                    INSTALL_STR(&eas->basename, optarg);
 
                     optarg = argv[optind];
-                    INSTALL_STR(&eus->table, optarg);
+                    INSTALL_STR(&eas->table, optarg);
 
                     optarg = argv[++optind];
-                    INSTALL_STR(&eus->template_table, optarg);
+                    INSTALL_STR(&eas->template_table, optarg);
 
                     optarg = argv[++optind];
-                    INSTALL_STR(&eus->view, optarg);
+                    INSTALL_STR(&eas->view, optarg);
 
                     optarg = argv[++optind];
 
-                    sll_push_back(&in->external_attach.setup, eus);
+                    sll_push_back(&in->external_attach.setup, eas);
                 }
                 break;
 

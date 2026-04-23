@@ -79,7 +79,7 @@ void attach_extdbs(struct input *in, sqlite3 *db,
      * if necessary, change this to attach+query+detach one at a time
      */
     sll_loop(&in->external_attach.setup, node) {
-        eus_t *user = (eus_t *) sll_node_data(node);
+        eas_t *user = (eas_t *) sll_node_data(node);
 
         char basename_comp[MAXSQL];
         const size_t basename_comp_len = SNFORMAT_S(basename_comp, sizeof(basename_comp), 7,
@@ -172,7 +172,7 @@ void detach_extdbs(struct input *in, sqlite3 *db,
                    size_t *extdb_count) {
     /* detach each external db */
     sll_loop(&in->external_attach.setup, node) {
-        eus_t *user = (eus_t *) sll_node_data(node);
+        eas_t *user = (eas_t *) sll_node_data(node);
 
         /* drop user defined view */
         char drop_extdb_view[MAXSQL];

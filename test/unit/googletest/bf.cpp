@@ -244,12 +244,12 @@ static void check_input(const int /* argc */, const char **argv,
         {
             sll_node_t *head = sll_head_node(&in->external_attach.setup);
             ASSERT_NE(head,                                   nullptr);
-            eus_t *eus = (eus_t *) sll_node_data(head);
-            ASSERT_NE(eus,                                    nullptr);
-            EXPECT_EQ(eus->basename.data,                     external_attach_arg0);
-            EXPECT_EQ(eus->table.data,                        external_attach_arg1);
-            EXPECT_EQ(eus->template_table.data,               external_attach_arg2);
-            EXPECT_EQ(eus->view.data,                         external_attach_arg3);
+            eas_t *eas = (eas_t *) sll_node_data(head);
+            ASSERT_NE(eas,                                    nullptr);
+            EXPECT_EQ(eas->basename.data,                     external_attach_arg0);
+            EXPECT_EQ(eas->table.data,                        external_attach_arg1);
+            EXPECT_EQ(eas->template_table.data,               external_attach_arg2);
+            EXPECT_EQ(eas->view.data,                         external_attach_arg3);
         }
 
         {

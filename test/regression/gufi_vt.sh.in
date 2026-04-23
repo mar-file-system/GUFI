@@ -513,9 +513,30 @@ query=$(
 )
 query_vt "${query}"
 
+echo "# Bad Q (no arguments)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", Q=\"\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
 echo "# Bad Q (not enough arguments)"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", Q=\"basename\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Bad Q (not enough arguments)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", Q=\"basename tab\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Bad Q (not enough arguments)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", Q=\"basename tab temp\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
@@ -527,9 +548,30 @@ query=$(
 )
 query_vt "${query}"
 
+echo "# Bad external_attach (no arguments)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", external_attach=\"\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
 echo "# Bad external_attach (not enough arguments)"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", external_attach=\"basename\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Bad external_attach (not enough arguments)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", external_attach=\"basename tab\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Bad external_attach (not enough arguments)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);\", E=\"SELECT * FROM vrpentries;\", external_attach=\"basename tab temp\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"

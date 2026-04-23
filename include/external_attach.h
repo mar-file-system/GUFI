@@ -190,13 +190,13 @@ size_t external_increment_attachname(char *dst, const size_t dst_size,
 size_t external_decrement_attachname(char *dst, const size_t dst_size,
                                      void *args);
 
-typedef struct external_user_setup {
+typedef struct external_attach_setup {
     str_t basename;
     /* str_t attachname (pulled from table) */
     str_t table;
     str_t template_table;
     str_t view;
-} eus_t;
+} eas_t;
 
 /*
  * external_with_template
@@ -212,12 +212,12 @@ typedef struct external_user_setup {
  * @in db                      handle to the main db
  * @in type                    external database type (xattrs, user, etc.)
  * @in type_len                length of type
- * @in eus                     list of external user db setup configs
+ * @in eas                     list of external user db setup configs
  * @return the number of views created
  */
 int external_with_template(sqlite3 *db,
                            const str_t *type,
-                           sll_t *eus);
+                           sll_t *eas);
 
 /*
  * external_with_template_cleanup
@@ -227,12 +227,12 @@ int external_with_template(sqlite3 *db,
  * @in db                      handle to the main db
  * @in type                    external database type (xattrs, user, etc.)
  * @in type_len                length of type
- * @in eus                     list of external user db setup configs
+ * @in eas                     list of external user db setup configs
  * @return 0
  */
 int external_with_template_cleanup(sqlite3 *db,
                                    const str_t *type,
-                                   sll_t *eus);
+                                   sll_t *eas);
 
 #ifdef __cplusplus
 }

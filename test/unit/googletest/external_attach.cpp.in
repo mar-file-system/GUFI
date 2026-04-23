@@ -305,13 +305,13 @@ TEST(gufi_query_external, NULL_db) {
     EXPECT_NO_THROW(create_extdb_views_iter(nullptr, "0"));
     EXPECT_NO_THROW(drop_extdb_views(nullptr));
 
-    eus_t eus;
-    memset(&eus, 0, sizeof(eus));
-    eus.view = REFSTR("testview", 8);
+    eas_t eas;
+    memset(&eas, 0, sizeof(eas));
+    eas.view = REFSTR("testview", 8);
 
     struct input in;
     sll_init(&in.external_attach.setup);
-    sll_push_back(&in.external_attach.setup, &eus);
+    sll_push_back(&in.external_attach.setup, &eas);
 
     std::size_t extdb_count = 0;
     detach_extdbs(&in, nullptr, nullptr, 0, &extdb_count);

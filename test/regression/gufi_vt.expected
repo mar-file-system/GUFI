@@ -1173,10 +1173,31 @@ $ (
 Attaching external databases require template files attached with -I
 Runtime error near line 2: SQL logic error
 
+# Bad Q (no arguments)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", Q="");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Bad external attach database args (21)
+
 # Bad Q (not enough arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", Q="basename");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Bad external attach database args (21)
+
+# Bad Q (not enough arguments)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", Q="basename tab");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Bad external attach database args (21)
+
+# Bad Q (not enough arguments)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", Q="basename tab temp");SELECT * FROM gufi;"
 ) | sqlite3
 Runtime error near line 2: Bad external attach database args (21)
 
@@ -1188,10 +1209,31 @@ $ (
 Attaching external databases require template files attached with -I
 Runtime error near line 2: SQL logic error
 
+# Bad external_attach (no arguments)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", external_attach="");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Bad external attach database args (21)
+
 # Bad external_attach (not enough arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", external_attach="basename");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Bad external attach database args (21)
+
+# Bad external_attach (not enough arguments)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", external_attach="basename tab");SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: Bad external attach database args (21)
+
+# Bad external_attach (not enough arguments)
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", external_attach="basename tab temp");SELECT * FROM gufi;"
 ) | sqlite3
 Runtime error near line 2: Bad external attach database args (21)
 

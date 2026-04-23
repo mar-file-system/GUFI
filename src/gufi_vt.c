@@ -158,7 +158,7 @@ static void gq_cmd_init(gq_cmd_t *cmd) {
 
 static void gq_cmd_destroy(gq_cmd_t *cmd) {
     sll_destroy(&cmd->external_copy, ecs_free);    /* list of allocated ecs_t */
-    sll_destroy(&cmd->external_attach, free);      /* list of allocated eus_t */
+    sll_destroy(&cmd->external_attach, free);      /* list of allocated eas_t */
     sll_destroy(&cmd->indexroots, NULL);           /* list of references to argv[i] */
     sll_destroy(&cmd->plugins, NULL);              /* list of references to argv[i] */
     sll_destroy(&cmd->remote_args, free);          /* list of allocated str_t */
@@ -293,13 +293,13 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         }
 
         sll_loop(&cmd->external_attach, node) {
-            eus_t *eus = (eus_t *) sll_node_data(node);
+            eas_t *eas = (eas_t *) sll_node_data(node);
             write_with_resize(&flat, &size, &len,
                               "--external-attach '%s' '%s' '%s' '%s' ",
-                              eus->basename.data,
-                              eus->table.data,
-                              eus->template_table.data,
-                              eus->view.data);
+                              eas->basename.data,
+                              eas->table.data,
+                              eas->template_table.data,
+                              eas->view.data);
         }
 
         sll_loop(&cmd->external_copy, node) {
@@ -395,12 +395,12 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         }
 
         sll_loop(&cmd->external_attach, node) {
-            eus_t *eus = (eus_t *) sll_node_data(node);
+            eas_t *eas = (eas_t *) sll_node_data(node);
             argv[argc++] = "--external-attach";
-            argv[argc++] = eus->basename.data;
-            argv[argc++] = eus->table.data;
-            argv[argc++] = eus->template_table.data;
-            argv[argc++] = eus->view.data;
+            argv[argc++] = eas->basename.data;
+            argv[argc++] = eas->table.data;
+            argv[argc++] = eas->template_table.data;
+            argv[argc++] = eas->view.data;
         }
 
         sll_loop(&cmd->external_copy, node) {
@@ -617,7 +617,7 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
 
     gufi_vtab *pNew = NULL;
     const int rc = sqlite3_declare_vtab(db, schema);
-    if(rc == SQLITE_OK){
+    if (rc == SQLITE_OK) {
         pNew = (gufi_vtab *)sqlite3_malloc( sizeof(*pNew) );
         if( pNew==0 ) return SQLITE_NOMEM;
         memset(pNew, 0, sizeof(*pNew));
@@ -984,22 +984,21 @@ static int parse_external_attach_args(sll_t *external_attach, char *arg) {
         return -1;
     }
 
-    eus_t *eus = calloc(1, sizeof(*eus));
-    set_refstr(&eus->basename,       basename);
-    set_refstr(&eus->table,          table);
-    set_refstr(&eus->template_table, template);
-    set_refstr(&eus->view,           view);
+    eas_t *eas = calloc(1, sizeof(*eas));
+    set_refstr(&eas->basename,       basename);
+    set_refstr(&eas->table,          table);
+    set_refstr(&eas->template_table, template);
+    set_refstr(&eas->view,           view);
 
-    sll_push_back(external_attach, eus);
+    sll_push_back(external_attach, eas);
 
     return 0;
 }
 
-/* parse external_copy='<basename patter> <SQL>' */
+/* parse external_copy='<basename pattern> <SQL>' */
 static int parse_external_copy_args(sll_t *external_copy, char *arg) {
-    char *saveptr          = NULL;
-    char *basename_pattern = strtok_r(arg,  " ", &saveptr);
-    char *sql              = strtok_r(NULL, " ", &saveptr);
+    char *sql              = NULL;
+    char *basename_pattern = strtok_r(arg,  " ", &sql);
 
     if (!basename_pattern || !sql) {
         return -1;
@@ -1008,6 +1007,11 @@ static int parse_external_copy_args(sll_t *external_copy, char *arg) {
     ecs_t *ecs = calloc(1, sizeof(*ecs));
     set_refstr(&ecs->basename_pattern, basename_pattern);
     set_refstr(&ecs->sql,              sql);
+
+    if (!ecs->basename_pattern.len || !ecs->sql.len) {
+        free(ecs);
+        return -1;
+    }
 
     sll_push_back(external_copy, ecs);
 
