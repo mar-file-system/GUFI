@@ -82,6 +82,7 @@ add_dependencies(dsi install_dependencies)
 # DSI indexing plugin
 add_library(dsi_indexing SHARED
   dsi_indexing.c
+  "${CMAKE_SOURCE_DIR}/src/str.c"
   $<TARGET_OBJECTS:dsi>
 )
 add_dependencies(dsi_indexing install_dependencies)

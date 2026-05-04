@@ -37,8 +37,8 @@ Total Non-Dirs:      16
 $ find "prefix" -name "*collection*" -printf "%p %y %l\n"
 prefix/collection1.db f
 prefix/collection2.db f
-prefix/directory/collection1.db l prefix/collection1.db
-prefix/leaf_directory/collection2.db l prefix/collection2.db
+prefix/directory/collection1.db l ../collection1.db
+prefix/leaf_directory/collection2.db l ../collection2.db
 
 # query collection1
 $ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);" "prefix" 2>/dev/null
