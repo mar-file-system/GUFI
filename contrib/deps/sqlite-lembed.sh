@@ -110,8 +110,8 @@ if [[ ! -d "${lembed_prefix}" ]]; then
     cd "${llama_build}"
     mkdir -p build
     cd build
-    CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_prefix}" -DCMAKE_INSTALL_LIBDIR=lib -DLLAMA_METAL=OFF ${OMP_FLAGS} # not quoting OMP_FLAGS
-    make -j "${THREADS}"
+    CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_prefix}" -DCMAKE_INSTALL_LIBDIR=lib -DLLAMA_BUILD_EXAMPLES=Off -DLLAMA_BUILD_TESTS=Off -DLLAMA_CCACHE=Off -DLLAMA_METAL=OFF ${OMP_FLAGS} # not quoting OMP_FLAGS
+    make # do not build with multiple threads
     make -j "${THREADS}" install
 
     cd "${lembed_build}"
