@@ -95,7 +95,8 @@ QPTPool_ctx_t *QPTPool_init(const size_t nthreads, void *args);
 QPTPool_ctx_t *QPTPool_init_with_props(const size_t nthreads, void *args,
                                        QPTPoolNextFunc_t next_func, void *next_args,
                                        const uint64_t queue_limit, const char *swap_prefix,
-                                       const uint64_t steal_num, const uint64_t steal_denom);
+                                       const uint64_t steal_num, const uint64_t steal_denom,
+                                       const int stop_on_error);
 
 /*
  * Set QPTPool context properties
@@ -109,6 +110,7 @@ int QPTPool_set_queue_limit(QPTPool_ctx_t *ctx, const uint64_t queue_limit); /* 
 int QPTPool_set_swap_prefix(QPTPool_ctx_t *ctx, const char *swap_prefix);
 #endif
 int QPTPool_set_steal(QPTPool_ctx_t *ctx, const uint64_t num, const uint64_t denom);
+int QPTPool_set_stop_on_error(QPTPool_ctx_t *ctx); /* defaults to 0 - set to 1 by this function */
 
 /*
  * Get QPTPool context properties
@@ -124,6 +126,7 @@ int QPTPool_get_queue_limit(QPTPool_ctx_t *ctx, uint64_t *queue_limit);
 int QPTPool_get_swap_prefix(QPTPool_ctx_t *ctx, const char **swap_prefix);
 #endif
 int QPTPool_get_steal(QPTPool_ctx_t *ctx, uint64_t *num, uint64_t *denom);
+int QPTPool_get_stop_on_error(QPTPool_ctx_t *ctx, int *stop_on_error);
 
 /*
  * QPTPool_init only allocates memory - call this to start threads
@@ -275,6 +278,9 @@ uint64_t QPTPool_work_swapped_count(QPTPool_ctx_t *ctx);
 /* total size of work items that were swapped out (function pointer + arg size + arg contents) */
 size_t QPTPool_work_swapped_size(QPTPool_ctx_t *ctx);
 #endif
+
+/* whether or not the pool stopped on an error */
+int QPTPool_stopped_on_error(QPTPool_ctx_t *ctx);
 
 /* clean up QPTPool context data */
 void QPTPool_destroy(QPTPool_ctx_t *ctx);

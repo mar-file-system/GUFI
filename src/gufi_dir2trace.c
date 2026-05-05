@@ -309,7 +309,7 @@ int main(int argc, char *argv[]) {
     }
 
     const uint64_t queue_limit = get_queue_limit(pa.in.target_memory, pa.in.maxthreads);
-    QPTPool_ctx_t *ctx = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2);
+    QPTPool_ctx_t *ctx = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2, 1);
     if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(ctx);
@@ -365,6 +365,10 @@ int main(int argc, char *argv[]) {
     /* don't count as part of processtime */
 
     const uint64_t thread_count = QPTPool_threads_completed(ctx);
+
+    if (QPTPool_stopped_on_error(ctx) == 1) {
+        rc = EXIT_FAILURE;
+    }
 
     QPTPool_destroy(ctx);
 

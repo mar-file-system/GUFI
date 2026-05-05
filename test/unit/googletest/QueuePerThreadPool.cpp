@@ -115,7 +115,7 @@ TEST(QueuePerThreadPool, no_start_stop) {
 /* C Standard 6.10.3/C++ Standard 16.3 Macro replacement */
 static void *qptpool_init_with_props(const std::size_t threads = -1,
                                      const uint64_t queue_limit = 0) {
-    return QPTPool_init_with_props(threads, nullptr, nullptr, nullptr, queue_limit, "", 0, 0);
+    return QPTPool_init_with_props(threads, nullptr, nullptr, nullptr, queue_limit, "", 0, 0, 0);
 }
 
 TEST(QueuePreThreadPool, bad_init) {
@@ -832,6 +832,89 @@ TEST(QueuePerThreadPool, swap) {
 }
 #endif
 
+static void push_after_error(QPTPool_ctx_t *ctx) {
+    EXPECT_EQ(QPTPool_enqueue(ctx, return_data, nullptr), QPTPool_enqueue_ERROR);
+
+    #ifdef QPTPOOL_SWAP
+    EXPECT_EQ(QPTPool_enqueue_swappable(ctx,
+                                        return_data, nullptr,
+                                        nullptr, nullptr),
+              QPTPool_enqueue_ERROR);
+
+    EXPECT_EQ(QPTPool_enqueue_here(ctx, 0, QPTPool_enqueue_WAIT,
+                                   return_data, nullptr,
+                                   nullptr, nullptr),
+              QPTPool_enqueue_ERROR);
+    #else
+    EXPECT_EQ(QPTPool_enqueue_here(ctx, 0, QPTPool_enqueue_WAIT,
+                                   return_data, nullptr),
+              QPTPool_enqueue_ERROR);
+    #endif
+}
+
+TEST(QueuePerThreadPool, stop_on_error) {
+    // enqueue before starting thread pool
+    {
+        QPTPool_ctx_t *ctx = QPTPool_init(THREADS, nullptr);
+        ASSERT_NE(ctx, nullptr);
+        EXPECT_EQ(QPTPool_set_stop_on_error(ctx), 0);
+
+        // push work that returns success
+        EXPECT_EQ(QPTPool_enqueue(ctx, return_data, (void *) (uintptr_t) 0), QPTPool_enqueue_WAIT);
+
+        // push work function that returns an error
+        EXPECT_EQ(QPTPool_enqueue(ctx, return_data, (void *) (uintptr_t) 1), QPTPool_enqueue_WAIT);
+
+        // start after enqueuing work
+        ASSERT_EQ(QPTPool_start(ctx), 0);
+
+        // wait for work to drain
+        QPTPool_wait(ctx);
+
+        // pushing again fails
+        push_after_error(ctx);
+
+        QPTPool_stop(ctx);
+
+        EXPECT_GE(QPTPool_threads_started(ctx),   (uint64_t) 1); // at least 1 thread was started, possibly 2
+        EXPECT_LE(QPTPool_threads_completed(ctx), (uint64_t) 1); // at most 1 thread completed successfully
+        EXPECT_EQ(QPTPool_stopped_on_error(ctx),             1);
+
+        QPTPool_destroy(ctx);
+    }
+
+    // enqueue after starting thread pool
+    {
+        QPTPool_ctx_t *ctx = QPTPool_init(THREADS, nullptr);
+        ASSERT_NE(ctx, nullptr);
+        EXPECT_EQ(QPTPool_set_stop_on_error(ctx), 0);
+        ASSERT_EQ(QPTPool_start(ctx), 0);
+
+        // push work that returns success
+        EXPECT_EQ(QPTPool_enqueue(ctx, return_data, (void *) (uintptr_t) 0), QPTPool_enqueue_WAIT);
+
+        // wait for successful work to complete
+        QPTPool_wait(ctx);
+
+        // push work function that returns an error
+        EXPECT_EQ(QPTPool_enqueue(ctx, return_data, (void *) (uintptr_t) 1), QPTPool_enqueue_WAIT);
+
+        // wait for failed work to complete
+        QPTPool_wait(ctx);
+
+        // pushing again fails
+        push_after_error(ctx);
+
+        QPTPool_stop(ctx);
+
+        EXPECT_EQ(QPTPool_threads_started(ctx),   (uint64_t) 2); // two threads must have started
+        EXPECT_EQ(QPTPool_threads_completed(ctx), (uint64_t) 1); // only one thread completed successfully
+        EXPECT_EQ(QPTPool_stopped_on_error(ctx),             1);
+
+        QPTPool_destroy(ctx);
+    }
+}
+
 TEST(QueuePerThreadPool, prop_nthreads) {
     QPTPool_ctx_t *ctx = QPTPool_init(THREADS, nullptr);
     ASSERT_NE(ctx, nullptr);
@@ -882,15 +965,15 @@ TEST(QueuePerThreadPool, prop_next) {
     {
         QPTPool_ctx_t *ctx = QPTPool_init(THREADS, nullptr);
         EXPECT_EQ(QPTPool_set_next(nullptr, test_next_func, nullptr), 1);
-        EXPECT_EQ(QPTPool_set_next(ctx,    nullptr,        nullptr), 1);
-        EXPECT_EQ(QPTPool_set_next(ctx,    test_next_func, nullptr), 0);
+        EXPECT_EQ(QPTPool_set_next(ctx,     nullptr,        nullptr), 1);
+        EXPECT_EQ(QPTPool_set_next(ctx,     test_next_func, nullptr), 0);
 
         QPTPoolNextFunc_t get_next_func = nullptr;
         void *get_next_func_args = nullptr;
         EXPECT_EQ(QPTPool_get_next(nullptr, &get_next_func, &get_next_func_args), 1);
-        EXPECT_EQ(QPTPool_get_next(ctx,    nullptr,        &get_next_func_args), 0);
-        EXPECT_EQ(QPTPool_get_next(ctx,    &get_next_func, nullptr),             0);
-        EXPECT_EQ(QPTPool_get_next(ctx,    &get_next_func, &get_next_func_args), 0);
+        EXPECT_EQ(QPTPool_get_next(ctx,     nullptr,        &get_next_func_args), 0);
+        EXPECT_EQ(QPTPool_get_next(ctx,     &get_next_func, nullptr),             0);
+        EXPECT_EQ(QPTPool_get_next(ctx,     &get_next_func, &get_next_func_args), 0);
         EXPECT_EQ(get_next_func, test_next_func);
         EXPECT_EQ(get_next_func_args, nullptr);
         QPTPool_destroy(ctx);
@@ -908,7 +991,7 @@ TEST(QueuePerThreadPool, prop_queue_limit) {
     // bad state
     {
         setup_pool(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_queue_limit(ctx,    queue_limit),      1);
+        EXPECT_EQ(QPTPool_set_queue_limit(ctx,     queue_limit),      1);
         QPTPool_stop(ctx);
         QPTPool_destroy(ctx);
     }
@@ -916,21 +999,21 @@ TEST(QueuePerThreadPool, prop_queue_limit) {
     {
         QPTPool_ctx_t *ctx = QPTPool_init(THREADS, nullptr);
         EXPECT_EQ(QPTPool_set_queue_limit(nullptr, queue_limit),      1);
-        EXPECT_EQ(QPTPool_set_queue_limit(ctx,    queue_limit),      0);
+        EXPECT_EQ(QPTPool_set_queue_limit(ctx,     queue_limit),      0);
 
         uint64_t get_queue_limit = 0;
         EXPECT_EQ(QPTPool_get_queue_limit(nullptr, &get_queue_limit), 1);
-        EXPECT_EQ(QPTPool_get_queue_limit(ctx,    nullptr),          0);
-        EXPECT_EQ(QPTPool_get_queue_limit(ctx,    &get_queue_limit), 0);
+        EXPECT_EQ(QPTPool_get_queue_limit(ctx,     nullptr),          0);
+        EXPECT_EQ(QPTPool_get_queue_limit(ctx,     &get_queue_limit), 0);
         EXPECT_EQ(get_queue_limit, static_cast<std::size_t>(THREADS));
 
         // swap path exists and is a directory
         EXPECT_EQ(mkdir(dir, S_IRWXU), 0);
-        EXPECT_EQ(QPTPool_set_queue_limit(ctx,    queue_limit),      1);
+        EXPECT_EQ(QPTPool_set_queue_limit(ctx,     queue_limit),      1);
         EXPECT_EQ(rmdir(dir), 0);
 
         // reset to 0 to destroy swap and not recreate it
-        EXPECT_EQ(QPTPool_set_queue_limit(ctx,    0),                0);
+        EXPECT_EQ(QPTPool_set_queue_limit(ctx,     0),                0);
 
         QPTPool_destroy(ctx);
     }
@@ -943,7 +1026,7 @@ TEST(QueuePerThreadPool, prop_queue_limit) {
         EXPECT_EQ(rmdir(dir), 0);
 
         // good
-        QPTPool_ctx_t *ctx = QPTPool_init_with_props(THREADS, nullptr, nullptr, nullptr, 1, "", 0, 0);
+        QPTPool_ctx_t *ctx = QPTPool_init_with_props(THREADS, nullptr, nullptr, nullptr, 1, "", 0, 0, 0);
         EXPECT_NE(ctx, nullptr);
         QPTPool_destroy(ctx);
     }
@@ -955,27 +1038,27 @@ TEST(QueuePerThreadPool, prop_swap_prefix) {
     // bad state
     {
         setup_pool(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_swap_prefix(ctx,    swap_prefix), 1);
+        EXPECT_EQ(QPTPool_set_swap_prefix(ctx,    swap_prefix),       1);
         QPTPool_stop(ctx);
         QPTPool_destroy(ctx);
     }
 
     {
         QPTPool_ctx_t *ctx = QPTPool_init(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_swap_prefix(nullptr, swap_prefix), 1);
+        EXPECT_EQ(QPTPool_set_swap_prefix(nullptr, swap_prefix),      1);
 
         // set, but since queue_limit is 0, nothing happens
-        EXPECT_EQ(QPTPool_set_swap_prefix(ctx,    swap_prefix), 0);
+        EXPECT_EQ(QPTPool_set_swap_prefix(ctx,    swap_prefix),       0);
 
         const char *get_swap_prefix = nullptr;
         EXPECT_EQ(QPTPool_get_swap_prefix(nullptr, &get_swap_prefix), 1);
-        EXPECT_EQ(QPTPool_get_swap_prefix(ctx,    nullptr),          0);
-        EXPECT_EQ(QPTPool_get_swap_prefix(ctx,    &get_swap_prefix), 0);
+        EXPECT_EQ(QPTPool_get_swap_prefix(ctx,     nullptr),          0);
+        EXPECT_EQ(QPTPool_get_swap_prefix(ctx,     &get_swap_prefix), 0);
         EXPECT_STREQ(get_swap_prefix, swap_prefix);
 
         // queue_limit > 0, so swap is started
-        EXPECT_EQ(QPTPool_set_queue_limit(ctx,    THREADS),     0);
-        EXPECT_EQ(QPTPool_set_swap_prefix(ctx,    swap_prefix), 0);
+        EXPECT_EQ(QPTPool_set_queue_limit(ctx,     THREADS),          0);
+        EXPECT_EQ(QPTPool_set_swap_prefix(ctx,     swap_prefix),      0);
 
         // change swap prefix but swap path exists and is a directory
         char dir[1024];
@@ -1004,17 +1087,43 @@ TEST(QueuePerThreadPool, prop_steal) {
 
     {
         QPTPool_ctx_t *ctx = QPTPool_init(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_steal(nullptr, num, denom), 1);
-        EXPECT_EQ(QPTPool_set_steal(ctx,     num, denom), 0);
+        EXPECT_EQ(QPTPool_set_steal(nullptr, num, denom),             1);
+        EXPECT_EQ(QPTPool_set_steal(ctx,     num, denom),             0);
 
         uint64_t get_num = 0;
         uint64_t get_denom = 0;
-        EXPECT_EQ(QPTPool_get_steal(nullptr, &get_num, &get_denom), 1);
-        EXPECT_EQ(QPTPool_get_steal(ctx,    nullptr,  &get_denom), 0);
-        EXPECT_EQ(QPTPool_get_steal(ctx,    &get_num, nullptr),    0);
-        EXPECT_EQ(QPTPool_get_steal(ctx,    &get_num, &get_denom), 0);
+        EXPECT_EQ(QPTPool_get_steal(nullptr, &get_num, &get_denom),   1);
+        EXPECT_EQ(QPTPool_get_steal(ctx,     nullptr,  &get_denom),   0);
+        EXPECT_EQ(QPTPool_get_steal(ctx,     &get_num, nullptr),      0);
+        EXPECT_EQ(QPTPool_get_steal(ctx,     &get_num, &get_denom),   0);
         EXPECT_EQ(get_num, num);
         EXPECT_EQ(get_denom, denom);
+        QPTPool_destroy(ctx);
+    }
+}
+
+TEST(QueuePerThreadPool, prop_stop_on_error) {
+    // bad state
+    {
+        setup_pool(THREADS, nullptr);
+        EXPECT_EQ(QPTPool_set_stop_on_error(ctx), 1);
+        QPTPool_stop(ctx);
+        QPTPool_destroy(ctx);
+    }
+
+    {
+        QPTPool_ctx_t *ctx = QPTPool_init(THREADS, nullptr);
+        EXPECT_EQ(QPTPool_stopped_on_error(ctx),                      0);
+        EXPECT_EQ(QPTPool_set_stop_on_error(nullptr),                 1);
+        EXPECT_EQ(QPTPool_set_stop_on_error(ctx),                     0);
+
+        int stop_on_error = 0;
+        EXPECT_EQ(QPTPool_get_stop_on_error(nullptr, &stop_on_error), 1);
+        EXPECT_EQ(QPTPool_get_stop_on_error(ctx,     nullptr),        0);
+        EXPECT_EQ(QPTPool_get_stop_on_error(ctx,     &stop_on_error), 0);
+        EXPECT_EQ(stop_on_error,                                      1);
+        EXPECT_EQ(QPTPool_stopped_on_error(nullptr),                  0);
+        EXPECT_EQ(QPTPool_stopped_on_error(ctx),                      0);
         QPTPool_destroy(ctx);
     }
 }

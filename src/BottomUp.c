@@ -443,7 +443,7 @@ QPTPool_ctx_t *parallel_bottomup_init(const size_t thread_count,
     trie_insert(ua->skip, ".",  1, NULL, NULL);
     trie_insert(ua->skip, "..", 2, NULL, NULL);
 
-    QPTPool_ctx_t *ctx = QPTPool_init_with_props(thread_count, ua, NULL, NULL, 0, "", 1, 2);
+    QPTPool_ctx_t *ctx = QPTPool_init_with_props(thread_count, ua, NULL, NULL, 0, "", 1, 2, 0);
     if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(ctx);

@@ -109,6 +109,17 @@ typedef struct QPTPool {
         uint64_t denom;      /* max(queue.size * num / denom, 1) items from the front */
     } steal;
 
+    int stop_on_error;       /* if set, the current thread stops processing immediately after
+                              * an error while other threads complete their claimed queue
+                              * (processing across all threads is not stopped immediately in
+                              * order to not globally lock on every single work item as they
+                              * are being peeled off for processing)
+                              *
+                              * additionally, new work is not accepted for any thread
+                              */
+
+    int errored;             /* check this if stop_on_error is set */
+
     void *args;
 
     struct {
@@ -255,44 +266,48 @@ static inline void maybe_steal_work(QPTPool_t *pool, QPTPoolThreadData_t *tw, si
  */
 static void wait_for_work(QPTPool_t *pool, QPTPoolThreadData_t *tw) {
     while (
+        /* not stopping on error or stopping on error and error occurred */
+        ((pool->stop_on_error == 0) || ((pool->stop_on_error == 1) && (pool->errored == 0))) &&
         (
-            /* running, so sit here while there is
-             *     - no work in the pool OR
-             *     - no work for this thread to process
-             */
-            (pool->state == RUNNING) &&
             (
-                /* no work in pool */
-                (!pool->incomplete && !pool->swapped)
-
-                /*
-                 * Using OR here because AND would loop on
-                 * non-empty pool + no work for this thread
+                /* running, so sit here while there is
+                 *     - no work in the pool OR
+                 *     - no work for this thread to process
                  */
-                ||
+                (pool->state == RUNNING) &&
+                (
+                    /* no work in pool */
+                    (!pool->incomplete && !pool->swapped)
 
-                /* no claimed or waiting work in this thread */
-                (!tw->claimed.size && !tw->waiting.size)
-            )
-        )
-        ||
-        (
-            /*
-             * waiting to stop, but there is still work (that might
-             * spawn more work), so sit here until there is either
-             *     - no work across the pool OR
-             *     - work for this thread to process
-             */
-            (pool->state == STOPPING) &&
+                    /*
+                     * Using OR here because AND would loop on
+                     * non-empty pool + no work for this thread
+                     */
+                    ||
+
+                    /* no claimed or waiting work in this thread */
+                    (!tw->claimed.size && !tw->waiting.size)
+                    )
+                )
+            ||
             (
-                /* work somewhere in pool */
-                (pool->incomplete || pool->swapped) &&
+                /*
+                 * waiting to stop, but there is still work (that might
+                 * spawn more work), so sit here until there is either
+                 *     - no work across the pool OR
+                 *     - work for this thread to process
+                 */
+                (pool->state == STOPPING) &&
+                (
+                    /* work somewhere in pool */
+                    (pool->incomplete || pool->swapped) &&
 
-                /* no claimed work being processed by this thread */
-                !tw->claimed.size &&
+                    /* no claimed work being processed by this thread */
+                    !tw->claimed.size &&
 
-                /* no work for this thread to process (more might come in from other threads) */
-                !tw->waiting.size
+                    /* no work for this thread to process (more might come in from other threads) */
+                    !tw->waiting.size
+                )
             )
         )
         ) {
@@ -343,14 +358,26 @@ static size_t process_work(QPTPool_ctx_t *ctx, QPTPoolThreadData_t *tw) {
     pthread_mutex_unlock(&tw->claimed_mutex);
 
     while (qi) {
-        tw->threads_successful += !qi->func(ctx, qi->work);
+        const int rc = qi->func(ctx, qi->work);
         free(qi);
+        work_count++;
 
+        if (rc == 0) {
+            tw->threads_successful++;
+        }
+        else {
+            if (ctx->pool->stop_on_error) {
+                pthread_mutex_lock(&ctx->pool->mutex);
+                ctx->pool->errored = 1;
+                pthread_mutex_unlock(&ctx->pool->mutex);
+                break; /* unprocessed work is freed during QPTPool_destroy */
+            }
+        }
+
+        /* get next work item */
         pthread_mutex_lock(&tw->claimed_mutex);
         qi = (struct queue_item *) sll_pop_front(&tw->claimed);
         pthread_mutex_unlock(&tw->claimed_mutex);
-
-        work_count++; /* increment for previous work item */
     }
 
     return work_count;
@@ -368,14 +395,22 @@ static void *worker_function(void *args) {
         pthread_mutex_lock(&tw->mutex);
         pthread_mutex_lock(&pool->mutex);
 
+        /*
+         * steal from other threads' waiting and claimed queues
+         * and place them into this thread's waiting queue
+         */
         maybe_steal_work(pool, tw, ctx->id);
 
         pthread_mutex_lock(&tw->claimed_mutex); /* lock claimed_mutex after stealing work */
         wait_for_work(pool, tw);
         pthread_mutex_unlock(&tw->claimed_mutex);
 
-        /* if stopping and entire thread pool is empty, this thread can exit */
-        if ((pool->state == STOPPING) && !pool->incomplete && !pool->swapped) {
+        if (
+            /* if stopping on error and error has occurred, stop this thread */
+            ((pool->stop_on_error == 1) && (pool->errored == 1)) ||
+            /* if stopping and entire thread pool is empty, this thread can exit */
+            ((pool->state == STOPPING) && !pool->incomplete && !pool->swapped)
+            ) {
             pthread_mutex_unlock(&pool->mutex);
             pthread_mutex_unlock(&tw->mutex);
             break;
@@ -419,7 +454,7 @@ static void *worker_function(void *args) {
 }
 
 QPTPool_ctx_t *QPTPool_init(const size_t nthreads, void *args) {
-    return QPTPool_init_with_props(nthreads, args, NULL, NULL, 0, "", 0, 0);
+    return QPTPool_init_with_props(nthreads, args, NULL, NULL, 0, "", 0, 0, 0);
 }
 
 /* default function for selecting next thread to push to */
@@ -433,7 +468,8 @@ static size_t QPTPool_round_robin(const size_t id, const size_t prev, const size
 QPTPool_ctx_t *QPTPool_init_with_props(const size_t nthreads, void *args,
                                        QPTPoolNextFunc_t next_func, void *next_args,
                                        const uint64_t queue_limit, const char *swap_prefix,
-                                       const uint64_t steal_num, const uint64_t steal_denom) {
+                                       const uint64_t steal_num, const uint64_t steal_denom,
+                                       const int stop_on_error) {
     #ifndef QPTPOOL_SWAP
     (void) queue_limit;
     (void) swap_prefix;
@@ -451,6 +487,8 @@ QPTPool_ctx_t *QPTPool_init_with_props(const size_t nthreads, void *args,
     #endif
     pool->steal.num = steal_num;
     pool->steal.denom = steal_denom;
+    pool->stop_on_error = stop_on_error;
+    pool->errored = 0;
     pool->args = args;
     pool->next.func = next_func?next_func:QPTPool_round_robin;
     pool->next.args = next_args;
@@ -630,6 +668,24 @@ int QPTPool_set_steal(QPTPool_ctx_t *ctx, const uint64_t num, const uint64_t den
     return 0;
 }
 
+int QPTPool_set_stop_on_error(QPTPool_ctx_t *ctx) {
+    if (!ctx) {
+        return 1;
+    }
+
+    QPTPool_t *pool = ctx->pool;
+
+    pthread_mutex_lock(&pool->mutex);
+    if (pool->state != INITIALIZED) {
+        pthread_mutex_unlock(&pool->mutex);
+        return 1;
+    }
+
+    pool->stop_on_error = 1;
+    pthread_mutex_unlock(&pool->mutex);
+    return 0;
+}
+
 int QPTPool_get_nthreads(QPTPool_ctx_t *ctx, size_t *nthreads) {
     if (!ctx) {
         return 1;
@@ -707,6 +763,18 @@ int QPTPool_get_steal(QPTPool_ctx_t *ctx, uint64_t *num, uint64_t *denom) {
 
     if (denom) {
         *denom = ctx->pool->steal.denom;
+    }
+
+    return 0;
+}
+
+int QPTPool_get_stop_on_error(QPTPool_ctx_t *ctx, int *stop_on_error) {
+    if (!ctx) {
+        return 1;
+    }
+
+    if (stop_on_error) {
+        *stop_on_error = ctx->pool->stop_on_error;
     }
 
     return 0;
@@ -791,15 +859,20 @@ int QPTPool_generic_alloc_and_deserialize(const int fd, QPTPool_f *func, void **
 QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_ctx_t *ctx, QPTPool_f func, void *new_work) {
     /* Not checking arguments */
 
-    struct queue_item *qi = malloc(sizeof(struct queue_item));
-    qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
-    qi->work = new_work;
-
     QPTPool_t *pool = ctx->pool;
     const size_t id = ctx->id;
 
     QPTPoolThreadData_t *data = &pool->data[id];
     pthread_mutex_lock(&data->mutex);
+    if (pool->stop_on_error && pool->errored) {
+        pthread_mutex_unlock(&data->mutex);
+        return QPTPool_enqueue_ERROR;
+    }
+
+    struct queue_item *qi = malloc(sizeof(struct queue_item));
+    qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
+    qi->work = new_work;
+
     QPTPoolThreadData_t *next = &pool->data[data->next_queue];
 
     /* have to calculate next_queue before new_work is modified */
@@ -879,6 +952,11 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_swappable(QPTPool_ctx_t *ctx, QPTPool_f fu
     QPTPoolThreadData_t *data = &pool->data[ctx->id];
 
     pthread_mutex_lock(&data->mutex);
+    if (pool->stop_on_error && pool->errored) {
+        pthread_mutex_unlock(&data->mutex);
+        return QPTPool_enqueue_ERROR;
+    }
+
     QPTPoolThreadData_t *next = &pool->data[data->next_queue];
     /* have to calculate next_queue before new_work is modified */
     data->next_queue = pool->next.func(ctx->id, data->next_queue, pool->nthreads,
@@ -940,6 +1018,11 @@ QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_ctx_t *ctx, const size_t id, 
 
     QPTPoolThreadData_t *data = &pool->data[id];
     pthread_mutex_lock(&data->mutex);
+    if (pool->stop_on_error && pool->errored) {
+        pthread_mutex_unlock(&data->mutex);
+        return QPTPool_enqueue_ERROR;
+    }
+
     #ifdef QPTPOOL_SWAP
     if (queue == QPTPool_enqueue_WAIT) {
     #endif
@@ -985,7 +1068,8 @@ uint64_t QPTPool_wait_mem_lte(QPTPool_ctx_t *ctx, const uint64_t count) {
 
     pthread_mutex_lock(&pool->mutex);
 
-    while ((pool->state == RUNNING) &&
+    while (((pool->stop_on_error == 0) || ((pool->stop_on_error == 1) && (pool->errored == 0))) &&
+           (pool->state == RUNNING) &&
            (pool->incomplete > count)) {
         pthread_cond_wait(&pool->cv, &pool->mutex);
     }
@@ -1196,6 +1280,18 @@ size_t QPTPool_work_swapped_size(QPTPool_ctx_t *ctx) {
 }
 #endif
 
+int QPTPool_stopped_on_error(QPTPool_ctx_t *ctx) {
+    if (!ctx) {
+        return 0;
+    }
+
+    if (!ctx->pool->stop_on_error) {
+        return 0;
+    }
+
+    return ctx->pool->errored;
+}
+
 void QPTPool_destroy(QPTPool_ctx_t *ctx) {
     if (!ctx) {
         return;
@@ -1217,9 +1313,11 @@ void QPTPool_destroy(QPTPool_ctx_t *ctx) {
         /*
          * If QPTPool_start was called, queues will be empty at this point
          *
-         * If QPTPool_start was not called, queues might not be empty since
-         * enqueuing work without starting the worker threads is allowed,
-         * so free() is called to clear out any unprocessed work items
+         * If QPTPool_start was not called, or if stop_on_error is set
+         * and errors occured, queues might not be empty. free() is
+         * called to clear out any unprocessed QPTPool work items but
+         * the user allocated work items will leak because there is
+         * currently no mechanism for freeing them.
          */
         sll_destroy(&data->waiting, free);
         pthread_mutex_destroy(&data->claimed_mutex);
