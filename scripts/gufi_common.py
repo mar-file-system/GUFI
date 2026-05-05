@@ -243,11 +243,11 @@ def get_uid(uid_str):
         uid_str: An integer stored as a string
 
     Returns:
-        An int that is an uid
+        The original uid_str
     '''
 
-    uid = int(uid_str)
-    return pwd.getpwuid(uid).pw_uid
+    int(uid_str)
+    return uid_str
 
 def get_user(user):
     '''
@@ -274,11 +274,11 @@ def get_gid(grp_str):
         grp_str: A number stored as a string
 
     Returns:
-        An int that is a gid
+        The original grp_str
     '''
 
-    gid = int(grp_str)
-    return grp.getgrgid(gid).gr_gid
+    int(grp_str)
+    return grp_str
 
 def get_group(group):
     '''
