@@ -79,6 +79,7 @@ set(GUFI_SOURCES
   external_copy.c
   gufi_vt.c
   histogram.c
+  incremental_non_path.c
   outfiles.c
   path_list.c
   plugin.c
