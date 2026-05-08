@@ -1,11 +1,12 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 8fdef01..9ba607b 100644
+index da8a010..fae63f8 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -9,36 +9,18 @@ set(LLAMA_STATIC ON)
+@@ -8,38 +8,17 @@ set(LLAMA_METAL OFF)
+ set(LLAMA_STATIC ON)
  set(LLAMA_OPENMP OFF)
  
- set(LLAMA_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llama.cpp")
+-set(LLAMA_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llama.cpp")
 -set(SQLITE_AMALGAMATION_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/sqlite")
 -
 -include(ExternalProject)
@@ -22,30 +23,39 @@ index 8fdef01..9ba607b 100644
 -    INSTALL_COMMAND     ""
 -)
 -
- 
- add_subdirectory(${LLAMA_CPP_DIR} ${CMAKE_BINARY_DIR}/llama.cpp)
- 
+-
+-add_subdirectory(${LLAMA_CPP_DIR} ${CMAKE_BINARY_DIR}/llama.cpp)
+-
 -include_directories(${SQLITE_AMALGAMATION_DIR})
-+include_directories("@DEP_INSTALL_PREFIX@/sqlite3/include")
++set(DEP_INSTALL_PREFIX "" CACHE PATH "Where other dependencies are installed")
++include_directories("${DEP_INSTALL_PREFIX}/sqlite3/include")
++include_directories("${DEP_INSTALL_PREFIX}/llama.cpp/include")
++link_directories("${DEP_INSTALL_PREFIX}/llama.cpp/lib")
  
  add_library(sqlite_lembed SHARED sqlite-lembed.c)
 -add_dependencies(sqlite_lembed sqlite_amalgamation)
- target_link_libraries(sqlite_lembed ggml_static llama)
- target_include_directories(sqlite_lembed PRIVATE ${LLAMA_CPP_DIR})
+-target_link_libraries(sqlite_lembed ggml llama)
+-target_include_directories(sqlite_lembed PRIVATE ${LLAMA_CPP_DIR})
++target_link_libraries(sqlite_lembed ggml-cpu ggml-base ggml llama)
  set_target_properties(sqlite_lembed PROPERTIES PREFIX "")
  set_target_properties(sqlite_lembed PROPERTIES OUTPUT_NAME "lembed0")
  
  add_library(sqlite_lembed_static STATIC sqlite-lembed.c)
 -add_dependencies(sqlite_lembed_static sqlite_amalgamation)
  target_link_libraries(sqlite_lembed_static ggml_static llama)
- target_include_directories(sqlite_lembed_static PRIVATE ${LLAMA_CPP_DIR})
+-target_include_directories(sqlite_lembed_static PRIVATE ${LLAMA_CPP_DIR})
  target_compile_definitions(sqlite_lembed_static PRIVATE SQLITE_CORE)
+ set_target_properties(sqlite_lembed_static PROPERTIES OUTPUT_NAME "sqlite_lembed0")
 diff --git a/Makefile b/Makefile
-index b11db35..247970f 100644
+index 5a2008e..8c34c7b 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -69,28 +69,21 @@ $(BUILD_DIR):
- 	cmake -B $@ $(LLAMA_CMAKE_FLAGS)
+@@ -73,31 +73,24 @@ BUILD_DIR=$(prefix)/.build
+ 
+ $(BUILD_DIR):
+ 	rm -rf @ || true
+-	cmake -B $@ $(LLAMA_CMAKE_FLAGS)
++	cmake -B $@ $(LLAMA_CMAKE_FLAGS) -DDEP_INSTALL_PREFIX="@DEP_INSTALL_PREFIX@"
  
  
 -ifdef CONFIG_WINDOWS

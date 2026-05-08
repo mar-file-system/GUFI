@@ -79,6 +79,10 @@ foreach(SOURCE ${CONTRIB_SOURCES})
   get_filename_component(TARGET "${SOURCE}" NAME_WE)
   add_executable("${TARGET}" "${SOURCE}")
   target_link_libraries("${TARGET}" ${COMMON_LIBRARIES})
+  if (DEP_AI)
+    # not really needed but not all linkers remove unused libraries
+    set_property(TARGET "${TARGET}" PROPERTY BUILD_RPATH "${DEP_INSTALL_PREFIX}/llama.cpp/lib")
+  endif()
   add_dependencies("${TARGET}" install_dependencies)
 endforeach()
 

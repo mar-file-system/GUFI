@@ -169,26 +169,17 @@ will reach out to the internet.
   & configured with the FTS5 extension enabled \\
   & (\url{https://www.sqlite.org/fts5.html}) \\
   \hline
-  sqlite3-pcre & \url{https://github.com/mar-file-system/sqlite3-pcre}
-  \\
+  sqlite3-pcre & \url{https://github.com/mar-file-system/sqlite3-pcre} \\
   \hline
-\end{tabularx}
-\end{center}
-
-\subsection{AI Packages}
-These packages will be installed if the CMake variable
-\texttt{DEP\_AI} is set to \texttt{On}.
-
-\begin{center}
-\begin{tabularx}{\textwidth}{| l | X |}
+  llama.cpp & \url{https://github.com/ggml-org/llama.cpp} \\
+  & Required by sqlite-lembed \\
   \hline
-  Name & Comments \\
-  \hline
-  sqlite-lembed & \url{https://github.com/asg017/sqlite-lembed} \\
-  & Downloaded with git in order to get submodules \\
+  sqlite-lembed & \url{https://github.com/rodydavis/sqlite-lembed} \\
+  & Fork of \url{https://github.com/asg017/sqlite-lembed} that updates to latest llama.cpp \\
+  & Installed if \texttt{DEP\_AI=On} \\
   \hline
   sqlite-vec & \url{https://github.com/asg017/sqlite-vec} \\
-  & Provided by GUFI as a tarball\\
+  & Installed if \texttt{DEP\_AI=On} \\
   \hline
 \end{tabularx}
 \end{center}

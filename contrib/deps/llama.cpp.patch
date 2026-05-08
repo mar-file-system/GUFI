@@ -1,0 +1,111 @@
+diff --git a/common/arg.cpp b/common/arg.cpp
+index 55ec9389b..a6cec3305 100644
+--- a/common/arg.cpp
++++ b/common/arg.cpp
+@@ -35,20 +35,6 @@
+ #include <thread> // for hardware_concurrency
+ #include <vector>
+ 
+-#ifndef __EMSCRIPTEN__
+-#ifdef __linux__
+-#include <linux/limits.h>
+-#elif defined(_WIN32)
+-#   if !defined(PATH_MAX)
+-#   define PATH_MAX MAX_PATH
+-#   endif
+-#elif defined(_AIX)
+-#include <sys/limits.h>
+-#else
+-#include <sys/syslimits.h>
+-#endif
+-#endif
+-
+ #define LLAMA_MAX_URL_LENGTH 2084 // Maximum URL Length in Chrome: 2083
+ 
+ extern const char * LICENSES[];
+diff --git a/common/common.cpp b/common/common.cpp
+index 793b8fee7..0becb7afb 100644
+--- a/common/common.cpp
++++ b/common/common.cpp
+@@ -970,7 +970,7 @@ std::string fs_get_cache_directory() {
+         }
+ #elif defined(__APPLE__)
+         cache_directory = std::getenv("HOME") + std::string("/Library/Caches/");
+-#elif defined(_WIN32)
++#elif defined(_WIN32) || defined(__CYGWIN__)
+         cache_directory = std::getenv("LOCALAPPDATA");
+ #elif defined(__EMSCRIPTEN__)
+         GGML_ABORT("not implemented on this platform");
+diff --git a/common/download.cpp b/common/download.cpp
+index d6d47b2d2..7cbec87d6 100644
+--- a/common/download.cpp
++++ b/common/download.cpp
+@@ -32,6 +32,7 @@
+ #   endif
+ #elif defined(_AIX)
+ #include <sys/limits.h>
++#elif defined(__CYGWIN__)
+ #else
+ #include <sys/syslimits.h>
+ #endif
+diff --git a/ggml/cmake/common.cmake b/ggml/cmake/common.cmake
+index cb6638833..e37c56af3 100644
+--- a/ggml/cmake/common.cmake
++++ b/ggml/cmake/common.cmake
+@@ -3,8 +3,8 @@ function(ggml_get_flags CCID CCVER)
+     set(CXX_FLAGS "")
+ 
+     if (CCID MATCHES "Clang")
+-        set(C_FLAGS   -Wunreachable-code-break -Wunreachable-code-return)
+-        set(CXX_FLAGS -Wunreachable-code-break -Wunreachable-code-return -Wmissing-prototypes -Wextra-semi)
++        set(C_FLAGS)
++        set(CXX_FLAGS -Wmissing-prototypes -Wextra-semi)
+ 
+         if (
+             (CCID STREQUAL "Clang"      AND CCVER VERSION_GREATER_EQUAL 3.8.0) OR
+diff --git a/ggml/src/CMakeLists.txt b/ggml/src/CMakeLists.txt
+index 3e48860bf..15add0d9c 100644
+--- a/ggml/src/CMakeLists.txt
++++ b/ggml/src/CMakeLists.txt
+@@ -450,7 +450,6 @@ ggml_add_backend(BLAS)
+ ggml_add_backend(CANN)
+ ggml_add_backend(CUDA)
+ ggml_add_backend(HIP)
+-ggml_add_backend(METAL)
+ ggml_add_backend(MUSA)
+ ggml_add_backend(RPC)
+ ggml_add_backend(VirtGPU)
+diff --git a/scripts/get-flags.mk b/scripts/get-flags.mk
+index a742766d1..19e6118f0 100644
+--- a/scripts/get-flags.mk
++++ b/scripts/get-flags.mk
+@@ -15,8 +15,8 @@ endif
+ 
+ ifeq ($(GF_CC_IS_CLANG), 1)
+ 	# clang options
+-	GF_CFLAGS   = -Wunreachable-code-break -Wunreachable-code-return
+-	GF_CXXFLAGS = -Wunreachable-code-break -Wunreachable-code-return -Wmissing-prototypes -Wextra-semi
++	GF_CFLAGS   =
++	GF_CXXFLAGS = -Wmissing-prototypes -Wextra-semi
+ 
+ 	ifneq '' '$(and $(GF_CC_IS_LLVM_CLANG),$(filter 1,$(shell expr $(GF_CC_VER) \>= 030800)))'
+ 		GF_CFLAGS += -Wdouble-promotion
+diff --git a/src/llama-mmap.cpp b/src/llama-mmap.cpp
+index ed572da7f..c4f93484e 100644
+--- a/src/llama-mmap.cpp
++++ b/src/llama-mmap.cpp
+@@ -659,14 +659,6 @@ struct llama_mlock::impl {
+         // visionOS/tvOS/Haiku don't support RLIMIT_MEMLOCK
+         // Skip resource limit checks on these platforms
+         suggest = false;
+-#else
+-        struct rlimit lock_limit;
+-        if (suggest && getrlimit(RLIMIT_MEMLOCK, &lock_limit)) {
+-            suggest = false;
+-        }
+-        if (suggest && ((uint64_t)lock_limit.rlim_max > (uint64_t)lock_limit.rlim_cur + size)) {
+-            suggest = false;
+-        }
+ #endif
+ 
+         LLAMA_LOG_WARN("warning: failed to mlock %zu-byte buffer (after previously locking %zu bytes): %s\n%s",

@@ -471,7 +471,7 @@ if (DEP_AI)
   list(APPEND COMMON_LIBRARIES
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libsqlite_vec0.a"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/libsqlite_lembed0.a"
-    -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama -lstdc++ ${OpenMP_C_FLAGS}
+    -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml ${OpenMP_C_FLAGS}
     -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
     )
 
@@ -491,6 +491,7 @@ endif()
 if (DEP_USE_JEMALLOC)
   list(APPEND COMMON_LIBRARIES
     "${JEMALLOC}"
+    stdc++ # required by alpine linux
   )
 endif()
 

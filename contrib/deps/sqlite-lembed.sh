@@ -78,14 +78,15 @@ lembed_prefix="${INSTALL_DIR}/${lembed_name}"
 llama_name="llama.cpp"
 llama_prefix="${INSTALL_DIR}/${llama_name}"
 if [[ ! -d "${lembed_prefix}" ]]; then
-    lembed_build="${BUILD_DIR}/sqlite-lembed-main"
+    lembed_build="${BUILD_DIR}/sqlite-lembed"
     if [[ ! -d "${lembed_build}" ]]; then
         lembed_tarball="${DOWNLOAD_DIR}/sqlite-lembed.tar.gz"
         if [[ ! -f "${lembed_tarball}" ]]; then
-            wget https://github.com/asg017/sqlite-lembed/archive/refs/heads/main.tar.gz -O "${lembed_tarball}"
+            wget https://github.com/rodydavis/sqlite-lembed/archive/refs/heads/update-llama-cpp.tar.gz -O "${lembed_tarball}"
         fi
 
         tar -xf "${lembed_tarball}" -C "${BUILD_DIR}"
+        mv "${BUILD_DIR}/sqlite-lembed-update-llama-cpp" "${lembed_build}"
         patch -p1 -d "${lembed_build}" < "${SCRIPT_PATH}/sqlite-lembed.patch"
 
         rm -r "${lembed_build}/vendor/llama.cpp"
@@ -93,32 +94,49 @@ if [[ ! -d "${lembed_prefix}" ]]; then
 
     llama_build="${lembed_build}/vendor/llama.cpp"
     if [[ ! -f "${llama_build}/Makefile" ]]; then
-        llama_tarball="${DOWNLOAD_DIR}/llama.cpp-2b33896.tar.gz"
+        llama_tarball="${DOWNLOAD_DIR}/llama.cpp.tar.gz"
         if [[ ! -f "${llama_tarball}" ]]; then
-            wget https://github.com/ggml-org/llama.cpp/archive/2b3389677a833cee0880226533a1768b1a9508d2.tar.gz -O "${llama_tarball}"
-            tar -xf "${llama_tarball}" -C "${lembed_build}/vendor/"
-            mv "${lembed_build}/vendor/llama.cpp-2b3389677a833cee0880226533a1768b1a9508d2" "${llama_build}"
-        else
-            mkdir -p "${llama_build}"
-            tar -xf "${llama_tarball}" -C "${llama_build}"
-            if [[ "${CYGWIN}" == "true" ]]; then
-                patch -p1 -d "${llama_build}" < "${SCRIPT_PATH}/llama.cpp-2b33896.patch"
-            fi
+            wget https://github.com/ggml-org/llama.cpp/archive/master.tar.gz -O "${llama_tarball}"
         fi
+
+        tar -xf "${llama_tarball}" -C "${lembed_build}/vendor/"
+        mv "${lembed_build}/vendor/llama.cpp-master" "${llama_build}"
+
+        patch -p1 -d "${llama_build}" < "${SCRIPT_PATH}/llama.cpp.patch"
     fi
 
     cd "${llama_build}"
     mkdir -p build
     cd build
-    CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. -DCMAKE_INSTALL_PREFIX="${llama_prefix}" -DCMAKE_INSTALL_LIBDIR=lib -DLLAMA_BUILD_EXAMPLES=Off -DLLAMA_BUILD_TESTS=Off -DLLAMA_CCACHE=Off -DLLAMA_METAL=OFF ${OMP_FLAGS} # not quoting OMP_FLAGS
-    make # do not build with multiple threads
+    if [[ "${CYGWIN}" == "true" ]]; then
+        # shellcheck disable=SC2089
+        CYGWIN_FLAGS="-DCMAKE_CXX_FLAGS=-D_GNU_SOURCE"
+    fi
+
+    # RPATH only finds the location of llama.so and not its dependencies,
+    # so set CMAKE_SHARED_LINKER_FLAGS to find llama.so's dependencies
+    CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DCMAKE_INSTALL_PREFIX="${llama_prefix}" \
+      -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-rpath,${llama_prefix}/lib" \
+      -DGGML_BUILD_EXAMPLES=Off \
+      -DGGML_BUILD_TESTS=Off \
+      -DGGML_CCACHE=Off \
+      -DGGML_METAL=OFF \
+      -DGGML_METAL_EMBED_LIBRARY=Off \
+      -DLLAMA_BUILD_EXAMPLES=Off \
+      -DLLAMA_BUILD_SERVER=Off \
+      -DLLAMA_BUILD_TESTS=Off \
+      ${CYGWIN_FLAGS} \
+      ${OMP_FLAGS} # not quoting OMP_FLAGS
+
+    make -j "${THREADS}"
     make -j "${THREADS}" install
 
     cd "${lembed_build}"
-    sed -i "s%@DEP_INSTALL_PREFIX@%${INSTALL_DIR}%g;" CMakeLists.txt
-
-    make sqlite-lembed.h
-    make static loadable
+    touch .build
+    sed -i "s%@DEP_INSTALL_PREFIX@%${INSTALL_DIR}%g;" Makefile
+    make sqlite-lembed.h static loadable
     mkdir -p "${lembed_prefix}/include" "${lembed_prefix}/lib"
     cp sqlite-lembed.h "${lembed_prefix}/include"
     cp dist/libsqlite_lembed0.* dist/lembed0.* "${lembed_prefix}/lib"
