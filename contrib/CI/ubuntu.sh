@@ -81,6 +81,7 @@ apt -y install \
 apt -y install \
     attr \
     autoconf \
+    automake \
     bsdmainutils \
     clang \
     cmake \

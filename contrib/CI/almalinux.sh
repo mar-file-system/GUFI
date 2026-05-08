@@ -68,10 +68,28 @@ set -e
 dnf -y install epel-release
 
 # install libraries
-dnf -y install libattr-devel pcre2-devel zlib-devel
+dnf -y install \
+    libattr-devel \
+    pcre2-devel \
+    zlib-devel
 
 # install required packages
-dnf -y install attr autoconf clang cmake3 colordiff findutils gettext git make patch pkgconfig python3 python3-pip sudo
+dnf -y install \
+    attr \
+    autoconf \
+    automake \
+    clang \
+    cmake3 \
+    colordiff \
+    findutils \
+    gettext \
+    git \
+    make \
+    patch \
+    pkgconfig \
+    python3 \
+    python3-pip \
+    sudo
 
 # SQLAlchemy needs Python.h
 yum -y install python3-devel

@@ -80,7 +80,7 @@ brew install diffutils
 paths="$(brew --prefix diffutils)/bin:${paths}"
 
 # install required packages
-brew install autoconf cmake gettext llvm libomp pcre2 pkgconf python
+brew install autoconf automake cmake gettext llvm libomp pcre2 pkgconf python
 
 echo "tail -n 1 the output of this script and add it to your PATH:"
 echo "${paths}"

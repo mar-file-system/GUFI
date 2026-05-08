@@ -82,6 +82,7 @@ apk add \
 apk add \
     attr \
     autoconf \
+    automake \
     bash \
     bash-completion \
     clang20 \
