@@ -114,8 +114,10 @@ TEST(template_db, create_copy) {
     ASSERT_NE(dst, -1);
     EXPECT_EQ(close(dst), 0);
 
-    sqlite3 *db = template_to_db(&tdb, dst_name, -1, -1);
-    EXPECT_NE(db, nullptr);
+    int copy_err = 0;
+    sqlite3 *db = template_to_db(&tdb, dst_name, -1, -1, &copy_err);
+    ASSERT_NE(db, nullptr);
+    EXPECT_EQ(copy_err, 0);
 
     // make sure the columns are correct
     std::string cols[2];
@@ -144,9 +146,12 @@ TEST(template_db, bad_inputs) {
     EXPECT_EQ(create_template(&tdb,    create_test_tables, template_name), -1);
     tdb.fd = -1;
 
-    EXPECT_EQ(copy_template(&tdb,      template_name, -1, -1), -1);
+    int copy_err = 0;
+    EXPECT_EQ(copy_template(&tdb,      template_name, -1, -1, &copy_err),  -1);
+    EXPECT_NE(copy_err, 0);
 
-    EXPECT_EQ(template_to_db(&tdb,     template_name, -1, -1), nullptr);
+    EXPECT_EQ(template_to_db(&tdb,     template_name, -1, -1, &copy_err),  nullptr);
+    EXPECT_NE(copy_err, 0);
 
     EXPECT_EQ(remove(template_name), 0);
     ASSERT_EQ(close_template_db(&tdb), 0);
@@ -184,7 +189,9 @@ TEST(copy_template, not_enough_fds) {
 
     // open should fail
     struct template_db tdb;
-    EXPECT_EQ(copy_template(&tdb, name, -1, -1), -1);
+    int copy_err = 0;
+    EXPECT_EQ(copy_template(&tdb, name, -1, -1, &copy_err), -1);
+    EXPECT_NE(copy_err, 0);
 
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
 
@@ -200,7 +207,9 @@ TEST(copy_template, bad_size) {
     struct template_db tdb;
     tdb.fd = fd;
     tdb.size = 1024; // bad size
-    EXPECT_EQ(copy_template(&tdb, name, -1, -1), -1);
+    int copy_err = 0;
+    EXPECT_EQ(copy_template(&tdb, name, -1, -1, &copy_err), -1);
+    EXPECT_NE(copy_err, 0);
 
     ASSERT_EQ(close(fd), 0);
 

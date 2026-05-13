@@ -207,36 +207,44 @@ int create_dbdb_template(struct template_db *tdb, const str_t *dir) {
 
 /* copy the template file instead of creating a new database and new tables for each work item */
 /* the ownership and permissions are set too */
-int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid) {
-    /* Not checking arguments */
+int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid, int *err) {
+    int stack_err = 0;
+    if (!err) {
+        err = &stack_err;
+    }
 
     const int src_db = tdb->fd;
 
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     if (dst_db < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: copy_template dst db: %s (%d)\n", strerror(err), err);
+        *err = errno;
+        fprintf(stderr, "Error: copy_template dst db: %s (%d)\n", strerror(*err), *err);
         return -1;
     }
 
     const ssize_t sf = copyfd(src_db, 0, dst_db, 0, tdb->size);
     if (sf < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: copy_template copyfd error: %s (%d)\n", strerror(err), err);
+        *err = errno;
+        fprintf(stderr, "Error: copy_template copyfd error: %s (%d)\n", strerror(*err), *err);
         close(dst_db);
         return -1;
     }
     else if (sf != tdb->size) {
-        const int err = errno;
+        *err = errno;
+        /* ending early is not an error, so force an error */
+        if (*err == 0) {
+            *err = ESPIPE; /* illegal seek */
+        }
+
         fprintf(stderr, "Error: copy_template copyfd expected to copy %jd. Actually copied %zd: %s (%d)\n",
-                (intmax_t) tdb->size, sf, strerror(err), err);
+                (intmax_t) tdb->size, sf, strerror(*err), *err);
         close(dst_db);
         return -1;
     }
 
     if (fchown(dst_db, uid, gid) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Warning: copy_template fchown: %s (%d)\n", strerror(err), err);
+        *err = errno;
+        fprintf(stderr, "Warning: copy_template fchown: %s (%d)\n", strerror(*err), *err);
     }
 
     close(dst_db);
@@ -244,8 +252,8 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
     return 0;
 }
 
-sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid) {
-    if (copy_template(tdb, dst, uid, gid)) {
+sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid, int *copy_err) {
+    if (copy_template(tdb, dst, uid, gid, copy_err)) {
         return NULL;
     }
 
@@ -275,5 +283,5 @@ int create_empty_dbdb(struct template_db *tdb, str_t *dst, uid_t uid, gid_t gid)
         return -1;
     }
 
-    return copy_template(tdb, dbname, uid, gid);
+    return copy_template(tdb, dbname, uid, gid, NULL);
 }

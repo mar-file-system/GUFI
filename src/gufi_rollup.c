@@ -661,7 +661,7 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
         }
 
         /* copy the template file */
-        if (copy_template(ca->xattr, xattr_db_name, uid, gid)) {
+        if (copy_template(ca->xattr, xattr_db_name, uid, gid, NULL)) {
             return 1;
         }
     }

@@ -98,7 +98,7 @@ int reindex_dir(struct PoolArgs *pa,
         SNPRINTF(dbpath, MAXPATH, "%s/%" STAT_ino, pa->parking_lot.data, work->statuso.st_ino);
     }
 
-    sqlite3 *db = template_to_db(&pa->db, dbpath, -1, -1);
+    sqlite3 *db = template_to_db(&pa->db, dbpath, -1, -1, NULL);
     if (!db) {
         return -1;
     }

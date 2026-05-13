@@ -239,7 +239,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         const int err = errno;
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath.data, err, strerror(err));
-            rc = 1;
+            rc = (err == ENOSPC);
             goto close_dir;
         }
     }
@@ -252,13 +252,16 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         /* restore "/db.db" */
         nda.topath.data[nda.topath.len] = '/';
 
-        nda.db = template_to_db(nda.temp_db, nda.topath.data, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
+        int copy_err = 0;
+        nda.db = template_to_db(nda.temp_db, nda.topath.data,
+                                nda.work->statuso.st_uid, nda.work->statuso.st_gid,
+                                &copy_err);
 
         /* remove "/db.db" */
         nda.topath.data[nda.topath.len] = '\0';
 
         if (!nda.db) {
-            rc = 1;
+            rc = (copy_err == ENOSPC);
             goto close_dir;
         }
 

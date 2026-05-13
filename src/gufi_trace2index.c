@@ -189,13 +189,16 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         free(nda.topath);
         free(dir);
         row_destroy(&w);
-        return 1;
+        return (err == ENOSPC);
     }
 
     /* restore "/db.db" (no need to remove afterwards) */
     nda.topath[nda.topath_len] = '/';
 
-    sqlite3 *db = template_to_db(&nda.pa->db, nda.topath, dir->statuso.st_uid, dir->statuso.st_gid);
+    int copy_err = 0;
+    sqlite3 *db = template_to_db(&nda.pa->db, nda.topath,
+                                 dir->statuso.st_uid, dir->statuso.st_gid,
+                                 &copy_err);
 
     if (db) {
         zeroit(&nda.summary);
@@ -257,7 +260,12 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     free(dir);
     row_destroy(&w);
 
-    return !db;
+    if (!db) {
+        /* if no space, return 1 and stop all processing, else return 0 */
+        return (copy_err == ENOSPC);
+    }
+
+    return 0;
 }
 
 static void sub_help(void) {

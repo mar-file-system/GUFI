@@ -1005,7 +1005,7 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
     xdb->st.st_uid = uid;
     xdb->st.st_gid = gid;
 
-    if (copy_template(tdb, filename, xdb->st.st_uid, xdb->st.st_gid) != 0) {
+    if (copy_template(tdb, filename, xdb->st.st_uid, xdb->st.st_gid, NULL) != 0) {
         destroy_xattr_db(xdb);
         return NULL;
     }
