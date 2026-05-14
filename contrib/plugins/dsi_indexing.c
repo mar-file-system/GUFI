@@ -143,73 +143,10 @@ static void copy_collection_db(const char *srcpath, const char *dstpath) {
     close(dst);
 }
 
-static void remove_leading(str_t *str) {
-    while (str->len && str->data[0] == '/') {
-        str->data++;
-        str->len--;
-    }
-}
-
-static str_t *compute_relpath(str_t *index_parent,
-                              str_t *index_dir,         /* go up to common path */
-                              str_t *collectiondb) {    /* go down to here */
-    /* remove index parent from both paths */
-    str_t rel_index_dir = REFSTR(index_dir->data + index_parent->len,
-                                 index_dir->len - index_parent->len);
-    str_t rel_collectiondb = REFSTR(collectiondb->data + index_parent->len,
-                                    collectiondb->len - index_parent->len);
-
-    /* remove extra leading slashes */
-    remove_leading(&rel_index_dir);
-    remove_leading(&rel_collectiondb);
-
-    /* remove common prefix under the index parent */
-    while (rel_index_dir.len && rel_collectiondb.len &&
-           (rel_index_dir.data[0] == rel_collectiondb.data[0])) {
-        rel_index_dir.data++;
-        rel_index_dir.len--;
-        rel_collectiondb.data++;
-        rel_collectiondb.len--;
-    }
-
-    /* guarantee that the first character in each path is not a slash */
-    remove_leading(&rel_index_dir);
-    remove_leading(&rel_collectiondb);
-
-    size_t up = 1; /* start at 1 because the current path is a directory */
-
-    /* count slashes */
-    for(size_t i = 1; i < rel_index_dir.len; i++) {
-        if ((rel_index_dir.data[i] == '/') &&
-            (rel_index_dir.data[i - 1] != '/')) { /* i starts at 1 */
-            up++;
-        }
-    }
-
-    /* "../" * number of times to go up to the common path + remaining path to get to collection db */
-    const size_t relpath_len = up * 3 + rel_collectiondb.len;
-    str_t *relpath = str_alloc(relpath_len);
-    relpath->len = 0;
-
-    /* go up from the current location in the index */
-    for(size_t i = 0; i < up; i++) {
-        memcpy(relpath->data + relpath->len, "../", 3);
-        relpath->len += 3;
-    }
-
-    /* go down once the common path is hit */
-    memcpy(relpath->data + relpath->len, rel_collectiondb.data, rel_collectiondb.len);
-    relpath->len += rel_collectiondb.len;
-
-    return relpath;
-}
-
 static void dsi_indexing_dir(void *ptr, void *user_data) {
     PCS_t *pcs = (PCS_t *) ptr;
     struct entry_data *ed = pcs->ed;
-    void **plugin_data = (void **) pcs->data;
-    str_t *topath = (str_t *) plugin_data[0];
-    str_t *index_parent = (str_t *) plugin_data[1];
+    str_t *index_parent = (str_t *) pcs->data;
     (void) user_data;
 
     /* need the absolute path to use with the DSI xattr */
@@ -234,7 +171,7 @@ static void dsi_indexing_dir(void *ptr, void *user_data) {
     const size_t parent_len = dirname_len(orig_fullpath, strlen(orig_fullpath));
     free(orig_fullpath); /* only need length */
 
-    /* find DSI xattrs and copy collection dbs into current directory */
+    /* find DSI xattrs and copy collection dbs into corresponding location in index once */
     for(size_t i = 0; i < ed->xattrs.count; i++) {
         struct xattr *xattr = &ed->xattrs.pairs[i];
 
@@ -283,35 +220,6 @@ static void dsi_indexing_dir(void *ptr, void *user_data) {
 
         copy_collection_db(collectiondb, dstpath->data);
 
-        /*
-         * whether:
-         *     - this thread did not create the collection db file
-         *     - this thread created the collection db file, whether or not the copy succeeded
-         *
-         * create a symlink in this index directory to point to the
-         * copy of the collection db in the index
-         */
-        const size_t sym_len = topath->len + 1 + xattr->name_len - DSI_NAME_PREFIX_LEN + 3;
-        str_t *sym = str_alloc(sym_len);
-        SNFORMAT_S(sym->data, sym->len + 1, 4,
-                   topath->data, topath->len,
-                   "/", (size_t) 1,
-                   xattr->name + DSI_NAME_PREFIX_LEN, xattr->name_len - DSI_NAME_PREFIX_LEN,
-                   ".db", (size_t) 3);
-
-        str_t *target = compute_relpath(index_parent, topath, dstpath);
-        if (symlink(target->data, sym->data) != 0) {
-            const int err = errno;
-            /* if the symlink path is also the collection db path, not an error */
-            if (!((err == EEXIST) && (dstpath->len == sym->len) &&
-                  !strncmp(dstpath->data, sym->data, sym->len))) {
-                fprintf(stderr, "Error: Symlink \"%s\" -> \"%s\" failed: %s (%d)\n",
-                        sym->data, target->data, strerror(err), err);
-            }
-        }
-
-        str_free(target);
-        str_free(sym);
         str_free(dstpath);
     }
 }

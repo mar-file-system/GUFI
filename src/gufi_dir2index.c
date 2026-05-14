@@ -196,7 +196,6 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     PCS_t pcs; /* references passed into plugin */
     memset(&pcs, 0, sizeof(pcs));
-    void *plugin_data[] = {&nda.topath, &pa->index_parent};
 
     DIR *dir = NULL;
 
@@ -268,7 +267,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         pcs.db = nda.db;
         pcs.work = nda.work;
         pcs.ed = &nda.ed;
-        pcs.data = plugin_data;
+        pcs.data = &pa->index_parent;
 
         /* prepare to insert into the database */
         zeroit(&nda.summary);
