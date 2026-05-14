@@ -74,19 +74,19 @@ COLLECTION1="collection1"
 # some realpath implementations don't allow for nonexistent paths
 COLLECTION1_DB="${SRCDIR}/${COLLECTION1}.db"
 touch "${COLLECTION1_DB}" # gets deleted during initial cleanup
-COLLECTION1_DB=$(realpath "${COLLECTION1_DB}")
+COLLECTION1_PATH=$(realpath "${COLLECTION1_DB}")
 
 COLLECTION2="collection2"
 # some realpath implementations don't allow for nonexistent paths
 COLLECTION2_DB="${SRCDIR}/${COLLECTION2}.db"
 touch "${COLLECTION2_DB}" # gets deleted during initial cleanup
-COLLECTION2_DB=$(realpath "${COLLECTION2_DB}")
+COLLECTION2_PATH=$(realpath "${COLLECTION2_DB}")
 
 COLLECTION3="collection3"
 # some realpath implementations don't allow for nonexistent paths
 COLLECTION3_DB="${COLLECTION3}.db" # this db is outside the collection
 touch "${COLLECTION3_DB}" # gets deleted during initial cleanup
-COLLECTION3_DB=$(realpath "${COLLECTION3_DB}")
+COLLECTION3_PATH=$(realpath "${COLLECTION3_DB}")
 
 cleanup() {
     rm -f "${COLLECTION1_DB}" "${COLLECTION2_DB}" "${COLLECTION3_DB}"
@@ -164,30 +164,30 @@ cleanup
     echo "#         and one file with an unprocessed collection (3) db"
 
     # mark files as belonging to DSI collection 1
-    os_setfattr "user.COL.file.collection1" "${UUIDS[0]}.${COLLECTION1_DB}" "${SRCDIR}/1KB"
-    os_setfattr "user.COL.file.collection1" "${UUIDS[1]}.${COLLECTION1_DB}" "${SRCDIR}/1MB"
-    os_setfattr "user.COL.file.collection1" "${UUIDS[2]}.${COLLECTION1_DB}" "${SRCDIR}/directory/executable"
-    os_setfattr "user.COL.file.collection1" "${UUIDS[3]}.${COLLECTION1_DB}" "${SRCDIR}/directory/writable"
-    os_setfattr "user.COL.file.collection1" "${UUIDS[8]}.${COLLECTION1_DB}" "${SRCDIR}/repeat_name"
+    os_setfattr "user.COL.file.collection1" "${UUIDS[0]}.${COLLECTION1_PATH}" "${SRCDIR}/1KB"
+    os_setfattr "user.COL.file.collection1" "${UUIDS[1]}.${COLLECTION1_PATH}" "${SRCDIR}/1MB"
+    os_setfattr "user.COL.file.collection1" "${UUIDS[2]}.${COLLECTION1_PATH}" "${SRCDIR}/directory/executable"
+    os_setfattr "user.COL.file.collection1" "${UUIDS[3]}.${COLLECTION1_PATH}" "${SRCDIR}/directory/writable"
+    os_setfattr "user.COL.file.collection1" "${UUIDS[8]}.${COLLECTION1_PATH}" "${SRCDIR}/repeat_name"
 
     # mark files as belonging to DSI collection 2
-    os_setfattr "user.COL.file.collection2" "${UUIDS[4]}.${COLLECTION2_DB}" "${SRCDIR}/.hidden"
-    os_setfattr "user.COL.file.collection2" "${UUIDS[5]}.${COLLECTION2_DB}" "${SRCDIR}/old_file"
-    os_setfattr "user.COL.file.collection2" "${UUIDS[6]}.${COLLECTION2_DB}" "${SRCDIR}/leaf_directory/leaf_file1"
-    os_setfattr "user.COL.file.collection2" "${UUIDS[7]}.${COLLECTION2_DB}" "${SRCDIR}/leaf_directory/leaf_file2"
-    os_setfattr "user.COL.file.collection2" "${UUIDS[8]}.${COLLECTION2_DB}" "${SRCDIR}/repeat_name"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[4]}.${COLLECTION2_PATH}" "${SRCDIR}/.hidden"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[5]}.${COLLECTION2_PATH}" "${SRCDIR}/old_file"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[6]}.${COLLECTION2_PATH}" "${SRCDIR}/leaf_directory/leaf_file1"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[7]}.${COLLECTION2_PATH}" "${SRCDIR}/leaf_directory/leaf_file2"
+    os_setfattr "user.COL.file.collection2" "${UUIDS[8]}.${COLLECTION2_PATH}" "${SRCDIR}/repeat_name"
 
     # mark files as belonging to DSI collection 3
-    os_setfattr "user.COL.file.collection3" "${UUIDS[9]}.${COLLECTION3_DB}" "${SRCDIR}/unusual#? directory ,/unusual, name?#"
+    os_setfattr "user.COL.file.collection3" "${UUIDS[9]}.${COLLECTION3_PATH}" "${SRCDIR}/unusual#? directory ,/unusual, name?#"
 
     # have to mark directories as containing DSI collections
     # these uuids don't matter
     # ${SRCDIR} contains 2 collections
-    os_setfattr "user.COL.file.collection1" "$(uuid).${COLLECTION1_DB}" "${SRCDIR}"
-    os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_DB}" "${SRCDIR}"
-    os_setfattr "user.COL.file.collection1" "$(uuid).${COLLECTION1_DB}" "${SRCDIR}/directory"
-    os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_DB}" "${SRCDIR}/leaf_directory"
-    os_setfattr "user.COL.file.collection3" "$(uuid).${COLLECTION3_DB}" "${SRCDIR}/unusual#? directory ,"
+    os_setfattr "user.COL.file.collection1" "$(uuid).${COLLECTION1_PATH}" "${SRCDIR}"
+    os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_PATH}" "${SRCDIR}"
+    os_setfattr "user.COL.file.collection1" "$(uuid).${COLLECTION1_PATH}" "${SRCDIR}/directory"
+    os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_PATH}" "${SRCDIR}/leaf_directory"
+    os_setfattr "user.COL.file.collection3" "$(uuid).${COLLECTION3_PATH}" "${SRCDIR}/unusual#? directory ,"
 
     echo
 
@@ -197,35 +197,80 @@ cleanup
     echo "# directories with collections should have copies of the collection dbs they are associated with or symlinks to the copies"
     run_sort "find \"${INDEXROOT}\" -name \"*collection*\" -printf \"%p %y %l\n\""
 
-    echo "# query collection1"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);\" \"${INDEXROOT}\" 2>/dev/null"
-
-    echo "# query collection2"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid);\" \"${INDEXROOT}\" 2>/dev/null"
-
-    echo "# query collection3"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection3.data ON (dsi_collection_name(xattr_name) == '${COLLECTION3}') AND (dsi_uuid(xattr_name, xattr_value) == collection3.data.uuid);\" \"${INDEXROOT}\" 2>/dev/null"
-
-    echo "# query collection1 with gufi_vt"
+    echo "# query collection1 with gufi_vt, joining externally"
     query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION1}'; CREATE TABLE ${COLLECTION1}.data (uuid TEXT, info1 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN ${COLLECTION1}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION1}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
-        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (uuid IS NOT NULL);\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "ATTACH 'file:${SEARCH}/${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};"
+        echo "SELECT fullpath, info1 FROM gufi JOIN ${COLLECTION1}.data ON gufi.uuid == ${COLLECTION1}.data.uuid ORDER BY info1 ASC;"
     )
-    gufi_vt "${query}" | replace # do not capture or hide stderr
+    gufi_vt "${query}" 2>&1 | replace
 
-    echo "# query collection2 with gufi_vt"
+    echo "# query collection1 with gufi_vt, joining in gufi_vt"
     query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION2}'; CREATE TABLE ${COLLECTION2}.data (uuid TEXT, info2 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN ${COLLECTION2}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION2}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
-        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    I=\"CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);\", "
+        echo "    E=\"INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (uuid IS NOT NULL);\", "
+        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${SEARCH}/${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};\", "
+        echo "    J=\"INSERT INTO  aggregate SELECT * FROM intermediate;\", "
+        echo "    G=\"SELECT fullpath, info1 FROM aggregate JOIN ${COLLECTION1}.data ON aggregate.uuid == ${COLLECTION1}.data.uuid ORDER BY info1;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi;"
     )
-    gufi_vt "${query}" | replace # do not capture or hide stderr
+    gufi_vt "${query}" 2>&1 | replace
 
-    echo "# query collection3 with gufi_vt"
+    echo "# query collection2 with gufi_vt, joining externally"
     query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION3}'; CREATE TABLE ${COLLECTION3}.data (uuid TEXT, info2 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN ${COLLECTION3}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION3}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION3}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
-        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (uuid IS NOT NULL);\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "ATTACH 'file:${SEARCH}/${COLLECTION2_DB}?mode=ro' AS ${COLLECTION2};"
+        echo "SELECT fullpath, info2 FROM gufi JOIN ${COLLECTION2}.data ON gufi.uuid == ${COLLECTION2}.data.uuid ORDER BY info2 ASC;"
     )
-    gufi_vt "${query}" | replace # do not capture or hide stderr
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# query collection2 with gufi_vt, joining in gufi_vt"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    I=\"CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);\", "
+        echo "    E=\"INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (uuid IS NOT NULL);\", "
+        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${SEARCH}/${COLLECTION2_DB}?mode=ro' AS ${COLLECTION2};\", "
+        echo "    J=\"INSERT INTO  aggregate SELECT * FROM intermediate;\", "
+        echo "    G=\"SELECT fullpath, info2 FROM aggregate JOIN ${COLLECTION2}.data ON aggregate.uuid == ${COLLECTION2}.data.uuid ORDER BY info2;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# query collection3 with gufi_vt, joining externally"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION3}') AND (uuid IS NOT NULL);\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "ATTACH 'file:${SEARCH}/${COLLECTION3_DB}?mode=ro' AS ${COLLECTION3};"
+        echo "SELECT fullpath, info3 FROM gufi JOIN ${COLLECTION3}.data ON gufi.uuid == ${COLLECTION3}.data.uuid ORDER BY info3 ASC;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# query collection3 with gufi_vt, joining in gufi_vt"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    I=\"CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);\", "
+        echo "    E=\"INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION3}') AND (uuid IS NOT NULL);\", "
+        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${SEARCH}/${COLLECTION3_DB}?mode=ro' AS ${COLLECTION3};\", "
+        echo "    J=\"INSERT INTO  aggregate SELECT * FROM intermediate;\", "
+        echo "    G=\"SELECT fullpath, info3 FROM aggregate JOIN ${COLLECTION3}.data ON aggregate.uuid == ${COLLECTION3}.data.uuid ORDER BY info3;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
 
     echo "#####################################"
     echo
@@ -233,17 +278,28 @@ cleanup
     echo "# delete collection dbs"
     run_sort "find \"${INDEXROOT}\" -name \"*collection*\" -delete"
 
-    echo "# fail due to missing collection dbs"
-    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -x --plugin \"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;\" \"${INDEXROOT}\" 2>&1 | sort | head -n 1" | @SED@ "s%${COLLECTION1_DB}%${COLLECTION1}.db%g;"
-
-    echo "# gufi_vt fail due to missing collection dbs"
     query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type=\"ATTACH ':memory:' AS '${COLLECTION1}'; CREATE TABLE ${COLLECTION1}.data (uuid TEXT, info1 TEXT);\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN ${COLLECTION1}.data ON (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (dsi_uuid(xattr_name, xattr_value) == ${COLLECTION1}.data.uuid);\", plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", \"${INDEXROOT}\");"
-        echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (uuid IS NOT NULL);\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "ATTACH 'file:${SEARCH}/${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};"
+        echo "SELECT fullpath, info1 FROM gufi JOIN ${COLLECTION1}.data ON gufi.uuid == ${COLLECTION1}.data.uuid ORDER BY info1 ASC;"
     )
-    out=$(gufi_vt "${query}" 2>&1 | replace)
-    echo "${out}" | head -n 4
-    echo "${out}" | sort | @GREP@ "local copy" | head -n 1
+    gufi_vt "${query}" 2>&1 | replace
+
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    I=\"CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);\", "
+        echo "    E=\"INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (uuid IS NOT NULL);\", "
+        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${SEARCH}/${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};\", "
+        echo "    J=\"INSERT INTO  aggregate SELECT * FROM intermediate;\", "
+        echo "    G=\"SELECT fullpath, info1 FROM aggregate JOIN ${COLLECTION1}.data ON aggregate.uuid == ${COLLECTION1}.data.uuid ORDER BY info1;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/dsi_plugins.expected "${OUTPUT}"

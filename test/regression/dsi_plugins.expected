@@ -2,7 +2,7 @@
 $ generatetree "prefix"
 
 # generate collection db for collection1
-$ sqlite3 "prefix/collection1.db" "SELECT uuid, info1 FROM data ORDER BY info1;"
+$ sqlite3 "collection1.db" "SELECT uuid, info1 FROM data ORDER BY info1;"
 <uuid>|0
 <uuid>|1
 <uuid>|2
@@ -10,7 +10,7 @@ $ sqlite3 "prefix/collection1.db" "SELECT uuid, info1 FROM data ORDER BY info1;"
 <uuid>|4
 
 # generate collection db for collection2
-$ sqlite3 "prefix/collection2.db" "SELECT uuid, info2 FROM data ORDER BY info2;"
+$ sqlite3 "collection2.db" "SELECT uuid, info2 FROM data ORDER BY info2;"
 <uuid>|5
 <uuid>|6
 <uuid>|7
@@ -37,32 +37,16 @@ Total Non-Dirs:      16
 $ find "prefix" -name "*collection*" -printf "%p %y %l\n"
 prefix/collection1.db f
 prefix/collection2.db f
-prefix/directory/collection1.db l ../collection1.db
-prefix/leaf_directory/collection2.db l ../collection2.db
 
-# query collection1
-$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);" "prefix" 2>/dev/null
-prefix/1KB|0
-prefix/1MB|1
-prefix/directory/executable|2
-prefix/directory/writable|3
-prefix/repeat_name|4
-
-# query collection2
-$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection2.data ON (dsi_collection_name(xattr_name) == 'collection2') AND (dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid);" "prefix" 2>/dev/null
-prefix/.hidden|5
-prefix/leaf_directory/leaf_file1|7
-prefix/leaf_directory/leaf_file2|8
-prefix/old_file|6
-prefix/repeat_name|9
-
-# query collection3
-$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info2 FROM vrxpentries JOIN collection3.data ON (dsi_collection_name(xattr_name) == 'collection3') AND (dsi_uuid(xattr_name, xattr_value) == collection3.data.uuid);" "prefix" 2>/dev/null
-
-# query collection1 with gufi_vt
+# query collection1 with gufi_vt, joining externally
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection1'; CREATE TABLE collection1.data (uuid TEXT, info1 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection1') AND (uuid IS NOT NULL);",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+ATTACH 'file:prefix/collection1.db?mode=ro' AS collection1;
+SELECT fullpath, info1 FROM gufi JOIN collection1.data ON gufi.uuid == collection1.data.uuid ORDER BY info1 ASC;"
 ) | sqlite3
 prefix/1KB|0
 prefix/1MB|1
@@ -70,35 +54,114 @@ prefix/directory/executable|2
 prefix/directory/writable|3
 prefix/repeat_name|4
 
-# query collection2 with gufi_vt
+# query collection1 with gufi_vt, joining in gufi_vt
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection2'; CREATE TABLE collection2.data (uuid TEXT, info2 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN collection2.data ON (dsi_collection_name(xattr_name) == 'collection2') AND (dsi_uuid(xattr_name, xattr_value) == collection2.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    I="CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);",
+    E="INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection1') AND (uuid IS NOT NULL);",
+    K="CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:prefix/collection1.db?mode=ro' AS collection1;",
+    J="INSERT INTO  aggregate SELECT * FROM intermediate;",
+    G="SELECT fullpath, info1 FROM aggregate JOIN collection1.data ON aggregate.uuid == collection1.data.uuid ORDER BY info1;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi;"
+) | sqlite3
+prefix/1KB|0
+prefix/1MB|1
+prefix/directory/executable|2
+prefix/directory/writable|3
+prefix/repeat_name|4
+
+# query collection2 with gufi_vt, joining externally
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection2') AND (uuid IS NOT NULL);",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+ATTACH 'file:prefix/collection2.db?mode=ro' AS collection2;
+SELECT fullpath, info2 FROM gufi JOIN collection2.data ON gufi.uuid == collection2.data.uuid ORDER BY info2 ASC;"
 ) | sqlite3
 prefix/.hidden|5
+prefix/old_file|6
 prefix/leaf_directory/leaf_file1|7
 prefix/leaf_directory/leaf_file2|8
-prefix/old_file|6
 prefix/repeat_name|9
 
-# query collection3 with gufi_vt
+# query collection2 with gufi_vt, joining in gufi_vt
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection3'; CREATE TABLE collection3.data (uuid TEXT, info2 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info2 FROM vrxpentries JOIN collection3.data ON (dsi_collection_name(xattr_name) == 'collection3') AND (dsi_uuid(xattr_name, xattr_value) == collection3.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    I="CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);",
+    E="INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection2') AND (uuid IS NOT NULL);",
+    K="CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:prefix/collection2.db?mode=ro' AS collection2;",
+    J="INSERT INTO  aggregate SELECT * FROM intermediate;",
+    G="SELECT fullpath, info2 FROM aggregate JOIN collection2.data ON aggregate.uuid == collection2.data.uuid ORDER BY info2;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi;"
 ) | sqlite3
+prefix/.hidden|5
+prefix/old_file|6
+prefix/leaf_directory/leaf_file1|7
+prefix/leaf_directory/leaf_file2|8
+prefix/repeat_name|9
 
+# query collection3 with gufi_vt, joining externally
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection3') AND (uuid IS NOT NULL);",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+ATTACH 'file:search/collection3.db?mode=ro' AS collection3;
+SELECT fullpath, info3 FROM gufi JOIN collection3.data ON gufi.uuid == collection3.data.uuid ORDER BY info3 ASC;"
+) | sqlite3
+Runtime error near line 6: unable to open database: file:search/collection3.db?mode=ro (14)
+Parse error near line 7: no such table: collection3.data
+# query collection3 with gufi_vt, joining in gufi_vt
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    I="CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);",
+    E="INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection3') AND (uuid IS NOT NULL);",
+    K="CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:search/collection3.db?mode=ro' AS collection3;",
+    J="INSERT INTO  aggregate SELECT * FROM intermediate;",
+    G="SELECT fullpath, info3 FROM aggregate JOIN collection3.data ON aggregate.uuid == collection3.data.uuid ORDER BY info3;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: -K SQL failed while getting columns types: unable to open database: file:search/collection3.db?mode=ro
+Parse error near line 10: no such table: gufi
 #####################################
 
 # delete collection dbs
 $ find "prefix" -name "*collection*" -delete
 
-# fail due to missing collection dbs
-$ gufi_query -d "|" -x --plugin "gufi_plugin_operations:dsi_querying_plugin" -E "SELECT rpath(sname, sroll, name), info1 FROM vrxpentries JOIN collection1.data ON dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid;" "prefix" 2>&1 | sort | head -n 1
-Error: Could not attach local copy of collection db for collection "collection1" (original file: "prefix/collection1.db") at "prefix"
-
-# gufi_vt fail due to missing collection dbs
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(setup_res_col_type="ATTACH ':memory:' AS 'collection1'; CREATE TABLE collection1.data (uuid TEXT, info1 TEXT);", E="SELECT rpath(sname, sroll, name) AS fullpath, info1 FROM vrxpentries JOIN collection1.data ON (dsi_collection_name(xattr_name) == 'collection1') AND (dsi_uuid(xattr_name, xattr_value) == collection1.data.uuid);", plugin="gufi_plugin_operations:dsi_querying_plugin", "prefix");SELECT * FROM gufi ORDER BY fullpath ASC;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection1') AND (uuid IS NOT NULL);",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+ATTACH 'file:prefix/collection1.db?mode=ro' AS collection1;
+SELECT fullpath, info1 FROM gufi JOIN collection1.data ON gufi.uuid == collection1.data.uuid ORDER BY info1 ASC;"
 ) | sqlite3
-Error: Could not attach local copy of collection db for collection "collection1" (original file: "prefix/collection1.db") at "prefix"
+Runtime error near line 6: unable to open database: file:prefix/collection1.db?mode=ro (14)
+Parse error near line 7: no such table: collection1.data
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    I="CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);",
+    E="INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection1') AND (uuid IS NOT NULL);",
+    K="CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:prefix/collection1.db?mode=ro' AS collection1;",
+    J="INSERT INTO  aggregate SELECT * FROM intermediate;",
+    G="SELECT fullpath, info1 FROM aggregate JOIN collection1.data ON aggregate.uuid == collection1.data.uuid ORDER BY info1;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi;"
+) | sqlite3
+Runtime error near line 2: -K SQL failed while getting columns types: unable to open database: file:prefix/collection1.db?mode=ro
+Parse error near line 10: no such table: gufi
