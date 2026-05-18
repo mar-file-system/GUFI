@@ -1437,6 +1437,7 @@ static trie_t *sqlite3_types(void) {
     trie_insert(types, "REAL",    4, (void *) (uintptr_t) SQLITE_FLOAT,   NULL);
 
     trie_insert(types, "TEXT",    4, (void *) (uintptr_t) SQLITE_TEXT,    NULL);
+    trie_insert(types, "VARCHAR", 7, (void *) (uintptr_t) SQLITE_TEXT,    NULL);
 
     trie_insert(types, "BLOB",    4, (void *) (uintptr_t) SQLITE_BLOB,    NULL);
 
