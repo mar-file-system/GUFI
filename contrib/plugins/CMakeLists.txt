@@ -98,7 +98,9 @@ target_link_libraries(dsi_querying
 )
 add_dependencies(dsi_querying install_dependencies)
 install(TARGETS dsi_querying DESTINATION "${SERVER_LIB}" COMPONENT Server)
-install(TARGETS dsi_querying DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
+if (CLIENT)
+  install(TARGETS dsi_querying DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
+endif()
 
 # marfs plugin
 set(MARFS_PREFIX "" CACHE PATH "MarFS install prefix")
