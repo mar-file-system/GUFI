@@ -68,7 +68,7 @@ jobs:
   Documentation:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
       with:
         fetch-depth: 0
         fetch-tags: true
@@ -86,7 +86,7 @@ jobs:
       run:  cmake --build ${{ github.workspace }}/build --target gufi_quickstart gufi_user gufi_administrator gufi_developer
 
     - name: Upload PDFs
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@master
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: ${{ github.workspace }}/build/docs/latex/pdfs/*.pdf

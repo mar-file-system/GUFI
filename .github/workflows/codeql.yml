@@ -79,17 +79,17 @@ jobs:
       security-events: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
       with:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-CodeQL
 
-    - uses: github/codeql-action/init@v3
+    - uses: github/codeql-action/init@main
       with:
         queries: security-and-quality
 
@@ -111,4 +111,4 @@ jobs:
            find ${{ github.workspace }}/build -type f -name "*.py" -delete
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@main

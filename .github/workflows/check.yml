@@ -75,7 +75,7 @@ jobs:
   ShellCheck:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
 
     - name: Install ShellCheck
       run:  sudo apt -y install shellcheck
@@ -86,7 +86,7 @@ jobs:
   Pylint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
 
     - name: Install pip
       run:  sudo apt install -y python3-pip
@@ -103,9 +103,9 @@ jobs:
     container:
       image: rockylinux:9
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-old-cmake
@@ -149,12 +149,12 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
       with:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-test-directory
@@ -182,12 +182,12 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
       with:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-test-directory
@@ -218,12 +218,12 @@ jobs:
       CC: gcc
       CXX: g++
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
       with:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-ASAN-LSAN-UBSAN
@@ -251,12 +251,12 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
       with:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-TSAN
@@ -283,12 +283,12 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
       with:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-memcheck
@@ -318,12 +318,12 @@ jobs:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@main
       with:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-without-jemalloc
