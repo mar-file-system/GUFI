@@ -213,13 +213,13 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     dir = opendir_wrapper(nda.work->name, 1);
     if (!dir) {
-        rc = 1;
+        rc = 0;
         goto cleanup;
     }
 
     if (lstat_wrapper(nda.work->name, &nda.work->statuso, &nda.work->crtime,
                       &nda.work->stat_called, 1, 1) != 0) {
-        rc = 1;
+        rc = 0;
         goto close_dir;
     }
 

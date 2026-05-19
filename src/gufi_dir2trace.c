@@ -166,13 +166,14 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     DIR *dir = opendir_wrapper(work->name, 1);
     if (!dir) {
-        rc = 1;
+        rc = 0;
         goto cleanup;
     }
 
     memset(&ed, 0, sizeof(ed));
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
                       &work->stat_called, 1, 1) != 0) {
+        rc = 0;
         goto close_dir;
     }
 
