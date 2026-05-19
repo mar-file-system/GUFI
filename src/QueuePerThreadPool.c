@@ -266,49 +266,34 @@ static inline void maybe_steal_work(QPTPool_t *pool, QPTPoolThreadData_t *tw, si
  */
 static void wait_for_work(QPTPool_t *pool, QPTPoolThreadData_t *tw) {
     while (
-        /* not stopping on error or stopping on error and error occurred */
+        /* not stopping on error or stopping on error and no error has occurred */
         ((pool->stop_on_error == 0) || ((pool->stop_on_error == 1) && (pool->errored == 0))) &&
         (
-            (
-                /* running, so sit here while there is
-                 *     - no work in the pool OR
-                 *     - no work for this thread to process
-                 */
-                (pool->state == RUNNING) &&
-                (
-                    /* no work in pool */
-                    (!pool->incomplete && !pool->swapped)
+        (
+            /* running, so sit here while there is
+             *     - no work in the pool OR
+             *     - there is work in the pool, but not in this thread
+             */
+            (pool->state == RUNNING) &&
 
-                    /*
-                     * Using OR here because AND would loop on
-                     * non-empty pool + no work for this thread
-                     */
-                    ||
-
-                    /* no claimed or waiting work in this thread */
-                    (!tw->claimed.size && !tw->waiting.size)
-                    )
-                )
-            ||
-            (
-                /*
-                 * waiting to stop, but there is still work (that might
-                 * spawn more work), so sit here until there is either
-                 *     - no work across the pool OR
-                 *     - work for this thread to process
-                 */
-                (pool->state == STOPPING) &&
-                (
-                    /* work somewhere in pool */
-                    (pool->incomplete || pool->swapped) &&
-
-                    /* no claimed work being processed by this thread */
-                    !tw->claimed.size &&
-
-                    /* no work for this thread to process (more might come in from other threads) */
-                    !tw->waiting.size
-                )
-            )
+            /*
+             * inverted logic:
+             *     NOT(there is work in the pool and this thread has work to process)
+             */
+            !((pool->incomplete || pool->swapped) &&
+              (tw->claimed.size || tw->waiting.size))
+        )
+        ||
+        (
+            /*
+             * waiting to stop, but there is still work (that might
+             * spawn more work), so sit here while there is work in
+             * the pool but not in this thread
+             */
+            (pool->state == STOPPING) &&
+            ((pool->incomplete || pool->swapped) &&
+             (!tw->claimed.size && !tw->waiting.size))
+        )
         )
         ) {
         pthread_mutex_unlock(&tw->claimed_mutex);
