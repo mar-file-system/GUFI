@@ -70,11 +70,11 @@ set -e
 jemalloc_name="jemalloc"
 jemalloc_prefix="${INSTALL_DIR}/${jemalloc_name}"
 if [[ ! -d "${jemalloc_prefix}" ]]; then
-    jemalloc_build="${BUILD_DIR}/jemalloc-master"
+    jemalloc_build="${BUILD_DIR}/jemalloc-dev"
     if [[ ! -d "${jemalloc_build}" ]]; then
         jemalloc_tarball="${DOWNLOAD_DIR}/jemalloc.tar.gz"
         if [[ ! -f "${jemalloc_tarball}" ]]; then
-            wget https://github.com/jemalloc/jemalloc/archive/master.tar.gz -O "${jemalloc_tarball}"
+            wget https://github.com/jemalloc/jemalloc/archive/dev.tar.gz -O "${jemalloc_tarball}"
         fi
 
         tar -xf "${jemalloc_tarball}" -C "${BUILD_DIR}"
