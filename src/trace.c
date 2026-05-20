@@ -320,23 +320,23 @@ int linetowork(char *line, const size_t len, const char delim,
 
     *work = new_work;
 
-    p = q;  q = split(p, &delim, 1, end); ed->type = *p;
+    p = q; q = split(p, &delim, 1, end); ed->type = *p;
 
     if (ed->type == 'e') {
         return 0;
     }
 
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_ino, &new_work->statuso.st_ino);
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_mode, &new_work->statuso.st_mode);
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_nlink, &new_work->statuso.st_nlink);
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_uid, &new_work->statuso.st_uid);
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_gid, &new_work->statuso.st_gid);
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_size, &new_work->statuso.st_size);
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_bsize, &new_work->statuso.st_blksize);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_ino,    &new_work->statuso.st_ino);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_mode,   &new_work->statuso.st_mode);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_nlink,  &new_work->statuso.st_nlink);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_uid,    &new_work->statuso.st_uid);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_gid,    &new_work->statuso.st_gid);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_size,   &new_work->statuso.st_size);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_bsize,  &new_work->statuso.st_blksize);
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_blocks, &new_work->statuso.st_blocks);
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->statuso.st_atime);
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->statuso.st_mtime);
-    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->statuso.st_ctime);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld",           &new_work->statuso.st_atime);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld",           &new_work->statuso.st_mtime);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld",           &new_work->statuso.st_ctime);
 
     p = q;
     if (old_format) {
@@ -356,6 +356,8 @@ int linetowork(char *line, const size_t len, const char delim,
     }
 
     if (!q) {
+        free(new_work);
+        *work = NULL;
         return -1;
     }
 

@@ -902,7 +902,7 @@ static int rollup_ascend(void *args) {
     struct DirStats *ds = malloc(sizeof(struct DirStats));
     SNFORMAT_S(ds->path, MAXPATH, 1, dir->data.name, dir->data.name_len);
     ds->level = dir->data.level;
-    ds->subdir_count = dir->data.subdir_count;
+    ds->subdir_count = sll_get_size(&dir->data.subdirs);
     ds->subnondir_count = 0;
     ds->too_many_before = 0;
     ds->too_many_after = 0;

@@ -95,8 +95,8 @@ const char XATTR_GID_W_READ_FILENAME_FORMAT[]  = "gid+r.%llu.db";
 const char XATTR_GID_WO_READ_FILENAME_FORMAT[] = "gid-r.%llu.db";
 
 int xattr_can_rollin(struct stat *parent, struct stat *entry) {
-    /* Rule 1: File is 0+R (doesn’t matter what the parent dir perms or ownership is) */
-    static const mode_t UGO_MASK = 0444;
+    /* Rule 1: File is O+R (doesn’t matter what the parent dir perms or ownership is) */
+    static const mode_t UGO_MASK = 0004;
     if ((entry->st_mode & UGO_MASK) == UGO_MASK) {
         return 1;
     }

@@ -298,8 +298,6 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
     int dir_fd = gufi_dirfd(dir);
 
     pthread_mutex_init(&bu->refs.mutex, NULL);
-    bu->subdir_count = 0;
-    bu->subnondir_count = 0;
     sll_init(&bu->subdirs);
     sll_init(&bu->subnondirs);
 
@@ -316,14 +314,14 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
             continue;
         }
 
+        struct work child;
+        child.name = entry->d_name;
+        child.name_len = name_len;
+        child.basename_len = name_len;
+        child.stat_called = STAT_NOT_CALLED;
+
         int is_dir = 0;
         if (entry->d_type == DT_UNKNOWN) {
-            struct work child;
-            child.name = entry->d_name;
-            child.name_len = name_len;
-            child.basename_len = name_len;
-            child.stat_called = STAT_NOT_CALLED;
-
             struct entry_data ed;
             ed.parent_fd = dir_fd;
 
@@ -336,10 +334,7 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
             is_dir = 1;
         }
 
-        if (is_dir) {
-            bu->subdir_count++;
-        } else {
-            bu->subnondir_count++;
+        if (!is_dir) {
             // For files, only keep going if asked to track them:
             if (!ua->track_non_dirs)
                 continue;
@@ -348,6 +343,12 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
         struct BottomUp new_work = { 0 };
 
         new_pathname(&new_work, bu->name, bu->name_len, entry->d_name, name_len);
+
+        /* keep stat data so that users do not have to call it again unnecessarily */
+        if (child.stat_called != STAT_NOT_CALLED) {
+            new_work.stat_called = child.stat_called;
+            new_work.st = child.statuso;
+        }
 
         if (ua->generate_alt_name) {
             /* append converted entry name to converted directory */
@@ -382,9 +383,9 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
     /* if the descent function succeeded */
     if (desc_rc == 0) {
         /* if there are subdirectories, this directory cannot go back up just yet */
-        if (keep_descending && (next_level <= ua->max_level) && bu->subdir_count) {
+        if (keep_descending && (next_level <= ua->max_level) && sll_get_size(&bu->subdirs)) {
             /* decrement each time child triggers parent for processing */
-            bu->refs.remaining = bu->subdir_count;
+            bu->refs.remaining = sll_get_size(&bu->subdirs);
 
             /* have to lock to prevent subdirs from getting popped */
             /* off before all of them have been enqueued */
@@ -409,8 +410,6 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
     else {
         sll_destroy(&bu->subdirs, bottomup_destroy);
         sll_destroy(&bu->subnondirs, bottomup_destroy);
-        bu->subdir_count = 0;
-        bu->subnondir_count = 0;
         bottomup_destroy(bu);
     }
 

@@ -92,12 +92,12 @@ struct BottomUp {
     size_t name_len;
     char *alt_name;
     size_t alt_name_len;
+    StatCalled stat_called;
+    struct stat st;
     struct {
         pthread_mutex_t mutex;
         size_t remaining;
     } refs;
-    size_t subdir_count;
-    size_t subnondir_count;
     sll_t subdirs;
     sll_t subnondirs;
     struct BottomUp *parent;
