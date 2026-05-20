@@ -79,6 +79,7 @@ set(GUFI_SOURCES
   external_copy.c
   gufi_vt.c
   histogram.c
+  incremental_non_path.c
   outfiles.c
   path_list.c
   plugin.c
@@ -345,3 +346,17 @@ if (DB2_FOUND AND DB2_BUILD)
   string(REPLACE ";" " " DB2_CFLAGS "${DB2_CFLAGS}")
   string(REPLACE ";" " " DB2_LDFLAGS "${DB2_LDFLAGS}")
 endif()
+
+# lustre changelog reader...
+add_executable(lustre_changelog_updater lustre_changelog_updater.c)
+target_include_directories(lustre_changelog_updater
+    PRIVATE /home/bertschinger/git/lustre-release/lustre/include/
+    /home/bertschinger/git/lustre-release/lustre/include/uapi
+)
+target_link_directories(lustre_changelog_updater
+    PRIVATE /home/bertschinger/git/lustre-release/lustre/utils/.libs
+)
+target_link_libraries(lustre_changelog_updater
+    lustreapi
+    ${COMMON_LIBRARIES}
+)
