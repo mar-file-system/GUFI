@@ -150,15 +150,12 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         rc = !db;
     }
 
-    /* get roll up status set by parent */
-    int rolledup = work->rolledup;
-
     /*
      * if parent of this directory was rolled up, all children are rolled up, so skip this check
      * if parent of this directory was not rolled up, this directory might be
      */
-    if (deep_enough(in, work) && db && !rolledup) {
-        rc = !!get_rollupscore(db, &rolledup);
+    if (deep_enough(in, work) && db && !work->rolledup) {
+        rc = !!get_rollupscore(db, &work->rolledup);
     }
 
     /*
@@ -198,7 +195,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
             if (subdir) {
                 /* set child rolledup status so that if this dir */
                 /* was rolled up, child can skip roll up check */
-                subdir->rolledup = rolledup;
+                subdir->rolledup = work->rolledup;
 
                 QPTPool_enqueue(ctx, processdir, subdir);
             }
@@ -206,7 +203,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     /* now that work has been pushed onto the queue, clean up this db */
-    if (deep_enough(in, work) && db && rolledup) {
+    if (deep_enough(in, work) && db && work->rolledup) {
         str_t name = REFSTR(work->name, work->name_len);
 
         char *err = NULL;
