@@ -259,8 +259,8 @@ static size_t gq_descend(QPTPool_ctx_t *ctx,
 static void subdirs(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc; (void) argv;
 
-    const int rollupscore = sqlite3_value_int(argv[1]);
-    if (rollupscore == 0) {
+    const int isrolledup = sqlite3_value_int(argv[1]);
+    if (isrolledup == 0) {
         size_t *subdirs_walked_count = (size_t *) sqlite3_user_data(context);
         sqlite3_result_int64(context, *subdirs_walked_count);
     }
@@ -290,13 +290,13 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
          * ignore errors - if the db wasn't opened, or if
          * summary is missing the columns, keep descending
          */
-        int rollupscore = 0;
+        int isrolledup = 0;
         if (db) {
-            get_rollupscore(db, &rollupscore);
+            get_isrolledup(db, &isrolledup);
         }
 
         /* push subdirectories into the queue */
-        if (rollupscore == 0) {
+        if (isrolledup == 0) {
             *subdirs_walked_count =
                 gq_descend(ctx, in, db, gqw, dir, in->skip, processdir);
         }

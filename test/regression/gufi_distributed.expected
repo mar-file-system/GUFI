@@ -164,13 +164,13 @@ Waiting for slurm jobs to complete
     Process upper directories on 127.0.0.1
 
 # Query the rolled up index
-$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, rollupscore FROM summary;" "search2/prefix"
-prefix/directory/subdirectory|0|1
-prefix/directory|0|1
-prefix/empty_directory|0|1
-prefix/leaf_directory|0|1
-prefix/unusual#? directory ,|0|1
-prefix|1|1
+$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, canrollup, isrolledup FROM summary;" "search2/prefix"
+prefix/directory/subdirectory|0|1|1
+prefix/directory|0|1|1
+prefix/empty_directory|0|1|1
+prefix/leaf_directory|0|1|1
+prefix/unusual#? directory ,|0|1|1
+prefix|1|1|1
 
 # Unroll up the index
 $ gufi_unrollup_distributed --sbatch "sbatch" --gufi_unrollup "gufi_unrollup" --use-existing-group-files "find.sh" slurm "hostfile" 1 "search2/prefix" 2>/dev/null
@@ -184,13 +184,13 @@ Waiting for slurm jobs to complete
     Process upper directories on 127.0.0.1
 
 # Query the unrolled up index
-$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, rollupscore FROM summary;" "search2/prefix"
-directory|1|0
-empty_directory|1|0
-leaf_directory|1|0
-prefix|1|0
-subdirectory|1|0
-unusual#? directory ,|1|0
+$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, canrollup, isrolledup FROM summary;" "search2/prefix"
+directory|1|0|0
+empty_directory|1|0|0
+leaf_directory|1|0|0
+prefix|1|0|0
+subdirectory|1|0|0
+unusual#? directory ,|1|0|0
 
 #####################################
 
@@ -339,13 +339,13 @@ Waiting for ssh jobs to complete
     Process upper directories on 127.0.0.1
 
 # Query the rolled up index
-$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, rollupscore FROM summary;" "search2/prefix"
-prefix/directory/subdirectory|0|1
-prefix/directory|0|1
-prefix/empty_directory|0|1
-prefix/leaf_directory|0|1
-prefix/unusual#? directory ,|0|1
-prefix|1|1
+$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, canrollup, isrolledup FROM summary;" "search2/prefix"
+prefix/directory/subdirectory|0|1|1
+prefix/directory|0|1|1
+prefix/empty_directory|0|1|1
+prefix/leaf_directory|0|1|1
+prefix/unusual#? directory ,|0|1|1
+prefix|1|1|1
 
 # Unroll up the index
 $ gufi_unrollup_distributed --ssh "ssh" --gufi_unrollup "gufi_unrollup" --use-existing-group-files "parallel_find.sh" ssh "hostfile" 1 "search2/prefix" 2>/dev/null
@@ -359,13 +359,13 @@ Waiting for ssh jobs to complete
     Process upper directories on 127.0.0.1
 
 # Query the unrolled up index
-$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, rollupscore FROM summary;" "search2/prefix"
-directory|1|0
-empty_directory|1|0
-leaf_directory|1|0
-prefix|1|0
-subdirectory|1|0
-unusual#? directory ,|1|0
+$ gufi_query -n 2 -d "|" -T "SELECT name, isroot, canrollup, isrolledup FROM summary;" "search2/prefix"
+directory|1|0|0
+empty_directory|1|0|0
+leaf_directory|1|0|0
+prefix|1|0|0
+subdirectory|1|0|0
+unusual#? directory ,|1|0|0
 
 #####################################
 

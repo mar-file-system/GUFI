@@ -1580,13 +1580,13 @@ Total:          10
 Remaining Dirs: 2 (66.67%)
 
 # Check which directories have been rolled up
-$ gufi_query -d "|" -S "SELECT path(), rpath(sname, sroll), rollupscore FROM vrsummary;" "prefix"
-prefix/directory|prefix/directory/subdirectory|1
-prefix/directory|prefix/directory|1
-prefix/empty_directory|prefix/empty_directory|0
-prefix/leaf_directory|prefix/leaf_directory|1
-prefix/unusual#? directory ,|prefix/unusual#? directory ,|0
-prefix|prefix|0
+$ gufi_query -d "|" -S "SELECT path(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"
+prefix/directory|prefix/directory/subdirectory|1|1
+prefix/directory|prefix/directory|1|1
+prefix/empty_directory|prefix/empty_directory|0|0
+prefix/leaf_directory|prefix/leaf_directory|1|1
+prefix/unusual#? directory ,|prefix/unusual#? directory ,|0|0
+prefix|prefix|0|0
 
 # Full Rollup up to level 1
 $ gufi_rollup --min-level 1 "prefix"
@@ -1625,13 +1625,13 @@ Total:          15
 Remaining Dirs: 0 (0.00%)
 
 # Check which directories have been rolled up
-$ gufi_query -d "|" -S "SELECT path(), rpath(sname, sroll), rollupscore FROM vrsummary;" "prefix"
-prefix/directory|prefix/directory/subdirectory|1
-prefix/directory|prefix/directory|1
-prefix/empty_directory|prefix/empty_directory|1
-prefix/leaf_directory|prefix/leaf_directory|1
-prefix/unusual#? directory ,|prefix/unusual#? directory ,|1
-prefix|prefix|0
+$ gufi_query -d "|" -S "SELECT path(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"
+prefix/directory|prefix/directory/subdirectory|1|1
+prefix/directory|prefix/directory|1|1
+prefix/empty_directory|prefix/empty_directory|1|1
+prefix/leaf_directory|prefix/leaf_directory|1|1
+prefix/unusual#? directory ,|prefix/unusual#? directory ,|1|1
+prefix|prefix|0|0
 
 # Complete rollup using existing data
 $ gufi_rollup --dont-reprocess "prefix"
@@ -1670,13 +1670,13 @@ Total:          11
 Remaining Dirs: 1 (20.00%)
 
 # Check which directories have been rolled up
-$ gufi_query -d "|" -S "SELECT path(), rpath(sname, sroll), rollupscore FROM vrsummary;" "prefix"
-prefix|prefix/directory/subdirectory|1
-prefix|prefix/directory|1
-prefix|prefix/empty_directory|1
-prefix|prefix/leaf_directory|1
-prefix|prefix/unusual#? directory ,|1
-prefix|prefix|1
+$ gufi_query -d "|" -S "SELECT path(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"
+prefix|prefix/directory/subdirectory|1|1
+prefix|prefix/directory|1|1
+prefix|prefix/empty_directory|1|1
+prefix|prefix/leaf_directory|1|1
+prefix|prefix/unusual#? directory ,|1|1
+prefix|prefix|1|1
 
 Creating GUFI tree search with 1 threads
 Total Dirs:          6
@@ -1759,23 +1759,23 @@ prefix/test-xattr.db
 prefix/unusual#? directory ,/db.db
 
 # prefix is rolled up, so directory traversal stops immediately
-$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix"
-prefix|prefix/directory/subdirectory|0|1|test.name|test.value
-prefix|prefix/directory/subdirectory|0|1|user.name|sub
-prefix|prefix/directory/subdirectory|0|1|user.type|dir
-prefix|prefix/directory|0|1||
-prefix|prefix/empty_directory|0|1||
-prefix|prefix/leaf_directory|0|1|user.name|leaf
-prefix|prefix/leaf_directory|0|1|user.type|dir
-prefix|prefix/unusual#? directory ,|0|1||
-prefix|prefix|1|1||
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix"
+prefix|prefix/directory/subdirectory|0|1|1|test.name|test.value
+prefix|prefix/directory/subdirectory|0|1|1|user.name|sub
+prefix|prefix/directory/subdirectory|0|1|1|user.type|dir
+prefix|prefix/directory|0|1|1||
+prefix|prefix/empty_directory|0|1|1||
+prefix|prefix/leaf_directory|0|1|1|user.name|leaf
+prefix|prefix/leaf_directory|0|1|1|user.type|dir
+prefix|prefix/unusual#? directory ,|0|1|1||
+prefix|prefix|1|1|1||
 
 # prefix/directory is not rolled up, so directory traversal does not stop
-$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix/directory"
-prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|test.name|test.value
-prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|user.name|sub
-prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|user.type|dir
-prefix/directory|prefix/directory|1|0||
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix/directory"
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|0|test.name|test.value
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|0|user.name|sub
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|0|user.type|dir
+prefix/directory|prefix/directory|1|1|0||
 
 Creating GUFI tree search with 1 threads
 Total Dirs:          6
@@ -1816,41 +1816,41 @@ Directories:    6 (1 empty)
 Total:          20
 Remaining Dirs: 0 (0.00%)
 
-$ find "prefix" -name "db.db" -exec "sqlite3" {} "SELECT name, isroot, rollupscore FROM summary;" \;
-directory/subdirectory|0|1
-directory|1|1
-empty_directory|1|1
-leaf_directory|1|1
-prefix/directory/subdirectory|0|1
-prefix/directory|0|1
-prefix/empty_directory|0|1
-prefix/leaf_directory|0|1
-prefix/unusual#? directory ,|0|1
-prefix|1|1
-subdirectory|1|0
-unusual#? directory ,|1|1
+$ find "prefix" -name "db.db" -exec "sqlite3" {} "SELECT name, isroot, canrollup, isrolledup FROM summary;" \;
+directory/subdirectory|0|1|1
+directory|1|1|1
+empty_directory|1|1|1
+leaf_directory|1|1|1
+prefix/directory/subdirectory|0|1|1
+prefix/directory|0|1|1
+prefix/empty_directory|0|1|1
+prefix/leaf_directory|0|1|1
+prefix/unusual#? directory ,|0|1|1
+prefix|1|1|1
+subdirectory|1|1|0
+unusual#? directory ,|1|1|1
 
 # prefix is rolled up, so directory traversal stops immediately
-$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix"
-prefix|prefix/directory/subdirectory|0|1|user.name|sub
-prefix|prefix/directory/subdirectory|0|1|user.type|dir
-prefix|prefix/directory|0|1||
-prefix|prefix/empty_directory|0|1||
-prefix|prefix/leaf_directory|0|1|user.name|leaf
-prefix|prefix/leaf_directory|0|1|user.type|dir
-prefix|prefix/unusual#? directory ,|0|1||
-prefix|prefix|1|1||
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix"
+prefix|prefix/directory/subdirectory|0|1|1|user.name|sub
+prefix|prefix/directory/subdirectory|0|1|1|user.type|dir
+prefix|prefix/directory|0|1|1||
+prefix|prefix/empty_directory|0|1|1||
+prefix|prefix/leaf_directory|0|1|1|user.name|leaf
+prefix|prefix/leaf_directory|0|1|1|user.type|dir
+prefix|prefix/unusual#? directory ,|0|1|1||
+prefix|prefix|1|1|1||
 
 # prefix/directory is also rolled up, so directory traversal stops immediately
-$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix/directory"
-prefix/directory|prefix/directory/subdirectory|0|1|user.name|sub
-prefix/directory|prefix/directory/subdirectory|0|1|user.type|dir
-prefix/directory|prefix/directory|1|1||
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix/directory"
+prefix/directory|prefix/directory/subdirectory|0|1|1|user.name|sub
+prefix/directory|prefix/directory/subdirectory|0|1|1|user.type|dir
+prefix/directory|prefix/directory|1|1|1||
 
 # prefix/directory/subdirectory is not rolled up
-$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix/directory/subdirectory"
-prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|user.name|sub
-prefix/directory/subdirectory|prefix/directory/subdirectory|1|0|user.type|dir
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix/directory/subdirectory"
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|0|user.name|sub
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|0|user.type|dir
 
 Creating GUFI tree search with 1 threads
 Total Dirs:          6
@@ -1865,14 +1865,14 @@ Cannot open database: prefix/directory/db.db unable to open database file rc 14
 Cannot open database: prefix/directory/db.db unable to open database file rc 14
 
 # prefix/directory wasn't rolled up, so have to traverse entire tree
-$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, rollupscore, xattr_name, xattr_value FROM vrxsummary;" "prefix"
-prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|user.name|sub
-prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|user.type|dir
-prefix/empty_directory|prefix/empty_directory|1|1||
-prefix/leaf_directory|prefix/leaf_directory|1|1|user.name|leaf
-prefix/leaf_directory|prefix/leaf_directory|1|1|user.type|dir
-prefix/unusual#? directory ,|prefix/unusual#? directory ,|1|1||
-prefix|prefix|1|0||
+$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix"
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|1|user.name|sub
+prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|1|user.type|dir
+prefix/empty_directory|prefix/empty_directory|1|1|1||
+prefix/leaf_directory|prefix/leaf_directory|1|1|1|user.name|leaf
+prefix/leaf_directory|prefix/leaf_directory|1|1|1|user.type|dir
+prefix/unusual#? directory ,|prefix/unusual#? directory ,|1|1|1||
+prefix|prefix|1|0|0||
 
 # bad thread count
 $ gufi_rollup -n 18446744073709551615 "search"

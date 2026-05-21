@@ -750,7 +750,8 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
     "minossint2 INT64, maxossint2 INT64, totossint2 INT64, "                      \
     "minossint3 INT64, maxossint3 INT64, totossint3 INT64, "                      \
     "minossint4 INT64, maxossint4 INT64, totossint4 INT64, "                      \
-    "rectype INT64, pinode TEXT, isroot INT64, rollupscore INT64"                 \
+    "rectype INT64, pinode TEXT, isroot INT64, "                                  \
+    "canrollup INT64, isrolledup INT64"                                           \
     ");"
 
 #define VRPENTRIES_SCHEMA(name, extra_cols)                                       \

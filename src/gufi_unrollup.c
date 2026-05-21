@@ -155,7 +155,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
      * if parent of this directory was not rolled up, this directory might be
      */
     if (deep_enough(in, work) && db && !work->rolledup) {
-        rc = !!get_rollupscore(db, &work->rolledup);
+        rc = !!get_isrolledup(db, &work->rolledup);
     }
 
     /*

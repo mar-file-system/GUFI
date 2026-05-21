@@ -132,7 +132,8 @@ extern const char ENTRIES_INSERT[];
     "minossint2 INT64, maxossint2 INT64, totossint2 INT64, "            \
     "minossint3 INT64, maxossint3 INT64, totossint3 INT64, "            \
     "minossint4 INT64, maxossint4 INT64, totossint4 INT64, "            \
-    "rectype INT64, pinode TEXT, isroot INT64, rollupscore INT64"       \
+    "rectype INT64, pinode TEXT, isroot INT64, "                        \
+    "canrollup INT64, isrolledup INT64"                                 \
     ");"
 extern const char SUMMARY_CREATE[];
 
@@ -309,22 +310,22 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
 
 void sqlite_print_err_and_free(char *err, FILE *stream, const char *format, ...);
 
-int get_rollupscore(sqlite3 *db, int *rollupscore);
+int get_isrolledup(sqlite3 *db, int *isrolledup);
 
 extern const char   ROLLUP_CLEANUP[];
 extern const size_t ROLLUP_CLEANUP_SIZE;
 
 int treesummary_exists_callback(void *args, int count, char **data, char **columns);
 
-enum CheckRollupScore {
-    ROLLUPSCORE_CHECK,
-    ROLLUPSCORE_DONT_CHECK,
-    ROLLUPSCORE_KNOWN_YES,
-    ROLLUPSCORE_KNOWN_NO,
+enum CheckIsRolledUp {
+    ISROLLEDUP_CHECK,
+    ISROLLEDUP_DONT_CHECK,
+    ISROLLEDUP_KNOWN_YES,
+    ISROLLEDUP_KNOWN_NO,
 };
 
 int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
-                                 const enum CheckRollupScore check_rollupscore,
+                                 const enum CheckIsRolledUp check_isrolledup,
                                  const uid_t uid, const gid_t gid);
 
 /* caller frees types */

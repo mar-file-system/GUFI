@@ -266,7 +266,7 @@ def flatten_index(args):                         # pylint: disable=too-many-loca
         # Stat('rectype'),
         Stat(PINODE),
         # Stat('isroot'),
-        # Stat('rollupscore'),
+        # Stat('isrolledup'),
     ]
 
     E_COLS = [

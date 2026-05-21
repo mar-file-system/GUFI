@@ -12,7 +12,7 @@ GUFI query is
     -S 'INSERT INTO intermediate SELECT rpath(sname, sroll), basename(name), type, inode, nlink, size, mode, uid, gid, blksize, blocks, mtime, atime, ctime, linkname, xattr_names, pinode FROM vrsummary WHERE (name REGEXP '"'"'^(?![\.]).*$'"'"') AND (
     CASE level()
         WHEN 0 THEN
-            CASE rollupscore
+            CASE isrolledup
                 WHEN 0 THEN FALSE
                 WHEN 1 THEN (isroot == 0 AND depth == 1)
             END

@@ -301,7 +301,7 @@ def get_group(group):
 ROLLUP_SUMMARY_WHERE = '''
     CASE level()
         WHEN 0 THEN
-            CASE rollupscore
+            CASE isrolledup
                 WHEN 0 THEN FALSE
                 WHEN 1 THEN (isroot == 0 AND depth == 1)
             END

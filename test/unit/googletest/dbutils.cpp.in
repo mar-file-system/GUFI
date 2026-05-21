@@ -297,13 +297,13 @@ TEST(sqlite_uri_path, not_enough_space) {
     }
 }
 
-TEST(get_rollupscore, nullptr) {
-    EXPECT_EQ(get_rollupscore(nullptr, nullptr), 1);
+TEST(get_isrolledup, nullptr) {
+    EXPECT_EQ(get_isrolledup(nullptr, nullptr), 1);
 }
 
 TEST(bottomup_collect_treesummary, nullptr) {
     // fail at top
-    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", nullptr, ROLLUPSCORE_KNOWN_YES, 0, 0), 1);
+    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", nullptr, ISROLLEDUP_KNOWN_YES, 0, 0), 1);
 
     char dirname[] = "XXXXXX";
     ASSERT_EQ(mkdtemp(dirname), dirname);
@@ -313,7 +313,7 @@ TEST(bottomup_collect_treesummary, nullptr) {
     sll_push_back(&sll, dirname);    // fail to open
     sll_push_back(&sll, (char *) ":memory:");
 
-    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", &sll, ROLLUPSCORE_KNOWN_YES, 0, 0), 1);
+    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", &sll, ISROLLEDUP_KNOWN_YES, 0, 0), 1);
 
     sll_destroy(&sll, nullptr);
     EXPECT_EQ(rmdir(dirname), 0);
@@ -323,17 +323,17 @@ TEST(bottomup_collect_treesummary, nullptr) {
     ASSERT_NE(db, nullptr);
 
     // break at deleting old treesummary rows becase the table does not exist
-    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ROLLUPSCORE_KNOWN_YES, 0, 0), 1);
+    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ISROLLEDUP_KNOWN_YES, 0, 0), 1);
 
     // create tables with a bad schemas that will run the delete
     EXPECT_EQ(sqlite3_exec(db, "CREATE TABLE summary (inode, isroot);", nullptr, nullptr, nullptr), SQLITE_OK);
     EXPECT_EQ(sqlite3_exec(db, "CREATE TABLE treesummary (inode);",     nullptr, nullptr, nullptr), SQLITE_OK);
 
-    // rollupscore=1 fail to insert
-    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ROLLUPSCORE_KNOWN_YES, 0, 0), 1);
+    // isrolledup=1 fail to insert
+    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ISROLLEDUP_KNOWN_YES, 0, 0), 1);
 
-    // rollupscore=0 fail querytsdb
-    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ROLLUPSCORE_KNOWN_NO, 0, 0), 1);
+    // isrolledup=0 fail querytsdb
+    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ISROLLEDUP_KNOWN_NO, 0, 0), 1);
 
     sqlite3_close(db);
 }

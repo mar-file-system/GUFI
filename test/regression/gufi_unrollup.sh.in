@@ -101,8 +101,8 @@ rollup() {
 }
 
 query() {
-    echo "# level, COUNT(entries), COUNT(pentries_rollup), rollupscore, directory"
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rollupscore, rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
+    echo "# level, COUNT(entries), COUNT(pentries_rollup), canrollup, isrolledup, directory"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), canrollup, isrolledup, rpath(name, isrolledup) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
     echo
 }
 
@@ -117,7 +117,7 @@ rollup
 query
 
 echo "# rolled up directories should have rows in pentries_rollup"
-run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(name, rollupscore), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(name, isrolledup), canrollup, isrolledup, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1;\" \"${INDEXROOT}\""
 
 echo "# unroll up the entire index"
 run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}\""

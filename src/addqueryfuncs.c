@@ -1064,7 +1064,7 @@ static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **argv,
                           struct work *work, str_t *prefix)
 {
-    const int rollupscore = sqlite3_value_int(argv[1]);
+    const int isrolledup = sqlite3_value_int(argv[1]);
 
     const char *entry = NULL;
     size_t entry_len = 0;
@@ -1078,7 +1078,7 @@ static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **ar
 
     const size_t root_len = work->root_parent.len + work->root_basename_len;
 
-    if (rollupscore == 0) { /* use work->name */
+    if (isrolledup == 0) { /* use work->name */
         user_dirname_len = prefix->len + work->name_len - root_len + entry_len;
         user_dirname = malloc(user_dirname_len + 1);
 

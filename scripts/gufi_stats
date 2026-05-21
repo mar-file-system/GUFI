@@ -210,7 +210,7 @@ def entries_count(config, args, where, type): # pylint: disable=redefined-builti
     '''
 
     queries = [
-        '-E', build_query((['substr(rpath({0}.name, {0}.rollupscore), {1})'.format(VRSUMMARY, len(config.indexroot) + 2)] if args.recursive else []) +
+        '-E', build_query((['substr(rpath({0}.name, {0}.sroll), {1})'.format(VRSUMMARY, len(config.indexroot) + 2)] if args.recursive else []) +
                           ['COUNT({0}.inode)'.format(VRPENTRIES)],
                           ['{0} LEFT JOIN {1} ON (({0}.inode == {1}.pinode) AND {1}.type == \'{2}\')'.format(VRSUMMARY, VRPENTRIES, type)],
                           where,

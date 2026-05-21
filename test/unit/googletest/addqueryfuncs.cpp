@@ -1132,9 +1132,9 @@ TEST(addqueryfuncs_with_context, rpath) {
     ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
     // directory
-    for(int rollupscore : {0, 1}) {
+    for(int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT rpath('%s', %d);", dirname, rollupscore);
+        SNPRINTF(query, MAXSQL, "SELECT rpath('%s', %d);", dirname, isrolledup);
 
         // the path returned by the query is the path without the index prefix
         char buf[MAXPATH] = {};
@@ -1152,9 +1152,9 @@ TEST(addqueryfuncs_with_context, rpath) {
                "/", (std::size_t) 1,
                entry, sizeof(entry) - 1);
 
-    for(int rollupscore : {0, 1}) {
+    for(int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT rpath('%s', %d, '%s');", dirname, rollupscore, entry);
+        SNPRINTF(query, MAXSQL, "SELECT rpath('%s', %d, '%s');", dirname, isrolledup, entry);
 
         // the path returned by the query is the path without the index prefix
         char buf[MAXPATH] = {};
@@ -1197,9 +1197,9 @@ TEST(addqueryfuncs_with_context, spath) {
                dirname, sizeof(dirname) - 1);
 
     // directory
-    for(int rollupscore : {0, 1}) {
+    for(int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d);", dirname, rollupscore);
+        SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d);", dirname, isrolledup);
 
         // the path returned by the query is the path without the index prefix
         char buf[MAXPATH] = {};
@@ -1218,9 +1218,9 @@ TEST(addqueryfuncs_with_context, spath) {
                entry, sizeof(entry) - 1);
 
     // non-directory
-    for(int rollupscore : {0, 1}) {
+    for(int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d, '%s');", dirname, rollupscore, entry);
+        SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d, '%s');", dirname, isrolledup, entry);
 
         // the path returned by the query is the path without the index prefix
         char buf[MAXPATH] = {};

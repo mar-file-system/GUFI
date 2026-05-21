@@ -159,9 +159,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         struct sum sum;
         zeroit(&sum);
 
-        int rollupscore = 0;
-        get_rollupscore(db, &rollupscore);
-        if (rollupscore != 0) {
+        int isrolledup = 0;
+        get_isrolledup(db, &isrolledup);
+        if (isrolledup != 0) {
             /*
              * this directory has been rolled up, so all information is
              * available here: compute the treesummary, no need to go

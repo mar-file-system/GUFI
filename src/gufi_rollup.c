@@ -322,16 +322,6 @@ struct RollUp {
     int rolledup;
 };
 
-static int rollup_found(void *args, int count, char **data, char **columns) {
-    (void) count;
-    (void) data;
-    (void) columns;
-
-    int *rolledup = (int *) args;
-    *rolledup = data[0][0] - '0';
-    return 0;
-}
-
 static int rollup_descend(void *args, int *keep_going) {
     struct RollUp *dir = (struct RollUp *) args;
 
@@ -344,18 +334,12 @@ static int rollup_descend(void *args, int *keep_going) {
 
     int rc = !db;
     if (db) {
-        char *err = NULL;
-        /* check if the current directory is rolled up - if it is, don't descend */
-        if (sqlite3_exec(db, "SELECT rollupscore FROM " SUMMARY " WHERE isroot == 1;",
-                         rollup_found, &dir->rolledup, &err) == SQLITE_OK) {
+        if (get_isrolledup(db, &dir->rolledup) == 0) {
             if (dir->rolledup) {
                 *keep_going = 0;
             }
         }
         else {
-            fprintf(stderr, "Error: Could not check for existence of rollup status at \"%s\": %s\n",
-                    dir->data.name, err);
-            sqlite3_free(err);
             rc = 1;
         }
     }
@@ -607,7 +591,8 @@ static const char ROLLUP_ONE_SUBDIR[] =
     "sub.minossint2, sub.maxossint2, sub.totossint2, "
     "sub.minossint3, sub.maxossint3, sub.totossint3, "
     "sub.minossint4, sub.maxossint4, sub.totossint4, "
-    "sub.rectype, sub.pinode, 0, sub.rollupscore "
+    "sub.rectype, sub.pinode, 0, "
+    "sub.canrollup, sub.isrolledup "
     "FROM " SUMMARY " AS s, " SUBDIR_ATTACH_NAME "." SUMMARY " AS sub WHERE s.isroot == 1;"
     "INSERT INTO " TREESUMMARY " SELECT * FROM " SUBDIR_ATTACH_NAME "." TREESUMMARY ";"
     "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
@@ -707,8 +692,8 @@ static const char DELETE_SUBDIR_ROLLUP[] =
     /* remove rolled up directories */
     "DELETE FROM " SUBDIR_ATTACH_NAME "." SUMMARY " WHERE isroot != 1;"
 
-    /* unset rollup score */
-    "UPDATE "      SUBDIR_ATTACH_NAME "." SUMMARY " SET rollupscore = 0;"
+    /* unset isrolledup */
+    "UPDATE "      SUBDIR_ATTACH_NAME "." SUMMARY " SET isrolledup = 0;" /* leave canrollup unchanged */
 
     /* remove rolled up entries */
     "DELETE FROM " SUBDIR_ATTACH_NAME "." PENTRIES_ROLLUP ";"
@@ -806,9 +791,10 @@ static int do_rollup(struct RollUp *rollup,
     memcpy(setup, ROLLUP_CLEANUP, ROLLUP_CLEANUP_SIZE);
 
     /*
-     * set rollup score here instead of running 2 SQL statements
+     * set isrolledup here instead of running 2 SQL statements
      * setting it to 0 here and then to 1 during copying
      */
+    setup[sizeof(setup) - sizeof("0, isrolledup = 0;")] += ds->score;
     setup[sizeof(setup) - sizeof("0;")] += ds->score;
 
     str_t name = REFSTR(rollup->data.name,
@@ -884,7 +870,7 @@ static int do_rollup(struct RollUp *rollup,
             }
         }
 
-        bottomup_collect_treesummary(dst, rollup->data.name, &rollup->data.subdirs, ROLLUPSCORE_KNOWN_YES,
+        bottomup_collect_treesummary(dst, rollup->data.name, &rollup->data.subdirs, ISROLLEDUP_KNOWN_YES,
                                      rollup->data.st.st_uid, rollup->data.st.st_uid);
     }
 
@@ -997,7 +983,7 @@ static int rollup_ascend(void *args) {
                     }
                 }
 
-                bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ROLLUPSCORE_KNOWN_NO,
+                bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ISROLLEDUP_KNOWN_NO,
                                              dir->data.st.st_uid, dir->data.st.st_gid);
             }
         }

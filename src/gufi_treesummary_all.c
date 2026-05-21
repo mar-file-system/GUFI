@@ -160,7 +160,7 @@ static int treesummary_ascend(void *args) {
     }
 
     /* the treesummary table was not found, so create it */
-    const int rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ROLLUPSCORE_CHECK,
+    const int rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ISROLLEDUP_CHECK,
                                                 dir->st.st_uid, dir->st.st_gid);
 
     ts->modified = 1;

@@ -120,7 +120,8 @@ static const char SUMMARY_INSERT[] =
     "@minossint4, @maxossint4, @totossint4, "
 
     /* extra info */
-    "@rectype,    @pinode,     @isroot,     @rollupscore"
+    "@rectype,    @pinode,     @isroot, "
+    "@canrollup,  @isrolledup"
     ");";
 
 const char VRSUMMARY_CREATE[] =
@@ -128,7 +129,7 @@ const char VRSUMMARY_CREATE[] =
     "CREATE VIEW " VRSUMMARY " AS SELECT "
     "REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, '/', '')), '') AS dname, "
     SUMMARY ".name AS sname, "
-    SUMMARY ".rollupscore AS sroll, "
+    SUMMARY ".isrolledup AS sroll, "
     "(SELECT COUNT(*) FROM " SUMMARY " AS c WHERE c.pinode == " SUMMARY ".inode) AS srollsubdirs, "
     SUMMARY ".* "
     "FROM " SUMMARY
@@ -192,7 +193,7 @@ const char VRPENTRIES_CREATE[] =
     VRSUMMARY ".totxattr     AS dtotxattr, "  VRSUMMARY ".depth       AS ddepth, "
     VRSUMMARY ".mincrtime    AS dmincrtime, " VRSUMMARY ".maxcrtime   AS dmaxcrtime, "
     VRSUMMARY ".totcrtime    AS dtotcrtime, "
-    VRSUMMARY ".rollupscore  AS sroll, "      VRSUMMARY ".isroot      AS atroot, "
+    VRSUMMARY ".isrolledup   AS sroll, "      VRSUMMARY ".isroot      AS atroot, "
     VRSUMMARY ".srollsubdirs AS srollsubdirs, "
     PENTRIES ".* "
     "FROM " VRSUMMARY ", " PENTRIES " "
@@ -853,7 +854,8 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_bind_int64(res,  62, 0); /* rectype */
     sqlite3_bind_text(res,   63, zpino, -1, SQLITE_STATIC);
     sqlite3_bind_int64(res,  64, 1); /* isroot */
-    sqlite3_bind_int64(res,  65, 0); /* rollupscore */
+    sqlite3_bind_int64(res,  65, 0); /* canrollup */
+    sqlite3_bind_int64(res,  66, 0); /* isrolledup */
 
     sqlite3_step(res);
     sqlite3_reset(res);
@@ -1064,7 +1066,7 @@ const char ROLLUP_CLEANUP[] =
     "SELECT filename FROM " EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
     "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
     "VACUUM;"
-    "UPDATE " SUMMARY " SET rollupscore = 0;"; /* keep this last to allow it to be modified easily */
+    "UPDATE " SUMMARY " SET canrollup = 0, isrolledup = 0;"; /* keep this last to allow it to be modified easily */
 
 const size_t ROLLUP_CLEANUP_SIZE = sizeof(ROLLUP_CLEANUP);
 
@@ -1255,16 +1257,30 @@ void sqlite_print_err_and_free(char *err, FILE *stream, const char *format, ...)
     sqlite3_free(err);
 }
 
-static int get_rollupscore_callback(void *args, int count, char **data, char **columns) {
+static int get_isrolledup_callback(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
-    return !(sscanf(data[0], "%d", (int *) args) == 1);
+
+    /* make sure canrollup is set before checking isrolledup */
+    int canrollup = 0;
+    if (sscanf(data[0], "%d", &canrollup) != 1) {
+        return 1;
+    }
+
+    int *isrolledup = (int *) args;
+    *isrolledup = 0;
+
+    if (canrollup == 0) {
+        return 0;
+    }
+
+    return !(sscanf(data[1], "%d", isrolledup) == 1);
 }
 
-int get_rollupscore(sqlite3 *db, int *rollupscore) {
+int get_isrolledup(sqlite3 *db, int *isrolledup) {
     char *err = NULL;
-    if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1;",
-                     get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Could not get rollupscore: %s\n", err);
+    if (sqlite3_exec(db, "SELECT canrollup, isrolledup FROM summary WHERE isroot == 1;",
+                     get_isrolledup_callback, isrolledup, &err) != SQLITE_OK) {
+        sqlite_print_err_and_free(err, stderr, "Could not get isrolledup: %s\n", err);
         return 1;
     }
 
@@ -1279,18 +1295,18 @@ int treesummary_exists_callback(void *args, int count, char **data, char **colum
 }
 
 int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
-                                 const enum CheckRollupScore check_rollupscore,
+                                 const enum CheckIsRolledUp check_isrolledup,
                                  const uid_t uid, const gid_t gid) {
-    int rollupscore = 0;
-    switch(check_rollupscore) {
-        case ROLLUPSCORE_CHECK:
-            get_rollupscore(db, &rollupscore);
+    int isrolledup = 0;
+    switch(check_isrolledup) {
+        case ISROLLEDUP_CHECK:
+            get_isrolledup(db, &isrolledup);
             break;
-        case ROLLUPSCORE_KNOWN_YES:
-            rollupscore = 1;
+        case ISROLLEDUP_KNOWN_YES:
+            isrolledup = 1;
             break;
-        case ROLLUPSCORE_DONT_CHECK:
-        case ROLLUPSCORE_KNOWN_NO:
+        case ISROLLEDUP_DONT_CHECK:
+        case ISROLLEDUP_KNOWN_NO:
         default:
             break;
     }
@@ -1305,7 +1321,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
         return 1;
     }
 
-    if (rollupscore != 0) {
+    if (isrolledup != 0) {
         /*
          * this directory has been rolled up, so all information is
          * available here: compute the treesummary, no need to go
