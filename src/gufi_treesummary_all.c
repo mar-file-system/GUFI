@@ -136,33 +136,34 @@ static int treesummary_ascend(void *args) {
                dir->name, dir->name_len,
                "/" DBNAME, DBNAME_LEN + 1);
 
-    /* check if this treesummary table needs to be updated */
-    if (!subdir_modified && in->suspecttime) {
-        struct stat st;
+    /* stat structure is used for both subspecttime and treesummary generation */
+    if (dir->stat_called == STAT_NOT_CALLED) {
         time_t crtime = 0; /* unused */
-        StatCalled stat_called = STAT_NOT_CALLED;
-
-        if (lstat_wrapper(dbname, &st, &crtime,
-                          &stat_called, 1, 1) != 0) {
+        if (lstat_wrapper(dbname, &dir->st, &crtime,
+                          &dir->stat_called, 1, 1) != 0) {
             return 1;
         }
+    }
 
+    /* check if this treesummary table needs to be updated */
+    if (!subdir_modified && in->suspecttime) {
         /* suspect time is more recent than mtime/ctime -> nothing to update */
-        if ((st.st_mtime < in->suspecttime) &&
-            (st.st_ctime < in->suspecttime)) {
+        if ((dir->st.st_mtime < in->suspecttime) &&
+            (dir->st.st_ctime < in->suspecttime)) {
             return 0;
         }
     }
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, create_treesummary_tables, NULL);
-
-    int rc = !db;
-    if (db) {
-        /* the treesummary table was not found, so create it */
-        rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ROLLUPSCORE_CHECK);
-        ts->modified = 1;
+    if (!db) {
+        return 1;
     }
 
+    /* the treesummary table was not found, so create it */
+    const int rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ROLLUPSCORE_CHECK,
+                                                dir->st.st_uid, dir->st.st_gid);
+
+    ts->modified = 1;
     closedb(db);
 
     return rc;

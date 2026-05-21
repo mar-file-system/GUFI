@@ -876,7 +876,16 @@ static int do_rollup(struct RollUp *rollup,
      * of complexity
      */
     if (!rc && !pa->in.dry_run) {
-        bottomup_collect_treesummary(dst, rollup->data.name, &rollup->data.subdirs, ROLLUPSCORE_KNOWN_YES);
+        if (rollup->data.stat_called == STAT_NOT_CALLED) {
+            time_t crtime = 0; /* unused */
+            if (lstat_wrapper(rollup->data.name, &rollup->data.st, &crtime,
+                              &rollup->data.stat_called, 1, 1) != 0) {
+                return 1;
+            }
+        }
+
+        bottomup_collect_treesummary(dst, rollup->data.name, &rollup->data.subdirs, ROLLUPSCORE_KNOWN_YES,
+                                     rollup->data.st.st_uid, rollup->data.st.st_uid);
     }
 
 end_rollup:
@@ -980,7 +989,16 @@ static int rollup_ascend(void *args) {
             }
 
             if (!pa->in.dry_run) {
-                bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ROLLUPSCORE_KNOWN_NO);
+                if (dir->data.stat_called == STAT_NOT_CALLED) {
+                    time_t crtime = 0; /* unused */
+                    if (lstat_wrapper(dir->data.name, &dir->data.st, &crtime,
+                                      &dir->data.stat_called, 1, 1) != 0) {
+                        return 1;
+                    }
+                }
+
+                bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ROLLUPSCORE_KNOWN_NO,
+                                             dir->data.st.st_uid, dir->data.st.st_gid);
             }
         }
     }

@@ -89,7 +89,7 @@ summary              vsummarygroup        xattrs_rollup
 
 # Missing db.db
 $ gufi_treesummary_all "search"
-Cannot open database: search/db.db unable to open database file rc 14
+Error: Could not lstat "search/db.db": No such file or directory (2)
 
 # Multiple paths with --min-level and --path-list
 $ gufi_treesummary_all --min-level 1 --path-list path_list "search" "search"

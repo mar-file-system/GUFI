@@ -137,7 +137,7 @@ run_no_sort "${SQLITE3} \"${SEARCH}/db.db\" \".tables\""
 rm "${SEARCH}/db.db"
 
 echo "# Missing db.db"
-run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\"" | @SED@ '\%^Started .*$%d;'
+run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\"" | @SED@ 's%statx%lstat%g;'
 
 echo "# Multiple paths with --min-level and --path-list"
 run_no_sort "${GUFI_TREESUMMARY_ALL} --min-level 1 --path-list path_list \"${SEARCH}\" \"${SEARCH}\""

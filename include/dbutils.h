@@ -324,7 +324,8 @@ enum CheckRollupScore {
 };
 
 int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
-                                 const enum CheckRollupScore check_rollupscore);
+                                 const enum CheckRollupScore check_rollupscore,
+                                 const uid_t uid, const gid_t gid);
 
 /* caller frees types */
 int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols);

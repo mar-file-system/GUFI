@@ -1279,11 +1279,8 @@ int treesummary_exists_callback(void *args, int count, char **data, char **colum
 }
 
 int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
-                                 const enum CheckRollupScore check_rollupscore) {
-    if (!db) {
-        return 1;
-    }
-
+                                 const enum CheckRollupScore check_rollupscore,
+                                 const uid_t uid, const gid_t gid) {
     int rollupscore = 0;
     switch(check_rollupscore) {
         case ROLLUPSCORE_CHECK:
@@ -1318,9 +1315,8 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
          */
         static const char TREESUMMARY_ROLLUP_COMPUTE_INSERT[] =
             /*
-             * ignore all treesummary tables and recompute from
-             * summary tables since all summary tables are immediately
-             * available
+             * recompute treesummary from summary tables since
+             * all summary tables are immediately available
              */
             "INSERT INTO " TREESUMMARY " SELECT (SELECT "
             "inode FROM " SUMMARY " WHERE isroot == 1), "
@@ -1346,7 +1342,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
             "(SELECT COUNT(*) FROM " EXTERNAL_DBS "), rectype, "
             "(SELECT uid FROM " SUMMARY " WHERE isroot == 1), "
             "(SELECT gid FROM " SUMMARY " WHERE isroot == 1) "
-            "FROM " SUMMARY
+            "FROM " SUMMARY " GROUP BY rectype"
             ";";
 
         if (sqlite3_exec(db, TREESUMMARY_ROLLUP_COMPUTE_INSERT, NULL, NULL, &err) != SQLITE_OK) {
@@ -1413,7 +1409,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
     tsumit(&sum, &tsum);
     tsum.totsubdirs--;
 
-    return inserttreesumdb(dirname, db, &tsum, 0, 0, 0);
+    return inserttreesumdb(dirname, db, &tsum, 0, uid, gid);
 }
 
 /*
