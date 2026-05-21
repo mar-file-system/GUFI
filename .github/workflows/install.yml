@@ -85,7 +85,7 @@ jobs:
     - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-Client-${{ matrix.client }}
+        key:  ${{ runner.os }}-RPM-Client-${{ matrix.client }}
 
     - name: Rocky Linux Prerequisites
       run:  contrib/CI/rockylinux.sh
@@ -99,19 +99,13 @@ jobs:
             cd build
             cmake .. ${{ env.COMMON_CONFIG }} -DCLIENT="${{ matrix.client }}"
 
-    - name: Test Generic RPM
-      if:   matrix.client == 'Off'
-      working-directory: build
-      run:  contrib/CI/generic_rpm.sh
-
-    - name: Test Server and Client RPMs
-      if:   matrix.client == 'On'
-      working-directory: build
-      run:  contrib/CI/rpms.sh
+    - name: Build and Test RPMs
+      run:  contrib/CI/rpms.sh "${{ matrix.client }}"
+      working-directory: ${{ github.workspace }}/build
 
     - name: Upload RPMs
       uses: softprops/action-gh-release@master
-      if:   startsWith(github.ref, 'refs/tags/')
+      if:   startsWith(github.ref, 'refs/tags/') && (matrix.client == 'On')
       with:
         files: ${{ github.workspace }}/build/*.rpm
 

@@ -63,6 +63,8 @@
 
 set -e
 
+CLIENT="$1"
+
 # install rpmbuild
 dnf install -y rpm-build
 
@@ -74,9 +76,6 @@ make package
 
 # list the files in the server RPM
 rpm -ql gufi-server*.rpm | sed '/.*\.build-id/d' | sort
-
-# list the files in the client RPM
-rpm -ql gufi-client*.rpm | sort
 
 # install the RPM
 dnf install -y gufi-server-*.rpm
@@ -95,14 +94,19 @@ gufi_find --help
 # uninstall GUFI-Server
 dnf autoremove -y GUFI-Server
 
-# upgrade pip to get the latest Python dependencies
-python3 -m pip install --upgrade pip
+if [[ "${CLIENT}" == "On" ]]; then
+    # list the files in the client RPM
+    rpm -ql gufi-client*.rpm | sort
 
-# install the client RPM
-dnf install -y gufi-client-*.rpm
+    # install the client RPM
+    dnf install -y gufi-client-*.rpm
 
-# compare the configuration files
-@DIFF@ client.example "$(dirname @CLIENT_CONFIG@)/client.example"
+    # compare the configuration files
+    @DIFF@ client.example "$(dirname @CLIENT_CONFIG@)/client.example"
 
-# make sure the Python3 library files can be imported
-python3 -c "import gufi_common, gufi_config"
+    # make sure the Python3 library files can be imported
+    python3 -c "import gufi_common, gufi_config"
+
+    # uninstall GUFI-Server
+    dnf autoremove -y GUFI-Client
+fi
