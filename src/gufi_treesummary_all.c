@@ -72,11 +72,13 @@ OF SUCH DAMAGE.
 #include "BottomUp.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "rollup.h"
 #include "utils.h"
 
 struct treesummary {
     struct BottomUp data;
-    int modified; /* whether or not this directory was modified; informs parent if it needs to be modified */
+    int canrollup;  /* used by parent */
+    int modified;   /* whether or not this directory was modified; informs parent if it needs to be modified */
 };
 
 static int treesummary_found(void *args, int count, char **data, char **columns) {
@@ -159,11 +161,27 @@ static int treesummary_ascend(void *args) {
         return 1;
     }
 
-    /* the treesummary table was not found, so create it */
-    const int rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ISROLLEDUP_CHECK,
-                                                dir->st.st_uid, dir->st.st_gid);
-
+    /* set this regardless of errors */
     ts->modified = 1;
+
+    int rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ISROLLEDUP_CHECK,
+                                          dir->st.st_uid, dir->st.st_gid, &ts->canrollup);
+
+    if (rc == 0) {
+        /* update summary canrollup */
+        char update_canrollup[] = "UPDATE " SUMMARY " SET canrollup = 0 WHERE isroot == 1;";
+        update_canrollup[sizeof(update_canrollup) - sizeof("0 WHERE isroot == 1;")] += ts->canrollup;
+
+        char *err = NULL;
+        if (sqlite3_exec(db, update_canrollup, NULL, NULL, &err) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr,
+                                      "Error: Could not get update " SUMMARY ".canrollup at \"%s\": %s\n",
+                                      dir->name, err);
+            rc = 1;
+        }
+    }
+
+
     closedb(db);
 
     return rc;

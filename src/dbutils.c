@@ -72,10 +72,10 @@ OF SUCH DAMAGE.
 
 #include "pcre.h"
 
-#include "BottomUp.h"
 #include "dbutils.h"
 #include "external_attach.h"
 #include "histogram.h"
+#include "rollup.h"
 #include "trie.h"
 
 const char ENTRIES_CREATE[] =
@@ -1050,77 +1050,6 @@ void destroy_xattr_db(void *ptr) {
     free(xdb);
 }
 
-static int count_pwd(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    size_t *xattr_count = (size_t *) args;
-    sscanf(data[0], "%zu", xattr_count); /* skip check */
-    return 0;
-}
-
-const char ROLLUP_CLEANUP[] =
-    "DROP INDEX IF EXISTS " SUMMARY "_idx;"
-    "DELETE FROM " PENTRIES_ROLLUP ";"
-    "DELETE FROM " SUMMARY " WHERE isroot != 1;"
-    "DELETE FROM " XATTRS_ROLLUP ";"
-    "SELECT filename FROM " EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
-    "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
-    "VACUUM;"
-    "UPDATE " SUMMARY " SET canrollup = 0, isrolledup = 0;"; /* keep this last to allow it to be modified easily */
-
-const size_t ROLLUP_CLEANUP_SIZE = sizeof(ROLLUP_CLEANUP);
-
-/* Delete all entries in the XATTR_ROLLUP table */
-int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    str_t *name = (str_t *) args;
-
-    char *relpath = data[0];
-    char fullpath[MAXPATH];
-    SNFORMAT_S(fullpath, sizeof(fullpath), 3,
-               name->data, name->len,
-               "/", (size_t) 1,
-               relpath, strlen(relpath));
-
-    /* if the file is missing, return ok */
-    struct stat st;
-    if (stat(fullpath, &st) != 0) {
-        return (errno != ENOENT);
-    }
-
-    int rc = 0;
-
-    sqlite3 *db = opendb(fullpath, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
-
-    if (db) {
-        char *err_msg = NULL;
-        size_t xattr_count = 0;
-        if (sqlite3_exec(db,
-                         "DELETE FROM " XATTRS_ROLLUP ";"
-                         "SELECT COUNT(*) FROM " XATTRS_PWD ";",
-                         count_pwd, &xattr_count, &err_msg) == SQLITE_OK) {
-             /* remove empty per-user/per-group xattr db files */
-             if (xattr_count == 0) {
-                 if (remove(fullpath) != 0) {
-                     const int err = errno;
-                     fprintf(stderr, "Warning: Failed to remove empty xattr db file %s: %s (%d)\n",
-                             fullpath, strerror(err), err);
-                     rc = 1;
-                 }
-             }
-        }
-        else {
-            sqlite_print_err_and_free(err_msg, stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n", fullpath, err_msg);
-            rc = 1;
-        }
-    }
-
-    closedb(db);
-
-    return rc;
-}
-
 static size_t xattr_modify_filename(char **dst, const size_t dst_size,
                                     const char *src, const size_t src_len,
                                     void *args) {
@@ -1257,175 +1186,11 @@ void sqlite_print_err_and_free(char *err, FILE *stream, const char *format, ...)
     sqlite3_free(err);
 }
 
-static int get_isrolledup_callback(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    /* make sure canrollup is set before checking isrolledup */
-    int canrollup = 0;
-    if (sscanf(data[0], "%d", &canrollup) != 1) {
-        return 1;
-    }
-
-    int *isrolledup = (int *) args;
-    *isrolledup = 0;
-
-    if (canrollup == 0) {
-        return 0;
-    }
-
-    return !(sscanf(data[1], "%d", isrolledup) == 1);
-}
-
-int get_isrolledup(sqlite3 *db, int *isrolledup) {
-    char *err = NULL;
-    if (sqlite3_exec(db, "SELECT canrollup, isrolledup FROM summary WHERE isroot == 1;",
-                     get_isrolledup_callback, isrolledup, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Could not get isrolledup: %s\n", err);
-        return 1;
-    }
-
-    return 0;
-}
-
 int treesummary_exists_callback(void *args, int count, char **data, char **columns) {
     (void) count; (void) data; (void) columns;
     int *trecs = (int *) args;
     (*trecs)++;
     return 0;
-}
-
-int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
-                                 const enum CheckIsRolledUp check_isrolledup,
-                                 const uid_t uid, const gid_t gid) {
-    int isrolledup = 0;
-    switch(check_isrolledup) {
-        case ISROLLEDUP_CHECK:
-            get_isrolledup(db, &isrolledup);
-            break;
-        case ISROLLEDUP_KNOWN_YES:
-            isrolledup = 1;
-            break;
-        case ISROLLEDUP_DONT_CHECK:
-        case ISROLLEDUP_KNOWN_NO:
-        default:
-            break;
-    }
-
-    char *err = NULL;
-
-    /* delete any old treesummary rows that exist for this directory */
-    if (sqlite3_exec(db, "DELETE FROM " TREESUMMARY " WHERE inode == (SELECT inode FROM " SUMMARY " WHERE isroot == 1);",
-                     NULL, NULL, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Error: Failed to delete old treesummary for \"%s\": %s\n",
-                                  dirname, err);
-        return 1;
-    }
-
-    if (isrolledup != 0) {
-        /*
-         * this directory has been rolled up, so all information is
-         * available here: compute the treesummary, no need to go
-         * further down
-         *
-         * don't bother copying it out of sqlite only to put it back in
-         */
-        static const char TREESUMMARY_ROLLUP_COMPUTE_INSERT[] =
-            /*
-             * recompute treesummary from summary tables since
-             * all summary tables are immediately available
-             */
-            "INSERT INTO " TREESUMMARY " SELECT (SELECT "
-            "inode FROM " SUMMARY " WHERE isroot == 1), "
-            "(SELECT pinode FROM " SUMMARY " WHERE isroot == 1), "
-            "COUNT(*) - 1, " /* a directory is not a subdirectory of itself */
-            "MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), "
-            "MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), "
-            "MIN(minsize), MAX(maxsize), TOTAL(totzero), "
-            "TOTAL(totltk), TOTAL(totmtk), "
-            "TOTAL(totltm), TOTAL(totmtm), "
-            "TOTAL(totmtg), TOTAL(totmtt), "
-            "TOTAL(totsize), "
-            "MIN(minctime),   MAX(maxctime),   TOTAL(totctime),  "
-            "MIN(minmtime),   MAX(maxmtime),   TOTAL(totmtime),  "
-            "MIN(minatime),   MAX(maxatime),   TOTAL(totatime),  "
-            "MIN(minblocks),  MAX(maxblocks),  TOTAL(totblocks), "
-            "TOTAL(totxattr), TOTAL(depth), "
-            "MIN(mincrtime),  MAX(maxcrtime),  TOTAL(totcrtime),  "
-            "MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), "
-            "MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), "
-            "MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), "
-            "MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), "
-            "(SELECT COUNT(*) FROM " EXTERNAL_DBS "), rectype, "
-            "(SELECT uid FROM " SUMMARY " WHERE isroot == 1), "
-            "(SELECT gid FROM " SUMMARY " WHERE isroot == 1) "
-            "FROM " SUMMARY " GROUP BY rectype"
-            ";";
-
-        if (sqlite3_exec(db, TREESUMMARY_ROLLUP_COMPUTE_INSERT, NULL, NULL, &err) != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Error: Failed to compute treesummary for \"%s\": %s\n",
-                                      dirname, err);
-            return 1;
-        }
-
-        return 0;
-    }
-
-    /*
-     * this directory has not rolled up, so have to use child
-     * directories to get information
-     *
-     * every child is either
-     *     - a leaf, and thus all the data is available in the summary
-     *       table to use to create the treesummary table, or
-     *
-     *     - has a treesummary table because BottomUp is comming back up
-     *
-     * reopen child dbs to collect data
-     *     - not super efficient
-     *     - doing in-place update results in a massive query
-     */
-    struct sum tsum;
-    zeroit(&tsum);
-
-    struct sum sum;
-    sll_loop(subdirs, node) {
-        struct BottomUp *subdir = (struct BottomUp *) sll_node_data(node);
-
-        char child_dbname[MAXPATH];
-        SNFORMAT_S(child_dbname, sizeof(child_dbname), 2,
-                   subdir->name, subdir->name_len,
-                   "/" DBNAME, DBNAME_LEN + 1);
-
-        sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
-        if (!child_db) {
-            continue;
-        }
-
-        int trecs = 0;
-        if (sqlite3_exec(child_db, TREESUMMARY_EXISTS,
-            treesummary_exists_callback, &trecs, &err) == SQLITE_OK) {
-            zeroit(&sum);
-
-            querytsdb(dirname, &sum, child_db, !(trecs < 1));
-
-            /* aggregate subdirectory summaries */
-            tsumit(&sum, &tsum);
-        }
-        else {
-            sqlite_print_err_and_free(err, stderr, "Warning: Failed to check for existance of treesummary table in child \"%s\": %s\n", subdir->name, err);
-            err = NULL;
-        }
-
-        closedb(child_db);
-    }
-
-    /* add summary data from this directory */
-    zeroit(&sum);
-    querytsdb(dirname, &tsum, db, 0);
-    tsumit(&sum, &tsum);
-    tsum.totsubdirs--;
-
-    return inserttreesumdb(dirname, db, &tsum, 0, uid, gid);
 }
 
 /*
@@ -1552,16 +1317,4 @@ int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, i
 
     sqlite3_finalize(stmt);
     return 0;
-}
-
-/* SELECT mode, uid, gid FROM <table>; */
-int get_permissions_callback(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    struct Permissions *perms = (struct Permissions *) args;
-    return !(
-        (sscanf(data[0], "%" STAT_mode, &perms->mode) == 1) &&
-        (sscanf(data[1], "%" STAT_uid,  &perms->uid)  == 1) &&
-        (sscanf(data[2], "%" STAT_gid,  &perms->gid)  == 1)
-    );
 }

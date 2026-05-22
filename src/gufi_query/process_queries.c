@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include "external_attach.h"
 #include "external_copy.h"
 #include "print.h"
+#include "rollup.h"
 #include "str.h"
 #include "utils.h"
 

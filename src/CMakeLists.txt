@@ -84,6 +84,7 @@ set(GUFI_SOURCES
   plugin.c
   popen_argv.c
   print.c
+  rollup.c
   run_vt.c
   str.c
   template_db.c
@@ -165,6 +166,7 @@ set(C_SOURCES
   gufi_dir2trace.c
   gufi_index2dir.c
   gufi_rollup.c
+  gufi_rollup_topdown.c
   gufi_sqlite3.c          # simple wrapper around sqlite3 to enable GUFI modifications
   gufi_top_info.c
   gufi_trace2dir.c

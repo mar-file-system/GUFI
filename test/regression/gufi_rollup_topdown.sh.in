@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
+
+OUTPUT="gufi_rollup_topdown.out"
+
+cleanup() {
+    rollup_tree_cleanup
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+(
+run_no_sort "${GUFI_ROLLUP_TOPDOWN} --help"
+
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SEARCH}\""
+
+echo "# run gufi_treesummary_all to get whether or not directories can rollup"
+run_no_sort "${GUFI_TREESUMMARY_ALL} -n ${THREADS} \"${INDEXROOT}\""
+
+echo "# Level 0 cannot roll up"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} --min-level 0 --max-level 0 -S \"SELECT rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
+
+echo "# Level 1 should only have 1 directory that can roll up"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} --min-level 1 --max-level 1 -S \"SELECT rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
+
+echo "# Level 2 can completely roll up"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} --min-level 2 --max-level 2 -S \"SELECT rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
+
+echo "# Level 3 can completely roll up"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} --min-level 3 --max-level 3 -S \"SELECT rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
+
+echo "# do rollup"
+run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} \"${INDEXROOT}\""
+
+echo "# see which directories are walked when querying"
+echo "# ugo stops because it was rolled up"
+echo "# dir* directories were rolled up"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -S \"SELECT rpath(sname, sroll), isroot FROM vrsummary;\" \"${INDEXROOT}\""
+
+echo "# compare find and gufi_query"
+run_sort "@DIFF@ <(find \"${SRCDIR}\" | sort) <(${GUFI_QUERY} -n ${THREADS} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\" | @SED@ \"s%${SEARCH}/%%g\"| sort)"
+
+echo "# remove rollup tree and index"
+run_no_sort "rm -rf \"${SRCDIR}\" \"${SEARCH}\""
+
+echo "# generate new source tree"
+run_no_sort "${GENERATETREE} \"${SRCDIR}\""
+
+echo "# index source tree"
+run_no_sort "${GUFI_DIR2INDEX} -x -n ${THREADS} \"${SRCDIR}\" \"${SEARCH}\""
+
+echo "# generate treesummaries"
+run_no_sort "${GUFI_TREESUMMARY_ALL} -n ${THREADS} \"${SEARCH}\""
+
+echo "# check summary tables"
+run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}\""
+
+echo "# check entries tables"
+run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -E \"SELECT level(), rpath(sname, sroll, name), xattr_name, xattr_value FROM vrxpentries;\" \"${INDEXROOT}\""
+
+echo "# do a dry run"
+run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --dry-run \"${SEARCH}\""
+
+echo "# index should not have been rolled up"
+run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
+
+echo "# roll up index"
+run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} \"${SEARCH}\""
+
+echo "# check rolled up summary tables"
+run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}\""
+
+echo "# check rolled up entries tables"
+run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -E \"SELECT level(), rpath(sname, sroll, name), xattr_name, xattr_value FROM vrxpentries;\" \"${INDEXROOT}\""
+
+echo "# remove rollup data"
+run_no_sort "${GUFI_UNROLLUP} -n ${THREADS} \"${SEARCH}\""
+
+echo "# directories should be marked canrollup = 1, isrolledup = 0"
+run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
+
+echo "# roll up starting at level 1"
+run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --min-level 1 \"${SEARCH}\""
+
+echo "# gufi_query should traverse down to level 1"
+run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}\""
+
+echo "# bad thread count"
+run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n 18446744073709551615 \"${SEARCH}\""
+) | remove_indexing_time | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_rollup_topdown.expected "${OUTPUT}"
+rm "${OUTPUT}"

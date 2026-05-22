@@ -185,12 +185,12 @@ Waiting for slurm jobs to complete
 
 # Query the unrolled up index
 $ gufi_query -n 2 -d "|" -T "SELECT name, isroot, canrollup, isrolledup FROM summary;" "search2/prefix"
-directory|1|0|0
-empty_directory|1|0|0
-leaf_directory|1|0|0
-prefix|1|0|0
-subdirectory|1|0|0
-unusual#? directory ,|1|0|0
+directory|1|1|0
+empty_directory|1|1|0
+leaf_directory|1|1|0
+prefix|1|1|0
+subdirectory|1|1|0
+unusual#? directory ,|1|1|0
 
 #####################################
 
@@ -360,12 +360,12 @@ Waiting for ssh jobs to complete
 
 # Query the unrolled up index
 $ gufi_query -n 2 -d "|" -T "SELECT name, isroot, canrollup, isrolledup FROM summary;" "search2/prefix"
-directory|1|0|0
-empty_directory|1|0|0
-leaf_directory|1|0|0
-prefix|1|0|0
-subdirectory|1|0|0
-unusual#? directory ,|1|0|0
+directory|1|1|0
+empty_directory|1|1|0
+leaf_directory|1|1|0
+prefix|1|1|0
+subdirectory|1|1|0
+unusual#? directory ,|1|1|0
 
 #####################################
 

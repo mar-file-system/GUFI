@@ -102,7 +102,7 @@ rollup() {
 
 query() {
     echo "# level, COUNT(entries), COUNT(pentries_rollup), canrollup, isrolledup, directory"
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), canrollup, isrolledup, rpath(name, isrolledup) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
+    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), canrollup, isrolledup, rpath(name, isrolledup) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | sort -k5 | tail -n +2
     echo
 }
 

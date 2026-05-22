@@ -299,8 +299,6 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  sqlite3_stmt *file_list);
 void destroy_xattr_db(void *ptr);
 
-int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns);
-
 void setup_xattrs_views(struct input *in, sqlite3 *db,
                         struct work *work, size_t *extdb_count);
 
@@ -310,37 +308,12 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
 
 void sqlite_print_err_and_free(char *err, FILE *stream, const char *format, ...);
 
-int get_isrolledup(sqlite3 *db, int *isrolledup);
-
-extern const char   ROLLUP_CLEANUP[];
-extern const size_t ROLLUP_CLEANUP_SIZE;
-
 int treesummary_exists_callback(void *args, int count, char **data, char **columns);
-
-enum CheckIsRolledUp {
-    ISROLLEDUP_CHECK,
-    ISROLLEDUP_DONT_CHECK,
-    ISROLLEDUP_KNOWN_YES,
-    ISROLLEDUP_KNOWN_NO,
-};
-
-int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
-                                 const enum CheckIsRolledUp check_isrolledup,
-                                 const uid_t uid, const gid_t gid);
 
 /* caller frees types */
 int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols);
 /* caller frees names, names[i], and lens */
 int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, int *cols);
-
-struct Permissions {
-    mode_t mode;
-    uid_t uid;
-    gid_t gid;
-};
-
-/* SELECT mode, uid, gid FROM <table>; */
-int get_permissions_callback(void *args, int count, char **data, char **columns);
 
 /* ******************************************************************* */
 /* virtual table signatures (since they don't have associated headers) */

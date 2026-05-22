@@ -296,6 +296,7 @@ if (SUDO)
 
     set(SUDO_BINARIES
       gufi_rollup
+      gufi_rollup_topdown
       gufi_unrollup
     )
 

@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "debug.h"
 #include "external_attach.h"
+#include "rollup.h"
 #include "utils.h"
 
 struct Unrollup {

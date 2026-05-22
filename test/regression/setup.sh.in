@@ -207,6 +207,7 @@ GUFI_QUERY="${BINARY_DIR}/src/gufi_query"
 GUFI_QUERY_PY="${GUFI_TOOL} query.py"
 GUFI_QUERY_MULTIPLE_REMOTES="${GUFI_TOOL} query_multiple_remotes"
 GUFI_ROLLUP="${BINARY_DIR}/src/gufi_rollup"
+GUFI_ROLLUP_TOPDOWN="${BINARY_DIR}/src/gufi_rollup_topdown"
 GUFI_SQLITE3="${BINARY_DIR}/src/gufi_sqlite3"
 GUFI_STAT="${GUFI_TOOL} stat"
 GUFI_STATS="${GUFI_TOOL} stats"
@@ -311,6 +312,7 @@ replace() {
     s%${GUFI_QUERY_PY}%gufi_query.py%g;
     s%${GUFI_QUERY_MULTIPLE_REMOTES}%gufi_query_multiple_remotes%g;
     s%${GUFI_ROLLUP}%gufi_rollup%g;
+    s%${GUFI_ROLLUP_TOPDOWN}%gufi_rollup_topdown%g;
     s%${GUFI_SQLITE3}%gufi_sqlite3%g
     s%${GUFI_STAT}%gufi_stat%g;
     s%${GUFI_STATS}%gufi_stats%g;
