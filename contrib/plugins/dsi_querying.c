@@ -69,8 +69,20 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 
 #include "bf.h"
-#include "dsi.h"
 #include "plugin.h"
+
+static const char   DSI_NAME_PREFIX[]    = "user.COL.file.";
+static const size_t DSI_NAME_PREFIX_LEN  = sizeof(DSI_NAME_PREFIX) - 1;
+static const size_t DSI_VALUE_UUID_LEN   = 36;                     /* UUID (32 + 4 separators) */
+static const size_t DSI_VALUE_PREFIX_LEN = DSI_VALUE_UUID_LEN + 1; /* UUID + period */
+
+static int is_dsi_xattr(const char *name, const size_t name_len) {
+    if (name_len <= DSI_NAME_PREFIX_LEN) {
+        return 0;
+    }
+
+    return (strncmp(name, DSI_NAME_PREFIX, DSI_NAME_PREFIX_LEN) == 0);
+}
 
 /*
  * dsi_collection_name(xattr_name)

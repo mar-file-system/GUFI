@@ -82,14 +82,8 @@ COLLECTION2_DB="${SRCDIR}/${COLLECTION2}.db"
 touch "${COLLECTION2_DB}" # gets deleted during initial cleanup
 COLLECTION2_PATH=$(realpath "${COLLECTION2_DB}")
 
-COLLECTION3="collection3"
-# some realpath implementations don't allow for nonexistent paths
-COLLECTION3_DB="${COLLECTION3}.db" # this db is outside the collection
-touch "${COLLECTION3_DB}" # gets deleted during initial cleanup
-COLLECTION3_PATH=$(realpath "${COLLECTION3_DB}")
-
 cleanup() {
-    rm -f "${COLLECTION1_DB}" "${COLLECTION2_DB}" "${COLLECTION3_DB}"
+    rm -f "${COLLECTION1_DB}" "${COLLECTION2_DB}"
 }
 
 cleanup_exit() {
@@ -124,9 +118,6 @@ cleanup
 
         # both collections
         "$(uuid)" # repeat_name
-
-        # collection3
-        "$(uuid)" # unusual#? directory ,/unusual, name?#
     )
 
     echo "# generate collection db for collection1"
@@ -151,17 +142,7 @@ cleanup
     ) | "${SQLITE3}" "${COLLECTION2_DB}"
     run_no_sort "${SQLITE3} \"${COLLECTION2_DB}\" \"SELECT uuid, info2 FROM data ORDER BY info2;\"" | @SED@ "s%[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}%<uuid>%g; s%${COLLECTION2_DB}%${COLLECTION2}.db%g;"
 
-    echo "# generate collection db for collection3"
-    (
-        echo "CREATE TABLE data(uuid TEXT, info3 TEXT);"         # different column name
-        echo "INSERT INTO  data VALUES ('${UUIDS[9]}', '10');"   # unusual#? directory ,/unusual, name?#
-    ) | "${SQLITE3}" "${COLLECTION3_DB}"
-    run_no_sort "${SQLITE3} \"${COLLECTION3_DB}\" \"SELECT uuid, info3 FROM data ORDER BY info3;\"" | @SED@ "s%[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}%<uuid>%g; s%${COLLECTION3_DB}%${COLLECTION3}.db%g;"
-
     echo "# mark files as belonging to collections"
-    echo "#     three collections in one index"
-    echo "#         two good collections (1 and 2), with one file belonging to both"
-    echo "#         and one file with an unprocessed collection (3) db"
 
     # mark files as belonging to DSI collection 1
     os_setfattr "user.COL.file.collection1" "${UUIDS[0]}.${COLLECTION1_PATH}" "${SRCDIR}/1KB"
@@ -177,9 +158,6 @@ cleanup
     os_setfattr "user.COL.file.collection2" "${UUIDS[7]}.${COLLECTION2_PATH}" "${SRCDIR}/leaf_directory/leaf_file2"
     os_setfattr "user.COL.file.collection2" "${UUIDS[8]}.${COLLECTION2_PATH}" "${SRCDIR}/repeat_name"
 
-    # mark files as belonging to DSI collection 3
-    os_setfattr "user.COL.file.collection3" "${UUIDS[9]}.${COLLECTION3_PATH}" "${SRCDIR}/unusual#? directory ,/unusual, name?#"
-
     # have to mark directories as containing DSI collections
     # these uuids don't matter
     # ${SRCDIR} contains 2 collections
@@ -187,15 +165,11 @@ cleanup
     os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_PATH}" "${SRCDIR}"
     os_setfattr "user.COL.file.collection1" "$(uuid).${COLLECTION1_PATH}" "${SRCDIR}/directory"
     os_setfattr "user.COL.file.collection2" "$(uuid).${COLLECTION2_PATH}" "${SRCDIR}/leaf_directory"
-    os_setfattr "user.COL.file.collection3" "$(uuid).${COLLECTION3_PATH}" "${SRCDIR}/unusual#? directory ,"
 
     echo
 
     echo "# index updated tree with DSI plugin"
     run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"gufi_plugin_operations:${DSI_INDEXING_PLUGIN}\" \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
-
-    echo "# directories with collections should have copies of the collection dbs they are associated with or symlinks to the copies"
-    run_sort "find \"${INDEXROOT}\" -name \"*collection*\" -printf \"%p %y %l\n\""
 
     echo "# query collection1 with gufi_vt, joining externally"
     query=$(
@@ -203,7 +177,7 @@ cleanup
         echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (uuid IS NOT NULL);\", "
         echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
         echo "    \"${INDEXROOT}\");"
-        echo "ATTACH 'file:${SEARCH}/${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};"
+        echo "ATTACH 'file:${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};"
         echo "SELECT fullpath, info1 FROM gufi JOIN ${COLLECTION1}.data ON gufi.uuid == ${COLLECTION1}.data.uuid ORDER BY info1 ASC;"
     )
     gufi_vt "${query}" 2>&1 | replace
@@ -213,7 +187,7 @@ cleanup
         echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
         echo "    I=\"CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);\", "
         echo "    E=\"INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (uuid IS NOT NULL);\", "
-        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${SEARCH}/${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};\", "
+        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};\", "
         echo "    J=\"INSERT INTO  aggregate SELECT * FROM intermediate;\", "
         echo "    G=\"SELECT fullpath, info1 FROM aggregate JOIN ${COLLECTION1}.data ON aggregate.uuid == ${COLLECTION1}.data.uuid ORDER BY info1;\", "
         echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
@@ -228,7 +202,7 @@ cleanup
         echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (uuid IS NOT NULL);\", "
         echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
         echo "    \"${INDEXROOT}\");"
-        echo "ATTACH 'file:${SEARCH}/${COLLECTION2_DB}?mode=ro' AS ${COLLECTION2};"
+        echo "ATTACH 'file:${COLLECTION2_DB}?mode=ro' AS ${COLLECTION2};"
         echo "SELECT fullpath, info2 FROM gufi JOIN ${COLLECTION2}.data ON gufi.uuid == ${COLLECTION2}.data.uuid ORDER BY info2 ASC;"
     )
     gufi_vt "${query}" 2>&1 | replace
@@ -238,63 +212,9 @@ cleanup
         echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
         echo "    I=\"CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);\", "
         echo "    E=\"INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION2}') AND (uuid IS NOT NULL);\", "
-        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${SEARCH}/${COLLECTION2_DB}?mode=ro' AS ${COLLECTION2};\", "
+        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${COLLECTION2_DB}?mode=ro' AS ${COLLECTION2};\", "
         echo "    J=\"INSERT INTO  aggregate SELECT * FROM intermediate;\", "
         echo "    G=\"SELECT fullpath, info2 FROM aggregate JOIN ${COLLECTION2}.data ON aggregate.uuid == ${COLLECTION2}.data.uuid ORDER BY info2;\", "
-        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
-        echo "    \"${INDEXROOT}\");"
-        echo "SELECT * FROM gufi;"
-    )
-    gufi_vt "${query}" 2>&1 | replace
-
-    echo "# query collection3 with gufi_vt, joining externally"
-    query=$(
-        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
-        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION3}') AND (uuid IS NOT NULL);\", "
-        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
-        echo "    \"${INDEXROOT}\");"
-        echo "ATTACH 'file:${SEARCH}/${COLLECTION3_DB}?mode=ro' AS ${COLLECTION3};"
-        echo "SELECT fullpath, info3 FROM gufi JOIN ${COLLECTION3}.data ON gufi.uuid == ${COLLECTION3}.data.uuid ORDER BY info3 ASC;"
-    )
-    gufi_vt "${query}" 2>&1 | replace
-
-    echo "# query collection3 with gufi_vt, joining in gufi_vt"
-    query=$(
-        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
-        echo "    I=\"CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);\", "
-        echo "    E=\"INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION3}') AND (uuid IS NOT NULL);\", "
-        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${SEARCH}/${COLLECTION3_DB}?mode=ro' AS ${COLLECTION3};\", "
-        echo "    J=\"INSERT INTO  aggregate SELECT * FROM intermediate;\", "
-        echo "    G=\"SELECT fullpath, info3 FROM aggregate JOIN ${COLLECTION3}.data ON aggregate.uuid == ${COLLECTION3}.data.uuid ORDER BY info3;\", "
-        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
-        echo "    \"${INDEXROOT}\");"
-        echo "SELECT * FROM gufi;"
-    )
-    gufi_vt "${query}" 2>&1 | replace
-
-    echo "#####################################"
-    echo
-
-    echo "# delete collection dbs"
-    run_sort "find \"${INDEXROOT}\" -name \"*collection*\" -delete"
-
-    query=$(
-        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
-        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (uuid IS NOT NULL);\", "
-        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
-        echo "    \"${INDEXROOT}\");"
-        echo "ATTACH 'file:${SEARCH}/${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};"
-        echo "SELECT fullpath, info1 FROM gufi JOIN ${COLLECTION1}.data ON gufi.uuid == ${COLLECTION1}.data.uuid ORDER BY info1 ASC;"
-    )
-    gufi_vt "${query}" 2>&1 | replace
-
-    query=$(
-        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
-        echo "    I=\"CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);\", "
-        echo "    E=\"INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == '${COLLECTION1}') AND (uuid IS NOT NULL);\", "
-        echo "    K=\"CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:${SEARCH}/${COLLECTION1_DB}?mode=ro' AS ${COLLECTION1};\", "
-        echo "    J=\"INSERT INTO  aggregate SELECT * FROM intermediate;\", "
-        echo "    G=\"SELECT fullpath, info1 FROM aggregate JOIN ${COLLECTION1}.data ON aggregate.uuid == ${COLLECTION1}.data.uuid ORDER BY info1;\", "
         echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
         echo "    \"${INDEXROOT}\");"
         echo "SELECT * FROM gufi;"

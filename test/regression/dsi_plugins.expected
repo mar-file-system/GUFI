@@ -17,26 +17,13 @@ $ sqlite3 "collection2.db" "SELECT uuid, info2 FROM data ORDER BY info2;"
 <uuid>|8
 <uuid>|9
 
-# generate collection db for collection3
-$ sqlite3 "collection3.db" "SELECT uuid, info3 FROM data ORDER BY info3;"
-<uuid>|10
-
 # mark files as belonging to collections
-#     three collections in one index
-#         two good collections (1 and 2), with one file belonging to both
-#         and one file with an unprocessed collection (3) db
 
 # index updated tree with DSI plugin
 $ gufi_dir2index -x --plugin "gufi_plugin_operations:dsi_indexing_plugin" "prefix" "search"
 Creating GUFI tree search with 1 threads
-Error: Collection db "collection3.db" is outside the index. Not processing collection "collection3".
 Total Dirs:          6
 Total Non-Dirs:      16
-
-# directories with collections should have copies of the collection dbs they are associated with or symlinks to the copies
-$ find "prefix" -name "*collection*" -printf "%p %y %l\n"
-prefix/collection1.db f
-prefix/collection2.db f
 
 # query collection1 with gufi_vt, joining externally
 $ (
@@ -108,60 +95,3 @@ prefix/leaf_directory/leaf_file1|7
 prefix/leaf_directory/leaf_file2|8
 prefix/repeat_name|9
 
-# query collection3 with gufi_vt, joining externally
-$ (
-    echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
-    E="SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection3') AND (uuid IS NOT NULL);",
-    plugin="gufi_plugin_operations:dsi_querying_plugin",
-    "prefix");
-ATTACH 'file:search/collection3.db?mode=ro' AS collection3;
-SELECT fullpath, info3 FROM gufi JOIN collection3.data ON gufi.uuid == collection3.data.uuid ORDER BY info3 ASC;"
-) | sqlite3
-Runtime error near line 6: unable to open database: file:search/collection3.db?mode=ro (14)
-Parse error near line 7: no such table: collection3.data
-# query collection3 with gufi_vt, joining in gufi_vt
-$ (
-    echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
-    I="CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);",
-    E="INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection3') AND (uuid IS NOT NULL);",
-    K="CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:search/collection3.db?mode=ro' AS collection3;",
-    J="INSERT INTO  aggregate SELECT * FROM intermediate;",
-    G="SELECT fullpath, info3 FROM aggregate JOIN collection3.data ON aggregate.uuid == collection3.data.uuid ORDER BY info3;",
-    plugin="gufi_plugin_operations:dsi_querying_plugin",
-    "prefix");
-SELECT * FROM gufi;"
-) | sqlite3
-Runtime error near line 2: -K SQL failed while getting columns types: unable to open database: file:search/collection3.db?mode=ro
-Parse error near line 10: no such table: gufi
-#####################################
-
-# delete collection dbs
-$ find "prefix" -name "*collection*" -delete
-
-$ (
-    echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
-    E="SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection1') AND (uuid IS NOT NULL);",
-    plugin="gufi_plugin_operations:dsi_querying_plugin",
-    "prefix");
-ATTACH 'file:prefix/collection1.db?mode=ro' AS collection1;
-SELECT fullpath, info1 FROM gufi JOIN collection1.data ON gufi.uuid == collection1.data.uuid ORDER BY info1 ASC;"
-) | sqlite3
-Runtime error near line 6: unable to open database: file:prefix/collection1.db?mode=ro (14)
-Parse error near line 7: no such table: collection1.data
-$ (
-    echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
-    I="CREATE TABLE intermediate(fullpath TEXT, uuid TEXT);",
-    E="INSERT INTO  intermediate SELECT rpath(sname, sroll, name) AS fullpath, dsi_uuid(xattr_name, xattr_value) AS uuid FROM vrxpentries WHERE (dsi_collection_name(xattr_name) == 'collection1') AND (uuid IS NOT NULL);",
-    K="CREATE TABLE aggregate(fullpath TEXT, uuid TEXT); ATTACH 'file:prefix/collection1.db?mode=ro' AS collection1;",
-    J="INSERT INTO  aggregate SELECT * FROM intermediate;",
-    G="SELECT fullpath, info1 FROM aggregate JOIN collection1.data ON aggregate.uuid == collection1.data.uuid ORDER BY info1;",
-    plugin="gufi_plugin_operations:dsi_querying_plugin",
-    "prefix");
-SELECT * FROM gufi;"
-) | sqlite3
-Runtime error near line 2: -K SQL failed while getting columns types: unable to open database: file:prefix/collection1.db?mode=ro
-Parse error near line 10: no such table: gufi
