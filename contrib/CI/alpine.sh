@@ -84,10 +84,12 @@ apk add \
     autoconf \
     bash \
     bash-completion \
+    binutils \
     clang20 \
     cmake \
     diffutils \
     findutils \
+    gcc \
     gettext-envsubst \
     git \
     grep \
