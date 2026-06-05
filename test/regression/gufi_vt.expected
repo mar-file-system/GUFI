@@ -131,6 +131,23 @@ $ (
 ) | sqlite3
 prefix|prefix|prefix|prefix
 
+# SELECT rightmost columns to make sure column index checking is correct
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT ossint1, ossint2, ossint3, ossint4, osstext1, osstext2, pinode, ppinode FROM gufi_vt_pentries('prefix', 2) WHERE ((name != 'directory_symlink') AND (name != 'repeat_name')) ORDER BY mtime ASC;"
+) | sqlite3
+0|0|0|0|||17|18
+1|2|3|4|||7|17
+2|4|6|8|||7|17
+3|6|9|12|||7|17
+9|18|27|36|||17|18
+10|20|30|40|||17|18
+11|22|33|44|||13|17
+12|24|36|48|||13|17
+15|30|45|60|||16|17
+1024|2048|3072|4096|||17|18
+1048576|2097152|3145728|4194304|||17|18
+
 # Make sure all types work
 $ (
     echo ".load gufi_vt"

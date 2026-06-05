@@ -492,7 +492,13 @@ clean_index() {
         -a 1 \
         -w \
         -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime, crtime = mtime;" \
-        -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime, crtime = mtime;" \
+        -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime, crtime = mtime, ossint1 = mtime * 1, ossint2 = mtime * 2, ossint3 = mtime * 3, ossint4 = mtime * 4;" \
+        "${INDEX}"
+
+    "${GUFI_QUERY}" \
+        -a 1 \
+        -w \
+        -S "UPDATE summary SET minossint1 = min(ossint1), maxossint1 = max(ossint1), totossint1 = SUM(ossint1), minossint2 = min(ossint2), maxossint2 = max(ossint2), totossint2 = SUM(ossint2), minossint3 = min(ossint3), maxossint3 = max(ossint3), totossint3 = SUM(ossint3), minossint4 = min(ossint4), maxossint4 = max(ossint4), totossint4 = SUM(ossint4) FROM entries;" \
         "${INDEX}"
 
     # set symlink permissions to 777 since they don't matter but are different depending on system

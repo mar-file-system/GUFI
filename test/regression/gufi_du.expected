@@ -123,10 +123,10 @@ minmtime 1 maxmtime 5
 minatime 1 maxatime 5
 totxattr 0
 mincrtime 0 maxcrtime 0
-minossint1 0 maxossint1 0 totossint1 0
-minossint2 0 maxossint2 0 totossint2 0
-minossint3 0 maxossint3 0 totossint3 0
-minossint4 0 maxossint4 0 totossint4 0
+minossint1 1 maxossint1 5 totossint1 15
+minossint2 2 maxossint2 10 totossint2 30
+minossint3 3 maxossint3 15 totossint3 45
+minossint4 4 maxossint4 20 totossint4 60
 totsubdirs 1 maxsubdirfiles 3 maxsubdirlinks 1 maxsubdirsize 6
 totextdbs 0
 

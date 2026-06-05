@@ -193,7 +193,7 @@ typedef struct gufi_vtab_cursor {
 static void gufi_vtab_cursor_fini(gufi_vtab_cursor *pCur) {
     free(pCur->cols);
     pCur->cols = NULL;
-    pCur->col_count =0;
+    pCur->col_count = 0;
     pCur->len = 0;
     free(pCur->row);
     pCur->row = NULL;
@@ -1565,12 +1565,11 @@ static int gufi_vtColumn(sqlite3_vtab_cursor *cur,
      * of the selected column is past what is available in this row,
      * return NULL
      */
-    if (N >= pCur->col_count) {
+    const int idx = N - (pVtab->fixed_schema?GUFI_VT_ARGS_COUNT:0);
+    if (idx >= pCur->col_count) {
         sqlite3_result_null(ctx);
         return SQLITE_OK;
     }
-
-    const size_t idx = N - (pVtab->fixed_schema?GUFI_VT_ARGS_COUNT:0);
 
     struct column *col = &pCur->cols[idx];
     const char *buf = pCur->row + col->start;
