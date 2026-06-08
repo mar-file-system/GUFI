@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,70 +61,38 @@
 
 
 
-# See if lustre-devel is installed by checking if the lustreapi.h header is in a standard include path.
-find_path(LUSTRE_PLUGIN "lustre/lustreapi.h")
-# If so, build the lustre example plugin:
-if (LUSTRE_PLUGIN)
-  add_library(lustre_plugin SHARED lustre_plugin.c)
-  add_dependencies(lustre_plugin install_dependencies)
-  target_link_libraries(lustre_plugin lustreapi)
-endif()
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-# DSI indexing plugin
-add_library(dsi_indexing SHARED
-  dsi_indexing.c
-)
-add_dependencies(dsi_indexing install_dependencies)
-install(TARGETS dsi_indexing DESTINATION "${SERVER_LIB}" COMPONENT Server)
+OUTPUT="presidio_plugin.out"
 
-# DSI querying plugin
-add_library(dsi_querying SHARED
-  dsi_querying.c
-)
-target_link_libraries(dsi_querying
-  "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
-)
-add_dependencies(dsi_querying install_dependencies)
-install(TARGETS dsi_querying DESTINATION "${SERVER_LIB}" COMPONENT Server)
-if (CLIENT)
-  install(TARGETS dsi_querying DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
-endif()
+# this script requires the presidio docker containers to be running
+# see contrib/CI/presidio.sh
 
-# marfs plugin
-set(MARFS_PREFIX "" CACHE PATH "MarFS install prefix")
-if (MARFS_PREFIX)
-  find_package(LibXml2 REQUIRED)
-  message(STATUS "MARFS_PREFIX: ${MARFS_PREFIX}")
-  message(STATUS "Building marfs plugin.")
-  add_library(marfs_plugin SHARED
-    marfs_plugin.c
-    "${CMAKE_SOURCE_DIR}/src/str.c"
-  )
-  target_include_directories(marfs_plugin SYSTEM PUBLIC "${MARFS_PREFIX}" "${LIBXML2_INCLUDE_DIRS}")
-  target_link_libraries(marfs_plugin PUBLIC marfs)
-  target_link_directories(marfs_plugin PUBLIC "${MARFS_PREFIX}/lib")
-  add_dependencies(marfs_plugin install_dependencies)
-  install(TARGETS marfs_plugin DESTINATION "${SERVER_LIB}" COMPONENT Server)
-else()
-  message(STATUS "MARFS_PREFIX not set. Not building marfs plugin.")
-endif()
+(
+    echo "# set some osstext1"
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'name = Gufi Devs' WHERE name == '1KB';\""
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'email = gufi-lanl@lanl.gov' WHERE name == '1MB';\""
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'phone = 0 (123) 456-7890' WHERE name == '.hidden';\""
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'time = 00:00 AM' WHERE name == 'old_file';\""
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'date = Jan 1, 1970' WHERE name == 'repeat_name';\""
 
-# presidio plugin
-option(PRESIDIO_PLUGIN "Build presidio querying plugin" Off)
-if (PRESIDIO_PLUGIN)
-  find_package(CURL REQUIRED)
-  pkg_search_module(CJSON REQUIRED libcjson)
+    echo "# query without presidio"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), osstext1 FROM vrxpentries\" \"${SEARCH}\" | @SED@ '\%.*|$%d'"
 
-  message(STATUS "Building presidio querying plugin. Presidio analysis and anonymizer services must be available when used.")
-  add_library(presidio_plugin SHARED
-    presidio_plugin.c
-    "${CMAKE_SOURCE_DIR}/src/str.c"
-  )
-  target_include_directories(presidio_plugin SYSTEM PUBLIC "${CURL_INCLUDE_DIRS}" "${PCRE2_INCLUDEDIR}")
-  target_link_libraries(presidio_plugin PUBLIC CURL::libcurl "${CJSON_LDFLAGS}")
-  add_dependencies(presidio_plugin install_dependencies)
-  install(TARGETS presidio_plugin DESTINATION "${SERVER_LIB}" COMPONENT Server)
-  if (CLIENT)
-    install(TARGETS presidio_plugin DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
-  endif()
-endif()
+    echo "# query with presidio"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;\" \"${SEARCH}\" | @SED@ '\%.*|$%d'"
+
+    echo "# query with presidio through gufi_vt"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, presidio_anonymize(osstext1) AS anonymized, (osstext1 == '') AS empty FROM vrpentries;\", "
+        echo "    plugin=\"presidio:${PRESIDIO_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT fullpath, anonymized FROM gufi WHERE empty == '0';"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+) | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/presidio_plugin.expected "${OUTPUT}"
+rm "${OUTPUT}"

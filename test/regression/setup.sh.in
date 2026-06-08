@@ -360,6 +360,8 @@ replace() {
 
     s%${MARFS_INDEXING_PLUGIN}%marfs_indexing_plugin%g;
 
+    s%${PRESIDIO_QUERYING_PLUGIN}%presidio_plugin%g;
+
     s%${TEST_GUFI_JAIL}%gufi_jail%g;
 
     s%&vfs=.* as % as %g;

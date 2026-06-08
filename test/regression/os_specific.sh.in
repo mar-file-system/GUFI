@@ -82,6 +82,8 @@ case "@CMAKE_SYSTEM_NAME@" in
 
         MARFS_INDEXING_PLUGIN="@CMAKE_BINARY_DIR@/contrib/plugins/libmarfs_plugin.dylib"
 
+        PRESIDIO_QUERYING_PLUGIN="@CMAKE_BINARY_DIR@/contrib/plugins/libpresidio_plugin.dylib"
+
         os_setfattr() {
             @XATTR@ -w "$1" "$2" "$3"
         }
@@ -129,6 +131,8 @@ case "@CMAKE_SYSTEM_NAME@" in
         DSI_QUERYING_PLUGIN="@CMAKE_BINARY_DIR@/contrib/plugins/libdsi_querying.so"
 
         MARFS_INDEXING_PLUGIN="@CMAKE_BINARY_DIR@/contrib/plugins/libmarfs_plugin.so"
+
+        PRESIDIO_QUERYING_PLUGIN="@CMAKE_BINARY_DIR@/contrib/plugins/libpresidio_plugin.so"
 
         os_setfattr() {
             @SETFATTR@ -n "$1" -v "$2" "$3"

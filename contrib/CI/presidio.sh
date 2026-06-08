@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,70 +61,18 @@
 
 
 
-# See if lustre-devel is installed by checking if the lustreapi.h header is in a standard include path.
-find_path(LUSTRE_PLUGIN "lustre/lustreapi.h")
-# If so, build the lustre example plugin:
-if (LUSTRE_PLUGIN)
-  add_library(lustre_plugin SHARED lustre_plugin.c)
-  add_dependencies(lustre_plugin install_dependencies)
-  target_link_libraries(lustre_plugin lustreapi)
-endif()
+set -e
 
-# DSI indexing plugin
-add_library(dsi_indexing SHARED
-  dsi_indexing.c
-)
-add_dependencies(dsi_indexing install_dependencies)
-install(TARGETS dsi_indexing DESTINATION "${SERVER_LIB}" COMPONENT Server)
+# https://microsoft.github.io/presidio/installation/#using-docker
 
-# DSI querying plugin
-add_library(dsi_querying SHARED
-  dsi_querying.c
-)
-target_link_libraries(dsi_querying
-  "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
-)
-add_dependencies(dsi_querying install_dependencies)
-install(TARGETS dsi_querying DESTINATION "${SERVER_LIB}" COMPONENT Server)
-if (CLIENT)
-  install(TARGETS dsi_querying DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
-endif()
+docker pull mcr.microsoft.com/presidio-analyzer
+docker run -d -p 5002:3000 mcr.microsoft.com/presidio-analyzer:latest
 
-# marfs plugin
-set(MARFS_PREFIX "" CACHE PATH "MarFS install prefix")
-if (MARFS_PREFIX)
-  find_package(LibXml2 REQUIRED)
-  message(STATUS "MARFS_PREFIX: ${MARFS_PREFIX}")
-  message(STATUS "Building marfs plugin.")
-  add_library(marfs_plugin SHARED
-    marfs_plugin.c
-    "${CMAKE_SOURCE_DIR}/src/str.c"
-  )
-  target_include_directories(marfs_plugin SYSTEM PUBLIC "${MARFS_PREFIX}" "${LIBXML2_INCLUDE_DIRS}")
-  target_link_libraries(marfs_plugin PUBLIC marfs)
-  target_link_directories(marfs_plugin PUBLIC "${MARFS_PREFIX}/lib")
-  add_dependencies(marfs_plugin install_dependencies)
-  install(TARGETS marfs_plugin DESTINATION "${SERVER_LIB}" COMPONENT Server)
-else()
-  message(STATUS "MARFS_PREFIX not set. Not building marfs plugin.")
-endif()
+docker pull mcr.microsoft.com/presidio-anonymizer
+docker run -d -p 5001:3000 mcr.microsoft.com/presidio-anonymizer:latest
 
-# presidio plugin
-option(PRESIDIO_PLUGIN "Build presidio querying plugin" Off)
-if (PRESIDIO_PLUGIN)
-  find_package(CURL REQUIRED)
-  pkg_search_module(CJSON REQUIRED libcjson)
+docker pull mcr.microsoft.com/presidio-image-redactor
+docker run -d -p 5003:3000 mcr.microsoft.com/presidio-image-redactor:latest
 
-  message(STATUS "Building presidio querying plugin. Presidio analysis and anonymizer services must be available when used.")
-  add_library(presidio_plugin SHARED
-    presidio_plugin.c
-    "${CMAKE_SOURCE_DIR}/src/str.c"
-  )
-  target_include_directories(presidio_plugin SYSTEM PUBLIC "${CURL_INCLUDE_DIRS}" "${PCRE2_INCLUDEDIR}")
-  target_link_libraries(presidio_plugin PUBLIC CURL::libcurl "${CJSON_LDFLAGS}")
-  add_dependencies(presidio_plugin install_dependencies)
-  install(TARGETS presidio_plugin DESTINATION "${SERVER_LIB}" COMPONENT Server)
-  if (CLIENT)
-    install(TARGETS presidio_plugin DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
-  endif()
-endif()
+# also need libcurl and libcjson dev packages, but this
+# script is not os specific, so not adding here

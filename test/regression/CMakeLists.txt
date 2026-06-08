@@ -184,6 +184,12 @@ set(OTHERS
   run_vt
 )
 
+if (PRESIDIO_PLUGIN)
+  list(APPEND OTHERS
+    presidio_plugin
+  )
+endif()
+
 if (COMPOPT EQUAL 0)
   list(APPEND OTHERS
     bash_completion

@@ -1,0 +1,42 @@
+# set some osstext1
+$ sqlite3 "prefix/db.db" "UPDATE entries SET osstext1 = 'name = Gufi Devs' WHERE name == '1KB';"
+
+$ sqlite3 "prefix/db.db" "UPDATE entries SET osstext1 = 'email = gufi-lanl@lanl.gov' WHERE name == '1MB';"
+
+$ sqlite3 "prefix/db.db" "UPDATE entries SET osstext1 = 'phone = 0 (123) 456-7890' WHERE name == '.hidden';"
+
+$ sqlite3 "prefix/db.db" "UPDATE entries SET osstext1 = 'time = 00:00 AM' WHERE name == 'old_file';"
+
+$ sqlite3 "prefix/db.db" "UPDATE entries SET osstext1 = 'date = Jan 1, 1970' WHERE name == 'repeat_name';"
+
+# query without presidio
+$ gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), osstext1 FROM vrxpentries" "search" | sed '\%.*|$%d'
+prefix/.hidden|phone = 0 (123) 456-7890
+prefix/1KB|name = Gufi Devs
+prefix/1MB|email = gufi-lanl@lanl.gov
+prefix/old_file|time = 00:00 AM
+prefix/repeat_name|date = Jan 1, 1970
+
+# query with presidio
+$ gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;" "search" | sed '\%.*|$%d'
+prefix/.hidden|phone = <PHONE_NUMBER>
+prefix/1KB|name = <PERSON>
+prefix/1MB|email = <EMAIL_ADDRESS>
+prefix/old_file|time = <DATE_TIME>
+prefix/repeat_name|date = <DATE_TIME>
+
+# query with presidio through gufi_vt
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT rpath(sname, sroll, name) AS fullpath, presidio_anonymize(osstext1) AS anonymized, (osstext1 == '') AS empty FROM vrpentries;",
+    plugin="presidio:presidio_plugin",
+    "prefix");
+SELECT fullpath, anonymized FROM gufi WHERE empty == '0';"
+) | sqlite3
+prefix/.hidden|phone = <PHONE_NUMBER>
+prefix/1KB|name = <PERSON>
+prefix/1MB|email = <EMAIL_ADDRESS>
+prefix/old_file|time = <DATE_TIME>
+prefix/repeat_name|date = <DATE_TIME>
+
