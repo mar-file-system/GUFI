@@ -109,6 +109,14 @@ OUTPUT="external_copy.out"
     echo "# Add external database ${EXTDB_PATH}"
     run_no_sort "${SQLITE3} \"${EXTDB_PATH}\" \"SELECT * FROM ${TABLE};\""
 
+    EXTDB_PATH="${INDEXROOT}/unusual#? directory ,/ext2.db"
+    (
+        echo "CREATE TABLE ${TABLE}(data TEXT, inode TEXT);"
+        echo "INSERT INTO tab VALUES ('data12', '15');"
+    ) | "${SQLITE3}" "${EXTDB_PATH}"
+    echo "# Add external database ${EXTDB_PATH}"
+    run_no_sort "${SQLITE3} \"${EXTDB_PATH}\" \"SELECT * FROM ${TABLE};\""
+
     # reset inode of directory/subdirectory/repeat_name
     "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE entries SET inode = CAST(mtime AS TEXT);"
 

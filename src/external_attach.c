@@ -323,8 +323,23 @@ int external_concatenate(sqlite3 *db,
             const size_t attachname_len = set_attachname(attachname, sizeof(attachname),
                                                          attachname_args);
 
+            /* make sure path is usable by sqlite3 */
+            const size_t filename_len = strlen(filename);
+            const size_t clean_path_size = filename_len * 3 + 1;
+            char *clean_path = malloc(clean_path_size);
+            size_t used_chars = filename_len; /* unused */
+            const size_t clean_path_len = sqlite_uri_path(clean_path, clean_path_size,
+                                                          filename, &used_chars);
+
+            /*
+             * skip checking if path_len == used_chars because
+             * clean_path should always have enough space
+             */
+
+            clean_path[clean_path_len] = '\0';
+
             /* if attach fails, you don't have access to the database - just continue */
-            if (attachdb(filename, db, attachname, SQLITE_OPEN_READONLY, 0, 0)) {
+            if (attachdb(clean_path, db, attachname, SQLITE_OPEN_READONLY, 0, 0)) {
                 /* SELECT * FROM <attach name>.<table name> UNION */
                 unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 6,
                                         select->data, select->len,
@@ -335,6 +350,8 @@ int external_concatenate(sqlite3 *db,
                                         " UNION", (size_t) 6);
                 rec_count++;
             }
+
+            free(clean_path);
         }
         sqlite3_finalize(res);
     }

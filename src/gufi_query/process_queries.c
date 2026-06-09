@@ -92,18 +92,33 @@ static int gqw_serialize_and_free(const int fd, QPTPool_f func, void *work, size
  * path is the current directory + basename
  */
 static void maybe_copy_external(sqlite3 *db, struct input *in,
-                                const char *basename, const size_t len,
-                                const char *path) {
+                                const char *path, const size_t path_len,
+                                const size_t basename_len) {
     /* constant namespace/alias of the external database being attached in each loop */
     static const char EXTDB[] = "extdb";
+
+    /* make sure path is usable by sqlite3 */
+    const size_t clean_path_size = path_len * 3 + 1;
+    char *clean_path = malloc(clean_path_size);
+    size_t used_chars = path_len; /* unused */
+    const size_t clean_path_len = sqlite_uri_path(clean_path, clean_path_size,
+                                                  path, &used_chars);
+
+    /*
+     * skip checking if path_len == used_chars because
+     * clean_path should always have enough space
+     */
+
+    clean_path[clean_path_len] = '\0';
 
     /* find a basename pattern match */
     sll_loop(&in->external_copy.setup, node) {
         ecs_t *ecs = (ecs_t *) sll_node_data(node);
-        if (ecs_match(ecs, basename, len) == 1) {
+        if (ecs_match(ecs, path + path_len - basename_len, basename_len) == 1) {
             str_t *sql = &ecs->sql;
 
-            if (attachdb(path, db, EXTDB, SQLITE_OPEN_READONLY, 1, in->print_eacces)) {
+
+            if (attachdb(clean_path, db, EXTDB, SQLITE_OPEN_READONLY, 1, in->print_eacces)) {
                 char *err = NULL;
 
                 /* run user provided SQL */
@@ -125,6 +140,8 @@ static void maybe_copy_external(sqlite3 *db, struct input *in,
             /* do not break - might have multiple matches */
         }
     }
+
+    free(clean_path);
 }
 
 /* Push the subdirectories in the current directory onto the queue */
@@ -221,7 +238,7 @@ static size_t gq_descend(QPTPool_ctx_t *ctx,
             else if (S_ISREG(child->work.statuso.st_mode) ||
                      S_ISLNK(child->work.statuso.st_mode)) {
                 /* db.db and ignored basenames are not processed here */
-                maybe_copy_external(db, in, entry->d_name, len, child->work.name);
+                maybe_copy_external(db, in, child->work.name, child->work.name_len, len);
 
                 free(child);
             }

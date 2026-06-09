@@ -22,6 +22,10 @@ $ sqlite3 "prefix/leaf_directory/ext2.db" "SELECT * FROM tab;"
 data10|11
 data11|12
 
+# Add external database prefix/unusual#? directory ,/ext2.db
+$ sqlite3 "prefix/unusual#? directory ,/ext2.db" "SELECT * FROM tab;"
+data12|15
+
 # Copy ext1.db
 $ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy "ext1\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" "prefix"
 data00|prefix/old_file
@@ -39,6 +43,7 @@ data08|prefix/directory/subdirectory/directory_symlink
 data09|prefix/directory/subdirectory/repeat_name
 data10|prefix/leaf_directory/leaf_file1
 data11|prefix/leaf_directory/leaf_file2
+data12|prefix/unusual#? directory ,/unusual, name?#
 
 # Copy both ext1.db and ext2.db with one pattern
 $ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy "ext.*\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" "prefix"
@@ -54,6 +59,7 @@ data08|prefix/directory/subdirectory/directory_symlink
 data09|prefix/directory/subdirectory/repeat_name
 data10|prefix/leaf_directory/leaf_file1
 data11|prefix/leaf_directory/leaf_file2
+data12|prefix/unusual#? directory ,/unusual, name?#
 
 # Copy both ext1.db and ext2.db with separate patterns into one table
 $ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy "ext1\.db" "INSERT INTO ext SELECT * FROM tab;" --external-copy "ext2\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" "prefix"
@@ -69,6 +75,7 @@ data08|prefix/directory/subdirectory/directory_symlink
 data09|prefix/directory/subdirectory/repeat_name
 data10|prefix/leaf_directory/leaf_file1
 data11|prefix/leaf_directory/leaf_file2
+data12|prefix/unusual#? directory ,/unusual, name?#
 
 # Copy both ext1.db and ext2.db with one pattern into two tables but only select from one of them
 $ gufi_query -d "|" -I "CREATE TABLE ext1(data TEXT, inode TEXT); CREATE TABLE ext2(data TEXT, inode TEXT);" --external-copy "ext.*\.db" "INSERT INTO ext1 SELECT * FROM tab; INSERT INTO ext2 SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext1 ON vrpentries.inode == ext1.inode; DELETE FROM ext1; DELETE FROM ext2;" "prefix"
@@ -84,6 +91,7 @@ data08|prefix/directory/subdirectory/directory_symlink
 data09|prefix/directory/subdirectory/repeat_name
 data10|prefix/leaf_directory/leaf_file1
 data11|prefix/leaf_directory/leaf_file2
+data12|prefix/unusual#? directory ,/unusual, name?#
 
 # Multiple matches on the same basename
 $ gufi_query -d "|" -I "CREATE TABLE ext1(data TEXT, inode TEXT); CREATE TABLE ext2(data TEXT, inode TEXT);" --external-copy "1\.db" "INSERT INTO ext1 SELECT * FROM tab;" --external-copy "ext1\." "INSERT INTO ext2 SELECT * FROM tab;" -E "SELECT ext1.data, ext2.data, rpath(sname, sroll, name) FROM vrpentries JOIN ext1 ON vrpentries.inode == ext1.inode JOIN ext2 ON ext1.inode == ext2.inode; DELETE FROM ext1; DELETE FROM ext2;" "prefix"
