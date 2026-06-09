@@ -290,7 +290,7 @@ int tsumit(struct sum *sumin, struct sum *smout) {
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
 //
-int mkpath(const char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
+int mkpath(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
     for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
         if (mkdir(path, mode) == -1) {
@@ -309,7 +309,7 @@ int mkpath(const char *path, const mode_t mode, const uid_t uid, const gid_t gid
     return mkdir(path,mode);
 }
 
-int dupdir(const char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
+int dupdir(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
     // the writer must be able to create the index files into this directory so or in S_IWRITE
     if (mkdir(path, mode) != 0) {
         const int err = errno;

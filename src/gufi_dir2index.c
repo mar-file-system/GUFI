@@ -444,7 +444,7 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
  * note that the provided directories go into
  * individual directories underneath this one
  */
-static int setup_dst(const char *index_parent) {
+static int setup_dst(char *index_parent) {
     /* check if the destination path already exists (not an error) */
     struct stat dst_st;
     if (lstat(index_parent, &dst_st) == 0) {

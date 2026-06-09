@@ -101,3 +101,9 @@ apt -y install \
     libtool \
     libxml2-dev \
     nasm
+
+. /etc/os-release
+if [[ "${VERSION_ID}" =~ 26.* ]]
+then
+    apt -y install libstdc++-16-dev
+fi
