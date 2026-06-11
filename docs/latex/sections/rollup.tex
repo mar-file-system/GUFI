@@ -173,11 +173,15 @@ Additional steps are needed to rollup xattrs:
   into the parent's external database's \xattrsrollup table instead.
 \end{itemize}
 
-\subsubsection{\gufirollup executable}
+\subsubsection{\gufirollup}
 In order to apply rollup to an index, run the \gufirollup executable:
 \\\\
 \indent \gufirollup \indexroot
 \\\\
+Because \gufirollup walks back up the tree in the same way that
+\gufitreesummaryall does, treesummary tables are automatically
+generated during rollup.
+
 Figure~\ref{fig:rollupworkflow} shows the overall structure of the
 \gufirollup executable. \gufirollup recursively descends the index and
 performs the rollup operation on a directory once all of the
@@ -197,22 +201,27 @@ Figure~\ref{fig:rollupfunction}.
   \label{fig:rollupfunction}
 \end{figure}
 
-\subsubsection{\gufirolluptopdown executable}
-The \gufirollup method of rolling up copies data up every level that
-is allowed to see the data, resulting in massive indexes with a lot of
-repeated data.
+\subsubsection{\gufirolluptopdown}
+The \gufirollup method of rolling up traverses to the bottom of a tree
+and walks upwards, copying data up to every level that is allowed to
+see the data. This results in massive indexes with a lot of repeated
+data. It is possible to reclaim space by using
+\texttt{-{}-delete-below}, but the I/O is still performed, which takes
+time.
 
 The \gufirolluptopdown executable was created to rollup directly to
 the highest point where data can be placed without intermediate copies
 so that indexes only grow at those directories instead of over the
-entire subtree. However, this does mean that queries that start below
-a rolled directory cannot take advantage of rolled up
-subdirectories. However, users are generally expected to query
-starting near the top of a tree, so this should not be too much of an
-issue.
+entire subtree. This does mean that queries that start below a rolled
+directory cannot take advantage of rolled up subdirectories. However,
+as users are generally expected to query starting near the top of a
+tree, this should not be too much of an issue.
 
 \gufirolluptopdown requires that \gufitreesummaryall be called first
-to mark which directories are allowed to roll up:
+to mark which directories are allowed to roll up. \gufirolluptopdown
+then traverses the tree from top to bottom to discover the top-most
+directories that can be rolled up and traverses the remainder of each
+subtree, copying data to the top without needing to traverse back up.
 \\\\
 \indent \gufitreesummaryall \indexroot
 
