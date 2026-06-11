@@ -153,7 +153,16 @@ echo "# roll up starting at level 1"
 run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --min-level 1 \"${SEARCH}\""
 
 echo "# gufi_query should traverse down to level 1"
-run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
+
+echo "# remove rollup data"
+run_no_sort "${GUFI_UNROLLUP} -n ${THREADS} \"${SEARCH}\""
+
+echo "# roll up with limit of 5 files"
+run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --limit 5 \"${SEARCH}\""
+
+echo "# all subdirectories rolled up, but did not roll up into ${INDEXROOT}"
+run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
 
 echo "# bad thread count"
 run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n 18446744073709551615 \"${SEARCH}\""

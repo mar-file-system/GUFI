@@ -680,9 +680,9 @@ static int do_rollup(struct RollUp *rollup,
 
         if (rc == 0){
             /* if the current level is at or below the delete_below value, drop the subdir data */
-            char *err = NULL;
             if ((pa->in.rollup.attach_flag == SQLITE_OPEN_READWRITE) &&
                 (rollup->data.level >= pa->in.rollup.delete_below)) {
+                char *err = NULL;
                 if (sqlite3_exec(dst, DELETE_SUBDIR_ROLLUP, rollup_external_xattrs_delete, &rexa, &err) != SQLITE_OK) {
                     sqlite_print_err_and_free(err, stderr,
                                               "Error: Failed to delete data from subdir \"%s\": %s\n",

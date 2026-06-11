@@ -6,6 +6,7 @@ options:
   -v, --version                     version
   -n, --threads <n>                 number of threads
       --min-level <n>               minimum level to go down
+      --limit <count>               Highest number of files/links in a directory allowed to be rolled up
       --dry-run                     Dry run
 
 GUFI_tree         GUFI tree to roll up
@@ -102,7 +103,9 @@ prefix/ugo/ugo/dir3|1|0
 
 # do rollup
 $ gufi_rollup_topdown -n 2 "prefix"
+3 directories could not rollup
 Rolled up 52 subdirectories into 13 top-level directories
+Total remaining directories to traverse: 16
 
 # see which directories are walked when querying
 # ugo stops because it was rolled up
@@ -230,7 +233,9 @@ $ gufi_query -x -d "|" -n 2 -E "SELECT level(), rpath(sname, sroll, name), xattr
 
 # do a dry run
 $ gufi_rollup_topdown -n 2 --dry-run "search"
+0 directories could not rollup
 Rolled up 0 subdirectories into 1 top-level directories
+Total remaining directories to traverse: 1
 
 # index should not have been rolled up
 $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"
@@ -243,7 +248,9 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 
 # roll up index
 $ gufi_rollup_topdown -n 2 "search"
+0 directories could not rollup
 Rolled up 5 subdirectories into 1 top-level directories
+Total remaining directories to traverse: 1
 
 # check rolled up summary tables
 $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix"
@@ -291,20 +298,38 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 
 # roll up starting at level 1
 $ gufi_rollup_topdown -n 2 --min-level 1 "search"
+0 directories could not rollup
 Rolled up 1 subdirectories into 4 top-level directories
+Total remaining directories to traverse: 4
 
 # gufi_query should traverse down to level 1
-$ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix"
-0|prefix|1|0||
-1|prefix/directory/subdirectory|1|1|user.name|sub
-1|prefix/directory/subdirectory|1|1|user.type|dir
-1|prefix/directory|1|1||
-1|prefix/empty_directory|1|1||
-1|prefix/leaf_directory|1|1|user.name|leaf
-1|prefix/leaf_directory|1|1|user.type|dir
-1|prefix/unusual#? directory ,|1|1||
+$ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"
+0|prefix|1|0
+1|prefix/directory/subdirectory|1|1
+1|prefix/directory|1|1
+1|prefix/empty_directory|1|1
+1|prefix/leaf_directory|1|1
+1|prefix/unusual#? directory ,|1|1
+
+# remove rollup data
+$ gufi_unrollup -n 2 "search"
+
+# roll up with limit of 5 files
+$ gufi_rollup_topdown -n 2 --limit 5 "search"
+0 directories could not rollup
+Rolled up 1 subdirectories into 4 top-level directories
+Total remaining directories to traverse: 4
+
+# all subdirectories rolled up, but did not roll up into search/prefix
+$ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"
+0|prefix|1|0
+1|prefix/directory/subdirectory|1|1
+1|prefix/directory|1|1
+1|prefix/empty_directory|1|1
+1|prefix/leaf_directory|1|1
+1|prefix/unusual#? directory ,|1|1
 
 # bad thread count
 $ gufi_rollup_topdown -n 18446744073709551615 "search"
-Error: Could not allocate counters
+Error: Could not allocate stat counters
 

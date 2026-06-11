@@ -197,6 +197,27 @@ Figure~\ref{fig:rollupfunction}.
   \label{fig:rollupfunction}
 \end{figure}
 
+\subsubsection{\gufirolluptopdown executable}
+The \gufirollup method of rolling up copies data up every level that
+is allowed to see the data, resulting in massive indexes with a lot of
+repeated data.
+
+The \gufirolluptopdown executable was created to rollup directly to
+the highest point where data can be placed without intermediate copies
+so that indexes only grow at those directories instead of over the
+entire subtree. However, this does mean that queries that start below
+a rolled directory cannot take advantage of rolled up
+subdirectories. However, users are generally expected to query
+starting near the top of a tree, so this should not be too much of an
+issue.
+
+\gufirolluptopdown requires that \gufitreesummaryall be called first
+to mark which directories are allowed to roll up:
+\\\\
+\indent \gufitreesummaryall \indexroot
+
+\indent \gufirolluptopdown \indexroot
+
 \subsubsection{Undoing a rollup}
 To remove rollup data from an index, run the \gufiunrollup executable:
 \\\\

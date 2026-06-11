@@ -85,9 +85,11 @@ struct PoolArgs {
     struct template_db xattr_template;
 
     /* per-thread stats */
-
-    size_t *top_counts;
-    size_t *subdir_counts;
+    struct {
+        size_t not_rolledup;
+        size_t top;
+        size_t subdir;
+    } *stats;
 };
 
 typedef struct Path {
@@ -286,7 +288,7 @@ static int top_down_rollup(struct PoolArgs *pa, const size_t id,
 
     while (sll_get_size(&subdirs)) {
         Path_t *child_path = (Path_t *) sll_pop_front(&subdirs);
-        pa->subdir_counts[id]++;
+        pa->stats[id].subdir++;
 
         /* enqueue child directories */
         {
@@ -329,6 +331,12 @@ static int top_down_rollup(struct PoolArgs *pa, const size_t id,
     Path_free(top_path);
 
     return failures;
+}
+
+/* get number of entries in the tree */
+static int get_entries(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+    return !(sscanf(data[0], "%zu", (size_t *) args) == 1);
 }
 
 /* get both canrolledup and isrolled up */
@@ -375,30 +383,68 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
                "/", (size_t) 1,
                DBNAME, DBNAME_LEN);
 
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
-    if (!db) {
-        goto free_dbname;
-    }
-
     int canrollup = 0;
     int isrolledup = 0;
-    int *arr[] = { &canrollup, &isrolledup };
 
-    char *err = NULL;
-    const int rc = sqlite3_exec(db, "SELECT canrollup, isrolledup FROM " SUMMARY " WHERE isroot == 1;",
-                                get_rollup, arr, &err);
-    closedb(db); /* readonly db is not needed any more */
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
 
-    if (rc != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Error: Could not get canrollup from \"%s\": %s\n",
-                                  work->name, err);
-        goto free_dbname;
+    /*
+     * if the database file does not exist, this directory cannot rollup
+     *
+     * opendb will print an error, but keep going
+     */
+
+    if (db) {
+        char *err = NULL;
+
+        if (pa->in.rollup.entries_limit) {
+            size_t entries = 0;
+            if (sqlite3_exec(db,
+                             "SELECT " TREESUMMARY ".totfiles + " TREESUMMARY ".totlinks "
+                             "FROM " TREESUMMARY " JOIN " SUMMARY " ON " TREESUMMARY ".inode == " SUMMARY ".inode "
+                             "WHERE " SUMMARY ".isroot == 1;",
+                             get_entries, &entries, &err) != SQLITE_OK) {
+                sqlite_print_err_and_free(err, stderr, "Error: Could not get entries count from \"%s\": %s\n",
+                                          work->name, err);
+                closedb(db);
+                goto free_dbname;
+            }
+
+            /*
+             * if rolling up into this directory would result in
+             * too many entries, do not roll up this directory
+             * and instead keep going down
+             */
+            if (entries > pa->in.rollup.entries_limit) {
+                closedb(db);
+
+                descend(ctx,
+                        &pa->in, work,
+                        dir, 1,
+                        find_top, NULL, NULL,
+                        NULL);
+
+                goto free_dbname;
+            }
+        }
+
+        int *arr[] = { &canrollup, &isrolledup };
+        if (sqlite3_exec(db, "SELECT canrollup, isrolledup FROM " SUMMARY " WHERE isroot == 1;",
+                         get_rollup, arr, &err) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr, "Error: Could not get rollup data from \"%s\": %s\n",
+                                      work->name, err);
+            closedb(db);
+            goto free_dbname;
+        }
+
+        closedb(db); /* readonly db is not needed any more */
     }
+
+    const size_t id = QPTPool_get_id(ctx);
 
     /* found top - do rollup */
     if (canrollup == 1) {
-        const size_t id = QPTPool_get_id(ctx);
-        pa->top_counts[id]++;
+        pa->stats[id].top++;
 
         if (pa->in.dry_run ||
             (isrolledup && pa->in.dont_reprocess)) {
@@ -409,6 +455,8 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
         }
     }
     else {
+        pa->stats[id].not_rolledup++;
+
         /* cannot roll up, so descend */
         descend(ctx,
                 &pa->in, work,
@@ -437,8 +485,7 @@ int main(int argc, char *argv[]) {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
         /* processing/tree walk flags */
-        FLAG_MIN_LEVEL,
-        FLAG_DRY_RUN,
+        FLAG_MIN_LEVEL, FLAG_ROLLUP_LIMIT, FLAG_DRY_RUN,
 
         FLAG_END
     };
@@ -455,19 +502,18 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    pa.top_counts = calloc(pa.in.maxthreads, sizeof(*pa.top_counts));
-    pa.subdir_counts = calloc(pa.in.maxthreads, sizeof(*pa.subdir_counts));
-    if (!pa.top_counts || !pa.subdir_counts) {
-        fprintf(stderr, "Error: Could not allocate counters\n");
+    pa.stats = calloc(pa.in.maxthreads, sizeof(*pa.stats));
+    if (!pa.stats) {
+        fprintf(stderr, "Error: Could not allocate stat counters\n");
         rc = 1;
-        goto free_counters;
+        goto free_stats;
     }
 
     QPTPool_ctx_t *pool = QPTPool_init(pa.in.maxthreads, &pa);
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         rc = 1;
-        goto free_counters;
+        goto free_stats;
     }
 
     struct start_end runtime;
@@ -489,19 +535,22 @@ int main(int argc, char *argv[]) {
 
     /* cleanup */
 
-    size_t top_count = 0;
-    size_t subdir_count = 0; /* does not include top_count */
+    size_t not_rolledup = 0;
+    size_t top = 0;
+    size_t subdir = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
-        top_count += pa.top_counts[i];
-        subdir_count += pa.subdir_counts[i];
+        not_rolledup += pa.stats[i].not_rolledup;
+        top += pa.stats[i].top;
+        subdir += pa.stats[i].subdir;
     }
 
-    fprintf(stderr, "Rolled up %zu subdirectories into %zu top-level directories\n", subdir_count, top_count);
+    fprintf(stderr, "%zu directories could not rollup\n", not_rolledup);
+    fprintf(stderr, "Rolled up %zu subdirectories into %zu top-level directories\n", subdir, top);
+    fprintf(stderr, "Total remaining directories to traverse: %zu\n", not_rolledup + top);
     fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));
 
-  free_counters:
-    free(pa.subdir_counts);
-    free(pa.top_counts);
+  free_stats:
+    free(pa.stats);
 
     close_template_db(&pa.xattr_template);
 
