@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 #include "bf.h"
+#include "debug.h"
 #include "dbutils.h"
 #include "rollup.h"
 #include "utils.h"
@@ -224,6 +225,9 @@ int main(int argc, char *argv[]) {
 
     BU_descend_f desc = in.dont_reprocess?treesummary_descend:NULL;
 
+    struct start_end after_init;
+    clock_gettime(CLOCK_MONOTONIC, &after_init.start);
+
     const int rc = parallel_bottomup(in.pos.argv, in.pos.argc,
                                      in.min_level, in.max_level,
                                      &in.path_list,
@@ -233,6 +237,10 @@ int main(int argc, char *argv[]) {
                                      0,
                                      0,
                                      &in);
+
+    clock_gettime(CLOCK_MONOTONIC, &after_init.end);
+    const long double processtime = sec(nsec(&after_init));
+    fprintf(stderr, "Time Spent Computing Tree Summary tables: %.2Lfs\n", processtime);
 
     input_fini(&in);
 

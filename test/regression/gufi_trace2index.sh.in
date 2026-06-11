@@ -362,7 +362,7 @@ done
 
 echo "# bad thread count"
 run_no_sort "${GUFI_TRACE2INDEX} -n 18446744073709551615 \"${SRCDIR}\" \"${SEARCH}\""
-) | remove_indexing_time | tee "${OUTPUT}"
+) | remove_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

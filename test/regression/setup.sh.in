@@ -423,8 +423,8 @@ order_tracefile() {
     @GREP@ -a "^[0-9A-Fa-f]\{4\}${SRCDIR}/unusual.*${DELIM}"    "$1"
 }
 
-remove_indexing_time() {
-    @GREP@ -v "Scouts took \|Start Time:\|End Time:\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec\|Took "
+remove_time() {
+    @GREP@ -v "Scouts took \|Start Time:\|End Time:\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec\|Took \|Time Spent "
 }
 
 partial_indexing_setup() {

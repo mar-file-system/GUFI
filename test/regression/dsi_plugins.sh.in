@@ -169,7 +169,7 @@ cleanup
     echo
 
     echo "# index updated tree with DSI plugin"
-    run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"gufi_plugin_operations:${DSI_INDEXING_PLUGIN}\" \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
+    run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"gufi_plugin_operations:${DSI_INDEXING_PLUGIN}\" \"${SRCDIR}\" \"${SEARCH}\"" | remove_time
 
     echo "# query collection1 with gufi_vt, joining externally"
     query=$(

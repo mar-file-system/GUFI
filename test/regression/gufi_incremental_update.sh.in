@@ -136,7 +136,7 @@ setup_index_and_update_simple_tree() {
     RENAME_INODE=$(stat -c '%i' "${SRCDIR}/rename")             # 4
 
     echo "# get index original version of source tree"
-    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${search}" | remove_indexing_time
+    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${search}" | remove_time
 
     echo "# modify source tree"
     mkdir --mode 775 "${SRCDIR}/created"
@@ -161,7 +161,7 @@ setup_index_and_update_simple_tree() {
     touch -md "@${future}" "${SRCDIR}"
 
     echo "# run ${GUFI_DIR2INDEX} on the updated tree to serve as the expected results" | replace
-    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${FULL_INDEX}" | remove_indexing_time
+    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${FULL_INDEX}" | remove_time
 
     sleep 1 # need to make sure no-change's ctime is in the past
 }
@@ -227,7 +227,7 @@ setup_index_and_update_complex_tree() {
     J_INODE=$(stat -c '%i' "${SRCDIR}/A/C/G/H/I/J")      # 10
 
     echo "# get index original version of source tree"
-    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${search}" | remove_indexing_time
+    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${search}" | remove_time
 
     echo "# modify source tree"
     mkdir --mode 775 "${SRCDIR}/A/B/D/C"
@@ -252,7 +252,7 @@ setup_index_and_update_complex_tree() {
     touch -md "@${future}" "${SRCDIR}/A"
 
     echo "# run ${GUFI_DIR2INDEX} on the updated tree to serve as the expected results" | replace
-    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${FULL_INDEX}" | remove_indexing_time
+    run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${FULL_INDEX}" | remove_time
 
     sleep 1 # need to make sure no-change's ctime is in the past
 }

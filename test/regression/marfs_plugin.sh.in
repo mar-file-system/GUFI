@@ -88,36 +88,36 @@ cleanup
 
 (
     echo "# create mock MarFS namespace structure"
-    
+
     # Create dal-root (data abstraction layer - empty but must exist)
     mkdir -p "${MARFS_DAL_ROOT}"
-    
+
     # Create mdal-root and sec-root (metadata abstraction layer)
     mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2"
-    
+
     # Create user files in namespaces
     echo "user file 1" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt"
     echo "user file 2" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile2.txt"
     mkdir -p "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userdir"
     echo "user file 3" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userdir/userfile3.txt"
-    
+
     echo "nested file 1" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile1.txt"
     echo "nested file 2" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile2.txt"
-    
+
     # Create MarFS internal files (these should be filtered out)
     echo "reference" > "${MARFS_SEC_ROOT}/MDAL_reference"
     echo "reference ns1" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_reference"
     echo "reference ns2" > "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/MDAL_reference"
-    
+
     # Add MarFS xattrs to files (these should be filtered out)
     os_setfattr user.MDAL_MARFS-FILE "marfs_metadata" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt" 2>/dev/null || true
     os_setfattr user.MDAL_MARFS-FILE "marfs_metadata" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/MDAL_subspaces/namespace2/nestedfile1.txt" 2>/dev/null || true
-    
+
     # Add user xattrs (these should be preserved)
     os_setfattr user.myattr "myvalue" "${MARFS_SEC_ROOT}/MDAL_subspaces/namespace1/userfile1.txt" 2>/dev/null || true
-    
+
     run_sort "find \"${MARFS_SEC_ROOT}\" -type f -o -type d"
-    
+
     echo
     echo "# create MarFS config XML"
     cp "@CMAKE_CURRENT_BINARY_DIR@/marfs_plugin_config.xml" "${MARFS_CONFIG}"
@@ -125,9 +125,9 @@ cleanup
     # Replace placeholders with actual paths
     @SED@ -i "s|DAL_ROOT_PLACEHOLDER|${MARFS_DAL_ROOT}|g" "${MARFS_CONFIG}"
     @SED@ -i "s|NS_ROOT_PLACEHOLDER|${MARFS_SEC_ROOT}|g" "${MARFS_CONFIG}"
-    
+
     echo "Created MarFS config at ${MARFS_CONFIG}"
-    
+
     echo
     echo "# test: index MarFS structure with plugin"
     echo "# This should:"
@@ -135,14 +135,14 @@ cleanup
     echo "#   - Filter out MDAL_MARFS-FILE xattrs"
     echo "#   - Preserve MDAL_subspaces structure during indexing"
     echo "#   - Rename root namespace to mountpoint in final index"
-    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}\"" 2>&1 | remove_indexing_time
-    
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}\"" 2>&1 | remove_time
+
     echo
     echo "# verify index structure"
     echo "# Root should be renamed from 'sec-root' to 'marfs' (mountpoint basename)"
     echo "# MDAL_subspaces directories should be removed from final structure"
     run_sort "find \"${SEARCH}\" -type d"
-    
+
     echo
     echo "# query indexed files"
     echo "# MarFS internal files (MDAL_reference) should not appear in results"
@@ -151,42 +151,42 @@ cleanup
     echo
     echo "# query file counts per directory"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll) AS name, totfiles FROM vrsummary WHERE totfiles > 0 ORDER BY name;\" \"${SEARCH}\""
-    
+
     echo
     echo "# verify xattrs"
     echo "# MarFS xattrs (user.MDAL_MARFS-FILE) should be filtered out"
     echo "# User xattrs (user.myattr) should be preserved"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -x -E \"SELECT rpath(sname, sroll, name), xattr_name FROM vrxpentries WHERE xattr_name != '' ORDER BY name;\" \"${SEARCH}\" 2>/dev/null" || echo "No xattrs found"
-    
+
     echo
     echo "# verify nlink decrement"
     echo "# All file nlink counts should be decremented by 1 (MarFS metadata link removed)"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), nlink FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;\" \"${SEARCH}\""
-    
+
     echo
     echo "# test: verify root namespace rename in summary table"
     run_sort "${SQLITE3} \"${SEARCH}/marfs/db.db\" \"SELECT name FROM summary;\""
-    
+
     echo
     echo "# test: re-index over existing index"
     echo "# Plugin should handle existing index structure correctly"
-    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}\"" 2>&1 | remove_indexing_time
-    
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}\"" 2>&1 | remove_time
+
     echo
     echo "# verify structure after re-indexing"
     run_sort "find \"${SEARCH}\" -type d"
-    
+
     echo
     echo "# test: error handling - missing config"
     echo "# Should fail with appropriate error message"
     unset MARFS_CONFIG_PATH
     run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}_fail\" 2>&1 | head -n 1" || true
-    
+
     echo
     echo "# test: error handling - invalid path"
     echo "# Should fail when path is not a MarFS sec-root"
     MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"/tmp\" \"${SEARCH}_fail2\" 2>&1 | @GREP@ -i 'error' | head -n 1" || true
-    
+
     echo
     echo "# test: verify inode/pinode relationships"
     echo "# Check that all child directories have pinode matching parent's inode"
@@ -239,9 +239,9 @@ cleanup
               AND (expected_inode IS NULL OR pinode != expected_inode)
             ORDER BY dir;\" \\
         \"${SEARCH}\""
-    
+
     echo "# If above query returns no results, all inode/pinode relationships are correct"
-    
+
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/marfs_plugin.expected "${OUTPUT}"

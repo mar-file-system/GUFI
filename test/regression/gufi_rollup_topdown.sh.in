@@ -157,7 +157,7 @@ run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rp
 
 echo "# bad thread count"
 run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n 18446744073709551615 \"${SEARCH}\""
-) | remove_indexing_time | tee "${OUTPUT}"
+) | remove_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_rollup_topdown.expected "${OUTPUT}"
 rm "${OUTPUT}"

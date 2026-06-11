@@ -120,7 +120,7 @@ run_no_sort "${GUFI_TREESUMMARY_ALL} --dont-reprocess \"${INDEXROOT}\"" | @SED@ 
 rm -rf "${SEARCH}"
 
 echo "# Create a fresh tree without treesummary tables"
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SEARCH}\""
 
 echo "# Use --suspect-time with a future timestamp on the new index"
 run_no_sort "${GUFI_TREESUMMARY_ALL} --suspect-time 2147483646 \"${SEARCH}\"" | @SED@ '\%^Started .*$%d;'
@@ -141,7 +141,7 @@ run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\"" | @SED@ 's%statx%lstat%g;'
 
 echo "# Multiple paths with --min-level and --path-list"
 run_no_sort "${GUFI_TREESUMMARY_ALL} --min-level 1 --path-list path_list \"${SEARCH}\" \"${SEARCH}\""
-) 2>&1 | replace | tee "${OUTPUT}"
+) 2>&1 | remove_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary_all.expected "${OUTPUT}"
 rm "${OUTPUT}"
