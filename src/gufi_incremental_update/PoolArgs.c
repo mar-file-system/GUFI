@@ -80,10 +80,10 @@ static int setup_suspect_file(struct PoolArgs *pa) {
     pa->suspects.fl.min = (ino_t) -1;
     pa->suspects.fl.max = 0;
 
-    if (pa->in.suspectfile > 0) {
-        FILE *f = fopen(pa->in.insuspect.data, "r"); /* --suspect-file */
+    if (pa->in.suspect.filename.data && pa->in.suspect.filename.len) {
+        FILE *f = fopen(pa->in.suspect.filename.data, "r"); /* --suspect-file */
         if(!f) {
-            fprintf(stderr, "Can't open suspect file %s\n", pa->in.insuspect.data);
+            fprintf(stderr, "Can't open suspect file %s\n", pa->in.suspect.filename.data);
             return 1;
         }
 
@@ -117,8 +117,19 @@ static int setup_suspect_file(struct PoolArgs *pa) {
 }
 
 int PoolArgs_init(struct PoolArgs *pa) {
+    if (pa->in.snapshot_prefix.data && pa->in.snapshot_prefix.len) {
+        pa->in.outname = pa->in.snapshot_prefix;
+    }
+    else {
+        pa->in.outname = (str_t) REFSTR("snapshot", 8);
+    }
+
     pa->index.parent_len = trailing_match_index(pa->index.path.data, pa->index.path.len, "/", 1);
     pa->tree.parent_len = trailing_match_index(pa->tree.path.data, pa->tree.path.len, "/", 1);
+
+    memset(&pa->index.snapshot, 0, sizeof(pa->index.snapshot));
+    memset(&pa->tree.snapshot,  0, sizeof(pa->tree.snapshot));
+    memset(&pa->diff,           0, sizeof(pa->diff));
 
     if (setup_suspect_file(pa) != 0) {
         return 1;
@@ -130,14 +141,32 @@ int PoolArgs_init(struct PoolArgs *pa) {
         return 1;
     }
 
+    pa->tops = malloc(pa->in.maxthreads * sizeof(*pa->tops));
+    if (!pa->tops) {
+        fprintf(stderr, "Error: Failed to allocate %zu per-thread lists\n", pa->in.maxthreads);
+        return 1;
+    }
+    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+        sll_init(&pa->tops[i]);
+    }
+
     return 0;
 }
 
 void PoolArgs_fini(struct PoolArgs *pa) {
     QPTPool_stop(pa->ctx);
     QPTPool_destroy(pa->ctx);
+    if (pa->tops) {
+        for(size_t i = 0; i < pa->in.maxthreads; i++) {
+            sll_destroy(&pa->tops[i], NULL);
+        }
+        free(pa->tops);
+    }
     plugins_global_exit(&pa->in.plugins, &pa->in);
     trie_free(pa->suspects.fl.inodes);
     trie_free(pa->suspects.dir.inodes);
+    str_free_existing(&pa->diff);
+    str_free_existing(&pa->tree.snapshot);
+    str_free_existing(&pa->index.snapshot);
     input_fini(&pa->in);
 }

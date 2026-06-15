@@ -116,7 +116,7 @@ struct input *input_init(struct input *in) {
         in->dir_match.uid           = geteuid();              /* always successful */
         in->dir_match.gid           = getegid();              /* always successful */
         in->process_sql             = RUN_ON_ROW;
-        in->suspecttime             = time(NULL);
+        in->suspect.time            = time(NULL);             /* time_set is still 0 */
         in->max_level               = -1;                     // default to all the way down
         sll_init(&in->sql_format.tsum);
         sll_init(&in->sql_format.sum);
@@ -273,6 +273,7 @@ void print_help(const char* prog_name,
             case FLAG_SUSPECT_METHOD_SHORT:              printf("      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)"); break;
             case FLAG_SUSPECT_TIME_SHORT:                printf("      --suspect-time <s>            time in seconds since epoch for suspect comparision"); break;
             case FLAG_SUSPECT_STAT_SHORT:                printf("      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime"); break;
+            case FLAG_SNAPSHOT_PREFIX_SHORT:             printf("      --snapshot-prefix <path>      alternate snapshot filename prefix (defaults to snapshot.* in the current working directory)"); break;
 
             /* gufi_rollup flags */
             case FLAG_ROLLUP_LIMIT_SHORT:                printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
@@ -361,11 +362,11 @@ void show_input(struct input* in, int retval) {
 
     /* gufi_incremental_update flags */
 
-    printf("in.insuspect                = '%s'\n",          in->insuspect.data);
-    printf("in.suspectfile              = '%d'\n",          in->suspectfile);
-    printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
-    printf("in.suspecttime              = '%d'\n",          in->suspecttime);
-    printf("in.suspectstat              = '%d'\n",          in->suspectstat);
+    printf("in.suspect.filename         = '%s'\n",          in->suspect.filename.data);
+    printf("in.suspect.method           = %d\n",            in->suspect.method);
+    printf("in.suspect.time             = %d\n",            in->suspect.time);
+    printf("in.suspect.stat             = %d\n",            in->suspect.stat);
+    printf("in.snapshot_prefix          = '%s'\n",          in->snapshot_prefix.data);
 
     /* gufi_rollup flags */
 
@@ -717,23 +718,26 @@ int parse_cmd_line(int                  argc,
             /* gufi_incremental_update flags */
 
             case FLAG_SUSPECT_FILE_SHORT:
-                INSTALL_STR(&in->insuspect, optarg);
-                in->suspectfile = 1;
+                INSTALL_STR(&in->suspect.filename, optarg);
                 break;
 
             case FLAG_SUSPECT_METHOD_SHORT:
-                INSTALL_INT(&in->suspectmethod, optarg, 0, 3,
+                INSTALL_INT(&in->suspect.method, optarg, 0, 3,
                             "--" FLAG_SUSPECT_METHOD_LONG, &retval);
                 break;
 
             case FLAG_SUSPECT_TIME_SHORT:
-                INSTALL_INT(&in->suspecttime, optarg, 0, 2147483646,
+                INSTALL_INT(&in->suspect.time, optarg, 0, 2147483646,
                             "--" FLAG_SUSPECT_TIME_LONG, &retval);
-                in->suspecttime_set = 1;
+                in->suspect.time_set = 1;
                 break;
 
             case FLAG_SUSPECT_STAT_SHORT:
-                in->suspectstat = 1;
+                in->suspect.stat = 1;
+                break;
+
+            case FLAG_SNAPSHOT_PREFIX_SHORT:
+                INSTALL_STR(&in->snapshot_prefix, optarg);
                 break;
 
             /* gufi_rollup flags */

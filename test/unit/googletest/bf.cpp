@@ -124,6 +124,7 @@ static const std::string suspect_file                = "--suspect-file";   stati
 static const std::string suspect_method              = "--suspect-method"; static const std::string suspect_method_arg = "1";
 static const std::string suspect_time                = "--suspect-time";   static const std::string suspect_time_arg = "1";
 static const std::string suspect_stat                = "--suspect-stat";
+static const std::string snapshot_prefix             = "--snapshot-prefix"; static const std::string snapshot_prefix_arg = "snapshot_prefix";
 static const std::string rollup_limit                = "--limit"; static const std::string rollup_limit_arg = "1";
 static const std::string rollup_delete_below         = "--delete-below"; static const std::string rollup_delete_below_arg = "1";
 static const std::string external_attach_validate    = "--external-attach-validate";
@@ -188,7 +189,7 @@ static void check_input(const int /* argc */, const char **argv,
     EXPECT_EQ(in->process_xattrs,                             flags);
     EXPECT_EQ(in->printdir,                                   flags);
     EXPECT_EQ(in->types.print_tlv,                            flags);
-    EXPECT_EQ(in->suspectstat,                                flags);
+    EXPECT_EQ(in->suspect.stat,                               flags);
     EXPECT_EQ(in->keep_matime,                                flags);
     EXPECT_EQ(in->open_flags,                                 flags?SQLITE_OPEN_READWRITE:SQLITE_OPEN_READONLY);
     EXPECT_EQ(in->terse,                                      flags);
@@ -218,10 +219,10 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->sql.init_agg,                           K_arg);
         EXPECT_EQ(in->sql.agg,                                G_arg);
         EXPECT_EQ(in->sql.fin,                                F_arg);
-        EXPECT_EQ(in->insuspect,                              suspect_file_arg);
-        EXPECT_EQ(in->suspectfile,                            1);
-        EXPECT_EQ(in->suspectmethod,                          1);
-        EXPECT_EQ(in->suspecttime,                            1);
+        EXPECT_EQ(in->suspect.filename,                       suspect_file_arg);
+        EXPECT_EQ(in->suspect.method,                         1);
+        EXPECT_EQ(in->suspect.time,                           1);
+        EXPECT_EQ(in->snapshot_prefix,                        snapshot_prefix_arg);
         EXPECT_EQ(in->source_prefix.data,                     path_arg);
         EXPECT_EQ(in->filter_types,                           FILTER_TYPE_DIR | FILTER_TYPE_FILE | FILTER_TYPE_LINK);
         EXPECT_EQ(in->min_level,                              (std::size_t) 1);
@@ -277,10 +278,10 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->sql.init_agg,                           empty);
         EXPECT_EQ(in->sql.agg,                                empty);
         EXPECT_EQ(in->sql.fin,                                empty);
-        EXPECT_EQ(in->insuspect.data,                         nullptr);
-        EXPECT_EQ(in->suspectfile,                            0);
-        EXPECT_EQ(in->suspectmethod,                          0);
-        EXPECT_NE(in->suspecttime,                            0);
+        EXPECT_EQ(in->suspect.filename.data,                  nullptr);
+        EXPECT_EQ(in->suspect.method,                         0);
+        EXPECT_NE(in->suspect.time,                           0);
+        EXPECT_EQ(in->snapshot_prefix.data,                   nullptr);
         EXPECT_EQ(in->source_prefix,                          empty);
         EXPECT_EQ(in->filter_types,                           0);
         EXPECT_EQ(in->min_level,                              (std::size_t) 0);
@@ -360,13 +361,13 @@ TEST(parse_cmd_line, debug) {
         FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SETUP_RES_COL_TYPES,
         FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
         FLAG_SUSPECT_STAT, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
-        FLAG_SUSPECT_TIME, FLAG_PATH, FLAG_FILTER_TYPE, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL,
-        FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME,
-        FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE,
-        FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW,
-        FLAG_SKIP_FILE, FLAG_DONT_REPROCESS, FLAG_PRINT_EACCES,
-        FLAG_NO_PRINT_SQL_ON_ERR, FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT,
-        FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
+        FLAG_SUSPECT_TIME, FLAG_SNAPSHOT_PREFIX, FLAG_PATH, FLAG_FILTER_TYPE,
+        FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG,
+        FLAG_SQL_AGG, FLAG_KEEP_MATIME, FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE,
+        FLAG_FORMAT, FLAG_TERSE, FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT,
+        FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE, FLAG_DONT_REPROCESS,
+        FLAG_PRINT_EACCES, FLAG_NO_PRINT_SQL_ON_ERR, FLAG_TARGET_MEMORY,
+        FLAG_SUBDIR_LIMIT, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -393,6 +394,7 @@ TEST(parse_cmd_line, debug) {
         suspect_file.c_str(), suspect_file_arg.c_str(),
         suspect_method.c_str(), suspect_method_arg.c_str(),
         suspect_time.c_str(), suspect_time_arg.c_str(),
+        snapshot_prefix.c_str(), snapshot_prefix_arg.c_str(),
         path.c_str(), path_arg.c_str(),
         filter_type.c_str(), filter_type_arg.c_str(),
         min_level.c_str(), min_level_arg.c_str(),
@@ -488,7 +490,7 @@ TEST(parse_cmd_line, options) {
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
         FLAG_SETUP_RES_COL_TYPES, FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM,
         FLAG_SQL_ENT, FLAG_SQL_FIN, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
-        FLAG_SUSPECT_TIME, FLAG_PATH, FLAG_FILTER_TYPE,
+        FLAG_SUSPECT_TIME, FLAG_SNAPSHOT_PREFIX, FLAG_PATH, FLAG_FILTER_TYPE,
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_OUTPUT_BUFFER_SIZE, FLAG_FORMAT,
         FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE,
@@ -511,6 +513,7 @@ TEST(parse_cmd_line, options) {
         suspect_file.c_str(), suspect_file_arg.c_str(),
         suspect_method.c_str(), suspect_method_arg.c_str(),
         suspect_time.c_str(), suspect_time_arg.c_str(),
+        snapshot_prefix.c_str(), snapshot_prefix_arg.c_str(),
         path.c_str(), path_arg.c_str(),
         filter_type.c_str(), filter_type_arg.c_str(),
         min_level.c_str(), min_level_arg.c_str(),

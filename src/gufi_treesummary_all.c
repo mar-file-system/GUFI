@@ -149,10 +149,10 @@ static int treesummary_ascend(void *args) {
     }
 
     /* check if this treesummary table needs to be updated */
-    if (!subdir_modified && in->suspecttime) {
+    if (!subdir_modified && in->suspect.time) {
         /* suspect time is more recent than mtime/ctime -> nothing to update */
-        if ((dir->st.st_mtime < in->suspecttime) &&
-            (dir->st.st_ctime < in->suspecttime)) {
+        if ((dir->st.st_mtime < in->suspect.time) &&
+            (dir->st.st_ctime < in->suspect.time)) {
             return 0;
         }
     }
@@ -219,8 +219,8 @@ int main(int argc, char *argv[]) {
     process_args_and_maybe_exit(options, 1, "GUFI_tree", &in);
 
     /* default to create/update treesummary tables for all directories */
-    if (!in.suspecttime_set) {
-        in.suspecttime = 0;
+    if (!in.suspect.time_set) {
+        in.suspect.time = 0;
     }
 
     BU_descend_f desc = in.dont_reprocess?treesummary_descend:NULL;

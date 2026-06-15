@@ -72,18 +72,12 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "debug.h"
 #include "descend.h"
+#include "str.h"
 
 #include "gufi_incremental_update/aggregate.h"
 #include "gufi_incremental_update/incremental_update.h"
 
 #define INDEX_SNAPSHOT_EXT "index"
-
-size_t gen_index_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size) {
-    return SNFORMAT_S(name, name_size, 3,
-                      pa->in.outname.data, pa->in.outname.len,
-                      ".", (size_t) 1,
-                      INDEX_SNAPSHOT_EXT, sizeof(INDEX_SNAPSHOT_EXT) - 1);
-}
 
 static const char UPDATE_WORK_SQL[] = "SELECT inode, pinode FROM " SUMMARY " WHERE isroot == 1;";
 
@@ -108,8 +102,13 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     decompress_work(&work, data);
 
-    dir = opendir_wrapper(work->name, 1);
+    dir = opendir(work->name);
     if (!dir) {
+        const int err = errno;
+        if (err != ENOENT) { /* new directory in source tree but not yet in index */
+            fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
+                    work->name, strerror(err), err);
+        }
         rc = 1;
         goto cleanup;
     }
@@ -167,11 +166,16 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 }
 
 int gen_index_snapshot(struct PoolArgs *pa, struct work *work) {
-    char index_snapshot_name[MAXPATH];
-    gen_index_snapshot_name(pa, index_snapshot_name, sizeof(index_snapshot_name));
+    str_alloc_existing(&pa->index.snapshot, pa->in.outname.len + 1 + sizeof(INDEX_SNAPSHOT_EXT) - 1);
+    SNFORMAT_S(pa->index.snapshot.data, pa->index.snapshot.len + 1, 3,
+               pa->in.outname.data, pa->in.outname.len,
+               ".", (size_t) 1,
+               INDEX_SNAPSHOT_EXT, sizeof(INDEX_SNAPSHOT_EXT) - 1);
 
     /* set up per-thread databases to write to */
-    if (aggregate_init(&pa->index.agg, pa->in.maxthreads, index_snapshot_name, 0) != 0) {
+    if (aggregate_init(&pa->index.agg, pa->in.maxthreads, pa->index.snapshot.data, 0) != 0) {
+        free(work);
+        str_free_existing(&pa->index.snapshot);
         return 1;
     }
 

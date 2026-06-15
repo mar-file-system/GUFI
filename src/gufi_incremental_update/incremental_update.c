@@ -159,11 +159,11 @@ static const char INCR_DIFF_CREATE[] =
     "       * "
     "FROM " ALL_MATCHES " "
     /* only keep changes */
-    "WHERE (" INDEX "pinode != " TREE "pinode) "
-    "  OR  (" INDEX "path   != " TREE "path) "
-    "  OR  (" INDEX "inode IS NULL) "
-    "  OR  (" TREE  "inode IS NULL) "
-    "  OR  (" TREE  "suspect == 1) "
+    "WHERE (" INDEX "pinode != " TREE "pinode) " /* new directory with same name */
+    "  OR  (" INDEX "path   != " TREE "path) "   /* renamed */
+    "  OR  (" INDEX "inode IS NULL) "            /* new directory */
+    "  OR  (" TREE  "inode IS NULL) "            /* deleted directory */
+    "  OR  (" TREE  "suspect == 1) "             /* marked as suspect */
     ";";
 
 /* find directories that were deleted or renamed */
@@ -287,27 +287,32 @@ static int get_created(QPTPool_ctx_t *ctx, void *data) {
     return (dp->ret = !!err);
 }
 
+void delete_artifact(const char *path) {
+    if (path) {
+        if (remove(path) == 0) {
+            fprintf(stdout, "Deleted artifact %s\n", path);
+        }
+        else {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not remove %s: %s (%d)\n",
+                    path, strerror(err), err);
+        }
+    }
+}
+
 /* create db file containing the differences between the index and current state of the tree */
 #define DIFF_SNAPSHOT_EXT "diff"
-static int get_diff(struct PoolArgs *pa, char *diff_dbname, const size_t diff_dbname_size) {
-    /* ground truth */
-    char index_dbname[MAXPATH];
-    gen_index_snapshot_name(pa, index_dbname, sizeof(index_dbname));
-
-    /* tree with changes */
-    char tree_dbname[MAXPATH];
-    gen_tree_snapshot_name(pa, tree_dbname, sizeof(tree_dbname));
-
+static int get_diff(struct PoolArgs *pa) {
     diff_part_t urd = {
-        .index  = index_dbname,
-        .tree   = tree_dbname,
+        .index  = pa->index.snapshot.data,
+        .tree   = pa->tree.snapshot.data,
         .dbname = "",
         .ret    = 1, /* default to error */
     };
 
     diff_part_t created = {
-        .index  = index_dbname,
-        .tree   = tree_dbname,
+        .index  = pa->index.snapshot.data,
+        .tree   = pa->tree.snapshot.data,
         .dbname = "",
         .ret    = 1, /* default to error */
     };
@@ -320,13 +325,15 @@ static int get_diff(struct PoolArgs *pa, char *diff_dbname, const size_t diff_db
 
     /* should probably check return values */
 
-    /* generate the name of the diff database (<snapshotdb>.diff; not deleted afterwards for debugging) */
-    SNFORMAT_S(diff_dbname, diff_dbname_size, 3,
+    /* generate the name of the diff database (<snapshotdb>.diff) */
+    const size_t diff_name_len = pa->in.outname.len + 1 + sizeof(DIFF_SNAPSHOT_EXT) - 1;
+    str_alloc_existing(&pa->diff, diff_name_len);
+    SNFORMAT_S(pa->diff.data, pa->diff.len + 1, 3,
                pa->in.outname.data, pa->in.outname.len,
                ".", (size_t) 1,
                DIFF_SNAPSHOT_EXT, sizeof(DIFF_SNAPSHOT_EXT) - 1);
 
-    sqlite3 *db = opendb(diff_dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
+    sqlite3 *db = opendb(pa->diff.data, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
     if (!db) {
         return 1;
     }
@@ -353,6 +360,9 @@ static int get_diff(struct PoolArgs *pa, char *diff_dbname, const size_t diff_db
 
   cleanup:
     closedb(db);
+
+    delete_artifact(created.dbname);
+    delete_artifact(urd.dbname);
 
     return !!err;
 }
@@ -445,7 +455,7 @@ static int apply_creates_and_move_ins_callback(void *args, int count, char **dat
     /* const char *treeinode = data[2]; */
     /* const char  new       = data[3][0]; */
 
-    const char *treepath  = data[0];
+    const char *treepath  = data[0]; /* if the directory is new, the indexpath is NULL, so generate the indexpath */
     const char *treeinode = data[1];
     const char  new       = data[2][0];
 
@@ -534,11 +544,6 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
                "/", (size_t) 1,
                ud->treeinode.data, ud->treeinode.len);
 
-    /*
-     * this might fail if a directory was renamed, due to a parent
-     * directory being renamed, but otherwise being unchanged, meaning
-     * it was not suspect, and thus not reindexed
-     */
     struct stat st;
     ERRNO_NOT_ERR(free_ud, ud,
                   stat(plname, &st), "    Warning: Could not stat update " DBNAME " in parking lot \"%s\"",
@@ -652,15 +657,13 @@ static int apply_updates(struct PoolArgs *pa, sqlite3 *db) {
 }
 
 int incremental_update(struct PoolArgs *pa) {
-    char diff_dbname[MAXPATH];
-
     /* generate the diff database */
-    if (get_diff(pa, diff_dbname, sizeof(diff_dbname)) != 0) {
+    if (get_diff(pa) != 0) {
         return 1;
     }
 
     /* reopen diff database in read-only mode */
-    sqlite3 *db = opendb(diff_dbname, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
+    sqlite3 *db = opendb(pa->diff.data, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
     if (!db) {
         return 1;
     }

@@ -76,6 +76,13 @@ OF SUCH DAMAGE.
 int setup_parking_lot(const char *path);
 int cleanup_parking_lot(const char *path, const int created);
 
+/* check if a filesystem entry is suspect */
+int is_suspect(const int suspectmethod,
+               struct SuspectInodes *suspectinodes,
+               const int suspectstat,
+               const time_t suspecttime,
+               struct work *work);
+
 /* table for containing snapshot information */
 #define SNAPSHOT      "snapshot"
 #define SNAPSHOT_SCHEMA(name)                    \
@@ -96,7 +103,6 @@ int insert_snapshot_row(struct work *work, struct entry_data *ed,
 
 /* *********************************************************** */
 /* walk the old index and generate a readdirplus table in <snapshot>.index */
-size_t gen_index_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size);
 int gen_index_snapshot(struct PoolArgs *pa, struct work *work); /* TODO: reuse gufi_query code */
 /* *********************************************************** */
 
@@ -113,9 +119,10 @@ int reindex_dir(struct PoolArgs *pa,
                 DIR *dir, const size_t id);
 
 /* walk the current index and generate a readdirplus table in <snapshot>.tree */
-size_t gen_tree_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size);
 int find_suspects(struct PoolArgs *pa, struct work *work);
 /* *********************************************************** */
+
+void delete_artifact(const char *path);
 
 /* do the incremental update after getting snapshots from the original index and updated tree */
 int incremental_update(struct PoolArgs *pa);

@@ -306,6 +306,10 @@ extern "C" {
 #define FLAG_SUSPECT_STAT_LONG "suspect-stat"
 #define FLAG_SUSPECT_STAT {FLAG_SUSPECT_STAT_LONG, no_argument, NULL, FLAG_SUSPECT_STAT_SHORT}
 
+#define FLAG_SNAPSHOT_PREFIX_SHORT (FLAG_GROUP_INC + 4)
+#define FLAG_SNAPSHOT_PREFIX_LONG "snapshot-prefix"
+#define FLAG_SNAPSHOT_PREFIX {FLAG_SNAPSHOT_PREFIX_LONG, required_argument, NULL, FLAG_SNAPSHOT_PREFIX_SHORT}
+
 /* gufi_rollup flags */
 
 #define FLAG_ROLLUP_LIMIT_SHORT (FLAG_GROUP_ROLLUP + 0)
@@ -511,12 +515,27 @@ struct input {
         gid_t gid;                 /* only set if --match-gid is set; defaults to EGID */
     } dir_match;
     AFlag_t process_sql;           /* what to do if an SQL statement returns/doesn't return 1 row */
-    int  suspectstat;              /* if an entry is suspect, stat it to get timestamps to compare against suspecttime */
-    str_t insuspect;               /* added for bfwreaddirplus2db input path for suspects file */
-    int  suspectfile;              /* added for bfwreaddirplus2db flag for if we are processing suspects file */
-    int  suspectmethod;            /* added for bfwreaddirplus2db flag for if we are processing suspects what method do we use */
-    int  suspecttime;              /* added for bfwreaddirplus2db time for suspect comparison in seconds since epoch */
-    int  suspecttime_set;          /* bool for suspecttime */
+
+    /*
+     * incremental update values for determining if an entry is
+     * suspected of having changed using different methods
+     */
+    struct {
+        int stat;                  /* if an entry is suspect, stat it to get timestamps to compare against suspect.time */
+        str_t filename;            /* suspects file containing inodes and types (d, f, or l) */
+        int method;                /* what method (0, 1, or 3) do we use
+                                    *     0 - nothing is suspect (not sure why this exists)
+                                    *     1 - check suspects file for appearance of inodes (all types)
+                                    *         if found in suspect file and suspect.stat is set,
+                                    *         use whether or not either mtime/ctime changed
+                                    *     2 - **REMOVED** only check file/link inode existence in suspect file
+                                    *     3 - use whether or not either mtime/ctime changed
+                                    */
+        int time;                  /* time for suspect comparison in seconds since epoch */
+        int time_set;              /* bool for suspect.time; only used by gufi_treesummary_all */
+    } suspect;
+    str_t snapshot_prefix;         /* alternate filename prefix for gufi_incremental_update snapshot files */
+
     size_t min_level;              /* minimum level of recursion to reach before running queries */
     size_t max_level;              /* maximum level of recursion to run queries on */
     int dry_run;

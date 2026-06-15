@@ -68,6 +68,7 @@ OF SUCH DAMAGE.
 #include <sys/types.h>
 
 #include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
 #include "bf.h"
 #include "str.h"
 #include "template_db.h"
@@ -79,6 +80,7 @@ OF SUCH DAMAGE.
 struct GenSnapshot {
     str_t path;            /* argv */
     size_t parent_len;     /* strlen(diriname(path) */
+    str_t snapshot;        /* name of the artifact */
     Aggregate_t agg;       /* per-thread in-memory databases that are merged at end to get final results */
 };
 
@@ -96,9 +98,11 @@ struct PoolArgs {
     struct template_db db; /* (optimization) db.db with empty tables for copying when creating update db.dbs */
 
     QPTPool_ctx_t *ctx;
+    sll_t *tops; /* per thread lists of struct work * */
 
     struct GenSnapshot index;
     struct GenSnapshot tree;
+    str_t diff; /* diff database path */
 
     int same;   /* is the index in the tree? */
 
