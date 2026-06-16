@@ -292,11 +292,8 @@ static int top_down_rollup(struct PoolArgs *pa, const size_t id,
 
         /* enqueue child directories */
         {
-            DIR *dir = opendir(child_path->orig.data);
+            DIR *dir = opendir_wrapper(child_path->orig.data, 1);
             if (!dir) {
-                const int err = errno;
-                fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
-                        child_path->orig.data, strerror(err), err);
                 failures++;
                 Path_free(child_path);
                 continue;
@@ -358,11 +355,8 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
 
     struct work *work = (struct work *) data;
 
-    DIR *dir = opendir(work->name);
+    DIR *dir = opendir_wrapper(work->name, 1);
     if (!dir) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
-                work->name, strerror(err), err);
         goto free_work;
     }
 
