@@ -309,9 +309,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
      * do slower processing on this directory
      */
     if (process_dir == PLUGIN_PROCESS_DIR) {
-        stopdb(nda.db);
-
-        /* entries and xattrs have been inserted */
+        /* entries and xattrs have been added to the transaction */
 
         if (nda.in->process_xattrs) {
             /* write out per-user and per-group xattrs */
@@ -337,6 +335,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
         /* run plugin before destroying data */
         plugins_process_dir(&pa->in.plugins, &pcs, nda.id);
+
+        /* end the transaction */
+        stopdb(nda.db);
 
         if (nda.in->process_xattrs) {
             xattrs_cleanup(&nda.ed.xattrs);

@@ -233,8 +233,6 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
             free(line); /* reuse line and only alloc+free once */
         }
 
-        stopdb(db);
-
         /* write out per-user and per-group xattrs */
         sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
 
@@ -251,6 +249,10 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         const size_t basename_start = trailing_match_index(dir->name, dir->name_len, "/", 1);
 
         insertsumdb(db, dir->name + basename_start, dir, &ed, &nda.summary);
+
+        /* end the transaction */
+        stopdb(db);
+
         xattrs_cleanup(&ed.xattrs);
 
         closedb(db); /* don't set to nullptr */

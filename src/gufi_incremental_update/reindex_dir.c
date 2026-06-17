@@ -205,13 +205,15 @@ int reindex_dir(struct PoolArgs *pa,
         free(child);
     }
 
-    stopdb(db);
     insertdbfin(res);
 
     insertsumdb(db, work->name, work, ed, &summary);
 
     /* run plugin before destroying data */
     plugins_process_dir(&pa->in.plugins, &pcs, id);
+
+    /* end the transaction */
+    stopdb(db);
 
     if (pa->in.process_xattrs) {
         xattrs_cleanup(&ed->xattrs);
