@@ -711,7 +711,7 @@ static int do_rollup(struct RollUp *rollup,
         if (rollup->data.stat_called == STAT_NOT_CALLED) {
             time_t crtime = 0; /* unused */
             if (lstat_wrapper(rollup->data.name, &rollup->data.st, &crtime,
-                              &rollup->data.stat_called, 1, 1) != 0) {
+                              &rollup->data.stat_called, 1, NULL) != 0) {
                 return 1;
             }
         }
@@ -823,7 +823,7 @@ static int rollup_ascend(void *args) {
                 if (dir->data.stat_called == STAT_NOT_CALLED) {
                     time_t crtime = 0; /* unused */
                     if (lstat_wrapper(dir->data.name, &dir->data.st, &crtime,
-                                      &dir->data.stat_called, 1, 1) != 0) {
+                                      &dir->data.stat_called, 1, NULL) != 0) {
                         return 1;
                     }
                 }

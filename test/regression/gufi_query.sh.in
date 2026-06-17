@@ -210,6 +210,9 @@ run_no_sort "${GUFI_QUERY} -n 18446744073709551615 \"${INDEXROOT}\""
 echo "# Bad user data key"
 run_sort "${GUFI_QUERY} -d \" \" --max-level 0 -E \"SELECT {abc}, {def;\" \"${INDEXROOT}\"" | @SED@ '\%^$%d;'
 
+echo "# Bad errno"
+run_no_sort "${GUFI_QUERY} --no-print-errno 256 \"${INDEXROOT}\" > /dev/null"
+
 echo "#####################################"
 echo "# Extra Inputs                      #"
 echo "#####################################"

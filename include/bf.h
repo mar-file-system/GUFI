@@ -66,7 +66,7 @@ OF SUCH DAMAGE.
 #define BF_H
 
 #include <getopt.h>
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdlib.h> /* EXIT_SUCCESS and EXIT_FAILURE */
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -88,8 +88,6 @@ extern "C" {
 #define DBNAME "db.db"
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
 #define GETLINE_DEFAULT_SIZE 750 /* magic number */
-
-/* DO NOT use -Q and -q */
 
 #define FLAG_HELP_SHORT 'h'
 #define FLAG_HELP_LONG "help"
@@ -236,9 +234,9 @@ extern "C" {
 #define FLAG_DIR_MATCH_GID_LONG "dir-match-gid"
 #define FLAG_DIR_MATCH_GID {FLAG_DIR_MATCH_GID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_GID_SHORT}
 
-#define FLAG_PRINT_EACCES_SHORT (FLAG_GROUP_MISC + 16)
-#define FLAG_PRINT_EACCES_LONG "print-eacces"
-#define FLAG_PRINT_EACCES {FLAG_PRINT_EACCES_LONG, no_argument, NULL, FLAG_PRINT_EACCES_SHORT}
+#define FLAG_NO_PRINT_ERRNO_SHORT (FLAG_GROUP_MISC + 16)
+#define FLAG_NO_PRINT_ERRNO_LONG "no-print-errno"
+#define FLAG_NO_PRINT_ERRNO {FLAG_NO_PRINT_ERRNO_LONG, required_argument, NULL, FLAG_NO_PRINT_ERRNO_SHORT}
 
 #define FLAG_NO_PRINT_SQL_ON_ERR_SHORT (FLAG_GROUP_MISC + 17)
 #define FLAG_NO_PRINT_SQL_ON_ERR_LONG "no-print-sql-on-err"
@@ -504,7 +502,7 @@ struct input {
     char delim;
     char newline;
     int  suppress_newline;
-    int  print_eacces;             /* if cannot open a path due to EACCES, print error message (default: off) */
+    uint64_t no_print_errno[4];    /* errno bitfield to not print errors for when they occur */
     int  no_print_sql_on_err;      /* if there is an SQL error, do not print the SQL in the error message */
     int  old_trace_format;         /* used to read old traces only - do not generate new traces with the old format */
     int  buildindex;

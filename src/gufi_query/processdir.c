@@ -180,7 +180,7 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
                                          gqw->sqlite3_name, gqw->sqlite3_name_len,
                                          "/" DBNAME, DBNAME_LEN + 1);
 
-    dir = opendir_wrapper(gqw->work.name, in->print_eacces);
+    dir = opendir_wrapper(gqw->work.name, in->no_print_errno);
 
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
@@ -197,7 +197,7 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     if (gqw->work.level >= in->min_level) {
-        db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1, in->print_eacces);
+        db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1, in->no_print_errno);
     }
 
     /* get number of subdirs walked on first call to process_queries */
@@ -424,7 +424,7 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
 
   detach:
     if (db) {
-        detachdb_cached(dbname, db, pa->detach, 1, in->print_eacces);
+        detachdb_cached(dbname, db, pa->detach, 1, in->no_print_errno);
     }
 
     /* restore mtime and atime */

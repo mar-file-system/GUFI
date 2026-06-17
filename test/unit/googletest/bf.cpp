@@ -109,7 +109,7 @@ static const std::string terse                       = "--terse";
 static const std::string dont_reprocess              = "--dont-reprocess";
 static const std::string dir_match_uid               = "--dir-match-uid"; static const std::string dir_match_uid_arg = "1";
 static const std::string dir_match_gid               = "--dir-match-gid"; static const std::string dir_match_gid_arg = "1";
-static const std::string print_eacces                = "--print-eacces";
+static const std::string no_print_errno              = "--no-print-errno"; static const std::string no_print_errno_arg = "2";
 static const std::string no_print_sql_on_err         = "--no-print-sql-on-err";
 
 static const std::string output_buffer_size          = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
@@ -198,7 +198,6 @@ static void check_input(const int /* argc */, const char **argv,
     EXPECT_EQ(in->dir_match.on,                               DIR_MATCH_NONE);
     EXPECT_EQ(in->dir_match.uid,                              geteuid());
     EXPECT_EQ(in->dir_match.gid,                              getegid());
-    EXPECT_EQ(in->print_eacces,                               flags);
     EXPECT_EQ(in->no_print_sql_on_err,                        flags);
     #if HAVE_ZLIB
     EXPECT_EQ(in->compress,                                   flags);
@@ -233,6 +232,7 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->rollup.delete_below,                    (std::size_t) 1);
         EXPECT_EQ(in->rollup.attach_flag,                     SQLITE_OPEN_READWRITE);
         EXPECT_NE(in->skip,                                   nullptr);
+        EXPECT_EQ(in->no_print_errno[0],                      1ULL << 2);
         EXPECT_EQ(in->target_memory,                          (std::size_t) 1);
         EXPECT_EQ(in->subdir_limit,                           (std::size_t) 1);
         EXPECT_EQ(sll_get_size(&in->external_attach.setup),   (std::size_t) 1);
@@ -292,6 +292,7 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->rollup.delete_below,                    (std::size_t) -1);
         EXPECT_EQ(in->rollup.attach_flag,                     SQLITE_OPEN_READONLY);
         EXPECT_NE(in->skip,                                   nullptr);
+        EXPECT_EQ(in->no_print_errno[0],                      0ULL);
         EXPECT_EQ(in->target_memory,                          (std::size_t) 0);
         EXPECT_EQ(in->subdir_limit,                           (std::size_t) 0);
         EXPECT_NE(in->swap_prefix.data,                       nullptr); /* default exists */
@@ -366,7 +367,7 @@ TEST(parse_cmd_line, debug) {
         FLAG_SQL_AGG, FLAG_KEEP_MATIME, FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE,
         FLAG_FORMAT, FLAG_TERSE, FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT,
         FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE, FLAG_DONT_REPROCESS,
-        FLAG_PRINT_EACCES, FLAG_NO_PRINT_SQL_ON_ERR, FLAG_TARGET_MEMORY,
+        FLAG_NO_PRINT_ERRNO, FLAG_NO_PRINT_SQL_ON_ERR, FLAG_TARGET_MEMORY,
         FLAG_SUBDIR_LIMIT, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
@@ -412,7 +413,8 @@ TEST(parse_cmd_line, debug) {
         rollup_delete_below.c_str(), rollup_delete_below_arg.c_str(),
         // skip_file.c_str(), skip_file_arg.c_str(),
         dont_reprocess.c_str(),
-        print_eacces.c_str(), no_print_sql_on_err.c_str(),
+        no_print_errno.c_str(), no_print_errno_arg.c_str(),
+        no_print_sql_on_err.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
         #ifdef HAVE_ZLIB
@@ -448,7 +450,7 @@ TEST(parse_cmd_line, flags) {
         FLAG_XATTRS, FLAG_PRINTDIR, FLAG_PRINT_TLV,
         FLAG_SUSPECT_STAT, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
         FLAG_TERSE, FLAG_DRY_RUN, FLAG_DONT_REPROCESS,
-        FLAG_PRINT_EACCES, FLAG_NO_PRINT_SQL_ON_ERR,
+        FLAG_NO_PRINT_SQL_ON_ERR,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -467,7 +469,6 @@ TEST(parse_cmd_line, flags) {
         terse.c_str(),
         dry_run.c_str(),
         dont_reprocess.c_str(),
-        print_eacces.c_str(),
         no_print_sql_on_err.c_str(),
         #ifdef HAVE_ZLIB
         compress.c_str(),
@@ -494,8 +495,8 @@ TEST(parse_cmd_line, options) {
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
         FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_OUTPUT_BUFFER_SIZE, FLAG_FORMAT,
         FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE,
-        FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_SWAP_PREFIX,
-        FLAG_PATH_LIST, FLAG_EXTERNAL_ATTACH, FLAG_EXTERNAL_COPY,
+        FLAG_NO_PRINT_ERRNO, FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT,
+        FLAG_SWAP_PREFIX, FLAG_PATH_LIST, FLAG_EXTERNAL_ATTACH, FLAG_EXTERNAL_COPY,
         FLAG_END
     };
 
@@ -526,6 +527,7 @@ TEST(parse_cmd_line, options) {
         rollup_limit.c_str(), rollup_limit_arg.c_str(),
         rollup_delete_below.c_str(), rollup_delete_below_arg.c_str(),
         // skip_file.c_str(), skip_file_arg.c_str(),
+        no_print_errno.c_str(),no_print_errno_arg.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
         swap_prefix.c_str(), swap_prefix_arg.c_str(),
@@ -803,6 +805,50 @@ TEST(parse_cmd_line, print_tlv) {
             exec.c_str(),
             print_tlv.c_str(),
             O.c_str(), O_arg.c_str(),
+            nullptr,
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
+
+        struct input in;
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
+        input_fini(&in);
+    }
+}
+
+TEST(parse_cmd_line, no_print_errno) {
+    const struct option opt[] = {
+        FLAG_PRINT_TLV,
+        FLAG_NO_PRINT_ERRNO,
+        FLAG_END
+    };
+
+    // good
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            no_print_errno.c_str(), "1",
+            no_print_errno.c_str(), "65",
+            no_print_errno.c_str(), "129",
+            no_print_errno.c_str(), "193",
+            nullptr,
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]) - 1;
+
+        struct input in;
+        EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), argc);
+        for(int i = 0; i < 4; i++) {
+            EXPECT_EQ(in.no_print_errno[i], 1ULL << 1);
+        }
+        input_fini(&in);
+    }
+
+    // pass in bad values one at a time to make sure they each fail
+    for(const char *bad_value : {"-1", "0", "256"}) {
+        const char *argv[] = {
+            exec.c_str(),
+            no_print_errno.c_str(), bad_value,
             nullptr,
         };
 

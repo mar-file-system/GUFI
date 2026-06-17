@@ -274,7 +274,7 @@ rm -rf "${SEARCH}"
     run_no_sort "${GUFI_ROLLUP} \"${SEARCH}\" > /dev/null"
 
     echo "# ${INDEXROOT}/directory wasn't rolled up, so have to traverse entire tree"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --query-xattrs -S \"SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}\""
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --no-print-errno 13 --query-xattrs -S \"SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}\""
 }
 
 echo "# bad thread count"

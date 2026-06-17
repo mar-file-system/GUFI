@@ -870,7 +870,7 @@ void statx_to_work(struct statx *stx, struct stat *st, time_t *crtime) {
 static int stat_func_wrapper(int (*func)(const char *, struct stat *),
                              const char *name, struct stat *st, time_t *crtime,
                              StatCalled *stat_called,
-                             const int print_err, const int print_eacces) {
+                             const int print_err, const uint64_t *no_print_errno) {
     /* don't duplicate work */
     if (*stat_called != STAT_NOT_CALLED) {
         return 0;
@@ -885,7 +885,7 @@ static int stat_func_wrapper(int (*func)(const char *, struct stat *),
               STATX_ALL, &stx) != 0) {
         const int err = errno;
         if (print_err) {
-            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            if (!no_print_errno_set(no_print_errno, err)) {
                 fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
                         name, strerror(err), err);
             }
@@ -900,7 +900,7 @@ static int stat_func_wrapper(int (*func)(const char *, struct stat *),
     if (func(name, st) != 0) {
         if (print_err) {
             const int err = errno;
-            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            if (!no_print_errno_set(no_print_errno, err)) {
                 fprintf(stderr, "Error: Could not lstat \"%s\": %s (%d)\n",
                         name, strerror(err), err);
             }
@@ -918,19 +918,19 @@ static int stat_func_wrapper(int (*func)(const char *, struct stat *),
 
 /* try to call statx if available, otherwise, call stat */
 int stat_wrapper(const char *name, struct stat *st, time_t *crtime,
-                 StatCalled *stat_called, const int print_err, const int print_eacces) {
-    return stat_func_wrapper(stat, name, st, crtime, stat_called, print_err, print_eacces);
+                 StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno) {
+    return stat_func_wrapper(stat, name, st, crtime, stat_called, print_err, no_print_errno);
 }
 
 /* try to call statx if available, otherwise, call lstat */
 int lstat_wrapper(const char *name, struct stat *st, time_t *crtime,
-                  StatCalled *stat_called, const int print_err, const int print_eacces) {
-    return stat_func_wrapper(lstat, name, st, crtime, stat_called, print_err, print_eacces);
+                  StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno) {
+    return stat_func_wrapper(lstat, name, st, crtime, stat_called, print_err, no_print_errno);
 }
 
 /* used by gufi_dir2index and gufi_dir2trace */
 int fstatat_wrapper(struct work *entry, struct entry_data *ed,
-                    const int print_err, const int print_eacces) {
+                    const int print_err, const uint64_t *no_print_errno) {
     /* don't duplicate work */
     if (entry->stat_called != STAT_NOT_CALLED) {
         return 0;
@@ -945,7 +945,7 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed,
               STATX_ALL, &stx) != 0) {
         if (print_err) {
             const int err = errno;
-            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            if (!no_print_errno_set(no_print_errno, err)) {
                 fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
                         entry->name, strerror(err), err);
             }
@@ -960,7 +960,7 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed,
     if (fstatat(ed->parent_fd, basename, &entry->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
         if (print_err) {
             const int err = errno;
-            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            if (!no_print_errno_set(no_print_errno, err)) {
                 fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n",
                         entry->name, strerror(err), err);
             }
@@ -1057,11 +1057,11 @@ int dir_match(struct input *in, struct stat *st) {
     return rc;
 }
 
-DIR *opendir_wrapper(const char *name, const int print_eacces) {
+DIR *opendir_wrapper(const char *name, const uint64_t *no_print_errno) {
     DIR *dir = opendir(name);
     if (!dir) {
         const int err = errno;
-        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+        if (!no_print_errno_set(no_print_errno, err)) {
             fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
                     name, strerror(err), err);
         }

@@ -265,7 +265,7 @@ char *rollup_child_attach(sqlite3 *db, const str_t *child_path, const int attach
                DBNAME, DBNAME_LEN);
 
     /* attach subdir database file as 'SUBDIR_ATTACH_NAME' */
-    if (attachdb(child_dbname, db, ROLLUP_SUBDIR_ATTACH_NAME, attach_flag, 1, 1)) {
+    if (attachdb(child_dbname, db, ROLLUP_SUBDIR_ATTACH_NAME, attach_flag, 1, NULL)) {
         return child_dbname;
     }
 
@@ -328,7 +328,7 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
     SNPRINTF(attachname, sizeof(attachname),
              EXTERNAL_ATTACH_PREFIX "%zu", (*rexa->count)++);
 
-    if (!attachdb(child_xattr_db_name, xattr_db, attachname, SQLITE_OPEN_READONLY, 1, 1)) {
+    if (!attachdb(child_xattr_db_name, xattr_db, attachname, SQLITE_OPEN_READONLY, 1, NULL)) {
         closedb(xattr_db);
         return 1;
     }
@@ -362,7 +362,7 @@ int rollup_child_process(sqlite3 *db, const char *sql, rexa_t *rexa) {
 }
 
 int rollup_child_detach(sqlite3 *db, char *child_dbname) {
-    detachdb(child_dbname, db, ROLLUP_SUBDIR_ATTACH_NAME, 1, 1);
+    detachdb(child_dbname, db, ROLLUP_SUBDIR_ATTACH_NAME, 1, NULL);
 
     free(child_dbname);
 

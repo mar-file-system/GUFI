@@ -119,7 +119,7 @@ static void maybe_copy_external(sqlite3 *db, struct input *in,
             str_t *sql = &ecs->sql;
 
 
-            if (attachdb(clean_path, db, EXTDB, SQLITE_OPEN_READONLY, 1, in->print_eacces)) {
+            if (attachdb(clean_path, db, EXTDB, SQLITE_OPEN_READONLY, 1, in->no_print_errno)) {
                 char *err = NULL;
 
                 /* run user provided SQL */
@@ -135,7 +135,7 @@ static void maybe_copy_external(sqlite3 *db, struct input *in,
                     sqlite3_free(err);
                 }
 
-                detachdb(path, db, EXTDB, 1, in->print_eacces);
+                detachdb(path, db, EXTDB, 1, in->no_print_errno);
             }
 
             /* do not break - might have multiple matches */
@@ -178,7 +178,7 @@ static size_t gq_descend(QPTPool_ctx_t *ctx,
                                              entry->d_name, len,
                                              entry, next_level,
                                              gqw->sqlite3_name, gqw->sqlite3_name_len,
-                                             in->print_eacces);
+                                             in->no_print_errno);
             if (!child) {
                 continue;
             }
@@ -209,7 +209,7 @@ static size_t gq_descend(QPTPool_ctx_t *ctx,
                     (child->work.level >= in->min_level)) {
                     /* lstat(2)/statx(2) is not normally called during descent */
                     if (lstat_wrapper(child->work.name, &child->work.statuso, &child->work.crtime,
-                                      &child->work.stat_called, 1, in->print_eacces) != 0) {
+                                      &child->work.stat_called, 1, in->no_print_errno) != 0) {
                         free(child);
                         continue;
                     }

@@ -142,7 +142,7 @@ static void ls_dirs(const Path_t *path,
             time_t crtime;                            /* unused */
             StatCalled stat_called = STAT_NOT_CALLED; /* unused */
             if (lstat_wrapper(child_path, &st, &crtime,
-                              &stat_called, 1, 1) != 0) {
+                              &stat_called, 1, NULL) != 0) {
                 free(child_path);
                 continue;
             }
@@ -292,7 +292,7 @@ static int top_down_rollup(struct PoolArgs *pa, const size_t id,
 
         /* enqueue child directories */
         {
-            DIR *dir = opendir_wrapper(child_path->orig.data, 1);
+            DIR *dir = opendir_wrapper(child_path->orig.data, NULL);
             if (!dir) {
                 failures++;
                 Path_free(child_path);
@@ -355,7 +355,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
 
     struct work *work = (struct work *) data;
 
-    DIR *dir = opendir_wrapper(work->name, 1);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         goto free_work;
     }

@@ -368,7 +368,7 @@ query_vt "${query}"
 echo "# No results with LIKE (not an error)"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%no_match%';\");"
-    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
 )
 query_vt "${query}"
 
@@ -382,9 +382,23 @@ query_vt "${query}"
 echo "# No results with REGEXP (not an error)"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*no_match.*';\");"
-    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
 )
 query_vt "${query}"
+
+echo "# no_print_errno"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\", no_print_errno=13, verbose=1);"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+)
+query_vt "${query}" | @SED@ '\%prefix/%d;'
+
+echo "# no_print_errno with remote"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\", no_print_errno=13, verbose=1, remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+)
+query_vt "${query}" | @SED@ '\%prefix/%d;'
 
 echo "# ######################################"
 echo "# errors"
@@ -603,6 +617,14 @@ query=$(
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
+
+echo "# Bad no_print_errno"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\", no_print_errno=-1, no_print_errno=0, no_print_errno=256, verbose=1);"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+)
+query_vt "${query}"
+
 ) | replace | tee "${OUTPUT}"
 
 # FIXME: cygwin is having trouble with plugin tests.

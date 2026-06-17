@@ -140,6 +140,7 @@ typedef struct gufi_query_cmd {
     str_t path_list;          /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
     str_t p;                  /* source path */
     sll_t plugins;            /* gufi_query plugin library paths */
+    sll_t no_print_errno;     /* errno numbers stored as strings */
 
     sll_t external_attach;    /* list of external attach database args */
     sll_t external_copy;      /* list of external copy database args */
@@ -151,6 +152,7 @@ static void gq_cmd_init(gq_cmd_t *cmd) {
     memset(cmd, 0, sizeof(*cmd));
     sll_init(&cmd->remote_args);
     sll_init(&cmd->plugins);
+    sll_init(&cmd->no_print_errno);
     sll_init(&cmd->indexroots);
     sll_init(&cmd->external_attach);
     sll_init(&cmd->external_copy);
@@ -160,6 +162,7 @@ static void gq_cmd_destroy(gq_cmd_t *cmd) {
     sll_destroy(&cmd->external_copy, ecs_free);    /* list of allocated ecs_t */
     sll_destroy(&cmd->external_attach, free);      /* list of allocated eas_t */
     sll_destroy(&cmd->indexroots, NULL);           /* list of references to argv[i] */
+    sll_destroy(&cmd->no_print_errno, NULL);       /* list of references to argv[i] */
     sll_destroy(&cmd->plugins, NULL);              /* list of references to argv[i] */
     sll_destroy(&cmd->remote_args, free);          /* list of allocated str_t */
     /* not freeing cmd here */
@@ -292,6 +295,12 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--plugin '%s' ", plugin);
         }
 
+        sll_loop(&cmd->no_print_errno, node) {
+            const char *err = (char *) sll_node_data(node);
+            write_with_resize(&flat, &size, &len,
+                              "--no-print-errno '%s' ", err);
+        }
+
         sll_loop(&cmd->external_attach, node) {
             eas_t *eas = (eas_t *) sll_node_data(node);
             write_with_resize(&flat, &size, &len,
@@ -322,6 +331,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         /* can keep arguments separate */
 
         max_argc = 35; /* 3 fixed args, 15 pairs of flags, 2 single argv flags */
+        max_argc += sll_get_size(&cmd->no_print_errno) * 2;
         max_argc += sll_get_size(&cmd->plugins) * 2;
         max_argc += sll_get_size(&cmd->external_attach) * 5;
         max_argc += sll_get_size(&cmd->external_copy) * 3;
@@ -392,6 +402,12 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             const char *plugin = (char *) sll_node_data(node);
             argv[argc++] = "--plugin";
             argv[argc++] = plugin;
+        }
+
+        sll_loop(&cmd->no_print_errno, node) {
+            const char *err = (char *) sll_node_data(node);
+            argv[argc++] = "--no-print-errno";
+            argv[argc++] = err;
         }
 
         sll_loop(&cmd->external_attach, node) {
@@ -866,6 +882,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     Q or external_attach    = '<basename> <table> <template>.<table> <view>'
  *     external_copy           = '<basename pattern> <SQL>'
  *     plugin                  = '<entrypoint>:<gufi_query plugin library path>'
+ *     no_print_errno          = errno number (range: [1, 255])
  *     index                   = '<path>' (can also pass in without the key)
  *     verbose/VERBOSE         =  <0|1>
  *
@@ -1158,6 +1175,11 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                 gq_cmd_destroy(&cmd);
                 return SQLITE_MISUSE;
             }
+        }
+        else if (strncmp(key, "no_print_errno", 15) == 0) {
+            str_t err;
+            set_refstr(&err, value);
+            sll_push_back(&cmd.no_print_errno, (char *) err.data);
         }
         else if (strncmp(key, "external_attach", 16) == 0) {
             if (parse_external_attach_args(&cmd.external_attach, value) != 0) {

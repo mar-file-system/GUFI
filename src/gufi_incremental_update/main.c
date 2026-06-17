@@ -198,7 +198,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
 
     struct work *tree = (struct work *) data; /* source tree */
 
-    DIR *dir = opendir_wrapper(tree->name, 1);
+    DIR *dir = opendir_wrapper(tree->name, NULL);
     if (!dir) {
         goto free_work;
     }
@@ -218,7 +218,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
     /* make sure timestamps are available before calling is_suspect() */
     time_t crtime = 0; /* unused */
     if (lstat_wrapper(tree->name, &tree->statuso, &crtime,
-                      &tree->stat_called, 1, 1) != 0) {
+                      &tree->stat_called, 1, NULL) != 0) {
         suspect = 1; /* assume something changed? */
     }
 

@@ -381,7 +381,7 @@ static int process_output(struct work *work, struct entry_data *ed, void *nondir
     }
 
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                      &work->stat_called, 1, 1) != 0) {
+                      &work->stat_called, 1, NULL) != 0) {
         return 1; /* error (not handled anywhere) */
     }
 
@@ -426,7 +426,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     };
 
     /* enqueue more work before processing this directory */
-    DIR *dir = opendir_wrapper(work->name, 1);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         rc = 1;
     }

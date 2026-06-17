@@ -281,7 +281,7 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
     /* keep track of which thread was used to walk downwards */
     bu->tid.down = QPTPool_get_id(ctx);
 
-    DIR *dir = opendir_wrapper(bu->name, 1);
+    DIR *dir = opendir_wrapper(bu->name, NULL);
 
     if (!dir) {
         sll_destroy(&bu->subdirs, bottomup_destroy);
@@ -325,7 +325,7 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
             struct entry_data ed;
             ed.parent_fd = dir_fd;
 
-            if (fstatat_wrapper(&child, &ed, 1, 1) != 0) {
+            if (fstatat_wrapper(&child, &ed, 1, NULL) != 0) {
                 return 1;
             }
 

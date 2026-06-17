@@ -114,7 +114,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                      &work->stat_called, 1, 1) != 0) {
+                      &work->stat_called, 1, NULL) != 0) {
         rc = 1;
         goto close_dir;
     }
@@ -136,7 +136,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                "/", 1,
                DBNAME, DBNAME_LEN);
 
-    if (!attachdb(index_dbname, db, "tree", SQLITE_OPEN_READONLY, 1, 1)) {
+    if (!attachdb(index_dbname, db, "tree", SQLITE_OPEN_READONLY, 1, NULL)) {
         goto close_dir;
     }
 
@@ -154,7 +154,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     sqlite3_finalize(res);
 
   detach_db:
-    detachdb(index_dbname, db, "tree", 1, 1);
+    detachdb(index_dbname, db, "tree", 1, NULL);
 
   close_dir:
     closedir(dir);

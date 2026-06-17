@@ -232,13 +232,13 @@ LONG_CREATE(SUMMARY);
 LONG_CREATE(VRSUMMARY);
 
 static sqlite3 *attachdb_internal(const char *name, const char *attach, sqlite3 *db, const char *dbn,
-                                  const int print_err, const int print_eacces) {
+                                  const int print_err, const uint64_t *no_print_errno) {
     char *err = NULL;
     const int rc = sqlite3_exec(db, attach, NULL, NULL, print_err?(&err):NULL);
     if (rc != SQLITE_OK) {
         if (print_err) {
             if ((rc != SQLITE_CANTOPEN) ||
-                ((rc == SQLITE_CANTOPEN) && print_eacces)) {
+                ((rc == SQLITE_CANTOPEN) && !no_print_errno_set(no_print_errno, EACCES))) {
                 sqlite_print_err_and_free(err, stderr, "Cannot attach database \"%s\" as \"%s\": %s\n",
                                           name, dbn, err);
             }
@@ -253,7 +253,7 @@ static sqlite3 *attachdb_internal(const char *name, const char *attach, sqlite3 
 }
 
 sqlite3 *attachdb_raw(const char *name, sqlite3 *db, const char *dbn,
-                      const int print_err, const int print_eacces) {
+                      const int print_err, const uint64_t *no_print_errno) {
     /*
      * create ATTACH statement here to prevent double copy that
      * would be done by generating name first and passing it to
@@ -262,11 +262,11 @@ sqlite3 *attachdb_raw(const char *name, sqlite3 *db, const char *dbn,
     char attach[MAXSQL];
     sqlite3_snprintf(sizeof(attach), attach, "ATTACH %Q AS %Q;", name, dbn);
 
-    return attachdb_internal(name, attach, db, dbn, print_err, print_eacces);
+    return attachdb_internal(name, attach, db, dbn, print_err, no_print_errno);
 }
 
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags,
-                  const int print_err, const int print_eacces) {
+                  const int print_err, const uint64_t *no_print_errno) {
     char ow = '?';
     if (flags & SQLITE_OPEN_READONLY) {
         ow = 'o';
@@ -284,17 +284,17 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
     sqlite3_snprintf(sizeof(attach), attach, "ATTACH 'file:%q?mode=r%c" GUFI_SQLITE_VFS_URI "' AS %Q;",
                      name, ow, dbn);
 
-    return attachdb_internal(name, attach, db, dbn, print_err, print_eacces);
+    return attachdb_internal(name, attach, db, dbn, print_err, no_print_errno);
 }
 
 sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql,
-                         const int print_err, const int print_eacces) {
+                         const int print_err, const uint64_t *no_print_errno) {
     char *err = NULL;
     const int rc = sqlite3_exec(db, sql, NULL, NULL, print_err?(&err):NULL);
     if (rc != SQLITE_OK) {
         if (print_err) {
             if ((rc != SQLITE_CANTOPEN) ||
-                ((rc == SQLITE_CANTOPEN) && print_eacces)) {
+                ((rc == SQLITE_CANTOPEN) && !no_print_errno_set(no_print_errno, EACCES))) {
                 sqlite_print_err_and_free(err, stderr, "Cannot detach database \"%s\": %s\n", name, err);
             }
             else {
@@ -308,12 +308,12 @@ sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql,
 }
 
 sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn,
-                  const int print_err, const int print_eacces) {
+                  const int print_err, const uint64_t *no_print_errno) {
     /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
     char detach[MAXSQL];
     sqlite3_snprintf(MAXSQL, detach, "DETACH %Q;", dbn);
 
-    return detachdb_cached(name, db, detach, print_err, print_eacces);
+    return detachdb_cached(name, db, detach, print_err, no_print_errno);
 }
 
 int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql) {

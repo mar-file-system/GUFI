@@ -1865,7 +1865,7 @@ Cannot open database: prefix/directory/db.db unable to open database file rc 14
 Cannot open database: prefix/directory/db.db unable to open database file rc 14
 
 # prefix/directory wasn't rolled up, so have to traverse entire tree
-$ gufi_query -d "|" --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix"
+$ gufi_query -d "|" --no-print-errno 13 --query-xattrs -S "SELECT path(), rpath(sname, sroll), isroot, canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix"
 prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|1|user.name|sub
 prefix/directory/subdirectory|prefix/directory/subdirectory|1|1|1|user.type|dir
 prefix/empty_directory|prefix/empty_directory|1|1|1||

@@ -227,7 +227,7 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
 
     int rc = 0;
 
-    DIR *dir = opendir_wrapper(work->name, 1);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         goto cleanup;
     }

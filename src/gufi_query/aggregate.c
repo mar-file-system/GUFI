@@ -150,7 +150,7 @@ void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input
         ThreadArgs_t *ta = &(pa->ta[i]);
 
         /* print all errors here, regardless of input args */
-        if (attachdb_raw(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1, 1)) {
+        if (attachdb_raw(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1, NULL)) {
             char *err = NULL;
             if ((sqlite3_exec(aggregate->db, in->sql.intermediate.data, NULL, NULL, &err) != SQLITE_OK)) {
                 if (!in->no_print_sql_on_err) {
@@ -165,7 +165,7 @@ void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input
         }
 
         /* print all errors here, regardless of input args */
-        detachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1, 1);
+        detachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1, NULL);
     }
 }
 

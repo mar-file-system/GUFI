@@ -134,13 +134,13 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
 
-    DIR *dir = opendir_wrapper(passmywork->name, 1);
+    DIR *dir = opendir_wrapper(passmywork->name, NULL);
     if (!dir) {
         goto out_free;
     }
 
     if (lstat_wrapper(passmywork->name, &passmywork->statuso, &passmywork->crtime,
-                      &passmywork->stat_called, 1, 1) != 0) {
+                      &passmywork->stat_called, 1, NULL) != 0) {
         goto close_dir;
     }
 

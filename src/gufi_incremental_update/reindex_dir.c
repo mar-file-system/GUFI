@@ -76,7 +76,7 @@ int reindex_dir(struct PoolArgs *pa,
                 struct work *work, struct entry_data *ed,
                 DIR *dir, const size_t id) {
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                      &work->stat_called, 1, 1) != 0) {
+                      &work->stat_called, 1, NULL) != 0) {
         return 1;
     }
 
@@ -144,7 +144,7 @@ int reindex_dir(struct PoolArgs *pa,
         struct work *child = new_work_with_name(work->name, work->name_len, entry->d_name, len);
         child->basename_len = len;
 
-        if (!try_skip_lstat(entry, child, 1)) {
+        if (!try_skip_lstat(entry, child, NULL)) {
             free(child);
             continue;
         }
@@ -163,7 +163,7 @@ int reindex_dir(struct PoolArgs *pa,
 
         /* need actual values of files/links */
         if (lstat_wrapper(child->name, &child->statuso, &child->crtime,
-                          &child->stat_called, 1, 1) != 0) {
+                          &child->stat_called, 1, NULL) != 0) {
             free(child);
             continue;
         }

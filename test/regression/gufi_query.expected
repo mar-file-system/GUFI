@@ -43,7 +43,7 @@ options:
       --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
       --setup-res-col-types <SQL>   SQL statement(s) for setting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv
       --terse                       print the information in terse form
-      --print-eacces                print messages when errno is EACCES
+      --no-print-errno <int>        one errno value (e.g. 2 for ENOENT; range: [1, 255]) to not print errors for when encounted. Use multiple times to hide multiple error message types
       --no-print-sql-on-err         do not print SQL with error messages
       --output-buffer-size <bytes>  size of each thread's output buffer in bytes
       --target-memory <bytes>       target memory utilization (soft limit)
@@ -399,6 +399,10 @@ $ gufi_query -d " " --max-level 0 -E "SELECT {abc}, {def;" "prefix"
 Error: Failed to do string replacements for -E
 Error: replacement key not found: abc
 Warning: Could not find stop character for user string key starting at index 14 of "SELECT {abc}, {def;"
+# Bad errno
+$ gufi_query --no-print-errno 256 "prefix" > /dev/null
+argument '--no-print-errno' not in range [1, 255]
+
 #####################################
 # Extra Inputs                      #
 #####################################

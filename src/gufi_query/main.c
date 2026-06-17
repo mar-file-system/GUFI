@@ -128,7 +128,7 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_ctx_t *ctx) {
         if (in->dir_match.on != DIR_MATCH_NONE) {
             /* use lstat(2)/statx(2) here because these might not be index roots */
             if (lstat_wrapper(subtree_root->work.name, &subtree_root->work.statuso, &subtree_root->work.crtime,
-                              &subtree_root->work.stat_called, 1, in->print_eacces) != 0) {
+                              &subtree_root->work.stat_called, 1, in->no_print_errno) != 0) {
                 free(subtree_root);
                 continue;
             }
@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
         /* output flags */
         FLAG_DELIM, FLAG_NEWLINE, FLAG_SUPPRESS_NEWLINE,
         FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV,
-        FLAG_SETUP_RES_COL_TYPES, FLAG_TERSE, FLAG_PRINT_EACCES,
+        FLAG_SETUP_RES_COL_TYPES, FLAG_TERSE, FLAG_NO_PRINT_ERRNO,
         FLAG_NO_PRINT_SQL_ON_ERR,
 
         /* memory usage flags  */

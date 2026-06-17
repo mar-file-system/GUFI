@@ -80,7 +80,7 @@ static int work_serialize_and_free(const int fd, QPTPool_f func, void *work, siz
 }
 #endif
 
-struct work *try_skip_lstat(struct dirent *entry, struct work *work, const int print_eacces) {
+struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint64_t *no_print_errno) {
     work->statuso.st_ino = entry->d_ino;
 
     switch (entry->d_type) {
@@ -102,7 +102,7 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work, const int p
         default:
             /* some filesystems don't support d_type - fall back to calling lstat */
             if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                              &work->stat_called, 1, print_eacces) != 0) {
+                              &work->stat_called, 1, no_print_errno) != 0) {
                 return NULL;
             }
             break;
@@ -165,7 +165,7 @@ int descend(QPTPool_ctx_t *ctx,
 
             child->statuso.st_ino = dir_child->d_ino;
 
-            if (!try_skip_lstat(dir_child, child, in->print_eacces)) {
+            if (!try_skip_lstat(dir_child, child, in->no_print_errno)) {
                 free(child);
                 continue;
             }

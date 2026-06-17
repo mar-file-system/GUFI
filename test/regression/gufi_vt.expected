@@ -917,7 +917,7 @@ prefix/old_file
 # No results with LIKE (not an error)
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%no_match%';");SELECT * FROM gufi ORDER BY fullpath ASC"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%no_match%';");SELECT * FROM gufi ORDER BY fullpath ASC;"
 ) | sqlite3
 
 # REGEXP
@@ -933,8 +933,35 @@ $ (
 # No results with REGEXP (not an error)
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*no_match.*';");SELECT * FROM gufi ORDER BY fullpath ASC"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*no_match.*';");SELECT * FROM gufi ORDER BY fullpath ASC;"
 ) | sqlite3
+
+# no_print_errno
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;", no_print_errno=13, verbose=1);SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+Each line is one argv[i]:
+    gufi_query \
+        --print-tlv \
+        -x \
+        --threads \
+        1 \
+        -E \
+        SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries; \
+        --no-print-errno \
+        13 \
+        prefix
+
+# no_print_errno with remote
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;", no_print_errno=13, verbose=1, remote_cmd="ssh", remote_arg="remote");SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+Each line is one argv[i]:
+    ssh \
+        remote \
+        gufi_query --print-tlv -x --threads 1 -E "SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;" --no-print-errno '13' prefix
 
 # ######################################
 # errors
@@ -1282,4 +1309,29 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;");SELECT * FROM gufi;"
 ) | sqlite3
 Runtime error near line 2: Setting up results table with 'CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));' failed: near "plugin_query_view": syntax error
+
+# Bad no_print_errno
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;", no_print_errno=-1, no_print_errno=0, no_print_errno=256, verbose=1);SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+Each line is one argv[i]:
+    gufi_query \
+        --print-tlv \
+        -x \
+        --threads \
+        1 \
+        -E \
+        SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries; \
+        --no-print-errno \
+        -1 \
+        --no-print-errno \
+        0 \
+        --no-print-errno \
+        256 \
+        prefix
+argument '--no-print-errno' not in range [1, 255]
+argument '--no-print-errno' not in range [1, 255]
+argument '--no-print-errno' not in range [1, 255]
+Runtime error near line 2: SQL logic error
 

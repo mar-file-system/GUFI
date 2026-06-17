@@ -143,7 +143,7 @@ static int treesummary_ascend(void *args) {
     if (dir->stat_called == STAT_NOT_CALLED) {
         time_t crtime = 0; /* unused */
         if (lstat_wrapper(dbname, &dir->st, &crtime,
-                          &dir->stat_called, 1, 1) != 0) {
+                          &dir->stat_called, 1, NULL) != 0) {
             return 1;
         }
     }

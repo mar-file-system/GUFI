@@ -105,7 +105,7 @@ ssize_t process_path_list(struct input *in, struct work *root,
 
         /* directory symlinks are not allowed under the root */
         if (lstat_wrapper(subtree_root->name, &subtree_root->statuso, &subtree_root->crtime,
-                          &subtree_root->stat_called, 1, in->print_eacces) != 0) {
+                          &subtree_root->stat_called, 1, in->no_print_errno) != 0) {
             free(subtree_root);
             continue;
         }

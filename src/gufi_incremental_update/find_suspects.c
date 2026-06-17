@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #include <errno.h>
 #include <dirent.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -95,7 +96,7 @@ struct NonDirArgs {
 
 static int compare_suspect_time(struct work *work, const time_t suspect_time) {
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                      &work->stat_called, 1, 1) != 0) {
+                      &work->stat_called, 1, NULL) != 0) {
         return 1; /* something broke - try to reindex */
     }
 
@@ -161,7 +162,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     decompress_work(&work, data);
 
-    dir = opendir_wrapper(work->name, 1);
+    dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         rc = 1;
         goto cleanup;

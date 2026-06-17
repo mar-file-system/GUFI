@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <cstdint>
 #include <cstdlib>
 
 #include <gtest/gtest.h>
@@ -69,24 +70,27 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "rollup.h"
 
+static const uint64_t    PRINT_ERRNO[4] = {0x00000000ULL, 0x00000000ULL, 0x00000000ULL, 0x00000000ULL};
+static const uint64_t NO_PRINT_ERRNO[4] = {0xffffffffULL, 0xffffffffULL, 0xffffffffULL, 0xffffffffULL};
+
 TEST(attachdb, nullptr) {
     // error not printed
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0, 0), nullptr);
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0, 1), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0,    PRINT_ERRNO), nullptr);
 
     // error printed because error is not SQLITE_CANTOPEN
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1, 0), nullptr);
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1, 1), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1,    PRINT_ERRNO), nullptr);
 }
 
 TEST(detachdb, nullptr) {
     // error not printed
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0, 0), nullptr);
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0, 1), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0,    PRINT_ERRNO), nullptr);
 
     // error printed because error is not SQLITE_CANTOPEN
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1, 0), nullptr);
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1, 1), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1,    PRINT_ERRNO), nullptr);
 }
 
 TEST(attachdb, CANTOPEN) {
@@ -102,12 +106,12 @@ TEST(attachdb, CANTOPEN) {
                               nullptr), SQLITE_OK);
 
     // error not printed
-    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0, 0), nullptr);
-    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0, 1), nullptr);
-    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1, 0), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0,    PRINT_ERRNO), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1, NO_PRINT_ERRNO), nullptr);
 
     // error printed
-    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1, 1), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1,    PRINT_ERRNO), nullptr);
 
     EXPECT_EQ(sqlite3_close(db), SQLITE_OK);
 

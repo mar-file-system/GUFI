@@ -78,6 +78,9 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "utils.h"
 
+static const uint64_t    PRINT_ERRNO[4] = {0x00000000ULL, 0x00000000ULL, 0x00000000ULL, 0x00000000ULL};
+static const uint64_t NO_PRINT_ERRNO[4] = {0xffffffffULL, 0xffffffffULL, 0xffffffffULL, 0xffffffffULL};
+
 TEST(SNPRINTF, bad) {
     char buf[1];
     const std::size_t size = sizeof(buf);
@@ -1202,18 +1205,18 @@ TEST(stat_wrapper, bad) {
     struct work *work = new_work_with_name(nullptr, 0, name, strlen(name));
 
     for(int print_err : {0, 1}) {
-        for(int print_eacces: {0, 1}) {
+        for(const uint64_t *bitfield : {NO_PRINT_ERRNO, PRINT_ERRNO}) {
             work->stat_called = STAT_NOT_CALLED;
             EXPECT_EQ(stat_wrapper(work->name, &work->statuso, &work->crtime,
-                                   &work->stat_called, print_err, print_eacces), 1);
+                                   &work->stat_called, print_err, bitfield), 1);
 
             work->stat_called = NOT_STATX_CALLED;
             EXPECT_EQ(stat_wrapper(work->name, &work->statuso, &work->crtime,
-                                   &work->stat_called, print_err, print_eacces), 0);
+                                   &work->stat_called, print_err, bitfield), 0);
 
             work->stat_called = STATX_CALLED;
             EXPECT_EQ(stat_wrapper(work->name, &work->statuso, &work->crtime,
-                                   &work->stat_called, print_err, print_eacces), 0);
+                                   &work->stat_called, print_err, bitfield), 0);
         }
     }
 
@@ -1225,18 +1228,18 @@ TEST(lstat_wrapper, bad) {
     struct work *work = new_work_with_name(nullptr, 0, name, strlen(name));
 
     for(int print_err : {0, 1}) {
-        for(int print_eacces: {0, 1}) {
+        for(const uint64_t *bitfield : {NO_PRINT_ERRNO, PRINT_ERRNO}) {
             work->stat_called = STAT_NOT_CALLED;
             EXPECT_EQ(lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                                    &work->stat_called, print_err, print_eacces), 1);
+                                    &work->stat_called, print_err, bitfield), 1);
 
             work->stat_called = NOT_STATX_CALLED;
             EXPECT_EQ(lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                                    &work->stat_called, print_err, print_eacces), 0);
+                                    &work->stat_called, print_err, bitfield), 0);
 
             work->stat_called = STATX_CALLED;
             EXPECT_EQ(lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                                    &work->stat_called, print_err, print_eacces), 0);
+                                    &work->stat_called, print_err, bitfield), 0);
         }
     }
 
@@ -1250,15 +1253,15 @@ TEST(fstatat_wrapper, bad) {
     ed.parent_fd = -1;
 
     for(int print_err : {0, 1}) {
-        for(int print_eacces: {0, 1}) {
+        for(const uint64_t *bitfield : {NO_PRINT_ERRNO, PRINT_ERRNO}) {
             work->stat_called = STAT_NOT_CALLED;
-            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, print_eacces), 1);
+            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, bitfield), 1);
 
             work->stat_called = NOT_STATX_CALLED;
-            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, print_eacces), 0);
+            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, bitfield), 0);
 
             work->stat_called = STATX_CALLED;
-            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, print_eacces), 0);
+            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, bitfield), 0);
         }
     }
 

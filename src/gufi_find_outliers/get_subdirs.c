@@ -96,7 +96,7 @@ static int is_subdir(const char *path, struct dirent *entry) {
             time_t crtime = 0; /* unused */
             StatCalled stat_called = STAT_NOT_CALLED;
             if (stat_wrapper(path, &st, &crtime,
-                             &stat_called, 1, 1) != 0) {
+                             &stat_called, 1, NULL) != 0) {
                 return -1;
             }
             return S_ISDIR(st.st_mode);
@@ -108,7 +108,7 @@ static int is_subdir(const char *path, struct dirent *entry) {
 /* go down only one level */
 void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
                  QPTPool_ctx_t *ctx) {
-    DIR *dir = opendir_wrapper(ow->path.data, 1);
+    DIR *dir = opendir_wrapper(ow->path.data, NULL);
     if (!dir) {
         return;
     }

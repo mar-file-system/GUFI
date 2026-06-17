@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 
 #include <dirent.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 #include "SinglyLinkedList.h"
@@ -94,6 +95,12 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...);
 
 static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
     return (lhs > rhs)?lhs:rhs;
+}
+
+/* if bit is set, do not print error message */
+static inline int no_print_errno_set(const uint64_t *bitfield, const int err) {
+    if (!bitfield) { return 0; }
+    return (bitfield[err >> 6] >> (err & 0x3f)) & 1;
 }
 
 uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads);
@@ -170,13 +177,13 @@ void statx_to_work(struct statx *stx, struct stat *st, time_t *crtime);
 
 /* try to call statx if available, otherwise, call stat */
 int stat_wrapper(const char *name, struct stat *st, time_t *crtime,
-                 StatCalled *stat_called, const int print_err, const int print_eacces);
+                 StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno);
 /* try to call statx if available, otherwise, call lstat */
 int lstat_wrapper(const char *name, struct stat *st, time_t *crtime,
-                  StatCalled *stat_called, const int print_err, const int print_eacces);
+                  StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno);
 /* used by gufi_dir2index and gufi_dir2trace */
 int fstatat_wrapper(struct work *entry, struct entry_data *ed,
-                    const int print_err, const int print_eacces);
+                    const int print_err, const uint64_t *no_print_errno);
 
 /* make sure --path-list is followed by at most 1 root directory argument */
 int bad_partial_walk(struct input *in, const size_t root_count);
@@ -203,7 +210,7 @@ int write_with_resize(char **buf, size_t *size, size_t *offset,
 int dir_match(struct input *in, struct stat *st);
 
 /* common opendir code wrapper */
-DIR *opendir_wrapper(const char *name, const int print_eacces);
+DIR *opendir_wrapper(const char *name, const uint64_t *no_print_errno);
 
 /* convert aggregated list of --plugin strings to a struct plugins */
 size_t args_to_plugins(sll_t *args, struct plugins *plugins, const size_t nthreads);
