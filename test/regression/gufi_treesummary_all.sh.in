@@ -94,50 +94,29 @@ echo "# Start with no treesummary tables"
 echo
 
 echo "# Generate treesummary tables in some directories at level 1"
-run_no_sort "${GUFI_TREESUMMARY_ALL} --min-level 1 --path-list \"${PATH_LIST}\" \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
+run_no_sort "${GUFI_TREESUMMARY_ALL} --min-level 1 --path-list \"${PATH_LIST}\" \"${INDEXROOT}\""
 
 echo "# Query treesummary tables"
 run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
 echo
 
 echo "# Generate treesummary tables in all directories at level 1"
-run_no_sort "${GUFI_TREESUMMARY_ALL} --min-level 1 \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
+run_no_sort "${GUFI_TREESUMMARY_ALL} --min-level 1 \"${INDEXROOT}\""
 
 echo "# Query treesummary tables"
 run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
 echo
 
 echo "# Generate treesummary tables in all directories"
-run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
+run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\""
 
 echo "# Query treesummary tables"
 run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;\" \"${INDEXROOT}\""
-echo
-
-echo "# Generate treesummary tables if they don't already exist"
-run_no_sort "${GUFI_TREESUMMARY_ALL} --dont-reprocess \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
-
-rm -rf "${SEARCH}"
-
-echo "# Create a fresh tree without treesummary tables"
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SEARCH}\""
-
-echo "# Use --suspect-time with a future timestamp on the new index"
-run_no_sort "${GUFI_TREESUMMARY_ALL} --suspect-time 2147483646 \"${SEARCH}\"" | @SED@ '\%^Started .*$%d;'
-
-echo "# treesumary table was not created"
-run_no_sort "${SQLITE3} \"${SEARCH}/db.db\" \".tables\""
-
-echo "# Use --suspect-time with a past timestamp"
-run_no_sort "${GUFI_TREESUMMARY_ALL} --suspect-time 0 \"${SEARCH}\"" | @SED@ '\%^Started .*$%d;'
-
-echo "# treesumary table was created"
-run_no_sort "${SQLITE3} \"${SEARCH}/db.db\" \".tables\""
 
 rm "${SEARCH}/db.db"
 
 echo "# Missing db.db"
-run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\"" | @SED@ 's%statx%lstat%g;'
+run_no_sort "${GUFI_TREESUMMARY_ALL} \"${SEARCH}\""
 
 echo "# Multiple paths with --min-level and --path-list"
 run_no_sort "${GUFI_TREESUMMARY_ALL} --min-level 1 --path-list path_list \"${SEARCH}\" \"${SEARCH}\""

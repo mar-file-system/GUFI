@@ -157,13 +157,13 @@ static int get_permissions_canrollup(sqlite3 *db, const char *name, struct PermC
 }
 
 const char ROLLUP_CLEANUP[] =
-    "DROP INDEX IF EXISTS " SUMMARY "_idx;"
-    "DELETE FROM " PENTRIES_ROLLUP ";"
-    "DELETE FROM " SUMMARY " WHERE isroot != 1;"
-    "DELETE FROM " XATTRS_ROLLUP ";"
-    "SELECT filename FROM " EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
-    "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
-    "VACUUM;"
+    "DROP INDEX IF EXISTS " SUMMARY "_idx; "
+    "DELETE FROM " PENTRIES_ROLLUP "; "
+    "DELETE FROM " SUMMARY " WHERE isroot != 1; "
+    "DELETE FROM " XATTRS_ROLLUP "; "
+    "SELECT filename FROM " EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "'; "
+    "DELETE FROM " EXTERNAL_DBS_ROLLUP "; "
+    "VACUUM; "
     "UPDATE " SUMMARY " SET canrollup = 1, isrolledup = 0;"; /* keep this last to allow it to be modified easily */
                                                              /* set canrollup = 1 because this SQL should only be used on directories that have been rolled up */
 
@@ -204,8 +204,8 @@ int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
         char *err_msg = NULL;
         size_t xattr_count = 0;
         if (sqlite3_exec(db,
-                         "DELETE FROM " XATTRS_ROLLUP ";"
-                         "SELECT COUNT(*) FROM " XATTRS_PWD ";",
+                         "DELETE FROM " XATTRS_ROLLUP "; "
+                         "SELECT COUNT(*) FROM " XATTRS_PWD "; ",
                          count_pwd, &xattr_count, &err_msg) == SQLITE_OK) {
              /* remove empty per-user/per-group xattr db files */
              if (xattr_count == 0) {

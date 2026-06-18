@@ -159,8 +159,8 @@ static const char INCR_DIFF_CREATE[] =
     "       * "
     "FROM " ALL_MATCHES " "
     /* only keep changes */
-    "WHERE (" INDEX "pinode != " TREE "pinode) " /* new directory with same name */
-    "  OR  (" INDEX "path   != " TREE "path) "   /* renamed */
+    "WHERE (" INDEX "pinode != " TREE "pinode) " /* new parent directory */
+    "  OR  (" INDEX "path   != " TREE "path) "   /* renamed (under same parent) */
     "  OR  (" INDEX "inode IS NULL) "            /* new directory */
     "  OR  (" TREE  "inode IS NULL) "            /* deleted directory */
     "  OR  (" TREE  "suspect == 1) "             /* marked as suspect */

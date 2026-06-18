@@ -530,7 +530,6 @@ struct input {
                                     *     3 - use whether or not either mtime/ctime changed
                                     */
         int time;                  /* time for suspect comparison in seconds since epoch */
-        int time_set;              /* bool for suspect.time; only used by gufi_treesummary_all */
     } suspect;
     str_t snapshot_prefix;         /* alternate filename prefix for gufi_incremental_update snapshot files */
 

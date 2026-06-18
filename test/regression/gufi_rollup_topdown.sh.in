@@ -100,7 +100,7 @@ echo "# Level 3 can completely roll up"
 run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} --min-level 3 --max-level 3 -S \"SELECT rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
 
 echo "# do rollup"
-run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} \"${INDEXROOT}\""
+run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} \"${INDEXROOT}\""
 
 echo "# see which directories are walked when querying"
 echo "# ugo stops because it was rolled up"
@@ -129,13 +129,13 @@ echo "# check entries tables"
 run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -E \"SELECT level(), rpath(sname, sroll, name), xattr_name, xattr_value FROM vrxpentries;\" \"${INDEXROOT}\""
 
 echo "# do a dry run"
-run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --dry-run \"${SEARCH}\""
+run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --dry-run \"${SEARCH}\""
 
 echo "# index should not have been rolled up"
 run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
 
 echo "# roll up index"
-run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} \"${SEARCH}\""
+run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} \"${SEARCH}\""
 
 echo "# check rolled up summary tables"
 run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;\" \"${INDEXROOT}\""
@@ -150,7 +150,7 @@ echo "# directories should be marked canrollup = 1, isrolledup = 0"
 run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
 
 echo "# roll up starting at level 1"
-run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --min-level 1 \"${SEARCH}\""
+run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --min-level 1 \"${SEARCH}\""
 
 echo "# gufi_query should traverse down to level 1"
 run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""
@@ -159,7 +159,7 @@ echo "# remove rollup data"
 run_no_sort "${GUFI_UNROLLUP} -n ${THREADS} \"${SEARCH}\""
 
 echo "# roll up with limit of 5 files"
-run_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --limit 5 \"${SEARCH}\""
+run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} --limit 5 \"${SEARCH}\""
 
 echo "# all subdirectories rolled up, but did not roll up into ${INDEXROOT}"
 run_sort "${GUFI_QUERY} -x -d \"${DELIM}\" -n ${THREADS} -S \"SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;\" \"${INDEXROOT}\""

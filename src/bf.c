@@ -744,7 +744,6 @@ int parse_cmd_line(int                  argc,
             case FLAG_SUSPECT_TIME_SHORT:
                 INSTALL_INT(&in->suspect.time, optarg, 0, 2147483646,
                             "--" FLAG_SUSPECT_TIME_LONG, &retval);
-                in->suspect.time_set = 1;
                 break;
 
             case FLAG_SUSPECT_STAT_SHORT:

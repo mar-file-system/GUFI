@@ -170,7 +170,7 @@ extern const char VRPENTRIES_CREATE[];
 /* aggregate data of tree starting at current directory */
 #define TREESUMMARY       "treesummary"
 #define TREESUMMARY_SCHEMA(name, extra_cols)                                              \
-    "CREATE TABLE " name "(" extra_cols                                                   \
+    "CREATE TABLE IF NOT EXISTS " name "(" extra_cols                                     \
     "inode TEXT, pinode TEXT, "                                                           \
     "totsubdirs INT64, "                                                                  \
     "maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, "                   \

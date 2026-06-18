@@ -103,9 +103,11 @@ prefix/ugo/ugo/dir3|1|0
 
 # do rollup
 $ gufi_rollup_topdown -n 2 "prefix"
-3 directories could not rollup
+4 directories could not rollup
+    0 directories started with too many entries
+    0 directories would have ended up with too many entries
 Rolled up 52 subdirectories into 13 top-level directories
-Total remaining directories to traverse: 16
+Total remaining directories to traverse: 17
 
 # see which directories are walked when querying
 # ugo stops because it was rolled up
@@ -233,9 +235,11 @@ $ gufi_query -x -d "|" -n 2 -E "SELECT level(), rpath(sname, sroll, name), xattr
 
 # do a dry run
 $ gufi_rollup_topdown -n 2 --dry-run "search"
-0 directories could not rollup
+1 directories could not rollup
+    0 directories started with too many entries
+    0 directories would have ended up with too many entries
 Rolled up 0 subdirectories into 1 top-level directories
-Total remaining directories to traverse: 1
+Total remaining directories to traverse: 2
 
 # index should not have been rolled up
 $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"
@@ -248,9 +252,11 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 
 # roll up index
 $ gufi_rollup_topdown -n 2 "search"
-0 directories could not rollup
+1 directories could not rollup
+    0 directories started with too many entries
+    0 directories would have ended up with too many entries
 Rolled up 5 subdirectories into 1 top-level directories
-Total remaining directories to traverse: 1
+Total remaining directories to traverse: 2
 
 # check rolled up summary tables
 $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup, xattr_name, xattr_value FROM vrxsummary;" "prefix"
@@ -298,9 +304,11 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 
 # roll up starting at level 1
 $ gufi_rollup_topdown -n 2 --min-level 1 "search"
-0 directories could not rollup
+2 directories could not rollup
+    0 directories started with too many entries
+    0 directories would have ended up with too many entries
 Rolled up 1 subdirectories into 4 top-level directories
-Total remaining directories to traverse: 4
+Total remaining directories to traverse: 6
 
 # gufi_query should traverse down to level 1
 $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"
@@ -316,9 +324,11 @@ $ gufi_unrollup -n 2 "search"
 
 # roll up with limit of 5 files
 $ gufi_rollup_topdown -n 2 --limit 5 "search"
-0 directories could not rollup
+2 directories could not rollup
+    1 directories started with too many entries
+    0 directories would have ended up with too many entries
 Rolled up 1 subdirectories into 4 top-level directories
-Total remaining directories to traverse: 4
+Total remaining directories to traverse: 6
 
 # all subdirectories rolled up, but did not roll up into search/prefix
 $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"

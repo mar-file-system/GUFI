@@ -87,6 +87,8 @@ struct PoolArgs {
     /* per-thread stats */
     struct {
         size_t not_rolledup;
+        size_t too_many_before;
+        size_t too_many_after;
         size_t top;
         size_t subdir;
     } *stats;
@@ -336,6 +338,48 @@ static int get_entries(void *args, int count, char **data, char **columns) {
     return !(sscanf(data[0], "%zu", (size_t *) args) == 1);
 }
 
+static int find_top(QPTPool_ctx_t *ctx, void *data);
+
+/*
+ * return -1: error
+ *         0: roll up this directory
+ *         1: this directory has/will have too many entries
+ */
+static int check_entries_count(struct PoolArgs *pa, struct work *work, size_t *counter,
+                               DIR *dir, QPTPool_ctx_t *ctx, const size_t id,
+                               sqlite3 *db, const char *sql) {
+    char *err = NULL;
+
+    size_t entries = 0;
+    if (sqlite3_exec(db, sql, get_entries, &entries, &err) != SQLITE_OK) {
+        sqlite_print_err_and_free(err, stderr, "Error: Could not get entries count from \"%s\": %s\n",
+                                  work->name, err);
+        closedb(db);
+        pa->stats[id].not_rolledup++;
+        return -1;
+    }
+
+    /*
+     * if this directory has/will have too many entries, do not
+     * roll up this directory and instead keep going down
+     */
+    if (entries > pa->in.rollup.entries_limit) {
+        closedb(db);
+        (*counter)++;
+        pa->stats[id].not_rolledup++;
+
+        descend(ctx,
+                &pa->in, work,
+                dir, 1,
+                find_top, NULL, NULL,
+                NULL);
+
+        return 1;
+    }
+
+    return 0;
+}
+
 /* get both canrolledup and isrolled up */
 static int get_rollup(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
@@ -352,16 +396,19 @@ static int get_rollup(void *args, int count, char **data, char **columns) {
 static int find_top(QPTPool_ctx_t *ctx, void *data) {
     struct PoolArgs *pa = NULL;
     QPTPool_get_args(ctx, (void **) &pa);
+    const size_t id = QPTPool_get_id(ctx);
 
     struct work *work = (struct work *) data;
 
     DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
+        pa->stats[id].not_rolledup++;
         goto free_work;
     }
 
     /* not deep enough - descend */
     if (work->level <= pa->in.min_level) {
+        pa->stats[id].not_rolledup++;
         descend(ctx,
                 &pa->in, work,
                 dir, 1,
@@ -389,18 +436,16 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
      */
 
     if (db) {
-        char *err = NULL;
-
         if (pa->in.rollup.entries_limit) {
-            size_t entries = 0;
-            if (sqlite3_exec(db,
-                             "SELECT " TREESUMMARY ".totfiles + " TREESUMMARY ".totlinks "
-                             "FROM " TREESUMMARY " JOIN " SUMMARY " ON " TREESUMMARY ".inode == " SUMMARY ".inode "
-                             "WHERE " SUMMARY ".isroot == 1;",
-                             get_entries, &entries, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr, "Error: Could not get entries count from \"%s\": %s\n",
-                                          work->name, err);
-                closedb(db);
+            /*
+             * if this directory started with too many entries, do not
+             * roll up this directory and instead keep going down
+             */
+            if (check_entries_count(pa, work, &pa->stats[id].too_many_before,
+                                    dir, ctx, id, db,
+                                    "SELECT totfiles + totlinks "
+                                    "FROM " SUMMARY " "
+                                    "WHERE isroot == 1;") != 0) {
                 goto free_dbname;
             }
 
@@ -409,18 +454,16 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
              * too many entries, do not roll up this directory
              * and instead keep going down
              */
-            if (entries > pa->in.rollup.entries_limit) {
-                closedb(db);
-
-                descend(ctx,
-                        &pa->in, work,
-                        dir, 1,
-                        find_top, NULL, NULL,
-                        NULL);
-
+            if (check_entries_count(pa, work, &pa->stats[id].too_many_after,
+                                    dir, ctx, id, db,
+                                    "SELECT " TREESUMMARY ".totfiles + " TREESUMMARY ".totlinks "
+                                    "FROM " TREESUMMARY " JOIN " SUMMARY " ON " TREESUMMARY ".inode == " SUMMARY ".inode "
+                                    "WHERE " SUMMARY ".isroot == 1;") != 0) {
                 goto free_dbname;
             }
         }
+
+        char *err = NULL;
 
         int *arr[] = { &canrollup, &isrolledup };
         if (sqlite3_exec(db, "SELECT canrollup, isrolledup FROM " SUMMARY " WHERE isroot == 1;",
@@ -428,13 +471,12 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
             sqlite_print_err_and_free(err, stderr, "Error: Could not get rollup data from \"%s\": %s\n",
                                       work->name, err);
             closedb(db);
+            pa->stats[id].not_rolledup++;
             goto free_dbname;
         }
 
         closedb(db); /* readonly db is not needed any more */
     }
-
-    const size_t id = QPTPool_get_id(ctx);
 
     /* found top - do rollup */
     if (canrollup == 1) {
@@ -530,15 +572,21 @@ int main(int argc, char *argv[]) {
     /* cleanup */
 
     size_t not_rolledup = 0;
+    size_t too_many_before = 0;
+    size_t too_many_after = 0;
     size_t top = 0;
     size_t subdir = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
         not_rolledup += pa.stats[i].not_rolledup;
+        too_many_before += pa.stats[i].too_many_before;
+        too_many_after += pa.stats[i].too_many_after;
         top += pa.stats[i].top;
         subdir += pa.stats[i].subdir;
     }
 
     fprintf(stderr, "%zu directories could not rollup\n", not_rolledup);
+    fprintf(stderr, "    %zu directories started with too many entries\n", too_many_before);
+    fprintf(stderr, "    %zu directories would have ended up with too many entries\n", too_many_after);
     fprintf(stderr, "Rolled up %zu subdirectories into %zu top-level directories\n", subdir, top);
     fprintf(stderr, "Total remaining directories to traverse: %zu\n", not_rolledup + top);
     fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));
