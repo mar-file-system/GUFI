@@ -83,6 +83,7 @@ if (CMAKE_CXX_COMPILER)
     popen_argv.cpp
     print.cpp
     query_user_str.cpp
+    rollup.cpp
     str.cpp
     template_db.cpp
     trace.cpp
