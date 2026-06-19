@@ -163,7 +163,7 @@ const char ROLLUP_CLEANUP[] =
     "DELETE FROM " XATTRS_ROLLUP "; "
     "SELECT filename FROM " EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "'; "
     "DELETE FROM " EXTERNAL_DBS_ROLLUP "; "
-    "VACUUM; "
+    /* "VACUUM; " */
     "UPDATE " SUMMARY " SET canrollup = 1, isrolledup = 0;"; /* keep this last to allow it to be modified easily */
                                                              /* set canrollup = 1 because this SQL should only be used on directories that have been rolled up */
 

@@ -104,9 +104,17 @@ prefix/ugo/ugo/dir3|1|0
 # do rollup
 $ gufi_rollup_topdown -n 2 "prefix"
 4 directories could not rollup
+    3 directories are not allowed to rollup
     0 directories started with too many entries
     0 directories would have ended up with too many entries
-Rolled up 52 subdirectories into 13 top-level directories
+Rolled up into 13 top-level directories
+    Subdir stats:
+        Rolled up: 52
+        Min:   3
+        Max:   16
+        Mean:  4.00
+        Stdev: 3.46
+    0 failed rollup copies
 Total remaining directories to traverse: 17
 
 # see which directories are walked when querying
@@ -236,9 +244,17 @@ $ gufi_query -x -d "|" -n 2 -E "SELECT level(), rpath(sname, sroll, name), xattr
 # do a dry run
 $ gufi_rollup_topdown -n 2 --dry-run "search"
 1 directories could not rollup
+    0 directories are not allowed to rollup
     0 directories started with too many entries
     0 directories would have ended up with too many entries
-Rolled up 0 subdirectories into 1 top-level directories
+Rolled up into 1 top-level directories
+    Subdir stats:
+        Rolled up: 0
+        Min:   0
+        Max:   0
+        Mean:  0.00
+        Stdev: 0.00
+    0 failed rollup copies
 Total remaining directories to traverse: 2
 
 # index should not have been rolled up
@@ -253,9 +269,17 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 # roll up index
 $ gufi_rollup_topdown -n 2 "search"
 1 directories could not rollup
+    0 directories are not allowed to rollup
     0 directories started with too many entries
     0 directories would have ended up with too many entries
-Rolled up 5 subdirectories into 1 top-level directories
+Rolled up into 1 top-level directories
+    Subdir stats:
+        Rolled up: 5
+        Min:   5
+        Max:   5
+        Mean:  5.00
+        Stdev: 0.00
+    0 failed rollup copies
 Total remaining directories to traverse: 2
 
 # check rolled up summary tables
@@ -305,9 +329,17 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 # roll up starting at level 1
 $ gufi_rollup_topdown -n 2 --min-level 1 "search"
 2 directories could not rollup
+    0 directories are not allowed to rollup
     0 directories started with too many entries
     0 directories would have ended up with too many entries
-Rolled up 1 subdirectories into 4 top-level directories
+Rolled up into 4 top-level directories
+    Subdir stats:
+        Rolled up: 1
+        Min:   0
+        Max:   1
+        Mean:  0.25
+        Stdev: 0.43
+    0 failed rollup copies
 Total remaining directories to traverse: 6
 
 # gufi_query should traverse down to level 1
@@ -325,9 +357,17 @@ $ gufi_unrollup -n 2 "search"
 # roll up with limit of 5 files
 $ gufi_rollup_topdown -n 2 --limit 5 "search"
 2 directories could not rollup
+    0 directories are not allowed to rollup
     1 directories started with too many entries
     0 directories would have ended up with too many entries
-Rolled up 1 subdirectories into 4 top-level directories
+Rolled up into 4 top-level directories
+    Subdir stats:
+        Rolled up: 1
+        Min:   0
+        Max:   1
+        Mean:  0.25
+        Stdev: 0.43
+    0 failed rollup copies
 Total remaining directories to traverse: 6
 
 # all subdirectories rolled up, but did not roll up into search/prefix
