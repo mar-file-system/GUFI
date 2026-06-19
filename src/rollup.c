@@ -269,7 +269,7 @@ char *rollup_child_attach(sqlite3 *db, const str_t *child_path, const int attach
                "/", (size_t) 1,
                DBNAME, DBNAME_LEN);
 
-    /* attach subdir database file as 'SUBDIR_ATTACH_NAME' */
+    /* attach subdir database file as 'ROLLUP_SUBDIR_ATTACH_NAME' */
     if (attachdb(child_dbname, db, ROLLUP_SUBDIR_ATTACH_NAME, attach_flag, 1, NULL)) {
         return child_dbname;
     }
@@ -291,6 +291,8 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
     uid_t uid;
     gid_t gid;
 
+    int rc = 0;
+
     sscanf(uid_str, "%" STAT_uid, &uid); /* skip checking for failure */
     sscanf(gid_str, "%" STAT_gid, &gid); /* skip checking for failure */
 
@@ -302,6 +304,14 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
                "/", (size_t) 1,
                filename, filename_len);
 
+    /*
+     * TODO: create a trie and create per-user/group mutexes
+     * so that xattr writes don't block unnecessarily
+     */
+    if (rexa->xattr.mutex) {
+        pthread_mutex_lock(rexa->xattr.mutex);
+    }
+
     /* check if the parent per-user/per-group xattr db file exists */
     struct stat st;
     if (stat(xattr_db_name, &st) != 0) {
@@ -309,22 +319,22 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
         if (err != ENOENT) {
             fprintf(stderr, "Error: Cannot access xattr db file %s: %s (%d)\n",
                     xattr_db_name, strerror(err), err);
-            free(xattr_db_name);
-            return 1;
+            rc = 1;
+            goto free_xattr_db_name;
         }
 
         /* copy the template file */
-        if (copy_template(rexa->xattr, xattr_db_name, uid, gid, NULL)) {
-            free(xattr_db_name);
-            return 1;
+        if (copy_template(rexa->xattr.temp, xattr_db_name, uid, gid, NULL)) {
+            rc = 1;
+            goto free_xattr_db_name;
         }
     }
 
     /* open parent per-user/per-group xattr db file */
     sqlite3 *xattr_db = opendb(xattr_db_name, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
     if (!xattr_db) {
-        free(xattr_db_name);
-        return 1;
+        rc = 1;
+        goto free_xattr_db_name;
     }
 
     const size_t child_xattr_db_name_len = rexa->child_len + 1 + filename_len;
@@ -336,13 +346,13 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
 
     char attachname[MAXSQL];
     SNPRINTF(attachname, sizeof(attachname),
-             EXTERNAL_ATTACH_PREFIX "%zu", (*rexa->count)++);
+             EXTERNAL_ATTACH_PREFIX "%zu", rexa->xattr.count++);
 
     if (!attachdb(child_xattr_db_name, xattr_db, attachname, SQLITE_OPEN_READONLY, 1, NULL)) {
         free(child_xattr_db_name);
         closedb(xattr_db);
-        free(xattr_db_name);
-        return 1;
+        rc = 1;
+        goto free_xattr_db_name;
     }
 
     /* copy child external xattrs_avail to external xattrs_rollup */
@@ -358,12 +368,21 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
 
     free(child_xattr_db_name);
     closedb(xattr_db);
+
+  free_xattr_db_name:
     free(xattr_db_name);
-    return 0;
+
+    if (rexa->xattr.mutex) {
+        pthread_mutex_unlock(rexa->xattr.mutex);
+    }
+
+    return rc;
 }
 
 /* roll up the attached subdir into this dir */
 int rollup_child_process(sqlite3 *db, const char *sql, rexa_t *rexa) {
+    rexa->xattr.count = 0;
+
     char *err = NULL;
     if (sqlite3_exec(db, sql, rollup_external_xattrs, rexa, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr,

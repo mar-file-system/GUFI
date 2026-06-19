@@ -101,10 +101,176 @@ prefix/ugo/ugo/dir1|1|0
 prefix/ugo/ugo/dir2|1|0
 prefix/ugo/ugo/dir3|1|0
 
+$ gufi_query -d " " -n 2 -S "SELECT rpath(sname, sroll), canrollup FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
+prefix 0
+prefix/o+rx 0
+prefix/o+rx/o+rx 1
+prefix/o+rx/o+rx/dir1 1
+prefix/o+rx/o+rx/dir1/file1
+prefix/o+rx/o+rx/dir2 1
+prefix/o+rx/o+rx/dir2/file1
+prefix/o+rx/o+rx/dir2/file2
+prefix/o+rx/o+rx/dir3 1
+prefix/o+rx/o+rx/dir3/file1
+prefix/o+rx/o+rx/dir3/file2
+prefix/o+rx/o+rx/dir3/file3
+prefix/o+rx/u 1
+prefix/o+rx/u/dir1 1
+prefix/o+rx/u/dir1/file1
+prefix/o+rx/u/dir2 1
+prefix/o+rx/u/dir2/file1
+prefix/o+rx/u/dir2/file2
+prefix/o+rx/u/dir3 1
+prefix/o+rx/u/dir3/file1
+prefix/o+rx/u/dir3/file2
+prefix/o+rx/u/dir3/file3
+prefix/o+rx/ug 1
+prefix/o+rx/ug/dir1 1
+prefix/o+rx/ug/dir1/file1
+prefix/o+rx/ug/dir2 1
+prefix/o+rx/ug/dir2/file1
+prefix/o+rx/ug/dir2/file2
+prefix/o+rx/ug/dir3 1
+prefix/o+rx/ug/dir3/file1
+prefix/o+rx/ug/dir3/file2
+prefix/o+rx/ug/dir3/file3
+prefix/o+rx/ugo 1
+prefix/o+rx/ugo/dir1 1
+prefix/o+rx/ugo/dir1/file1
+prefix/o+rx/ugo/dir2 1
+prefix/o+rx/ugo/dir2/file1
+prefix/o+rx/ugo/dir2/file2
+prefix/o+rx/ugo/dir3 1
+prefix/o+rx/ugo/dir3/file1
+prefix/o+rx/ugo/dir3/file2
+prefix/o+rx/ugo/dir3/file3
+prefix/u 0
+prefix/u/o+rx 1
+prefix/u/o+rx/dir1 1
+prefix/u/o+rx/dir1/file1
+prefix/u/o+rx/dir2 1
+prefix/u/o+rx/dir2/file1
+prefix/u/o+rx/dir2/file2
+prefix/u/o+rx/dir3 1
+prefix/u/o+rx/dir3/file1
+prefix/u/o+rx/dir3/file2
+prefix/u/o+rx/dir3/file3
+prefix/u/u 1
+prefix/u/u/dir1 1
+prefix/u/u/dir1/file1
+prefix/u/u/dir2 1
+prefix/u/u/dir2/file1
+prefix/u/u/dir2/file2
+prefix/u/u/dir3 1
+prefix/u/u/dir3/file1
+prefix/u/u/dir3/file2
+prefix/u/u/dir3/file3
+prefix/u/ug 1
+prefix/u/ug/dir1 1
+prefix/u/ug/dir1/file1
+prefix/u/ug/dir2 1
+prefix/u/ug/dir2/file1
+prefix/u/ug/dir2/file2
+prefix/u/ug/dir3 1
+prefix/u/ug/dir3/file1
+prefix/u/ug/dir3/file2
+prefix/u/ug/dir3/file3
+prefix/u/ugo 1
+prefix/u/ugo/dir1 1
+prefix/u/ugo/dir1/file1
+prefix/u/ugo/dir2 1
+prefix/u/ugo/dir2/file1
+prefix/u/ugo/dir2/file2
+prefix/u/ugo/dir3 1
+prefix/u/ugo/dir3/file1
+prefix/u/ugo/dir3/file2
+prefix/u/ugo/dir3/file3
+prefix/ug 0
+prefix/ug/o+rx 1
+prefix/ug/o+rx/dir1 1
+prefix/ug/o+rx/dir1/file1
+prefix/ug/o+rx/dir2 1
+prefix/ug/o+rx/dir2/file1
+prefix/ug/o+rx/dir2/file2
+prefix/ug/o+rx/dir3 1
+prefix/ug/o+rx/dir3/file1
+prefix/ug/o+rx/dir3/file2
+prefix/ug/o+rx/dir3/file3
+prefix/ug/u 1
+prefix/ug/u/dir1 1
+prefix/ug/u/dir1/file1
+prefix/ug/u/dir2 1
+prefix/ug/u/dir2/file1
+prefix/ug/u/dir2/file2
+prefix/ug/u/dir3 1
+prefix/ug/u/dir3/file1
+prefix/ug/u/dir3/file2
+prefix/ug/u/dir3/file3
+prefix/ug/ug 1
+prefix/ug/ug/dir1 1
+prefix/ug/ug/dir1/file1
+prefix/ug/ug/dir2 1
+prefix/ug/ug/dir2/file1
+prefix/ug/ug/dir2/file2
+prefix/ug/ug/dir3 1
+prefix/ug/ug/dir3/file1
+prefix/ug/ug/dir3/file2
+prefix/ug/ug/dir3/file3
+prefix/ug/ugo 1
+prefix/ug/ugo/dir1 1
+prefix/ug/ugo/dir1/file1
+prefix/ug/ugo/dir2 1
+prefix/ug/ugo/dir2/file1
+prefix/ug/ugo/dir2/file2
+prefix/ug/ugo/dir3 1
+prefix/ug/ugo/dir3/file1
+prefix/ug/ugo/dir3/file2
+prefix/ug/ugo/dir3/file3
+prefix/ugo 1
+prefix/ugo/o+rx 1
+prefix/ugo/o+rx/dir1 1
+prefix/ugo/o+rx/dir1/file1
+prefix/ugo/o+rx/dir2 1
+prefix/ugo/o+rx/dir2/file1
+prefix/ugo/o+rx/dir2/file2
+prefix/ugo/o+rx/dir3 1
+prefix/ugo/o+rx/dir3/file1
+prefix/ugo/o+rx/dir3/file2
+prefix/ugo/o+rx/dir3/file3
+prefix/ugo/u 1
+prefix/ugo/u/dir1 1
+prefix/ugo/u/dir1/file1
+prefix/ugo/u/dir2 1
+prefix/ugo/u/dir2/file1
+prefix/ugo/u/dir2/file2
+prefix/ugo/u/dir3 1
+prefix/ugo/u/dir3/file1
+prefix/ugo/u/dir3/file2
+prefix/ugo/u/dir3/file3
+prefix/ugo/ug 1
+prefix/ugo/ug/dir1 1
+prefix/ugo/ug/dir1/file1
+prefix/ugo/ug/dir2 1
+prefix/ugo/ug/dir2/file1
+prefix/ugo/ug/dir2/file2
+prefix/ugo/ug/dir3 1
+prefix/ugo/ug/dir3/file1
+prefix/ugo/ug/dir3/file2
+prefix/ugo/ug/dir3/file3
+prefix/ugo/ugo 1
+prefix/ugo/ugo/dir1 1
+prefix/ugo/ugo/dir1/file1
+prefix/ugo/ugo/dir2 1
+prefix/ugo/ugo/dir2/file1
+prefix/ugo/ugo/dir2/file2
+prefix/ugo/ugo/dir3 1
+prefix/ugo/ugo/dir3/file1
+prefix/ugo/ugo/dir3/file2
+prefix/ugo/ugo/dir3/file3
 # do rollup
 $ gufi_rollup_topdown -n 2 "prefix"
 4 directories could not rollup
-    3 directories are not allowed to rollup
+    4 directories are not allowed to rollup
     0 directories started with too many entries
     0 directories would have ended up with too many entries
 Rolled up into 13 top-level directories
@@ -117,79 +283,197 @@ Rolled up into 13 top-level directories
     0 failed rollup copies
 Total remaining directories to traverse: 17
 
+# query should return same data
+$ gufi_query -d " " -n 2 -S "SELECT rpath(sname, sroll), canrollup FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
+prefix 0
+prefix/o+rx 0
+prefix/o+rx/o+rx 1
+prefix/o+rx/o+rx/dir1 1
+prefix/o+rx/o+rx/dir1/file1
+prefix/o+rx/o+rx/dir2 1
+prefix/o+rx/o+rx/dir2/file1
+prefix/o+rx/o+rx/dir2/file2
+prefix/o+rx/o+rx/dir3 1
+prefix/o+rx/o+rx/dir3/file1
+prefix/o+rx/o+rx/dir3/file2
+prefix/o+rx/o+rx/dir3/file3
+prefix/o+rx/u 1
+prefix/o+rx/u/dir1 1
+prefix/o+rx/u/dir1/file1
+prefix/o+rx/u/dir2 1
+prefix/o+rx/u/dir2/file1
+prefix/o+rx/u/dir2/file2
+prefix/o+rx/u/dir3 1
+prefix/o+rx/u/dir3/file1
+prefix/o+rx/u/dir3/file2
+prefix/o+rx/u/dir3/file3
+prefix/o+rx/ug 1
+prefix/o+rx/ug/dir1 1
+prefix/o+rx/ug/dir1/file1
+prefix/o+rx/ug/dir2 1
+prefix/o+rx/ug/dir2/file1
+prefix/o+rx/ug/dir2/file2
+prefix/o+rx/ug/dir3 1
+prefix/o+rx/ug/dir3/file1
+prefix/o+rx/ug/dir3/file2
+prefix/o+rx/ug/dir3/file3
+prefix/o+rx/ugo 1
+prefix/o+rx/ugo/dir1 1
+prefix/o+rx/ugo/dir1/file1
+prefix/o+rx/ugo/dir2 1
+prefix/o+rx/ugo/dir2/file1
+prefix/o+rx/ugo/dir2/file2
+prefix/o+rx/ugo/dir3 1
+prefix/o+rx/ugo/dir3/file1
+prefix/o+rx/ugo/dir3/file2
+prefix/o+rx/ugo/dir3/file3
+prefix/u 0
+prefix/u/o+rx 1
+prefix/u/o+rx/dir1 1
+prefix/u/o+rx/dir1/file1
+prefix/u/o+rx/dir2 1
+prefix/u/o+rx/dir2/file1
+prefix/u/o+rx/dir2/file2
+prefix/u/o+rx/dir3 1
+prefix/u/o+rx/dir3/file1
+prefix/u/o+rx/dir3/file2
+prefix/u/o+rx/dir3/file3
+prefix/u/u 1
+prefix/u/u/dir1 1
+prefix/u/u/dir1/file1
+prefix/u/u/dir2 1
+prefix/u/u/dir2/file1
+prefix/u/u/dir2/file2
+prefix/u/u/dir3 1
+prefix/u/u/dir3/file1
+prefix/u/u/dir3/file2
+prefix/u/u/dir3/file3
+prefix/u/ug 1
+prefix/u/ug/dir1 1
+prefix/u/ug/dir1/file1
+prefix/u/ug/dir2 1
+prefix/u/ug/dir2/file1
+prefix/u/ug/dir2/file2
+prefix/u/ug/dir3 1
+prefix/u/ug/dir3/file1
+prefix/u/ug/dir3/file2
+prefix/u/ug/dir3/file3
+prefix/u/ugo 1
+prefix/u/ugo/dir1 1
+prefix/u/ugo/dir1/file1
+prefix/u/ugo/dir2 1
+prefix/u/ugo/dir2/file1
+prefix/u/ugo/dir2/file2
+prefix/u/ugo/dir3 1
+prefix/u/ugo/dir3/file1
+prefix/u/ugo/dir3/file2
+prefix/u/ugo/dir3/file3
+prefix/ug 0
+prefix/ug/o+rx 1
+prefix/ug/o+rx/dir1 1
+prefix/ug/o+rx/dir1/file1
+prefix/ug/o+rx/dir2 1
+prefix/ug/o+rx/dir2/file1
+prefix/ug/o+rx/dir2/file2
+prefix/ug/o+rx/dir3 1
+prefix/ug/o+rx/dir3/file1
+prefix/ug/o+rx/dir3/file2
+prefix/ug/o+rx/dir3/file3
+prefix/ug/u 1
+prefix/ug/u/dir1 1
+prefix/ug/u/dir1/file1
+prefix/ug/u/dir2 1
+prefix/ug/u/dir2/file1
+prefix/ug/u/dir2/file2
+prefix/ug/u/dir3 1
+prefix/ug/u/dir3/file1
+prefix/ug/u/dir3/file2
+prefix/ug/u/dir3/file3
+prefix/ug/ug 1
+prefix/ug/ug/dir1 1
+prefix/ug/ug/dir1/file1
+prefix/ug/ug/dir2 1
+prefix/ug/ug/dir2/file1
+prefix/ug/ug/dir2/file2
+prefix/ug/ug/dir3 1
+prefix/ug/ug/dir3/file1
+prefix/ug/ug/dir3/file2
+prefix/ug/ug/dir3/file3
+prefix/ug/ugo 1
+prefix/ug/ugo/dir1 1
+prefix/ug/ugo/dir1/file1
+prefix/ug/ugo/dir2 1
+prefix/ug/ugo/dir2/file1
+prefix/ug/ugo/dir2/file2
+prefix/ug/ugo/dir3 1
+prefix/ug/ugo/dir3/file1
+prefix/ug/ugo/dir3/file2
+prefix/ug/ugo/dir3/file3
+prefix/ugo 1
+prefix/ugo/o+rx 1
+prefix/ugo/o+rx/dir1 1
+prefix/ugo/o+rx/dir1/file1
+prefix/ugo/o+rx/dir2 1
+prefix/ugo/o+rx/dir2/file1
+prefix/ugo/o+rx/dir2/file2
+prefix/ugo/o+rx/dir3 1
+prefix/ugo/o+rx/dir3/file1
+prefix/ugo/o+rx/dir3/file2
+prefix/ugo/o+rx/dir3/file3
+prefix/ugo/u 1
+prefix/ugo/u/dir1 1
+prefix/ugo/u/dir1/file1
+prefix/ugo/u/dir2 1
+prefix/ugo/u/dir2/file1
+prefix/ugo/u/dir2/file2
+prefix/ugo/u/dir3 1
+prefix/ugo/u/dir3/file1
+prefix/ugo/u/dir3/file2
+prefix/ugo/u/dir3/file3
+prefix/ugo/ug 1
+prefix/ugo/ug/dir1 1
+prefix/ugo/ug/dir1/file1
+prefix/ugo/ug/dir2 1
+prefix/ugo/ug/dir2/file1
+prefix/ugo/ug/dir2/file2
+prefix/ugo/ug/dir3 1
+prefix/ugo/ug/dir3/file1
+prefix/ugo/ug/dir3/file2
+prefix/ugo/ug/dir3/file3
+prefix/ugo/ugo 1
+prefix/ugo/ugo/dir1 1
+prefix/ugo/ugo/dir1/file1
+prefix/ugo/ugo/dir2 1
+prefix/ugo/ugo/dir2/file1
+prefix/ugo/ugo/dir2/file2
+prefix/ugo/ugo/dir3 1
+prefix/ugo/ugo/dir3/file1
+prefix/ugo/ugo/dir3/file2
+prefix/ugo/ugo/dir3/file3
+# compare old and new output
+$ diff <(original) <(new)
+
 # see which directories are walked when querying
 # ugo stops because it was rolled up
-# dir* directories were rolled up
-$ gufi_query -d "|" -n 2 -S "SELECT rpath(sname, sroll), isroot FROM vrsummary;" "prefix"
-prefix/o+rx/o+rx/dir1|0
-prefix/o+rx/o+rx/dir2|0
-prefix/o+rx/o+rx/dir3|0
-prefix/o+rx/o+rx|1
-prefix/o+rx/u/dir1|0
-prefix/o+rx/u/dir2|0
-prefix/o+rx/u/dir3|0
-prefix/o+rx/ug/dir1|0
-prefix/o+rx/ug/dir2|0
-prefix/o+rx/ug/dir3|0
-prefix/o+rx/ugo/dir1|0
-prefix/o+rx/ugo/dir2|0
-prefix/o+rx/ugo/dir3|0
-prefix/o+rx/ugo|1
-prefix/o+rx/ug|1
-prefix/o+rx/u|1
-prefix/o+rx|1
-prefix/u/o+rx/dir1|0
-prefix/u/o+rx/dir2|0
-prefix/u/o+rx/dir3|0
-prefix/u/o+rx|1
-prefix/u/u/dir1|0
-prefix/u/u/dir2|0
-prefix/u/u/dir3|0
-prefix/u/ug/dir1|0
-prefix/u/ug/dir2|0
-prefix/u/ug/dir3|0
-prefix/u/ugo/dir1|0
-prefix/u/ugo/dir2|0
-prefix/u/ugo/dir3|0
-prefix/u/ugo|1
-prefix/u/ug|1
-prefix/u/u|1
-prefix/ug/o+rx/dir1|0
-prefix/ug/o+rx/dir2|0
-prefix/ug/o+rx/dir3|0
-prefix/ug/o+rx|1
-prefix/ug/u/dir1|0
-prefix/ug/u/dir2|0
-prefix/ug/u/dir3|0
-prefix/ug/ug/dir1|0
-prefix/ug/ug/dir2|0
-prefix/ug/ug/dir3|0
-prefix/ug/ugo/dir1|0
-prefix/ug/ugo/dir2|0
-prefix/ug/ugo/dir3|0
-prefix/ug/ugo|1
-prefix/ug/ug|1
-prefix/ug/u|1
-prefix/ugo/o+rx/dir1|0
-prefix/ugo/o+rx/dir2|0
-prefix/ugo/o+rx/dir3|0
-prefix/ugo/o+rx|0
-prefix/ugo/u/dir1|0
-prefix/ugo/u/dir2|0
-prefix/ugo/u/dir3|0
-prefix/ugo/ug/dir1|0
-prefix/ugo/ug/dir2|0
-prefix/ugo/ug/dir3|0
-prefix/ugo/ugo/dir1|0
-prefix/ugo/ugo/dir2|0
-prefix/ugo/ugo/dir3|0
-prefix/ugo/ugo|0
-prefix/ugo/ug|0
-prefix/ugo/u|0
-prefix/ugo|1
-prefix/ug|1
-prefix/u|1
-prefix|1
+# dir* directories were all rolled up
+$ gufi_query -d "|" -n 2 -S "SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;" "prefix"
+prefix
+prefix/o+rx
+prefix/o+rx/o+rx
+prefix/o+rx/u
+prefix/o+rx/ug
+prefix/o+rx/ugo
+prefix/u
+prefix/u/o+rx
+prefix/u/u
+prefix/u/ug
+prefix/u/ugo
+prefix/ug
+prefix/ug/o+rx
+prefix/ug/u
+prefix/ug/ug
+prefix/ug/ugo
+prefix/ugo
 
 # compare find and gufi_query
 $ diff <(find "prefix" | sort) <(gufi_query -n 2 -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix" | sed "s%search/%%g"| sort)
@@ -244,7 +528,7 @@ $ gufi_query -x -d "|" -n 2 -E "SELECT level(), rpath(sname, sroll, name), xattr
 # do a dry run
 $ gufi_rollup_topdown -n 2 --dry-run "search"
 1 directories could not rollup
-    0 directories are not allowed to rollup
+    1 directories are not allowed to rollup
     0 directories started with too many entries
     0 directories would have ended up with too many entries
 Rolled up into 1 top-level directories
@@ -269,7 +553,7 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 # roll up index
 $ gufi_rollup_topdown -n 2 "search"
 1 directories could not rollup
-    0 directories are not allowed to rollup
+    1 directories are not allowed to rollup
     0 directories started with too many entries
     0 directories would have ended up with too many entries
 Rolled up into 1 top-level directories
@@ -327,8 +611,8 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 2|prefix/directory/subdirectory|1|0
 
 # roll up starting at level 1
-$ gufi_rollup_topdown -n 2 --min-level 1 "search"
-2 directories could not rollup
+$ gufi_rollup_topdown -n 2 --min-level 1 "prefix"
+1 directories could not rollup
     0 directories are not allowed to rollup
     0 directories started with too many entries
     0 directories would have ended up with too many entries
@@ -340,7 +624,7 @@ Rolled up into 4 top-level directories
         Mean:  0.25
         Stdev: 0.43
     0 failed rollup copies
-Total remaining directories to traverse: 6
+Total remaining directories to traverse: 5
 
 # gufi_query should traverse down to level 1
 $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, isrolledup FROM vrsummary;" "prefix"
@@ -357,7 +641,7 @@ $ gufi_unrollup -n 2 "search"
 # roll up with limit of 5 files
 $ gufi_rollup_topdown -n 2 --limit 5 "search"
 2 directories could not rollup
-    0 directories are not allowed to rollup
+    1 directories are not allowed to rollup
     1 directories started with too many entries
     0 directories would have ended up with too many entries
 Rolled up into 4 top-level directories
@@ -381,5 +665,5 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 
 # bad thread count
 $ gufi_rollup_topdown -n 18446744073709551615 "search"
-Error: Could not allocate stat counters
+Error: Could not allocate subtree root lists
 

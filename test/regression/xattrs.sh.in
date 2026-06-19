@@ -114,11 +114,7 @@ create() {
     )
 }
 
-query() {
-    run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;\" \"${INDEXROOT}\""
-}
-
-(
+create_tree() (
     # shellcheck disable=SC2174
     mkdir -p -m 555 "${SRCDIR}"
     cd "${SRCDIR}"
@@ -138,32 +134,55 @@ query() {
     create u+rw   700
 )
 
+query() {
+    run_sort "${GUFI_QUERY} -n ${THREADS} -d \" \" -x -S \"SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;\" \"${INDEXROOT}\""
+}
+
 (
 set +e
 
-# query index created directly from source tree
-run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${SEARCH}\""
+create_tree
+
+echo "# query index created directly from source tree"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -x \"${SRCDIR}\" \"${SEARCH}\""
 orig="$(query)"
 echo -e "${orig}\n"
 
 rm -r "${SEARCH}"
 
-# query index created from traces
+echo "# query index created from traces"
 # shellcheck disable=SC2153
-run_no_sort "${GUFI_DIR2TRACE} -x \"${SRCDIR}\" \"${TRACE}\""
-run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2TRACE} -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
+cat "${TRACES[@]}" > "${TRACE}"
+run_no_sort "${GUFI_TRACE2INDEX} -n ${THREADS} \"${TRACE}\" \"${SEARCH}\""
 trace="$(query)"
 echo -e "${trace}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${trace}")
 
-# query rolled up index
-run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" 2>&1 | @SED@ '\%Started %d; \%Took %d;'
+echo "# query rolled up index"
+run_no_sort "${GUFI_ROLLUP} -n ${THREADS} \"${INDEXROOT}\"" | @SED@ '\%Started %d; \%Took %d;'
 rolled="$(query)"
 echo -e "${rolled}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${rolled}")
 
-# query unrolled index
-run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}\""
+echo "# query unrolled index"
+run_no_sort "${GUFI_UNROLLUP} -n ${THREADS} \"${INDEXROOT}\""
+unrolled="$(query)"
+echo -e "${unrolled}\n"
+@DIFF@ <(echo -e "${orig}") <(echo -e "${unrolled}")
+
+echo "# query topdown rolled up tree"
+rm -r "${SEARCH}"
+create_tree
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -x \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "${GUFI_TREESUMMARY_ALL} -n ${THREADS} \"${INDEXROOT}\""
+run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} \"${INDEXROOT}\"" | @SED@ '\%Time to do%d; \%Min: .*s$%d; \%Max: .*s$%d; \%Mean: .*s$%d; \%Stdev: .*s$%d;'
+topdown="$(query)"
+echo -e "${topdown}\n"
+@DIFF@ <(echo -e "${orig}") <(echo -e "${topdown}")
+
+echo "# query unrolled index"
+run_no_sort "${GUFI_UNROLLUP} -n ${THREADS} \"${INDEXROOT}\""
 unrolled="$(query)"
 echo -e "${unrolled}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${unrolled}")

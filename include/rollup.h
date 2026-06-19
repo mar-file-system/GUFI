@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #ifndef GUFI_ROLLUP_H
 #define GUFI_ROLLUP_H
 
+#include <pthread.h>
 #include <sys/types.h>
 
 #include <sqlite3.h>
@@ -117,12 +118,15 @@ char *rollup_child_attach(sqlite3 *db, const str_t *child_path, const int attach
 
 /* SQLite3 callback arg for handling externally stored xattrs */
 typedef struct RollupExternalXattrsArgs {
-    struct template_db *xattr;
+    struct {
+        struct template_db *temp;
+        pthread_mutex_t *mutex;   /* write lock for rolling up external xattrs directly into the target file */
+        size_t count;             /* only used internally */
+    } xattr;
     char *parent;
     size_t parent_len;
     char *child;
     size_t child_len;
-    size_t *count;
 } rexa_t;
 
 /*
@@ -172,9 +176,7 @@ typedef struct RollupExternalXattrsArgs {
     /* internal data */                                                 \
     "sub.rectype, sub.pinode, 0, " /* isroot */                         \
     "1, 1 " /* canrollup, isrolledup */                                 \
-    "FROM " SUMMARY " AS s, "                                           \
-    ROLLUP_SUBDIR_ATTACH_NAME "." SUMMARY " AS sub "                    \
-    "WHERE s.isroot == 1;"                                              \
+    "FROM " ROLLUP_SUBDIR_ATTACH_NAME "." SUMMARY " AS sub;"            \
                                                                         \
     "INSERT INTO " TREESUMMARY " "                                      \
     "SELECT * "                                                         \

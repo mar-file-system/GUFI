@@ -162,7 +162,7 @@ do {                                                                            
     fprintf(stdout, "        max:        %" #width "zu\n",  max);                \
     fprintf(stdout, "        median:     %" #width ".2f\n", median);             \
     fprintf(stdout, "        sum:        %" #width "zu\n",  sum);                \
-    fprintf(stdout, "        average:    %" #width ".2f\n",  avg);               \
+    fprintf(stdout, "        average:    %" #width ".2f\n", avg);                \
                                                                                  \
     free(array);                                                                 \
 } while (0)
@@ -643,7 +643,9 @@ static int rollup_external_xattrs_delete(void *args, int count, char **data, cha
 
 /* copy one subdir/db.db table into the current directory */
 static const char ROLLUP_ONE_SUBDIR[] =
-    ROLLUP_ONE_SUBDIR_FRONT "s.name || '/' || sub.name" ROLLUP_ONE_SUBDIR_BACK;
+    ROLLUP_ONE_SUBDIR_FRONT
+    "(SELECT name FROM " SUMMARY " WHERE isroot == 1) || '/' || sub.name"
+    ROLLUP_ONE_SUBDIR_BACK;
 
 /*
 @return -1 - error
@@ -670,7 +672,6 @@ static int do_rollup(struct RollUp *rollup,
 
     /* process each child */
     int rc = 0;
-    size_t xattr_count = 0;
     sll_loop(&rollup->data.subdirs, node) {
         struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
@@ -682,12 +683,14 @@ static int do_rollup(struct RollUp *rollup,
         }
 
         rexa_t rexa = {
-            .xattr      = xattr_template,
-            .parent     = rollup->data.name,
-            .parent_len = rollup->data.name_len,
-            .child      = child->name,
-            .child_len  = child->name_len,
-            .count      = &xattr_count,
+            .xattr       = {
+                .temp    = xattr_template,
+                .mutex   = NULL,
+            },
+            .parent      = rollup->data.name,
+            .parent_len  = rollup->data.name_len,
+            .child       = child->name,
+            .child_len   = child->name_len,
         };
 
         /* roll up the subdir into this dir */
