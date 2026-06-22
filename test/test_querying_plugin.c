@@ -120,19 +120,23 @@ static void global_exit(void *global) {
 struct plugin_operations test_querying_plugin_ops = {
     .type = PLUGIN_QUERY,
     .global_init = global_init,
+    .thread_init = NULL,
     .ctx_init = db_init,
     .process_dir = NULL,
     .process_file = NULL,
     .ctx_exit = db_exit,
+    .thread_exit = NULL,
     .global_exit = global_exit,
 };
 
 struct plugin_operations test_querying_plugin_bad_ops = {
     .type = PLUGIN_QUERY,
     .global_init = global_bad_init,
+    .thread_init = NULL,
     .ctx_init = NULL,
     .process_dir = NULL,
     .process_file = NULL,
     .ctx_exit = NULL,
+    .thread_exit = NULL,
     .global_exit = global_exit,
 };

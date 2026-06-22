@@ -73,10 +73,12 @@ static int dsi_indexing_global_init(void *global) {
 struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_INDEX,
     .global_init = dsi_indexing_global_init,
+    .thread_init = NULL,
     .dir_action = NULL,
     .ctx_init = NULL,
     .process_dir = NULL,
     .process_file = NULL,
     .ctx_exit = NULL,
+    .thread_exit = NULL,
     .global_exit = NULL,
 };

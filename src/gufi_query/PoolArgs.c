@@ -234,6 +234,11 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             }
         }
 
+        /* do thread db setup once at the top */
+        if (plugins_thread_init(&in->plugins, ta->outdb) != in->plugins.count) {
+            break;
+        }
+
         /* run -I */
         if (in->sql.init.len) {
             if (sqlite3_exec(ta->outdb, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
@@ -285,6 +290,8 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
     for(size_t i = 0; i < allocated; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
+
+        plugins_thread_exit(&pa->in->plugins, ta->outdb);
 
         closedb(ta->outdb);
 

@@ -107,8 +107,17 @@ struct plugin_operations {
      */
     int (*global_init)(void *global);
 
-    /* 
-     * Returns whether a directory should be processed and/or 
+    /*
+     * One-time initialization of a database instance when each thread
+     * is being set up
+     *
+     * Generally expected to be used to define SQLite3 UDFs that do
+     * not need context
+     */
+    int (*thread_init)(sqlite3 *db);
+
+    /*
+     * Returns whether a directory should be processed and/or
      * descended into
      */
     plugin_dir_action (*dir_action)(void *ptr);
@@ -128,6 +137,9 @@ struct plugin_operations {
 
     /* Clean up any state for the current context */
     void (*ctx_exit)(void *ptr, void *user_data);
+
+    /* Clean up any thread_init state */
+    void (*thread_exit)(sqlite3 *db);
 
     /*
      * One-time cleanup
@@ -189,11 +201,13 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted);
  *         successfully initialized plugins, and return error
  */
 size_t            plugins_global_init (struct plugins* plugins, void* global);
+size_t            plugins_thread_init (struct plugins *plugins, sqlite3 *db);
 plugin_dir_action plugins_dir_action  (struct plugins* plugins, void* ctx);
 void              plugins_ctx_init    (struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_process_dir (struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_process_file(struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_ctx_exit    (struct plugins* plugins, void* ctx, const size_t tid);
+void              plugins_thread_exit (struct plugins *plugins, sqlite3 *db);
 void              plugins_global_exit (struct plugins* plugins, void* global);
 
 /* common plugin ptr struct (don't have to use; here to reduce duplicate struct definitions) */

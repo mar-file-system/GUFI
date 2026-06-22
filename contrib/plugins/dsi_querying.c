@@ -151,9 +151,7 @@ static int dsi_querying_global_init(void *global) {
     return 0;
 }
 
-static void *dsi_querying_ctx_init(void *ptr) {
-    sqlite3 *db = (sqlite3 *) ptr;
-
+static int dsi_querying_thread_init(sqlite3 *db) {
     if ((sqlite3_create_function(db,   "dsi_collection_name", 1, SQLITE_UTF8,
                                  NULL, &dsi_collection_name,  NULL, NULL) != SQLITE_OK) ||
         (sqlite3_create_function(db,   "dsi_uuid",            2, SQLITE_UTF8,
@@ -161,9 +159,10 @@ static void *dsi_querying_ctx_init(void *ptr) {
         (sqlite3_create_function(db,   "dsi_dbpath",          2, SQLITE_UTF8,
                                  NULL, &dsi_dbpath,           NULL, NULL) != SQLITE_OK)) {
         fprintf(stderr, "Error: Could not create DSI functions\n");
+        return 1;
     }
 
-    return NULL;
+    return 0;
 }
 
 static void dsi_querying_global_exit(void *global) {
@@ -174,10 +173,12 @@ static void dsi_querying_global_exit(void *global) {
 struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_QUERY,
     .global_init = dsi_querying_global_init,
+    .thread_init = dsi_querying_thread_init,
     .dir_action = NULL,
-    .ctx_init = dsi_querying_ctx_init,
+    .ctx_init = NULL,
     .process_dir = NULL,
     .process_file = NULL,
     .ctx_exit = NULL,
+    .thread_exit = NULL,
     .global_exit = dsi_querying_global_exit,
 };

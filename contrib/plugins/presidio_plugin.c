@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include <curl/curl.h>
 #include <sqlite3.h>
 
+#include "SinglyLinkedList.h"
 #include "plugin.h"
 #include "str.h"
 
@@ -320,22 +321,30 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
     free(anonymized_response.data);
 }
 
+static sll_t curl_instances; /* CURL * */
+static int loaded = 0;
+
 static int presidio_global_init(void *global) {
     (void) global;
 
+    if (loaded) {
+        fprintf(stderr, "Error: Cannot load presidio plugin multiple times\n");
+        return 1;
+    }
+    loaded++;
+
     curl_global_init(CURL_GLOBAL_ALL);
     sqlite3_initialize();
+    sll_init(&curl_instances);
+
     return 0;
 }
 
-static void *presidio_ctx_init(void *ptr) {
-    sqlite3 *db = (sqlite3 *) ptr;
-
-    /* TODO: change to CURLM or per thread handle, not per directory */
+static int presidio_thread_init(sqlite3 *db) {
     CURL *curl = curl_easy_init();
     if (!curl) {
         fprintf(stderr, "curl_easy_init() failed\n");
-        return NULL;
+        return 1;
     }
 
     if ((sqlite3_create_function(db,   "presidio_analyze",     -1, SQLITE_UTF8,
@@ -345,31 +354,41 @@ static void *presidio_ctx_init(void *ptr) {
         fprintf(stderr, "Error: Could not create presidio plugin functions\n");
         curl_easy_cleanup(curl);
 
-        return NULL;
+        return 1;
     }
 
-    return curl; /* only needed for cleanup */
+    /*
+     * cannot pass CURL * to sqlite3_create_function_v2 xDestroy
+     * because by the time it is called, the cURL library will
+     * have been cleaned up, so keep track of it here
+     */
+    sll_push_back(&curl_instances, curl);
+    return 0;
 }
 
-static void presidio_ctx_exit(void *ptr, void *user_data) {
-    (void) ptr;
-    CURL *curl = (CURL *) user_data;
-    curl_easy_cleanup(curl);
+static void curl_instance_free(void *ptr) {
+    curl_easy_cleanup(ptr);
 }
 
 static void presidio_global_exit(void *global) {
     (void) global;
+
+    sll_destroy(&curl_instances, curl_instance_free);
     sqlite3_shutdown();
     curl_global_cleanup();
+
+    loaded--;
 }
 
 struct plugin_operations presidio = {
     .type = PLUGIN_QUERY,
     .global_init = presidio_global_init,
+    .thread_init = presidio_thread_init,
     .dir_action = NULL,
-    .ctx_init = presidio_ctx_init,
+    .ctx_init = NULL,
     .process_dir = NULL,
     .process_file = NULL,
-    .ctx_exit = presidio_ctx_exit,
+    .ctx_exit = NULL,
+    .thread_exit = NULL,
     .global_exit = presidio_global_exit,
 };

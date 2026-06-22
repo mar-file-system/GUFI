@@ -1201,10 +1201,12 @@ static void marfs_indexing_global_exit(void* global) {
 struct plugin_operations GUFI_MARFS_PLUGIN = {
     .type = PLUGIN_INDEX,
     .global_init = marfs_indexing_global_init,
+    .thread_init = NULL,
     .dir_action = marfs_dir_action,
     .ctx_init = marfs_ctx_init,
     .process_dir = marfs_process_dir,
     .process_file = marfs_process_file,
     .ctx_exit = marfs_ctx_exit,
+    .thread_exit = NULL,
     .global_exit = marfs_indexing_global_exit,
 };

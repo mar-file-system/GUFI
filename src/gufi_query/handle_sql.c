@@ -192,6 +192,7 @@ static int gen_types(struct input *in) {
         }
 
         plugins_ctx_init(&in->plugins, db, 0);
+        plugins_thread_init(&in->plugins, db);
 
         if (in->sql.setup_res_col_types.data && in->sql.setup_res_col_types.len) {
             char *err = NULL;
@@ -246,6 +247,7 @@ static int gen_types(struct input *in) {
         }
 
         plugins_ctx_exit(&in->plugins, db, 0);
+        plugins_thread_exit(&in->plugins, db);
 
         closedb(db);
     }

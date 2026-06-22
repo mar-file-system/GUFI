@@ -228,6 +228,26 @@ size_t plugins_global_init(struct plugins *plugins, void *global) {
     return plugins->initialized;
 }
 
+size_t plugins_thread_init(struct plugins *plugins, sqlite3 *db) {
+    /* Not checking arguments */
+
+    size_t i = 0;
+    for(i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->thread_init) {
+            if (plugins->plugins[i]->ops->thread_init(db) != 0) {
+                for(size_t j = i; j > 0; j--) {
+                    if (plugins->plugins[j - 1]->ops->thread_exit) {
+                        plugins->plugins[j - 1]->ops->thread_exit(db);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    return i;
+}
+
 plugin_dir_action plugins_dir_action(struct plugins* plugins, void* ctx) {
     plugin_dir_action ret = PLUGIN_PROCESS_DIR;
 
@@ -286,6 +306,16 @@ void plugins_ctx_exit(struct plugins *plugins, void *ctx, const size_t tid) {
     }
 
     /* not zero-ing, but all user_data[i] should be invalid at this point */
+}
+
+void plugins_thread_exit(struct plugins *plugins, sqlite3 *db) {
+    /* Not checking arguments */
+
+    for(size_t i = plugins->count; i > 0; i--) {
+        if (plugins->plugins[i - 1]->ops->thread_exit) {
+            plugins->plugins[i - 1]->ops->thread_exit(db);
+        }
+    }
 }
 
 void plugins_global_exit(struct plugins *plugins, void *global) {

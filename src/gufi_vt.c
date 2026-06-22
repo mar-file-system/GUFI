@@ -1258,6 +1258,15 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     addqueryfuncs(tempdb);
     addqueryfuncs_with_context(tempdb, &ctx);
 
+    if (plugins_thread_init(&in.plugins, tempdb) != in.plugins.count) {
+        closedb(tempdb);
+        plugins_global_exit(&in.plugins, &in);
+        plugins_destroy(&in.plugins);
+        gq_cmd_destroy(&cmd);
+        input_fini(&in);
+        return SQLITE_CONSTRAINT;
+    }
+
     if (cmd.T.len) {
         /* this should never fail */
         create_table_wrapper(SQLITE_MEMORY, tempdb, TREESUMMARY, TREESUMMARY_CREATE);
@@ -1338,6 +1347,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     free(types);
 
     plugins_ctx_exit(&in.plugins, tempdb, 0);
+    plugins_thread_exit(&in.plugins, tempdb);
     plugins_global_exit(&in.plugins, &in);
     plugins_destroy(&in.plugins);
 
@@ -1350,6 +1360,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     /* if here, types, names, and lens are NULL, so not freeing */
 
     plugins_ctx_exit(&in.plugins, tempdb, 0);
+    plugins_thread_exit(&in.plugins, tempdb);
     plugins_global_exit(&in.plugins, &in);
     plugins_destroy(&in.plugins);
 

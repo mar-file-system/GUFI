@@ -92,6 +92,9 @@ OUTPUT="presidio_plugin.out"
         echo "SELECT fullpath, anonymized FROM gufi WHERE empty == '0';"
     )
     gufi_vt "${query}" 2>&1 | replace
+
+    echo "# try to load presidio plugin multiple times"
+    run_sort "${GUFI_QUERY} --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\""
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/presidio_plugin.expected "${OUTPUT}"

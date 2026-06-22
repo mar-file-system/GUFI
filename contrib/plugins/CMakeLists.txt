@@ -117,6 +117,7 @@ if (PRESIDIO_PLUGIN)
   message(STATUS "Building presidio querying plugin. Presidio analysis and anonymizer services must be available when used.")
   add_library(presidio_plugin SHARED
     presidio_plugin.c
+    "${CMAKE_SOURCE_DIR}/src/SinglyLinkedList.c"
     "${CMAKE_SOURCE_DIR}/src/str.c"
   )
   target_include_directories(presidio_plugin SYSTEM PUBLIC "${CURL_INCLUDE_DIRS}" "${PCRE2_INCLUDEDIR}")

@@ -182,9 +182,11 @@ static void process_dir(void *ptr, void *user_data) {
 struct plugin_operations test_indexing_plugin_ops = {
     .type = PLUGIN_INDEX,
     .global_init = NULL,
+    .thread_init = NULL,
     .ctx_init = db_init,
     .process_dir = process_dir,
     .process_file = process_file,
     .ctx_exit = db_exit,
+    .thread_exit = NULL,
     .global_exit = NULL,
 };

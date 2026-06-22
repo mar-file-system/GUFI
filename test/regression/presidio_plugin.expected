@@ -40,3 +40,7 @@ prefix/1MB|email = <EMAIL_ADDRESS>
 prefix/old_file|time = <DATE_TIME>
 prefix/repeat_name|date = <DATE_TIME>
 
+# try to load presidio plugin multiple times
+$ gufi_query --plugin "presidio:presidio_plugin" --plugin "presidio:presidio_plugin"
+Error: Cannot load presidio plugin multiple times
+
