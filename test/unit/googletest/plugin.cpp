@@ -88,8 +88,8 @@ TEST(plugin, bad_arg) {
 // thread count cannot be 0
 static const std::size_t THREADS = 2;
 
-static int test_global_init(void *global) {
-    return !!global;
+static int test_global_init(struct input *in) {
+    return !!in;
 }
 
 static int test_thread_init(sqlite3 *db) {
@@ -114,7 +114,7 @@ static void test_ctx_exit(void *, void *) {}
 
 static void test_thread_exit(sqlite3 *) {}
 
-static void test_global_exit(void *) {}
+static void test_global_exit(struct input *) {}
 
 TEST(plugins, good) {
     // 0 plugins
@@ -161,8 +161,8 @@ TEST(plugins, good) {
     EXPECT_EQ(plugins_check_type(&plugins, (plugin_type) 4), count);
 
     // fail
-    EXPECT_EQ(plugins_global_init(&plugins, &plugins), (std::size_t) 0);
-    EXPECT_EQ(plugins_thread_init(&plugins, reinterpret_cast<sqlite3 *>(&plugins)), (std::size_t) 0);
+    EXPECT_EQ(plugins_global_init(&plugins, reinterpret_cast<struct input *>(&plugins)), (std::size_t) 0);
+    EXPECT_EQ(plugins_thread_init(&plugins, reinterpret_cast<sqlite3 *>     (&plugins)), (std::size_t) 0);
 
     // ctx
     std::size_t value = 0;

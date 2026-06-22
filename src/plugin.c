@@ -212,13 +212,13 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted) {
     return plugins->count;
 }
 
-size_t plugins_global_init(struct plugins *plugins, void *global) {
+size_t plugins_global_init(struct plugins *plugins, struct input *in) {
     /* Not checking arguments */
 
     for(size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->global_init) {
-            if (plugins->plugins[i]->ops->global_init(global) != 0) {
-                plugins_global_exit(plugins, global);
+            if (plugins->plugins[i]->ops->global_init(in) != 0) {
+                plugins_global_exit(plugins, in);
                 break;
             }
         }
@@ -318,13 +318,13 @@ void plugins_thread_exit(struct plugins *plugins, sqlite3 *db) {
     }
 }
 
-void plugins_global_exit(struct plugins *plugins, void *global) {
+void plugins_global_exit(struct plugins *plugins, struct input *in) {
     /* Not checking arguments */
 
     /* stack unwind */
     for(size_t i = plugins->initialized; i > 0; i--) {
         if (plugins->plugins[i - 1]->ops->global_exit) {
-            plugins->plugins[i - 1]->ops->global_exit(global);
+            plugins->plugins[i - 1]->ops->global_exit(in);
         }
     }
 }

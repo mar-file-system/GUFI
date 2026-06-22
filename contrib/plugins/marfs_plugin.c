@@ -604,8 +604,7 @@ static int revert_marfs_index(void) {
 }
 
 // marfs_indexing_global_init reads the marfs config and adds the namespaces to a global state.
-static int marfs_indexing_global_init(void* global) {
-    struct input* in = (struct input*)global;
+static int marfs_indexing_global_init(struct input* in) {
     pthread_mutex_t marfs_erasurelock = PTHREAD_MUTEX_INITIALIZER;
 
     size_t config_index = 0;
@@ -1186,8 +1185,8 @@ static void marfs_process_dir(void* ptr, void* user_data) {
 }
 
 // marfs_indexing_global_exit cleans up the marfs index tree and cleans up the global state
-static void marfs_indexing_global_exit(void* global) {
-    (void)global;
+static void marfs_indexing_global_exit(struct input* in) {
+    (void)in;
 
     sqlite3_shutdown();
 

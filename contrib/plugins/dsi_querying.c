@@ -143,8 +143,7 @@ static void dsi_dbpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_text(context, value + DSI_VALUE_PREFIX_LEN, -1, SQLITE_TRANSIENT);
 }
 
-static int dsi_querying_global_init(void *global) {
-    struct input *in = (struct input *) global;
+static int dsi_querying_global_init(struct input *in) {
     in->process_xattrs = 1; /* automatically enable xattr processing if not already */
 
     sqlite3_initialize();
@@ -165,8 +164,8 @@ static int dsi_querying_thread_init(sqlite3 *db) {
     return 0;
 }
 
-static void dsi_querying_global_exit(void *global) {
-    (void) global;
+static void dsi_querying_global_exit(struct input *in) {
+    (void) in;
     sqlite3_shutdown();
 }
 

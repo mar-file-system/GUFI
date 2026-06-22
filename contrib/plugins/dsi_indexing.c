@@ -64,8 +64,7 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 
-static int dsi_indexing_global_init(void *global) {
-    struct input *in = (struct input *) global;
+static int dsi_indexing_global_init(struct input *in) {
     in->process_xattrs = 1;
     return 0;
 }

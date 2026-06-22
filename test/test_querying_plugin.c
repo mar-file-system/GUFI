@@ -72,14 +72,14 @@ OF SUCH DAMAGE.
 
 #include "plugin.h"
 
-static int global_init(void *global) {
-    (void) global;
+static int global_init(struct input *in) {
+    (void) in;
     sqlite3_initialize();
     return 0;
 }
 
-static int global_bad_init(void *global) {
-    (void) global;
+static int global_bad_init(struct input *in) {
+    (void) in;
     fprintf(stderr, "Error: test_querying_plugin: Bad global initialization\n");
     /* no sqlite3_initialize() because sqlite3_shutdown() will not be called */
     return 1;
@@ -112,8 +112,8 @@ static void db_exit(void *ptr, void *user_data) {
     }
 }
 
-static void global_exit(void *global) {
-    (void) global;
+static void global_exit(struct input *in) {
+    (void) in;
     sqlite3_shutdown();
 }
 

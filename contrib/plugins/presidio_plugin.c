@@ -324,8 +324,8 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
 static sll_t curl_instances; /* CURL * */
 static int loaded = 0;
 
-static int presidio_global_init(void *global) {
-    (void) global;
+static int presidio_global_init(struct input *in) {
+    (void) in;
 
     if (loaded) {
         fprintf(stderr, "Error: Cannot load presidio plugin multiple times\n");
@@ -370,8 +370,8 @@ static void curl_instance_free(void *ptr) {
     curl_easy_cleanup(ptr);
 }
 
-static void presidio_global_exit(void *global) {
-    (void) global;
+static void presidio_global_exit(struct input *in) {
+    (void) in;
 
     sll_destroy(&curl_instances, curl_instance_free);
     sqlite3_shutdown();

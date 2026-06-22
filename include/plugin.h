@@ -72,6 +72,7 @@ extern "C" {
 #endif
 
 /* forward declarations */
+struct input;
 struct work;
 struct entry_data;
 
@@ -105,7 +106,7 @@ struct plugin_operations {
      *
      * If the plugin does SQLite 3 operations, should call sqlite3_initialize()
      */
-    int (*global_init)(void *global);
+    int (*global_init)(struct input *in);
 
     /*
      * One-time initialization of a database instance when each thread
@@ -146,7 +147,7 @@ struct plugin_operations {
      *
      * If the plugin does SQLite 3 operations, should call sqlite3_shutdown()
      */
-    void (*global_exit)(void *global);
+    void (*global_exit)(struct input *in);
 };
 
 /* none of these pointers can be NULL */
@@ -200,7 +201,7 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted);
  *         on error, stop, call plugins_global_exit() for previously
  *         successfully initialized plugins, and return error
  */
-size_t            plugins_global_init (struct plugins* plugins, void* global);
+size_t            plugins_global_init (struct plugins* plugins, struct input *in);
 size_t            plugins_thread_init (struct plugins *plugins, sqlite3 *db);
 plugin_dir_action plugins_dir_action  (struct plugins* plugins, void* ctx);
 void              plugins_ctx_init    (struct plugins* plugins, void* ctx, const size_t tid);
@@ -208,7 +209,7 @@ void              plugins_process_dir (struct plugins* plugins, void* ctx, const
 void              plugins_process_file(struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_ctx_exit    (struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_thread_exit (struct plugins *plugins, sqlite3 *db);
-void              plugins_global_exit (struct plugins* plugins, void* global);
+void              plugins_global_exit (struct plugins* plugins, struct input *in);
 
 /* common plugin ptr struct (don't have to use; here to reduce duplicate struct definitions) */
 typedef struct PluginCommonStruct {
