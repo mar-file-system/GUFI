@@ -105,3 +105,8 @@ dnf -y --enablerepo=crb install \
     nasm \
     openmpi-devel \
     readline-devel
+
+# packages for presidio
+dnf -y install \
+    cjson-devel \
+    libcurl-devel

@@ -103,3 +103,8 @@ apk add \
 
 ln -sf /usr/bin/clang-20   /usr/bin/clang
 ln -sf /usr/bin/clang++-20 /usr/bin/clang++
+
+# packages for presidio
+apk add \
+    cjson-dev \
+    curl-dev

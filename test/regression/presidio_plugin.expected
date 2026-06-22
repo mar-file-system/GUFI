@@ -40,6 +40,14 @@ prefix/1MB|email = <EMAIL_ADDRESS>
 prefix/old_file|time = <DATE_TIME>
 prefix/repeat_name|date = <DATE_TIME>
 
+# query with presidio with values set by environment variables
+$ PRESIDIO_PLUGIN_ANALYZE_URL="127.0.0.1:5002/analyze" PRESIDIO_PLUGIN_ANONYMIZE_URL="127.0.0.1:5001/anonymize" PRESIDIO_PLUGIN_LANGUAGE="en" gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;" "search" | sed '\%.*|$%d'
+prefix/.hidden|phone = <PHONE_NUMBER>
+prefix/1KB|name = <PERSON>
+prefix/1MB|email = <EMAIL_ADDRESS>
+prefix/old_file|time = <DATE_TIME>
+prefix/repeat_name|date = <DATE_TIME>
+
 # try to load presidio plugin multiple times
 $ gufi_query --plugin "presidio:presidio_plugin" --plugin "presidio:presidio_plugin"
 Error: Cannot load presidio plugin multiple times

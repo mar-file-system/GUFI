@@ -92,7 +92,7 @@ apt -y install \
     python3-pip \
     sudo
 
-# extra packages for marfs
+# packages for marfs
 apt -y install \
     automake \
     libfuse-dev \
@@ -107,3 +107,8 @@ if [[ "${VERSION_ID}" =~ 26.* ]]
 then
     apt -y install libstdc++-16-dev
 fi
+
+# packages for presidio
+apt -y install \
+    libcjson-dev \
+    libcurl4-openssl-dev

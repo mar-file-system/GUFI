@@ -148,6 +148,15 @@ jobs:
   TestDirectory:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
+    services:
+      presidio-analyzer:
+        image: mcr.microsoft.com/presidio-analyzer:latest
+        ports:
+          - 5002:3000
+      presidio-anonymizer:
+        image: mcr.microsoft.com/presidio-anonymizer:latest
+        ports:
+          - 5001:3000
     steps:
     - uses: actions/checkout@main
       with:
@@ -169,7 +178,7 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY=/tmp -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY=/tmp -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs -DPRESIDIO_PLUGIN=On
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -202,7 +211,7 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DALLOW_DB_WRITES=Off -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DALLOW_DB_WRITES=Off
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -214,6 +223,15 @@ jobs:
   ASAN-LSAN-UBSAN:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
+    services:
+      presidio-analyzer:
+        image: mcr.microsoft.com/presidio-analyzer:latest
+        ports:
+          - 5002:3000
+      presidio-anonymizer:
+        image: mcr.microsoft.com/presidio-anonymizer:latest
+        ports:
+          - 5001:3000
     env:
       CC: gcc
       CXX: g++
@@ -238,7 +256,7 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DFSANITIZE="address,leak,pointer-compare,pointer-subtract,undefined" -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DFSANITIZE="address,leak,pointer-compare,pointer-subtract,undefined" -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs -DPRESIDIO_PLUGIN=On
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -277,7 +295,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure -E "dsi|import|query_multiple_remotes|vt"
+      run:  ctest --output-on-failure -E "dsi|import|presidio|query_multiple_remotes|vt"
 
   Memcheck:
     needs: [ShellCheck, Pylint]
@@ -306,7 +324,7 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -317,6 +335,15 @@ jobs:
   WithoutJemalloc:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
+    services:
+      presidio-analyzer:
+        image: mcr.microsoft.com/presidio-analyzer:latest
+        ports:
+          - 5002:3000
+      presidio-anonymizer:
+        image: mcr.microsoft.com/presidio-anonymizer:latest
+        ports:
+          - 5001:3000
     steps:
     - uses: actions/checkout@main
       with:
@@ -338,7 +365,7 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DDEP_USE_JEMALLOC=Off -DTEST_WORKING_DIRECTORY="$(pwd)" -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DDEP_USE_JEMALLOC=Off -DTEST_WORKING_DIRECTORY="$(pwd)" -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs -DPRESIDIO_PLUGIN=On
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j

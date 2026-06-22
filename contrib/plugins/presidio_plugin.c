@@ -74,14 +74,31 @@ OF SUCH DAMAGE.
 #include "plugin.h"
 #include "str.h"
 
+static const char ANALYZE_URL_ENV[]       = "PRESIDIO_PLUGIN_ANALYZE_URL";
+static const char ANONYMIZE_URL_ENV[]     = "PRESIDIO_PLUGIN_ANONYMIZE_URL";
+static const char LANG_ENV[]              = "PRESIDIO_PLUGIN_LANGUAGE";
+
 /* defaults */
-static const char ANALYZE_URL_DEFAULT[]   = "http://localhost:5002/analyze";
-static const char ANONYMIZE_URL_DEFAULT[] = "http://localhost:5001/anonymize";
+static const char ANALYZE_URL_DEFAULT[]   = "localhost:5002/analyze";
+static const char ANONYMIZE_URL_DEFAULT[] = "localhost:5001/anonymize";
 static const str_t LANG_DEFAULT = {
-    .data = "en",
+    .data = (char *) "en",
     .len  = 2,
     .free = NULL,
 };
+
+/* ************************************* */
+/* global state */
+static int loaded = 0;       /* cannot load multiple times */
+static const char *ANALYZE_URL   = ANALYZE_URL_DEFAULT;
+static const char *ANONYMIZE_URL = ANONYMIZE_URL_DEFAULT;
+static str_t LANG                = {
+    .data = (char *) "en",
+    .len  = 2,
+    .free = NULL,
+};
+static sll_t curl_instances; /* CURL * */
+/* ************************************* */
 
 /* write results into a buffer instead of to stdout */
 static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userdata) {
@@ -181,15 +198,15 @@ static void presidio_analyze(sqlite3_context *context, int argc, sqlite3_value *
     const char *text = (char *) sqlite3_value_text(argv[0]);
     const size_t text_len = strlen(text);
 
-    char *lang = LANG_DEFAULT.data;
-    size_t lang_len = LANG_DEFAULT.len;
+    char *lang = LANG.data;
+    size_t lang_len = LANG.len;
     if (argc > 1) {
         lang = (char *) sqlite3_value_text(argv[1]);
         lang_len = strlen(lang);
     }
 
     str_t analysis = {0};
-    const int rc = presidio_analyzer(curl, ANALYZE_URL_DEFAULT,
+    const int rc = presidio_analyzer(curl, ANALYZE_URL,
                                      text, text_len,
                                      lang, lang_len,
                                      &analysis,
@@ -262,15 +279,15 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
         return;
     }
 
-    char *lang = LANG_DEFAULT.data;
-    size_t lang_len = LANG_DEFAULT.len;
+    char *lang = LANG.data;
+    size_t lang_len = LANG.len;
     if (argc > 1) {
         lang = (char *) sqlite3_value_text(argv[1]);
         lang_len = strlen(lang);
     }
 
     str_t analysis_response = {0};
-    if (presidio_analyzer(curl, ANALYZE_URL_DEFAULT,
+    if (presidio_analyzer(curl, ANALYZE_URL,
                           text, text_len,
                           lang, lang_len,
                           &analysis_response,
@@ -280,7 +297,7 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
     }
 
     str_t anonymized_response = {0};
-    const int rc = presidio_anonymizer(curl, ANONYMIZE_URL_DEFAULT,
+    const int rc = presidio_anonymizer(curl, ANONYMIZE_URL,
                                        text, text_len,
                                        &analysis_response,
                                        &anonymized_response,
@@ -321,8 +338,44 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
     free(anonymized_response.data);
 }
 
-static sll_t curl_instances; /* CURL * */
-static int loaded = 0;
+static int set_plugin_state_var(const char *env, const char **global) {
+    const char *val = getenv(env);
+    if (val) {
+        const size_t len = strlen(val);
+        if (len == 0) {
+            return 1;
+        }
+
+        *global = malloc(len + 1);
+        if (!*global) {
+            return 1;
+        }
+
+        memcpy((char *) *global, val, len + 1);
+    }
+    return 0;
+}
+
+static void reset_globals(void) {
+    if (LANG.data != LANG_DEFAULT.data) {
+        free(LANG.data);
+        LANG.data = LANG_DEFAULT.data;
+    }
+
+    if (LANG.len != LANG_DEFAULT.len) {
+        LANG.len = LANG_DEFAULT.len;
+    }
+
+    if (ANONYMIZE_URL != ANONYMIZE_URL_DEFAULT) {
+        free((char *) ANONYMIZE_URL);
+        ANONYMIZE_URL = ANONYMIZE_URL_DEFAULT;
+    }
+
+    if (ANALYZE_URL != ANALYZE_URL_DEFAULT) {
+        free((char *) ANALYZE_URL);
+        ANALYZE_URL = ANALYZE_URL_DEFAULT;
+    }
+}
 
 static int presidio_global_init(struct input *in) {
     (void) in;
@@ -331,11 +384,21 @@ static int presidio_global_init(struct input *in) {
         fprintf(stderr, "Error: Cannot load presidio plugin multiple times\n");
         return 1;
     }
-    loaded++;
+
+    if ((set_plugin_state_var(ANALYZE_URL_ENV,   &ANALYZE_URL)      != 0) ||
+        (set_plugin_state_var(ANONYMIZE_URL_ENV, &ANONYMIZE_URL)    != 0) ||
+        (set_plugin_state_var(LANG_ENV, (const char **) &LANG.data) != 0)) {
+        reset_globals();
+        return 1;
+    }
+
+    LANG.len = strlen(LANG.data);
 
     curl_global_init(CURL_GLOBAL_ALL);
     sqlite3_initialize();
     sll_init(&curl_instances);
+
+    loaded++;
 
     return 0;
 }
@@ -376,6 +439,8 @@ static void presidio_global_exit(struct input *in) {
     sll_destroy(&curl_instances, curl_instance_free);
     sqlite3_shutdown();
     curl_global_cleanup();
+
+    reset_globals();
 
     loaded--;
 }
