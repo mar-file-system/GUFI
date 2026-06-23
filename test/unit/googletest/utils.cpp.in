@@ -444,8 +444,8 @@ TEST(shortpath, split) {
     #define LAST "e"
     #define SRC PATH "/" LAST
 
-    char dst[MAXPATH];
-    char endname[MAXPATH];
+    char dst[sizeof(SRC)];
+    char endname[sizeof(SRC)];
 
     // path ending with basename
     EXPECT_EQ(shortpath(SRC, dst, endname), 0);
@@ -472,14 +472,14 @@ TEST(dupdir, parentfirst) {
     char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
-    char parent[MAXPATH];
+    char parent[14];
     EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[MAXPATH];
+    char child[20];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
@@ -512,23 +512,23 @@ TEST(dupdir, parentfirst) {
     EXPECT_EQ(orig_child_stat.st_gid,             child_stat.st_gid);
 }
 
-TEST(dupdir, childtfirst) {
+TEST(dupdir, childfirst) {
     char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
-    char parent[MAXPATH];
+    char parent[14];
     EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
-    orig_parent_stat.st_uid = geteuid();
-    orig_parent_stat.st_gid = getegid();
+    orig_parent_stat.st_uid  = geteuid();
+    orig_parent_stat.st_gid  = getegid();
 
-    char child[MAXPATH];
+    char child[20];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
-    orig_child_stat.st_uid = geteuid();
-    orig_child_stat.st_gid = getegid();
+    orig_child_stat.st_uid  = geteuid();
+    orig_child_stat.st_gid  = getegid();
 
     // remove leftover directories
     rmdir(child);
@@ -536,7 +536,7 @@ TEST(dupdir, childtfirst) {
 
     const mode_t prev_umask = umask(0);
 
-    ASSERT_EQ(dupdir(child,  orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid), 0);
+    ASSERT_EQ(dupdir(child, orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid), 0);
 
     // parent path should have the same permissions as the child path
     {
@@ -572,7 +572,7 @@ TEST(dupdir, childtfirst) {
     EXPECT_EQ(orig_parent_stat.st_uid,            parent_stat.st_uid);
     EXPECT_EQ(orig_parent_stat.st_gid,            parent_stat.st_gid);
 
-    EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR,  child_stat.st_mode);
+    EXPECT_EQ(orig_child_stat.st_mode  | S_IFDIR, child_stat.st_mode);
     EXPECT_EQ(orig_child_stat.st_uid,             child_stat.st_uid);
     EXPECT_EQ(orig_child_stat.st_gid,             child_stat.st_gid);
 }
@@ -583,7 +583,7 @@ TEST(dupdir, fileasdir) {
     ASSERT_GE(fd, -1);
     EXPECT_EQ(close(fd), 0);
 
-    char child[MAXPATH];
+    char child[13];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
 
     EXPECT_NE(dupdir(parent, S_IRWXU, geteuid(), getegid()), 0);
@@ -591,18 +591,25 @@ TEST(dupdir, fileasdir) {
     EXPECT_EQ(remove(parent), 0);
 }
 
+TEST(dupdir, exists) {
+    char root[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(root), nullptr);
+    EXPECT_EQ(dupdir(root, S_IRWXU, geteuid(), getegid()), 0);
+    rmdir(root);
+}
+
 TEST(mkpath, parentfirst) {
     char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
-    char parent[MAXPATH];
+    char parent[14];
     EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[MAXPATH];
+    char child[20];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
@@ -644,14 +651,14 @@ TEST(mkpath, childfirst) {
     char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
-    char parent[MAXPATH];
+    char parent[14];
     EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[MAXPATH];
+    char child[20];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
@@ -693,7 +700,7 @@ TEST(mkpath, fileasdir) {
     EXPECT_EQ(close(fd), 0);
 
     // need 2 levels due to how mkpath is implemented
-    char child[MAXPATH];
+    char child[18];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/dir/subdir", parent), 0);
     EXPECT_EQ(mkpath(child, S_IRWXU, geteuid(), getegid()), -1);
 
@@ -821,7 +828,7 @@ TEST(dirname, len) {
 
 TEST(split, delims) {
     const char delims[] = "\xfe\xff";
-    char line[MAXPATH];
+    char line[7];
     const std::size_t line_len = SNFORMAT_S(line, MAXPATH, 6,
                                        "a", 1,
                                        delims, 1,
@@ -862,6 +869,9 @@ TEST(split, delims) {
     EXPECT_EQ(next, nullptr);
 
     next = split(line, delims, 2, nullptr);
+    EXPECT_EQ(next, nullptr);
+
+    next = split((char *) end, delims, 2, end);
     EXPECT_EQ(next, nullptr);
 
     next = split((char *) end + 1, delims, 2, end);
@@ -1135,7 +1145,7 @@ TEST(set_metadata, bad) {
     char dir[] = "XXXXXX";
     ASSERT_NE(mkdtemp(dir), nullptr);
 
-    char path[MAXPATH];
+    char path[12];
     snprintf(path, sizeof(path), "%s/file", dir);
 
     struct stat st;
@@ -1328,6 +1338,33 @@ TEST(write_with_resize, good) {
     EXPECT_STREQ(buf, "a1234a");
 
     free(buf);
+}
+
+TEST(opendir, wrapper) {
+    char path[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(path), nullptr);
+
+    const uint64_t no_print_errno[4] = {1ULL << 2, 0, 0, 0};
+
+    for(const uint64_t *bitfield: {(const uint64_t *) nullptr, no_print_errno}) {
+        // open existing directory
+        {
+            DIR *dir = opendir_wrapper(path, bitfield);
+            EXPECT_NE(dir, nullptr);
+            closedir(dir);
+        }
+
+        // open nonexistent directory
+        {
+            char subdir[] = "XXXXXX/nonexistent";
+            memcpy(subdir, path, strlen(path));
+
+            DIR *dir = opendir_wrapper(subdir, bitfield);
+            EXPECT_EQ(dir, nullptr);
+        }
+    }
+
+    rmdir(path);
 }
 
 TEST(dir, match) {

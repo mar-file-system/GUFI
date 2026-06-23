@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #include <atomic>
 #include <inttypes.h>
 #include <pthread.h> // macOS doesn't seem to like std::mutex
+#include <sys/resource.h>
 
 #include <gtest/gtest.h>
 
@@ -130,6 +131,26 @@ TEST(QueuePerThreadPool, bad_start) {
     QPTPool_stop(ctx);
     QPTPool_destroy(ctx);
 }
+
+#if defined(DEBUG) && defined(__linux__) && defined(RLIMIT_NPROC_UNIT_TESTS)
+TEST(QueuePerThreadPool, cant_start_threads) {
+    struct rlimit orig;
+    ASSERT_EQ(getrlimit(RLIMIT_NPROC, &orig), 0);
+
+    struct rlimit fewer = orig;
+    fewer.rlim_cur = 1;
+    ASSERT_LT(fewer.rlim_cur, THREADS);
+    ASSERT_EQ(setrlimit(RLIMIT_NPROC, &fewer), 0);
+
+    QPTPool_ctx_t *ctx = QPTPool_init(THREADS, NULL);
+    ASSERT_NE(ctx, nullptr);
+    EXPECT_EQ(QPTPool_start(ctx), 1);
+    QPTPool_stop(ctx); // just in case QPTPool_start succeeds (doesn't hurt if failed)
+    QPTPool_destroy(ctx);
+
+    ASSERT_EQ(setrlimit(RLIMIT_NPROC, &orig), 0);
+}
+#endif
 
 // not starting up QPTPool even though there
 // is work queued should not leak memory

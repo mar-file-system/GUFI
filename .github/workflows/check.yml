@@ -135,7 +135,7 @@ jobs:
       run:  |
             mkdir -p build
             cd build
-            cmake .. ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs
+            cmake .. ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs -DRLIMIT_NPROC_UNIT_TESTS=Off
 
     - name: Build
       working-directory: ${{ github.workspace }}/build

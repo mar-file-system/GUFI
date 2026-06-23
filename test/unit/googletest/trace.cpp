@@ -316,11 +316,112 @@ TEST(trace, linetowork) {
 
     xattrs_cleanup(&ed.xattrs);
     free(work);
+
+    // name does not end with delimiter (do this before modifying length)
+    line[PATH_PREFIX_LEN + src->name_len] = '\0';
+    EXPECT_EQ(linetowork(line,    rc, delim, &work,   &ed,     0), -1);
+    line[PATH_PREFIX_LEN + src->name_len] = delim;
+
     free(src);
 
-    EXPECT_EQ(linetowork(nullptr, rc, delim, &work, &ed,  0), -1);
-    EXPECT_EQ(linetowork(line, rc, delim, nullptr,  &ed,  0), -1);
-    EXPECT_EQ(linetowork(line, rc, delim, &work, nullptr, 0), -1);
+    // name characters are not valid
+    for(size_t i = 0; i < PATH_PREFIX_LEN; i++) {
+        line[i] = '-';
+    };
+    EXPECT_EQ(linetowork(line,    rc, delim, &work,   &ed,     0), -1);
+
+    // name length is too long
+    for(size_t i = 0; i < PATH_PREFIX_LEN; i++) {
+        line[i] = 'f';
+    };
+    EXPECT_EQ(linetowork(line,    rc, delim, &work,   &ed,     0), -1);
+
+    EXPECT_EQ(linetowork(nullptr, rc, delim, &work,   &ed,     0), -1);
+    EXPECT_EQ(linetowork(line,    rc, delim, nullptr, &ed,     0), -1);
+    EXPECT_EQ(linetowork(line,    rc, delim, &work,   nullptr, 0), -1);
+}
+
+TEST(old_trace, linetowork) {
+    struct entry_data src_ed;
+    struct work *src = get_work(&src_ed);
+
+    // write the known struct to a string using an alternative write function
+    char line[4096];
+    char *curr = line;
+    const int part1 = snprintf(curr, sizeof(line),
+                               "%s%c"
+                               "%c%c"
+                               "%" STAT_ino "%c"
+                               "%d%c"
+                               "%" STAT_nlink "%c"
+                               "%d%c"
+                               "%d%c"
+                               "%" STAT_size "%c"
+                               "%" STAT_bsize "%c"
+                               "%" STAT_blocks "%c"
+                               "%ld%c"
+                               "%ld%c"
+                               "%ld%c"
+                               "%s%c",
+                               src->name,               delim,
+                               src_ed.type,             delim,
+                               src->statuso.st_ino,     delim,
+                               src->statuso.st_mode,    delim,
+                               src->statuso.st_nlink,   delim,
+                               src->statuso.st_uid,     delim,
+                               src->statuso.st_gid,     delim,
+                               src->statuso.st_size,    delim,
+                               src->statuso.st_blksize, delim,
+                               src->statuso.st_blocks,  delim,
+                               src->statuso.st_atime,   delim,
+                               src->statuso.st_mtime,   delim,
+                               src->statuso.st_ctime,   delim,
+                               src_ed.linkname,         delim);
+
+    curr += part1;
+
+    memcpy(curr, EXPECTED_XATTRS_STR + 8, EXPECTED_XATTRS_STR_LEN - 8);
+    curr += EXPECTED_XATTRS_STR_LEN - 8;
+
+    const int part2 = snprintf(curr, sizeof(line),
+                               "%c"
+                               "%ld%c"
+                               "%d%c"
+                               "%d%c"
+                               "%d%c"
+                               "%d%c"
+                               "%s%c"
+                               "%s%c"
+                               "%lld%c"
+                               "\n",
+                                                delim,
+                               src->crtime,     delim,
+                               src_ed.ossint1,  delim,
+                               src_ed.ossint2,  delim,
+                               src_ed.ossint3,  delim,
+                               src_ed.ossint4,  delim,
+                               src_ed.osstext1, delim,
+                               src_ed.osstext2, delim,
+                               src->pinode,     delim);
+
+    curr += part2;
+    *curr = '\0';
+
+    // read the string
+    struct work *work = nullptr;
+    struct entry_data ed;
+    EXPECT_EQ(linetowork(line, curr - line, delim, &work, &ed, 1), 0);
+
+    COMPARE(src, &src_ed, work, &ed);
+
+    EXPECT_STREQ(ed.xattrs.pairs[0].name,  EXPECTED_XATTRS.pairs[0].name);
+    EXPECT_STREQ(ed.xattrs.pairs[0].value, EXPECTED_XATTRS.pairs[0].value);
+    EXPECT_STREQ(ed.xattrs.pairs[1].name,  EXPECTED_XATTRS.pairs[1].name);
+    EXPECT_STREQ(ed.xattrs.pairs[1].value, EXPECTED_XATTRS.pairs[1].value);
+
+    xattrs_cleanup(&ed.xattrs);
+    free(work);
+    free(src);
 }
 
 TEST(open_traces, too_many) {

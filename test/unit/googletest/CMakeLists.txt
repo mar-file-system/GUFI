@@ -65,6 +65,8 @@
 include(CheckLanguage)
 
 if (CMAKE_CXX_COMPILER)
+  option(RLIMIT_NPROC_UNIT_TEST On "Whether or not to run unit tests that use RLIMIT_NPROC")
+
   configure_file(valgrind.suppressions valgrind.suppressions COPYONLY)
 
   include_directories("${DEP_INSTALL_PREFIX}/googletest/include")
@@ -113,6 +115,10 @@ if (CMAKE_CXX_COMPILER)
       "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
     )
   endforeach()
+
+  if (RLIMIT_NPROC_UNIT_TESTS)
+    set_source_files_properties(QueuePerThreadPool.cpp PROPERTIES COMPILE_FLAGS -DRLIMIT_NPROC_UNIT_TESTS=1)
+  endif()
 
   add_executable(unit_tests main.cpp ${TEST_SRC} $<TARGET_OBJECTS:gufi_query_lib>)
   target_link_libraries(unit_tests -L"${DEP_INSTALL_PREFIX}/googletest/lib" -L"${DEP_INSTALL_PREFIX}/googletest/lib64" gtest ${COMMON_LIBRARIES})

@@ -107,3 +107,9 @@ TEST(str, cmp) {
         str_free_existing(&lhs);
     }
 }
+
+TEST(str, free_reference) {
+    str_t *str = (str_t *) calloc(1, sizeof(*str));
+    // str->free is NULL
+    str_free(str);
+}

@@ -51,9 +51,16 @@ prefix/empty_directory 0 0 0 0 0
 prefix/leaf_directory 0 2 0 2 0
 prefix/unusual#? directory , 0 1 0 1 0
 
+# Don't regenerate treesummary tables
+$ gufi_treesummary_all --dont-reprocess "prefix"
+
 # Missing db.db
 $ gufi_treesummary_all "search"
 Cannot open database: search/db.db unable to open database file rc 14
+
+# Empty db.db
+$ gufi_treesummary_all "search"
+Error: Could not get data from summary table at "search": no such table: summary
 
 # Multiple paths with --min-level and --path-list
 $ gufi_treesummary_all --min-level 1 --path-list path_list "search" "search"
