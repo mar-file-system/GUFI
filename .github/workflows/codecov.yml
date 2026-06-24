@@ -74,6 +74,15 @@ env:
 jobs:
   CodeCoverage:
     runs-on: ubuntu-latest
+    services:
+      presidio-analyzer:
+        image: mcr.microsoft.com/presidio-analyzer:latest
+        ports:
+          - 5002:3000
+      presidio-anonymizer:
+        image: mcr.microsoft.com/presidio-anonymizer:latest
+        ports:
+          - 5001:3000
     steps:
     - uses: actions/checkout@main
       with:
@@ -91,6 +100,9 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
     - name: Coverage Prerequisites
       run:  |
             sudo apt install gcovr
@@ -99,7 +111,7 @@ jobs:
             python3 -m pip install pytest
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs -DPRESIDIO_PLUGIN=On
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -125,9 +137,10 @@ jobs:
             (${{ github.workspace }}/build/test/regression/gufi_find.sh                   || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_getfattr.sh               || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_ls.sh                     || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/gufi_query.py.sh               || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/gufi_query_multiple_remotes.sh || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_stat.sh                   || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_stats.sh                  || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/gufi_query_multiple_remotes.sh || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/import.sh                      || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/longitudinal_snapshot.sh       || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/querydbs.sh                    || true) > /dev/null 2>&1
