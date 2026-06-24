@@ -201,9 +201,8 @@ run_sort "${GUFI_FIND} -name repeat_name --num-results 2"
 # zero some columns to make test easier
 run_no_sort "${GUFI_QUERY} -a 1 -w -E \"UPDATE entries SET inode = 0, uid = 0, gid = 0;\" \"${SEARCH}\""
 
-# %H and %l still need fixing
 # shellcheck disable=SC2016
-run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y\n\" -type f" | @AWK@ '{ if ((NR > 1) && (NF > 8)) { $3=0; $6=0; $7=0; $8=0; } print }' | sort -n -k 2; echo
+run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %H %i %l %m %M %n %p %P %s %t %U %y\n\" -type f" | @AWK@ '{ if ((NR > 1) && (NF > 8)) { $3=0; $6=0; $7=0; $8=0; } print }' | sort -n -k 2; echo
 
 # path must come before expressions
 run_no_sort "${GUFI_FIND} -empty path_after_expression 2>&1 | @GREP@ \"RuntimeError:\""
