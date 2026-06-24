@@ -99,6 +99,9 @@ set(GUFI_VT
   gufi_vt_py # test gufi_vt with the builtin Python SQLite library
 )
 
+# gufi_vt.common is always required by gufi_vt test
+configure_file(gufi_vt.common gufi_vt.common @ONLY)
+
 # Python wrapper tool (not part of scripts)
 configure_file(gufi_vt_py.py.in gufi_vt_py.py @ONLY)
 
@@ -139,19 +142,19 @@ set(PYTHON
   gufi_find
   gufi_getfattr
   gufi_ls
+  gufi_query_multiple_remotes
   gufi_stat
   gufi_stats
 )
+
+# replacement main for python scripts
+configure_file(gufi_tool.py.in gufi_tool.py @ONLY)
 
 if (CLIENT)
   list(APPEND PYTHON
     gufi_query.py
   )
 endif()
-
-list(APPEND PYTHON
-  gufi_query_multiple_remotes
-)
 
 set(EXAMPLES
   deluidgidsummaryrecs
@@ -166,16 +169,38 @@ set(EXAMPLES
   userfilespacehogusesummary
 )
 
+set(PLUGINS
+  dsi_plugins
+  gufi_plugin
+)
+
+if (TARGET marfs_plugin)
+  # marfs_plugin test config
+  configure_file(
+    marfs_plugin_config.xml.in
+    marfs_plugin_config.xml
+    @ONLY
+  )
+
+  list(APPEND PLUGINS
+    marfs_plugin
+  )
+endif()
+
+if (PRESIDIO_PLUGIN)
+  list(APPEND PLUGINS
+    presidio_plugin
+  )
+endif()
+
 set(OTHERS
   deploy
-  dsi_plugins
   external_attach
   external_copy
   gufi_distributed
   gufi_find_outliers
   gufi_incremental_update
   gufi_jail
-  gufi_plugin
   longitudinal_snapshot
   parallel_cpr
   parallel_find
@@ -183,12 +208,6 @@ set(OTHERS
   querydbs
   run_vt
 )
-
-if (PRESIDIO_PLUGIN)
-  list(APPEND OTHERS
-    presidio_plugin
-  )
-endif()
 
 if (COMPOPT EQUAL 0)
   list(APPEND OTHERS
@@ -209,24 +228,8 @@ if (CMAKE_CXX_COMPILER)
   )
 endif()
 
-# replacement main for python scripts
-configure_file(gufi_tool.py.in gufi_tool.py @ONLY)
-
-# gufi_vt.common is always required by gufi_vt test
-configure_file(gufi_vt.common gufi_vt.common @ONLY)
-
-if (TARGET marfs_plugin)
-  # marfs_plugin test config
-  configure_file(
-    marfs_plugin_config.xml.in
-    marfs_plugin_config.xml
-    @ONLY
-  )
-
-  list(APPEND OTHERS
-    marfs_plugin
-  )
-endif()
+# ###################################################
+# create tests and label as regression tests
 
 # .sh and .expected
 function(sh_and_expected)
@@ -244,6 +247,10 @@ sh_and_expected(${BINARIES})
 sh_and_expected(${GUFI_VT})
 sh_and_expected(${PYTHON})
 
+sh_and_expected(${EXAMPLES})
+sh_and_expected(${PLUGINS})
+sh_and_expected(${OTHERS})
+
 # add import test
 # import test does not have a .expected file
 configure_file(import.py.in import.py @ONLY)
@@ -252,8 +259,10 @@ add_test(NAME "import" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/import.sh"
   WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
 set_property(TEST "import" APPEND PROPERTY LABELS "regression;python")
 
-sh_and_expected(${EXAMPLES})
-sh_and_expected(${OTHERS})
+# ###################################################
+
+# ###################################################
+# label tests
 
 foreach(NAME ${BINARIES})
   set_property(TEST "${NAME}" APPEND PROPERTY LABELS "binary")
@@ -277,13 +286,17 @@ foreach(NAME ${PYTHON})
 endforeach()
 set_property(TEST "gufi_query_multiple_remotes" APPEND PROPERTY LABELS "gufi_vt")
 
-# OTHERS
-set_property(TEST "dsi_plugins" APPEND PROPERTY LABELS "gufi_vt;binary;plugin")
-set_property(TEST "gufi_plugin" APPEND PROPERTY LABELS "plugin")
-if (TARGET marfs_plugin)
-  set_property(TEST "marfs_plugin" APPEND PROPERTY LABELS "binary;plugin")
+foreach(NAME ${PLUGINS})
+  set_property(TEST "${NAME}" APPEND PROPERTY LABELS "binary;plugin")
+endforeach()
+set_property(TEST "dsi_plugins" APPEND PROPERTY LABELS "gufi_vt")
+if (PRESIDIO_PLUGIN)
+  set_property(TEST "presidio_plugin" APPEND PROPERTY LABELS "gufi_vt")
 endif()
+# ###################################################
 
+# ###################################################
+# do all of above for tests that require sudo
 find_program(SUDO sudo)
 if (SUDO)
   if (APPLE OR DARWIN)
@@ -292,37 +305,30 @@ if (SUDO)
 
   set(ENABLE_SUDO_TESTS Off CACHE BOOL "Whether or not to enable tests that need sudo")
   if (ENABLE_SUDO_TESTS)
+    message(STATUS "Adding tests that require sudo.")
+
     configure_file("rollup_tree.sh.in" "rollup_tree.sh" @ONLY)
 
-    set(SUDO_BINARIES
+    set(NEED_SUDO
       gufi_rollup
       gufi_rollup_topdown
       gufi_unrollup
-    )
-
-    set(SUDO_OTHERS
       xattrs
     )
 
     # .sh and .expected
-    set(NEED_SUDO
-      ${SUDO_BINARIES}
-      ${SUDO_OTHERS}
-    )
-
     foreach(NAME ${NEED_SUDO})
       configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
       configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
       add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
         WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-      set_property(TEST "${NAME}" APPEND PROPERTY LABELS "regression;sudo")
+      set_property(TEST "${NAME}" APPEND PROPERTY LABELS "binary;regression;sudo")
     endforeach()
-
-    foreach(NAME ${SUDO_BINARIES})
-      set_property(TEST "${NAME}" APPEND PROPERTY LABELS "binary")
-    endforeach()
+  else()
+    message(STATUS "sudo executable found but sudo tests have been disabled.")
   endif()
 else()
   message(STATUS "sudo executable not found. Not running tests requiring sudo.")
 endif()
+# ###################################################
