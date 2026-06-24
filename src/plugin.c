@@ -97,7 +97,7 @@ struct plugin *load_plugin_library(const char *plugin_arg, const size_t len) {
         return NULL;
     }
 
-    void *lib = dlopen(filename, RTLD_NOW);
+    void *lib = dlopen(filename, RTLD_NOW | RTLD_NODELETE);
     if (!lib) {
         fprintf(stderr, "Error: Could not open plugin library %s\n",
                 dlerror());

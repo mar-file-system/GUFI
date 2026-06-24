@@ -169,8 +169,11 @@ then
         else
             ASAN_PRELOAD=$(gcc -print-file-name=libasan.so)
         fi
+        # https://github.com/google/sanitizers/wiki/SanitizerCommonFlags
+        # https://github.com/google/sanitizers/wiki/addresssanitizerflags
         export ASAN_OPTIONS="allocator_may_return_null=1:detect_invalid_pointer_pairs=1"
-        export LSAN_OPTIONS="suppressions=${BINARY_DIR}/test/lsan.suppressions:print_suppressions=0"
+        # https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer
+        export LSAN_OPTIONS="suppressions=${BINARY_DIR}/test/lsan.suppressions:print_suppressions=0:fast_unwind_on_malloc=0"
     fi
 
     export UBSAN_OPTIONS="suppressions=${BINARY_DIR}/test/ubsan.suppressions"

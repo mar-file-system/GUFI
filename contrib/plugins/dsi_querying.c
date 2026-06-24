@@ -120,6 +120,11 @@ static void dsi_uuid(sqlite3_context *context, int argc, sqlite3_value **argv) {
     }
 
     const char *value = (char *) sqlite3_value_text(argv[1]);
+    if (!value || (strlen(value) < DSI_VALUE_PREFIX_LEN)) {
+        sqlite3_result_error(context, "Cannot get DSI UUID", -1);
+        return;
+    }
+
     sqlite3_result_text(context, value, DSI_VALUE_UUID_LEN, SQLITE_TRANSIENT);
 }
 
@@ -140,6 +145,11 @@ static void dsi_dbpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     }
 
     const char *value = (char *) sqlite3_value_text(argv[1]);
+    if (!value || (strlen(value) < DSI_VALUE_PREFIX_LEN)) {
+        sqlite3_result_error(context, "Cannot get DSI collection database path", -1);
+        return;
+    }
+
     sqlite3_result_text(context, value + DSI_VALUE_PREFIX_LEN, -1, SQLITE_TRANSIENT);
 }
 

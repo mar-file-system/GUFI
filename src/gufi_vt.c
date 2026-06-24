@@ -1432,6 +1432,8 @@ static int gufi_vtOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor) {
 static int gufi_vtClose(sqlite3_vtab_cursor *cur) {
     gufi_vtab_cursor *pCur = (gufi_vtab_cursor *) cur;
     gufi_vtab_cursor_fini(pCur);
+    popen_argv_close(pCur->output);
+    pCur->output = NULL;
     sqlite3_free(cur);
     return SQLITE_OK;
 }

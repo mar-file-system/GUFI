@@ -80,12 +80,29 @@ OUTPUT="presidio_plugin.out"
     echo "# query without presidio"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), osstext1 FROM vrxpentries\" \"${SEARCH}\" | @SED@ '\%.*|$%d'"
 
-    echo "# query with presidio"
-    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;\" \"${SEARCH}\" | @SED@ '\%.*|$%d'"
+    echo "# analyze with presidio"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_analyze(osstext1) FROM vrxpentries;\" \"${SEARCH}\" | @SED@ '\%.*|$%d'" | @SED@ 's%: [0-9]\+\(\.[0-9]\+\)\?%: #%g;'
 
-    echo "# query with presidio through gufi_vt"
+    echo "# analyze with presidio through gufi_vt"
     query=$(
         echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        # deliberately SELECT-ing (osstext1 == '') to make sure empty
+        # strings get passed into presidio plugin functions
+        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, presidio_analyze(osstext1) AS analyze, (osstext1 == '') AS empty FROM vrpentries;\", "
+        echo "    plugin=\"presidio:${PRESIDIO_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT fullpath, analyze FROM gufi WHERE empty == '0';"
+    )
+    gufi_vt "${query}" 2>&1 | replace | @SED@ 's%: [0-9]\+\(\.[0-9]\+\)\?%: #%g;'
+
+    echo "# anonymize with presidio"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;\" \"${SEARCH}\" | @SED@ '\%.*|$%d'"
+
+    echo "# anonymize with presidio through gufi_vt"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        # deliberately SELECT-ing (osstext1 == '') to make sure empty
+        # strings get passed into presidio plugin functions
         echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, presidio_anonymize(osstext1) AS anonymized, (osstext1 == '') AS empty FROM vrpentries;\", "
         echo "    plugin=\"presidio:${PRESIDIO_QUERYING_PLUGIN}\", "
         echo "    \"${INDEXROOT}\");"
@@ -93,8 +110,20 @@ OUTPUT="presidio_plugin.out"
     )
     gufi_vt "${query}" 2>&1 | replace
 
-    echo "# query with presidio with values set by environment variables"
-    run_sort "PRESIDIO_PLUGIN_ANALYZE_URL=\"127.0.0.1:5002/analyze\" PRESIDIO_PLUGIN_ANONYMIZE_URL=\"127.0.0.1:5001/anonymize\" PRESIDIO_PLUGIN_LANGUAGE=\"en\" ${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;\" \"${SEARCH}\" | @SED@ '\%.*|$%d'"
+    echo "# anonymize with presidio with values set by environment variables"
+    run_sort "PRESIDIO_PLUGIN_ANALYZE_URL=\"127.0.0.1:5002/analyze\" PRESIDIO_PLUGIN_ANONYMIZE_URL=\"127.0.0.1:5001/anonymize\" PRESIDIO_PLUGIN_LANGUAGE=\"en\" ${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries WHERE osstext1 != '';\" \"${SEARCH}\""
+
+    echo "# empty default language"
+    run_no_sort "PRESIDIO_PLUGIN_LANGUAGE=\"\" ${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;\" \"${SEARCH}\""
+
+    echo "# empty language"
+    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1, '') FROM vrxpentries WHERE osstext1 != '';\" \"${SEARCH}\""
+
+    echo "# unknown default language"
+    run_no_sort "PRESIDIO_PLUGIN_LANGUAGE=\"unknown\" ${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries WHERE osstext1 != '';\" \"${SEARCH}\""
+
+    echo "# unknown language"
+    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1, 'unknown') FROM vrxpentries WHERE osstext1 != '';\" \"${SEARCH}\""
 
     echo "# try to load presidio plugin multiple times"
     run_sort "${GUFI_QUERY} --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\""

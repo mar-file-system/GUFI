@@ -133,16 +133,40 @@ static int do_curl(CURL *curl, const char *url,
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
 
     CURLcode res = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+
     if (res != CURLE_OK) {
         sqlite3_result_error(context, curl_easy_strerror(res), -1);
         free(response->data);
         response->data = NULL;
         response->len = 0;
+        return 1;
     }
 
-    curl_slist_free_all(headers);
+    long http_code = 0;
+    if (curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code) == CURLE_OK) {
+        if (http_code >= 400) {
+            char err[1024];
+            if (response->len) {
+                response->data[response->len - 1] = '\0'; /* remove trailing newline */
+                 snprintf(err, sizeof(err),
+                          "Request returned with HTTP code %ld: %s",
+                          http_code, response->data);
+            }
+            else {
+                snprintf(err, sizeof(err),
+                         "Request returned with HTTP code %ld",
+                         http_code);
+            }
+            sqlite3_result_error(context, err, -1);
+            free(response->data);
+            response->data = NULL;
+            response->len = 0;
+            return 1;
+        }
+    }
 
-    return (res != CURLE_OK);
+    return 0;
 }
 
 /*
@@ -155,8 +179,7 @@ static int presidio_analyzer(CURL *curl, const char *url,
                              const char *lang, const size_t lang_len,
                              str_t *analysis,
                              sqlite3_context *context) {
-    if (!text || !text_len ||
-        !lang || !lang_len) {
+    if (!text || !text_len) {
         memset(analysis, 0, sizeof(*analysis));
         return 0;
     }
@@ -196,12 +219,21 @@ static void presidio_analyze(sqlite3_context *context, int argc, sqlite3_value *
     CURL *curl = (CURL *) sqlite3_user_data(context);
 
     const char *text = (char *) sqlite3_value_text(argv[0]);
+    if (!text) {
+        sqlite3_result_null(context);
+        return;
+    }
+
     const size_t text_len = strlen(text);
 
     char *lang = LANG.data;
     size_t lang_len = LANG.len;
     if (argc > 1) {
         lang = (char *) sqlite3_value_text(argv[1]);
+        if (!lang) {
+            sqlite3_result_error(context, "Bad language", -1);
+            return;
+        }
         lang_len = strlen(lang);
     }
 
@@ -283,6 +315,10 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
     size_t lang_len = LANG.len;
     if (argc > 1) {
         lang = (char *) sqlite3_value_text(argv[1]);
+        if (!lang) {
+            sqlite3_result_error(context, "Bad language", -1);
+            return;
+        }
         lang_len = strlen(lang);
     }
 
@@ -324,13 +360,12 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
         goto cleanup;
     }
 
-    if (!cJSON_IsString(anon_text) || !anon_text->valuestring) {
-        sqlite3_result_error(context, "text field is not a string", -1);
-        cJSON_Delete(json);
-        goto cleanup;
+    if (cJSON_IsString(anon_text) && anon_text->valuestring) {
+        sqlite3_result_text(context, anon_text->valuestring, -1, SQLITE_TRANSIENT);
     }
-
-    sqlite3_result_text(context, anon_text->valuestring, -1, SQLITE_TRANSIENT);
+    else{
+        sqlite3_result_error(context, "text field is not a string", -1);
+    }
 
     cJSON_Delete(json);
 
@@ -343,6 +378,7 @@ static int set_plugin_state_var(const char *env, const char **global) {
     if (val) {
         const size_t len = strlen(val);
         if (len == 0) {
+            fprintf(stderr, "Error: Empty environment variable: %s\n", env);
             return 1;
         }
 

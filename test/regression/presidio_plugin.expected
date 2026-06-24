@@ -17,7 +17,30 @@ prefix/1MB|email = gufi-lanl@lanl.gov
 prefix/old_file|time = 00:00 AM
 prefix/repeat_name|date = Jan 1, 1970
 
-# query with presidio
+# analyze with presidio
+$ gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_analyze(osstext1) FROM vrxpentries;" "search" | sed '\%.*|$%d'
+prefix/.hidden|[{"analysis_explanation": null, "end": #, "entity_type": "PHONE_NUMBER", "score": #, "start": #}]
+prefix/1KB|[{"analysis_explanation": null, "end": #, "entity_type": "PERSON", "score": #, "start": #}]
+prefix/1MB|[{"analysis_explanation": null, "end": #, "entity_type": "EMAIL_ADDRESS", "score": #, "start": #}, {"analysis_explanation": null, "end": #, "entity_type": "URL", "score": #, "start": #}]
+prefix/old_file|[{"analysis_explanation": null, "end": #, "entity_type": "DATE_TIME", "score": #, "start": #}]
+prefix/repeat_name|[{"analysis_explanation": null, "end": #, "entity_type": "DATE_TIME", "score": #, "start": #}]
+
+# analyze with presidio through gufi_vt
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT rpath(sname, sroll, name) AS fullpath, presidio_analyze(osstext1) AS analyze, (osstext1 == '') AS empty FROM vrpentries;",
+    plugin="presidio:presidio_plugin",
+    "prefix");
+SELECT fullpath, analyze FROM gufi WHERE empty == '0';"
+) | sqlite3
+prefix/.hidden|[{"analysis_explanation": null, "end": #, "entity_type": "PHONE_NUMBER", "score": #, "start": #}]
+prefix/1KB|[{"analysis_explanation": null, "end": #, "entity_type": "PERSON", "score": #, "start": #}]
+prefix/1MB|[{"analysis_explanation": null, "end": #, "entity_type": "EMAIL_ADDRESS", "score": #, "start": #}, {"analysis_explanation": null, "end": #, "entity_type": "URL", "score": #, "start": #}]
+prefix/old_file|[{"analysis_explanation": null, "end": #, "entity_type": "DATE_TIME", "score": #, "start": #}]
+prefix/repeat_name|[{"analysis_explanation": null, "end": #, "entity_type": "DATE_TIME", "score": #, "start": #}]
+
+# anonymize with presidio
 $ gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;" "search" | sed '\%.*|$%d'
 prefix/.hidden|phone = <PHONE_NUMBER>
 prefix/1KB|name = <PERSON>
@@ -25,7 +48,7 @@ prefix/1MB|email = <EMAIL_ADDRESS>
 prefix/old_file|time = <DATE_TIME>
 prefix/repeat_name|date = <DATE_TIME>
 
-# query with presidio through gufi_vt
+# anonymize with presidio through gufi_vt
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
@@ -40,13 +63,29 @@ prefix/1MB|email = <EMAIL_ADDRESS>
 prefix/old_file|time = <DATE_TIME>
 prefix/repeat_name|date = <DATE_TIME>
 
-# query with presidio with values set by environment variables
-$ PRESIDIO_PLUGIN_ANALYZE_URL="127.0.0.1:5002/analyze" PRESIDIO_PLUGIN_ANONYMIZE_URL="127.0.0.1:5001/anonymize" PRESIDIO_PLUGIN_LANGUAGE="en" gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;" "search" | sed '\%.*|$%d'
+# anonymize with presidio with values set by environment variables
+$ PRESIDIO_PLUGIN_ANALYZE_URL="127.0.0.1:5002/analyze" PRESIDIO_PLUGIN_ANONYMIZE_URL="127.0.0.1:5001/anonymize" PRESIDIO_PLUGIN_LANGUAGE="en" gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries WHERE osstext1 != '';" "search"
 prefix/.hidden|phone = <PHONE_NUMBER>
 prefix/1KB|name = <PERSON>
 prefix/1MB|email = <EMAIL_ADDRESS>
 prefix/old_file|time = <DATE_TIME>
 prefix/repeat_name|date = <DATE_TIME>
+
+# empty default language
+$ PRESIDIO_PLUGIN_LANGUAGE="" gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;" "search"
+Error: Empty environment variable: PRESIDIO_PLUGIN_LANGUAGE
+
+# empty language
+$ gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1, '') FROM vrxpentries WHERE osstext1 != '';" "search"
+Error: Request returned with HTTP code 500: {"error":"No language provided"}: prefix/db.db: "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1, '') FROM vrxpentries WHERE osstext1 != '';"
+
+# unknown default language
+$ PRESIDIO_PLUGIN_LANGUAGE="unknown" gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries WHERE osstext1 != '';" "search"
+Error: Request returned with HTTP code 500: {"error":"No matching recognizers were found to serve the request."}: prefix/db.db: "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries WHERE osstext1 != '';"
+
+# unknown language
+$ gufi_query -d "|" --plugin "presidio:presidio_plugin" -E "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1, 'unknown') FROM vrxpentries WHERE osstext1 != '';" "search"
+Error: Request returned with HTTP code 500: {"error":"No matching recognizers were found to serve the request."}: prefix/db.db: "SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1, 'unknown') FROM vrxpentries WHERE osstext1 != '';"
 
 # try to load presidio plugin multiple times
 $ gufi_query --plugin "presidio:presidio_plugin" --plugin "presidio:presidio_plugin"

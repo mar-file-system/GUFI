@@ -220,6 +220,78 @@ cleanup
         echo "SELECT * FROM gufi;"
     )
     gufi_vt "${query}" 2>&1 | replace
+
+    XATTR_NAME="user.COL.file.collection"
+
+    echo "# dsi_collection_name with bad xxatr names"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT dsi_collection_name(NULL), dsi_collection_name('') FROM vrxpentries;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi LIMIT 1;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# dsi_uuid with bad xattr names"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT dsi_uuid(NULL, NULL), dsi_uuid('', NULL) FROM vrxpentries;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi LIMIT 1;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# dsi_uuid with NULL xattr value"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT dsi_uuid('${XATTR_NAME}', NULL) FROM vrxpentries WHERE level() == 0;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# dsi_uuid with empty xattr value"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT dsi_uuid('${XATTR_NAME}', '') FROM vrxpentries WHERE level() == 0;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# dsi_dbpath calls"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT dsi_dbpath('${XATTR_NAME}', '00000000-0000-0000-0000-000000000000./collection/db/path'), dsi_dbpath(NULL, NULL), dsi_dbpath('', NULL) FROM vrxpentries;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi LIMIT 1;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# dsi_dbpath with NULL xattr value"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT dsi_dbpath('${XATTR_NAME}', NULL) FROM vrxpentries WHERE level() == 0;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# dsi_dbpath with empty xattr value"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        echo "    E=\"SELECT dsi_dbpath('${XATTR_NAME}', '') FROM vrxpentries WHERE level() == 0;\", "
+        echo "    plugin=\"gufi_plugin_operations:${DSI_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi;"
+    )
+    gufi_vt "${query}" 2>&1 | replace
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/dsi_plugins.expected "${OUTPUT}"
