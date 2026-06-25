@@ -84,14 +84,39 @@ TEST(popen_argv, cant_pipe) {
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds),  0);
 }
 
-TEST(popen_argv, bad_command) {
-    const char *argv[] = {""};
+#if defined(DEBUG) && defined(__linux__) && defined(RLIMIT_NPROC_UNIT_TESTS)
+TEST(popen_argv, cant_fork) {
+    struct rlimit orig_nprocs;
+    ASSERT_EQ(getrlimit(RLIMIT_NPROC, &orig_nprocs),  0);
+
+    struct rlimit fewer_nprocs = orig_nprocs;
+    fewer_nprocs.rlim_cur = 1;
+    ASSERT_EQ(setrlimit(RLIMIT_NPROC, &fewer_nprocs), 0);
+
+    EXPECT_EQ(popen_argv(nullptr), nullptr);
+
+    ASSERT_EQ(setrlimit(RLIMIT_NPROC, &orig_nprocs),  0);
+}
+#endif
+
+TEST(popen_argv, true) {
+    const char *argv[] = {"true", NULL};
 
     popen_argv_t *ret = popen_argv(argv);
-    EXPECT_NE(ret, nullptr); // fork succeeds
+    EXPECT_NE(ret, nullptr);
+
+    EXPECT_GT(popen_argv_fd(ret),       -1);
+    EXPECT_EQ(popen_argv_close(ret),     0);
+
+    EXPECT_EQ(popen_argv_close(nullptr), 0);
+}
+
+TEST(popen_argv, false) {
+    const char *argv[] = {"false", NULL};
+
+    popen_argv_t *ret = popen_argv(argv);
+    EXPECT_NE(ret, nullptr);
 
     EXPECT_GT(popen_argv_fd(ret),       -1);
     EXPECT_NE(popen_argv_close(ret),     0);
-
-    EXPECT_EQ(popen_argv_close(nullptr), 0);
 }

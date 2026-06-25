@@ -118,6 +118,7 @@ if (CMAKE_CXX_COMPILER)
 
   if (RLIMIT_NPROC_UNIT_TESTS)
     set_source_files_properties(QueuePerThreadPool.cpp PROPERTIES COMPILE_FLAGS -DRLIMIT_NPROC_UNIT_TESTS=1)
+    set_source_files_properties(popen_argv.cpp         PROPERTIES COMPILE_FLAGS -DRLIMIT_NPROC_UNIT_TESTS=1)
   endif()
 
   add_executable(unit_tests main.cpp ${TEST_SRC} $<TARGET_OBJECTS:gufi_query_lib>)
