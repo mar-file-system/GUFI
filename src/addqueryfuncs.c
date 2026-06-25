@@ -221,7 +221,7 @@ static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value *
     const char *fmt = (char *) sqlite3_value_text(argv[0]); /* format    */
     const time_t t = sqlite3_value_int64(argv[1]);          /* timestamp */
 
-    char buf[MAXPATH];
+    char buf[MAXSTRFTIME];
     #ifdef LOCALTIME_R
     struct tm tm;
     strftime(buf, sizeof(buf), fmt, localtime_r(&t, &tm));
@@ -624,7 +624,7 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 
     const uint64_t blocks = (size / unit_size) + (!!(size % unit_size));
 
-    char buf[MAXPATH];
+    char buf[20 + 2 + 1]; /* uint64_t max 20 decimal chars + max 2 unit chars */
     size_t buf_len = snprintf(buf, sizeof(buf), "%" PRIu64, blocks);
 
     /* add unit to block count */
@@ -639,7 +639,7 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 static void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
-    char buf[MAXPATH];
+    char buf[4 + 1 + 1 + 3 + 1]; /* max 4 integer digits + decimal point + 1 decimal precision + 3 unit chars */
 
     const char *size_s = (const char *) sqlite3_value_text(argv[0]);
     double size = 0;

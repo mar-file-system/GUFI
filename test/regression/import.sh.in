@@ -67,7 +67,7 @@ set -e
 # no output/expected
 
 # this script is only needed to set up the index
-"${GUFI_TREESUMMARY_ALL}" "${SEARCH}" > /dev/null 2>&1
+"${GUFI_TREESUMMARY_ALL}" "${INDEXROOT}" > /dev/null 2>&1
 
 # gufi_query needs to be available in remotes
 export PATH="${BINARY_DIR}/src:${PATH}"

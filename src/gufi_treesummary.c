@@ -149,8 +149,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         printits(&pa->in, passmywork, &ed, stdout);
     }
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
+    const size_t dbname_len = passmywork->name_len + 1 + DBNAME_LEN;
+    char *dbname = malloc(dbname_len + 1);
+    SNFORMAT_S(dbname, dbname_len + 1, 2,
                passmywork->name, passmywork->name_len,
                "/" DBNAME, DBNAME_LEN + 1);
 
@@ -211,6 +212,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     closedb(db);
+    free(dbname);
 
   close_dir:
     closedir(dir);
@@ -232,8 +234,9 @@ static int compute_treesummary(struct PoolArgs *pa) {
         sumout.totsubdirs--; /* subtract another 1 because starting directory is not a subdirectory of itself */
     }
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
+    const size_t dbname_len = pa->index.len + 1 + DBNAME_LEN;
+    char *dbname = malloc(dbname_len + 1);
+    SNFORMAT_S(dbname, dbname_len + 1, 2,
                pa->index.data, pa->index.len,
                "/" DBNAME, DBNAME_LEN + 1);
 
@@ -259,9 +262,12 @@ static int compute_treesummary(struct PoolArgs *pa) {
         if(utime(dbname, &utimeStruct) != 0) {
             const int err = errno;
             fprintf(stderr, "ERROR: utime failed with error number: %d on %s\n", err, dbname);
+            free(dbname);
             return 1;
         }
     }
+
+    free(dbname);
 
     printf("totals:\n");
     printf("totfiles %lld totlinks %lld\n",

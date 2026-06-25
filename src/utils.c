@@ -695,15 +695,18 @@ ssize_t copyfd(int src_fd, off_t src_off,
 #endif
 
 /* replace root of actual path being walked with original user inputted root */
-size_t present_user_path(const char *curr, size_t curr_len,
-                         str_t *root_parent, const size_t root_basename_len, str_t *orig_root,
-                         char *buf, size_t len) {
+char *present_user_path(const char *curr, size_t curr_len,
+                         str_t *root_parent, const size_t root_basename_len, str_t *orig_root) {
     const size_t prefix = root_parent->len + root_basename_len;
+    const size_t buf_len = orig_root->len + curr_len - prefix;
+    char *buf = malloc(buf_len + 1);
 
     /* curr + prefix comes with / prefixed, so no need for extra / */
-    return SNFORMAT_S(buf, len, 2,
-                      orig_root->data, orig_root->len,
-                      curr + prefix, curr_len - prefix);
+    SNFORMAT_S(buf, buf_len + 1, 2,
+               orig_root->data, orig_root->len,
+               curr + prefix, curr_len - prefix);
+
+    return buf;
 }
 
 /* print errors, but keep going */

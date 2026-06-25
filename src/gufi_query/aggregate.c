@@ -62,6 +62,8 @@ OF SUCH DAMAGE.
 
 
 
+#include <string.h>
+
 #include "dbutils.h"
 #include "print.h"
 
@@ -104,15 +106,17 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
 
     aggregate->outfile = stdout;
 
-    char dbname[MAXPATH];
+    char *dbname = NULL;
     if ((in->output == STDOUT) || (in->output == OUTFILE)) {
-        SNPRINTF(dbname, MAXPATH, AGGREGATE_FILE_NAME);
+        dbname = malloc(sizeof(AGGREGATE_FILE_NAME));
+        memcpy(dbname, AGGREGATE_FILE_NAME, sizeof(AGGREGATE_FILE_NAME));
 
         /* only open a final file if OUTFILE */
         if (in->output == OUTFILE) {
             aggregate->outfile = fopen(in->outname.data, "w");
             if (!aggregate->outfile) {
                 fprintf(stderr, "Error: Could not open output file %s\n", in->outname.data);
+                free(dbname);
                 aggregate_fin(aggregate, in);
                 return NULL;
             }
@@ -120,19 +124,24 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
 
         if (!OutputBuffer_init(&aggregate->ob, in->output_buffer_size)) {
             fprintf(stderr, "Error: Could not set up output buffers\n");
+            free(dbname);
             aggregate_fin(aggregate, in);
             return NULL;
         }
     }
     else if (in->output == OUTDB) {
-        SNFORMAT_S(dbname, MAXPATH, 1, in->outname.data, in->outname.len);
+        dbname = malloc(in->outname.len + 1);
+        memcpy(dbname, in->outname.data, in->outname.len + 1);
     }
 
     /* always open an aggregate db */
     if (!(aggregate->db = aggregate_setup(dbname, in->sql.init_agg.data, !in->no_print_sql_on_err))) {
+        free(dbname);
         aggregate_fin(aggregate, in);
         return NULL;
     }
+
+    free(dbname);
 
     return aggregate;
 }

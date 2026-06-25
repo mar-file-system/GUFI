@@ -70,12 +70,37 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <sys/resource.h>
 #include <sys/types.h>
+#include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
 
 #include "addqueryfuncs.h"
 #include "bf.h"
 #include "dbutils.h"
+
+static void test_str(const std::vector<std::pair <const char *, const char *> > &testcases,
+                     void (*other_tests)(sqlite3 *db)) {
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db), 0);
+
+    for(std::pair <const char *, const char *> const &testcase : testcases) {
+        char *output = nullptr;
+        EXPECT_EQ(sqlite3_exec(db, testcase.first,
+                               copy_columns_callback, &output, nullptr), SQLITE_OK);
+        EXPECT_STREQ(output, testcase.second);
+        free(output);
+    }
+
+    if (other_tests) {
+        other_tests(db);
+    }
+
+    sqlite3_close(db);
+}
 
 TEST(addqueryfuncs, uidtouser) {
     // user's uid
@@ -92,26 +117,27 @@ TEST(addqueryfuncs, uidtouser) {
     ASSERT_EQ(addqueryfuncs(db), 0);
 
     char query[MAXSQL] = {};
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
 
     /* convert good uid */
-    SNPRINTF(query, MAXSQL, "SELECT uidtouser(%" STAT_uid ");", uid);
+    SNPRINTF(query, sizeof(query), "SELECT uidtouser(%" STAT_uid ");", uid);
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, pwd->pw_name);
+    free(output);
+    output = nullptr;
 
     /* convert bad uid */
-    SNPRINTF(query, MAXSQL, "SELECT uidtouser('abcd');");
+    SNPRINTF(query, sizeof(query), "SELECT uidtouser('abcd');");
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_EQ(output, nullptr);
 
     /* convert NULL */
-    SNPRINTF(query, MAXSQL, "SELECT uidtouser(NULL);");
+    SNPRINTF(query, sizeof(query), "SELECT uidtouser(NULL);");
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_EQ(output, nullptr);
 
     /* convert large number */
-    SNPRINTF(query, MAXSQL, "SELECT uidtouser(98765432100123456789);");
+    SNPRINTF(query, sizeof(query), "SELECT uidtouser(98765432100123456789);");
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_ERROR);
 
     sqlite3_close(db);
@@ -132,26 +158,27 @@ TEST(addqueryfuncs, gidtogroup) {
     ASSERT_EQ(addqueryfuncs(db), 0);
 
     char query[MAXSQL] = {};
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
 
     /* convert good gid */
-    SNPRINTF(query, MAXSQL, "SELECT gidtogroup(%" STAT_gid ");", gid);
+    SNPRINTF(query, sizeof(query), "SELECT gidtogroup(%" STAT_gid ");", gid);
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, grp->gr_name);
+    free(output);
+    output = nullptr;
 
     /* convert bad gid */
-    SNPRINTF(query, MAXSQL, "SELECT gidtogroup('abcd');");
+    SNPRINTF(query, sizeof(query), "SELECT gidtogroup('abcd');");
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_EQ(output, nullptr);
 
     /* convert NULL */
-    SNPRINTF(query, MAXSQL, "SELECT gidtogroup(NULL);");
+    SNPRINTF(query, sizeof(query), "SELECT gidtogroup(NULL);");
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_EQ(output, nullptr);
 
     /* convert large number */
-    SNPRINTF(query, MAXSQL, "SELECT gidtogroup(98765432100123456789);");
+    SNPRINTF(query, sizeof(query), "SELECT gidtogroup(98765432100123456789);");
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_ERROR);
 
     sqlite3_close(db);
@@ -166,19 +193,22 @@ TEST(addqueryfuncs, modetotxt) {
 
     for(mode_t perm = 0; perm < 01000; perm++) {
         char query[MAXSQL] = {};
-        char buf[11] = {};
-        char *output = buf;
+        char *output = nullptr;
         char expected[11] = {};
 
         // file
-        SNPRINTF(query, MAXSQL, "SELECT modetotxt(%zu);", (size_t) perm);
+        SNPRINTF(query, sizeof(query), "SELECT modetotxt(%zu);", (size_t) perm);
         EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
         EXPECT_STREQ(output, modetostr(expected, 11, perm));
+        free(output);
+        output = nullptr;
 
         // directory
-        SNPRINTF(query, MAXSQL, "SELECT modetotxt(%zu);", perm | S_IFDIR);
+        SNPRINTF(query, sizeof(query), "SELECT modetotxt(%zu);", perm | S_IFDIR);
         EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
         EXPECT_STREQ(output, modetostr(expected, 11, perm | S_IFDIR));
+        free(output);
+        output = nullptr;
     }
 
     sqlite3_close(db);
@@ -196,10 +226,9 @@ TEST(addqueryfuncs, strftime) {
     const time_t now = time(nullptr);
 
     char query[MAXSQL] = {};
-    SNPRINTF(query, MAXSQL, "SELECT strftime('%s', %d);", fmt, (int) now);
+    SNPRINTF(query, sizeof(query), "SELECT strftime('%s', %d);", fmt, (int) now);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
 
     char expected[MAXSQL] = {};
@@ -208,112 +237,55 @@ TEST(addqueryfuncs, strftime) {
     EXPECT_NE(strftime(expected, MAXSQL, fmt, &tm), (size_t) 0);
 
     EXPECT_STREQ(output, expected);
+    free(output);
+    output = nullptr;
 
     sqlite3_close(db);
 }
 
 TEST(addqueryfuncs, intcat) {
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
+    const std::vector<std::pair <const char *, const char *> > tests = {
+        std::make_pair("SELECT intcat(0);",                "Zero"),
+        std::make_pair("SELECT intcat(pow(1000, 0) + 1);", "O"),
+        std::make_pair("SELECT intcat(pow(1000, 1) + 1);", "K"),
+        std::make_pair("SELECT intcat(pow(1000, 2) + 1);", "M"),
+        std::make_pair("SELECT intcat(pow(1000, 3) + 1);", "B"),
+        std::make_pair("SELECT intcat(pow(1000, 4) + 1);", "T"),
+        std::make_pair("SELECT intcat(pow(1000, 5) + 1);", "q"),
+        std::make_pair("SELECT intcat(pow(1000, 6) + 1);", "Q"),
+    };
 
-    ASSERT_EQ(addqueryfuncs(db), 0);
+    test_str(tests,
+             [](sqlite3 *db) -> void {
+                 EXPECT_NE(sqlite3_exec(db, "SELECT intcat('abc');",
+                                        copy_columns_callback, nullptr, nullptr), SQLITE_OK);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
-
-    EXPECT_NE(sqlite3_exec(db, "SELECT intcat('abc');",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-
-    EXPECT_NE(sqlite3_exec(db, "SELECT intcat(-1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT intcat(0);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Zero");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT intcat(pow(1000, 0) + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "O");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT intcat(pow(1000, 1) + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "K");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT intcat(pow(1000, 2) + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "M");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT intcat(pow(1000, 3) + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "B");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT intcat(pow(1000, 4) + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "T");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT intcat(pow(1000, 5) + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "q");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT intcat(pow(1000, 6) + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Q");
-
-    sqlite3_close(db);
+                 EXPECT_NE(sqlite3_exec(db, "SELECT intcat(-1);",
+                                        copy_columns_callback, nullptr, nullptr), SQLITE_OK);
+             });
 }
 
 TEST(addqueryfuncs, bytecat) {
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
-
-    ASSERT_EQ(addqueryfuncs(db), 0);
-
-    char buf[MAXPATH] = {};
-    char *output = buf;
-
-    EXPECT_NE(sqlite3_exec(db, "SELECT bytecat('abc');",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-
-    EXPECT_NE(sqlite3_exec(db, "SELECT bytecat(-1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-
     /* use integer powers of 1024 to not deal with numerical instability due to +1 */
+    const std::vector <std::pair <const char *, const char *> > tests = {
+        std::make_pair("SELECT bytecat(0);",                       "Zero"),
+        std::make_pair("SELECT bytecat(1);",                       "B"),
+        std::make_pair("SELECT bytecat(1024 + 1);",                "K"),
+        std::make_pair("SELECT bytecat(1048576 + 1);",             "M"),
+        std::make_pair("SELECT bytecat(1073741824 + 1);",          "G"),
+        std::make_pair("SELECT bytecat(1099511627776 + 1);",       "T"),
+        std::make_pair("SELECT bytecat(1125899906842624 + 1);",    "P"),
+        std::make_pair("SELECT bytecat(1152921504606846976 + 1);", "E"),
+    };
 
-    EXPECT_EQ(sqlite3_exec(db, "SELECT bytecat(0);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Zero");
+    test_str(tests,
+             [](sqlite3 *db) -> void {
+                 EXPECT_NE(sqlite3_exec(db, "SELECT bytecat('abc');",
+                                        copy_columns_callback, nullptr, nullptr), SQLITE_OK);
 
-    EXPECT_EQ(sqlite3_exec(db, "SELECT bytecat(1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "B");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT bytecat(1024 + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "K");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT bytecat(1048576 + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "M");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT bytecat(1073741824 + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "G");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT bytecat(1099511627776 + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "T");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT bytecat(1125899906842624 + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "P");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT bytecat(1152921504606846976 + 1);",
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "E");
-
-    sqlite3_close(db);
+                 EXPECT_NE(sqlite3_exec(db, "SELECT bytecat(-1);",
+                                        copy_columns_callback, nullptr, nullptr), SQLITE_OK);
+             });
 }
 
 TEST(addqueryfuncs, agecat) {
@@ -323,8 +295,7 @@ TEST(addqueryfuncs, agecat) {
 
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
 
     EXPECT_NE(sqlite3_exec(db, "SELECT agecat('abc');",
                            copy_columns_callback, &output, nullptr), SQLITE_OK);
@@ -335,50 +306,27 @@ TEST(addqueryfuncs, agecat) {
     EXPECT_NE(sqlite3_exec(db, sql,
                            copy_columns_callback, &output, nullptr), SQLITE_OK);
 
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr));
-    EXPECT_EQ(sqlite3_exec(db, sql,
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Zero");
+    const std::pair <int, const char *> tests[] = {
+        std::make_pair(+ 0,                           "Zero"),
+        std::make_pair(- 1,                           "Secs"),
+        std::make_pair(- 60 - 1,                      "Mins"),
+        std::make_pair(- 60 * 60 - 1,                 "Hrs"),
+        std::make_pair(- 60 * 60 * 24 - 1,            "Days"),
+        std::make_pair(- 60 * 60 * 24 * 7 - 1,        "Wks"),
+        std::make_pair(- 60 * 60  * 24 * 30 - 1,      "Mos"),
+        std::make_pair(- 60 * 60 * 24 * 365 - 1,      "Yrs"),
+        std::make_pair(- 60 * 60 * 24 * 365 * 10 - 1, "Decs"),
+    };
 
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) - 1);
-    EXPECT_EQ(sqlite3_exec(db, sql,
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Secs");
+    for(std::pair <int, const char *> const &test : tests) {
+        snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) + test.first);
+        EXPECT_EQ(sqlite3_exec(db, sql,
+                               copy_columns_callback, &output, nullptr), SQLITE_OK);
+        EXPECT_STREQ(output, test.second);
 
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr)- 60 - 1);
-    EXPECT_EQ(sqlite3_exec(db, sql,
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Mins");
-
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) - 60 * 60 - 1);
-    EXPECT_EQ(sqlite3_exec(db, sql,
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Hrs");
-
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) - 60 * 60 * 24 - 1);
-    EXPECT_EQ(sqlite3_exec(db, sql,
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Days");
-
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) - 60 * 60 * 24 * 7 - 1);
-    EXPECT_EQ(sqlite3_exec(db, sql,
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Wks");
-
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) - 60 * 60 * 24 * 30 - 1);
-    EXPECT_EQ(sqlite3_exec(db, sql,
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Mos");
-
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) - 60 * 60 * 24 * 365 - 1);
-    EXPECT_EQ(sqlite3_exec(db, sql,
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Yrs");
-
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) - 60 * 60 * 24 * 365 * 10 - 1);
-    EXPECT_EQ(sqlite3_exec(db, sql,
-                           copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "Decs");
+        free(output);
+        output = nullptr;
+    }
 
     sqlite3_close(db);
 }
@@ -390,8 +338,7 @@ TEST(addqueryfuncs, epochtoage) {
 
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
 
     EXPECT_NE(sqlite3_exec(db, "SELECT epochtoage('abc', 's');",
                            copy_columns_callback, &output, nullptr), SQLITE_OK);
@@ -401,6 +348,8 @@ TEST(addqueryfuncs, epochtoage) {
     snprintf(sql, sizeof(sql), "SELECT epochtoage(%ld, 's');", time(nullptr) + 1);
     EXPECT_NE(sqlite3_exec(db, sql,
                            copy_columns_callback, &output, nullptr), SQLITE_OK);
+    free(output);
+    output = nullptr;
 
     for(const char unit : {'s', 'm', 'h', 'd', 'w', 'M', 'y', 'D', '-'}) {
         /* test 0 */
@@ -408,6 +357,9 @@ TEST(addqueryfuncs, epochtoage) {
         EXPECT_EQ(sqlite3_exec(db, sql,
                                copy_columns_callback, &output, nullptr), SQLITE_OK);
         EXPECT_STREQ(output, "0");
+
+        free(output);
+        output = nullptr;
     }
 
     sqlite3_close(db);
@@ -420,12 +372,13 @@ TEST(addqueryfuncs, hostname) {
 
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT hostname();",
                            copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STRNE(buf, "");
+    EXPECT_STRNE(output, "");
+    free(output);
+    output = nullptr;
 
     sqlite3_close(db);
 }
@@ -467,24 +420,29 @@ TEST(addqueryfuncs, blocksize) {
 
         for(size_t j = 0; j < 3; j++) {
             char query[MAXSQL] = {};
-            char buf[MAXPATH] = {};
-            char *output = buf;
+            char *output = nullptr;
             char expected[MAXPATH] = {};
 
-            SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%c');", iBinputs[j], SIZE[i]);
+            SNPRINTF(query, sizeof(query), "SELECT blocksize(%zu, '%c');", iBinputs[j], SIZE[i]);
             EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
-            SNPRINTF(expected, MAXPATH, "%c%c", expecteds[j], SIZE[i]);
+            SNPRINTF(expected, sizeof(expected), "%c%c", expecteds[j], SIZE[i]);
             EXPECT_STREQ(output, expected);
+            free(output);
+            output = nullptr;
 
-            SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%cB');", Binputs[j], SIZE[i]);
+            SNPRINTF(query, sizeof(query), "SELECT blocksize(%zu, '%cB');", Binputs[j], SIZE[i]);
             EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
-            SNPRINTF(expected, MAXPATH, "%c%cB", expecteds[j], SIZE[i]);
+            SNPRINTF(expected, sizeof(expected), "%c%cB", expecteds[j], SIZE[i]);
             EXPECT_STREQ(output, expected);
+            free(output);
+            output = nullptr;
 
-            SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%ciB');", iBinputs[j], SIZE[i]);
+            SNPRINTF(query, sizeof(query), "SELECT blocksize(%zu, '%ciB');", iBinputs[j], SIZE[i]);
             EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
-            SNPRINTF(expected, MAXPATH, "%c%ciB", expecteds[j], SIZE[i]);
+            SNPRINTF(expected, sizeof(expected), "%c%ciB", expecteds[j], SIZE[i]);
             EXPECT_STREQ(output, expected);
+            free(output);
+            output = nullptr;
         }
     }
 
@@ -511,14 +469,15 @@ TEST(addqueryfuncs, human_readable_size) {
     ASSERT_EQ(addqueryfuncs(db), 0);
 
     char query[MAXSQL] = {};
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
 
     std::size_t size = 1;
 
-    SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu);", size);
+    SNPRINTF(query, sizeof(query), "SELECT human_readable_size(%zu);", size);
     EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "1.0");
+    free(output);
+    output = nullptr;
 
     // greater than 1K - has unit suffix
     for(size_t i = 0; i < sizeof(SIZE); i++) {
@@ -526,10 +485,12 @@ TEST(addqueryfuncs, human_readable_size) {
 
         size *= 1024;
 
-        SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu);", size + (size / 10));
+        SNPRINTF(query, sizeof(query), "SELECT human_readable_size(%zu);", size + (size / 10));
         EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
-        SNPRINTF(expected, MAXPATH, "1.1%c", SIZE[i]);
+        SNPRINTF(expected, sizeof(expected), "1.1%c", SIZE[i]);
         EXPECT_STREQ(output, expected);
+        free(output);
+        output = nullptr;
     }
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT human_readable_size('');",    copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* empty input */
@@ -539,100 +500,50 @@ TEST(addqueryfuncs, human_readable_size) {
 }
 
 TEST(addqueryfuncs, basename) {
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
+    const std::vector <std::pair <const char *, const char *> > tests = {
+        /* from basename(3) manpage */
+        std::make_pair("SELECT basename('/usr/lib');", "lib"),
+        std::make_pair("SELECT basename('/usr/');",    "usr"),
+        std::make_pair("SELECT basename('usr');",      "usr"),
+        std::make_pair("SELECT basename('/');",        "/"),
+        std::make_pair("SELECT basename('.');",        "."),
+        std::make_pair("SELECT basename('..');",       ".."),
 
-    ASSERT_EQ(addqueryfuncs(db), 0);
+        /* not from manpage */
+        std::make_pair("SELECT basename(NULL);",       ""),
+    };
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
-
-    /* from basename(3) manpage */
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT basename('/usr/lib');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "lib");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT basename('/usr/');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "usr");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT basename('usr');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "usr");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT basename('/');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "/");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT basename('.');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, ".");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT basename('..');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "..");
-
-    /* not from manpage */
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT basename(NULL);", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "");
-
-    sqlite3_close(db);
+    test_str(tests, nullptr);
 }
 
 TEST(addqueryfuncs, ext) {
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
+    const std::vector <std::pair <const char *, const char *> > tests = {
+        std::make_pair("SELECT ext('file.txt');",      "txt"),
+        std::make_pair("SELECT ext('name.csv');",      "csv"),
+        std::make_pair("SELECT ext('files.tar.gz');",  "gz"),
+        std::make_pair("SELECT ext('.hidden');",       "hidden"),
+        std::make_pair("SELECT ext('no-extension');",  nullptr),
+        std::make_pair("SELECT ext(NULL);",            nullptr),
+    };
 
-    ASSERT_EQ(addqueryfuncs(db), 0);
-
-    char buf[MAXPATH] = {};
-    char *output = buf;
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('file.txt');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(buf, "txt");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('name.csv');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(buf, "csv");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('files.tar.gz');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(buf, "gz");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('.hidden');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(buf, "hidden");
-
-    memset(buf, 0, sizeof(buf));
-    EXPECT_EQ(sqlite3_exec(db, "SELECT ext('no-extension');", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(buf, "");
-
-    memset(buf, 0, sizeof(buf));
-    EXPECT_EQ(sqlite3_exec(db, "SELECT ext(NULL);", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(buf, "");
-
-    sqlite3_close(db);
+    test_str(tests, nullptr);
 }
 
 TEST(addqueryfuncs, rpad) {
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(SQLITE_MEMORY, &db), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
+    const std::vector <std::pair <const char *, const char *> > tests = {
+        std::make_pair("SELECT rpad(1, 1);", "1"),
+        std::make_pair("SELECT rpad(1, 2);", "1 "),
+        std::make_pair("SELECT rpad(1, 3);", "1  "),
+    };
 
-    ASSERT_EQ(addqueryfuncs(db), 0);
-
-    char buf[MAXPATH];
-    char *output = buf;
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT rpad(1, 1);", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "1");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT rpad(1, 2);", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "1 ");
-
-    EXPECT_EQ(sqlite3_exec(db, "SELECT rpad(1, 3);", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "1  ");
-
-    // input is longer than requested padding - return entire input (don't cut)
-    EXPECT_EQ(sqlite3_exec(db, "SELECT rpad('abcde', 3);", copy_columns_callback, &output, nullptr), SQLITE_OK);
-    EXPECT_STREQ(output, "abcde");
-
-    sqlite3_close(db);
+    test_str(tests,
+             [] (sqlite3 *db) {
+                 // input is longer than requested padding - return entire input (don't cut)
+                 char *output = NULL;
+                 EXPECT_EQ(sqlite3_exec(db, "SELECT rpad('abcde', 3);", copy_columns_callback, &output, nullptr), SQLITE_OK);
+                 EXPECT_STREQ(output, "abcde");
+                 free(output);
+             });
 }
 
 TEST(addqueryfuncs, strop) {
@@ -642,21 +553,26 @@ TEST(addqueryfuncs, strop) {
 
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT strop('echo abc def');", copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "abc def");
+    free(output);
+    output = nullptr;
 
     char *err = nullptr;
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT strop('');", copy_columns_callback, &output, &err), SQLITE_ERROR);
     EXPECT_NE(err, nullptr);
+    free(output);
+    output = nullptr;
     sqlite3_free(err);
     err = nullptr;
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT strop('echo');", copy_columns_callback, &output, &err), SQLITE_ERROR);
     EXPECT_NE(err, nullptr);
+    free(output);
+    output = nullptr;
     sqlite3_free(err);
     err = nullptr;
 
@@ -671,6 +587,8 @@ TEST(addqueryfuncs, strop) {
 
         EXPECT_EQ(sqlite3_exec(db, "SELECT strop('echo abc def');", copy_columns_callback, &output, &err), SQLITE_ERROR);
         EXPECT_NE(err, nullptr);
+        free(output);
+        output = nullptr;
         sqlite3_free(err);
         err = nullptr;
 
@@ -687,8 +605,7 @@ TEST(addqueryfuncs, intop) {
 
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT intop('echo 123');", copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "123");
@@ -696,21 +613,29 @@ TEST(addqueryfuncs, intop) {
     // wc is part of coreutils
     EXPECT_EQ(sqlite3_exec(db, "SELECT intop('echo 123 | wc -l');", copy_columns_callback, &output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "1");
+    free(output);
+    output = nullptr;
 
     char *err = nullptr;
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT intop('');", copy_columns_callback, &output, &err), SQLITE_ERROR);
     EXPECT_NE(err, nullptr);
+    free(output);
+    output = nullptr;
     sqlite3_free(err);
     err = nullptr;
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT intop('echo');", copy_columns_callback, &output, &err), SQLITE_ERROR);
     EXPECT_NE(err, nullptr);
+    free(output);
+    output = nullptr;
     sqlite3_free(err);
     err = nullptr;
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT intop('echo abc');", copy_columns_callback, &output, &err), SQLITE_ERROR);
     EXPECT_NE(err, nullptr);
+    free(output);
+    output = nullptr;
     sqlite3_free(err);
     err = nullptr;
 
@@ -725,6 +650,8 @@ TEST(addqueryfuncs, intop) {
 
         EXPECT_EQ(sqlite3_exec(db, "SELECT intop('echo 123');", copy_columns_callback, &output, &err), SQLITE_ERROR);
         EXPECT_NE(err, nullptr);
+        free(output);
+        output = nullptr;
         sqlite3_free(err);
         err = nullptr;
 
@@ -1004,7 +931,7 @@ TEST(addqueryfuncs, median) {
 }
 
 TEST(addqueryfuncs_with_context, path) {
-    const char dirname[MAXPATH] = "dirname";
+    const char dirname[] = "dirname";
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
     work->root_parent = REFSTR("", 0);
@@ -1019,8 +946,7 @@ TEST(addqueryfuncs_with_context, path) {
     ctx.work = work;
     ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
 
     // good orig_root
     {
@@ -1029,6 +955,8 @@ TEST(addqueryfuncs_with_context, path) {
 
         EXPECT_EQ(sqlite3_exec(db, "SELECT path();", copy_columns_callback, &output, nullptr), SQLITE_OK);
         EXPECT_STREQ(output, work->name);
+        free(output);
+        output = nullptr;
     }
 
     // empty orig_root
@@ -1038,18 +966,24 @@ TEST(addqueryfuncs_with_context, path) {
 
         EXPECT_EQ(sqlite3_exec(db, "SELECT path();", copy_columns_callback, &output, nullptr), SQLITE_OK);
         EXPECT_EQ(strncmp(output, work->name, work->basename_len), 0);
+        free(output);
+        output = nullptr;
 
         work->orig_root = REFSTR(nullptr, 1);
         work->root_basename_len = work->orig_root.len;
 
         EXPECT_EQ(sqlite3_exec(db, "SELECT path();", copy_columns_callback, &output, nullptr), SQLITE_OK);
         EXPECT_EQ(strncmp(output, work->name, work->basename_len), 0);
+        free(output);
+        output = nullptr;
 
         work->orig_root = REFSTR(nullptr, 0);
         work->root_basename_len = work->orig_root.len;
 
         EXPECT_EQ(sqlite3_exec(db, "SELECT path();", copy_columns_callback, &output, nullptr), SQLITE_OK);
         EXPECT_EQ(strncmp(output, work->name, work->basename_len), 0);
+        free(output);
+        output = nullptr;
     }
 
     sqlite3_close(db);
@@ -1057,7 +991,7 @@ TEST(addqueryfuncs_with_context, path) {
 }
 
 TEST(addqueryfuncs_with_context, epath) {
-    const char dirname[MAXPATH] = "dirname";
+    const char dirname[] = "dirname";
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
     work->basename_len = strlen(dirname);
@@ -1072,11 +1006,11 @@ TEST(addqueryfuncs_with_context, epath) {
     ctx.work = work;
     ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
     EXPECT_EQ(sqlite3_exec(db, "SELECT epath();", copy_columns_callback, &output, nullptr), SQLITE_OK);
 
     EXPECT_STREQ(output, dirname);
+    free(output);
 
     sqlite3_close(db);
     free(work);
@@ -1114,7 +1048,7 @@ TEST(addqueryfuncs_with_context, fpath) {
 }
 
 TEST(addqueryfuncs_with_context, rpath) {
-    const char dirname[MAXPATH] = "dirname";
+    const char dirname[] = "dirname";
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
     work->orig_root = REFSTR("index_root", 10);
@@ -1134,14 +1068,14 @@ TEST(addqueryfuncs_with_context, rpath) {
     // directory
     for(int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT rpath('%s', %d);", dirname, isrolledup);
+        SNPRINTF(query, sizeof(query), "SELECT rpath('%s', %d);", dirname, isrolledup);
 
         // the path returned by the query is the path without the index prefix
-        char buf[MAXPATH] = {};
-        char *output = buf;
+        char *output = nullptr;
         EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
 
         EXPECT_STREQ(output, work->name);
+        free(output);
     }
 
     // non-directory
@@ -1154,14 +1088,14 @@ TEST(addqueryfuncs_with_context, rpath) {
 
     for(int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT rpath('%s', %d, '%s');", dirname, isrolledup, entry);
+        SNPRINTF(query, sizeof(query), "SELECT rpath('%s', %d, '%s');", dirname, isrolledup, entry);
 
         // the path returned by the query is the path without the index prefix
-        char buf[MAXPATH] = {};
-        char *output = buf;
+        char *output = nullptr;
         EXPECT_EQ(sqlite3_exec(db, query, copy_columns_callback, &output, nullptr), SQLITE_OK);
 
         EXPECT_STREQ(output, entry_path);
+        free(output);
     }
 
     sqlite3_close(db);
@@ -1199,7 +1133,7 @@ TEST(addqueryfuncs_with_context, spath) {
     // directory
     for(int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d);", dirname, isrolledup);
+        SNPRINTF(query, sizeof(query), "SELECT spath('%s', %d);", dirname, isrolledup);
 
         // the path returned by the query is the path without the index prefix
         char buf[MAXPATH] = {};
@@ -1220,7 +1154,7 @@ TEST(addqueryfuncs_with_context, spath) {
     // non-directory
     for(int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d, '%s');", dirname, isrolledup, entry);
+        SNPRINTF(query, sizeof(query), "SELECT spath('%s', %d, '%s');", dirname, isrolledup, entry);
 
         // the path returned by the query is the path without the index prefix
         char buf[MAXPATH] = {};
@@ -1232,7 +1166,7 @@ TEST(addqueryfuncs_with_context, spath) {
 
     // missing source prefix
     char query[MAXSQL] = {};
-    SNPRINTF(query, MAXSQL, "SELECT spath('%s', %d);", dirname, 0);
+    SNPRINTF(query, sizeof(query), "SELECT spath('%s', %d);", dirname, 0);
 
     char *err = nullptr;
 
@@ -1265,11 +1199,11 @@ TEST(addqueryfuncs_with_context, starting_point) {
     ctx.work = work;
     ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
-    char buf[MAXPATH] = {};
-    char *output = buf;
+    char *output = nullptr;
     EXPECT_EQ(sqlite3_exec(db, "SELECT starting_point();", copy_columns_callback, &output, nullptr), SQLITE_OK);
 
     EXPECT_STREQ(output, work->orig_root.data);
+    free(output);
 
     sqlite3_close(db);
     free(work);
@@ -1289,14 +1223,14 @@ TEST(addqueryfuncs_with_context, level) {
     for(work->level = 0; work->level < 10; work->level++) {
         ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
-        char buf[MAXPATH] = {};
-        char *output = buf;
+        char *output = nullptr;
         EXPECT_EQ(sqlite3_exec(db, "SELECT level();", copy_columns_callback, &output, nullptr), SQLITE_OK);
 
         char expected[MAXPATH] = {};
-        SNPRINTF(expected, MAXPATH, "%zu", work->level);
+        SNPRINTF(expected, sizeof(expected), "%zu", work->level);
 
         EXPECT_STREQ(output, expected);
+        free(output);
     }
 
     sqlite3_close(db);
@@ -1318,14 +1252,14 @@ TEST(addqueryfuncs_with_context, pinode) {
     for(work->level = 0; work->level < 10; work->level++) {
         ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
-        char buf[MAXPATH] = {};
-        char *output = buf;
+        char *output = nullptr;
         EXPECT_EQ(sqlite3_exec(db, "SELECT pinode();", copy_columns_callback, &output, nullptr), SQLITE_OK);
 
         char expected[MAXPATH] = {};
-        SNPRINTF(expected, MAXPATH, "%lld", work->pinode);
+        SNPRINTF(expected, sizeof(expected), "%lld", work->pinode);
 
         EXPECT_STREQ(output, expected);
+        free(output);
     }
 
     sqlite3_close(db);

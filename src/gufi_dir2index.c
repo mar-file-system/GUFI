@@ -384,7 +384,7 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
                subtree_root->name + subtree_root->root_parent.len, subtree_root->name_len - subtree_root->root_parent.len);
 
     /*
-     * create directories up to parent with corrrect permissions and owners
+     * create directories up to parent with correct permissions and owners
      * so that processdir can maintain assumption that the parent directory
      * already exists
      *
@@ -399,17 +399,13 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
             if (err != ENOENT) {
                 fprintf(stderr, "Error: Cannot stat subtree root parent \"%s\": %s (%d)\n",
                         topath, strerror(err), err);
-                free(topath);
-                free(subtree_root);
-                return 1;
+                goto error;
             }
         }
 
         if (!S_ISDIR(st.st_mode)) {
             fprintf(stderr, "Error: Subtree root parent is not a directory \"%s\"\n", topath);
-            free(topath);
-            free(subtree_root);
-            return 1;
+            goto error;
         }
 
         if (mkdir(topath, st.st_mode) == -1) {
@@ -418,9 +414,7 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
                 fprintf(stderr, "Error: Could not make subtree root parent \"%s\": %s (%d)\n",
                         topath, strerror(err), err);
                 *p = '/';
-                free(topath);
-                free(subtree_root);
-                return 1;
+                goto error;
             }
         }
         else {
@@ -437,6 +431,11 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
     QPTPool_enqueue(ctx, processdir, copy);
 
     return 0;
+
+  error:
+    free(topath);
+    free(subtree_root);
+    return 1;
 }
 
 /*
@@ -493,17 +492,23 @@ static int validate_source(str_t *index_parent, const char *path, struct work **
     new_work->orig_root.data = (char *) path;
     new_work->orig_root.len = strlen(new_work->orig_root.data);
 
-    char expathin[MAXPATH];
-    char expathout[MAXPATH];
-    char expathtst[MAXPATH];
+    const size_t expathtst_len = index_parent->len + 1 + new_work->name_len - new_work->root_parent.len;
+    char *expathtst = malloc(expathtst_len + 1);
+    SNPRINTF(expathtst, expathtst_len + 1, "%s/%s", index_parent->data, new_work->root_parent.data + new_work->root_parent.len);
 
-    SNPRINTF(expathtst, MAXPATH,"%s/%s", index_parent->data, new_work->root_parent.data + new_work->root_parent.len);
-    realpath(expathtst, expathout);
-    realpath(new_work->root_parent.data, expathin);
+    char *expathout = realpath(expathtst, NULL);
+    if (expathout)  {
+        char *expathin = realpath(new_work->root_parent.data, NULL);
 
-    if (!strcmp(expathin, expathout)) {
-        fprintf(stderr,"You are putting the index dbs in input directory\n");
+        if (!strcmp(expathin, expathout)) {
+            fprintf(stderr,"You are putting the index dbs in input directory\n");
+        }
+
+        free(expathin);
+        free(expathout);
     }
+
+    free(expathtst);
 
     *work = new_work;
 

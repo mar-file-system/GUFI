@@ -86,8 +86,9 @@ FILE **outfiles_init(const str_t *prefix, const size_t count) {
     }
 
     for(size_t i = 0; i < count; i++) {
-        char outname[MAXPATH];
-        SNPRINTF(outname, MAXPATH, "%s.%zu", prefix->data, i);
+        const size_t outname_size = prefix->len + 1 + 8 * sizeof(i) + 1;
+        char *outname = malloc(outname_size);
+        SNPRINTF(outname, outname_size, "%s.%zu", prefix->data, i);
 
         /* check if the destination path already exists (not an error) */
         struct stat st;
@@ -98,6 +99,7 @@ FILE **outfiles_init(const str_t *prefix, const size_t count) {
             if (!S_ISREG(st.st_mode)) {
                 outfiles_fin(files, i);
                 fprintf(stderr, "Destination path is not a file \"%s\"\n", outname);
+                free(outname);
                 return NULL;
             }
         }
@@ -105,8 +107,11 @@ FILE **outfiles_init(const str_t *prefix, const size_t count) {
         if (!(files[i] = fopen(outname, "w"))) {
             outfiles_fin(files, i);
             fprintf(stderr, "Could not open output file %s\n", outname);
+            free(outname);
             return NULL;
         }
+
+        free(outname);
     }
 
     return files;

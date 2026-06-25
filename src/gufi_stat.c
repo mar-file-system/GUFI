@@ -118,22 +118,22 @@ static int print_callback(void * args, int count, char **data, char **columns) {
     time_t atime = atoi(data[9]);
     struct tm atm;
     localtime_r(&atime, &atm);
-    char atime_str[MAXPATH];
+    char atime_str[MAXSTRFTIME];
 
     time_t mtime = atoi(data[10]);
     struct tm mtm;
     localtime_r(&mtime, &mtm);
-    char mtime_str[MAXPATH];
+    char mtime_str[MAXSTRFTIME];
 
     time_t ctime = atoi(data[11]);
     struct tm ctm;
     localtime_r(&ctime, &ctm);
-    char ctime_str[MAXPATH];
+    char ctime_str[MAXSTRFTIME];
 
     time_t crtime = atoi(data[14]);
     struct tm crtm;
     localtime_r(&crtime, &crtm);
-    char crtime_str[MAXPATH];
+    char crtime_str[MAXSTRFTIME];
 
     while (*f) {
         if (*f == '\\') {        /* handle escape sequences */
@@ -379,7 +379,7 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     break;
                 case 'w': /* time of file birth, human-readable; - if unknown */
                     if (crtime) {
-                        strftime(crtime_str, MAXPATH, "%F %T %z", &crtm);
+                        strftime(crtime_str, sizeof(crtime_str), "%F %T %z", &crtm);
                         fprintf(out, line, crtime_str);
                     }
                     else {
@@ -388,7 +388,7 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     break;
                 case 'W': /* time of file birth, seconds since Epoch; 0 if unknown */
                     if (crtime) {
-                        SNPRINTF(crtime_str, MAXPATH, "%llu", (long long unsigned int) mktime(&crtm));
+                        SNPRINTF(crtime_str, sizeof(crtime_str), "%llu", (long long unsigned int) mktime(&crtm));
                         fprintf(out, line, crtime_str);
                     }
                     else {
@@ -396,27 +396,27 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     }
                     break;
                 case 'x': /* time of last access, human-readable */
-                    strftime(atime_str, MAXPATH, "%F %T %z", &atm);
+                    strftime(atime_str, sizeof(atime_str), "%F %T %z", &atm);
                     fprintf(out, line, atime_str);
                     break;
                 case 'X': /* time of last access, seconds since Epoch */
-                    SNPRINTF(atime_str, MAXPATH, "%llu", (long long unsigned int) mktime(&atm));
+                    SNPRINTF(atime_str, sizeof(mtime_str), "%llu", (long long unsigned int) mktime(&atm));
                     fprintf(out, line, atime_str);
                     break;
                 case 'y': /* time of last modification, human-readable */
-                    strftime(mtime_str, MAXPATH, "%F %T %z", &mtm);
+                    strftime(mtime_str, sizeof(mtime_str), "%F %T %z", &mtm);
                     fprintf(out, line, mtime_str);
                     break;
                 case 'Y': /* time of last modification, seconds since Epoch */
-                    SNPRINTF(mtime_str, MAXPATH, "%llu", (long long unsigned int) mktime(&mtm));
+                    SNPRINTF(mtime_str, sizeof(mtime_str), "%llu", (long long unsigned int) mktime(&mtm));
                     fprintf(out, line, mtime_str);
                     break;
                 case 'z': /* time of last change, human-readable */
-                    strftime(ctime_str, MAXPATH, "%F %T %z", &ctm);
+                    strftime(ctime_str, sizeof(ctime_str), "%F %T %z", &ctm);
                     fprintf(out, line, ctime_str);
                     break;
                 case 'Z': /* time of last change, seconds since Epoch */
-                    SNPRINTF(ctime_str, MAXPATH, "%llu", (long long unsigned int) mktime(&ctm));
+                    SNPRINTF(ctime_str, sizeof(ctime_str), "%llu", (long long unsigned int) mktime(&ctm));
                     fprintf(out, line, ctime_str);
                     break;
                 default:

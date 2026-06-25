@@ -98,8 +98,8 @@ TEST(external, read_file) {
         ASSERT_GE(bad_rel_path_fd, 0);
         EXPECT_EQ(close(bad_rel_path_fd), 0);
 
-        char bad_abs_path[MAXPATH];       // get full path to bypass call to realpath(3)
-        EXPECT_EQ(realpath(bad_rel_path, bad_abs_path), bad_abs_path);
+        char *bad_abs_path = realpath(bad_rel_path, nullptr);       // get full path to bypass call to realpath(3)
+        EXPECT_NE(bad_abs_path, nullptr);
 
         EXPECT_EQ(remove(bad_rel_path), 0);
 
@@ -108,6 +108,8 @@ TEST(external, read_file) {
         // add to list
         EXPECT_EQ(write(fd, bad_abs_path, len),     (ssize_t) len);
         EXPECT_EQ(write(fd, "\n", (std::size_t) 1), (ssize_t) 1);
+
+        free(bad_abs_path);
     }
 
     // add /dev/null to list (good path, not a file)

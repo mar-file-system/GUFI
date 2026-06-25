@@ -320,13 +320,6 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
                                       sqlite3_errmsg(db), sqlite3_errcode(db));
         }
 
-        char shortname[MAXPATH];
-        char endname[MAXPATH];
-
-        /* run query on summary, print it if printing is needed, if returns none */
-        /* and we are doing AND, skip querying the entries db */
-        shortpath(gqw->work.name, shortname, endname);
-
         if (in->sql.sum.len) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
 

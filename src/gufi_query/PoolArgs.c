@@ -136,10 +136,15 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
         /* only create per-thread db files when not aggregating and outputting to OUTDB */
         if (!in->sql.init_agg.len && (in->output == OUTDB)) {
-            SNPRINTF(ta->dbname, MAXPATH, "%s.%zu", in->outname.data, i);
+            const size_t len = in->outname.len + 20; /* if size_t == uint64_t, max 20 digits */
+            ta->dbname = malloc(len + 1);
+            SNPRINTF(ta->dbname, len + 1, "%s.%zu", in->outname.data, i);
         }
         else {
-            SNPRINTF(ta->dbname, MAXPATH, "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI, i);
+            static const char MEM[] = "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
+            const size_t len = sizeof(MEM) + 20; /* if size_t == uint64_t, max 20 digits */
+            ta->dbname = malloc(len + 1);
+            SNPRINTF(ta->dbname, len + 1, "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI, i);
         }
 
         ta->outdb = opendb(ta->dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1, NULL, NULL);
@@ -259,13 +264,16 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         /* write to per-thread files during walk - aggregation is handled outside */
         if (in->output == OUTFILE) {
             if (!in->sql.init_agg.len) {
-                char outname[MAXPATH];
-                SNPRINTF(outname, MAXPATH, "%s.%zu", in->outname.data, i);
+                const size_t len = snprintf(NULL, 0, "%s.%zu", in->outname.data, i);
+                char *outname = malloc(len + 1);
+                SNPRINTF(outname, len + 1, "%s.%zu", in->outname.data, i);
                 ta->outfile = fopen(outname, "w");
                 if (!ta->outfile) {
                     fprintf(stderr, "Error: Could not open output file \"%s\"\n", outname);
+                    free(outname);
                     break;
                 }
+                free(outname);
             }
         }
 
@@ -305,6 +313,8 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
        if (ta->outfile && (ta->outfile != stdout)) {
             fclose(ta->outfile);
         }
+
+       free(ta->dbname);
     }
 
     free(pa->ta);

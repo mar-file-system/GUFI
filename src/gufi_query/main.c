@@ -210,19 +210,22 @@ static int validate_source(struct input *in, const char *path, gqw_t **gqw) {
      * directly into new_work because new_work doesn't exist yet)
      */
     size_t rp_len = len; /* discarded */
-    char sqlite3_name[MAXPATH];
-    const size_t sqlite3_name_len = sqlite_uri_path(sqlite3_name, sizeof(sqlite3_name),
+    const size_t sqlite3_name_size = 3 * len + 1;
+    char *sqlite3_name = malloc(sqlite3_name_size);
+    const size_t sqlite3_name_len = sqlite_uri_path(sqlite3_name, sqlite3_name_size,
                                                     path, &rp_len);
 
     gqw_t *new_work = calloc(1, sizeof(*new_work) + len + 1 + sqlite3_name_len + 1);
     new_work->work.name = (char *) &new_work[1];
     new_work->work.name_len = SNFORMAT_S(new_work->work.name, len + 1, 1,
-                                     path, len);
+                                         path, len);
 
     /* set modified path name for SQLite3 */
     new_work->sqlite3_name = ((char *) new_work->work.name) + new_work->work.name_len + 1;
     new_work->sqlite3_name_len = SNFORMAT_S(new_work->sqlite3_name, sqlite3_name_len + 1, 1,
-                                        sqlite3_name, sqlite3_name_len);
+                                            sqlite3_name, sqlite3_name_len);
+
+    free(sqlite3_name);
 
     /* keep original user input */
     new_work->work.orig_root.data = (char *) path;

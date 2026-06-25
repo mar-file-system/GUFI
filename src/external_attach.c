@@ -223,7 +223,6 @@ size_t external_read_file(struct input *in,
     size_t len = 0;
     off_t offset = 0;
     while (getline_fd_seekable(&line, &len, extdb_list, &offset, 512) > 0) {
-        char extdb_path_stack[MAXPATH];
         char *extdb_path = line;
 
         /*
@@ -231,27 +230,34 @@ size_t external_read_file(struct input *in,
          * resolve to absolute paths
          */
         if (line[0] != '/')  {
-            char path[MAXPATH];
-            SNFORMAT_S(path, sizeof(path), 2,
+            size_t path_len = child->name_len - child->basename_len + len;
+            char *path = malloc(path_len + 1);
+            SNFORMAT_S(path, path_len + 1, 2,
                        child->name, child->name_len - child->basename_len,
                        /* basename does not include slash, so don't need to add another one */
                        line, len);
 
-            if (!realpath(path, extdb_path_stack)) {
+            extdb_path = realpath(path, NULL);
+            if (!extdb_path) {
                 const int err = errno;
                 fprintf(stderr, "Error: Could not resolve external database path %s: %s (%d)\n",
                         path, strerror(err), err);
+                free(path);
                 free(line);
                 line = NULL;
                 len = 0;
                 continue;
             }
 
-            extdb_path = extdb_path_stack;
+            free(path);
         }
 
         if (check_is_db(in->external_attach.validate, extdb_path) == 1){
             rc += !func(in, args, child->pinode, extdb_path);
+        }
+
+        if (extdb_path != line) {
+            free(extdb_path);
         }
 
         free(line);

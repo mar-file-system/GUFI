@@ -163,36 +163,40 @@ static void new_pathname(struct BottomUp *work, const char *dirname, size_t dirn
 static int new_alt_pathname(struct BottomUp *work, const char *dirname, size_t dirname_len,
                              const char *basename, size_t basename_len) {
     // Alternate name may be longer than the provided dirname and basename together
-    char buf[MAXPATH] = { 0 };
-    size_t bufsize = sizeof(buf);
+    char *buf = NULL;
     size_t new_len = 0;
 
     if (basename) {
+        size_t orig_size = dirname_len + 1 + 3 * basename_len + 1;
+        buf = malloc(orig_size);
+
         // Assume dirname is already sanitized, only need to sanitize basename:
-        new_len = SNFORMAT_S(buf, bufsize, 2, dirname, dirname_len, "/", (size_t) 1);
+        new_len = SNFORMAT_S(buf, orig_size, 2, dirname, dirname_len, "/", (size_t) 1);
 
         size_t converted_len = basename_len;
-        new_len += sqlite_uri_path(buf + new_len, bufsize - new_len, basename, &converted_len);
+        new_len += sqlite_uri_path(buf + new_len, orig_size - new_len, basename, &converted_len);
 
         if (converted_len < basename_len) {
             // uh-oh ... didn't convert entire string
+            free(buf);
             return -1;
         }
     } else {
+        new_len = 3 * dirname_len;
+        buf = malloc(new_len + 1);
+
         // Need to sanitize dirname:
         size_t converted_len = dirname_len;
-        new_len = sqlite_uri_path(buf, bufsize, dirname, &converted_len);
+        new_len = sqlite_uri_path(buf, new_len + 1, dirname, &converted_len);
 
         if (converted_len < dirname_len) {
             // uh-oh ... didn't convert entire string
+            free(buf);
             return -1;
         }
     }
 
-    char *path = calloc(new_len + 1, sizeof(char));
-    memcpy(path, buf, new_len);
-
-    work->alt_name = path;
+    work->alt_name = buf;
     work->alt_name_len = new_len;
 
     return 0;

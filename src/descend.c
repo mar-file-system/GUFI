@@ -230,7 +230,7 @@ int descend(QPTPool_ctx_t *ctx,
             /* non directories */
             else if (S_ISLNK(child->statuso.st_mode)) {
                 child_ed.type = 'l';
-                const ssize_t link_len = readlink(child->name, child_ed.linkname, MAXPATH);
+                const ssize_t link_len = readlink(child->name, child_ed.linkname, sizeof(child_ed.linkname));
                 /* check for error? */
                 child_ed.linkname[link_len] = '\0';
             }

@@ -184,15 +184,19 @@ int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
     str_t *name = (str_t *) args;
 
     char *relpath = data[0];
-    char fullpath[MAXPATH];
-    SNFORMAT_S(fullpath, sizeof(fullpath), 3,
+    const size_t relpath_len = strlen(relpath);
+
+    const size_t fullpath_len = name->len + 1 + relpath_len;
+    char *fullpath = malloc(fullpath_len + 1);
+    SNFORMAT_S(fullpath, fullpath_len + 1, 3,
                name->data, name->len,
                "/", (size_t) 1,
-               relpath, strlen(relpath));
+               relpath, relpath_len);
 
     /* if the file is missing, return ok */
     struct stat st;
     if (stat(fullpath, &st) != 0) {
+        free(fullpath);
         return (errno != ENOENT);
     }
 
@@ -224,6 +228,7 @@ int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
     }
 
     closedb(db);
+    free(fullpath);
 
     return rc;
 }
@@ -290,8 +295,9 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
     sscanf(gid_str, "%" STAT_gid, &gid); /* skip checking for failure */
 
     /* parent xattr db filename */
-    char xattr_db_name[MAXPATH];
-    SNFORMAT_S(xattr_db_name, MAXPATH, 3,
+    const size_t xattr_db_name_len = rexa->parent_len + 1 + filename_len;
+    char *xattr_db_name = malloc(xattr_db_name_len + 1);
+    SNFORMAT_S(xattr_db_name, xattr_db_name_len + 1, 3,
                rexa->parent, rexa->parent_len,
                "/", (size_t) 1,
                filename, filename_len);
@@ -303,11 +309,13 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
         if (err != ENOENT) {
             fprintf(stderr, "Error: Cannot access xattr db file %s: %s (%d)\n",
                     xattr_db_name, strerror(err), err);
+            free(xattr_db_name);
             return 1;
         }
 
         /* copy the template file */
         if (copy_template(rexa->xattr, xattr_db_name, uid, gid, NULL)) {
+            free(xattr_db_name);
             return 1;
         }
     }
@@ -315,21 +323,25 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
     /* open parent per-user/per-group xattr db file */
     sqlite3 *xattr_db = opendb(xattr_db_name, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
     if (!xattr_db) {
+        free(xattr_db_name);
         return 1;
     }
 
-    char child_xattr_db_name[MAXPATH];
-    SNFORMAT_S(child_xattr_db_name, MAXPATH, 3,
+    const size_t child_xattr_db_name_len = rexa->child_len + 1 + filename_len;
+    char *child_xattr_db_name = malloc(child_xattr_db_name_len + 1);
+    SNFORMAT_S(child_xattr_db_name, child_xattr_db_name_len + 1, 3,
                rexa->child, rexa->child_len,
                "/", (size_t) 1,
                filename, filename_len);
 
-    char attachname[MAXPATH];
+    char attachname[MAXSQL];
     SNPRINTF(attachname, sizeof(attachname),
              EXTERNAL_ATTACH_PREFIX "%zu", (*rexa->count)++);
 
     if (!attachdb(child_xattr_db_name, xattr_db, attachname, SQLITE_OPEN_READONLY, 1, NULL)) {
+        free(child_xattr_db_name);
         closedb(xattr_db);
+        free(xattr_db_name);
         return 1;
     }
 
@@ -344,7 +356,9 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
                                   child_xattr_db_name, xattr_db_name, err);
     }
 
+    free(child_xattr_db_name);
     closedb(xattr_db);
+    free(xattr_db_name);
     return 0;
 }
 
@@ -512,13 +526,15 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
     sll_loop(subdirs, node) {
         struct BottomUp *subdir = (struct BottomUp *) sll_node_data(node);
 
-        char child_dbname[MAXPATH];
-        SNFORMAT_S(child_dbname, sizeof(child_dbname), 2,
+        const size_t child_dbname_len = subdir->name_len + 1 + DBNAME_LEN;
+        char *child_dbname = malloc(child_dbname_len + 1);
+        SNFORMAT_S(child_dbname, child_dbname_len + 1, 2,
                    subdir->name, subdir->name_len,
                    "/" DBNAME, DBNAME_LEN + 1);
 
         sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
         if (!child_db) {
+            free(child_dbname);
             continue;
         }
 
@@ -544,10 +560,12 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
         struct PermCanRollup pcr = {0};
         if (get_permissions_canrollup(child_db, subdir->name, &pcr) != 0) {
             closedb(child_db);
+            free(child_dbname);
             return 1;
         }
 
         closedb(child_db);
+        free(child_dbname);
 
         /* make sure the subdirectory can be rolled up to begin with */
         if (pcr.canrollup) {

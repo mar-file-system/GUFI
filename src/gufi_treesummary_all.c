@@ -96,8 +96,9 @@ static int treesummary_found(void *args, int count, char **data, char **columns)
 static int treesummary_descend(void *args, int *keep_going) {
     struct BottomUp *dir = (struct BottomUp *) args;
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
+    const size_t dbname_len = dir->name_len + 1 + DBNAME_LEN;
+    char *dbname = malloc(dbname_len + 1);
+    SNFORMAT_S(dbname, dbname_len + 1, 2,
                dir->name, dir->name_len,
                "/" DBNAME, DBNAME_LEN + 1);
 
@@ -115,6 +116,7 @@ static int treesummary_descend(void *args, int *keep_going) {
     }
 
     closedb(db);
+    free(dbname);
 
     return rc;
 }
@@ -122,6 +124,9 @@ static int treesummary_descend(void *args, int *keep_going) {
 static int get_uidgid_callback(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
     struct stat *st = (struct stat *) args;
+
+    /* mark that this callback was called */
+    st->st_size++; /* doing ++ instead of = 1 just in case this is somehow called multiple times */
 
     return !((sscanf(data[0], "%" STAT_uid, &st->st_uid) == 1) &&
              (sscanf(data[0], "%" STAT_gid, &st->st_gid) == 1));
@@ -131,13 +136,15 @@ static int treesummary_ascend(void *args) {
     struct treesummary *ts = (struct treesummary *) args;
     struct BottomUp *dir = &ts->data;
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
+    const size_t dbname_len = dir->name_len + 1 + DBNAME_LEN;
+    char *dbname = malloc(dbname_len + 1);
+    SNFORMAT_S(dbname, dbname_len + 1, 2,
                dir->name, dir->name_len,
                "/" DBNAME, DBNAME_LEN + 1);
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, NULL, NULL);
     if (!db) {
+        free(dbname);
         return 1;
     }
 
@@ -146,7 +153,7 @@ static int treesummary_ascend(void *args) {
     char *err = NULL;
 
     /* pull uid and gid for bttomup_collect_treesummary */
-    struct stat st;
+    struct stat st = {0};
     if (sqlite3_exec(db, "SELECT uid, gid FROM " SUMMARY " WHERE isroot == 1;",
                      get_uidgid_callback, &st, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr,
@@ -172,6 +179,12 @@ static int treesummary_ascend(void *args) {
         goto cleanup;
     }
 
+    /* the callback would not have run if the database file is empty (such as at the top) */
+    if (st.st_size != 1) {
+        rc = (st.st_size > 1); /* if count is 0, don't error - just finish this thread without writing the treesummary data */
+        goto cleanup;
+    }
+
     rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ISROLLEDUP_CHECK,
                                       st.st_uid, st.st_gid, &ts->canrollup);
 
@@ -190,6 +203,7 @@ static int treesummary_ascend(void *args) {
 
   cleanup:
     closedb(db);
+    free(dbname);
 
     return rc;
 }

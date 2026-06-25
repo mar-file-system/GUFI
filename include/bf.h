@@ -83,6 +83,7 @@ extern "C" {
 #endif
 
 #define MAXPATH 4096
+#define MAXSTRFTIME 1024  /* maximum buffer size for strftime(3) */
 #define MAXSQL 8192
 #define MAXRECS 100000
 #define DBNAME "db.db"

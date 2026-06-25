@@ -78,7 +78,7 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 struct Unrollup {
-    char name[MAXPATH];
+    char *name;
     size_t name_len;
     size_t level;
     int rolledup; /* set by parent, can be modified by self */
@@ -99,13 +99,18 @@ static struct Unrollup *unrollup_create(const char *name, const size_t name_len,
      */
     struct Unrollup *work = malloc(sizeof(struct Unrollup));
     if (subpath && subpath_len) {
-        work->name_len = SNFORMAT_S(work->name, MAXPATH, 3,
-                                    name, name_len,
-                                    "/", (size_t) 1,
-                                    subpath, subpath_len);
+        work->name_len = name_len + 1 + subpath_len;
+        work->name = malloc(work->name_len + 1);
+        SNFORMAT_S(work->name, work->name_len + 1, 3,
+                   name, name_len,
+                   "/", (size_t) 1,
+                   subpath, subpath_len);
     }
     else {
-        work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, name, name_len);
+        work->name_len = name_len;
+        work->name = malloc(work->name_len + 1);
+        SNFORMAT_S(work->name, work->name_len + 1, 1,
+                   name, name_len);
     }
     work->level = level;
     work->rolledup = 0; /* assume this path was not rolled up */
@@ -113,12 +118,14 @@ static struct Unrollup *unrollup_create(const char *name, const size_t name_len,
     struct stat st;
     if (lstat(work->name, &st) != 0) {
         fprintf(stderr, "Could not stat '%s'\n", work->name);
+        free(work->name);
         free(work);
         return NULL;
     }
 
     if (!S_ISDIR(st.st_mode)) {
         fprintf(stderr, "'%s' is not a directory\n", work->name);
+        free(work->name);
         free(work);
         return NULL;
     }
@@ -144,11 +151,14 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     sqlite3 *db = NULL;
 
     if (deep_enough(in, work)) {
-        char dbname[MAXPATH];
-        SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, work->name);
+        const size_t dbname_len = work->name_len + 1 + DBNAME_LEN;
+        char *dbname = malloc(dbname_len + 1);
+        SNPRINTF(dbname, dbname_len + 1, "%s/" DBNAME, work->name);
 
         db = opendb(dbname, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
         rc = !db;
+
+        free(dbname);
     }
 
     /*
@@ -223,6 +233,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     closedir(dir);
 
   cleanup:
+    free(work->name);
     free(work);
 
     return rc;
@@ -256,6 +267,7 @@ static int enqueue_subtree_roots(struct input *in, struct Unrollup *root,
 
     free(line);
     fclose(file);
+    free(root->name);
     free(root);
 
     return 0;

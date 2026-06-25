@@ -972,20 +972,20 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
 
     /* set the relative path in xdb */
     if (uid != in->nobody.uid) {
-        xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
+        xdb->filename_len = SNPRINTF(xdb->filename, sizeof(xdb->filename),
                                      XATTR_UID_FILENAME_FORMAT, uid);
         xattr_db_mode = 0600;
     }
     else if (gid != in->nobody.gid) {
         /* g+r */
         if ((mode & 0040) == 0040) {
-            xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
+            xdb->filename_len = SNPRINTF(xdb->filename, sizeof(xdb->filename),
                                          XATTR_GID_W_READ_FILENAME_FORMAT, gid);
             xattr_db_mode = 0040;
         }
         /* g-r */
         else {
-            xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
+            xdb->filename_len = SNPRINTF(xdb->filename, sizeof(xdb->filename),
                                          XATTR_GID_WO_READ_FILENAME_FORMAT, gid);
             xattr_db_mode = 0000;
         }
@@ -995,7 +995,7 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
 
     /* store full path here */
     char filename[MAXPATH];
-    SNFORMAT_S(filename, MAXPATH, 3,
+    SNFORMAT_S(filename, sizeof(filename), 3,
                path, path_len,
                "/", (size_t) 1,
                xdb->filename, xdb->filename_len);

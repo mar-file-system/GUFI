@@ -262,8 +262,9 @@ sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid
 
 /* create db.db with empty tables at the given directory (and leave it on the filesystem) */
 int create_empty_dbdb(struct template_db *tdb, str_t *dst, uid_t uid, gid_t gid) {
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 3,
+    const size_t dbname_len = dst->len + 1 + DBNAME_LEN;
+    char *dbname = malloc(dbname_len + 1);
+    SNFORMAT_S(dbname, dbname_len + 1, 3,
                dst->data, dst->len,
                "/", (size_t) 1,
                DBNAME, DBNAME_LEN);
@@ -271,6 +272,7 @@ int create_empty_dbdb(struct template_db *tdb, str_t *dst, uid_t uid, gid_t gid)
     /* if database file already exists, assume it's good */
     struct stat st;
     if (stat(dbname, &st) == 0) {  /* following links */
+        free(dbname);
         return -!S_ISREG(st.st_mode);
     }
 
@@ -280,8 +282,11 @@ int create_empty_dbdb(struct template_db *tdb, str_t *dst, uid_t uid, gid_t gid)
     if (err != ENOENT) {
         fprintf(stderr, "Error: Empty db.db path '%s': %s (%d)\n",
                 dst->data, strerror(err), err);
+        free(dbname);
         return -1;
     }
 
-    return copy_template(tdb, dbname, uid, gid, NULL);
+    const int rc = copy_template(tdb, dbname, uid, gid, NULL);
+    free(dbname);
+    return rc;
 }

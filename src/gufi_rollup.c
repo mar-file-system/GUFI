@@ -82,7 +82,7 @@ OF SUCH DAMAGE.
 /* statistics stored when processing each directory */
 /* this is the type stored in the RollUpStats sll_t variables */
 struct DirStats {
-    char path[MAXPATH];
+    char *path;
 
     uint64_t level;           /* level this directory is at */
 
@@ -94,6 +94,12 @@ struct DirStats {
     int score;                /* roll up score regardless of success or failure */
     int success;              /* whether or not the roll up succeeded */
 };
+
+void DirStats_free(void *ptr) {
+    struct DirStats *ds = (struct DirStats *) ptr;
+    free(ds->path);
+    free(ds);
+}
 
 /* per thread stats */
 struct RollUpStats {
@@ -310,9 +316,9 @@ static void print_stats(char **paths, const int path_count,
     fprintf(stdout, "Directories:    %zu (%zu empty)\n", total_dirs, empty);
     fprintf(stdout, "Total:          %zu\n", total_nondirs + total_dirs);
     fprintf(stdout, "Remaining Dirs: %zu (%.2Lf%%)\n", remaining, (100 * (long double) remaining) / total_dirs);
-    sll_destroy(&rolled_up, free);
-    sll_destroy(&not_rolled_up, free);
-    sll_destroy(&not_processed, free);
+    sll_destroy(&rolled_up, DirStats_free);
+    sll_destroy(&not_rolled_up, DirStats_free);
+    sll_destroy(&not_processed, DirStats_free);
 }
 
 /* main data being passed around during walk */
@@ -324,12 +330,15 @@ struct RollUp {
 static int rollup_descend(void *args, int *keep_going) {
     struct RollUp *dir = (struct RollUp *) args;
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
+    const size_t dbname_len = dir->data.name_len + 1 + DBNAME_LEN;
+    char *dbname = malloc(dbname_len + 1);
+    SNFORMAT_S(dbname, dbname_len + 1, 2,
                dir->data.name, dir->data.name_len,
                "/" DBNAME, DBNAME_LEN + 1);
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
+
+    free(dbname);
 
     int rc = !db;
     if (db) {
@@ -454,13 +463,17 @@ int can_rollup(sqlite3 *dst, struct RollUp *rollup,
     sll_loop(&rollup->data.subdirs, node) {
         struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
-        char dbname[MAXPATH] = {0};
-        SNFORMAT_S(dbname, MAXPATH, 3,
+        const size_t dbname_len = child->name_len + 1 + DBNAME_LEN;
+        char *dbname = malloc(dbname_len + 1);
+        SNFORMAT_S(dbname, dbname_len + 1, 3,
                    child->name, child->name_len,
                    "/", (size_t) 1,
                    DBNAME, DBNAME_LEN);
 
         sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
+
+        free(dbname);
+
         if (!db) {
             break;
         }
@@ -590,8 +603,9 @@ static int rollup_external_xattrs_delete(void *args, int count, char **data, cha
     const char     existed      = data[1][0] - '0';
 
     /* parent xattr db filename */
-    char xattr_db_name[MAXPATH];
-    SNFORMAT_S(xattr_db_name, MAXPATH, 3,
+    const size_t xattr_db_name_len = rexa->child_len + 1 + filename_len;
+    char *xattr_db_name = malloc(xattr_db_name_len + 1);
+    SNFORMAT_S(xattr_db_name, xattr_db_name_len + 1, 3,
                rexa->child, rexa->child_len,
                "/", (size_t) 1,
                filename, filename_len);
@@ -601,6 +615,7 @@ static int rollup_external_xattrs_delete(void *args, int count, char **data, cha
         /* open parent per-user/per-group xattr db file */
         sqlite3 *xattr_db = opendb(xattr_db_name, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
         if (!xattr_db) {
+            free(xattr_db_name);
             return 1;
         }
 
@@ -620,6 +635,8 @@ static int rollup_external_xattrs_delete(void *args, int count, char **data, cha
                                       xattr_db_name, strerror(err), err);
         }
     }
+
+    free(xattr_db_name);
 
     return 0;
 }
@@ -725,22 +742,19 @@ static int do_rollup(struct RollUp *rollup,
 
 static int rollup_ascend(void *args) {
     struct RollUp *dir = (struct RollUp *) args;
-
     const size_t id = dir->data.tid.up;
-
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 3,
-               dir->data.name, dir->data.name_len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
-
     struct PoolArgs *pa = (struct PoolArgs *) dir->data.extra_args;
     struct input *in = &pa->in;
     struct RollUpStats *stats = pa->stats;
 
     /* get statistics out of BottomUp */
     struct DirStats *ds = malloc(sizeof(struct DirStats));
-    SNFORMAT_S(ds->path, MAXPATH, 1, dir->data.name, dir->data.name_len);
+    const size_t dbname_len = dir->data.name_len + 1 + DBNAME_LEN;
+    ds->path = malloc(dbname_len + 1); /* write "/db.db" and remove when not needed any more */
+    SNFORMAT_S(ds->path, dbname_len + 1, 3,
+               dir->data.name, dir->data.name_len,
+               "/", (size_t) 1,
+               DBNAME, DBNAME_LEN);
     ds->level = dir->data.level;
     ds->subdir_count = sll_get_size(&dir->data.subdirs);
     ds->subnondir_count = 0;
@@ -761,7 +775,10 @@ static int rollup_ascend(void *args) {
      *
      * always create the treesummary table
      */
-    sqlite3 *dst = opendb(dbname, openflag, 1, 0, modifydb, NULL);
+    sqlite3 *dst = opendb(ds->path, openflag, 1, 0, modifydb, NULL);
+
+    ds->path[dbname_len - 1 - DBNAME_LEN] = '\0'; /* remove "/db.db" */
+
     if (!dst) {
         sll_push_back(&stats[id].not_processed, ds); /* did not check if can roll up */
         stats[id].remaining++;
@@ -900,13 +917,9 @@ int main(int argc, char *argv[]) {
                                      1,
                                      &pa);
 
+    /* also frees stats */
     print_stats(pa.in.pos.argv, pa.in.pos.argc, &pa.in, pa.stats);
 
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
-        sll_destroy(&pa.stats[i].rolled_up, 0);
-        sll_destroy(&pa.stats[i].not_rolled_up, 0);
-        sll_destroy(&pa.stats[i].not_processed, 0);
-    }
     free(pa.stats);
     close_template_db(&pa.xattr_template);
 

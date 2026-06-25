@@ -87,8 +87,9 @@ struct PoolArgs {
 /* TODO: possible optimization - pass in and modify parent name by adding entry's name to save on some copying */
 static int process_entries(str_t *tree_parent,
                            struct work *entry, struct entry_data *ed) {
-    char path[MAXPATH];
-    SNFORMAT_S(path, sizeof(path), 3,
+    const size_t path_len = tree_parent->len + 1 + entry->name_len;
+    char *path = malloc(path_len + 1);
+    SNFORMAT_S(path, path_len + 1, 3,
                tree_parent->data, tree_parent->len,
                "/", (size_t) 1,
                entry->name, entry->name_len);
@@ -122,6 +123,8 @@ static int process_entries(str_t *tree_parent,
         /*     return 1; */
     }
 
+    free(path);
+
     return 0;
 }
 
@@ -146,8 +149,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     /* create the directory */
-    char topath[MAXPATH];
-    SNFORMAT_S(topath, MAXPATH, 3,
+    const size_t topath_len = pa->tree_parent.len + 1 + dir->name_len;
+    char *topath = malloc(topath_len + 1);
+    SNFORMAT_S(topath, topath_len + 1, 3,
                pa->tree_parent.data, pa->tree_parent.len,
                "/", (size_t) 1,
                dir->name, dir->name_len);
@@ -157,8 +161,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
-        xattrs_cleanup(&ed.xattrs);
+        free(topath);
         free(dir);
+        xattrs_cleanup(&ed.xattrs);
         row_destroy(&w);
         return 1;
     }
@@ -196,6 +201,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     set_metadata(topath, &dir->statuso, &ed.xattrs);
 
     free(line); /* reuse line and only alloc+free once */
+    free(topath);
     free(dir);
 
     xattrs_cleanup(&ed.xattrs);

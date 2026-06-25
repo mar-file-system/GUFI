@@ -199,11 +199,13 @@ static int process_entries(void *args, int count, char **data, char **columns) {
     const char *name = data[0];
     const char type = data[1][0];
 
-    char entry[MAXPATH];
-    SNFORMAT_S(entry, sizeof(entry), 3,
+    const size_t name_len = strlen(name);
+    const size_t entry_len = dcba->nameto_len + 1 + name_len;
+    char *entry = malloc(entry_len + 1);
+    SNFORMAT_S(entry, entry_len + 1, 3,
                dcba->nameto, dcba->nameto_len,
                "/", (size_t) 1,
-               name, strlen(name));
+               name, name_len);
 
     switch (type) {
         case 'f':
@@ -259,6 +261,8 @@ static int process_entries(void *args, int count, char **data, char **columns) {
         /*     return 1; */
     }
 
+    free(entry);
+
     return 0;
 }
 
@@ -283,11 +287,12 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
     }
 
     // create the destination directory using the source directory
-    char topath[MAXPATH];
-    const size_t topath_len = SNFORMAT_S(topath, MAXPATH, 3,
-                                         pa->dir.data, pa->dir.len,
-                                         "/", (size_t) 1,
-                                         work->name + pa->index_dirname_len, work->name_len - pa->index_dirname_len);
+    const size_t topath_len = pa->dir.len + 1 + work->name_len - pa->index_dirname_len;
+    char *topath = malloc(topath_len + 1);
+    SNFORMAT_S(topath, topath_len + 1, 3,
+               pa->dir.data, pa->dir.len,
+               "/", (size_t) 1,
+               work->name + pa->index_dirname_len, work->name_len - pa->index_dirname_len);
 
     rc = mkdir(topath, work->statuso.st_mode); /* don't need recursion because parent is guaranteed to exist */
     if (rc < 0) {
@@ -295,7 +300,7 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", topath, err, strerror(err));
             rc = 1;
-            goto close_dir;
+            goto free_topath;
         }
     }
 
@@ -303,15 +308,16 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
             processdir, NULL, NULL, NULL);
 
     /* open the index db.db */
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 2,
+    const size_t dbname_len = work->name_len + 1 + DBNAME_LEN;
+    char *dbname = malloc(dbname_len + 1);
+    SNFORMAT_S(dbname, dbname_len + 1, 2,
                work->name, work->name_len,
                "/" DBNAME, (size_t) (DBNAME_LEN + 1));
 
     db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
     if (!db) {
         rc = 1;
-        goto close_dir;
+        goto free_dbname;
     }
 
     size_t ext_xattrs = 0;
@@ -353,6 +359,12 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
 
     closedb(db);
 
+  free_dbname:
+    free(dbname);
+
+  free_topath:
+    free(topath);
+
   close_dir:
     closedir(dir);
 
@@ -379,17 +391,23 @@ struct work *validate_inputs(struct PoolArgs *pa) {
     pa->index_dirname_len = dirname_len(pa->index.data,
                                         pa->index.len - (pa->index.data[pa->index.len - 1] == '/'));
 
-    char expathin[MAXPATH];
-    char expathout[MAXPATH];
-    char expathtst[MAXPATH];
+    const size_t expathtst_len = pa->dir.len + 1 + pa->index.len;
+    char *expathtst = malloc(expathtst_len + 1);
+    SNPRINTF(expathtst, expathtst_len + 1, "%s/%s", pa->dir.data, pa->index.data);
 
-    SNPRINTF(expathtst, MAXPATH, "%s/%s", pa->dir.data, pa->index.data);
-    realpath(expathtst, expathout);
-    realpath(pa->index.data, expathin);
+    char *expathout = realpath(expathtst, NULL);
+    if (expathout) {
+        char *expathin = realpath(pa->index.data, NULL);
 
-    if (!strcmp(expathin, expathout)) {
-        fprintf(stderr,"You are putting the tree in the index directory\n");
+        if (!strcmp(expathin, expathout)) {
+            fprintf(stderr,"You are putting the tree in the index directory\n");
+        }
+
+        free(expathin);
+        free(expathout);
     }
+
+    free(expathtst);
 
     // get input path metadata
     struct stat src_st;
@@ -419,15 +437,19 @@ struct work *validate_inputs(struct PoolArgs *pa) {
     // create the source root under the destination directory using
     // the source directory's permissions and owners
     // this allows for the threads to not have to recursively create directories
-    char dst_path[MAXPATH];
-    SNFORMAT_S(dst_path, MAXPATH, 3,
+    const size_t dst_path_len = pa->dir.len + 1 + pa->index.len - pa->index_dirname_len;
+    char *dst_path = malloc(dst_path_len + 1);
+    SNFORMAT_S(dst_path, dst_path_len + 1, 3,
                pa->dir.data, pa->dir.len,
                "/", (size_t) 1,
                pa->index.data + pa->index_dirname_len, pa->index.len - pa->index_dirname_len);
     if (dupdir(dst_path, src_st.st_mode, src_st.st_uid, src_st.st_gid)) {
         fprintf(stderr, "Could not create %s under %s\n", pa->index.data, pa->dir.data);
+        free(dst_path);
         return NULL;
     }
+
+    free(dst_path);
 
     return new_work_with_name(NULL, 0, pa->index.data, pa->index.len);
 }

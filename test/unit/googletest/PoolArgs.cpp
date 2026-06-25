@@ -156,7 +156,7 @@ void poolargs_stdout(bool aggregate) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in memory
-        char dbname[MAXPATH];
+        char dbname[sizeof(DBNAME_FORMAT) + 20];
         const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
@@ -197,7 +197,7 @@ TEST(PoolArgs, OUTFILE) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in memory
-        char dbname[MAXPATH];
+        char dbname[sizeof(DBNAME_FORMAT) + 20];
         const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
@@ -210,7 +210,7 @@ TEST(PoolArgs, OUTFILE) {
 
     // delete the files here since the filenames are not available in the previous loop
     for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
-        char filename[MAXPATH];
+        char filename[sizeof(outname) + 1 + 20 + 1];
         snprintf(filename, sizeof(filename), "%s.%zu", in.outname.data, i);
         EXPECT_EQ(remove(filename), 0);
     }
@@ -238,7 +238,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in memory
-        char dbname[MAXPATH];
+        char dbname[sizeof(DBNAME_FORMAT) + 20];
         const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
@@ -251,7 +251,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
 
     // per-thread files are not created
     for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
-        char filename[MAXPATH];
+        char filename[sizeof(outname) + 1 + 20];
         snprintf(filename, sizeof(filename), "%s.%zu", in.outname.data, i);
         EXPECT_EQ(remove(filename), -1);
     }
@@ -281,7 +281,7 @@ TEST(PoolArgs, OUTDB) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in the filesystem
-        char dbname[MAXPATH];
+        char dbname[sizeof(outname) + 1 + 20];
         const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), "%s.%zu", in.outname.data, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
@@ -318,7 +318,7 @@ TEST(PoolArgs, OUTDB_aggregate) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in memory
-        char dbname[MAXPATH];
+        char dbname[sizeof(DBNAME_FORMAT) + 20];
         const std::size_t dbname_len = snprintf(dbname, sizeof(dbname), DBNAME_FORMAT, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
@@ -353,7 +353,7 @@ TEST(PoolArgs, bad_outdb) {
     in.outname.data = prefix;
 
     // create "<parent>/outdb.0" as a directory so that opendb fails
-    char subdir[MAXPATH];
+    char subdir[sizeof(prefix) + 2];
     snprintf(subdir, sizeof(subdir), "%s.0", prefix);
     ASSERT_EQ(mkdir(subdir, S_IRWXU | S_IRWXG | S_IRWXO), 0);
 
@@ -376,7 +376,7 @@ TEST(PoolArgs, bad_outfile) {
     in.outname.data = prefix;
 
     // create "<parent>/outfile.0" as a directory so that fopen fails
-    char subdir[MAXPATH];
+    char subdir[sizeof(prefix) + 2];
     snprintf(subdir, sizeof(subdir), "%s.0", prefix);
     ASSERT_EQ(mkdir(subdir, S_IRWXU | S_IRWXG | S_IRWXO), 0);
 
