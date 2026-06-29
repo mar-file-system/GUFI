@@ -176,11 +176,12 @@ static int new_alt_pathname(struct BottomUp *work, const char *dirname, size_t d
         size_t converted_len = basename_len;
         new_len += sqlite_uri_path(buf + new_len, orig_size - new_len, basename, &converted_len);
 
-        if (converted_len < basename_len) {
-            // uh-oh ... didn't convert entire string
-            free(buf);
-            return -1;
-        }
+        /* not possible */
+        /* if (converted_len < basename_len) { */
+        /*     // uh-oh ... didn't convert entire string */
+        /*     free(buf); */
+        /*     return -1; */
+        /* } */
     } else {
         new_len = 3 * dirname_len;
         buf = malloc(new_len + 1);
@@ -189,11 +190,12 @@ static int new_alt_pathname(struct BottomUp *work, const char *dirname, size_t d
         size_t converted_len = dirname_len;
         new_len = sqlite_uri_path(buf, new_len + 1, dirname, &converted_len);
 
-        if (converted_len < dirname_len) {
-            // uh-oh ... didn't convert entire string
-            free(buf);
-            return -1;
-        }
+        /* not possible */
+        /* if (converted_len < dirname_len) { */
+        /*     // uh-oh ... didn't convert entire string */
+        /*     free(buf); */
+        /*     return -1; */
+        /* } */
     }
 
     work->alt_name = buf;

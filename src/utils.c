@@ -1102,5 +1102,6 @@ size_t args_to_plugins(sll_t *args, struct plugins *plugins, const size_t nthrea
         }
     }
 
+    plugins->count = count;
     return count;
 }

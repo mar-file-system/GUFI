@@ -68,10 +68,9 @@ set -e
 OUTPUT="gufi_vt.out"
 
 PATH_LIST="path_list"
-BADDIR=$(mktemp -d "${INDEXROOT}.XXXXXX")
 
 cleanup() {
-    rm -rf "${PATH_LIST}" "${BADDIR}"
+    rm -rf "${PATH_LIST}"
 }
 
 cleanup_exit() {
@@ -515,7 +514,7 @@ query_vt "${query}" | @SED@ 's%plugin library.*%plugin library%g;'
 
 echo "# Bad plugin (global_init fails)"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"test_querying_plugin_bad_ops:${GUFI_QUERYING_PLUGIN}\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"test_querying_plugin_bad_global:${GUFI_QUERYING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
@@ -659,6 +658,13 @@ query_vt "${query}"
 echo "# Plugin with aggregation + remote"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${TEST_QUERYING_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Bad plugin (thread_init fails)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"test_querying_plugin_bad_thread:${GUFI_QUERYING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"

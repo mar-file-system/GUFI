@@ -1281,7 +1281,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             *pzErr = sqlite3_mprintf("Setting up results table with '%s' failed: %s",
                                      cmd.setup_res_col_type.data, err);
             sqlite3_free(err);
-            goto error;
+            goto done;
         }
     }
 
@@ -1300,11 +1300,11 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
         if (rc == -1) {
             *pzErr = sqlite3_mprintf("Need at least one of T/S/E when not aggregating");
-            goto error;
+            goto done;
         }
         else if (rc == 1) {
             *pzErr = sqlite3_mprintf("Could not get column types");
-            goto error;
+            goto done;
         }
     }
     /* types for G */
@@ -1314,37 +1314,42 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         if (sqlite3_exec(tempdb, cmd.K.data, NULL, NULL, &err) != SQLITE_OK) {
             *pzErr = sqlite3_mprintf("-K SQL failed while getting columns types: %s", err);
             sqlite3_free(err);
-            goto error;
+            goto done;
         }
         if (get_cols(tempdb, &cmd.G, &types, &names, &lens, &cols) != 0) {
             *pzErr = sqlite3_mprintf("Failed to get column types of -G");
-            goto error;
+            goto done;
         }
     }
 
-    static const char *SQL_TYPES[] = {
-        NULL,
-        "INTEGER",
-        "FLOAT",
-        "TEXT",
-        "BLOB",
-        "NULL"
-    };
-
-    /* construct the schema for the virtual table */
+  done:
+    ;
     char schema[MAXSQL];
-    char *ptr = schema + SNPRINTF(schema, sizeof(schema), "CREATE TABLE x(");
-    for(int c = 0; c < cols; c++) {
-        ptr += SNPRINTF(ptr, sizeof(schema) - (ptr - schema), "\"%s\" %s, ",
-                        names[c], SQL_TYPES[types[c]]);
-        free(names[c]);
+
+    if (!*pzErr) {
+        static const char *SQL_TYPES[] = {
+            NULL,
+            "INTEGER",
+            "FLOAT",
+            "TEXT",
+            "BLOB",
+            "NULL"
+        };
+
+        /* construct the schema for the virtual table */
+        char *ptr = schema + SNPRINTF(schema, sizeof(schema), "CREATE TABLE x(");
+        for(int c = 0; c < cols; c++) {
+            ptr += SNPRINTF(ptr, sizeof(schema) - (ptr - schema), "\"%s\" %s, ",
+                            names[c], SQL_TYPES[types[c]]);
+            free(names[c]);
+        }
+        ptr -= 2; /* remove trailing ", " */
+        SNPRINTF(ptr, sizeof(schema) - (ptr - schema), ");");
+
+        free(lens);
+        free(names);
+        free(types);
     }
-    ptr -= 2; /* remove trailing ", " */
-    SNPRINTF(ptr, sizeof(schema) - (ptr - schema), ");");
-
-    free(lens);
-    free(names);
-    free(types);
 
     plugins_ctx_exit(&in.plugins, tempdb, 0);
     plugins_thread_exit(&in.plugins, tempdb);
@@ -1354,18 +1359,11 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     closedb(tempdb);
     input_fini(&in);
 
-    return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
-                          schema, &cmd, 0);
-  error:
-    /* if here, types, names, and lens are NULL, so not freeing */
+    if (!*pzErr) {
+        return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
+                              schema, &cmd, 0);
+    }
 
-    plugins_ctx_exit(&in.plugins, tempdb, 0);
-    plugins_thread_exit(&in.plugins, tempdb);
-    plugins_global_exit(&in.plugins, &in);
-    plugins_destroy(&in.plugins);
-
-    closedb(tempdb);
-    input_fini(&in);
     gq_cmd_destroy(&cmd);
     return SQLITE_ERROR;
 }

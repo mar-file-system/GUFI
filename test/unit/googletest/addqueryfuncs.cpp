@@ -522,6 +522,7 @@ TEST(addqueryfuncs, ext) {
         std::make_pair("SELECT ext('name.csv');",      "csv"),
         std::make_pair("SELECT ext('files.tar.gz');",  "gz"),
         std::make_pair("SELECT ext('.hidden');",       "hidden"),
+        std::make_pair("SELECT ext('.');",             nullptr),
         std::make_pair("SELECT ext('no-extension');",  nullptr),
         std::make_pair("SELECT ext(NULL);",            nullptr),
     };

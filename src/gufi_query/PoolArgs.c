@@ -103,7 +103,7 @@ static void setstr(sqlite3_context *context, int argc, sqlite3_value **argv) {
     trie_insert(user_strs, key, key_len, copy, str_free_void);
 }
 
-void thread_id(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void thread_id(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc; (void) argv;
 
     const size_t tid = (size_t) (uintptr_t) sqlite3_user_data(context);

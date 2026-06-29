@@ -1204,7 +1204,7 @@ Runtime error near line 2: vtable constructor failed: gufi (19)
 # Bad plugin (global_init fails)
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_querying_plugin_bad_ops:querying_plugin");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_querying_plugin_bad_global:querying_plugin");SELECT * FROM gufi;"
 ) | sqlite3
 Error: test_querying_plugin: Bad global initialization
 Runtime error near line 2: vtable constructor failed: gufi (19)

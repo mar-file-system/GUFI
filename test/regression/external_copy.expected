@@ -114,6 +114,10 @@ Error: Basename pattern "*" compilation failed at offset 0: quantifier does not 
 $ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy ".*\.db" "INSERT INTO SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode;" "prefix" 2>&1 | head -n 1
 Warning: Could not copy external database data "prefix/ext1.db" using "INSERT INTO SELECT * FROM tab;": near "SELECT": syntax error
 
+# Bad SQL
+$ gufi_query -d "|" -I "CREATE TABLE ext(data TEXT, inode TEXT);" --external-copy ".*\.db" "INSERT INTO SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode;" --no-print-sql "prefix" 2>&1 | head -n 1
+Warning: Could not copy external database data "prefix/ext1.db": near "SELECT": syntax error
+
 # Missing -I
 $ gufi_query -d "|" --external-copy ".*\.db" "INSERT INTO ext SELECT * FROM tab;" -E "SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ext ON vrpentries.inode == ext.inode;" "prefix"
 Copying external databases require tables created with -I

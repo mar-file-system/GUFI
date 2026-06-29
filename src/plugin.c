@@ -151,8 +151,8 @@ struct plugins *plugins_init(struct plugins *plugins, const size_t count, const 
         for(size_t i = 0; i < nthreads; i++) {
             user_data[i] = calloc(count, sizeof(**user_data));
             if (!user_data[i]) {
-                for(size_t j = 0; j < i; j++) {
-                    free(user_data[j]);
+                for(size_t j = i; j > 0; j--) {
+                    free(user_data[j - 1]);
                 }
                 free(user_data);
                 return NULL;

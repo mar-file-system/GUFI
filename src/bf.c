@@ -335,7 +335,7 @@ void show_input(struct input* in, int retval) {
     printf("in.dry_run                  = %d\n",            in->dry_run);
 
     for(size_t i = 0; i < in->plugins.count; i++) {
-        printf("in.plugins[%zu]         = '%s'\n",          i, in->plugins.plugins[i]->filename);
+        printf("in.plugins[%zu]               = '%s'\n",    i, in->plugins.plugins[i]->filename);
     }
 
     printf("in.path_list                = '%s'\n",          in->path_list.data);
@@ -465,9 +465,9 @@ int parse_cmd_line(int                  argc,
 
     char *getopt_str = build_getopt_str(options);
 
-    int show                    = 0;
-    int retval                  = 0;
-    int bad_skipfile            = 0;
+    int show          = 0;
+    int retval        = 0;
+    int bad_skipfile  = 0;
     int ch;
     setenv("POSIXLY_CORRECT", "1", 1); /* don't check errors? */
     optind = 0;                        /* man 3 getopt_long */

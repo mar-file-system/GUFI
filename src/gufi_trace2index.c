@@ -134,7 +134,7 @@ static void process_nondir(sqlite3 *db, char *line, const size_t len,
         xattrs_cleanup(&row_ed.xattrs);
 
         nda->count++;
-        if (nda->count > 100000) {
+        if (nda->count > MAXRECS) {
             stopdb(db);
             startdb(db);
             nda->count = 0;

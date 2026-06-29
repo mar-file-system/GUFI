@@ -69,6 +69,6 @@ $ gufi_dir2index --plugin "test_indexing_plugin_ops2:indexing_plugin" -x "prefix
 Error: Could not find exported operations "test_indexing_plugin_ops2" in the plugin library
 
 # global init error
-$ gufi_query -d " " --plugin "test_querying_plugin_bad_ops:querying_plugin" -E "SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;" "prefix"
+$ gufi_query -d " " --plugin "test_querying_plugin_bad_global:querying_plugin" -E "SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;" "prefix"
 Error: test_querying_plugin: Bad global initialization
 

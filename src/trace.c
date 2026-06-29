@@ -724,7 +724,7 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
  *      0 - found end
  *      1 - end of file
  */
-int find_stanza_end(const int fd, off_t *end, void *args) {
+static int find_stanza_end(const int fd, off_t *end, void *args) {
     /* Not checking arguments */
 
     struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) args;
@@ -927,6 +927,8 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
     char *first_delim = NULL;
     int delim_mismatch = 0;
 
+    struct row *work = NULL;
+
     /*
      * keep current directory while finding next directory
      * in order to find out whether or not the current
@@ -965,7 +967,7 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
         goto done;
     }
 
-    struct row *work = row_init(sta->tr.fd, first_delim - line, line, len, 0);
+    work = row_init(sta->tr.fd, first_delim - line, line, len, 0);
 
     /* don't free line - the pointer is now owned by work */
 
@@ -1061,8 +1063,14 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
     QPTPool_enqueue(ctx, sta->processdir, work);
     #endif
 
+    work = NULL; /* don't deallocate enqueued work */
+
   done:
     free(line);
+    if (work) {
+        free(work->line);
+        free(work);
+    }
 
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 

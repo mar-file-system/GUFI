@@ -85,6 +85,16 @@ static int global_bad_init(struct input *in) {
     return 1;
 }
 
+static int thread_init(sqlite3 *db) {
+    (void) db;
+    return 0;
+}
+
+static int thread_bad_init(sqlite3 *db) {
+    (void) db;
+    return 1;
+}
+
 static void *db_init(void *ptr) {
     sqlite3 *db = (sqlite3 *) ptr;
 
@@ -120,7 +130,7 @@ static void global_exit(struct input *in) {
 struct plugin_operations test_querying_plugin_ops = {
     .type = PLUGIN_QUERY,
     .global_init = global_init,
-    .thread_init = NULL,
+    .thread_init = thread_init,
     .ctx_init = db_init,
     .process_dir = NULL,
     .process_file = NULL,
@@ -129,10 +139,22 @@ struct plugin_operations test_querying_plugin_ops = {
     .global_exit = global_exit,
 };
 
-struct plugin_operations test_querying_plugin_bad_ops = {
+struct plugin_operations test_querying_plugin_bad_global = {
     .type = PLUGIN_QUERY,
     .global_init = global_bad_init,
     .thread_init = NULL,
+    .ctx_init = NULL,
+    .process_dir = NULL,
+    .process_file = NULL,
+    .ctx_exit = NULL,
+    .thread_exit = NULL,
+    .global_exit = global_exit,
+};
+
+struct plugin_operations test_querying_plugin_bad_thread = {
+    .type = PLUGIN_QUERY,
+    .global_init = global_init,
+    .thread_init = thread_bad_init,
     .ctx_init = NULL,
     .process_dir = NULL,
     .process_file = NULL,

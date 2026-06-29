@@ -150,6 +150,9 @@ OUTPUT="external_copy.out"
     echo "# Bad SQL"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"CREATE TABLE ${COPY_NAME}(data TEXT, inode TEXT);\" --external-copy \".*\\.db\" \"INSERT INTO SELECT * FROM ${TABLE};\" -E \"SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ${COPY_NAME} ON vrpentries.inode == ${COPY_NAME}.inode;\" \"${INDEXROOT}\" 2>&1 | head -n 1"
 
+    echo "# Bad SQL"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"CREATE TABLE ${COPY_NAME}(data TEXT, inode TEXT);\" --external-copy \".*\\.db\" \"INSERT INTO SELECT * FROM ${TABLE};\" -E \"SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ${COPY_NAME} ON vrpentries.inode == ${COPY_NAME}.inode;\" --no-print-sql \"${INDEXROOT}\" 2>&1 | head -n 1"
+
     echo "# Missing -I"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" --external-copy \".*\\.db\" \"INSERT INTO ${COPY_NAME} SELECT * FROM ${TABLE};\" -E \"SELECT data, rpath(sname, sroll, name) FROM vrpentries JOIN ${COPY_NAME} ON vrpentries.inode == ${COPY_NAME}.inode;\" \"${INDEXROOT}\""
 ) | replace | tee "${OUTPUT}"
