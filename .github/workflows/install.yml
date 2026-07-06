@@ -68,7 +68,7 @@ env:
   CC: clang
   CXX: clang++
   DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DDEP_AI=On
+  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DDEP_AI=On -DMARFS_PREFIX="${DEP_INSTALL_PREFIX}/marfs" -DPRESIDIO_PLUGIN=On
   PIP_BREAK_SYSTEM_PACKAGES: 1
 
 jobs:
@@ -78,7 +78,7 @@ jobs:
       matrix:
         client: [ Off, On ]
     container:
-      image: rockylinux:9
+      image: rockylinux/rockylinux:9
     steps:
     - uses: actions/checkout@main
 
@@ -93,15 +93,16 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
     - name: Configure CMake
-      run:  |
-            mkdir build
-            cd build
-            cmake .. ${{ env.COMMON_CONFIG }} -DCLIENT="${{ matrix.client }}"
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCLIENT="${{ matrix.client }}"
 
     - name: Build and Test RPMs
-      run:  contrib/CI/rpms.sh "${{ matrix.client }}"
-      working-directory: ${{ github.workspace }}/build
+      run:  |
+        cd ${{ github.workspace }}/build
+        contrib/CI/rpms.sh "${{ matrix.client }}"
 
     - name: Upload RPMs
       uses: softprops/action-gh-release@master
@@ -130,6 +131,9 @@ jobs:
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
