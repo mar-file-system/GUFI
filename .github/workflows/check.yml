@@ -100,21 +100,31 @@ jobs:
   Older_CMake:
     needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
-    container:
-      image: rockylinux:9
+    services:
+      presidio-analyzer:
+        image: mcr.microsoft.com/presidio-analyzer:latest
+        ports:
+          - 5002:3000
+      presidio-anonymizer:
+        image: mcr.microsoft.com/presidio-anonymizer:latest
+        ports:
+          - 5001:3000
     steps:
     - uses: actions/checkout@main
+      with:
+        fetch-depth: 0
+        fetch-tags: true
 
     - uses: actions/cache@main
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-old-cmake
 
-    - name: Rocky Linux Prerequisites
-      run:  contrib/CI/rockylinux.sh
+    - name: Ubuntu Prerequisites
+      run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install wget
-      run:  yum -y install wget
+      run:  sudo apt -y install wget
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
@@ -123,7 +133,7 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Uninstall CMake from package manager
-      run:  yum -y autoremove cmake3
+      run:  sudo apt -y autoremove cmake
 
     - name: Install CMake 3.19.0
       run:  contrib/CI/cmake-download.sh 3.19.0 linux-x86_64 | tail -n 1 | sed 's/linux/Linux/g' >> "${GITHUB_PATH}"
@@ -132,14 +142,10 @@ jobs:
       run:  cmake --version
 
     - name: Configure CMake
-      run:  |
-            mkdir -p build
-            cd build
-            cmake .. ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs -DRLIMIT_NPROC_UNIT_TESTS=Off
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX=${{ env.DEP_INSTALL_PREFIX }}/marfs -DPRESIDIO_PLUGIN=On -DRLIMIT_NPROC_UNIT_TESTS=Off
 
     - name: Build
-      working-directory: ${{ github.workspace }}/build
-      run:  make -j
+      run:  cmake --build ${{ github.workspace }}/build -j
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
