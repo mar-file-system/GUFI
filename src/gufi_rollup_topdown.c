@@ -388,8 +388,21 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
      *
      * opendb will print an error, but keep going
      */
-
     if (db) {
+        char *err = NULL;
+
+        /* get whether or not this directory CAN roll up */
+        int *arr[] = { &canrollup, &isrolledup };
+        if (sqlite3_exec(db, "SELECT canrollup, isrolledup FROM " SUMMARY " WHERE isroot == 1;",
+                         get_rollup, arr, &err) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr, "Error: Could not get rollup data from \"%s\": %s\n",
+                                      work->name, err);
+            closedb(db);
+            pa->stats[id].not_rolledup++;
+            goto free_dbname;
+        }
+
+        /* check whether or not this directory SHOULD roll up */
         if (pa->in.rollup.entries_limit) {
             /*
              * if this directory started with too many entries, do not
@@ -400,6 +413,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
                                     "SELECT totfiles + totlinks "
                                     "FROM " SUMMARY " "
                                     "WHERE isroot == 1;") != 0) {
+                closedb(db);
                 goto free_dbname;
             }
 
@@ -413,20 +427,9 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
                                     "SELECT " TREESUMMARY ".totfiles + " TREESUMMARY ".totlinks "
                                     "FROM " TREESUMMARY " JOIN " SUMMARY " ON " TREESUMMARY ".inode == " SUMMARY ".inode "
                                     "WHERE " SUMMARY ".isroot == 1;") != 0) {
+                closedb(db);
                 goto free_dbname;
             }
-        }
-
-        char *err = NULL;
-
-        int *arr[] = { &canrollup, &isrolledup };
-        if (sqlite3_exec(db, "SELECT canrollup, isrolledup FROM " SUMMARY " WHERE isroot == 1;",
-                         get_rollup, arr, &err) != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Error: Could not get rollup data from \"%s\": %s\n",
-                                      work->name, err);
-            closedb(db);
-            pa->stats[id].not_rolledup++;
-            goto free_dbname;
         }
 
         closedb(db); /* readonly db is not needed any more */
@@ -778,6 +781,7 @@ int main(int argc, char *argv[]) {
     struct start_end runtime;
     clock_gettime(CLOCK_MONOTONIC, &runtime.start);
 
+    /* enqueue each input argument to search for tops of subtrees that can roll up */
     for(int i = 0; i < pa.in.pos.argc; i++) {
         const char *path = pa.in.pos.argv[i];
         struct work *work = new_work_with_name(NULL, 0, path, strlen(path));
