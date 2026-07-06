@@ -157,7 +157,7 @@ then
         else
             TSAN_PRELOAD=$(gcc -print-file-name=libtsan.so)
         fi
-        export TSAN_OPTIONS="allocator_may_return_null=1"
+        export TSAN_OPTIONS="allocator_may_return_null=1:suppressions=${BINARY_DIR}/test/tsan.suppressions"
     else # always run this if TSAN is not being used
         # Find libasan.so location
         # Adapted from answer by yugr

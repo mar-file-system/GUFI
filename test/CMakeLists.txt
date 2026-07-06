@@ -68,6 +68,9 @@ execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIR
 # LeakSanitizer suppressions
 configure_file("lsan.suppressions" "lsan.suppressions" COPYONLY)
 
+# ThreadSanitizer suppressions
+configure_file("tsan.suppressions" "tsan.suppressions" COPYONLY)
+
 # UndefinedBehaviorSanitizer suppressions
 configure_file("ubsan.suppressions" "ubsan.suppressions" COPYONLY)
 
