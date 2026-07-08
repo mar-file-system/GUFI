@@ -399,16 +399,23 @@ replace() {
 }
 
 run_sort() {
-    echo "$" "$@"                             2>&1 | replace
+    echo "$" "$@"                                  2>&1 | replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  2>&1 | replace | sort
+    out=$(eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@" 2>&1 | replace)
+    # shellcheck disable=SC2181
+    if [[ "$?" -eq 0 ]]
+    then
+        echo -n "${out}" | sort
+    else
+        echo -n "${out}"
+    fi
     echo
 }
 
 run_no_sort() {
-    echo "$" "$@"                             2>&1 | replace
+    echo "$" "$@"                                  2>&1 | replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  2>&1 | replace
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"       2>&1 | replace
     echo
 }
 
