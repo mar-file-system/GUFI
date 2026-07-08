@@ -196,7 +196,7 @@ int reindex_dir(struct PoolArgs *pa,
             .work = child,
             .ed = &child_ed,
         };
-        plugins_process_file(&pa->in.plugins, &child_pcs, id);
+        plugins_post_process_file(&pa->in.plugins, &child_pcs, id);
 
         if (pa->in.process_xattrs) {
             xattrs_cleanup(&child_ed.xattrs);
@@ -210,7 +210,7 @@ int reindex_dir(struct PoolArgs *pa,
     insertsumdb(db, work->name, work, ed, &summary);
 
     /* run plugin before destroying data */
-    plugins_process_dir(&pa->in.plugins, &pcs, id);
+    plugins_post_process_dir(&pa->in.plugins, &pcs, id);
 
     /* end the transaction */
     stopdb(db);

@@ -130,9 +130,6 @@ struct plugin_operations {
      */
     void *(*ctx_init)(void *ptr);
 
-    /* Process a directory */
-    void (*process_dir)(void *ptr, void *user_data);
-
     /*
      * Provide an entry's stat metadata from the plugin's own data
      * source instead of calling statx (GUFI#196).
@@ -152,8 +149,17 @@ struct plugin_operations {
      */
     int (*stat_file)(void *ptr, void *user_data);
 
-    /* Process a file */
-    void (*process_file)(void *ptr, void *user_data);
+    /* Process a directory before it gets inserted into the database */
+    void (*pre_process_dir)(void *ptr, void *user_data);
+
+    /* Process a file before it gets inserted into the database */
+    void (*pre_process_file)(void *ptr, void *user_data);
+
+    /* Process a directory after it gets inserted into the database */
+    void (*post_process_dir)(void *ptr, void *user_data);
+
+    /* Process a file after it gets inserted into the database*/
+    void (*post_process_file)(void *ptr, void *user_data);
 
     /* Clean up any state for the current context */
     void (*ctx_exit)(void *ptr, void *user_data);
@@ -224,8 +230,6 @@ size_t            plugins_global_init (struct plugins* plugins, struct input *in
 size_t            plugins_thread_init (struct plugins *plugins, sqlite3 *db);
 plugin_dir_action plugins_dir_action  (struct plugins* plugins, void* ctx);
 void              plugins_ctx_init    (struct plugins* plugins, void* ctx, const size_t tid);
-void              plugins_process_dir (struct plugins* plugins, void* ctx, const size_t tid);
-
 /*
  * Give plugins a chance to provide stat metadata instead of statx.
  * Returns 1 if some plugin fully populated the entry's stat (caller
@@ -233,7 +237,10 @@ void              plugins_process_dir (struct plugins* plugins, void* ctx, const
  * stat_file hook in struct plugin_operations (GUFI#196).
  */
 int               plugins_stat_file   (struct plugins* plugins, void* ctx, const size_t tid);
-void              plugins_process_file(struct plugins* plugins, void* ctx, const size_t tid);
+void              plugins_pre_process_dir (struct plugins* plugins, void* ctx, const size_t tid);
+void              plugins_pre_process_file(struct plugins* plugins, void* ctx, const size_t tid);
+void              plugins_post_process_dir (struct plugins* plugins, void* ctx, const size_t tid);
+void              plugins_post_process_file(struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_ctx_exit    (struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_thread_exit (struct plugins *plugins, sqlite3 *db);
 void              plugins_global_exit (struct plugins* plugins, struct input *in);
@@ -243,6 +250,7 @@ typedef struct PluginCommonStruct {
     sqlite3 *db;
     struct work *work;
     struct entry_data *ed;
+    struct sum *summary;
     void *data; /* any extra data to pass along */
 } PCS_t;
 

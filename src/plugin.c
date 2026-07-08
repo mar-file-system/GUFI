@@ -275,16 +275,6 @@ void plugins_ctx_init(struct plugins *plugins, void *ctx, const size_t tid) {
     }
 }
 
-void plugins_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
-    /* Not checking arguments */
-
-    for(size_t i = 0; i < plugins->count; i++) {
-        if (plugins->plugins[i]->ops->process_dir) {
-            plugins->plugins[i]->ops->process_dir(ctx, plugins->user_data[tid][i]);
-        }
-    }
-}
-
 int plugins_stat_file(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 
@@ -304,12 +294,42 @@ int plugins_stat_file(struct plugins *plugins, void *ctx, const size_t tid) {
     return 0;
 }
 
-void plugins_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
+void plugins_pre_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 
     for(size_t i = 0; i < plugins->count; i++) {
-        if (plugins->plugins[i]->ops->process_file) {
-            plugins->plugins[i]->ops->process_file(ctx, plugins->user_data[tid][i]);
+        if (plugins->plugins[i]->ops->pre_process_dir) {
+            plugins->plugins[i]->ops->pre_process_dir(ctx, plugins->user_data[tid][i]);
+        }
+    }
+}
+
+void plugins_pre_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
+    for(size_t i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->pre_process_file) {
+            plugins->plugins[i]->ops->pre_process_file(ctx, plugins->user_data[tid][i]);
+        }
+    }
+}
+
+void plugins_post_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
+    for(size_t i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->post_process_dir) {
+            plugins->plugins[i]->ops->post_process_dir(ctx, plugins->user_data[tid][i]);
+        }
+    }
+}
+
+void plugins_post_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
+    for(size_t i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->post_process_file) {
+            plugins->plugins[i]->ops->post_process_file(ctx, plugins->user_data[tid][i]);
         }
     }
 }

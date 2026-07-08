@@ -159,17 +159,25 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         }
     }
 
+    /* read external files before modifying the entry's path */
+    if (strncmp(entry->name + entry->name_len - entry->basename_len,
+                EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
+        external_read_file(in, entry, process_external, nda->db);
+    }
+
+    PCS_t pcs = {
+        .db = nda->db,
+        .work = entry,
+        .ed = ed,
+    };
+
+    plugins_pre_process_file(&nda->in->plugins, &pcs, nda->id);
+
     if (in->process_xattrs) {
         insertdbgo_xattrs(in, &nda->work->statuso, entry, ed,
                           &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath.data, nda->topath.len,
                           nda->xattrs_res, nda->xattr_files_res);
-    }
-
-    /* read external files before modifying the entry's path */
-    if (strncmp(entry->name + entry->name_len - entry->basename_len,
-                EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
-        external_read_file(in, entry, process_external, nda->db);
     }
 
     /* update summary table */
@@ -178,7 +186,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     /* add entry + xattr names into bulk insert */
     insertdbgo(entry, ed, nda->entries_res);
 
-    plugins_process_file(&nda->in->plugins, &pcs, nda->id);
+    plugins_post_process_file(&nda->in->plugins, &pcs, nda->id);
 
 out:
     return rc;
@@ -281,6 +289,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         pcs.work = nda.work;
         pcs.ed = &nda.ed;
         pcs.data = &pa->index_parent;
+        pcs.summary = &nda.summary;
 
         /* prepare to insert into the database */
         zeroit(&nda.summary);
@@ -328,20 +337,25 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
             /* pull this directory's xattrs because they were not pulled by the parent */
             xattrs_setup(&nda.ed.xattrs);
             xattrs_get(nda.work->name, &nda.ed.xattrs);
+        }
+        insertdbfin(nda.entries_res);
 
+        /* run plugin pre_processing before inserting data into database */
+        plugins_pre_process_dir(&pa->in.plugins, &pcs, nda.id);
+
+        if (nda.in->process_xattrs) {
             /* directory xattrs go into the same table as entries xattrs */
             insertdbgo_xattrs_avail(nda.work, &nda.ed, nda.xattrs_res);
             insertdbfin(nda.xattrs_res);
         }
-        insertdbfin(nda.entries_res);
 
         /* insert this directory's summary data */
         /* the xattrs go into the xattrs_avail table in db.db */
         insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len,
                     nda.work, &nda.ed, &nda.summary);
 
-        /* run plugin before destroying data */
-        plugins_process_dir(&pa->in.plugins, &pcs, nda.id);
+        /* run plugin post_processing before destroying data */
+        plugins_post_process_dir(&pa->in.plugins, &pcs, nda.id);
 
         /* end the transaction */
         stopdb(nda.db);
