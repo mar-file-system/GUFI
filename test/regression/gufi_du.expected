@@ -34,6 +34,12 @@ Does "prefix" have treesummary data?
 0 prefix
 0 total
 
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT totsize FROM summary;" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT SUM(size) FROM pentries WHERE type == 'f';" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
+
 $ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix
 Warning: Did not get any results from gufi_query.
 Does "prefix" have treesummary data?
@@ -200,6 +206,12 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 prefix
 1049673 total
 
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT totsize FROM summary;" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT SUM(size) FROM pentries WHERE type == 'f';" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
+
 $ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix
 1.0M prefix
 1.0M total
@@ -328,6 +340,12 @@ $ gufi_du --apparent-size --block-size 1 --summarize prefix
 $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 prefix
 1049673 total
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT totsize FROM summary;" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT SUM(size) FROM pentries WHERE type == 'f';" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
 
 $ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix
 1.0M prefix
@@ -460,6 +478,12 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix/*/
 23 prefix/leaf_directory/
 15 prefix/unusual#? directory ,/
 49 total
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT totsize FROM summary;" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix/*/
+49
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT SUM(size) FROM pentries WHERE type == 'f';" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix/*/
+49
 
 $ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix/*/
 11.0 prefix/directory/
