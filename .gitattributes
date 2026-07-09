@@ -1,0 +1,5 @@
+*.py.in                    linguist-language=python
+scripts/distributed/gufi_* linguist-language=python
+scripts/gufi_*             linguist-language=python
+scripts/gufi_jail          linguist-language=shell
+scripts/querydbs           linguist-language=python
