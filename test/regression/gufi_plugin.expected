@@ -40,6 +40,16 @@ file 4
 file 6
 file 12
 
+# index with a plugin that provides stat (stat_file replaces statx)
+$ gufi_dir2index --plugin "test_indexing_plugin_ops:indexing_plugin" -x "prefix" "search"
+Creating GUFI tree search with 1 threads
+Total Dirs:          6
+Total Non-Dirs:      14
+
+# every indexed file shares the plugin-provided sentinel stat (size uid gid), not statx:
+$ gufi_query -d " " -E "SELECT size, uid, gid FROM entries WHERE type == 'f';" "prefix" | sort -u
+1048576 4242 4242
+
 # index with querying plugin
 $ gufi_dir2index --plugin "test_querying_plugin_ops:querying_plugin" -x "prefix" "search"
 Error: "querying_plugin" has bad plugin type. Expected 1. Got: 2

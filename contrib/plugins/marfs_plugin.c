@@ -1204,6 +1204,7 @@ struct plugin_operations GUFI_MARFS_PLUGIN = {
     .dir_action = marfs_dir_action,
     .ctx_init = marfs_ctx_init,
     .process_dir = marfs_process_dir,
+    .stat_file = NULL,
     .process_file = marfs_process_file,
     .ctx_exit = marfs_ctx_exit,
     .thread_exit = NULL,

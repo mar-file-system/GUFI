@@ -68,6 +68,8 @@ OF SUCH DAMAGE.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 
 #include <sqlite3.h>
 
@@ -179,12 +181,52 @@ static void process_dir(void *ptr, void *user_data) {
     sqlite3_free(error);
 }
 
+/*
+ * Provide the entry's stat from the plugin instead of statx (GUFI#196).
+ *
+ * This exercises the "replace" mode of the stat_file hook: for regular
+ * files we fill work->statuso with FIXED, recognizable sentinel values and
+ * return 1, so gufi_dir2index skips statx and the indexed row reflects the
+ * plugin-provided stat rather than the file's real metadata. Non-files
+ * return 0, so directories/symlinks still fall back to statx. The
+ * regression test then shows every indexed file shares the sentinel
+ * (SELECT DISTINCT size, uid, gid ... collapses to a single row), which a
+ * real statx could never produce.
+ */
+static int stat_file(void *ptr, void *user_data) {
+    PCS_t *pcs = (PCS_t *) ptr;
+    (void) user_data;
+
+    /* Only claim regular files; let statx handle everything else. */
+    if (!pcs->ed || (pcs->ed->type != 'f')) {
+        return 0;
+    }
+
+    struct stat *st = &pcs->work->statuso;
+    memset(st, 0, sizeof(*st));
+    st->st_mode    = S_IFREG | 0644;
+    st->st_nlink   = 1;
+    st->st_uid     = 4242;
+    st->st_gid     = 4242;
+    st->st_size    = 1048576;      /* 1 MiB sentinel */
+    st->st_blksize = 512;
+    st->st_blocks  = 2048;
+    st->st_atime   = 1000000000;
+    st->st_mtime   = 1000000000;
+    st->st_ctime   = 1000000000;
+    pcs->work->crtime = 1000000000;
+
+    pcs->work->stat_called = STATX_CALLED;  /* tell GUFI stat is done */
+    return 1;                               /* statx skipped */
+}
+
 struct plugin_operations test_indexing_plugin_ops = {
     .type = PLUGIN_INDEX,
     .global_init = NULL,
     .thread_init = NULL,
     .ctx_init = db_init,
     .process_dir = process_dir,
+    .stat_file = stat_file,
     .process_file = process_file,
     .ctx_exit = db_exit,
     .thread_exit = NULL,

@@ -232,7 +232,7 @@ void              plugins_process_dir (struct plugins* plugins, void* ctx, const
  * should SKIP statx), 0 otherwise (caller should call statx). See the
  * stat_file hook in struct plugin_operations (GUFI#196).
  */
-int               plugins_stat_file  (struct plugins* plugins, void* ctx, const size_t tid);
+int               plugins_stat_file   (struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_process_file(struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_ctx_exit    (struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_thread_exit (struct plugins *plugins, sqlite3 *db);
