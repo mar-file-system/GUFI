@@ -488,6 +488,7 @@ struct plugin_operations presidio = {
     .dir_action = NULL,
     .ctx_init = NULL,
     .process_dir = NULL,
+    .stat_file = NULL,
     .process_file = NULL,
     .ctx_exit = NULL,
     .thread_exit = NULL,

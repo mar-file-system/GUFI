@@ -430,6 +430,7 @@ struct plugin_operations gufi_plugin_operations = {
     .dir_action = NULL,
     .ctx_init = db_init,
     .process_dir = process_dir,
+    .stat_file = NULL,
     .process_file = process_file,
     .ctx_exit = db_exit,
     .thread_exit = NULL,
