@@ -285,6 +285,25 @@ void plugins_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
     }
 }
 
+int plugins_stat_file(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
+    /* The first plugin whose stat_file reports success provides the
+       stat metadata; the caller then skips statx. Plugins that leave
+       stat_file NULL (the augment case, e.g. lustre/marfs) are skipped
+       here and still run in process_file. Returns 1 if stat was
+       provided, 0 to fall back to statx (GUFI#196). */
+    for(size_t i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->stat_file) {
+            if (plugins->plugins[i]->ops->stat_file(ctx, plugins->user_data[tid][i])) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
 void plugins_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 

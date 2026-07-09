@@ -133,6 +133,25 @@ struct plugin_operations {
     /* Process a directory */
     void (*process_dir)(void *ptr, void *user_data);
 
+    /*
+     * Provide an entry's stat metadata from the plugin's own data
+     * source instead of calling statx (GUFI#196).
+     *
+     * Called before the entry is inserted, so the plugin can fully
+     * populate work->statuso (and entry_data, e.g. type / linkname)
+     * that the insert and the summary/treesummary rollups depend on.
+     *
+     * Return 1 if the plugin fully populated the stat metadata (the
+     * caller then SKIPS statx); return 0 to fall back to statx.
+     *
+     * This is the per-plugin "PROVIDES_STAT" capability: a plugin that
+     * implements this REPLACES statx for the entries it handles; a
+     * plugin that leaves it NULL (the default) AUGMENTS the
+     * statx-derived row in process_file as before. Existing plugins
+     * (lustre, marfs, ...) are unaffected.
+     */
+    int (*stat_file)(void *ptr, void *user_data);
+
     /* Process a file */
     void (*process_file)(void *ptr, void *user_data);
 
@@ -206,6 +225,14 @@ size_t            plugins_thread_init (struct plugins *plugins, sqlite3 *db);
 plugin_dir_action plugins_dir_action  (struct plugins* plugins, void* ctx);
 void              plugins_ctx_init    (struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_process_dir (struct plugins* plugins, void* ctx, const size_t tid);
+
+/*
+ * Give plugins a chance to provide stat metadata instead of statx.
+ * Returns 1 if some plugin fully populated the entry's stat (caller
+ * should SKIP statx), 0 otherwise (caller should call statx). See the
+ * stat_file hook in struct plugin_operations (GUFI#196).
+ */
+int               plugins_stat_file  (struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_process_file(struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_ctx_exit    (struct plugins* plugins, void* ctx, const size_t tid);
 void              plugins_thread_exit (struct plugins *plugins, sqlite3 *db);
