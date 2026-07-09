@@ -286,14 +286,21 @@ TEST(PoolArgs, OUTDB) {
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
 
-        // delete the file now since the name is available
-        EXPECT_EQ(remove(ta->dbname), 0);
-
         // outfile is set to the default and not used
         EXPECT_EQ(ta->outfile, stdout);
     }
 
     EXPECT_NO_THROW(PoolArgs_fin(&pa, in.maxthreads));
+
+    // have to delete db files after they are closed on Windows/Cygwin
+    // this also checks to make sure they are not deleted by PoolArgs_fin
+    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+        // the per-thread database files are in the filesystem
+        char dbname[sizeof(outname) + 1 + 20];
+        snprintf(dbname, sizeof(dbname), "%s.%zu", in.outname.data, i);
+
+        EXPECT_EQ(remove(dbname), 0);
+    }
 }
 
 TEST(PoolArgs, OUTDB_aggregate) {

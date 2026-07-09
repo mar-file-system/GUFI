@@ -122,6 +122,9 @@ if (CMAKE_CXX_COMPILER)
   endif()
 
   add_executable(unit_tests main.cpp ${TEST_SRC} $<TARGET_OBJECTS:gufi_query_lib>)
+  if (CYGWIN)
+    target_compile_definitions(unit_tests PUBLIC _GNU_SOURCE)
+  endif()
   target_link_libraries(unit_tests -L"${DEP_INSTALL_PREFIX}/googletest/lib" -L"${DEP_INSTALL_PREFIX}/googletest/lib64" gtest ${COMMON_LIBRARIES})
 
   add_test(NAME unit_tests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/unit_tests" --gtest_shuffle

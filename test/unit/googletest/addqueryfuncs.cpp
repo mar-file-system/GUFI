@@ -577,6 +577,7 @@ TEST(addqueryfuncs, strop) {
     sqlite3_free(err);
     err = nullptr;
 
+    #ifndef __CYGWIN__
     // not enough file descriptors
     {
         struct rlimit orig_fds;
@@ -595,6 +596,7 @@ TEST(addqueryfuncs, strop) {
 
         ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
     }
+    #endif
 
     sqlite3_close(db);
 }
@@ -640,6 +642,7 @@ TEST(addqueryfuncs, intop) {
     sqlite3_free(err);
     err = nullptr;
 
+    #ifndef __CYGWIN__
     // not enough file descriptors
     {
         struct rlimit orig_fds;
@@ -658,6 +661,7 @@ TEST(addqueryfuncs, intop) {
 
         ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
     }
+    #endif
 
     sqlite3_close(db);
 }
@@ -747,6 +751,7 @@ TEST(addqueryfuncs, blobop) {
         str_free_existing(&output);
     }
 
+    #ifndef __CYGWIN__
     // not enough file descriptors
     {
         struct rlimit orig_fds;
@@ -764,6 +769,7 @@ TEST(addqueryfuncs, blobop) {
 
         ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds), 0);
     }
+    #endif
 
     sqlite3_close(db);
     remove(temp);

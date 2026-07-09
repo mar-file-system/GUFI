@@ -627,6 +627,10 @@ TEST(mkpath, parentfirst) {
     #endif
     ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid),  0);
 
+    #ifdef __CYGWIN__
+    ASSERT_EQ(chmod(child, orig_child_stat.st_mode),  0);
+    #endif
+
     struct stat parent_stat;
     struct stat child_stat;
     ASSERT_EQ(stat(parent, &parent_stat), 0);
@@ -670,8 +674,12 @@ TEST(mkpath, childfirst) {
     rmdir(parent);
 
     const mode_t prev_umask = umask(0);
-    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid),   0);
-    ASSERT_EQ(mkpath(parent, orig_parent_stat.st_mode, orig_parent_stat.st_uid, orig_parent_stat.st_gid),  -1); // EEXISTS
+    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode,  orig_child_stat.st_uid,  orig_child_stat.st_gid),   0);
+    ASSERT_EQ(mkpath(parent, orig_parent_stat.st_mode, orig_parent_stat.st_uid, orig_parent_stat.st_gid), -1); // EEXISTS
+
+    #ifdef __CYGWIN__
+    ASSERT_EQ(chmod(child, orig_child_stat.st_mode), 0);
+    #endif
 
     struct stat parent_stat;
     struct stat child_stat;

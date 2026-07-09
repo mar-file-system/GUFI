@@ -60,11 +60,5 @@
 
 
 
-# not using VERSION_GREATER_EQUAL just in case CMake version is less than 3.7
-if (NOT ("${CMAKE_VERSION}" VERSION_LESS "3.5.0"))
-  if (NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "CYGWIN")
-    add_subdirectory(googletest)
-  endif()
-endif()
-
+add_subdirectory(googletest)
 add_subdirectory(python)

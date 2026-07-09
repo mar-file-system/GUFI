@@ -131,9 +131,9 @@ if [[ "$#" -lt 3 ]]; then
     exit 1
 fi
 
-if [[ "$#" -lt 5 ]]
+if [[ "$#" -lt 3 ]]
 then
-    echo "Syntax: $0 download_dir build_dir install_dir CMAKE_VERSION CMAKE_SYSTEM_NAME" >&2
+    echo "Syntax: $0 download_dir build_dir install_dir" >&2
     exit 1
 fi
 
@@ -147,9 +147,6 @@ BUILD_DIR=$(realpath "$2")
 # dependency install path
 mkdir -p "$3"
 INSTALL_DIR=$(realpath "$3")
-
-CMAKE_VERSION="$4"
-CMAKE_SYSTEM_NAME="$5"
 
 export SCRIPT_PATH
 export DOWNLOAD_DIR
@@ -177,14 +174,7 @@ if [[ "${JEMALLOC}" == "true" ]]; then
     source "${SCRIPT_PATH}/jemalloc.sh"
 fi
 
-ACCEPTABLE_VERSION=3.5
-HIGHEST_VERSION=$( (echo "${CMAKE_VERSION}"; echo "${ACCEPTABLE_VERSION}") | sort -rV | head -1)
-
-if [[ "${CMAKE_SYSTEM_NAME}" != "CYGWIN" ]]; then
-    if [[ "${CMAKE_VERSION}" == "${HIGHEST_VERSION}" ]]; then
-        if [[ "${BUILD_CXX}" == "true" ]]; then
-            echo "Installing GoogleTest"
-            source "${SCRIPT_PATH}/googletest.sh"
-        fi
-    fi
+if [[ "${BUILD_CXX}" == "true" ]]; then
+    echo "Installing GoogleTest"
+    source "${SCRIPT_PATH}/googletest.sh"
 fi

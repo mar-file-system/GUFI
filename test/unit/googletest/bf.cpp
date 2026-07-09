@@ -1016,7 +1016,7 @@ TEST(setup_directory_skip, file) {
 
     {
         std::ofstream skip_stream(skip_name);
-        EXPECT_TRUE(skip_stream);
+        EXPECT_TRUE((bool) skip_stream);
 
         skip_stream << std::endl; // start with empty line
         for(std::string const & skip_dir : skip_dirs) {

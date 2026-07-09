@@ -351,7 +351,7 @@ if (DEP_AI)
     set(DEP_OPTIONS ${DEP_OPTIONS} --cygwin --OMP "-DOpenMP_C_FLAGS=\"${OpenMP_C_FLAGS}\" -DOpenMP_C_LIB_NAMES=\"${OpenMP_C_LIB_NAMES}\" -DOpenMP_libgomp_LIBRARY=\"${OpenMP_libgomp_LIBRARY}\"")
   endif()
 endif()
-add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}" "${CMAKE_VERSION}" "${CMAKE_SYSTEM_NAME}")
+add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
 # llama.cpp uses OpenMP (not required, but left enabled)
 if (DEP_AI)

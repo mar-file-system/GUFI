@@ -75,6 +75,10 @@ struct popen_argv_ret {
 };
 
 popen_argv_t *popen_argv(const char **argv) {
+    if (!argv) {
+        return NULL;
+    }
+
     int fds[2];
     if (pipe(fds) != 0) {
         return NULL;
