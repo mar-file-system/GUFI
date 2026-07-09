@@ -141,9 +141,22 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     struct input *in = nda->in;
     int rc = 0;
 
-    if (fstatat_wrapper(entry, ed, 1, NULL) != 0) {
-        rc = 1;
-        goto out;
+    /* references passed into plugins; built up front so a plugin may
+       provide stat before the entry is inserted (GUFI#196) */
+    PCS_t pcs = {
+        .db = nda->db,
+        .work = entry,
+        .ed = ed,
+    };
+
+    /* Let a plugin supply the entry's stat metadata from its own data
+       source (e.g. a pseudo-file read) instead of statx. If no plugin
+       provides it, fall back to statx exactly as before. */
+    if (!plugins_stat_file(&nda->in->plugins, &pcs, nda->id)) {
+        if (fstatat_wrapper(entry, ed, 1, NULL) != 0) {
+            rc = 1;
+            goto out;
+        }
     }
 
     if (in->process_xattrs) {
@@ -164,12 +177,6 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
 
     /* add entry + xattr names into bulk insert */
     insertdbgo(entry, ed, nda->entries_res);
-
-    PCS_t pcs = {
-        .db = nda->db,
-        .work = entry,
-        .ed = ed,
-    };
 
     plugins_process_file(&nda->in->plugins, &pcs, nda->id);
 
