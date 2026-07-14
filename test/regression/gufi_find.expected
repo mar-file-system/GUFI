@@ -278,6 +278,18 @@ prefix/leaf_directory/leaf_file2
 prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
+$ gufi_find -perm 444
+prefix/directory/readonly
+
+$ gufi_find -perm=-4000
+prefix/directory/executable
+
+$ gufi_find -perm=-2000
+prefix/directory
+
+$ gufi_find -perm /0111 -type f
+prefix/directory/executable
+
 $ gufi_find -readable
 prefix
 prefix/.hidden

@@ -317,7 +317,14 @@ def build_where(args, table, root_uid=0, root_gid=0):
         where += [' OR '.join(['(rpath(sname, sroll) GLOB \'{0}\')'.format(path)
                                for path in args.path])]
 
-    # if args.perm is not None:
+    if args.perm is not None:
+        if args.perm[0] is None:   # exact match
+            where += ['((mode & 4095) == {0})'.format(args.perm[1])]
+        elif args.perm[0] == '-':  # all provided bits are set
+            where += ['((mode & 4095) & {0}) == {0}'.format(args.perm[1])]
+        elif args.perm[0] == '/':  # any provided bits are set
+            where += ['((mode & 4095) & {0}) != 0'.format(args.perm[1])]
+        # elif args.perm[0] == '+': # deprecated
 
     if args.readable is True:
         where += ['(mode & 256) == 256'] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
@@ -672,10 +679,10 @@ or by sending an email to <gufi-lanl@lanl.gov>'''
                         type=str,
                         action='append',
                         help='File name matches shell pattern.')
-    # parser.add_argument('-perm',
-    #                     metavar='mode',
-    #                     type=str,
-    #                     help='File\'s  permission bits')
+    parser.add_argument('-perm',
+                        metavar='mode',
+                        type=gufi_common.get_mode,
+                        help='File\'s permission bits are exactly mode (octal only)')
     parser.add_argument('-readable',
                         action='store_true',
                         help='Matches files which are readable.')

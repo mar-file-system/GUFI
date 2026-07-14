@@ -222,7 +222,6 @@ def get_blocksize(value):
     blocksize = re.match(r'^(\+?[0-9]*)({0})?$'.format('|'.join(SIZES)), value)
     if (blocksize is None) or ((blocksize.group(1) != '') and (int(blocksize.group(1)) == 0)):
         raise argparse.ArgumentTypeError('Invalid --block-size argument: \'{0}\''.format(value))
-
     return value
 
 def get_port(port):
@@ -234,6 +233,24 @@ def get_port(port):
     if (p < 0) or (p > 65535):
         raise argparse.ArgumentTypeError("Bad port: {0}".format(p))
     return p
+
+# probably only applicable for gufi_find
+def get_mode(mode_str):
+    prefix = None
+    if mode_str[0] == '-':
+        prefix = '-'
+        mode_str = mode_str[1:]
+    elif mode_str[0] == '/':
+        prefix = '/'
+        mode_str = mode_str[1:]
+    elif mode_str[0] == '+':
+        raise argparse.ArgumentTypeError("+mode has been deprecated: {0}".format(mode_str))
+
+    mode = int(mode_str, 8)
+    get_non_negative(mode)
+    if mode > 0o7777:
+        raise argparse.ArgumentTypeError("Invalid mode: {0}".format(mode_str))
+    return [prefix, mode]
 
 def get_uid(uid_str):
     '''
