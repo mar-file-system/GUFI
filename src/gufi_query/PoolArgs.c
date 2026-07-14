@@ -136,13 +136,13 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
         /* only create per-thread db files when not aggregating and outputting to OUTDB */
         if (!in->sql.init_agg.len && (in->output == OUTDB)) {
-            const size_t len = in->outname.len + 20; /* if size_t == uint64_t, max 20 digits */
+            const size_t len = in->outname.len + UINT64_DIGITS;
             ta->dbname = malloc(len + 1);
             SNPRINTF(ta->dbname, len + 1, "%s.%zu", in->outname.data, i);
         }
         else {
             static const char MEM[] = "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
-            const size_t len = sizeof(MEM) + 20; /* if size_t == uint64_t, max 20 digits */
+            const size_t len = sizeof(MEM) + UINT64_DIGITS;
             ta->dbname = malloc(len + 1);
             SNPRINTF(ta->dbname, len + 1, "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI, i);
         }

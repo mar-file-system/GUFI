@@ -89,6 +89,7 @@ extern "C" {
 #define DBNAME "db.db"
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
 #define GETLINE_DEFAULT_SIZE 750 /* magic number */
+#define UINT64_DIGITS 20         /* ceil(log10((uint64_t) -1)) */
 
 #define FLAG_HELP_SHORT 'h'
 #define FLAG_HELP_LONG "help"
