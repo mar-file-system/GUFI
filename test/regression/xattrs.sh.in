@@ -66,19 +66,6 @@ set -e
 
 OUTPUT="xattrs.out"
 
-cleanup() {
-    rm -rf "${TRACES[@]}"
-}
-
-cleanup_exit() {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
-cleanup
-
 create() {
     # run in subshell to return to calling directory
     (
@@ -172,11 +159,11 @@ echo -e "${unrolled}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${unrolled}")
 
 echo "# query topdown rolled up tree"
-rm -r "${SEARCH}"
+rm -rf "${SRCDIR}" "${SEARCH}"
 create_tree
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -x \"${SRCDIR}\" \"${SEARCH}\""
 run_no_sort "${GUFI_TREESUMMARY_ALL} -n ${THREADS} \"${INDEXROOT}\""
-run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} \"${INDEXROOT}\"" | @SED@ '\%Time to do%d; \%Min: .*s$%d; \%Max: .*s$%d; \%Mean: .*s$%d; \%Stdev: .*s$%d;'
+run_no_sort "${GUFI_ROLLUP_TOPDOWN} -n ${THREADS} \"${INDEXROOT}\"" | @SED@ '\%Finished .*s$%d; \%Time to do%d; \%Min: .*s$%d; \%Max: .*s$%d; \%Mean: .*s$%d; \%Stdev: .*s$%d;'
 topdown="$(query)"
 echo -e "${topdown}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${topdown}")

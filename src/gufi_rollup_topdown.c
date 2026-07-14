@@ -86,6 +86,7 @@ typedef struct Path {
     str_t uri;  /* uri for ATTACH-ing in SQLite 3 */
 } Path_t;
 
+/* void * for sll_destroy */
 static void Path_free(void *ptr) {
     Path_t *path = (Path_t *) ptr;
     str_free_existing(&path->uri);
@@ -93,11 +94,38 @@ static void Path_free(void *ptr) {
     free(path);
 }
 
+typedef struct ThreadDB {
+    char *dbname;
+    char *uri;
+    sqlite3 *db;
+} ThreadDB_t;
+
 typedef struct Subtree {
-    struct work *root; /* top of subtree that can be rolled up */
-    sll_t *subdirs;    /* per-thread list of directory Path_t *s */
-    Path_t *curr;      /* the directory currently being processed */
-} Subtree_t ;
+    struct work *root;          /* top of subtree that can be rolled up */
+    sll_t *subdirs;             /* per-thread list of directory Path_t *s */
+    Path_t *curr;               /* the directory currently being processed (for parallel_walk) */
+    ThreadDB_t *tdbs;           /* array of target dbs to copy to */
+    size_t threads_used;        /* number of threads used for processing this subtree */
+    size_t enqueue_start;       /* thread to start enqueueing at (to round robin) */
+
+    pthread_mutex_t mutex;
+    size_t remaining;           /* when remaining hits 0, call rollup_merge */
+
+    struct start_end *se;       /* initially owned by subtree, transferred to stats */
+} Subtree_t;
+
+static void Subtree_free(Subtree_t *subtree, const size_t threads) {
+    free(subtree->se);
+    pthread_mutex_destroy(&subtree->mutex);
+    free(subtree->tdbs);    /* elements should have already been freed */
+    Path_free(subtree->curr);
+    for(size_t i = 0; i < threads; i++) {
+        sll_destroy(&subtree->subdirs[i], Path_free);
+    }
+    free(subtree->subdirs);
+    free(subtree->root);
+    free(subtree);
+}
 
 struct PoolArgs {
     struct input in;
@@ -105,6 +133,10 @@ struct PoolArgs {
     struct template_db xattr_template;
 
     sll_t *subtrees;            /* per-thread list of Subtree_t * */
+
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;        /* signal this to have main enqueue another subtree */
+    size_t active_dbs;
 
     /* per-thread stats */
     struct {
@@ -118,8 +150,9 @@ struct PoolArgs {
         size_t top;
 
         /* during rollup operation */
-        sll_t subdirs;
-        sll_t runtimes;         /* list of time to roll up into each subtree root (struct start_end) */
+        sll_t subdirs;          /* counts (size_t *) */
+        sll_t runtimes;         /* time to roll up into each subtree root (struct start_end *) */
+                                /* does not include timestamps for errors */
         size_t failures;        /* selected for rollup and failed */
     } *stats;
 };
@@ -279,7 +312,7 @@ static int prepare_top_down_rollup(struct PoolArgs *pa, QPTPool_ctx_t *ctx, stru
      * that need to be copied to the top
      */
 
-    Subtree_t *subtree = malloc(sizeof(*subtree));
+    Subtree_t *subtree = calloc(1, sizeof(*subtree));
     subtree->root    = work;         /* reference */
     subtree->subdirs = top->subdirs; /* reference */
     subtree->curr    = top_path;     /* reference */
@@ -472,17 +505,73 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
     return 0;
 }
 
-/* pulls double duty as bookkeeping and work item */
-struct ThreadDB {
-    struct work *work;
-    char *dbname;
-    char *uri;
-    sqlite3 *db;
-};
+/*
+ * merge per-thread dbs into main db
+ * tdbs[0] is db.db
+ *
+ * called when subtree has been processed
+ */
+static void rollup_merge(const size_t id, struct PoolArgs *pa, Subtree_t *subtree) {
+    if (subtree->tdbs) {
+        /* merge per-thread data into db.db */
+        for(size_t i = 1; i < subtree->threads_used; i++) {
+            if (!subtree->tdbs[i].db) {
+                continue;
+            }
+
+            closedb(subtree->tdbs[i].db);
+
+            if (attachdb(subtree->tdbs[i].uri, subtree->tdbs[0].db, ROLLUP_SUBDIR_ATTACH_NAME, SQLITE_OPEN_READONLY, 1, NULL)) {
+                char *err = NULL;
+                if (sqlite3_exec(subtree->tdbs[0].db,
+                                 "INSERT INTO " SUMMARY             " SELECT * FROM " ROLLUP_SUBDIR_ATTACH_NAME "." SUMMARY "; "
+                                 "INSERT INTO " PENTRIES_ROLLUP     " SELECT * FROM " ROLLUP_SUBDIR_ATTACH_NAME "." PENTRIES "; "
+                                 "INSERT INTO " XATTRS_ROLLUP       " SELECT * FROM " ROLLUP_SUBDIR_ATTACH_NAME "." XATTRS_AVAIL "; "
+                                 "INSERT INTO " EXTERNAL_DBS_ROLLUP " SELECT * FROM " ROLLUP_SUBDIR_ATTACH_NAME "." EXTERNAL_DBS "; ",
+                                 NULL, NULL, &err) != SQLITE_OK) {
+                    sqlite_print_err_and_free(err, stderr, "Error: Could not merge rollup data from thread %zu into %s: %s\n",
+                                              i, subtree->root->name, err);
+
+                    /* keep going */
+                }
+
+                detachdb(subtree->tdbs[i].uri, subtree->tdbs[0].db, ROLLUP_SUBDIR_ATTACH_NAME, 1, NULL);
+            }
+
+            free(subtree->tdbs[i].uri);
+            if (remove(subtree->tdbs[i].dbname) != 0) {
+                const int err = errno;
+                fprintf(stderr, "Warning: Could not remove \"%s\": %s (%d)\n",
+                        subtree->tdbs[i].dbname, strerror(err), err);
+            }
+            free(subtree->tdbs[i].dbname);
+        }
+
+        closedb(subtree->tdbs[0].db);
+        free(subtree->tdbs[0].dbname);
+    }
+
+    /* cleanup */
+
+    struct start_end *se = subtree->se;
+    subtree->se = NULL;
+    const size_t threads_used = subtree->threads_used;
+
+    Subtree_free(subtree, 0);
+
+    clock_gettime(CLOCK_MONOTONIC, &se->end);
+    sll_push_back(&pa->stats[id].runtimes, se);
+
+    pthread_mutex_lock(&pa->mutex);
+    pa->active_dbs -= threads_used;
+    pthread_cond_broadcast(&pa->cond);
+    pthread_mutex_unlock(&pa->mutex);
+}
 
 struct ThreadRollUp {
-    struct ThreadDB *tdbs;
-    Path_t *path; /* subdirectory path being operated on */
+    Subtree_t *subtree;
+    ThreadDB_t *tdb;       /* target to copy to */
+    Path_t *path;          /* subdirectory path being operated on */
 };
 
 /* copy one subdirectory into a per-thread database */
@@ -491,30 +580,33 @@ static int copy_to_top(QPTPool_ctx_t *ctx, void *data) {
     QPTPool_get_args(ctx, (void **) &pa);
     const size_t id = QPTPool_get_id(ctx);
     struct ThreadRollUp *tru = (struct ThreadRollUp *) data;
+    Subtree_t *subtree = tru->subtree;
+
+    int rc = 0;
 
     /* roll up one subdirectory into one of the root's per-thread db file */
 
     /* attach the subdirectory's db.db in READONLY mode to the per-thread database */
-    char *child_dbname = rollup_child_attach(tru->tdbs[id].db, &tru->path->uri, SQLITE_OPEN_READONLY);
+    char *child_dbname = rollup_child_attach(tru->tdb->db, &tru->path->uri, SQLITE_OPEN_READONLY);
     if (!child_dbname) {
-        return -1;
+        rc = -1;
+        goto cleanup;
     }
 
-    pthread_mutex_t xattr_mutex = PTHREAD_MUTEX_INITIALIZER;
     rexa_t rexa = {
         .xattr       = {
             .temp    = &pa->xattr_template,
-            .mutex   = &xattr_mutex,
+            .mutex   = &subtree->mutex,
         },
-        .parent      = tru->tdbs->work->name,
-        .parent_len  = tru->tdbs->work->name_len,
+        .parent      = subtree->root->name,
+        .parent_len  = subtree->root->name_len,
         .child       = tru->path->orig.data,
         .child_len   = tru->path->orig.len,
     };
 
     /* get the correct rolled up path */
-    const char *rolledup_path = rexa.child + rexa.parent_len - tru->tdbs->work->basename_len;
-    const size_t rolledup_path_len = rexa.child_len - rexa.parent_len + tru->tdbs->work->basename_len;
+    const char *rolledup_path = rexa.child + rexa.parent_len - subtree->root->basename_len;
+    const size_t rolledup_path_len = rexa.child_len - rexa.parent_len + subtree->root->basename_len;
 
     /* SQL for doing rollup */
     const size_t rollup_one_subdir_len =
@@ -529,39 +621,50 @@ static int copy_to_top(QPTPool_ctx_t *ctx, void *data) {
                "'", (size_t) 1,
                ROLLUP_ONE_SUBDIR_BACK, sizeof(ROLLUP_ONE_SUBDIR_BACK) - 1);
 
-    int rc = 0;
-
     /*
      * roll up the subdirectory into this directory
      *
      * xattrs that were not rolled in are directly rolled up into the
      * target user/group db, not into per-thread user/group dbs
      */
-    if (rollup_child_process(tru->tdbs[id].db, rollup_one_subdir, &rexa) != 0) {
+    if (rollup_child_process(tru->tdb->db, rollup_one_subdir, &rexa) != 0) {
         rc = -1;
     }
 
     free(rollup_one_subdir);
 
     /* always detach */
-    rollup_child_detach(tru->tdbs[id].db, child_dbname);
+    rollup_child_detach(tru->tdb->db, child_dbname);
 
+  cleanup:
     Path_free(tru->path);
     free(tru);
+
+    pthread_mutex_lock(&subtree->mutex);
+    const size_t remaining = --subtree->remaining;
+    pthread_mutex_unlock(&subtree->mutex);
+
+    if (!remaining) {
+        rollup_merge(id, pa, subtree);
+    }
 
     return rc;
 }
 
 /* set up and kick off copies into per-thread databases placed in the target directory */
-static struct ThreadDB *parallel_copy(QPTPool_ctx_t *ctx, void *data) {
+static int rollup_copy(QPTPool_ctx_t *ctx, void *data, const size_t enqueue_start) {
     struct PoolArgs *pa = NULL;
     QPTPool_get_args(ctx, (void **) &pa);
-    const size_t id = QPTPool_get_id(ctx);
     Subtree_t *subtree = (Subtree_t *) data;
     struct work *work = subtree->root;
     Path_t *path = subtree->curr;
 
     /* setup */
+
+    subtree->se = calloc(1, sizeof(*subtree->se));
+    clock_gettime(CLOCK_MONOTONIC, &subtree->se->start);
+
+    pthread_mutex_init(&subtree->mutex, NULL);
 
     /* <path>/db.db */
     const size_t dbname_len = work->name_len + 1 + DBNAME_LEN;
@@ -574,33 +677,65 @@ static struct ThreadDB *parallel_copy(QPTPool_ctx_t *ctx, void *data) {
     /* reopen the db in readwrite mode */
     sqlite3 *topdb = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, NULL, NULL);
     if (!topdb) {
-        pa->stats[id].failures++;
+        pa->stats[pa->in.maxthreads].failures++;
         free(dbname);
-        return NULL;
+        Subtree_free(subtree, pa->in.maxthreads);
+        return -1;
     }
 
     /* clear out old rollup data */
     str_t name = REFSTR(work->name, work->name_len);
     if (rollup_init(topdb, &name) != 0) {
-        pa->stats[id].failures++;
+        pa->stats[pa->in.maxthreads].failures++;
         closedb(topdb);
         free(dbname);
-        return NULL;
+        Subtree_free(subtree, pa->in.maxthreads);
+        return -1;
     }
 
-    struct ThreadDB *tdbs = calloc(pa->in.maxthreads, sizeof(*tdbs));
+    /* get number of subdirectories to process */
+    size_t *subdir_count = calloc(1, sizeof(*subdir_count));
+    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+        *subdir_count += sll_get_size(&subtree->subdirs[i]);
+    }
+    subtree->remaining = *subdir_count;
+
+    /* save subdirectory count in stats */
+    sll_push_back(&pa->stats[pa->in.maxthreads].subdirs, subdir_count);
+
+    /* no need to open maxthreads dbs for < maxthreads directories */
+    const size_t threads_used = min(*subdir_count, pa->in.maxthreads);
+    subtree->threads_used = threads_used;
+
+    /* single directory subtree - just clean up */
+    if (threads_used == 0) {
+        subtree->tdbs = NULL;
+        closedb(topdb);
+        free(dbname);
+
+        pthread_mutex_unlock(&pa->mutex);
+        rollup_merge(pa->in.maxthreads, pa, subtree);
+        pthread_mutex_lock(&pa->mutex);
+
+        return 0;
+    }
+
+    subtree->enqueue_start = enqueue_start;
+
+    pa->active_dbs += threads_used; /* locked by caller */
+
+    ThreadDB_t *tdbs = calloc(threads_used, sizeof(*tdbs));
+    subtree->tdbs = tdbs;
 
     /* thread 0 writes directly into the target db */
-    tdbs[0].work   = work;           /* reference (still owned by subtree) */
-    tdbs[0].dbname = dbname;
+    tdbs[0].dbname = dbname;         /* owned */
     tdbs[0].uri    = path->uri.data; /* reference */
-    tdbs[0].db     = topdb;
+    tdbs[0].db     = topdb;          /* owned */
 
     /* open per-thread dbs */
-    const size_t tdbname_len = dbname_len + 1 + 20;                 /* <path>/db.db.<thread id> */
-    const size_t uri_len = path->uri.len + 1 + DBNAME_LEN + 1 + 20; /* <uri>/db.db.<thread id> */
-    for(size_t i = 1; i < pa->in.maxthreads; i++) {
-        tdbs[i].work = work; /* reference */
+    const size_t tdbname_len = dbname_len + 1 + UINT64_DIGITS;                 /* <path>/db.db.<thread id> */
+    const size_t uri_len = path->uri.len + 1 + DBNAME_LEN + 1 + UINT64_DIGITS; /* <uri>/db.db.<thread id> */
+    for(size_t i = 1; i < threads_used; i++) {
         tdbs[i].dbname = malloc(tdbname_len + 1);
         SNPRINTF(tdbs[i].dbname, tdbname_len + 1, "%s.%zu", dbname, i);
         tdbs[i].uri = malloc(uri_len + 1);
@@ -611,83 +746,38 @@ static struct ThreadDB *parallel_copy(QPTPool_ctx_t *ctx, void *data) {
         create_treesummary_tables(tdbs[i].dbname, tdbs[i].db, NULL);
     }
 
-    size_t *subdir_count = calloc(1, sizeof(*subdir_count));
-    sll_push_back(&pa->stats[id].subdirs, subdir_count);
-
     /* ************************************************************ */
 
-    /* enqueue subtree paths for copying into per-thread database files */
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
-        *subdir_count += sll_get_size(&subtree->subdirs[i]);
+    if (*subdir_count) {
+        size_t enqueue_offset = 0;
 
-        for(Path_t *child_path = sll_pop_front(&subtree->subdirs[i]);
-            child_path;
-            child_path = sll_pop_front(&subtree->subdirs[i])) {
+        /* does not need to be carried around any more */
+        sll_t *subdirs = subtree->subdirs;
+        subtree->subdirs = NULL;
 
-            struct ThreadRollUp *tru = malloc(sizeof(*tru));
-            tru->tdbs = tdbs;       /* reference */
-            tru->path = child_path; /* take ownership */
+        /* enqueue subdirectories for copying into per-thread database files */
+        for(size_t i = 0; i < pa->in.maxthreads; i++) {
+            for(Path_t *child_path = sll_pop_front(&subdirs[i]);
+                child_path;
+                child_path = sll_pop_front(&subdirs[i])) {
 
-            QPTPool_enqueue(ctx, copy_to_top, tru);
-        }
+                struct ThreadRollUp *tru = malloc(sizeof(*tru));
+                tru->subtree = subtree;             /* reference */
+                tru->tdb = &tdbs[enqueue_offset];   /* reference */
+                tru->path = child_path;             /* take ownership */
 
-        sll_destroy(&subtree->subdirs[i], NULL); /* nothing should be in this list */
-    }
+                QPTPool_enqueue(ctx, copy_to_top, tru);
 
-    QPTPool_wait(ctx);
-
-    return tdbs;
-}
-
-/* do rollups with discovered subtrees */
-static void do_rollup(struct PoolArgs *pa, Subtree_t *subtree,
-                      QPTPool_ctx_t *ctx) {
-    struct start_end *se = malloc(sizeof(*se));
-    clock_gettime(CLOCK_MONOTONIC, &se->start);
-
-    /* copy subtree contents in parallel into per-thread db files */
-    struct ThreadDB *tdbs = parallel_copy(ctx, subtree);
-
-    /* merge per-thread data into db.db */
-    for(size_t i = 1; i < pa->in.maxthreads; i++) {
-        closedb(tdbs[i].db);
-
-        if (attachdb(tdbs[i].uri, tdbs[0].db, ROLLUP_SUBDIR_ATTACH_NAME, SQLITE_OPEN_READONLY, 1, NULL)) {
-            char *err = NULL;
-            if (sqlite3_exec(tdbs[0].db,
-                             "INSERT INTO " SUMMARY             " SELECT * FROM " ROLLUP_SUBDIR_ATTACH_NAME "." SUMMARY "; "
-                             "INSERT INTO " PENTRIES_ROLLUP     " SELECT * FROM " ROLLUP_SUBDIR_ATTACH_NAME "." PENTRIES "; "
-                             "INSERT INTO " XATTRS_ROLLUP       " SELECT * FROM " ROLLUP_SUBDIR_ATTACH_NAME "." XATTRS_AVAIL "; "
-                             "INSERT INTO " EXTERNAL_DBS_ROLLUP " SELECT * FROM " ROLLUP_SUBDIR_ATTACH_NAME "." EXTERNAL_DBS "; ",
-                             NULL, NULL, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr, "Error: Could not merge rollup data from thread %zu into %s: %s\n",
-                                          i, subtree->root->name, err);
-
-                /* keep going */
+                enqueue_offset = (enqueue_offset + 1) % threads_used;
             }
 
-            detachdb(tdbs[i].uri, tdbs[0].db, ROLLUP_SUBDIR_ATTACH_NAME, 1, NULL);
+            sll_destroy(&subdirs[i], NULL); /* nothing should be in this list */
         }
 
-        free(tdbs[i].uri);
-        remove(tdbs[i].dbname);
-        free(tdbs[i].dbname);
+        free(subdirs);
     }
 
-    /* cleanup */
-
-    closedb(tdbs[0].db);
-    free(tdbs[0].dbname);
-
-    free(tdbs);
-
-    Path_free(subtree->curr);
-    free(subtree->subdirs);
-    free(subtree->root);
-    free(subtree);
-
-    clock_gettime(CLOCK_MONOTONIC, &se->end);
-    sll_push_back(&pa->stats[0].runtimes, se);
+    return 0;
 }
 
 static int compare_subdirs(const void *lhs, const void *rhs) {
@@ -730,7 +820,7 @@ static void compute_stats(struct PoolArgs *pa) {
     long double *runtimes = calloc(top, sizeof(*runtimes));
     long double runtime_sum = 0;
     size_t idx[] = {0, 0};
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+    for(size_t i = 0; i < pa->in.maxthreads + 1; i++) {
         sll_loop(&pa->stats[i].subdirs, node) {
             const size_t sd = * (size_t *) sll_node_data(node);
             subdir_sum += sd;
@@ -839,14 +929,14 @@ int main(int argc, char *argv[]) {
         sll_init(&pa.subtrees[i]);
     }
 
-    pa.stats = calloc(pa.in.maxthreads, sizeof(*pa.stats));
+    pa.stats = calloc(pa.in.maxthreads + 1, sizeof(*pa.stats));
     if (!pa.stats) {
         fprintf(stderr, "Error: Could not allocate stat counters\n");
         rc = 1;
         goto free_subtrees;
     }
 
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+    for(size_t i = 0; i < pa.in.maxthreads + 1; i++) {
         sll_init(&pa.stats[i].subdirs);
         sll_init(&pa.stats[i].runtimes);
     }
@@ -876,33 +966,64 @@ int main(int argc, char *argv[]) {
      */
     QPTPool_wait(pool);
 
+    struct timespec done_finding_subtrees;
+    clock_gettime(CLOCK_MONOTONIC, &done_finding_subtrees);
+
+    fprintf(stderr, "Finished Finding Top of Subtrees to Roll Up in %.2Lfs\n",
+            sec(since_epoch(&done_finding_subtrees) - since_epoch(&runtime.start)));
+
+    pthread_mutex_init(&pa.mutex, NULL);
+    pthread_cond_init(&pa.cond, NULL);
+    pa.active_dbs = 0;
+
     /*
      * do the actual rollup using the discovered subtrees
      *
-     * each subtree is processed sequentially (for now) to not have
-     * explosive numbers of databases (pa.in.maxthreads * number of
-     * subtrees) open at once
+     * Subtrees are pushed into the thread pool for parallel
+     * processing up until all threads are active (oversubscription is
+     * allowed). The remaining subtrees are pushed in as subtrees exit
+     * the thread pool.
+     *
+     * TODO: Schedule subtree processing instead of enqueuing in whatever
+     * order they happened to show up in.
      */
+    size_t enqueue_start = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
         for(Subtree_t *subtree = sll_pop_front(&pa.subtrees[i]);
             subtree; subtree = sll_pop_front(&pa.subtrees[i])) {
-            do_rollup(&pa, subtree, pool);
+            pthread_mutex_lock(&pa.mutex);
+
+            /* wait until number of active copies drops */
+            while (pa.active_dbs >= pa.in.maxthreads) { /* can oversubscribe */
+                pthread_cond_wait(&pa.cond, &pa.mutex);
+            }
+
+            /* kick off subtree copying */
+            rollup_copy(pool, subtree, enqueue_start);
+            pthread_mutex_unlock(&pa.mutex);
+
+            enqueue_start = (enqueue_start + 1) % pa.in.maxthreads;
         }
     }
 
     QPTPool_stop(pool);
+
+    pthread_mutex_destroy(&pa.mutex);
+    pthread_cond_destroy(&pa.cond);
 
     clock_gettime(CLOCK_MONOTONIC, &runtime.end);
 
     QPTPool_destroy(pool);
 
     /* cleanup */
+    fprintf(stderr, "Finished Rolling Up in %.2Lfs\n",
+            sec(since_epoch(&runtime.end) - since_epoch(&done_finding_subtrees)));
 
     compute_stats(&pa);
     fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));
 
   free_stats:
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+    for(size_t i = 0; i < pa.in.maxthreads + 1; i++) {
         sll_destroy(&pa.stats[i].runtimes, free);
         sll_destroy(&pa.stats[i].subdirs, free);
     }

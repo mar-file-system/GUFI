@@ -394,7 +394,7 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
         /* https://stackoverflow.com/a/12864069/341683 */
         /* does not seem to fix it either */
         const size_t len = va_arg(args, unsigned int);
-        const size_t copy_len = (len < max_len)?len:max_len;
+        const size_t copy_len = min(len, max_len);
         /* not checking for NULL pointers */
         memcpy(dst, src, copy_len);
         dst += copy_len;
@@ -663,7 +663,7 @@ ssize_t copyfd(int src_fd, off_t src_off,
     ssize_t copied = 0;
     while ((size_t) copied < size) {
         const size_t rem = size - copied;
-        const ssize_t r = pread(src_fd, buf, (rem < buf_size)?rem:buf_size, src_off);
+        const ssize_t r = pread(src_fd, buf, min(rem, buf_size), src_off);
         if (r == 0) {
             break;
         }

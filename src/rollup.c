@@ -366,6 +366,8 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
                                   child_xattr_db_name, xattr_db_name, err);
     }
 
+    detachdb(child_xattr_db_name, xattr_db, attachname, 1, NULL);
+
     free(child_xattr_db_name);
     closedb(xattr_db);
 

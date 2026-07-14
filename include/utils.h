@@ -93,6 +93,10 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...);
 #define MIN_ASSIGN_LHS(lhs, rhs) if ((lhs) > (rhs)) { (lhs) = (rhs); }
 #define MAX_ASSIGN_LHS(lhs, rhs) if ((lhs) < (rhs)) { (lhs) = (rhs); }
 
+static inline uint64_t min(const uint64_t lhs, const uint64_t rhs) {
+    return (lhs < rhs)?lhs:rhs;
+}
+
 static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
     return (lhs > rhs)?lhs:rhs;
 }
