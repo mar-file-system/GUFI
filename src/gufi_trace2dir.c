@@ -209,7 +209,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     return 0;
 }
 
-void sub_help(void) {
+static void sub_help(void) {
    printf("trace...          read these trace files\n");
    printf("dir               reconstruct the tree under here\n");
    printf("\n");

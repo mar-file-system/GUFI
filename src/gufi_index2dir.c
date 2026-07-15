@@ -374,7 +374,7 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
     return rc;
 }
 
-struct work *validate_inputs(struct PoolArgs *pa) {
+static struct work *validate_inputs(struct PoolArgs *pa) {
     if (!pa->index.len) {
         fprintf(stderr, "Error: GUFI_tree path is empty\n");
         return NULL;
@@ -454,7 +454,7 @@ struct work *validate_inputs(struct PoolArgs *pa) {
     return new_work_with_name(NULL, 0, pa->index.data, pa->index.len);
 }
 
-void sub_help(void) {
+static void sub_help(void) {
    printf("GUFI_tree         walk this GUFI tree to produce a source tree\n");
    printf("dir               reconstruct the source tree under here\n");
    printf("\n");

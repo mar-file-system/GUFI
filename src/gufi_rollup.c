@@ -95,7 +95,7 @@ struct DirStats {
     int success;              /* whether or not the roll up succeeded */
 };
 
-void DirStats_free(void *ptr) {
+static void DirStats_free(void *ptr) {
     struct DirStats *ds = (struct DirStats *) ptr;
     free(ds->path);
     free(ds);
@@ -117,7 +117,7 @@ struct PoolArgs {
 };
 
 /* compare function for qsort */
-int compare_size_t(const void *lhs, const void *rhs) {
+static int compare_size_t(const void *lhs, const void *rhs) {
     return (*(size_t *) lhs - *(size_t *) rhs);
 }
 
@@ -424,7 +424,7 @@ static int get_nondirs(const char *name, sqlite3 *dst, size_t *subnondir_count) 
  *          0 - do not roll up
  *          1 - all permissions pass
  */
-int can_rollup(sqlite3 *dst, struct RollUp *rollup,
+static int can_rollup(sqlite3 *dst, struct RollUp *rollup,
                size_t *total_child_entries) { /* extra data to grab while getting permissions */
     const size_t child_count = sll_get_size(&rollup->data.subdirs);
 

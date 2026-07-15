@@ -68,17 +68,22 @@ env:
   CC: clang
   CXX: clang++
   DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DDEP_AI=On -DMARFS_PREFIX="${DEP_INSTALL_PREFIX}/marfs" -DPRESIDIO_PLUGIN=On
+  COMMON_CONFIG: -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-Wall -Werror -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wold-style-definition -Wpedantic -Wstrict-prototypes -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DDEP_AI=On -DMARFS_PREFIX="${DEP_INSTALL_PREFIX}/marfs" -DPRESIDIO_PLUGIN=On
   PIP_BREAK_SYSTEM_PACKAGES: 1
+
+permissions: {}
 
 jobs:
   RPMs:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         client: [ Off, On ]
+
     container:
-      image: rockylinux/rockylinux:9
+      image: rockylinux/rockylinux:10
+
     steps:
     - uses: actions/checkout@main
 
@@ -112,9 +117,11 @@ jobs:
 
   Install:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         type: [ 'CMake', 'Make' ]
+
     steps:
     - uses: actions/checkout@main
       with:

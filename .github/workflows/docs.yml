@@ -67,6 +67,10 @@ on: [push, pull_request]
 jobs:
   Documentation:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
     steps:
     - uses: actions/checkout@main
       with:

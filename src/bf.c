@@ -221,7 +221,7 @@ void print_help(const char* prog_name,
                                                             "                                    1 - skip T, run S and E whether or not a row was returned (old -a)\n"
                                                             "                                    2 - run T, S, and E whether or not a row was returned"); break;
             case FLAG_THREADS_SHORT:                     printf("  -n, --threads <n>                 number of threads"); break;
-            case FLAG_DELIM_SHORT:                       printf("  -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
+            case FLAG_DELIM_SHORT:                       printf("  -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x%02X]", (unsigned int) fielddelim); break;
             case FLAG_OUTPUT_FILE_SHORT:                 printf("  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)"); break;
             case FLAG_OUTPUT_DB_SHORT:                   printf("  -O, --output-db <out_DB>          output DB"); break;
             case FLAG_SQL_INIT_SHORT:                    printf("  -I <SQL_init>                     SQL init"); break;
@@ -306,7 +306,7 @@ void show_input(struct input* in, int retval) {
     printf("in.buildindex               = %d\n",            in->buildindex);
     printf("in.maxthreads               = %zu\n",           in->maxthreads);
     printf("in.delim                    = '%c'\n",          in->delim);
-    printf("in.dir_match_owner.on       = %d\n",            in->dir_match.on);
+    printf("in.dir_match_owner.on       = %d\n",            (int) in->dir_match.on);
     printf("in.dir_match_owner.uid      = %" STAT_uid "\n", in->dir_match.uid);
     printf("in.dir_match_owner.gid      = %" STAT_gid "\n", in->dir_match.gid);
     printf("in.process_sql              = %d\n",            (int) in->process_sql);
@@ -822,7 +822,7 @@ int parse_cmd_line(int                  argc,
 
             default:
                 retval = -1;
-                fprintf(stderr, "?? getopt returned character code 0%o ??\n", ch);
+                fprintf(stderr, "?? getopt returned character code 0%o ??\n", (unsigned int) ch);
         };
     }
     free(getopt_str);

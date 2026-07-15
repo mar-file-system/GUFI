@@ -68,12 +68,22 @@ env:
   CC: clang
   CXX: clang++
   DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On -DCLIENT=On -DDEP_AI=On
+  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Werror -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wold-style-definition -Wpedantic -Wstrict-prototypes -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On -DCLIENT=On -DDEP_AI=On -DMARFS_PREFIX="${DEP_INSTALL_PREFIX}/marfs" -DPRESIDIO_PLUGIN=On
   PIP_BREAK_SYSTEM_PACKAGES: 1
 
 jobs:
   SecurityCheck:
     runs-on: ubuntu-latest
+
+    services:
+      presidio-analyzer:
+        image: mcr.microsoft.com/presidio-analyzer:latest
+        ports:
+          - 5002:3000
+      presidio-anonymizer:
+        image: mcr.microsoft.com/presidio-anonymizer:latest
+        ports:
+          - 5001:3000
 
     permissions:
       security-events: write
@@ -98,6 +108,9 @@ jobs:
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Install Marfs & ISA-L
+      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}

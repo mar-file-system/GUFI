@@ -195,7 +195,7 @@ static int plugin_check_type(struct plugin *plugin, const plugin_type accepted) 
     if ((plugin->ops->type != PLUGIN_NONE) &&
         (plugin->ops->type != accepted)) {
         fprintf(stderr, "Error: \"%s\" has bad plugin type. Expected %d. Got: %d\n",
-                plugin->filename, accepted, plugin->ops->type);
+                plugin->filename, (int) accepted, (int) plugin->ops->type);
         return 0;
     }
     return 1;

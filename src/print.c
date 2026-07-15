@@ -154,7 +154,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             fprintf(print->outfile, TLV_ROW_LEN_WRITE_FMT, row_len);
 
             /* write column count */
-            fprintf(print->outfile, TLV_COL_COUNT_WRITE_FMT, count);
+            fprintf(print->outfile, TLV_COL_COUNT_WRITE_FMT, (unsigned int) count);
         }
 
         for(int i = 0; i < last; i++) {
@@ -221,7 +221,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             filled += TLV_ROW_LEN_LEN;
 
             /* write column count */
-            snprintf(&buf[filled], ob->capacity - filled, TLV_COL_COUNT_WRITE_FMT, count);
+            snprintf(&buf[filled], ob->capacity - filled, TLV_COL_COUNT_WRITE_FMT, (unsigned int) count);
             filled += TLV_COL_COUNT_LEN;
         }
 
