@@ -414,18 +414,22 @@ char *modetostr(char *str, const size_t size, const mode_t mode)
     }
 
     if (str) {
+        static const char SETUGID[]   = "-xSs";
+        static const char SETSTICKY[] = "-xTt";
+
         SNPRINTF(str, size, "----------");
         if (S_ISDIR(mode))  str[0] = 'd';
         if (S_ISLNK(mode))  str[0] = 'l';
         if (mode & S_IRUSR) str[1] = 'r';
         if (mode & S_IWUSR) str[2] = 'w';
-        if (mode & S_IXUSR) str[3] = 'x';
+        str[3] = SETUGID[((!!(mode & S_ISUID)) << 1) | !!(mode & S_IXUSR)];
         if (mode & S_IRGRP) str[4] = 'r';
         if (mode & S_IWGRP) str[5] = 'w';
-        if (mode & S_IXGRP) str[6] = 'x';
+        str[6] = SETUGID[((!!(mode & S_ISGID)) << 1) | !!(mode & S_IXGRP)];
         if (mode & S_IROTH) str[7] = 'r';
         if (mode & S_IWOTH) str[8] = 'w';
         if (mode & S_IXOTH) str[9] = 'x';
+        str[9] = SETSTICKY[((!!(mode & S_ISVTX)) << 1) | !!(mode & S_IXOTH)];
     }
 
     return str;

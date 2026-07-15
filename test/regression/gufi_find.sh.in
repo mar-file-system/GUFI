@@ -91,6 +91,7 @@ run_no_sort "${BINARY_DIR}/scripts/gufi_find --help"
 # setuid on directory/executable
 "${SQLITE3}" "${INDEXROOT}/directory/db.db" "UPDATE entries SET mode = mode | 2048 WHERE name == 'executable';"
 "${SQLITE3}" "${INDEXROOT}/directory/db.db" "UPDATE summary SET mode = mode | 1024 WHERE name == 'directory';"
+"${SQLITE3}" "${INDEXROOT}/directory/db.db" "UPDATE entries SET mode = mode | 512  WHERE name == 'writable';"
 
 run_no_sort "${GUFI_FIND} -H 2>&1 >/dev/null"
 run_no_sort "${GUFI_FIND} -L 2>&1 >/dev/null"
@@ -127,6 +128,7 @@ run_sort "${GUFI_FIND} -path  '*directory*'"
 run_sort "${GUFI_FIND} -perm 444"                 # directory/readonly
 run_sort "${GUFI_FIND} -perm=-4000"               # directory/executable
 run_sort "${GUFI_FIND} -perm=-2000"               # directory
+run_sort "${GUFI_FIND} -perm=-1000"               # directory/writable
 run_sort "${GUFI_FIND} -perm /0111 -type f"       # directory/executable
 run_sort "${GUFI_FIND} -readable"
 run_sort "${GUFI_FIND} -regex '.*/directory.*'"   # regex on whole path

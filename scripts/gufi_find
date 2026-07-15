@@ -682,7 +682,7 @@ or by sending an email to <gufi-lanl@lanl.gov>'''
     parser.add_argument('-perm',
                         metavar='mode',
                         type=gufi_common.get_mode,
-                        help='File\'s permission bits are exactly mode (octal only)')
+                        help='File\'s permission bits (no prefix, -, or /) (octal mode)')
     parser.add_argument('-readable',
                         action='store_true',
                         help='Matches files which are readable.')

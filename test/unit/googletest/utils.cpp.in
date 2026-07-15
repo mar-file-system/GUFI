@@ -748,30 +748,54 @@ TEST(modetostr, error) {
     }
 }
 
-TEST(modetostr, files) {
+static void modetostr_type(const mode_t type) {
     char actual[11];
     char expected[11];
     for(mode_t i = 0; i < 01000; i++) {
-        EXPECT_STREQ(modetostr(actual, 11, i), another_modetostr(expected, i));
+        const mode_t mode = i | type;
+        EXPECT_STREQ(modetostr(actual, 11, mode), another_modetostr(expected, mode));
     }
+}
+
+TEST(modetostr, files) {
+    modetostr_type(S_IFREG);
 }
 
 TEST(modetostr, links) {
-    char actual[11];
-    char expected[11];
-    for(mode_t i = 0; i < 01000; i++) {
-        const mode_t mode = i | S_IFLNK;
-        EXPECT_STREQ(modetostr(actual, 11, mode), another_modetostr(expected, mode));
-    }
+    modetostr_type(S_IFLNK);
 }
 
 TEST(modetostr, directories) {
+    modetostr_type(S_IFDIR);
+}
+
+static char SETUGID[]   = "-xSs";
+static char SETSTICKY[] = "-xTt";
+
+static void modetostr_setbits(const int idx, const mode_t x, const mode_t bits, const char *chars) {
     char actual[11];
     char expected[11];
-    for(mode_t i = 0; i < 01000; i++) {
-        const mode_t mode = i | S_IFDIR;
-        EXPECT_STREQ(modetostr(actual, 11, mode), another_modetostr(expected, mode));
+    for(mode_t mode = 0; mode < 01000; mode++) {
+        another_modetostr(expected, mode);
+        for(int set = 0; set < 4; set++) {
+            mode |= (set & 2)?bits:0;
+            expected[idx] = chars[(set & 2) | !!(mode & x)];
+            EXPECT_STREQ(modetostr(actual, 11, mode), expected);
+        }
+        mode &= ~bits;
     }
+}
+
+TEST(modetostr, setuid) {
+    modetostr_setbits(3, S_IXUSR, S_ISUID, SETUGID);
+}
+
+TEST(modetostr, setgid) {
+    modetostr_setbits(6, S_IXGRP, S_ISGID, SETUGID);
+}
+
+TEST(modetostr, sticky) {
+    modetostr_setbits(9, S_IXOTH, S_ISVTX, SETSTICKY);
 }
 
 TEST(trailing_match_index, paths) {

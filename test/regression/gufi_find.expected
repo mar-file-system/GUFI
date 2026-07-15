@@ -287,6 +287,9 @@ prefix/directory/executable
 $ gufi_find -perm=-2000
 prefix/directory
 
+$ gufi_find -perm=-1000
+prefix/directory/writable
+
 $ gufi_find -perm /0111 -type f
 prefix/directory/executable
 
@@ -599,7 +602,7 @@ prefix/old_file
 
 $ gufi_find -ls
 0 0 -rw-rw-r-- 1 user group 0 Jan 1 1970 prefix/old_file
-1 1 -rwxrwxrwx 1 user group 1 Jan 1 1970 prefix/directory/executable
+1 1 -rwsrwxrwx 1 user group 1 Jan 1 1970 prefix/directory/executable
 10 1 -rw-rw-r-- 1 user group 10 Jan 1 1970 prefix/.hidden
 1024 1 -rw-rw-r-- 1 user group 1024 Jan 1 1970 prefix/1KB
 1048576 1024 -rw-rw-r-- 1 user group 1048576 Jan 13 1970 prefix/1MB
@@ -611,23 +614,23 @@ $ gufi_find -ls
 16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? directory ,
 17 1 drwxrwxr-x 1 user group 17 Jan 1 1970 prefix
 2 1 -r--r--r-- 1 user group 2 Jan 1 1970 prefix/directory/readonly
-3 1 -rw-rw-rw- 1 user group 3 Jan 1 1970 prefix/directory/writable
+3 1 -rw-rw-rwT 1 user group 3 Jan 1 1970 prefix/directory/writable
 4 1 lrwxrwxrwx 1 user group 4 Jan 1 1970 prefix/directory/subdirectory/directory_symlink -> prefix/directory/subdirectory
 5 1 -rw-rw-r-- 1 user group 5 Jan 1 1970 prefix/directory/subdirectory/repeat_name
 6 1 drwxrwxr-x 1 user group 6 Jan 1 1970 prefix/directory/subdirectory
-7 1 drwxrwxr-x 1 user group 7 Jan 1 1970 prefix/directory
+7 1 drwxrwsr-x 1 user group 7 Jan 1 1970 prefix/directory
 8 1 drwxrwxr-x 1 user group 8 Jan 1 1970 prefix/empty_directory
 9 1 lrwxrwxrwx 1 user group 9 Jan 1 1970 prefix/file_symlink -> prefix/1KB
 
 $ gufi_find -ls --smallest
 0 0 -rw-rw-r-- 1 user group 0 Jan 1 1970 prefix/old_file
-1 1 -rwxrwxrwx 1 user group 1 Jan 1 1970 prefix/directory/executable
+1 1 -rwsrwxrwx 1 user group 1 Jan 1 1970 prefix/directory/executable
 2 1 -r--r--r-- 1 user group 2 Jan 1 1970 prefix/directory/readonly
-3 1 -rw-rw-rw- 1 user group 3 Jan 1 1970 prefix/directory/writable
+3 1 -rw-rw-rwT 1 user group 3 Jan 1 1970 prefix/directory/writable
 4 1 lrwxrwxrwx 1 user group 4 Jan 1 1970 prefix/directory/subdirectory/directory_symlink -> prefix/directory/subdirectory
 5 1 -rw-rw-r-- 1 user group 5 Jan 1 1970 prefix/directory/subdirectory/repeat_name
 6 1 drwxrwxr-x 1 user group 6 Jan 1 1970 prefix/directory/subdirectory
-7 1 drwxrwxr-x 1 user group 7 Jan 1 1970 prefix/directory
+7 1 drwxrwsr-x 1 user group 7 Jan 1 1970 prefix/directory
 8 1 drwxrwxr-x 1 user group 8 Jan 1 1970 prefix/empty_directory
 9 1 lrwxrwxrwx 1 user group 9 Jan 1 1970 prefix/file_symlink -> prefix/1KB
 10 1 -rw-rw-r-- 1 user group 10 Jan 1 1970 prefix/.hidden
@@ -654,13 +657,13 @@ $ gufi_find -ls --largest
 10 1 -rw-rw-r-- 1 user group 10 Jan 1 1970 prefix/.hidden
 9 1 lrwxrwxrwx 1 user group 9 Jan 1 1970 prefix/file_symlink -> prefix/1KB
 8 1 drwxrwxr-x 1 user group 8 Jan 1 1970 prefix/empty_directory
-7 1 drwxrwxr-x 1 user group 7 Jan 1 1970 prefix/directory
+7 1 drwxrwsr-x 1 user group 7 Jan 1 1970 prefix/directory
 6 1 drwxrwxr-x 1 user group 6 Jan 1 1970 prefix/directory/subdirectory
 5 1 -rw-rw-r-- 1 user group 5 Jan 1 1970 prefix/directory/subdirectory/repeat_name
 4 1 lrwxrwxrwx 1 user group 4 Jan 1 1970 prefix/directory/subdirectory/directory_symlink -> prefix/directory/subdirectory
-3 1 -rw-rw-rw- 1 user group 3 Jan 1 1970 prefix/directory/writable
+3 1 -rw-rw-rwT 1 user group 3 Jan 1 1970 prefix/directory/writable
 2 1 -r--r--r-- 1 user group 2 Jan 1 1970 prefix/directory/readonly
-1 1 -rwxrwxrwx 1 user group 1 Jan 1 1970 prefix/directory/executable
+1 1 -rwsrwxrwx 1 user group 1 Jan 1 1970 prefix/directory/executable
 0 0 -rw-rw-r-- 1 user group 0 Jan 1 1970 prefix/old_file
 
 $ gufi_find prefix/directory prefix/leaf_directory
@@ -772,9 +775,9 @@ $ gufi_query -a 1 -w -E "UPDATE entries SET inode = 0, uid = 0, gid = 0;" "searc
 
 $ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %H %i %l %m %M %n %p %P %s %t %U %y\n" -type f
 % 0 0 0 2 0 0 0 - old_file 0 prefix/old_file search 0 664 -rw-rw-r-- 1 prefix/old_file old_file 0 0 0 f
-% 1 0 1 3 0 0 0 - executable 0 prefix/directory/executable search 0 777 -rwxrwxrwx 1 prefix/directory/executable directory/executable 1 1 0 f
+% 1 0 1 3 0 0 0 - executable 0 prefix/directory/executable search 0 777 -rwsrwxrwx 1 prefix/directory/executable directory/executable 1 1 0 f
 % 2 0 2 3 0 0 0 - readonly 0 prefix/directory/readonly search 0 444 -r--r--r-- 1 prefix/directory/readonly directory/readonly 2 2 0 f
-% 3 0 3 3 0 0 0 - writable 0 prefix/directory/writable search 0 666 -rw-rw-rw- 1 prefix/directory/writable directory/writable 3 3 0 f
+% 3 0 3 3 0 0 0 - writable 0 prefix/directory/writable search 0 666 -rw-rw-rwT 1 prefix/directory/writable directory/writable 3 3 0 f
 % 5 0 5 4 0 0 0 - repeat_name 0 prefix/directory/subdirectory/repeat_name search 0 664 -rw-rw-r-- 1 prefix/directory/subdirectory/repeat_name directory/subdirectory/repeat_name 5 5 0 f
 % 10 0 10 2 0 0 0 - .hidden 0 prefix/.hidden search 0 664 -rw-rw-r-- 1 prefix/.hidden .hidden 10 10 0 f
 % 11 0 11 3 0 0 0 - leaf_file1 0 prefix/leaf_directory/leaf_file1 search 0 664 -rw-rw-r-- 1 prefix/leaf_directory/leaf_file1 leaf_directory/leaf_file1 11 11 0 f
