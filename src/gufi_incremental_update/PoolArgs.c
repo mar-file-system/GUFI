@@ -80,7 +80,7 @@ static int setup_suspect_file(struct PoolArgs *pa) {
     pa->suspects.fl.min = (ino_t) -1;
     pa->suspects.fl.max = 0;
 
-    if (pa->in.suspect.filename.data && pa->in.suspect.filename.len) {
+    if (str_exists(&pa->in.suspect.filename)) {
         FILE *f = fopen(pa->in.suspect.filename.data, "r"); /* --suspect-file */
         if(!f) {
             fprintf(stderr, "Can't open suspect file %s\n", pa->in.suspect.filename.data);
@@ -117,7 +117,7 @@ static int setup_suspect_file(struct PoolArgs *pa) {
 }
 
 int PoolArgs_init(struct PoolArgs *pa) {
-    if (pa->in.snapshot_prefix.data && pa->in.snapshot_prefix.len) {
+    if (str_exists(&pa->in.snapshot_prefix)) {
         pa->in.outname = pa->in.snapshot_prefix;
     }
     else {

@@ -83,17 +83,17 @@ TEST(parse_path, list) {
     EXPECT_EQ(write(fd, "\n", 1), (ssize_t) 1);
 
     // bad path
-    char bad[sizeof(SUBDIR) + 11 + 1] = {0};
+    char bad[sizeof(SUBDIR) + 11 + 1] = {};
     const std::size_t bad_len = snprintf(bad, sizeof(bad), "%s/utils.cpp/\n", SUBDIR + sizeof(ROOT));
     EXPECT_EQ(write(fd, bad, bad_len), (ssize_t) bad_len);
 
     // file path
-    char file[sizeof(SUBDIR) + 10 + 1] = {0};
+    char file[sizeof(SUBDIR) + 10 + 1] = {};
     const std::size_t file_len = snprintf(file, sizeof(file), "%s/utils.cpp\n", SUBDIR + sizeof(ROOT));
     EXPECT_EQ(write(fd, file, file_len), (ssize_t) file_len);
 
     // subdirectory
-    char line[sizeof(SUBDIR) + 1] = {0};
+    char line[sizeof(SUBDIR) + 1] = {};
     const std::size_t len = snprintf(line, sizeof(line), "%s\n", SUBDIR + sizeof(ROOT));
     EXPECT_EQ(write(fd, line, len), (ssize_t) len);
 

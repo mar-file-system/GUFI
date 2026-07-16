@@ -92,6 +92,7 @@ static int thread_init(sqlite3 *db) {
 
 static int thread_bad_init(sqlite3 *db) {
     (void) db;
+    fprintf(stderr, "Error: test_querying_plugin: Bad thread initialization\n");
     return 1;
 }
 
@@ -122,6 +123,10 @@ static void db_exit(void *ptr, void *user_data) {
     }
 }
 
+static void thread_exit(sqlite3 *db) {
+    (void) db;
+}
+
 static void global_exit(struct input *in) {
     (void) in;
     sqlite3_shutdown();
@@ -135,8 +140,20 @@ struct plugin_operations test_querying_plugin_ops = {
     .process_dir = NULL,
     .process_file = NULL,
     .ctx_exit = db_exit,
-    .thread_exit = NULL,
+    .thread_exit = thread_exit,
     .global_exit = global_exit,
+};
+
+struct plugin_operations test_querying_plugin_none_type = {
+    .type = PLUGIN_NONE,
+    .global_init = NULL,
+    .thread_init = NULL,
+    .ctx_init = NULL,
+    .process_dir = NULL,
+    .process_file = NULL,
+    .ctx_exit = NULL,
+    .thread_exit = NULL,
+    .global_exit = NULL,
 };
 
 struct plugin_operations test_querying_plugin_bad_global = {

@@ -81,10 +81,9 @@ TEST(trie, insert_nullptr) {
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    EXPECT_NO_THROW(trie_insert(nullptr, nullptr, 0, nullptr, nullptr));
-    trie_insert(root, nullptr, 0, nullptr, nullptr);
-
-    EXPECT_EQ(trie_search(root, nullptr, 0, nullptr), 0);
+    EXPECT_NO_THROW(trie_insert(nullptr, nullptr,       0, nullptr, nullptr));
+    EXPECT_NO_THROW(trie_insert(root,    nullptr,       0, nullptr, nullptr));
+    EXPECT_NO_THROW(trie_insert(nullptr, (char *) root, 0, nullptr, nullptr));
 
     trie_free(root);
 }
@@ -99,7 +98,7 @@ TEST(trie, insert_empty) {
     EXPECT_EQ(trie_search(root, buf, 0, nullptr), 1);
 
     // replace previous value, running user free fucntion
-    trie_insert(root, buf, 0, nullptr, nullptr);
+    trie_insert(root, buf, 0, nullptr,  nullptr);
     EXPECT_EQ(trie_search(root, buf, 0, nullptr), 1);
 
     trie_free(root);
@@ -109,10 +108,11 @@ TEST(trie, search) {
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    trie_insert(root, str, 4, nullptr, nullptr);
+    trie_insert(root, str, 4, nullptr,  nullptr);
+    EXPECT_EQ(trie_search(root,    str,     4, nullptr), 1);
 
-    EXPECT_EQ(trie_search(nullptr, str, 0, nullptr), 0);
-    EXPECT_EQ(trie_search(root, str, 4, nullptr),  1);
+    EXPECT_EQ(trie_search(nullptr, str,     4, nullptr), 0);
+    EXPECT_EQ(trie_search(root,    nullptr, 0, nullptr), 0);
 
     trie_free(root);
 }

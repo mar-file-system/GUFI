@@ -147,7 +147,7 @@ TEST(gufi_query, aggregate) {
     ASSERT_NE(aggregate_init(&aggregate, &in), nullptr);
 
     // replace stdout with in-memory file
-    char db_sum_str[1024] = {0};
+    char db_sum_str[1024] = {};
     aggregate.outfile = fmemopen(db_sum_str, sizeof(db_sum_str), "w+b");
     ASSERT_NE(aggregate.outfile, nullptr);
 

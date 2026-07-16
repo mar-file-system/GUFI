@@ -375,12 +375,12 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
 }
 
 static struct work *validate_inputs(struct PoolArgs *pa) {
-    if (!pa->index.len) {
+    if (!str_exists(&pa->index)) {
         fprintf(stderr, "Error: GUFI_tree path is empty\n");
         return NULL;
     }
 
-    if (!pa->dir.len) {
+    if (!str_exists(&pa->dir)) {
         fprintf(stderr, "Error: dir path is empty\n");
         return NULL;
     }

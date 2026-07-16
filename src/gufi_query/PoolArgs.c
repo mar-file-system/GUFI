@@ -163,7 +163,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
          *
          * maybe move this into processdir?
          */
-        if (in->source_prefix.data && in->source_prefix.len) {
+        if (str_exists(&in->source_prefix)) {
             trie_insert(ta->user_strs, "s", 1, &in->source_prefix, NULL);
         }
 
@@ -245,7 +245,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         }
 
         /* run -I */
-        if (in->sql.init.len) {
+        if (str_exists(&in->sql.init)) {
             if (sqlite3_exec(ta->outdb, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
                 if (!in->no_print_sql_on_err) {
                     sqlite_print_err_and_free(err, stderr, "Error: Could not run SQL Init \"%s\" on %s: %s\n",
@@ -263,7 +263,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
         /* write to per-thread files during walk - aggregation is handled outside */
         if (in->output == OUTFILE) {
-            if (!in->sql.init_agg.len) {
+            if (!str_exists(&in->sql.init_agg)) {
                 const size_t len = snprintf(NULL, 0, "%s.%zu", in->outname.data, i);
                 char *outname = malloc(len + 1);
                 SNPRINTF(outname, len + 1, "%s.%zu", in->outname.data, i);

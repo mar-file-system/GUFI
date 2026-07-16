@@ -210,7 +210,7 @@ TEST(inserttreesumdb, nullptr) {
 TEST(sqlite_uri_path, none) {
     const char src[] = "prefix/basename";
     std::size_t src_len = strlen(src);
-    char dst[32] = {0};
+    char dst[32] = {};
     const char *expected = src;
 
     const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -223,7 +223,7 @@ TEST(sqlite_uri_path, none) {
 TEST(sqlite_uri_path, 23) {
     const char src[] = "prefix/#/basename";
     std::size_t src_len = strlen(src);
-    char dst[32] = {0};
+    char dst[32] = {};
     const char expected[] = "prefix/%23/basename";
 
     const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -236,7 +236,7 @@ TEST(sqlite_uri_path, 23) {
 TEST(sqlite_uri_path, 3f) {
     const char src[] = "prefix/?/basename";
     std::size_t src_len = strlen(src);
-    char dst[32] = {0};
+    char dst[32] = {};
     const char expected[] = "prefix/%3f/basename";
 
     const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -249,7 +249,7 @@ TEST(sqlite_uri_path, 3f) {
 TEST(sqlite_uri_path, 25) {
     const char src[] = "prefix/%/basename";
     std::size_t src_len = strlen(src);
-    char dst[32] = {0};
+    char dst[32] = {};
     const char expected[] = "prefix/%25/basename";
 
     const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -265,7 +265,7 @@ TEST(sqlite_uri_path, not_enough_space) {
     // does not hit conversion
     {
         std::size_t src_len = strlen(src);
-        char dst[7] = {0};
+        char dst[7] = {};
         const char expected[] = "prefix/";
 
         const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -278,7 +278,7 @@ TEST(sqlite_uri_path, not_enough_space) {
     // # -> %
     {
         std::size_t src_len = strlen(src);
-        char dst[8] = {0};
+        char dst[8] = {};
         const char expected[] = "prefix/%";
 
         const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -291,7 +291,7 @@ TEST(sqlite_uri_path, not_enough_space) {
     // # -> %2
     {
         std::size_t src_len = strlen(src);
-        char dst[9] = {0};
+        char dst[9] = {};
         const char expected[] = "prefix/%2";
 
         const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);

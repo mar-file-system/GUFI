@@ -142,8 +142,14 @@ run_no_sort "${GUFI_DIR2INDEX} --plugin \"${TEST_INDEXING_PLUGIN_OPS}:${RUN_VT}.
 echo "# plugin entry point not found"
 run_no_sort "${GUFI_DIR2INDEX} --plugin \"${TEST_INDEXING_PLUGIN_OPS}2:${GUFI_INDEXING_PLUGIN}\" -x \"${SRCDIR}\" \"${SEARCH}\" 2>&1 | @GREP@ \"Error: \"" | @SED@ "s%plugin library.*%plugin library%g; s%.@EXT@%%g;"
 
+echo "# type error"
+run_no_sort "${GUFI_QUERY} -d \" \" --plugin \"test_querying_plugin_none_type:${GUFI_QUERYING_PLUGIN}\" -E \"SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;\" \"${INDEXROOT}\""
+
 echo "# global init error"
 run_no_sort "${GUFI_QUERY} -d \" \" --plugin \"test_querying_plugin_bad_global:${GUFI_QUERYING_PLUGIN}\" -E \"SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;\" \"${INDEXROOT}\""
+
+echo "# thread init error"
+run_no_sort "${GUFI_QUERY} -d \" \" --plugin \"test_querying_plugin_bad_thread:${GUFI_QUERYING_PLUGIN}\" -E \"SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;\" \"${INDEXROOT}\""
 ) | remove_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_plugin.expected "${OUTPUT}"

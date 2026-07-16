@@ -101,35 +101,35 @@ static int validate(struct input *in) {
      * outfile     stdout                                 | Get final results
      *                                                    | -G SELECT * FROM <aggregate name>
      */
-     if ((in->output == OUTDB) || in->sql.init_agg.len) {
+    if ((in->output == OUTDB) || str_exists(&in->sql.init_agg)) {
         /* -I (required) */
-        if (!in->sql.init.len) {
+        if (!str_exists(&in->sql.init)) {
             fprintf(stderr, "Error: Missing -I\n");
             return -1;
         }
     }
 
     /* not aggregating */
-    if (!in->sql.init_agg.len) {
-        if (in->sql.intermediate.len) {
+    if (!str_exists(&in->sql.init_agg)) {
+        if (str_exists(&in->sql.intermediate)) {
             fprintf(stderr, "Warning: Got -J even though not aggregating. Ignoring\n");
         }
 
-        if (in->sql.agg.len) {
+        if (str_exists(&in->sql.agg)) {
             fprintf(stderr, "Warning: Got -G even though not aggregating. Ignoring\n");
         }
     }
     /* aggregating */
     else {
         /* need -J to write to aggregate db */
-        if (!in->sql.intermediate.len) {
+        if (!str_exists(&in->sql.intermediate)) {
             fprintf(stderr, "Error: Missing -J\n");
             return -1;
         }
 
         if ((in->output == STDOUT) || (in->output == OUTFILE)) {
             /* need -G to write out results */
-            if (!in->sql.agg.len) {
+            if (!str_exists(&in->sql.agg)) {
                 fprintf(stderr, "Error: Missing -G\n");
                 return -1;
             }
@@ -139,7 +139,7 @@ static int validate(struct input *in) {
 
     /* -Q/--external-attach requires -I */
     if (sll_get_size(&in->external_attach.setup)) {
-        if (!in->sql.init.len) {
+        if (!str_exists(&in->sql.init)) {
             fprintf(stderr, "Attaching external databases require template files attached with -I\n");
             return -1;
         }
@@ -147,7 +147,7 @@ static int validate(struct input *in) {
 
     /* --external-copy requires -I */
     if (sll_get_size(&in->external_copy.setup)) {
-        if (!in->sql.init.len) {
+        if (!str_exists(&in->sql.init)) {
             fprintf(stderr, "Copying external databases require tables created with -I\n");
             return -1;
         }
@@ -185,7 +185,7 @@ static int gen_types(struct input *in) {
         addqueryfuncs(db);
         addqueryfuncs_with_context(db, &ctx);
 
-        if (in->sql.tsum.len) {
+        if (str_exists(&in->sql.tsum)) {
             if (create_table_wrapper(SQLITE_MEMORY, db, TREESUMMARY, TREESUMMARY_CREATE) != SQLITE_OK) {
                 goto error;
             }
@@ -194,7 +194,7 @@ static int gen_types(struct input *in) {
         plugins_ctx_init(&in->plugins, db, 0);
         plugins_thread_init(&in->plugins, db);
 
-        if (in->sql.setup_res_col_types.data && in->sql.setup_res_col_types.len) {
+        if (str_exists(&in->sql.setup_res_col_types)) {
             char *err = NULL;
             if (sqlite3_exec(db, in->sql.setup_res_col_types.data, NULL, NULL, &err) != SQLITE_OK) {
                 fprintf(stderr, "Error: Failed to set up table for getting result column types: %s\n", err);
@@ -204,7 +204,7 @@ static int gen_types(struct input *in) {
         }
 
         /* if not aggregating, get types for T, S, and E */
-        if (!in->sql.init_agg.len) {
+        if (!str_exists(&in->sql.init_agg)) {
             /*
              * Types for all available SQL must be generated even if
              * only one produces the final results. If this is not
@@ -215,17 +215,17 @@ static int gen_types(struct input *in) {
              * SQL in a single T/S/E option must SELECT first and do
              * other operations afterwards.
              */
-            if (in->sql.tsum.len) {
+            if (str_exists(&in->sql.tsum)) {
                 if (get_col_types(db, &in->sql.tsum, &in->types.tsum, &cols) != 0) {
                     goto error;
                 }
             }
-            if (in->sql.sum.len) {
+            if (str_exists(&in->sql.sum)) {
                 if (get_col_types(db, &in->sql.sum,  &in->types.sum,  &cols) != 0) {
                     goto error;
                 }
             }
-            if (in->sql.ent.len) {
+            if (str_exists(&in->sql.ent)) {
                 if (get_col_types(db, &in->sql.ent,  &in->types.ent,  &cols) != 0) {
                     goto error;
                 }

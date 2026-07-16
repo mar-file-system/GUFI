@@ -320,7 +320,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
                                       sqlite3_errmsg(db), sqlite3_errcode(db));
         }
 
-        if (in->sql.sum.len) {
+        if (str_exists(&in->sql.sum)) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
 
             /* replace {} */
@@ -353,7 +353,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
 
         /* if we have recs (or are running an OR) query the entries table */
         if (recs > 0) {
-            if (in->sql.ent.len) {
+            if (str_exists(&in->sql.ent)) {
                 /* replace {} */
                 char *ent = NULL;
                 if (replace_sql(&in->sql.ent, &in->sql_format.ent,

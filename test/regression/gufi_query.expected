@@ -551,6 +551,10 @@ $ gufi_query -E "SELECT abc;" "search" 2>&1 | grep "Error:" | sort | head -n 1
 Error: no such column: abc: search/db.db: "SELECT abc;"
 
 # error message without SQL
+$ gufi_query -I "SELECT abc;" --no-print-sql-on-err "search" 2>&1 | grep "Error:" | sort | head -n 1
+Error: Could not run SQL Init no such column: abc
+
+# error message without SQL
 $ gufi_query -E "SELECT abc;" --no-print-sql-on-err "search" 2>&1 | grep "Error:" | sort | head -n 1
 Error: no such column: abc: search/db.db
 

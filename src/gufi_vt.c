@@ -218,7 +218,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     char *dir_match_uid = NULL;
     char *dir_match_gid = NULL;
 
-    if (cmd->remote_cmd.len) {
+    if (str_exists(&cmd->remote_cmd)) {
         /* need to combine entire gufi_query command into one argument */
         max_argc = 1 + sll_get_size(&cmd->remote_args) + 1;
 
@@ -241,14 +241,14 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                           "-x ");
 
         /* no quotes around thread count */
-        if (cmd->threads.data && cmd->threads.len) {
+        if (str_exists(&cmd->threads)) {
             write_with_resize(&flat, &size, &len,
                               "--threads %s ", cmd->threads.data);
         }
 
         /* flatten the entire gufi_query command into a single string */
         #define flatten_argv(argc, argv, flag, refstr)               \
-            if (refstr.len) {                                        \
+            if (str_exists(&refstr)) {                               \
                 write_with_resize(&flat, &size, &len,                \
                                   "%s \"%s\" ", flag, refstr.data);  \
             }
@@ -260,7 +260,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         flatten_argv(argc, argv, "--max-level",           cmd->max_level);
         flatten_argv(argc, argv, "--path-list",           cmd->path_list);
 
-        if (cmd->dir_match_uid.len) {
+        if (str_exists(&cmd->dir_match_uid)) {
             write_with_resize(&flat, &size, &len,
                               "--dir-match-uid=%s ",      cmd->dir_match_uid.data);
         }
@@ -269,7 +269,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--dir-match-uid ");
         }
 
-        if (cmd->dir_match_gid.len) {
+        if (str_exists(&cmd->dir_match_gid)) {
             write_with_resize(&flat, &size, &len,
                               "--dir-match-gid=%s ",      cmd->dir_match_gid.data);
         }
@@ -344,7 +344,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         argv[argc++] = "-x";
 
         #define set_argv(argc, argv, flag, refstr)  \
-            if (refstr.len) {                       \
+            if (str_exists(&refstr)) {              \
                 argv[argc++] = flag;                \
                 argv[argc++] = refstr.data;         \
             }
@@ -357,7 +357,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         set_argv(argc, argv, "--max-level", cmd->max_level);
         set_argv(argc, argv, "--path-list", cmd->path_list);
 
-        if (cmd->dir_match_uid.len) {
+        if (str_exists(&cmd->dir_match_uid)) {
             size_t size = 0;
             size_t len = 0;
             write_with_resize(&dir_match_uid, &size, &len,
@@ -372,7 +372,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = dir_match_uid;
         }
 
-        if (cmd->dir_match_gid.len) {
+        if (str_exists(&cmd->dir_match_gid)) {
             size_t size = 0;
             size_t len = 0;
             write_with_resize(&dir_match_gid, &size, &len,
@@ -1026,7 +1026,7 @@ static int parse_external_copy_args(sll_t *external_copy, char *arg) {
     set_refstr(&ecs->basename_pattern, basename_pattern);
     set_refstr(&ecs->sql,              sql);
 
-    if (!ecs->basename_pattern.len || !ecs->sql.len) {
+    if (!str_exists(&ecs->basename_pattern) || !str_exists(&ecs->sql)) {
         free(ecs);
         return -1;
     }
@@ -1198,7 +1198,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         }
     }
 
-    if (!sll_get_size(&cmd.indexroots) && !cmd.path_list.len) {
+    if (!sll_get_size(&cmd.indexroots) && !str_exists(&cmd.path_list)) {
         *pzErr = sqlite3_mprintf("Missing indexroot or path_list");
         gq_cmd_destroy(&cmd);
         return SQLITE_CONSTRAINT;
@@ -1267,7 +1267,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         return SQLITE_CONSTRAINT;
     }
 
-    if (cmd.T.len) {
+    if (str_exists(&cmd.T)) {
         /* this should never fail */
         create_table_wrapper(SQLITE_MEMORY, tempdb, TREESUMMARY, TREESUMMARY_CREATE);
     }
@@ -1275,7 +1275,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     plugins_ctx_init(&in.plugins, tempdb, 0);
 
     /* before getting the column types, set up tables that don't exist yet in this temporary space */
-    if (cmd.setup_res_col_type.len) {
+    if (str_exists(&cmd.setup_res_col_type)) {
         char *err = NULL;
         if (sqlite3_exec(tempdb, cmd.setup_res_col_type.data, NULL, NULL, &err) != SQLITE_OK) {
             *pzErr = sqlite3_mprintf("Setting up results table with '%s' failed: %s",
@@ -1286,15 +1286,15 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     }
 
     /* if not aggregating, get types for T, S, or E */
-    if (!cmd.K.len) {
+    if (!str_exists(&cmd.K)) {
         int rc = -1; /* get_cols returns 0 or 1, so -1 means SQL was not provided */
-        if (cmd.T.len && !cmd.S.len && !cmd.E.len) {
+        if (str_exists(&cmd.T) && !str_exists(&cmd.S) && !str_exists(&cmd.E)) {
             rc = get_cols(tempdb, &cmd.T, &types, &names, &lens, &cols);
         }
-        else if (cmd.S.len && !cmd.E.len) {
+        else if (str_exists(&cmd.S) && !str_exists(&cmd.E)) {
             rc = get_cols(tempdb, &cmd.S, &types, &names, &lens, &cols);
         }
-        else if (cmd.E.len) {
+        else if (str_exists(&cmd.E)) {
             rc = get_cols(tempdb, &cmd.E, &types, &names, &lens, &cols);
         }
 
@@ -1403,7 +1403,7 @@ static int gufi_vtBestIndex(sqlite3_vtab *tab,
         }
 
         /* both index root and path list are not found */
-        if ((argc == 0) && !vtab->cmd.path_list.len) {
+        if ((argc == 0) && !str_exists(&vtab->cmd.path_list)) {
             return SQLITE_CONSTRAINT;
         }
     }

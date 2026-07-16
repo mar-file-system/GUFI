@@ -66,8 +66,10 @@ OF SUCH DAMAGE.
 #define UTILS_H
 
 #include <dirent.h>
-#include <stdio.h>
+#include <grp.h>
+#include <pwd.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/types.h>
 
 #include "SinglyLinkedList.h"
@@ -217,6 +219,9 @@ DIR *opendir_wrapper(const char *name, const uint64_t *no_print_errno);
 
 /* convert aggregated list of --plugin strings to a struct plugins */
 size_t args_to_plugins(sll_t *args, struct plugins *plugins, const size_t nthreads);
+
+int getpwuid_wrapper(const uid_t uid, struct passwd *pw, struct passwd **res, char **buf, char **err_msg, size_t *err_len);
+int getgrgid_wrapper(const gid_t gid, struct group *grp, struct group **res,  char **buf, char **err_msg, size_t *err_len);
 
 #ifdef __cplusplus
 }

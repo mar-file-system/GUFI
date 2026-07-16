@@ -985,7 +985,7 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed,
 
 /* not the same as !doing_partial_walk */
 int bad_partial_walk(struct input *in, const size_t root_count) {
-    if ((in->path_list.data && in->path_list.len) &&
+    if (str_exists(&in->path_list) &&
         (root_count > 1)) {
         fprintf(stderr, "Error: When -D is passed in, only one root directory may be specified\n");
         return 1;
@@ -1108,4 +1108,98 @@ size_t args_to_plugins(sll_t *args, struct plugins *plugins, const size_t nthrea
 
     plugins->count = count;
     return count;
+}
+
+int getpwuid_wrapper(const uid_t uid, struct passwd *pw, struct passwd **res, char **buf, char **err_msg, size_t *err_len) {
+    /*
+     * adapted from question by Tyler DiBartolo
+     * https://stackoverflow.com/q/47462890
+     */
+
+    const long init_len = sysconf(_SC_GETPW_R_SIZE_MAX);
+    size_t len = 1024;
+    if (init_len != -1) {
+        len = init_len;
+    }
+
+    *buf = malloc(len);
+    *err_msg = NULL;
+    *err_len = 0;
+
+    int rc = 0;
+    while ((rc = getpwuid_r(uid, pw, *buf, len, res)) == ERANGE) {
+        void *new_buf = realloc(*buf, len * 2);
+
+        if (!new_buf) {
+            const int err = errno;
+            *err_len = SNPRINTF(NULL, 0, "realloc: %s (%d)", strerror(err), err);
+            *err_msg = malloc(*err_len + 1);
+            SNPRINTF(*err_msg, *err_len + 1, "realloc: %s (%d)", strerror(err), err);
+            free(*buf);
+            *buf = NULL;
+            return 1;
+        }
+
+        *buf = new_buf;
+        len *= 2;
+    }
+
+    if (rc != 0) {
+        const int err = errno;
+        *err_len = SNPRINTF(NULL, 0, "getgruid: %s (%d)", strerror(err), err);
+        *err_msg = malloc(*err_len + 1);
+        SNPRINTF(*err_msg, *err_len + 1, "getgruid: %s (%d)", strerror(err), err);
+        free(*buf);
+        *buf = NULL;
+        return 1;
+    }
+
+    return 0;
+}
+
+int getgrgid_wrapper(const gid_t gid, struct group *grp, struct group **res, char **buf, char **err_msg, size_t *err_len) {
+    /*
+     * adapted from question by Tyler DiBartolo
+     * https://stackoverflow.com/q/47462890
+     */
+
+    const long init_len = sysconf(_SC_GETGR_R_SIZE_MAX);
+    size_t len = 1024;
+    if (init_len != -1) {
+        len = init_len;
+    }
+
+    *buf = malloc(len);
+    *err_msg = NULL;
+    *err_len = 0;
+
+    int rc = 0;
+    while ((rc = getgrgid_r(gid, grp, *buf, len, res)) == ERANGE) {
+        void *new_buf = realloc(*buf, len * 2);
+
+        if (!new_buf) {
+            const int err = errno;
+            *err_len = SNPRINTF(NULL, 0, "realloc: %s (%d)", strerror(err), err);
+            *err_msg = malloc(*err_len + 1);
+            SNPRINTF(*err_msg, *err_len + 1, "realloc: %s (%d)", strerror(err), err);
+            free(*buf);
+            *buf = NULL;
+            return 1;
+        }
+
+        *buf = new_buf;
+        len *= 2;
+    }
+
+    if (rc != 0) {
+        const int err = errno;
+        *err_len = SNPRINTF(NULL, 0, "getgrgid: %s (%d)", strerror(err), err);
+        *err_msg = malloc(*err_len + 1);
+        SNPRINTF(*err_msg, *err_len + 1, "getgrgid: %s (%d)", strerror(err), err);
+        free(*buf);
+        *buf = NULL;
+        return 1;
+    }
+
+    return 0;
 }

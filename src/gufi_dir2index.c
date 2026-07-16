@@ -356,9 +356,17 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         nda.db = NULL;
     }
 
-    /* ignore errors */
-    chmod(nda.topath.data, nda.work->statuso.st_mode);
-    chown(nda.topath.data, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
+    if (chmod(nda.topath.data, nda.work->statuso.st_mode) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Warning: Unable to set permission for \"%s\": %s (%d)\n",
+                nda.topath.data, strerror(err), err);
+    }
+
+    if (chown(nda.topath.data, nda.work->statuso.st_uid, nda.work->statuso.st_gid) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Warning: Unable to set owners for \"%s\": %s (%d)\n",
+                nda.topath.data, strerror(err), err);
+    }
 
   close_dir:
     closedir(dir);

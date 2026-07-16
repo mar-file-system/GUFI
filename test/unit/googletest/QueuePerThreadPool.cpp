@@ -820,7 +820,7 @@ static int swapped_function(QPTPool_ctx *, void *data) {
 }
 
 TEST(QueuePerThreadPool, swap) {
-    char buf[1024] = {0};
+    char buf[1024] = {};
     char *ptr = buf;
     EXPECT_STRNE(buf, SWAPPED);
 

@@ -93,7 +93,7 @@ void setup_input(struct input *in, OutputMethod om, bool aggregate) {
     input_init(in);
     in->maxthreads = dist(gen);
     in->sql.init = REFSTR(I.c_str(), I.size());
-    in->sql.init_agg.len = aggregate;
+    in->sql.init_agg = REFSTR(I.c_str(), aggregate);
     in->output = om;
     in->output_buffer_size = OB_SIZE;
 }
@@ -114,7 +114,7 @@ void test_common(PoolArgs *pa) {
         EXPECT_EQ(ob->filled, (size_t) 0);
         EXPECT_EQ(ob->count, (size_t) 0);
 
-        char file_buf[1024] = {0};
+        char file_buf[1024] = {};
         FILE *file = fmemopen(file_buf, sizeof(file_buf), "w+b");
         ASSERT_NE(file, nullptr);
 

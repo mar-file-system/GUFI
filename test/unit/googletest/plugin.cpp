@@ -69,7 +69,7 @@ OF SUCH DAMAGE.
 #include "plugin.h"
 
 TEST(plugin, bad_arg) {
-    char name[1024];
+    char name[1024] = {};
     std::size_t len = 0;
 
     len = 10;

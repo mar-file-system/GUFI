@@ -78,7 +78,15 @@ Error: Could not open plugin library
 $ gufi_dir2index --plugin "test_indexing_plugin_ops2:indexing_plugin" -x "prefix" "search" 2>&1 | grep "Error: "
 Error: Could not find exported operations "test_indexing_plugin_ops2" in the plugin library
 
+# type error
+$ gufi_query -d " " --plugin "test_querying_plugin_none_type:querying_plugin" -E "SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;" "prefix"
+Could not stat directory "prefix": No such file or directory (2)
+
 # global init error
 $ gufi_query -d " " --plugin "test_querying_plugin_bad_global:querying_plugin" -E "SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;" "prefix"
 Error: test_querying_plugin: Bad global initialization
+
+# thread init error
+$ gufi_query -d " " --plugin "test_querying_plugin_bad_thread:querying_plugin" -E "SELECT filetype, SUM(count) FROM plugin_query_view GROUP BY filetype;" "prefix"
+Error: test_querying_plugin: Bad thread initialization
 

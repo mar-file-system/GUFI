@@ -97,46 +97,20 @@ static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
         return;
     }
 
-    /*
-     * adapted from question by Tyler DiBartolo
-     * https://stackoverflow.com/q/47462890
-     */
-
-    const long init_len = sysconf(_SC_GETPW_R_SIZE_MAX);
-    size_t len = 1024;
-    if (init_len != -1) {
-        len = init_len;
-    }
-
-    void *buf = malloc(len);
-
-    struct passwd pwd;
+    struct passwd pw = {0};
     struct passwd *res = NULL;
-    int rc = 0;
-    while ((rc = getpwuid_r(uid, &pwd, buf, len, &res)) == ERANGE) {
-        void *new_buf = realloc(buf, len * 2);
+    char *buf = NULL;
+    char *err = NULL;
+    size_t err_len = 0;
 
-        if (!new_buf) {
-            sqlite3_result_error_nomem(context);
-            free(buf);
-            return;
-        }
-
-        buf = new_buf;
-        len *= 2;
-    }
-
-    if (rc != 0) {
-        const int err = errno;
-        char errmsg[1024];
-        const size_t errmsg_len = SNPRINTF(errmsg, sizeof(errmsg), "getpwuid: %s (%d)\n", strerror(err), err);
-        sqlite3_result_error(context, errmsg, errmsg_len);
+    if (getpwuid_wrapper(uid, &pw, &res, &buf, &err, &err_len) == 0) {
+        sqlite3_result_text(context, res?res->pw_name:text, -1, SQLITE_TRANSIENT);
         free(buf);
-        return;
     }
-
-    sqlite3_result_text(context, res?res->pw_name:text, -1, SQLITE_TRANSIENT);
-    free(buf);
+    else {
+        sqlite3_result_error(context, err, err_len);
+        free(err);
+    }
 }
 
 static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -162,46 +136,20 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
         return;
     }
 
-    /*
-     * adapted from question by Tyler DiBartolo
-     * https://stackoverflow.com/q/47462890
-     */
-
-    const long init_len = sysconf(_SC_GETGR_R_SIZE_MAX);
-    size_t len = 1024;
-    if (init_len != -1) {
-        len = init_len;
-    }
-
-    void *buf = malloc(len);
-
-    struct group grp;
+    struct group grp = {0};
     struct group *res = NULL;
-    int rc = 0;
-    while ((rc = getgrgid_r(gid, &grp, buf, len, &res)) == ERANGE) {
-        void *new_buf = realloc(buf, len * 2);
+    char *buf = NULL;
+    char *err = NULL;
+    size_t err_len = 0;
 
-        if (!new_buf) {
-            sqlite3_result_error_nomem(context);
-            free(buf);
-            return;
-        }
-
-        buf = new_buf;
-        len *= 2;
-    }
-
-    if (rc != 0) {
-        const int err = errno;
-        char errmsg[1024];
-        const size_t errmsg_len = SNPRINTF(errmsg, sizeof(errmsg), "getgrgid: %s (%d)\n", strerror(err), err);
-        sqlite3_result_error(context, errmsg, errmsg_len);
+    if (getgrgid_wrapper(gid, &grp, &res, &buf, &err, &err_len) == 0) {
+        sqlite3_result_text(context, res?res->gr_name:text, -1, SQLITE_TRANSIENT);
         free(buf);
-        return;
     }
-
-    sqlite3_result_text(context, res?res->gr_name:text, -1, SQLITE_TRANSIENT);
-    free(buf);
+    else {
+        sqlite3_result_error(context, err, err_len);
+        free(err);
+    }
 }
 
 static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -1023,7 +971,7 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
 
-    if (work->orig_root.data && work->orig_root.len) {
+    if (str_exists(&work->orig_root)) {
         const size_t user_dirname_len = work->orig_root.len + work->name_len - work->root_parent.len - work->root_basename_len;
         char *user_dirname = malloc(user_dirname_len + 1);
 
@@ -1172,7 +1120,7 @@ static void spath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     aqfctx_t *ctx = (aqfctx_t *) sqlite3_user_data(context);
     struct input *in = ctx->in;
-    if (!in->source_prefix.data || !in->source_prefix.len) {
+    if (!str_exists(&in->source_prefix)) {
         static const char ERR[] = "spath() requires source path (-p)";
         sqlite3_result_error(context, ERR, sizeof(ERR) - 1);
         return;

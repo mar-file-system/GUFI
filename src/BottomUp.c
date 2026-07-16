@@ -576,7 +576,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       const int track_non_dirs,
                       const int generate_alt_name,
                       void *extra_args) {
-    if (min_level && path_list->data && path_list->len) {
+    if (min_level && str_exists(path_list)) {
         if (root_count > 1) {
             fprintf(stderr, "Error: Only one root may be provided when a --min-level and -D are both provided\n");
             return -1;
@@ -596,7 +596,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
 
     /* enqueue all root directories */
     size_t good_roots = 0;
-    if (min_level && path_list->data && path_list->len) {
+    if (min_level && str_exists(path_list)) {
         good_roots += !parallel_bottomup_enqueue_subdirs(ctx, root_names[0], strlen(root_names[0]),
                                                          min_level, path_list, extra_args);
     }

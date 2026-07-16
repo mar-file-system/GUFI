@@ -239,7 +239,7 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
          * database view for treesummary, so run once here to not
          * get duplicate results when querying treesummary
          */
-        if (in->sql.tsum.len) {
+        if (str_exists(&in->sql.tsum)) {
             /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
             /* if this is OR, as well as no-sql-to-run, skip this query */
             if (in->process_sql != RUN_SE) {

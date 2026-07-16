@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
 
     Aggregate_t aggregate;
     memset(&aggregate, 0, sizeof(aggregate));
-    if (in.sql.init_agg.len) {
+    if (str_exists(&in.sql.init_agg)) {
         if (!aggregate_init(&aggregate, &in)) {
             PoolArgs_fin(&pa, in.maxthreads);
             return EXIT_FAILURE;
@@ -386,7 +386,7 @@ int main(int argc, char *argv[])
     QPTPool_stop(ctx);
     QPTPool_destroy(ctx);
 
-    if (in.sql.init_agg.len) {
+    if (str_exists(&in.sql.init_agg)) {
         /* aggregate the intermediate results */
         aggregate_intermediate(&aggregate, &pa, &in);
         aggregate_process(&aggregate, &in);

@@ -104,3 +104,7 @@ int str_cmp(const str_t *lhs, const str_t *rhs) {
     const size_t len = ((lhs->len > rhs->len)?lhs:rhs)->len;
     return strncmp(lhs->data, rhs->data, len + 1);
 }
+
+int str_exists(const str_t *str) {
+    return (str->data && str->len);
+}

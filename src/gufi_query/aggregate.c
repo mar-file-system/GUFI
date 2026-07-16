@@ -182,7 +182,7 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
     int rc = 0;
 
     /* normally expect STDOUT/OUTFILE to have SQL to run, but OUTDB can have SQL to run as well */
-    if ((in->output != OUTDB) || in->sql.agg.len) {
+    if ((in->output != OUTDB) || str_exists(&in->sql.agg)) {
         PrintArgs_t pa = {
             .output_buffer = &aggregate->ob,
             .delim = in->delim,

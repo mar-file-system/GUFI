@@ -65,9 +65,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <grp.h>
 #include <pthread.h>
-#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -182,42 +180,18 @@ static int format_output(struct work *work, struct entry_data *ed,
                 /* case 'F': */
                 case 'g':
                     {
-                        /*
-                         * adapted from question by Tyler DiBartolo
-                         * https://stackoverflow.com/q/47462890
-                         */
-
-                        const long init_len = sysconf(_SC_GETGR_R_SIZE_MAX);
-                        size_t len = 1024;
-                        if (init_len != -1) {
-                            len = init_len;
-                        }
-
-                        void *buf = malloc(len);
-
-                        struct group grp;
+                        struct group grp = {0};
                         struct group *res = NULL;
-                        int rc = 0;
-                        while ((rc = getgrgid_r(work->statuso.st_gid, &grp, buf, len, &res)) == ERANGE) {
-                            void *new_buf = realloc(buf, len * 2);
+                        char *buf = NULL;
+                        char *err = NULL;
+                        size_t err_len = 0;
 
-                            if (!new_buf) {
-                                const int err = errno;
-                                fprintf(stderr, "Error: realloc(3): %s (%d)\n", strerror(err), err);
-                                free(buf);
-                                return 1;
-                            }
-
-                            buf = new_buf;
-                            len *= 2;
-                        }
-
-                        if (rc != 0) {
-                            const int err = errno;
-                            fprintf(stderr, "Error: getgrgid_r(3): %s (%d)\n", strerror(err), err);
-                            free(buf);
+                        if (getgrgid_wrapper(work->statuso.st_gid, &grp, &res, &buf, &err, &err_len) != 0) {
+                            fprintf(stderr, "%s\n", err);
+                            free(err);
                             return 1;
                         }
+
 
                         if (res) {
                             out += SNPRINTF(out, rem, "%s", res->gr_name);
@@ -277,40 +251,15 @@ static int format_output(struct work *work, struct entry_data *ed,
                 /* case 'T': */
                 case 'u':
                     {
-                        /*
-                         * adapted from question by Tyler DiBartolo
-                         * https://stackoverflow.com/q/47462890
-                         */
-
-                        const long init_len = sysconf(_SC_GETPW_R_SIZE_MAX);
-                        size_t len = 1024;
-                        if (init_len != -1) {
-                            len = init_len;
-                        }
-
-                        void *buf = malloc(len);
-
-                        struct passwd pwd;
+                        struct passwd pw = {0};
                         struct passwd *res = NULL;
-                        int rc = 0;
-                        while ((rc = getpwuid_r(work->statuso.st_uid, &pwd, buf, len, &res)) == ERANGE) {
-                            void *new_buf = realloc(buf, len * 2);
+                        char *buf = NULL;
+                        char *err = NULL;
+                        size_t err_len = 0;
 
-                            if (!new_buf) {
-                                const int err = errno;
-                                fprintf(stderr, "Error: realloc(3): %s (%d)\n", strerror(err), err);
-                                free(buf);
-                                return 1;
-                            }
-
-                            buf = new_buf;
-                            len *= 2;
-                        }
-
-                        if (rc != 0) {
-                            const int err = errno;
-                            fprintf(stderr, "Error: getpwuid_r(3): %s (%d)\n", strerror(err), err);
-                            free(buf);
+                        if (getpwuid_wrapper(work->statuso.st_uid, &pw, &res, &buf, &err, &err_len) != 0) {
+                            fprintf(stderr, "%s\n", err);
+                            free(err);
                             return 1;
                         }
 

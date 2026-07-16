@@ -116,6 +116,25 @@ int close_template_db(struct template_db *tdb) {
     return init_template_db(tdb);
 }
 
+static char *template_path(const str_t *dir) {
+    char *name = NULL;
+
+    if (dir) {
+        const size_t name_len = dir->len + 1 + 6;
+        name = malloc(name_len + 1);
+        SNFORMAT_S(name, name_len + 1, 2,
+                   dir->data, dir->len,
+                   "/XXXXXX", (size_t) 7);
+    }
+    else {
+        name = malloc(6 + 1);
+        SNFORMAT_S(name, 6 + 1, 1,
+                   "XXXXXX", (size_t) 6);
+    }
+
+    return name;
+}
+
 /* create the database file to copy from */
 int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
                     const char *name) {
@@ -146,63 +165,35 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
     return !tdb->size;
 }
 
-static char *template_path(const str_t *dir) {
-    char *name = NULL;
+/* not merging this into create_template */
+static int create_template_temp(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
+                                const str_t *dir) {
+    char *name = template_path(dir);
+    const int fd = mkstemp(name); /* duplicate open */
 
-    if (dir) {
-        const size_t name_len = dir->len + 1 + 6;
-        name = malloc(name_len + 1);
-        SNFORMAT_S(name, name_len + 1, 2,
-                   dir->data, dir->len,
-                   "/XXXXXX", (size_t) 7);
+    if (fd < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not create temporary db \"%s\": %s (%d)\n",
+                name, strerror(err), err);
+        remove(name);             /* file is possibly created */
+        free(name);
+        return -1;
     }
-    else {
-        name = malloc(6 + 1);
-        SNFORMAT_S(name, 6 + 1, 1,
-                   "XXXXXX", (size_t) 6);
-    }
+    close(fd);
 
-    return name;
+    const int rc = create_template(tdb, create_tables, name);
+    free(name);
+    return rc;
 }
 
 /* create the initial xattrs database file to copy from */
 int create_xattrs_template(struct template_db *tdb, const str_t *dir) {
-    char *name = template_path(dir);
-    const int fd = mkstemp(name); /* duplicate open */
-
-    if (fd < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not create temporary xattrs db: %s (%d)\n",
-                strerror(err), err);
-        remove(name);             /* file is possibly created */
-        free(name);
-        return -1;
-    }
-    close(fd);
-
-    const int rc = create_template(tdb, create_xattr_tables, name);
-    free(name);
-    return rc;
+    return create_template_temp(tdb, create_xattr_tables, dir);
 }
 
 /* create the initial main database file to copy from */
 int create_dbdb_template(struct template_db *tdb, const str_t *dir) {
-    char *name = template_path(dir);
-    const int fd = mkstemp(name); /* duplicate open */
-
-    if (fd < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not create temporary db.db: %s (%d)\n",
-                strerror(err), err);
-        remove(name);             /* file is possibly created */
-        free(name);
-        return -1;
-    }
-    close(fd);
-
-    const int rc = create_template(tdb, create_dbdb_tables, name);
-    free(name);
-    return rc;
+    return create_template_temp(tdb, create_dbdb_tables, dir);
 }
 
 static int create_rollup_tables(const char *name, sqlite3 *db, void *args) {
@@ -212,22 +203,7 @@ static int create_rollup_tables(const char *name, sqlite3 *db, void *args) {
 
 /* create the initial main database file to copy from with a treesummary table */
 int create_rollup_template(struct template_db *tdb, const str_t *dir) {
-    char *name = template_path(dir);
-    const int fd = mkstemp(name); /* duplicate open */
-
-    if (fd < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not create temporary db.db: %s (%d)\n",
-                strerror(err), err);
-        remove(name);             /* file is possibly created */
-        free(name);
-        return -1;
-    }
-    close(fd);
-
-    const int rc = create_template(tdb, create_rollup_tables, name);
-    free(name);
-    return rc;
+    return create_template_temp(tdb, create_rollup_tables, dir);
 }
 
 /* copy the template file instead of creating a new database and new tables for each work item */
