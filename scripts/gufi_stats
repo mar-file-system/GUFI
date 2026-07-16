@@ -1470,6 +1470,89 @@ def dir_age_mtime_hist(_config, args, _where):
 def dir_age_ctime_hist(_config, args, _where):
     return age_bins_hist(args, 'ctime', 'd')
 
+def unique_col_count(args, col, table, where):
+    '''
+    Get number of unique column values
+
+    default returns count for 1 directory
+    with --recursive, count for each directory
+    with --cumulative, count for all directories
+
+    This query cannot take advantage of summary/treesummary
+    because it needs the actual values from the entries table
+    '''
+
+    if args.cumulative:
+        queries = [
+            '-I', build_create(INTERMEDIATE_NAME, ['{0} {1}'.format(col, SQLITE3_INTEGER)]),
+
+            # cannot get count right here - need to compare across directories
+            '-E', 'INSERT INTO {0} {1}'.format(INTERMEDIATE_NAME,
+                                               build_query(['DISTINCT {0}'.format(col)],
+                                                           [table],
+                                                           where,
+                                                           None,
+                                                           None,
+                                                           None,
+                                                           None)),
+
+            '-K', build_create(AGGREGATE_NAME, ['{0} {1}'.format(col, SQLITE3_INTEGER)]),
+
+            '-J', 'INSERT INTO {0} {1}'.format(AGGREGATE_NAME,
+                                               build_query(['DISTINCT {0}'.format(col)],
+                                                           [INTERMEDIATE_NAME],
+                                                           None,
+                                                           None,
+                                                           None,
+                                                           None,
+                                                           None)),
+
+            '-G', build_query(['COUNT(DISTINCT {0})'.format(col)],
+                              [AGGREGATE_NAME],
+                              None,
+                              None,
+                              None,
+                              None,
+                              None),
+        ]
+    else:
+        _, E_path, _ = path_sql(args)
+
+        queries = [
+            '-E', build_query(E_path + ['COUNT(DISTINCT {0})'.format(col)],
+                              [table],
+                              where,
+                              ['pinode'] if table == VRPENTRIES else None,
+                              None,
+                              None,
+                              None),
+        ]
+
+        if not args.recursive:
+            queries += [
+                '--max-level', '0'
+            ]
+
+    return queries
+
+def unique_file_uid_count(_config, args, _where):
+    return unique_col_count(args, 'uid', VRPENTRIES, ['type == \'f\''])
+
+def unique_file_gid_count(_config, args, _where):
+    return unique_col_count(args, 'gid', VRPENTRIES, ['type == \'f\''])
+
+def unique_link_uid_count(_config, args, _where):
+    return unique_col_count(args, 'uid', VRPENTRIES, ['type == \'l\''])
+
+def unique_link_gid_count(_config, args, _where):
+    return unique_col_count(args, 'gid', VRPENTRIES, ['type == \'l\''])
+
+def unique_dir_uid_count(_config, args, _where):
+    return unique_col_count(args, 'uid', VRSUMMARY, None)
+
+def unique_dir_gid_count(_config, args, _where):
+    return unique_col_count(args, 'gid', VRSUMMARY, None)
+
 # mapping of desired statistics to functions
 
 # normally only computes for current directory
@@ -1537,6 +1620,13 @@ BOTH = [
     ['dir-age-atime-hist',             dir_age_atime_hist],
     ['dir-age-mtime-hist',             dir_age_mtime_hist],
     ['dir-age-ctime-hist',             dir_age_ctime_hist],
+
+    ['unique-file-uid-count',          unique_file_uid_count],
+    ['unique-file-gid-count',          unique_file_gid_count],
+    ['unique-link-uid-count',          unique_link_uid_count],
+    ['unique-link-gid-count',          unique_link_gid_count],
+    ['unique-dir-uid-count',           unique_dir_uid_count],
+    ['unique-dir-gid-count',           unique_dir_gid_count],
 ]
 
 # does not use either

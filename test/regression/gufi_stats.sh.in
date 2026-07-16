@@ -219,6 +219,30 @@ run_no_sort "${GUFI_STATS}    --reftime 31536000 dir-age-ctime-hist \"${BASENAME
 run_no_sort "${GUFI_STATS} -r --reftime 31536000 dir-age-ctime-hist \"${BASENAME}\""
 run_no_sort "${GUFI_STATS} -c --reftime 31536000 dir-age-ctime-hist \"${BASENAME}\""
 
+run_sort "${GUFI_STATS}    unique-file-uid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -r unique-file-uid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -c unique-file-uid-count \"${BASENAME}\""
+
+run_sort "${GUFI_STATS}    unique-file-gid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -r unique-file-gid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -c unique-file-gid-count \"${BASENAME}\""
+
+run_sort "${GUFI_STATS}    unique-link-uid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -r unique-link-uid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -c unique-link-uid-count \"${BASENAME}\""
+
+run_sort "${GUFI_STATS}    unique-link-gid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -r unique-link-gid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -c unique-link-gid-count \"${BASENAME}\""
+
+run_sort "${GUFI_STATS}    unique-dir-uid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -r unique-dir-uid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -c unique-dir-uid-count \"${BASENAME}\""
+
+run_sort "${GUFI_STATS}    unique-dir-gid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -r unique-dir-gid-count \"${BASENAME}\""
+run_sort "${GUFI_STATS} -c unique-dir-gid-count \"${BASENAME}\""
+
 # glob
 run "${GUFI_STATS} -c total-filesize \"${BASENAME}/*/\""
 

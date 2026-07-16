@@ -552,6 +552,80 @@ prefix/unusual#? directory , 31536000;31536000:1;
 $ gufi_stats -c --reftime 31536000 dir-age-ctime-hist "prefix"
 31536000;31536000:1;
 
+$ gufi_stats    unique-file-uid-count "prefix"
+1
+
+$ gufi_stats -r unique-file-uid-count "prefix"
+prefix 1
+prefix/directory 1
+prefix/directory/subdirectory 1
+prefix/leaf_directory 1
+prefix/unusual#? directory , 1
+
+$ gufi_stats -c unique-file-uid-count "prefix"
+1
+
+$ gufi_stats    unique-file-gid-count "prefix"
+1
+
+$ gufi_stats -r unique-file-gid-count "prefix"
+prefix 1
+prefix/directory 1
+prefix/directory/subdirectory 1
+prefix/leaf_directory 1
+prefix/unusual#? directory , 1
+
+$ gufi_stats -c unique-file-gid-count "prefix"
+1
+
+$ gufi_stats    unique-link-uid-count "prefix"
+1
+
+$ gufi_stats -r unique-link-uid-count "prefix"
+prefix 1
+prefix/directory/subdirectory 1
+
+$ gufi_stats -c unique-link-uid-count "prefix"
+1
+
+$ gufi_stats    unique-link-gid-count "prefix"
+1
+
+$ gufi_stats -r unique-link-gid-count "prefix"
+prefix 1
+prefix/directory/subdirectory 1
+
+$ gufi_stats -c unique-link-gid-count "prefix"
+1
+
+$ gufi_stats    unique-dir-uid-count "prefix"
+1
+
+$ gufi_stats -r unique-dir-uid-count "prefix"
+prefix 1
+prefix/directory 1
+prefix/directory/subdirectory 1
+prefix/empty_directory 1
+prefix/leaf_directory 1
+prefix/unusual#? directory , 1
+
+$ gufi_stats -c unique-dir-uid-count "prefix"
+1
+
+$ gufi_stats    unique-dir-gid-count "prefix"
+1
+
+$ gufi_stats -r unique-dir-gid-count "prefix"
+prefix 1
+prefix/directory 1
+prefix/directory/subdirectory 1
+prefix/empty_directory 1
+prefix/leaf_directory 1
+prefix/unusual#? directory , 1
+
+$ gufi_stats -c unique-dir-gid-count "prefix"
+1
+
 $ gufi_stats -c total-filesize "prefix/*/"
 49
 
