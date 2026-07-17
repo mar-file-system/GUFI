@@ -100,7 +100,7 @@ extern "C" {
 
 #endif
 
-#define MAXXATTR            1024
+#define MAXXATTR            16384 /* xattr(7) says 65536, but that big of a buffer seems to make alpine linux segfault */
 extern const char XATTRDELIM;
 
 /* each db.db, per-user db, and per-group db will have a table with this name */

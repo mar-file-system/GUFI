@@ -443,7 +443,7 @@ $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
 
 # declared osstext1 length too long
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
-Error: osstext1 length is too big: 65535 (max: 1023)
+Error: osstext1 length is too big: 65535 (max: 16383)
 
 # declared osstext1 length does not go to delimiter
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
@@ -462,7 +462,7 @@ $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
 
 # declared osstext2 length too long
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
-Error: osstext2 length is too big: 65535 (max: 1023)
+Error: osstext2 length is too big: 65535 (max: 16383)
 
 # declared osstext2 length does not go to delimiter
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
