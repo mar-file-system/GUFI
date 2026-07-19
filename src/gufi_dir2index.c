@@ -84,6 +84,8 @@ OF SUCH DAMAGE.
 #include "str.h"
 #include "utils.h"
 
+#include "incremental_non_path.h"
+
 struct PoolArgs {
     struct input in;
     str_t index_parent; /* actual index is placed at <index parent>/$(basename <src>) */
@@ -93,6 +95,8 @@ struct PoolArgs {
 
     uint64_t *total_dirs;
     uint64_t *total_nondirs;
+
+    sqlite3 *filehandle_db;
 };
 
 /*
@@ -255,6 +259,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
             goto close_dir;
         }
     }
+
+    // printf("from dir: %s, to dir: %s\n", nda.work->name, nda.topath.data);
+    fh_db_insert_by_path(pa->filehandle_db, nda.work->name, nda.topath.data);
 
     /*
      * set up for processing, but keep to minimum to quickly hit
@@ -603,6 +610,14 @@ int main(int argc, char *argv[]) {
         rc = EXIT_FAILURE;
         goto free_db;
     }
+
+    sqlite3 *db = create_filehandle_db(pa.index_parent.data);
+    if (!db) {
+        fprintf(stderr, "Could not create filehandle database\n");
+        rc = EXIT_FAILURE;
+        goto free_db;
+    }
+    pa.filehandle_db = db;
 
     const uint64_t queue_limit = get_queue_limit(pa.in.target_memory, pa.in.maxthreads);
     QPTPool_ctx_t *ctx = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_limit, pa.in.swap_prefix.data, 1, 2, 1);
