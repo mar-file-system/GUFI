@@ -834,7 +834,7 @@ static void* marfs_ctx_init(void* ptr) {
 static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
     PCS_t* pcs = (PCS_t*)ptr;
     struct entry_data* ed = pcs->ed;
-    struct marfs_ctx* ctx = user_data;
+    (void)user_data;
 
     const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
@@ -843,7 +843,7 @@ static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
     const size_t removed = xattr_remove(&ed->xattrs, MARFS_XATTR_NAME, MARFS_XATTR_NAME_LEN);
 
     // decrement nlink if the marfs xattr was removed
-    if (removed > 0 && pcs->work->statuso.st_nlink > (nlink_t)0){
+    if (removed > 0 && pcs->work->statuso.st_nlink > (nlink_t)0) {
         pcs->work->statuso.st_nlink--;
     }
 
@@ -860,7 +860,7 @@ static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
         if (ROOT_NAMESPACE_LEVEL == pcs->work->level - 1 || is_namespace(parent)) {
             // this is a marfs file. do not add it to the database
             return PLUGIN_NO_PROCESS_FILE;
-        } 
+        }
     }
 
     return PLUGIN_PROCESS_FILE;
@@ -871,7 +871,7 @@ static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
 // parent is an MDAL_subspaces directory that will be removed from the final index.
 static void marfs_pre_process_dir(void* ptr, void* user_data) {
     PCS_t* pcs = (PCS_t*)ptr;
-    struct marfs_ctx* ctx = user_data;
+    (void)user_data;
 
     const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t parent = get_parent(path);
@@ -890,7 +890,7 @@ static void marfs_pre_process_dir(void* ptr, void* user_data) {
 
                 struct stat st;
                 if (stat(gp_path, &st) == 0) {
-                    pcs->work->pinode = (long long int) st.st_ino;
+                    pcs->work->pinode = (long long int)st.st_ino;
                 } else {
                     fprintf(stderr, "plugin: stat('%s') failed: %s\n", gp_path, strerror(errno));
                 }
@@ -901,7 +901,6 @@ static void marfs_pre_process_dir(void* ptr, void* user_data) {
             }
         }
     }
-
 }
 
 // marfs_process_dir renames the root namespace in the gufi db summary table to match the mountpoint in the marfs
