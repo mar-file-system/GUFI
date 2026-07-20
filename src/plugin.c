@@ -318,6 +318,8 @@ plugin_file_action plugins_pre_process_file(struct plugins *plugins, void *ctx, 
             }
         }
     }
+
+    return ret;
 }
 
 void plugins_post_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
