@@ -720,14 +720,9 @@ static int is_namespace(str_t path) {
 // marfs_pre_processing_dir checks if we're about to process a marfs specific directory (MDAL_reference, MDAL_subspaces)
 // or a namespace that is no longer active in the marfs config
 static plugin_dir_action marfs_dir_action(void* ptr) {
-    PCS_t* pcs = (PCS_t*)ptr;
+    PCS_t* pcs = ptr;
 
-    if (!pcs || !pcs->work || !pcs->work->name) {
-        fprintf(stderr, "Error: gufi pcs is NULL\n");
-        return PLUGIN_PROCESS_DIR;
-    }
-
-    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
+    const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
     const str_t parent = get_parent(path);
 
@@ -777,17 +772,13 @@ static plugin_dir_action marfs_dir_action(void* ptr) {
 struct marfs_ctx {
     sqlite3* db;
     sqlite3_stmt* delete_entry;
-    sqlite3_stmt* decrement_nlink;
-    sqlite3_stmt* update_xattr_names;
-    sqlite3_stmt* remove_xattrs;
     sqlite3_stmt* update_summary_name;
-    sqlite3_stmt* update_summary_pinode;
 };
 
 static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
     (void)ptr;
 
-    struct marfs_ctx* ctx = (struct marfs_ctx*)plugin_user_data;
+    struct marfs_ctx* ctx = plugin_user_data;
     if (!ctx) {
         return;
     }
@@ -796,36 +787,15 @@ static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
         sqlite3_finalize(ctx->delete_entry);
     }
 
-    if (ctx->decrement_nlink) {
-        sqlite3_finalize(ctx->decrement_nlink);
-    }
-
-    if (ctx->update_xattr_names) {
-        sqlite3_finalize(ctx->update_xattr_names);
-    }
-
-    if (ctx->remove_xattrs) {
-        sqlite3_finalize(ctx->remove_xattrs);
-    }
-
     if (ctx->update_summary_name) {
         sqlite3_finalize(ctx->update_summary_name);
-    }
-
-    if (ctx->update_summary_pinode) {
-        sqlite3_finalize(ctx->update_summary_pinode);
     }
 
     free(ctx);
 }
 
 static void* marfs_ctx_init(void* ptr) {
-    PCS_t* pcs = (PCS_t*)ptr;
-    if (!pcs || !pcs->db) {
-        fprintf(stderr, "Error: marfs_ctx_init got invalid PCS/db\n");
-        return NULL;
-    }
-
+    PCS_t* pcs = ptr;
     sqlite3* db = pcs->db;
 
     struct marfs_ctx* ctx = calloc(1, sizeof(*ctx));
@@ -846,38 +816,6 @@ static void* marfs_ctx_init(void* ptr) {
     }
 
     rc = sqlite3_prepare_v2(db,
-                            "UPDATE entries "
-                            "SET nlink = CASE WHEN nlink > 0 THEN nlink - 1 ELSE 0 END "
-                            "WHERE name = ?1;",
-                            -1, &ctx->decrement_nlink, NULL);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: prepare decrement nlink failed: %s\n", sqlite3_errmsg(db));
-        marfs_ctx_exit(ptr, ctx);
-        return NULL;
-    }
-
-    rc = sqlite3_prepare_v2(db,
-                            "UPDATE entries "
-                            "SET xattr_names = ?2 "
-                            "WHERE name = ?1;",
-                            -1, &ctx->update_xattr_names, NULL);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: prepare xattr update failed: %s\n", sqlite3_errmsg(db));
-        marfs_ctx_exit(ptr, ctx);
-        return NULL;
-    }
-
-    rc = sqlite3_prepare_v2(db,
-                            "DELETE FROM xattrs_pwd "
-                            "WHERE inode = ?2 AND name = ?1;",
-                            -1, &ctx->remove_xattrs, NULL);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: remove xattrs failed: %s\n", sqlite3_errmsg(db));
-        marfs_ctx_exit(ptr, ctx);
-        return NULL;
-    }
-
-    rc = sqlite3_prepare_v2(db,
                             "UPDATE summary "
                             "SET name = ?2 "
                             "WHERE name = ?1;",
@@ -888,65 +826,25 @@ static void* marfs_ctx_init(void* ptr) {
         return NULL;
     }
 
-    rc = sqlite3_prepare_v2(db,
-                            "UPDATE summary "
-                            "SET pinode = ?1 "
-                            "WHERE name = ?2;",
-                            -1, &ctx->update_summary_pinode, NULL);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: prepare summary pinode update failed: %s\n", sqlite3_errmsg(db));
-        marfs_ctx_exit(ptr, ctx);
-        return NULL;
-    }
-
     return ctx;
 }
 
-// filter out the marfs specific xattrs and rebuild the blob to update the gufi db
-static sqlite3_int64 build_xattr_names_filtered(struct entry_data* ed, char* out, size_t out_sz) {
-    size_t w = 0;
-
-    for (size_t i = 0; i < ed->xattrs.count; i++) {
-        const struct xattr* x = &ed->xattrs.pairs[i];
-
-        if ((x->name_len == MARFS_XATTR_NAME_LEN) && (strncmp(x->name, MARFS_XATTR_NAME, MARFS_XATTR_NAME_LEN) == 0)) {
-            continue;
-        }
-
-        const size_t nmlen = x->name_len;
-
-        // need space for name + delimiter
-        if (w + nmlen + 1 > out_sz) {
-            break;
-        }
-
-        memcpy(out + w, x->name, nmlen);
-        w += nmlen;
-
-        out[w++] = XATTRDELIM;
-    }
-
-    return (sqlite3_int64)w;
-}
-
-// marfs_process_file removes any marfs specific files from the gufi db, decrements every file nlink by 1, and removes
-// any marfs specific xattrs
-static void marfs_process_file(void* ptr, void* user_data) {
-    PCS_t* pcs = (PCS_t*)ptr;
+// marfs_pre_process_file removes any marfs specific files from the gufi db, decrements every file nlink by 1, and
+// removes any marfs specific xattrs
+static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
+    PCS_t* pcs = ptr;
     struct entry_data* ed = pcs->ed;
-    struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
+    (void)user_data;
 
-    if (!pcs || !ctx || !ctx->db || !ed || !pcs->work || !pcs->work->name) {
-        return;
-    }
-
-    int rc;
-
-    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
+    const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
 
-    if (!basename.data || basename.len == 0) {
-        return;
+    // remove marfs xattr from entry
+    const size_t removed = xattr_remove(&ed->xattrs, MARFS_XATTR_NAME, MARFS_XATTR_NAME_LEN);
+
+    // decrement nlink if the marfs xattr was removed
+    if (removed > 0 && pcs->work->statuso.st_nlink > (nlink_t)0) {
+        pcs->work->statuso.st_nlink--;
     }
 
     // remove mdal specific files
@@ -960,136 +858,22 @@ static void marfs_process_file(void* ptr, void* user_data) {
         // 1. directly under sec-root
         // 2. directly under a namespace
         if (ROOT_NAMESPACE_LEVEL == pcs->work->level - 1 || is_namespace(parent)) {
-            // this is a marfs file. remove it from the database
-
-            sqlite3_stmt* stmt = ctx->delete_entry;
-
-            sqlite3_reset(stmt);
-            sqlite3_clear_bindings(stmt);
-
-            rc = sqlite3_bind_text(stmt, 1, basename.data, (int)basename.len, SQLITE_STATIC);
-            if (rc != SQLITE_OK) {
-                fprintf(stderr, "plugin: bind DELETE failed for %.*s: %s\n", (int)basename.len, basename.data,
-                        sqlite3_errmsg(ctx->db));
-                return;
-            }
-
-            rc = sqlite3_step(stmt);
-            if (rc != SQLITE_DONE) {
-                fprintf(stderr, "plugin: DELETE failed for %.*s: %s\n", (int)basename.len, basename.data,
-                        sqlite3_errmsg(ctx->db));
-            }
-
-            sqlite3_reset(stmt);
-            sqlite3_clear_bindings(stmt);
-            return;
+            // this is a marfs file. do not add it to the database
+            return PLUGIN_NO_PROCESS_FILE;
         }
     }
 
-    // decrement nlink
-    {
-        sqlite3_stmt* stmt = ctx->decrement_nlink;
-
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
-
-        rc = sqlite3_bind_text(stmt, 1, basename.data, (int)basename.len, SQLITE_STATIC);
-        if (rc != SQLITE_OK) {
-            fprintf(stderr, "plugin: bind nlink failed for %.*s: %s\n", (int)basename.len, basename.data,
-                    sqlite3_errmsg(ctx->db));
-            return;
-        }
-
-        rc = sqlite3_step(stmt);
-        if (rc != SQLITE_DONE) {
-            fprintf(stderr, "plugin: decrement nlink failed for %.*s: %s\n", (int)basename.len, basename.data,
-                    sqlite3_errmsg(ctx->db));
-        }
-
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
-    }
-
-    // remove marfs xattr name from entries
-    {
-        sqlite3_stmt* stmt = ctx->update_xattr_names;
-
-        char xattr_names[MAXXATTR];
-        sqlite3_int64 xlen = build_xattr_names_filtered(ed, xattr_names, sizeof(xattr_names));
-        if (xlen < 0) xlen = 0;
-
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
-
-        rc = sqlite3_bind_text(stmt, 1, basename.data, (int)basename.len, SQLITE_STATIC);
-        if (rc != SQLITE_OK) {
-            fprintf(stderr, "plugin: bind xattr name failed for %.*s: %s\n", (int)basename.len, basename.data,
-                    sqlite3_errmsg(ctx->db));
-            return;
-        }
-
-        rc = sqlite3_bind_blob64(stmt, 2, xattr_names, (sqlite3_uint64)xlen, SQLITE_STATIC);
-        if (rc != SQLITE_OK) {
-            fprintf(stderr, "plugin: bind xattr_names failed for %.*s: %s\n", (int)basename.len, basename.data,
-                    sqlite3_errmsg(ctx->db));
-            return;
-        }
-
-        rc = sqlite3_step(stmt);
-        if (rc != SQLITE_DONE) {
-            fprintf(stderr, "plugin: update xattr_names failed for %.*s: %s\n", (int)basename.len, basename.data,
-                    sqlite3_errmsg(ctx->db));
-        }
-
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
-    }
-
-    // remove marfs xattr from xattr_pwd
-    {
-        sqlite3_stmt* stmt = ctx->remove_xattrs;
-
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
-
-        rc = sqlite3_bind_blob(stmt, 1, MARFS_XATTR_NAME, (int)MARFS_XATTR_NAME_LEN, SQLITE_STATIC);
-        if (rc != SQLITE_OK) {
-            fprintf(stderr, "plugin: bind xattr remove name failed for %.*s: %s\n", (int)basename.len, basename.data,
-                    sqlite3_errmsg(ctx->db));
-            return;
-        }
-
-        rc = sqlite3_bind_int64(stmt, 2, (sqlite3_int64)pcs->work->statuso.st_ino);
-        if (rc != SQLITE_OK) {
-            fprintf(stderr, "plugin: bind xattr remove inode failed for %lu: %s\n", pcs->work->statuso.st_ino,
-                    sqlite3_errmsg(ctx->db));
-            return;
-        }
-
-        rc = sqlite3_step(stmt);
-        if (rc != SQLITE_DONE) {
-            fprintf(stderr, "plugin: remove xattrs_pwd failed for %.*s: %s\n", (int)basename.len, basename.data,
-                    sqlite3_errmsg(ctx->db));
-        }
-
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
-    }
+    return PLUGIN_PROCESS_FILE;
 }
 
 // marfs_process_dir renames the root namespace in the gufi db summary table to match the mountpoint in the marfs
 // config. The actual dir gets renamed in cleanup_marfs_index. It also fixes pinode values for directories whose
 // parent is an MDAL_subspaces directory that will be removed from the final index.
-static void marfs_process_dir(void* ptr, void* user_data) {
-    PCS_t* pcs = (PCS_t*)ptr;
-    struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
+static void marfs_pre_process_dir(void* ptr, void* user_data) {
+    PCS_t* pcs = ptr;
+    (void)user_data;
 
-    if (!pcs || !pcs->work || !pcs->work->name || !ctx || !ctx->db) {
-        return;
-    }
-
-    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
-    const str_t basename = get_basename(path);
+    const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t parent = get_parent(path);
     const str_t parent_basename = get_basename(parent);
 
@@ -1106,30 +890,7 @@ static void marfs_process_dir(void* ptr, void* user_data) {
 
                 struct stat st;
                 if (stat(gp_path, &st) == 0) {
-                    sqlite3_stmt* stmt = ctx->update_summary_pinode;
-                    int rc;
-
-                    sqlite3_reset(stmt);
-                    sqlite3_clear_bindings(stmt);
-
-                    rc = sqlite3_bind_int64(stmt, 1, (sqlite3_int64)st.st_ino);
-                    if (rc == SQLITE_OK) {
-                        rc = sqlite3_bind_text(stmt, 2, basename.data, (int)basename.len, SQLITE_STATIC);
-                    }
-
-                    if (rc == SQLITE_OK) {
-                        rc = sqlite3_step(stmt);
-                        if (rc != SQLITE_DONE) {
-                            fprintf(stderr, "plugin: update pinode failed for %.*s: %s\n", (int)basename.len,
-                                    basename.data, sqlite3_errmsg(ctx->db));
-                        }
-                    } else {
-                        fprintf(stderr, "plugin: bind pinode failed for %.*s: %s\n", (int)basename.len, basename.data,
-                                sqlite3_errmsg(ctx->db));
-                    }
-
-                    sqlite3_reset(stmt);
-                    sqlite3_clear_bindings(stmt);
+                    pcs->work->pinode = (long long int)st.st_ino;
                 } else {
                     fprintf(stderr, "plugin: stat('%s') failed: %s\n", gp_path, strerror(errno));
                 }
@@ -1140,6 +901,17 @@ static void marfs_process_dir(void* ptr, void* user_data) {
             }
         }
     }
+}
+
+// marfs_process_dir renames the root namespace in the gufi db summary table to match the mountpoint in the marfs
+// config. The actual dir gets renamed in cleanup_marfs_index. It also fixes pinode values for directories whose
+// parent is an MDAL_subspaces directory that will be removed from the final index.
+static void marfs_post_process_dir(void* ptr, void* user_data) {
+    PCS_t* pcs = ptr;
+    struct marfs_ctx* ctx = user_data;
+
+    const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
+    const str_t basename = get_basename(path);
 
     // determine if this is the root namespace dir
     if (ROOT_NAMESPACE_LEVEL == pcs->work->level &&
@@ -1203,9 +975,11 @@ struct plugin_operations GUFI_MARFS_PLUGIN = {
     .thread_init = NULL,
     .dir_action = marfs_dir_action,
     .ctx_init = marfs_ctx_init,
-    .process_dir = marfs_process_dir,
     .stat_file = NULL,
-    .process_file = marfs_process_file,
+    .pre_process_dir = marfs_pre_process_dir,
+    .post_process_dir = marfs_post_process_dir,
+    .pre_process_file = marfs_pre_process_file,
+    .post_process_file = NULL,
     .ctx_exit = marfs_ctx_exit,
     .thread_exit = NULL,
     .global_exit = marfs_indexing_global_exit,

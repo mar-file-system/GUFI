@@ -162,6 +162,9 @@ int xattrs_setup(struct xattrs *xattrs);
 int xattrs_alloc(struct xattrs *xattrs);
 void xattrs_cleanup(struct xattrs *xattrs);
 
+/* in-memory xattr manipulation */
+size_t xattr_remove(struct xattrs *xattrs, const char* name, const size_t name_len);
+
 /* filesystem xattr interactions */
 int xattrs_get(const char *path, struct xattrs *xattrs);
 ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, const char delim);

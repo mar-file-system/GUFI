@@ -817,9 +817,11 @@ static void blobop(sqlite3_context *context, int argc, sqlite3_value **argv) {
         }
     }
 
+    const int read_error = ferror(p);
+
     pclose(p);
 
-    if ((char) got == EOF) {
+    if (read_error) {
         sqlite3_result_error_code(context, SQLITE_ERROR);
         free(data);
         return;

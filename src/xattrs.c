@@ -161,6 +161,41 @@ void xattrs_cleanup(struct xattrs *xattrs) {
 }
 
 /* ************************************************** */
+/* in-memory xattr manipulation */
+
+// xattr_remove will find and remove any xattrs that match the provided name.
+// It returns the number of xattrs that were removed.
+size_t xattr_remove(struct xattrs *xattrs, const char *name, const size_t name_len) {
+    size_t removed = 0;
+
+    size_t i = 0;
+
+    while (i < xattrs->count) {
+        struct xattr *x = &xattrs->pairs[i];
+
+        if ((x->name_len == name_len) &&
+            (strncmp(x->name, name, name_len) == 0)) {
+            removed++;
+            xattrs->name_len -= x->name_len;
+            xattrs->len -= x->name_len + x->value_len;
+
+            xattrs->count--;
+
+            if (i != xattrs->count) {
+                xattrs->pairs[i] = xattrs->pairs[xattrs->count];
+            }
+
+            continue;
+        }
+
+        i++;
+    }
+
+    return removed;
+}
+/* ************************************************** */
+
+/* ************************************************** */
 /* filesystem xattr interactions */
 
 /* caller should zero xattrs since this function isn't always called on a struct xattrs */
