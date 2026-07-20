@@ -105,9 +105,10 @@ static void test_pre_process_dir(void *, void *user_data) {
     (*value)++;
 }
 
-static void test_pre_process_file(void *, void *user_data) {
+static plugin_file_action test_pre_process_file(void *, void *user_data) {
     std::size_t *value = static_cast<std::size_t *>(user_data);
     (*value)++;
+    return PLUGIN_PROCESS_FILE;
 }
 
 static void test_post_process_dir(void *, void *user_data) {

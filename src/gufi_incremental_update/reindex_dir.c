@@ -188,15 +188,18 @@ int reindex_dir(struct PoolArgs *pa,
             xattrs_get(child->name, &child_ed.xattrs);
         }
 
-        sumit(&summary, child, &child_ed);
-        insertdbgo(child, &child_ed, res);
-
         PCS_t child_pcs = {
             .db = db,
             .work = child,
             .ed = &child_ed,
         };
-        plugins_post_process_file(&pa->in.plugins, &child_pcs, id);
+
+        if (plugins_pre_process_file(&pa->in.plugins, &child_pcs, id) == PLUGIN_PROCESS_FILE) {
+            sumit(&summary, child, &child_ed);
+            insertdbgo(child, &child_ed, res);
+
+            plugins_post_process_file(&pa->in.plugins, &child_pcs, id);
+        }
 
         if (pa->in.process_xattrs) {
             xattrs_cleanup(&child_ed.xattrs);
@@ -206,6 +209,9 @@ int reindex_dir(struct PoolArgs *pa,
     }
 
     insertdbfin(res);
+
+    /* run plugin pre_processing before inserting data into database */
+    plugins_pre_process_dir(&pa->in.plugins, &pcs, id);
 
     insertsumdb(db, work->name, work, ed, &summary);
 

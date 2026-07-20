@@ -171,22 +171,22 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         .ed = ed,
     };
 
-    plugins_pre_process_file(&nda->in->plugins, &pcs, nda->id);
+    if (plugins_pre_process_file(&nda->in->plugins, &pcs, nda->id) == PLUGIN_PROCESS_FILE) {
+        if (in->process_xattrs) {
+            insertdbgo_xattrs(in, &nda->work->statuso, entry, ed,
+                            &nda->xattr_db_list, nda->temp_xattr,
+                            nda->topath.data, nda->topath.len,
+                            nda->xattrs_res, nda->xattr_files_res);
+        }
 
-    if (in->process_xattrs) {
-        insertdbgo_xattrs(in, &nda->work->statuso, entry, ed,
-                          &nda->xattr_db_list, nda->temp_xattr,
-                          nda->topath.data, nda->topath.len,
-                          nda->xattrs_res, nda->xattr_files_res);
+        /* update summary table */
+        sumit(&nda->summary, entry, ed);
+
+        /* add entry + xattr names into bulk insert */
+        insertdbgo(entry, ed, nda->entries_res);
+
+        plugins_post_process_file(&nda->in->plugins, &pcs, nda->id);
     }
-
-    /* update summary table */
-    sumit(&nda->summary, entry, ed);
-
-    /* add entry + xattr names into bulk insert */
-    insertdbgo(entry, ed, nda->entries_res);
-
-    plugins_post_process_file(&nda->in->plugins, &pcs, nda->id);
 
 out:
     return rc;
@@ -333,14 +333,16 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
             /* keep track of per-user and per-group xattr dbs */
             insertdbfin(nda.xattr_files_res);
+        }
+        insertdbfin(nda.entries_res);
 
+        if (nda.in->process_xattrs) {
             /* pull this directory's xattrs because they were not pulled by the parent */
             xattrs_setup(&nda.ed.xattrs);
             xattrs_get(nda.work->name, &nda.ed.xattrs);
         }
-        insertdbfin(nda.entries_res);
 
-        /* run plugin pre_processing before inserting data into database */
+        /* allow plugins to modify this directory's metadata before summary/xattr insertion */
         plugins_pre_process_dir(&pa->in.plugins, &pcs, nda.id);
 
         if (nda.in->process_xattrs) {

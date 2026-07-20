@@ -722,11 +722,6 @@ static int is_namespace(str_t path) {
 static plugin_dir_action marfs_dir_action(void* ptr) {
     PCS_t* pcs = (PCS_t*)ptr;
 
-    if (!pcs || !pcs->work || !pcs->work->name) {
-        fprintf(stderr, "Error: gufi pcs is NULL\n");
-        return PLUGIN_PROCESS_DIR;
-    }
-
     const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
     const str_t parent = get_parent(path);
@@ -783,7 +778,7 @@ struct marfs_ctx {
 static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
     (void)ptr;
 
-    struct marfs_ctx* ctx = (struct marfs_ctx*)plugin_user_data;
+    struct marfs_ctx* ctx = plugin_user_data;
     if (!ctx) {
         return;
     }
@@ -801,11 +796,6 @@ static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
 
 static void* marfs_ctx_init(void* ptr) {
     PCS_t* pcs = (PCS_t*)ptr;
-    if (!pcs || !pcs->db) {
-        fprintf(stderr, "Error: marfs_ctx_init got invalid PCS/db\n");
-        return NULL;
-    }
-
     sqlite3* db = pcs->db;
 
     struct marfs_ctx* ctx = calloc(1, sizeof(*ctx));
@@ -839,96 +829,22 @@ static void* marfs_ctx_init(void* ptr) {
     return ctx;
 }
 
-// remove_xattr_from_entry will search through an entry's xattrs and remove any that match the provided name
-static size_t remove_xattr_from_entry(struct entry_data* ed, const char* name, const size_t name_len) {
-    if (!ed || !name || !ed->xattrs.pairs || ed->xattrs.count == 0) {
-        return 0;
-    }
-
-    struct xattrs* xattrs = &ed->xattrs;
-
-    size_t write_idx = 0;
-    size_t removed = 0;
-    size_t new_name_len = 0;
-    size_t new_len = 0;
-
-    for (size_t read_idx = 0; read_idx < xattrs->count; read_idx++) {
-        struct xattr* x = &xattrs->pairs[read_idx];
-
-        
-        if ((x->name_len == name_len) && (strncmp(x->name, name, name_len) == 0)){
-            removed++;
-            continue;
-        }
-
-        if (write_idx != read_idx) {
-            xattrs->pairs[write_idx] = *x;
-        }
-
-        new_name_len += xattrs->pairs[write_idx].name_len;
-        new_len += xattrs->pairs[write_idx].name_len + xattrs->pairs[write_idx].value_len;
-
-        write_idx++;
-    }
-
-    if (removed) {
-        memset(&xattrs->pairs[write_idx], 0, (xattrs->count - write_idx) * sizeof(xattrs->pairs[0]));
-
-        xattrs->count = write_idx;
-        xattrs->name_len = new_name_len;
-        xattrs->len = new_len;
-    }
-
-    return removed;
-}
-
 // marfs_pre_process_file removes any marfs specific files from the gufi db, decrements every file nlink by 1, and
 // removes any marfs specific xattrs
-static void marfs_pre_process_file(void* ptr, void* user_data) {
+static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
     PCS_t* pcs = (PCS_t*)ptr;
     struct entry_data* ed = pcs->ed;
-    struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
-
-    if (!pcs || !ctx || !ctx->db || !ed || !pcs->work || !pcs->work->name) {
-        return;
-    }
-
-    int rc;
+    struct marfs_ctx* ctx = user_data;
 
     const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
-
-    if (!basename.data || basename.len == 0) {
-        return;
-    }
-
-    // decrement nlink
-    if (pcs->work->statuso.st_nlink > (nlink_t)0) {
-        pcs->work->statuso.st_nlink--;
-    }
 
     // remove marfs xattr from entry
-    remove_xattr_from_entry(ed, MARFS_XATTR_NAME, MARFS_XATTR_NAME_LEN);
-}
+    const size_t removed = xattr_remove(&ed->xattrs, MARFS_XATTR_NAME, MARFS_XATTR_NAME_LEN);
 
-// marfs_process_file removes any marfs specific files from the gufi db, decrements every file nlink by 1, and removes
-// any marfs specific xattrs
-static void marfs_post_process_file(void* ptr, void* user_data) {
-    PCS_t* pcs = (PCS_t*)ptr;
-    struct entry_data* ed = pcs->ed;
-    struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
-
-    if (!pcs || !ctx || !ctx->db || !ed || !pcs->work || !pcs->work->name) {
-        return;
-    }
-
-    int rc;
-
-    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
-    const str_t basename = get_basename(path);
-
-    if (!basename.data || basename.len == 0) {
-        return;
+    // decrement nlink if the marfs xattr was removed
+    if (removed > 0 && pcs->work->statuso.st_nlink > (nlink_t)0){
+        pcs->work->statuso.st_nlink--;
     }
 
     // remove mdal specific files
@@ -942,31 +858,12 @@ static void marfs_post_process_file(void* ptr, void* user_data) {
         // 1. directly under sec-root
         // 2. directly under a namespace
         if (ROOT_NAMESPACE_LEVEL == pcs->work->level - 1 || is_namespace(parent)) {
-            // this is a marfs file. remove it from the database
-
-            sqlite3_stmt* stmt = ctx->delete_entry;
-
-            sqlite3_reset(stmt);
-            sqlite3_clear_bindings(stmt);
-
-            rc = sqlite3_bind_text(stmt, 1, basename.data, (int)basename.len, SQLITE_STATIC);
-            if (rc != SQLITE_OK) {
-                fprintf(stderr, "plugin: bind DELETE failed for %.*s: %s\n", (int)basename.len, basename.data,
-                        sqlite3_errmsg(ctx->db));
-                return;
-            }
-
-            rc = sqlite3_step(stmt);
-            if (rc != SQLITE_DONE) {
-                fprintf(stderr, "plugin: DELETE failed for %.*s: %s\n", (int)basename.len, basename.data,
-                        sqlite3_errmsg(ctx->db));
-            }
-
-            sqlite3_reset(stmt);
-            sqlite3_clear_bindings(stmt);
-            return;
-        }
+            // this is a marfs file. do not add it to the database
+            return PLUGIN_NO_PROCESS_FILE;
+        } 
     }
+
+    return PLUGIN_PROCESS_FILE;
 }
 
 // marfs_process_dir renames the root namespace in the gufi db summary table to match the mountpoint in the marfs
@@ -974,14 +871,9 @@ static void marfs_post_process_file(void* ptr, void* user_data) {
 // parent is an MDAL_subspaces directory that will be removed from the final index.
 static void marfs_pre_process_dir(void* ptr, void* user_data) {
     PCS_t* pcs = (PCS_t*)ptr;
-    struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
-
-    if (!pcs || !pcs->work || !pcs->work->name || !ctx || !ctx->db) {
-        return;
-    }
+    struct marfs_ctx* ctx = user_data;
 
     const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
-    const str_t basename = get_basename(path);
     const str_t parent = get_parent(path);
     const str_t parent_basename = get_basename(parent);
 
@@ -1017,16 +909,10 @@ static void marfs_pre_process_dir(void* ptr, void* user_data) {
 // parent is an MDAL_subspaces directory that will be removed from the final index.
 static void marfs_post_process_dir(void* ptr, void* user_data) {
     PCS_t* pcs = (PCS_t*)ptr;
-    struct marfs_ctx* ctx = (struct marfs_ctx*)user_data;
-
-    if (!pcs || !pcs->work || !pcs->work->name || !ctx || !ctx->db) {
-        return;
-    }
+    struct marfs_ctx* ctx = user_data;
 
     const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
-    const str_t parent = get_parent(path);
-    const str_t parent_basename = get_basename(parent);
 
     // determine if this is the root namespace dir
     if (ROOT_NAMESPACE_LEVEL == pcs->work->level &&
@@ -1094,7 +980,7 @@ struct plugin_operations GUFI_MARFS_PLUGIN = {
     .pre_process_dir = marfs_pre_process_dir,
     .post_process_dir = marfs_post_process_dir,
     .pre_process_file = marfs_pre_process_file,
-    .post_process_file = marfs_post_process_file,
+    .post_process_file = NULL,
     .ctx_exit = marfs_ctx_exit,
     .thread_exit = NULL,
     .global_exit = marfs_indexing_global_exit,

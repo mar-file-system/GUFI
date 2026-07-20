@@ -304,12 +304,18 @@ void plugins_pre_process_dir(struct plugins *plugins, void *ctx, const size_t ti
     }
 }
 
-void plugins_pre_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
-    /* Not checking arguments */
+plugin_file_action plugins_pre_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
+    plugin_file_action ret = PLUGIN_PROCESS_FILE;
+
 
     for(size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->pre_process_file) {
-            plugins->plugins[i]->ops->pre_process_file(ctx, plugins->user_data[tid][i]);
+            plugin_file_action pda = plugins->plugins[i]->ops->pre_process_file(ctx, plugins->user_data[tid][i]);
+
+            // choose the most restrictive action returned by any plugin
+            if (pda < ret) {
+                ret = pda;
+            }
         }
     }
 }
