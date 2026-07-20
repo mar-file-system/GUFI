@@ -165,12 +165,6 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         external_read_file(in, entry, process_external, nda->db);
     }
 
-    PCS_t pcs = {
-        .db = nda->db,
-        .work = entry,
-        .ed = ed,
-    };
-
     if (plugins_pre_process_file(&nda->in->plugins, &pcs, nda->id) == PLUGIN_PROCESS_FILE) {
         if (in->process_xattrs) {
             insertdbgo_xattrs(in, &nda->work->statuso, entry, ed,
