@@ -98,7 +98,6 @@ typedef enum {
     PLUGIN_PROCESS_FILE = 1,
 } plugin_file_action;
 
-
 /*
  * Operations for a user-defined plugin library, allowing the user to make custom
  * modifications to the databases as GUFI runs.

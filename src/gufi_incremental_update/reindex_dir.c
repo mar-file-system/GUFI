@@ -117,6 +117,7 @@ int reindex_dir(struct PoolArgs *pa,
         .db = db,
         .work = work,
         .ed = ed,
+        .summary = &summary,
     };
 
     /* run light-weight plugin setup before information is available */
@@ -192,6 +193,7 @@ int reindex_dir(struct PoolArgs *pa,
             .db = db,
             .work = child,
             .ed = &child_ed,
+            .summary = &summary
         };
 
         if (plugins_pre_process_file(&pa->in.plugins, &child_pcs, id) == PLUGIN_PROCESS_FILE) {

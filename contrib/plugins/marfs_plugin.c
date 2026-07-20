@@ -720,9 +720,9 @@ static int is_namespace(str_t path) {
 // marfs_pre_processing_dir checks if we're about to process a marfs specific directory (MDAL_reference, MDAL_subspaces)
 // or a namespace that is no longer active in the marfs config
 static plugin_dir_action marfs_dir_action(void* ptr) {
-    PCS_t* pcs = (PCS_t*)ptr;
+    PCS_t* pcs = ptr;
 
-    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
+    const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
     const str_t parent = get_parent(path);
 
@@ -795,7 +795,7 @@ static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
 }
 
 static void* marfs_ctx_init(void* ptr) {
-    PCS_t* pcs = (PCS_t*)ptr;
+    PCS_t* pcs = ptr;
     sqlite3* db = pcs->db;
 
     struct marfs_ctx* ctx = calloc(1, sizeof(*ctx));
@@ -832,11 +832,11 @@ static void* marfs_ctx_init(void* ptr) {
 // marfs_pre_process_file removes any marfs specific files from the gufi db, decrements every file nlink by 1, and
 // removes any marfs specific xattrs
 static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
-    PCS_t* pcs = (PCS_t*)ptr;
+    PCS_t* pcs = ptr;
     struct entry_data* ed = pcs->ed;
     (void)user_data;
 
-    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
+    const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
 
     // remove marfs xattr from entry
@@ -870,10 +870,10 @@ static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
 // config. The actual dir gets renamed in cleanup_marfs_index. It also fixes pinode values for directories whose
 // parent is an MDAL_subspaces directory that will be removed from the final index.
 static void marfs_pre_process_dir(void* ptr, void* user_data) {
-    PCS_t* pcs = (PCS_t*)ptr;
+    PCS_t* pcs = ptr;
     (void)user_data;
 
-    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
+    const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t parent = get_parent(path);
     const str_t parent_basename = get_basename(parent);
 
@@ -907,10 +907,10 @@ static void marfs_pre_process_dir(void* ptr, void* user_data) {
 // config. The actual dir gets renamed in cleanup_marfs_index. It also fixes pinode values for directories whose
 // parent is an MDAL_subspaces directory that will be removed from the final index.
 static void marfs_post_process_dir(void* ptr, void* user_data) {
-    PCS_t* pcs = (PCS_t*)ptr;
+    PCS_t* pcs = ptr;
     struct marfs_ctx* ctx = user_data;
 
-    const str_t path = (str_t)REFSTR(pcs->work->name, pcs->work->name_len);
+    const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
 
     // determine if this is the root namespace dir

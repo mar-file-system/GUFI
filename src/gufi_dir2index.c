@@ -159,13 +159,13 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         }
     }
 
-    /* read external files before modifying the entry's path */
-    if (strncmp(entry->name + entry->name_len - entry->basename_len,
-                EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
-        external_read_file(in, entry, process_external, nda->db);
-    }
-
     if (plugins_pre_process_file(&nda->in->plugins, &pcs, nda->id) == PLUGIN_PROCESS_FILE) {
+        /* read external files before modifying the entry's path */
+        if (strncmp(entry->name + entry->name_len - entry->basename_len, 
+                    EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
+            external_read_file(in, entry, process_external, nda->db);
+        }
+
         if (in->process_xattrs) {
             insertdbgo_xattrs(in, &nda->work->statuso, entry, ed,
                             &nda->xattr_db_list, nda->temp_xattr,
