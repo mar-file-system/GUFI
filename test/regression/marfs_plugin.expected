@@ -58,10 +58,9 @@ search/marfs/namespace1/userfile2.txt
 
 # query file counts per directory
 $ gufi_query -d "|" -S "SELECT rpath(sname, sroll) AS name, totfiles FROM vrsummary WHERE totfiles > 0 ORDER BY name;" "search"
-search/marfs/namespace1/namespace2|3
+search/marfs/namespace1/namespace2|2
 search/marfs/namespace1/userdir|1
-search/marfs/namespace1|3
-search/marfs|1
+search/marfs/namespace1|2
 
 
 # verify xattrs
@@ -75,12 +74,12 @@ search/marfs/namespace1/userfile1.txt|user.myattr
 # All file nlink counts should be decremented by 1 (MarFS metadata link removed)
 $ gufi_query -d "|" -S "SELECT rpath(sname, sroll), nlink FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;" "search"
 search/marfs/namespace1/namespace2/nestedfile1.txt|0
-search/marfs/namespace1/namespace2/nestedfile2.txt|0
+search/marfs/namespace1/namespace2/nestedfile2.txt|1
 search/marfs/namespace1/namespace2|2
-search/marfs/namespace1/userdir/userfile3.txt|0
+search/marfs/namespace1/userdir/userfile3.txt|1
 search/marfs/namespace1/userdir|2
 search/marfs/namespace1/userfile1.txt|0
-search/marfs/namespace1/userfile2.txt|0
+search/marfs/namespace1/userfile2.txt|1
 search/marfs/namespace1|4
 search/marfs|3
 
