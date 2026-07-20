@@ -102,23 +102,33 @@ typedef struct ThreadDB {
 
 typedef struct Subtree {
     struct work *root;          /* top of subtree that can be rolled up */
+
+    /* parallel_walk */
+    pthread_mutex_t *mutex;     /* used by parallel_walk and copy_to_top */
+    Path_t *curr;               /* the directory currently being processed */
     sll_t *subdirs;             /* per-thread list of directory Path_t *s */
-    Path_t *curr;               /* the directory currently being processed (for parallel_walk) */
+
+    /* rollup_copy */
     ThreadDB_t *tdbs;           /* array of target dbs to copy to */
     size_t threads_used;        /* number of threads used for processing this subtree */
-    size_t enqueue_start;       /* thread to start enqueueing at (to round robin) */
-
-    pthread_mutex_t mutex;
     size_t remaining;           /* when remaining hits 0, call rollup_merge */
 
     struct start_end *se;       /* initially owned by subtree, transferred to stats */
 } Subtree_t;
 
+static int Subtree_cmp(const void *lhs, const void *rhs) {
+    Subtree_t **l = (Subtree_t **) lhs;
+    Subtree_t **r = (Subtree_t **) rhs;
+    return ((*l)->remaining < (*r)->remaining);
+}
+
 static void Subtree_free(Subtree_t *subtree, const size_t threads) {
     free(subtree->se);
-    pthread_mutex_destroy(&subtree->mutex);
     free(subtree->tdbs);    /* elements should have already been freed */
+
     Path_free(subtree->curr);
+    pthread_mutex_destroy(subtree->mutex);
+    free(subtree->mutex);
     for(size_t i = 0; i < threads; i++) {
         sll_destroy(&subtree->subdirs[i], Path_free);
     }
@@ -249,14 +259,15 @@ static int parallel_walk(QPTPool_ctx_t *ctx, void *data) {
 
     /* queue up immediate subdirs for recursion */
     sll_loop(&subdirs, node) {
-        Subtree_t *work = malloc(sizeof(*work));
+        Subtree_t *subdir = calloc(1, sizeof(*subdir));
 
         /* references owned by subtree top */
-        work->root = subtree->root;
-        work->subdirs = subtree->subdirs;
-        work->curr = (Path_t *) sll_node_data(node);
+        subdir->root    = subtree->root;
+        subdir->mutex   = subtree->mutex;
+        subdir->curr    = (Path_t *) sll_node_data(node);
+        subdir->subdirs = subtree->subdirs;
 
-        QPTPool_enqueue(ctx, parallel_walk, work);
+        QPTPool_enqueue(ctx, parallel_walk, subdir);
     }
 
     /* push subdirs into subtree list (take ownership) */
@@ -283,6 +294,11 @@ static int prepare_top_down_rollup(struct PoolArgs *pa, QPTPool_ctx_t *ctx, stru
     Subtree_t *top = malloc(sizeof(*top));
 
     top->root = work;       /* take ownership */
+
+    top->mutex = malloc(sizeof(*top->mutex));
+    pthread_mutex_init(top->mutex, NULL);
+
+    top->curr = NULL;       /* not set for top */
 
     /* set up per-thread lists to subdirs */
     top->subdirs = calloc(pa->in.maxthreads, sizeof(*top->subdirs));
@@ -313,9 +329,10 @@ static int prepare_top_down_rollup(struct PoolArgs *pa, QPTPool_ctx_t *ctx, stru
      */
 
     Subtree_t *subtree = calloc(1, sizeof(*subtree));
-    subtree->root    = work;         /* reference */
-    subtree->subdirs = top->subdirs; /* reference */
-    subtree->curr    = top_path;     /* reference */
+    subtree->root    = work;                 /* reference */
+    subtree->subdirs = top->subdirs;         /* reference */
+    subtree->curr    = top_path;             /* reference */
+    subtree->mutex   = top->mutex;           /* reference */
 
     QPTPool_enqueue(ctx, parallel_walk, subtree);
 
@@ -470,7 +487,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
         closedb(db); /* readonly db is not needed any more */
     }
 
-    /* found top - do rollup */
+    /* found top - walk the subtree */
     if (canrollup == 1) {
         pa->stats[id].top++;
 
@@ -596,7 +613,7 @@ static int copy_to_top(QPTPool_ctx_t *ctx, void *data) {
     rexa_t rexa = {
         .xattr       = {
             .temp    = &pa->xattr_template,
-            .mutex   = &subtree->mutex,
+            .mutex   = subtree->mutex,
         },
         .parent      = subtree->root->name,
         .parent_len  = subtree->root->name_len,
@@ -640,9 +657,9 @@ static int copy_to_top(QPTPool_ctx_t *ctx, void *data) {
     Path_free(tru->path);
     free(tru);
 
-    pthread_mutex_lock(&subtree->mutex);
+    pthread_mutex_lock(subtree->mutex);
     const size_t remaining = --subtree->remaining;
-    pthread_mutex_unlock(&subtree->mutex);
+    pthread_mutex_unlock(subtree->mutex);
 
     if (!remaining) {
         rollup_merge(id, pa, subtree);
@@ -652,7 +669,7 @@ static int copy_to_top(QPTPool_ctx_t *ctx, void *data) {
 }
 
 /* set up and kick off copies into per-thread databases placed in the target directory */
-static int rollup_copy(QPTPool_ctx_t *ctx, void *data, const size_t enqueue_start) {
+static int rollup_copy(QPTPool_ctx_t *ctx, void *data) {
     struct PoolArgs *pa = NULL;
     QPTPool_get_args(ctx, (void **) &pa);
     Subtree_t *subtree = (Subtree_t *) data;
@@ -663,8 +680,6 @@ static int rollup_copy(QPTPool_ctx_t *ctx, void *data, const size_t enqueue_star
 
     subtree->se = calloc(1, sizeof(*subtree->se));
     clock_gettime(CLOCK_MONOTONIC, &subtree->se->start);
-
-    pthread_mutex_init(&subtree->mutex, NULL);
 
     /* <path>/db.db */
     const size_t dbname_len = work->name_len + 1 + DBNAME_LEN;
@@ -720,8 +735,6 @@ static int rollup_copy(QPTPool_ctx_t *ctx, void *data, const size_t enqueue_star
         return 0;
     }
 
-    subtree->enqueue_start = enqueue_start;
-
     pa->active_dbs += threads_used; /* locked by caller */
 
     ThreadDB_t *tdbs = calloc(threads_used, sizeof(*tdbs));
@@ -742,8 +755,6 @@ static int rollup_copy(QPTPool_ctx_t *ctx, void *data, const size_t enqueue_star
         SNPRINTF(tdbs[i].uri, uri_len + 1, "%s/" DBNAME ".%zu", path->uri.data, i);
         tdbs[i].db = template_to_db(&pa->dbdb_template, tdbs[i].dbname,
                                     geteuid(), getegid(), NULL);
-        /* TODO: move this to main to only do CREATE once */
-        create_treesummary_tables(tdbs[i].dbname, tdbs[i].db, NULL);
     }
 
     /* ************************************************************ */
@@ -905,7 +916,7 @@ int main(int argc, char *argv[]) {
 
     const str_t HERE = REFSTR(".", 1);
     init_template_db(&pa.dbdb_template);
-    if (create_dbdb_template(&pa.dbdb_template, &HERE) != 0) {
+    if (create_rollup_template(&pa.dbdb_template, &HERE) != 0) {
         fprintf(stderr, "Could not create template file\n");
         rc = EXIT_FAILURE;
         goto cleanup;
@@ -972,10 +983,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Finished Finding Top of Subtrees to Roll Up in %.2Lfs\n",
             sec(since_epoch(&done_finding_subtrees) - since_epoch(&runtime.start)));
 
-    pthread_mutex_init(&pa.mutex, NULL);
-    pthread_cond_init(&pa.cond, NULL);
-    pa.active_dbs = 0;
-
     /*
      * do the actual rollup using the discovered subtrees
      *
@@ -983,28 +990,44 @@ int main(int argc, char *argv[]) {
      * processing up until all threads are active (oversubscription is
      * allowed). The remaining subtrees are pushed in as subtrees exit
      * the thread pool.
-     *
-     * TODO: Schedule subtree processing instead of enqueuing in whatever
-     * order they happened to show up in.
      */
-    size_t enqueue_start = 0;
+
+    size_t subtree_count = 0;
+    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+        subtree_count += sll_get_size(&pa.subtrees[i]);
+    }
+
+    Subtree_t **subtrees = malloc(subtree_count * sizeof(*subtrees));
+
+    size_t j = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
         for(Subtree_t *subtree = sll_pop_front(&pa.subtrees[i]);
             subtree; subtree = sll_pop_front(&pa.subtrees[i])) {
-            pthread_mutex_lock(&pa.mutex);
-
-            /* wait until number of active copies drops */
-            while (pa.active_dbs >= pa.in.maxthreads) { /* can oversubscribe */
-                pthread_cond_wait(&pa.cond, &pa.mutex);
-            }
-
-            /* kick off subtree copying */
-            rollup_copy(pool, subtree, enqueue_start);
-            pthread_mutex_unlock(&pa.mutex);
-
-            enqueue_start = (enqueue_start + 1) % pa.in.maxthreads;
+            subtrees[j++] = subtree;
         }
     }
+
+    /* sort subtrees to process smaller ones first */
+    qsort(subtrees, subtree_count, sizeof(*subtrees), Subtree_cmp);
+
+    pthread_mutex_init(&pa.mutex, NULL);
+    pthread_cond_init(&pa.cond, NULL);
+    pa.active_dbs = 0;
+
+    for(size_t i = 0; i < subtree_count; i++) {
+        pthread_mutex_lock(&pa.mutex);
+
+        /* wait until number of active copies drops */
+        while (pa.active_dbs >= pa.in.maxthreads) { /* can oversubscribe */
+            pthread_cond_wait(&pa.cond, &pa.mutex);
+        }
+
+        /* kick off subtree copying */
+        rollup_copy(pool, subtrees[i]);
+        pthread_mutex_unlock(&pa.mutex);
+    }
+
+    free(subtrees);
 
     QPTPool_stop(pool);
 
@@ -1031,7 +1054,7 @@ int main(int argc, char *argv[]) {
 
   free_subtrees:
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
-        sll_destroy(&pa.subtrees[i], Path_free);
+        sll_destroy(&pa.subtrees[i], NULL); /* each subtree list should be empty at this point */
     }
     free(pa.subtrees);
 

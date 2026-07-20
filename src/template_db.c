@@ -205,6 +205,31 @@ int create_dbdb_template(struct template_db *tdb, const str_t *dir) {
     return rc;
 }
 
+static int create_rollup_tables(const char *name, sqlite3 *db, void *args) {
+    return (create_dbdb_tables(name, db, args) ||
+            create_treesummary_tables(name, db, args));
+}
+
+/* create the initial main database file to copy from with a treesummary table */
+int create_rollup_template(struct template_db *tdb, const str_t *dir) {
+    char *name = template_path(dir);
+    const int fd = mkstemp(name); /* duplicate open */
+
+    if (fd < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not create temporary db.db: %s (%d)\n",
+                strerror(err), err);
+        remove(name);             /* file is possibly created */
+        free(name);
+        return -1;
+    }
+    close(fd);
+
+    const int rc = create_template(tdb, create_rollup_tables, name);
+    free(name);
+    return rc;
+}
+
 /* copy the template file instead of creating a new database and new tables for each work item */
 /* the ownership and permissions are set too */
 int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid, int *err) {
