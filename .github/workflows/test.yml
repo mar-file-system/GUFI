@@ -127,7 +127,7 @@ jobs:
 
     - name: Configure CMake
       if:   matrix.img == 'alpine:edge'
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DQPTPOOL_STACK_SIZE=1048576
 
     - name: Configure CMake
       if:   matrix.img != 'alpine:edge'

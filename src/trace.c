@@ -229,23 +229,23 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
     return *offset - orig_offset;
 }
 
-#define read_prefixed(name, buf, FMT, LEN)                                          \
+#define read_prefixed(name, buf, FMT, FMT_LEN)                                      \
     size_t len = 0;                                                                 \
     int chars = 0;                                                                  \
     if ((sscanf(p, "%" FMT "%n", &len, &chars) != 1) ||                             \
-        (chars != LEN)) {                                                           \
-        fprintf(stderr, "Error: Bad %s \"%.*s\"\n", name, LEN, p);                  \
+        (chars != FMT_LEN)) {                                                       \
+        fprintf(stderr, "Error: Bad %s \"%.*s\"\n", name, FMT_LEN, p);              \
         xattrs_cleanup(&ed->xattrs);                                                \
         free(new_work);                                                             \
         *work = NULL;                                                               \
         return -1;                                                                  \
     }                                                                               \
                                                                                     \
-    q += LEN;                                                                       \
+    q += FMT_LEN;                                                                   \
                                                                                     \
-    if (len >= sizeof(buf)) {                                                       \
-        fprintf(stderr, "Error: %s length is too big: %zu (max: %zu)\n",            \
-                name, len, sizeof(buf) - 1);                                        \
+    if ((size_t) (end - q) < len) {                                                 \
+        fprintf(stderr, "Error: %s length goes past end of line: %zu (max: %zu)\n", \
+                name, len, end - q);                                                \
         xattrs_cleanup(&ed->xattrs);                                                \
         free(new_work);                                                             \
         *work = NULL;                                                               \

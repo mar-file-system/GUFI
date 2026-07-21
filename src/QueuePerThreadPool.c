@@ -780,19 +780,31 @@ int QPTPool_start(QPTPool_ctx_t *ctx) {
         return 1;
     }
 
+    pthread_attr_t *attr = NULL;
+    #if QPTPOOL_STACK_SIZE
+    pthread_attr_t attr_stack;
+    attr = &attr_stack;
+    pthread_attr_init(attr);
+    pthread_attr_setstacksize(attr, QPTPOOL_STACK_SIZE);
+    #endif
+
     pool->state = RUNNING;
 
     size_t started = 0;
     for(size_t i = 0; i < pool->nthreads; i++) {
         QPTPoolThreadData_t *data = &pool->data[i];
 
-        if (pthread_create(&data->thread, NULL, worker_function, &ctx[i]) != 0) {
+        if (pthread_create(&data->thread, attr, worker_function, &ctx[i]) != 0) {
             break;
         }
 
         started++;
     }
     pthread_mutex_unlock(&pool->mutex);
+
+    #if QPTPOOL_STACK_SIZE
+    pthread_attr_destroy(attr);
+    #endif
 
     if (started != pool->nthreads) {
         QPTPool_stop_threads(ctx, started);

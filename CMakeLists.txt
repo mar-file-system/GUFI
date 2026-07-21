@@ -504,6 +504,7 @@ list(APPEND COMMON_LIBRARIES
 include_directories(${COMMON_INCLUDES})
 
 option(QPTPOOL_SWAP "Whether or not to enable swapping in QueuePerThreadPool" On)
+set(QPTPOOL_STACK_SIZE 0 CACHE STRING "QueuePerThreadPool Stack Size")
 
 option(ALLOW_DB_WRITES "Whether or not to allow gufi_query to write to databases" On)
 
