@@ -81,8 +81,7 @@ OF SUCH DAMAGE.
 #include "gufi_incremental_update/incremental_update.h"
 
 static int validate_path(const char *type, const str_t *path,
-                         const size_t parent_len,
-                         struct work **work) {
+                         const size_t parent_len, struct work **work) {
     *work = NULL;
 
     /* get input path metadata */
@@ -113,19 +112,32 @@ static int validate_path(const char *type, const str_t *path,
     return 0;
 }
 
-static int validate_source(struct PoolArgs *pa, struct work **index, struct work **tree) {
-    if (validate_path("tree", &pa->tree.path, pa->tree.parent_len, tree) != 0) {
+static int validate_source(str_t *argv_index, struct GenSnapshot *index,
+                           str_t *argv_tree,  struct GenSnapshot *tree,
+                           int *same) {
+    *same = 0;
+
+    tree->parent_len = trailing_non_match_index(argv_tree->data, argv_tree->len, "/", 1);
+    tree->parent_len = trailing_match_index(argv_tree->data, tree->parent_len, "/", 1);
+    if (validate_path("tree", argv_tree, tree->parent_len, &tree->work) != 0) {
         return 1;
     }
 
-    if (!strcmp(pa->tree.path.data, pa->index.path.data)) {
-        fprintf(stderr,"You are putting the index dbs in input directory\n");
-        pa->same = 1;
+    char *real_tree = realpath(argv_tree->data, NULL);
+    char *real_index = realpath(argv_index->data, NULL);
+    *same = !strcmp(argv_tree->data, argv_index->data); /* both strings are NULL terminated, so not getting lengths */
+    free(real_index);
+    free(real_tree);
+
+    if (*same) {
+        fprintf(stderr, "You are putting the index dbs in input directory\n");
     }
     else {
-        if (validate_path("index", &pa->index.path, pa->index.parent_len, index) != 0) {
-            free(*tree);
-            *tree = NULL;
+        index->parent_len = trailing_non_match_index(argv_index->data, argv_index->len, "/", 1);
+        index->parent_len = trailing_match_index(argv_index->data, index->parent_len, "/", 1);
+        if (validate_path("index", argv_index, index->parent_len, &index->work) != 0) {
+            free(tree->work);
+            tree->work = NULL;
             return 1;
         }
     }
@@ -133,61 +145,118 @@ static int validate_source(struct PoolArgs *pa, struct work **index, struct work
     return 0;
 }
 
-static int compare_and_update(struct PoolArgs *pa, struct work *index, struct work *tree) {
+static int compare_and_update(struct PoolArgs *pa,
+                              const ino_t inode,
+                              struct GenSnapshot *index,
+                              struct GenSnapshot *tree) {
     fprintf(stdout, "--------------------\n");
-    fprintf(stdout, "Processing top of changed subtree: %s\n", tree->name);
+    fprintf(stdout, "Processing top of changed subtree: %s\n", tree->work->name);
 
     int rc = 0;
 
+    pthread_mutex_t mutex;
+    pthread_mutex_init(&mutex, NULL);
+
+    pthread_cond_t cond;
+    pthread_cond_init(&cond, NULL);
+
+    size_t counter = 0;
+
     /* if the index is in the tree, there is no need to get a snapshot of the index */
     if (pa->same == 0) {
+        ++counter;
+
+        index->mutex = &mutex;
+        index->cond = &cond;
+        index->counter = &counter;
+
+        /* use the tree's inode for the snapshot name (this gets overwritten by a second lstat_wrapper call) */
+        index->work->statuso.st_ino = inode;
+
         /*
          * get a snapshot of the existing index
-         * (write to <snapshotdb>.index)
+         * (write to <artifacts dir>/<inode>.index)
          */
-        rc = gen_index_snapshot(pa, index);
+        rc = gen_index_snapshot(pa, inode, index);
     }
+
+    tree->mutex = &mutex;
+    tree->cond = &cond;
+    tree->counter = &counter;
 
     /*
      * get a snapshot of the current tree
-     * (write to <snapshotdb>.tree)
+     * (write to <artifacts dir>/<inode>.tree)
      * generate update dbs
      * (write to <parking lot>/<dir inode>)
      */
     if (rc == 0) {
-        rc = find_suspects(pa, tree);
+        pthread_mutex_lock(&mutex);
+        ++counter;
+        pthread_mutex_unlock(&mutex);
+        rc = find_suspects(pa, inode, tree);
     }
     else {
-        free(tree);
+        free(tree->work);
+        tree->work = NULL;
     }
 
-    QPTPool_wait(pa->ctx);
+    if (rc != 0) {
+        pthread_mutex_lock(&mutex);
+        --counter;
+        pthread_mutex_unlock(&mutex);
+    }
+
+    pthread_mutex_lock(&mutex);
+    while (counter) {
+        pthread_cond_wait(&cond, &mutex);
+    }
+    pthread_mutex_unlock(&mutex);
+
+    pthread_cond_destroy(&cond);
+    pthread_mutex_destroy(&mutex);
 
     /* aggregate index results into one file */
     if (pa->same == 0) {
-        aggregate_intermediate(&pa->index.agg, pa->in.maxthreads, 0);
-        aggregate_fin(&pa->index.agg, pa->in.maxthreads);
+        aggregate_intermediate(&index->agg, pa->in.maxthreads, 0);
+        aggregate_fin(&index->agg, pa->in.maxthreads);
     }
 
     /* aggregate tree results into one file */
-    aggregate_intermediate(&pa->tree.agg, pa->in.maxthreads, pa->in.maxthreads);
-    aggregate_fin(&pa->tree.agg, pa->in.maxthreads);
+    aggregate_intermediate(&tree->agg, pa->in.maxthreads, pa->in.maxthreads);
+    aggregate_fin(&tree->agg, pa->in.maxthreads);
     close_template_db(&pa->db);
 
     if (rc == 0) {
         /* if the index is in the tree, databases have already been created/updated */
         if (pa->same == 0) {
             /* do the incremental update */
-            incremental_update(pa);
+            incremental_update(pa, inode, index, tree);
         }
     }
 
     /* clean up artifacts */
-    delete_artifact(pa->diff.data);
-    delete_artifact(pa->tree.snapshot.data);
-    delete_artifact(pa->index.snapshot.data);
+    if (!pa->in.artifacts.keep) {
+        delete_artifact(tree->snapshot.data);
+    }
+    str_free_existing(&tree->snapshot);
+    free(tree->work);
+    free(tree);
+
+    if (pa->same == 0) {
+        if (!pa->in.artifacts.keep) {
+            delete_artifact(index->snapshot.data);
+        }
+        str_free_existing(&index->snapshot);
+        free(index->work);
+        free(index);
+    }
 
     fprintf(stdout, "--------------------\n");
+
+    pthread_mutex_lock(&pa->mutex);
+    --pa->active;
+    pthread_mutex_unlock(&pa->mutex);
 
     return rc;
 }
@@ -208,6 +277,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
         descend(ctx,
                 &pa->in, tree,
                 dir, 1,
+                NULL, NULL,
                 find_top, NULL, NULL,
                 NULL);
         goto close_dir;
@@ -243,6 +313,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
         descend(ctx,
                 &pa->in, tree,
                 dir, 1,
+                NULL, NULL,
                 find_top, NULL, NULL,
                 NULL);
     }
@@ -251,6 +322,59 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
     closedir(dir);
   free_work:
     free(tree);
+
+    return 0;
+}
+
+static int handle_artifacts_dir(struct PoolArgs *pa, const int created_parking_lot) {
+    if (pa->in.artifacts.keep) {
+        /* artifacts directory must already exist */
+        char *real_artifacts = realpath(pa->in.artifacts.dir.data, NULL);
+        if (!real_artifacts) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not get realpath of \"%s\": %s (%d)\n",
+                    pa->in.artifacts.dir.data, strerror(err), err);
+            return 1;
+        }
+
+        /*
+         * if the parking lot was created by main(), do not allow for
+         * the artifacts to be placed there since the parking lot will
+         * be deleted at the end
+         *
+         * if the parking lot already existed, let the artifacts be
+         * placed there since the parking lot will not be deleted at
+         * the end
+         */
+        if (created_parking_lot) {
+            /* this should never fail because the parking lot already exists */
+            char *real_parking_lot = realpath(pa->parking_lot.data, NULL);
+
+            const int same = !strcmp(real_artifacts, real_parking_lot);  /* both strings are NULL terminated, so not getting lengths */
+            free(real_parking_lot);
+
+            if (same) {
+                fprintf(stderr, "Error: Refusing to save artifacts to the parking lot directory \"%s\" because it will be deleted at the end\n",
+                        pa->in.artifacts.dir.data);
+                free(real_artifacts);
+                return 1;
+            }
+        }
+
+        free(real_artifacts);
+
+        if (access(pa->in.artifacts.dir.data, W_OK | X_OK) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Cannot place artifacts into \"%s\": %s (%d)\n",
+                    pa->in.artifacts.dir.data, strerror(err), err);
+            return 1;
+        }
+
+        pa->artifacts = pa->in.artifacts.dir;
+    }
+    else {
+        pa->artifacts = pa->parking_lot;
+    }
 
     return 0;
 }
@@ -270,7 +394,7 @@ int main(int argc, char *argv[]) {
 
         /* processing flags */
         FLAG_SUSPECT_STAT, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
-        FLAG_SUSPECT_TIME, FLAG_SNAPSHOT_PREFIX,
+        FLAG_SUSPECT_TIME, FLAG_MAX_SUBTREES, FLAG_KEEP_ARTIFACTS,
 
         FLAG_INDEX_XATTRS, FLAG_PLUGIN,
 
@@ -297,8 +421,10 @@ int main(int argc, char *argv[]) {
     }
 
     /* parse positional args, following the options */
-    INSTALL_STR(&pa.index.path,  pa.in.pos.argv[pa.in.pos.argc - 3]);
-    INSTALL_STR(&pa.tree.path,   pa.in.pos.argv[pa.in.pos.argc - 2]);
+    str_t argv_index;
+    str_t argv_tree;
+    INSTALL_STR(&argv_index,     pa.in.pos.argv[pa.in.pos.argc - 3]);
+    INSTALL_STR(&argv_tree,      pa.in.pos.argv[pa.in.pos.argc - 2]);
     INSTALL_STR(&pa.parking_lot, pa.in.pos.argv[pa.in.pos.argc - 1]);
 
     int rc = 0;
@@ -315,39 +441,78 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    struct work *index = NULL;
-    struct work *tree = NULL;
-    if ((rc = validate_source(&pa, &index, &tree)) == 0) {
+    /* have to do this after creating the parking lot so that realpath can get the path */
+    if (handle_artifacts_dir(&pa, created_parking_lot) != 0) {
+        rc = 1;
+        goto cleanup_pl;
+    }
+
+    struct GenSnapshot index = {0}; /* used for entire lifetime of run, if set */
+
+    /* tree.work
+     *     set by validate_source
+     *     sent into find_top
+     *         stored as top of subtree if suspected to have changed
+     *         freed if not suspected to have changed, and children spawned
+     *     either way, tree.work is not valid after find_top
+     *     if subtrees were found, they will be passed to compare_and_update/find_suspects and freed
+     */
+    struct GenSnapshot tree = {0};
+    if ((rc = validate_source(&argv_index, &index, &argv_tree, &tree, &pa.same)) == 0) {
         /* get tops of all subtrees that changed */
-        QPTPool_enqueue(pa.ctx, find_top, tree);
+        QPTPool_enqueue(pa.ctx, find_top, tree.work);
         QPTPool_wait(pa.ctx);
+
+        /* tree.work is no longer valid */
+        tree.work = NULL;
+
+        /* comparison is >, so subtract 1 to get correct wait condition */
+        --pa.in.max_subtrees;
 
         /*
          * run (parallel) incremental update on subtrees one at a time
          * so that there are not pa.in.maxthreads in-memory dbs per
          * subtree being processed at once
-         *
          */
         for(size_t i = 0; i < pa.in.maxthreads; i++) {
             sll_loop(&pa.tops[i], node) {
-                struct work *subtree = (struct work *) sll_node_data(node);
+                pthread_mutex_lock(&pa.mutex);
 
-                /* jump into index */
-                struct work *subindex = NULL;
-                if (pa.same == 0) {
-                    subindex = new_work_with_name(index->name, index->name_len - index->root_parent.len,
-                                                  subtree->name + pa.tree.parent_len,
-                                                  subtree->name_len - pa.tree.parent_len);
+                /*
+                 * pa.in.max_subtrees is needed because there is no
+                 * way to predict how many aggregation dbs are needed
+                 * for a particular subtree
+                 */
+                while (pa.active > pa.in.max_subtrees) {
+                    pthread_cond_wait(&pa.cond, &pa.mutex);
                 }
 
-                rc |= compare_and_update(&pa, subindex, subtree);
+                ++pa.active;
+                pthread_mutex_unlock(&pa.mutex);
+
+                struct GenSnapshot *subtree = malloc(sizeof(*subtree));
+                *subtree = tree;
+                subtree->work = (struct work *) sll_node_data(node);
+
+                /* jump into index */
+                struct GenSnapshot *subindex = NULL;
+                if (pa.same == 0) {
+                    subindex = malloc(sizeof(*subindex));
+                    *subindex = index;
+                    subindex->work = new_work_with_name(index.work->name, index.work->root_parent.len,
+                                                        subtree->work->name + tree.parent_len,
+                                                        subtree->work->name_len - tree.parent_len);
+                }
+
+                rc |= compare_and_update(&pa, subtree->work->statuso.st_ino, subindex, subtree);
             }
         }
 
-        free(index);
-        /* tree would have been freed in find_top or compare_and_update */
+        free(index.work);
+        /* tree.work would have been freed in find_top or compare_and_update */
     }
 
+  cleanup_pl:
     cleanup_parking_lot(pa.parking_lot.data, created_parking_lot);
 
   cleanup:

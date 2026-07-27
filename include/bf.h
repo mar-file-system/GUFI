@@ -306,9 +306,13 @@ extern "C" {
 #define FLAG_SUSPECT_STAT_LONG "suspect-stat"
 #define FLAG_SUSPECT_STAT {FLAG_SUSPECT_STAT_LONG, no_argument, NULL, FLAG_SUSPECT_STAT_SHORT}
 
-#define FLAG_SNAPSHOT_PREFIX_SHORT (FLAG_GROUP_INC + 4)
-#define FLAG_SNAPSHOT_PREFIX_LONG "snapshot-prefix"
-#define FLAG_SNAPSHOT_PREFIX {FLAG_SNAPSHOT_PREFIX_LONG, required_argument, NULL, FLAG_SNAPSHOT_PREFIX_SHORT}
+#define FLAG_MAX_SUBTREES_SHORT (FLAG_GROUP_INC + 4)
+#define FLAG_MAX_SUBTREES_LONG "max-subtrees"
+#define FLAG_MAX_SUBTREES {FLAG_MAX_SUBTREES_LONG, required_argument, NULL, FLAG_MAX_SUBTREES_SHORT}
+
+#define FLAG_KEEP_ARTIFACTS_SHORT (FLAG_GROUP_INC + 5)
+#define FLAG_KEEP_ARTIFACTS_LONG "keep-artifacts"
+#define FLAG_KEEP_ARTIFACTS {FLAG_KEEP_ARTIFACTS_LONG, required_argument, NULL, FLAG_KEEP_ARTIFACTS_SHORT}
 
 /* gufi_rollup flags */
 
@@ -533,7 +537,19 @@ struct input {
                                     */
         int time;                  /* time for suspect comparison in seconds since epoch */
     } suspect;
-    str_t snapshot_prefix;         /* alternate filename prefix for gufi_incremental_update snapshot files */
+    size_t max_subtrees;           /* maximum number of subtrees to process in parallel
+                                    *
+                                    * this is limited by the number of file descriptors available for the process
+                                    *
+                                    * running with n threads will result in (2 sets (index and tree) *
+                                    * n aggregation dbs * 3 file descriptors per db) + n opendir file
+                                    * descriptors + (5 dbs (index, tree, created, urd, and diff) * 3 file
+                                    * descriptors per db) total file descriptors per subtree
+                                    */
+    struct {
+        str_t dir;
+        int keep;
+    } artifacts;
 
     size_t min_level;              /* minimum level of recursion to reach before running queries */
     size_t max_level;              /* maximum level of recursion to run queries on */
@@ -697,23 +713,23 @@ typedef enum {
  * storage for name.
  */
 struct work {
-    compressed_t  compressed;
-    str_t         orig_root;              /* argv[i] */
-    str_t         root_parent;            /* dirname(realpath(argv[i])) */
-    size_t        root_basename_len;      /* strlen(basename(argv[i])) */
-    size_t        level;
-    char          *name;                  /* points to memory located after struct work */
-    size_t        name_len;               /* == strlen(name) - meaning excludes NUL! */
-    size_t        basename_len;           /* can usually get through readdir */
-    struct stat   statuso;
-    time_t        crtime;
-    StatCalled    stat_called;
-    long long int pinode;
-    size_t        recursion_level;
+    compressed_t     compressed;
+    str_t            orig_root;              /* argv[i] */
+    str_t            root_parent;            /* dirname(realpath(argv[i])) */
+    size_t           root_basename_len;      /* strlen(basename(argv[i])) */
+    size_t           level;
+    char            *name;                   /* points to memory located after struct work */
+    size_t           name_len;               /* == strlen(name) - meaning excludes NUL! */
+    size_t           basename_len;           /* can usually get through readdir */
+    struct stat      statuso;
+    time_t           crtime;
+    StatCalled       stat_called;
+    long long int    pinode;
+    size_t           recursion_level;
 
     /* probably shouldn't be here */
-    char *        fullpath;
-    size_t        fullpath_len;
+    char            *fullpath;
+    size_t           fullpath_len;
 
     /* name is actually here, but not using flexible arrays */
 };

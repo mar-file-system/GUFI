@@ -198,7 +198,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                  * not used to generate the new treesummary table
                  */
                 descend(ctx, &pa->in, passmywork, dir, 0,
-                        processdir, NULL, NULL, NULL);
+                        NULL, NULL,
+                        processdir, NULL, NULL,
+                        NULL);
 
                 /* add summary data from this directory */
                 querytsdb(passmywork->name, &sum, db, 0);

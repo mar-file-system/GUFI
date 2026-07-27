@@ -74,6 +74,9 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+/* only used to wrap child directory work structures */
+typedef void *(*wrap_dir_f)(struct work *dir, void *ptr);
+
 typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
 
 struct descend_counters {
@@ -93,6 +96,7 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint6
 int descend(QPTPool_ctx_t *ctx,
             struct input *in, struct work *work,
             DIR *dir, const int skip_db,
+            wrap_dir_f wrap_dir, void *wrap_dir_ptr,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters);
 

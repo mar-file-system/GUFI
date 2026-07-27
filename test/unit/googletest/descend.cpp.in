@@ -129,15 +129,19 @@ TEST(descend, builddir) {
     struct descend_counters ctrs;
 
     // bad work; rest of inputs don't matter
-    EXPECT_EQ(descend(nullptr, nullptr, nullptr, nullptr,
-                      0, nullptr, nullptr, nullptr, nullptr), 1);
+    EXPECT_EQ(descend(nullptr, nullptr, nullptr, nullptr, 0,
+                      nullptr, nullptr,
+                      nullptr, nullptr, nullptr,
+                      nullptr), 1);
 
     // work->level > in->max_level - not descending
     {
         in.max_level = 0;
         work->level = 1;
-        EXPECT_EQ(descend(nullptr, &in, work, dir,
-                          0, nullptr, nullptr, nullptr, &ctrs), 0);
+        EXPECT_EQ(descend(nullptr, &in, work, dir, 0,
+                          nullptr, nullptr,
+                          nullptr, nullptr, nullptr,
+                          &ctrs), 0);
 
         EXPECT_EQ(ctrs.dirs,              (std::size_t) 0);
         EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
@@ -151,28 +155,30 @@ TEST(descend, builddir) {
         in.max_level = 1;
         work->level = 0;
         EXPECT_EQ(descend(ctx, &in, work, dir, 0,
+                          nullptr, nullptr,
                           [](QPTPool_ctx_t *, void *data) -> int {
                               free(data);
                               return 0;
-                          },
-                          nullptr, nullptr, &ctrs), 0);
+                          }, nullptr, nullptr,
+                          &ctrs), 0);
 
         EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
         EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
         EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
         EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
-        in.max_level = (size_t) -1;
+        in.max_level = (std::size_t) -1;
     }
 
     // good descend with skip_db
     {
         rewinddir(dir);
         EXPECT_EQ(descend(ctx, &in, work, dir, 1,
+                          nullptr, nullptr,
                           [](QPTPool_ctx_t *, void *data) -> int {
                               free(data);
                               return 0;
-                          },
-                          nullptr, nullptr, &ctrs), 0);
+                          }, nullptr, nullptr,
+                          &ctrs), 0);
 
         EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
         EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
@@ -185,11 +191,11 @@ TEST(descend, builddir) {
         rewinddir(dir);
         in.subdir_limit = 1;
         EXPECT_EQ(descend(ctx, &in, work, dir, 0,
+                          nullptr, nullptr,
                           [](QPTPool_ctx_t *, void *data) -> int {
                               free(data);
                               return 0;
-                          },
-                          nullptr, nullptr, &ctrs), 0);
+                          }, nullptr, nullptr, &ctrs), 0);
 
         EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
         EXPECT_NE(ctrs.dirs_insitu,       (std::size_t) 0);
@@ -204,6 +210,68 @@ TEST(descend, builddir) {
     free(work);
     EXPECT_EQ(unlink(pipename), 0);
     EXPECT_EQ(unlink(linkname), 0);
+}
+
+TEST(descend, null_processdir) {
+    struct input in = {};
+    in.max_level = (std::size_t) -1;
+
+    const char root[] = "@CMAKE_BINARY_DIR@";
+    struct work *work = new_work_with_name(nullptr, 0, root, strlen(root));
+
+    DIR *dir = opendir(work->name);
+    ASSERT_NE(dir, nullptr);
+
+    QPTPool_ctx_t *ctx = QPTPool_init(1, nullptr);
+    ASSERT_NE(ctx, nullptr);
+    EXPECT_EQ(QPTPool_start(ctx), 0);
+
+    struct descend_counters ctrs = {};
+
+    EXPECT_EQ(descend(ctx, &in, work, dir, 0,
+                      nullptr, nullptr,
+                      nullptr, nullptr, nullptr,
+                      &ctrs), 0);
+
+    EXPECT_GT(ctrs.dirs, (std::size_t) 0);
+
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
+
+    EXPECT_EQ(closedir(dir),    0);
+    free(work);
+}
+
+TEST(descend, wrap_dir) {
+    struct input in = {};
+    in.max_level = (std::size_t) -1;
+
+    const char root[] = "@CMAKE_BINARY_DIR@";
+    struct work *work = new_work_with_name(nullptr, 0, root, strlen(root));
+
+    DIR *dir = opendir(work->name);
+    ASSERT_NE(dir, nullptr);
+
+    QPTPool_ctx_t *ctx = QPTPool_init(1, nullptr);
+    ASSERT_NE(ctx, nullptr);
+    EXPECT_EQ(QPTPool_start(ctx), 0);
+
+    EXPECT_EQ(descend(ctx, &in, work, dir, 0,
+                      [](struct work *work, void *) -> void * {
+                          free(work);
+                          return NULL;
+                      }, nullptr,
+                      [](QPTPool_ctx_t *, void *data) -> int {
+                          EXPECT_EQ(data, nullptr);
+                          return !!data;
+                      }, nullptr, nullptr,
+                      nullptr), 0);
+
+    QPTPool_stop(ctx);
+    QPTPool_destroy(ctx);
+
+    EXPECT_EQ(closedir(dir),    0);
+    free(work);
 }
 
 #ifdef QPTPOOL_SWAP
@@ -275,11 +343,11 @@ TEST(descend, swap) {
     struct descend_counters ctrs;
 
     EXPECT_EQ(descend(ctx, &in, work, dir, 0,
+                      nullptr, nullptr,
                       [](QPTPool_ctx_t *, void *data) -> int {
                           free(data);
                           return 0;
-                      },
-                      nullptr, nullptr,
+                      }, nullptr, nullptr,
                       &ctrs), 0);
 
     // allow the first thread to complete

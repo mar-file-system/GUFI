@@ -9,7 +9,8 @@ options:
       --suspect-file <path>         suspect input file
       --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)
       --suspect-time <s>            time in seconds since epoch for suspect comparision
-      --snapshot-prefix <path>      alternate snapshot filename prefix (defaults to snapshot.* in the current working directory)
+      --max-subtrees <count>        maximum number of subtrees to process in parallel (control maximum number of file descriptors used)
+      --keep-artifacts <path>       place artifacts here so they are not automatically deleted (provided path must already exist)
   -x, --index-xattrs                index xattrs
       --plugin <entrypoint>:<path>  plugin library for modifying tree processing
       --compress                    compress work items
@@ -53,7 +54,7 @@ Total Dirs:          5
 Total Non-Dirs:      1
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x --suspect-method 0 "prefix" "prefix" "parking_lot" > /dev/null
+$ gufi_incremental_update -n 2 -x --suspect-method 0 "prefix" "prefix" "parking_lot" > /dev/null
 
 # State of updated index created with gufi_dir2index
 prefix/change/new_file|33204|uid|gid
@@ -127,7 +128,7 @@ $ cat "suspectfile"
 bad d
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x --suspect-method 1 --suspect-file "suspectfile" "prefix" "prefix" "parking_lot" > /dev/null
+$ gufi_incremental_update -n 2 -x --suspect-method 1 --suspect-file "suspectfile" "prefix" "prefix" "parking_lot" > /dev/null
 
 # State of updated index created with gufi_dir2index
 prefix/change/new_file|33204|uid|gid
@@ -181,7 +182,7 @@ Total Dirs:          5
 Total Non-Dirs:      1
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "parking_lot" > /dev/null
+$ gufi_incremental_update -n 2 -x --suspect-method 3 "prefix" "prefix" "parking_lot" > /dev/null
 
 # State of updated index created with gufi_dir2index
 prefix/change/new_file|33204|uid|gid
@@ -241,7 +242,7 @@ Total Dirs:          5
 Total Non-Dirs:      1
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "parking_lot" > /dev/null
+$ gufi_incremental_update -n 2 -x --suspect-method 3 "prefix" "prefix" "parking_lot" > /dev/null
 You are putting the index dbs in input directory
 
 # State of updated index created with gufi_dir2index
@@ -307,13 +308,82 @@ Total Dirs:          11
 Total Non-Dirs:      0
 
 # Update the original index via incremental update
-$ gufi_incremental_update -x --suspect-method 3 --suspect-stat "prefix" "prefix" "parking_lot" > /dev/null
-    Warning: Could not stat update db.db in parking lot "parking_lot/10": No such file or directory (2)
-    Warning: Could not stat update db.db in parking lot "parking_lot/8": No such file or directory (2)
+$ gufi_incremental_update -n 2 -x --suspect-method 3 --suspect-stat "prefix" "prefix" "parking_lot" > /dev/null
 
-# Incremental update showed errors because while directories H and J's full paths
-# changed, the directories themselves did not change, so there were no update
-# databases to copy in
+# State of updated index created with gufi_dir2index
+prefix/A/B/D/C|16893|uid|gid
+prefix/A/B/D|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I/J|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I|16893|uid|gid
+prefix/A/B/E/F/G/H|16893|uid|gid
+prefix/A/B/E/F/G|16893|uid|gid
+prefix/A/B/E/F|16893|uid|gid
+prefix/A/B/E|16893|uid|gid
+prefix/A/B|16893|uid|gid
+prefix/A|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/A/B/D/C|16893|uid|gid
+prefix/A/B/D|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I/J|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I|16893|uid|gid
+prefix/A/B/E/F/G/H|16893|uid|gid
+prefix/A/B/E/F/G|16893|uid|gid
+prefix/A/B/E/F|16893|uid|gid
+prefix/A/B/E|16893|uid|gid
+prefix/A/B|16893|uid|gid
+prefix/A|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
+# pass in paths with extra slashes (same test as suspect method 3 with more complex tree)
+# create source tree
+$ find "prefix"
+prefix
+prefix/A
+prefix/A/B
+prefix/A/B/D
+prefix/A/B/E
+prefix/A/C
+prefix/A/C/F
+prefix/A/C/G
+prefix/A/C/G/H
+prefix/A/C/G/H/I
+prefix/A/C/G/H/I/J
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI tree search with 1 threads
+Total Dirs:          11
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/A
+prefix/A/B
+prefix/A/B/D
+prefix/A/B/D/C
+prefix/A/B/E
+prefix/A/B/E/F
+prefix/A/B/E/F/G
+prefix/A/B/E/F/G/H
+prefix/A/B/E/F/G/H/renamed_I
+prefix/A/B/E/F/G/H/renamed_I/J
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI tree updated-index with 1 threads
+Total Dirs:          11
+Total Non-Dirs:      0
+
+# Update the original index via incremental update
+$ gufi_incremental_update -n 2 -x --suspect-method 3 --suspect-stat "prefix/..//prefix/" "prefix/" "parking_lot" > /dev/null
 
 # State of updated index created with gufi_dir2index
 prefix/A/B/D/C|16893|uid|gid
@@ -351,10 +421,44 @@ $ find -name "parking_lot" 2>/dev/null
 
 $ mkdir "parking_lot"
 
-$ gufi_incremental_update --suspect-method 3 "prefix" "prefix" "parking_lot" > /dev/null 2>&1
+$ gufi_incremental_update -n 2 --suspect-method 3 "prefix" "prefix" "parking_lot" > /dev/null 2>&1
 
 $ find -name "parking_lot" 2>/dev/null
 ./parking_lot
+
+#####################################
+
+#####################################
+# keep artifacts
+# artifacts directory exists
+$ mkdir "<artifacts_dir>"
+
+$ gufi_incremental_update -n 2 --suspect-time 0 --suspect-method 3 --keep-artifacts "<artifacts_dir>" "prefix" "prefix" "parking_lot" > /dev/null
+
+$ find "<artifacts_dir>" -type f
+<artifacts_dir>/<inode>.created
+<artifacts_dir>/<inode>.diff
+<artifacts_dir>/<inode>.index
+<artifacts_dir>/<inode>.tree
+<artifacts_dir>/<inode>.urd
+
+# artifacts directory exists and only has rx permission (good)
+$ chmod 333 "<artifacts_dir>"
+
+$ gufi_incremental_update -n 2 --suspect-time 0 --suspect-method 3 --keep-artifacts "<artifacts_dir>" "prefix" "prefix" "parking_lot" > /dev/null
+
+# artifacts directory does not exist
+$ rm -rf "<artifacts_dir>"
+
+$ gufi_incremental_update -n 2 --suspect-time 0 --suspect-method 3 --keep-artifacts "<artifacts_dir>" "prefix" "prefix" "parking_lot" > /dev/null
+Error: Could not get realpath of "<artifacts_dir>": No such file or directory (2)
+
+# artifacts directory is the parking lot created by gufi_incremental_update
+$ gufi_incremental_update -n 2 --suspect-time 0 --suspect-method 3 --keep-artifacts "parking_lot" "prefix" "prefix" "parking_lot" > /dev/null
+Error: Refusing to save artifacts to the parking lot directory "parking_lot" because it will be deleted at the end
+
+# artifacts directory is an existing parking lot
+$ gufi_incremental_update -n 2 --suspect-time 0 --suspect-method 3 --keep-artifacts "parking_lot" "prefix" "prefix" "parking_lot" > /dev/null
 
 #####################################
 
@@ -389,9 +493,9 @@ Error: Existing parking lot path "gufi_incremental_update" is not a directory
 $ gufi_incremental_update -x --suspect-method 3 --suspect-file "baddir/suspectfile" "prefix" "prefix" "parking_lot" > /dev/null
 Can't open suspect file baddir/suspectfile
 
-# bad snapshot prefix
-$ gufi_incremental_update -x --suspect-method 3 --snapshot-prefix "baddir/non-existant/subdir/prefix" "prefix" "prefix" "parking_lot" > /dev/null
-Could not open final aggregation database "baddir/non-existant/subdir/prefix.index"
+# bad max subtrees prefix
+$ gufi_incremental_update -x --suspect-method 3 --max-subtrees 0 "prefix" "prefix" "parking_lot" > /dev/null
+argument '--max-subtrees' not in range [1, 18446744073709551615]
 
 # bad thread count
 $ gufi_incremental_update -x --suspect-method 3 -n 18446744073709551615 "prefix" "prefix" "parking_lot" > /dev/null

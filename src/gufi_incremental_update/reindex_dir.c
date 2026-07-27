@@ -72,9 +72,12 @@ OF SUCH DAMAGE.
 #include "gufi_incremental_update/incremental_update.h"
 
 /* reindex the source directory */
-int reindex_dir(struct PoolArgs *pa,
+int reindex_dir(QPTPool_ctx_t *ctx,
                 struct work *work, struct entry_data *ed,
-                DIR *dir, const size_t id) {
+                DIR *dir) {
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
+    const size_t id = QPTPool_get_id(ctx);
+
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
                       &work->stat_called, 1, NULL) != 0) {
         return 1;

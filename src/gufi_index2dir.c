@@ -305,7 +305,9 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
     }
 
     descend(ctx, &pa->in, work, dir, 1,
-            processdir, NULL, NULL, NULL);
+            NULL, NULL,
+            processdir, NULL, NULL,
+            NULL);
 
     /* open the index db.db */
     const size_t dbname_len = work->name_len + 1 + DBNAME_LEN;

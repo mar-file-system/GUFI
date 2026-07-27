@@ -117,20 +117,6 @@ static int setup_suspect_file(struct PoolArgs *pa) {
 }
 
 int PoolArgs_init(struct PoolArgs *pa) {
-    if (str_exists(&pa->in.snapshot_prefix)) {
-        pa->in.outname = pa->in.snapshot_prefix;
-    }
-    else {
-        pa->in.outname = (str_t) REFSTR("snapshot", 8);
-    }
-
-    pa->index.parent_len = trailing_match_index(pa->index.path.data, pa->index.path.len, "/", 1);
-    pa->tree.parent_len = trailing_match_index(pa->tree.path.data, pa->tree.path.len, "/", 1);
-
-    memset(&pa->index.snapshot, 0, sizeof(pa->index.snapshot));
-    memset(&pa->tree.snapshot,  0, sizeof(pa->tree.snapshot));
-    memset(&pa->diff,           0, sizeof(pa->diff));
-
     if (setup_suspect_file(pa) != 0) {
         return 1;
     }
@@ -150,12 +136,18 @@ int PoolArgs_init(struct PoolArgs *pa) {
         sll_init(&pa->tops[i]);
     }
 
+    pthread_mutex_init(&pa->mutex, NULL);
+    pthread_cond_init(&pa->cond, NULL);
+    pa->active = 0;
+
     return 0;
 }
 
 void PoolArgs_fini(struct PoolArgs *pa) {
     QPTPool_stop(pa->ctx);
     QPTPool_destroy(pa->ctx);
+    pthread_cond_destroy(&pa->cond);
+    pthread_mutex_destroy(&pa->mutex);
     if (pa->tops) {
         for(size_t i = 0; i < pa->in.maxthreads; i++) {
             sll_destroy(&pa->tops[i], NULL);
@@ -165,8 +157,5 @@ void PoolArgs_fini(struct PoolArgs *pa) {
     plugins_global_exit(&pa->in.plugins, &pa->in);
     trie_free(pa->suspects.fl.inodes);
     trie_free(pa->suspects.dir.inodes);
-    str_free_existing(&pa->diff);
-    str_free_existing(&pa->tree.snapshot);
-    str_free_existing(&pa->index.snapshot);
     input_fini(&pa->in);
 }

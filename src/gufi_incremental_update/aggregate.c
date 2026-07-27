@@ -103,6 +103,8 @@ int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *nam
         return 1;
     }
 
+    fprintf(stdout, "Created artifact %s\n", name);
+
     /* don't need addqueryfuncs */
 
     return 0;

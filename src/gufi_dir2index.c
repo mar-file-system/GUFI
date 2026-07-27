@@ -161,7 +161,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
 
     if (plugins_pre_process_file(&nda->in->plugins, &pcs, nda->id) == PLUGIN_PROCESS_FILE) {
         /* read external files before modifying the entry's path */
-        if (strncmp(entry->name + entry->name_len - entry->basename_len, 
+        if (strncmp(entry->name + entry->name_len - entry->basename_len,
                     EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
             external_read_file(in, entry, process_external, nda->db);
         }
@@ -311,7 +311,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     if (process_dir != PLUGIN_NO_PROCESS_NO_DESCEND_DIR){
         descend(ctx, nda.in, nda.work, dir, 1,
-            processdir, process_dir == PLUGIN_PROCESS_DIR?process_nondir:NULL, &nda, &ctrs);
+                NULL, NULL,
+                processdir, process_dir == PLUGIN_PROCESS_DIR?process_nondir:NULL, &nda,
+                &ctrs);
     }
 
     /*

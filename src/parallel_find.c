@@ -381,8 +381,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
     else {
         descend(ctx, &pa->in,
-                work, dir, 0, processdir,
-                process_output, &nondir_args,
+                work, dir, 0,
+                NULL, NULL,
+                processdir, process_output, &nondir_args,
                 NULL);
     }
 

@@ -257,7 +257,9 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
 
     /* process children */
     descend(ctx, &pa->in, work, dir, 0,
-            cpr_dir,enqueue_nondir, &nondir_args, NULL);
+            NULL, NULL,
+            cpr_dir,enqueue_nondir, &nondir_args,
+            NULL);
 
     if (pa->in.process_xattrs) {
         struct xattrs xattrs;

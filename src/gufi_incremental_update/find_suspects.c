@@ -157,12 +157,10 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     int rc = 0;
 
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
-    struct work *work = NULL;
-    DIR *dir = NULL;
+    struct GenSnapshot *tree = (struct GenSnapshot *) data;
+    struct work *work = tree->work; /* no compression */
 
-    decompress_work(&work, data);
-
-    dir = opendir_wrapper(work->name, NULL);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         rc = 1;
         goto cleanup;
@@ -184,10 +182,17 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         .ed  = &ed,
     };
 
+    /* get number of subdirectories (cannot trust treesummary, which may or may not exist) */
+    struct descend_counters ctrs = {0};
+
     /* only process files/links if checking for file/link suspects or comparing timestamps */
     process_nondir_f func = (pa->in.suspect.method > 1)?process_nondir:NULL;
+
+    /* push actual work */
     descend(ctx, &pa->in, work, dir, 0,
-            processdir, func, &nda, NULL);
+            wrap_work, tree,
+            processdir, func, &nda,
+            &ctrs);
 
     const size_t id = QPTPool_get_id(ctx);
 
@@ -198,40 +203,46 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
          * if this directory is not a suspect, insert it anyways so that
          * it is not treated as having been deleted
          */
-        sqlite3 *db = pa->tree.agg.dbs[id]; /* partial snapshot db */
+        sqlite3 *db = tree->agg.dbs[id]; /* partial snapshot db */
         sqlite3_stmt *res = insertdbprep(db, SNAPSHOT_INSERT);
-        insert_snapshot_row(work, &ed, res, pa->tree.parent_len);
+        insert_snapshot_row(work, &ed, res, tree->parent_len);
         sqlite3_finalize(res);
     }
 
     /* reindex the directory if it needs to be reindexed */
     if (ed.suspect == 1) {
-        reindex_dir(pa, work, &ed, dir, id);
+        reindex_dir(ctx, work, &ed, dir);
     }
 
     closedir(dir);
 
   cleanup:
-    free(work);
+    pthread_mutex_lock(tree->mutex);
+    --(*tree->counter);
+    pthread_cond_broadcast(tree->cond);
+    pthread_mutex_unlock(tree->mutex);
+
+    if (tree->free_work) {
+        tree->free_work(tree->work);
+    }
+    free(tree);
 
     return rc;
 }
 
-int find_suspects(struct PoolArgs *pa, struct work *work) {
+int find_suspects(struct PoolArgs *pa, const ino_t inode, struct GenSnapshot *tree) {
     /* parking lot already set up */
 
     if (pa->same == 0) {
-        str_alloc_existing(&pa->tree.snapshot, pa->in.outname.len + 1 + sizeof(TREE_SNAPSHOT_EXT) - 1);
-        SNFORMAT_S(pa->tree.snapshot.data, pa->tree.snapshot.len + 1, 3,
-                   pa->in.outname.data, pa->in.outname.len,
-                   ".", (size_t) 1,
-                   TREE_SNAPSHOT_EXT, sizeof(TREE_SNAPSHOT_EXT) - 1);
+        str_alloc_existing(&tree->snapshot, pa->artifacts.len + 1 + UINT64_DIGITS + 1 + sizeof(TREE_SNAPSHOT_EXT) - 1);
+        SNPRINTF(tree->snapshot.data, tree->snapshot.len + 1,
+                 "%s/%" STAT_ino "." TREE_SNAPSHOT_EXT,
+                 pa->artifacts.data, inode);
     }
 
     /* set up per-thread databases to write to */
-    if (aggregate_init(&pa->tree.agg, pa->in.maxthreads, pa->tree.snapshot.data, pa->in.maxthreads) != 0) {
-        free(work);
-        str_free_existing(&pa->tree.snapshot);
+    if (aggregate_init(&tree->agg, pa->in.maxthreads, tree->snapshot.data, pa->in.maxthreads) != 0) {
+        str_free_existing(&tree->snapshot);
         return 1;
     }
 
@@ -239,21 +250,26 @@ int find_suspects(struct PoolArgs *pa, struct work *work) {
     init_template_db(&pa->db);
     if (create_dbdb_template(&pa->db, NULL) != 0) {
         fprintf(stderr, "Could not create template file\n");
-        aggregate_fin(&pa->tree.agg, pa->in.maxthreads);
-        free(work);
+        aggregate_fin(&tree->agg, pa->in.maxthreads);
+        str_free_existing(&tree->snapshot);
         return 1;
     }
 
+    /* clone the original struct so that it can be freed without affecting the original */
+    struct GenSnapshot *copy = malloc(sizeof(*copy));
+    *copy = *tree;
+    copy->free_work = NULL;
+    copy->snapshot.free = NULL;
+
     fprintf(stdout, "Scanning current state of \"%s\" with %zu threads\n",
-            pa->tree.path.data, pa->in.maxthreads);
-    fflush(stdout);
+            tree->work->name, pa->in.maxthreads);
 
     /*
      * do tree walk
      * get per-thread treewalk records
      * put per-directory update dbs into parking lot
      */
-    QPTPool_enqueue(pa->ctx, processdir, work);
+    QPTPool_enqueue(pa->ctx, processdir, copy);
 
     return 0;
 }

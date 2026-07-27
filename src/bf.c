@@ -118,6 +118,7 @@ struct input *input_init(struct input *in) {
         in->dir_match.gid           = getegid();              /* always successful */
         in->process_sql             = RUN_ON_ROW;
         in->suspect.time            = time(NULL);             /* time_set is still 0 */
+        in->max_subtrees            = 1;
         in->max_level               = -1;                     // default to all the way down
         sll_init(&in->sql_format.tsum);
         sll_init(&in->sql_format.sum);
@@ -274,7 +275,8 @@ void print_help(const char* prog_name,
             case FLAG_SUSPECT_METHOD_SHORT:              printf("      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)"); break;
             case FLAG_SUSPECT_TIME_SHORT:                printf("      --suspect-time <s>            time in seconds since epoch for suspect comparision"); break;
             case FLAG_SUSPECT_STAT_SHORT:                printf("      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime"); break;
-            case FLAG_SNAPSHOT_PREFIX_SHORT:             printf("      --snapshot-prefix <path>      alternate snapshot filename prefix (defaults to snapshot.* in the current working directory)"); break;
+            case FLAG_MAX_SUBTREES_SHORT:                printf("      --max-subtrees <count>        maximum number of subtrees to process in parallel (control maximum number of file descriptors used)"); break;
+            case FLAG_KEEP_ARTIFACTS_SHORT:              printf("      --keep-artifacts <path>       place artifacts here so they are not automatically deleted (provided path must already exist)"); break;
 
             /* gufi_rollup flags */
             case FLAG_ROLLUP_LIMIT_SHORT:                printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
@@ -375,7 +377,8 @@ void show_input(struct input* in, int retval) {
     printf("in.suspect.method           = %d\n",            in->suspect.method);
     printf("in.suspect.time             = %d\n",            in->suspect.time);
     printf("in.suspect.stat             = %d\n",            in->suspect.stat);
-    printf("in.snapshot_prefix          = '%s'\n",          in->snapshot_prefix.data);
+    printf("in.max_subtrees             = %zu\n",           in->max_subtrees);
+    printf("in.artifacts.dir            = '%s'\n",          in->artifacts.dir.data);
 
     /* gufi_rollup flags */
 
@@ -750,8 +753,14 @@ int parse_cmd_line(int                  argc,
                 in->suspect.stat = 1;
                 break;
 
-            case FLAG_SNAPSHOT_PREFIX_SHORT:
-                INSTALL_STR(&in->snapshot_prefix, optarg);
+            case FLAG_MAX_SUBTREES_SHORT:
+                INSTALL_SIZE(&in->max_subtrees, optarg, 1, (size_t) -1,
+                             "--" FLAG_MAX_SUBTREES_LONG, &retval);
+                break;
+
+            case FLAG_KEEP_ARTIFACTS_SHORT:
+                INSTALL_STR(&in->artifacts.dir, optarg);
+                in->artifacts.keep = 1;
                 break;
 
             /* gufi_rollup flags */
