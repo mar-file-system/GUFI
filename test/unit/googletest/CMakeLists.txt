@@ -65,7 +65,7 @@
 include(CheckLanguage)
 
 if (CMAKE_CXX_COMPILER)
-  option(RLIMIT_NPROC_UNIT_TEST On "Whether or not to run unit tests that use RLIMIT_NPROC")
+  option(RLIMIT_NPROC_UNIT_TESTS "Whether or not to run unit tests that use RLIMIT_NPROC" On)
 
   configure_file(valgrind.suppressions valgrind.suppressions COPYONLY)
 
