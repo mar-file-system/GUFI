@@ -257,9 +257,9 @@ void *db_init(void *ptr) {
         return NULL;
     }
 
-    char *text = "CREATE TABLE lustre_osts (ost_index INTEGER PRIMARY KEY, num_files INTEGER);"
-                 "CREATE TABLE lustre_fids (name TEXT, fid BLOB);";
-    char *error;
+    const char *text = "CREATE TABLE lustre_osts (ost_index INTEGER PRIMARY KEY, num_files INTEGER);"
+                       "CREATE TABLE lustre_fids (name TEXT, fid BLOB);";
+    char *error = NULL;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
     if (res != SQLITE_OK) {
@@ -279,7 +279,7 @@ static const size_t v1_size = sizeof(struct lov_user_md_v1) + LOV_MAX_STRIPE_COU
 static const size_t v3_size = sizeof(struct lov_user_md_v3) + LOV_MAX_STRIPE_COUNT * sizeof(struct lov_user_ost_data_v1);
 static const size_t lum_size = v1_size > v3_size ? v1_size : v3_size;
 
-static void *alloc_lum() {
+static void *alloc_lum(void) {
     return calloc(1, lum_size);
 }
 
@@ -289,6 +289,7 @@ static void *alloc_lum() {
  * For the directory itself, the key is the empty string, "".
  */
 static void insert_fid(char *path, sqlite3 *db, void *user_data, int is_child_entry) {
+    (void) user_data;
     struct lu_fid fid;
     int res = llapi_path2fid(path, &fid);
     if (res) {
@@ -298,13 +299,12 @@ static void insert_fid(char *path, sqlite3 *db, void *user_data, int is_child_en
     }
 
     /* The key is either the entry name, or if this is for the directory itself, an empty string. */
+    const char *child = "";
     if (is_child_entry) {
-        path = my_basename(path);
-    } else {
-        path = "";
+        child = my_basename(path);
     }
 
-    char *text = sqlite3_mprintf("INSERT INTO lustre_fids (name, fid) VALUES('%s', (?));", path);
+    char *text = sqlite3_mprintf("INSERT INTO lustre_fids (name, fid) VALUES('%s', (?));", child);
     sqlite3_stmt *statement = NULL;
     res = sqlite3_prepare_v2(db, text, -1, &statement, NULL);
     if (res != SQLITE_OK) {
@@ -421,7 +421,7 @@ static void db_exit(void *ptr, void *user_data) {
     }
 
     destroy_stripe_tracker(state);
-};
+}
 
 struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_INDEX,
