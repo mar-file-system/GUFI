@@ -1140,6 +1140,15 @@ size_t args_to_plugins(sll_t *args, struct plugins *plugins, const size_t nthrea
     return count;
 }
 
+static int get_id_err(const char *name, const int err, char **buf, char **err_msg, size_t *err_len) {
+    *err_len = SNPRINTF(NULL, 0, "%s: %s (%d)", name, strerror(err), err);
+    *err_msg = malloc(*err_len + 1);
+    SNPRINTF(*err_msg, *err_len + 1, "%s: %s (%d)", name, strerror(err), err);
+    free(*buf);
+    *buf = NULL;
+    return 1;
+}
+
 int getpwuid_wrapper(const uid_t uid, struct passwd *pw, struct passwd **res, char **buf, char **err_msg, size_t *err_len) {
     /*
      * adapted from question by Tyler DiBartolo
@@ -1161,13 +1170,7 @@ int getpwuid_wrapper(const uid_t uid, struct passwd *pw, struct passwd **res, ch
         void *new_buf = realloc(*buf, len * 2);
 
         if (!new_buf) {
-            const int err = errno;
-            *err_len = SNPRINTF(NULL, 0, "realloc: %s (%d)", strerror(err), err);
-            *err_msg = malloc(*err_len + 1);
-            SNPRINTF(*err_msg, *err_len + 1, "realloc: %s (%d)", strerror(err), err);
-            free(*buf);
-            *buf = NULL;
-            return 1;
+            return get_id_err("realloc", errno, buf, err_msg, err_len);
         }
 
         *buf = new_buf;
@@ -1175,13 +1178,7 @@ int getpwuid_wrapper(const uid_t uid, struct passwd *pw, struct passwd **res, ch
     }
 
     if (rc != 0) {
-        const int err = errno;
-        *err_len = SNPRINTF(NULL, 0, "getgruid: %s (%d)", strerror(err), err);
-        *err_msg = malloc(*err_len + 1);
-        SNPRINTF(*err_msg, *err_len + 1, "getgruid: %s (%d)", strerror(err), err);
-        free(*buf);
-        *buf = NULL;
-        return 1;
+        return get_id_err("getpwuid", errno, buf, err_msg, err_len);
     }
 
     return 0;
@@ -1208,13 +1205,7 @@ int getgrgid_wrapper(const gid_t gid, struct group *grp, struct group **res, cha
         void *new_buf = realloc(*buf, len * 2);
 
         if (!new_buf) {
-            const int err = errno;
-            *err_len = SNPRINTF(NULL, 0, "realloc: %s (%d)", strerror(err), err);
-            *err_msg = malloc(*err_len + 1);
-            SNPRINTF(*err_msg, *err_len + 1, "realloc: %s (%d)", strerror(err), err);
-            free(*buf);
-            *buf = NULL;
-            return 1;
+            return get_id_err("realloc", errno, buf, err_msg, err_len);
         }
 
         *buf = new_buf;
@@ -1222,13 +1213,7 @@ int getgrgid_wrapper(const gid_t gid, struct group *grp, struct group **res, cha
     }
 
     if (rc != 0) {
-        const int err = errno;
-        *err_len = SNPRINTF(NULL, 0, "getgrgid: %s (%d)", strerror(err), err);
-        *err_msg = malloc(*err_len + 1);
-        SNPRINTF(*err_msg, *err_len + 1, "getgrgid: %s (%d)", strerror(err), err);
-        free(*buf);
-        *buf = NULL;
-        return 1;
+        return get_id_err("getgrgid", errno, buf, err_msg, err_len);
     }
 
     return 0;
