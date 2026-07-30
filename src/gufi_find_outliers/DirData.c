@@ -71,12 +71,10 @@ OF SUCH DAMAGE.
 DirData_t *DirData_create(const str_t *path,
                           const char *subdir, const size_t subdir_len) {
     DirData_t *dd = calloc(1, sizeof(DirData_t));
-    const size_t new_path_len = path->len + 1 + subdir_len;
-    dd->path.data = malloc(new_path_len + 1);
-    dd->path.len = SNFORMAT_S(dd->path.data, new_path_len + 1, 3,
-                              path->data, path->len,
-                              "/", (size_t) 1,
-                              subdir, subdir_len);
+    dd->path.len = SNFORMAT_S_ALLOC(&dd->path.data, 3,
+                                    path->data, path->len,
+                                    "/", (size_t) 1,
+                                    subdir, subdir_len);
     dd->path.free = free;
 
     return dd;

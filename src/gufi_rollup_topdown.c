@@ -380,16 +380,15 @@ static int ls_dirs(QPTPool_ctx_t *ctx,
             continue;
         }
 
-        const size_t child_path_len = curr->path->orig.len + 1 + len;
+        size_t child_path_len = 0;
         char *child_path = NULL;
 
         if ((entry->d_type == DT_DIR) ||
             (entry->d_type == DT_UNKNOWN)) {
-            child_path = malloc(child_path_len + 1);
-            SNFORMAT_S(child_path, child_path_len + 1, 3,
-                       curr->path->orig.data, curr->path->orig.len,
-                       "/", (size_t) 1,
-                       entry->d_name, len);
+            child_path_len = SNFORMAT_S_ALLOC(&child_path, 3,
+                                              curr->path->orig.data, curr->path->orig.len,
+                                              "/", (size_t) 1,
+                                              entry->d_name, len);
         }
         else {
             continue;
@@ -504,17 +503,13 @@ static int copy_to_top(QPTPool_ctx_t *ctx, void *data) {
     const size_t rolledup_path_len = rexa.child_len - rexa.parent_len + subtree->root->basename_len;
 
     /* SQL for doing rollup */
-    const size_t rollup_one_subdir_len =
-        sizeof(ROLLUP_ONE_SUBDIR_FRONT) +
-        1 + rolledup_path_len + 1 +
-        sizeof(ROLLUP_ONE_SUBDIR_BACK);
-    char *rollup_one_subdir = malloc(rollup_one_subdir_len + 1);
-    SNFORMAT_S(rollup_one_subdir, rollup_one_subdir_len + 1, 5,
-               ROLLUP_ONE_SUBDIR_FRONT, sizeof(ROLLUP_ONE_SUBDIR_FRONT) - 1,
-               "'", (size_t) 1,
-               rolledup_path, rolledup_path_len,
-               "'", (size_t) 1,
-               ROLLUP_ONE_SUBDIR_BACK, sizeof(ROLLUP_ONE_SUBDIR_BACK) - 1);
+    char *rollup_one_subdir = NULL;
+    SNFORMAT_S_ALLOC(&rollup_one_subdir, 5,
+                     ROLLUP_ONE_SUBDIR_FRONT, sizeof(ROLLUP_ONE_SUBDIR_FRONT) - 1,
+                     "'", (size_t) 1,
+                     rolledup_path, rolledup_path_len,
+                     "'", (size_t) 1,
+                     ROLLUP_ONE_SUBDIR_BACK, sizeof(ROLLUP_ONE_SUBDIR_BACK) - 1);
 
     /*
      * roll up the subdirectory into this directory
@@ -563,12 +558,11 @@ static int enqueue_rollup_copy(QPTPool_ctx_t *ctx, Subdir_t *top) {
     struct start_end *se = calloc(1, sizeof(*se));
     clock_gettime(CLOCK_MONOTONIC, &se->start);
 
-    const size_t dbname_len = top->root->name_len + 1 + DBNAME_LEN;
-    char *dbname = malloc(dbname_len + 1);
-    SNFORMAT_S(dbname, dbname_len + 1, 3,
-               top->root->name, top->root->name_len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
+    char *dbname = NULL;
+    const size_t dbname_len = SNFORMAT_S_ALLOC(&dbname, 3,
+                                               top->root->name, top->root->name_len,
+                                               "/", (size_t) 1,
+                                               DBNAME, DBNAME_LEN);
 
     sqlite3 *topdb = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, NULL, NULL);
     if (!topdb) {
@@ -734,12 +728,11 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
         goto close_dir;
     }
 
-    const size_t dbname_len = work->name_len + 1 + DBNAME_LEN;
-    char *dbname = malloc(dbname_len + 1);
-    SNFORMAT_S(dbname, dbname_len + 1, 3,
-               work->name, work->name_len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 3,
+                     work->name, work->name_len,
+                     "/", (size_t) 1,
+                     DBNAME, DBNAME_LEN);
 
     int canrollup = 0;
     int isrolledup = 0;

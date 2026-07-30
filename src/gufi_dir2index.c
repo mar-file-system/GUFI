@@ -239,14 +239,11 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
      *
      * extra buffer is not needed and save on memcpy-ing
      */
-    const size_t topath_size = nda.topath.len + 1 + DBNAME_LEN + 1;
-
-    nda.topath.data = malloc(topath_size);
-    SNFORMAT_S(nda.topath.data, topath_size, 4,
-               pa->index_parent.data, pa->index_parent.len,
-               "/", (size_t) 1,
-               nda.work->name + nda.work->root_parent.len, nda.work->name_len - nda.work->root_parent.len,
-               "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
+    SNFORMAT_S_ALLOC(&nda.topath.data, 4,
+                     pa->index_parent.data, pa->index_parent.len,
+                     "/", (size_t) 1,
+                     nda.work->name + nda.work->root_parent.len, nda.work->name_len - nda.work->root_parent.len,
+                     "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     /* don't need recursion because parent is guaranteed to exist */
     if (process_dir != PLUGIN_NO_PROCESS_NO_DESCEND_DIR && mkdir(nda.topath.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
@@ -402,13 +399,11 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
     /* offset by root_parent.len to remove prefix */
-    const size_t topath_len = pa->index_parent.len + 1 + subtree_root->name_len - subtree_root->root_parent.len;
-
-    char *topath = malloc(topath_len + 1);
-    SNFORMAT_S(topath, topath_len + 1, 3,
-               pa->index_parent.data, pa->index_parent.len,
-               "/", (size_t) 1,
-               subtree_root->name + subtree_root->root_parent.len, subtree_root->name_len - subtree_root->root_parent.len);
+    char *topath = NULL;
+    SNFORMAT_S_ALLOC(&topath, 3,
+                     pa->index_parent.data, pa->index_parent.len,
+                     "/", (size_t) 1,
+                     subtree_root->name + subtree_root->root_parent.len, subtree_root->name_len - subtree_root->root_parent.len);
 
     /*
      * create directories up to parent with correct permissions and owners

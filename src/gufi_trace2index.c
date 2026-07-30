@@ -173,13 +173,11 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
      *
      * extra buffer is not needed and save on memcpy-ing
      */
-    const size_t topath_size = nda.topath_len + 1 + DBNAME_LEN + 1;
-    nda.topath = malloc(topath_size);
-    SNFORMAT_S(nda.topath, topath_size, 4,
-               nda.pa->index_parent.data, nda.pa->index_parent.len,
-               "/", (size_t) 1,
-               dir->name, dir->name_len,
-               "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
+    SNFORMAT_S_ALLOC(&nda.topath, 4,
+                     nda.pa->index_parent.data, nda.pa->index_parent.len,
+                     "/", (size_t) 1,
+                     dir->name, dir->name_len,
+                     "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     /* have to dupdir here because directories can show up in any order */
     if (dupdir(nda.topath, dir->statuso.st_mode, dir->statuso.st_uid, dir->statuso.st_gid)) {

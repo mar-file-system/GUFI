@@ -200,12 +200,11 @@ static int process_entries(void *args, int count, char **data, char **columns) {
     const char type = data[1][0];
 
     const size_t name_len = strlen(name);
-    const size_t entry_len = dcba->nameto_len + 1 + name_len;
-    char *entry = malloc(entry_len + 1);
-    SNFORMAT_S(entry, entry_len + 1, 3,
-               dcba->nameto, dcba->nameto_len,
-               "/", (size_t) 1,
-               name, name_len);
+    char *entry = NULL;
+    SNFORMAT_S_ALLOC(&entry, 3,
+                     dcba->nameto, dcba->nameto_len,
+                     "/", (size_t) 1,
+                     name, name_len);
 
     switch (type) {
         case 'f':
@@ -287,12 +286,11 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
     }
 
     // create the destination directory using the source directory
-    const size_t topath_len = pa->dir.len + 1 + work->name_len - pa->index_dirname_len;
-    char *topath = malloc(topath_len + 1);
-    SNFORMAT_S(topath, topath_len + 1, 3,
-               pa->dir.data, pa->dir.len,
-               "/", (size_t) 1,
-               work->name + pa->index_dirname_len, work->name_len - pa->index_dirname_len);
+    char *topath = NULL;
+    const size_t topath_len = SNFORMAT_S_ALLOC(&topath, 3,
+                                               pa->dir.data, pa->dir.len,
+                                               "/", (size_t) 1,
+                                               work->name + pa->index_dirname_len, work->name_len - pa->index_dirname_len);
 
     rc = mkdir(topath, work->statuso.st_mode); /* don't need recursion because parent is guaranteed to exist */
     if (rc < 0) {
@@ -310,11 +308,10 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
             NULL);
 
     /* open the index db.db */
-    const size_t dbname_len = work->name_len + 1 + DBNAME_LEN;
-    char *dbname = malloc(dbname_len + 1);
-    SNFORMAT_S(dbname, dbname_len + 1, 2,
-               work->name, work->name_len,
-               "/" DBNAME, (size_t) (DBNAME_LEN + 1));
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 2,
+                     work->name, work->name_len,
+                     "/" DBNAME, (size_t) (DBNAME_LEN + 1));
 
     db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
     if (!db) {
@@ -439,12 +436,11 @@ static struct work *validate_inputs(struct PoolArgs *pa) {
     // create the source root under the destination directory using
     // the source directory's permissions and owners
     // this allows for the threads to not have to recursively create directories
-    const size_t dst_path_len = pa->dir.len + 1 + pa->index.len - pa->index_dirname_len;
-    char *dst_path = malloc(dst_path_len + 1);
-    SNFORMAT_S(dst_path, dst_path_len + 1, 3,
-               pa->dir.data, pa->dir.len,
-               "/", (size_t) 1,
-               pa->index.data + pa->index_dirname_len, pa->index.len - pa->index_dirname_len);
+    char *dst_path = NULL;
+    SNFORMAT_S_ALLOC(&dst_path, 3,
+                     pa->dir.data, pa->dir.len,
+                     "/", (size_t) 1,
+                     pa->index.data + pa->index_dirname_len, pa->index.len - pa->index_dirname_len);
     if (dupdir(dst_path, src_st.st_mode, src_st.st_uid, src_st.st_gid)) {
         fprintf(stderr, "Could not create %s under %s\n", pa->index.data, pa->dir.data);
         free(dst_path);

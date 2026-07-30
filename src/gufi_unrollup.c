@@ -99,18 +99,14 @@ static struct Unrollup *unrollup_create(const char *name, const size_t name_len,
      */
     struct Unrollup *work = malloc(sizeof(struct Unrollup));
     if (subpath && subpath_len) {
-        work->name_len = name_len + 1 + subpath_len;
-        work->name = malloc(work->name_len + 1);
-        SNFORMAT_S(work->name, work->name_len + 1, 3,
-                   name, name_len,
-                   "/", (size_t) 1,
-                   subpath, subpath_len);
+        work->name_len = SNFORMAT_S_ALLOC(&work->name, 3,
+                                          name, name_len,
+                                          "/", (size_t) 1,
+                                          subpath, subpath_len);
     }
     else {
-        work->name_len = name_len;
-        work->name = malloc(work->name_len + 1);
-        SNFORMAT_S(work->name, work->name_len + 1, 1,
-                   name, name_len);
+        work->name_len = SNFORMAT_S_ALLOC(&work->name, 1,
+                                          name, name_len);
     }
     work->level = level;
     work->rolledup = 0; /* assume this path was not rolled up */

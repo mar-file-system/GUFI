@@ -330,11 +330,10 @@ struct RollUp {
 static int rollup_descend(void *args, int *keep_going) {
     struct RollUp *dir = (struct RollUp *) args;
 
-    const size_t dbname_len = dir->data.name_len + 1 + DBNAME_LEN;
-    char *dbname = malloc(dbname_len + 1);
-    SNFORMAT_S(dbname, dbname_len + 1, 2,
-               dir->data.name, dir->data.name_len,
-               "/" DBNAME, DBNAME_LEN + 1);
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 2,
+                     dir->data.name, dir->data.name_len,
+                     "/" DBNAME, DBNAME_LEN + 1);
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
 
@@ -463,12 +462,11 @@ static int can_rollup(sqlite3 *dst, struct RollUp *rollup,
     sll_loop(&rollup->data.subdirs, node) {
         struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
-        const size_t dbname_len = child->name_len + 1 + DBNAME_LEN;
-        char *dbname = malloc(dbname_len + 1);
-        SNFORMAT_S(dbname, dbname_len + 1, 3,
-                   child->name, child->name_len,
-                   "/", (size_t) 1,
-                   DBNAME, DBNAME_LEN);
+        char *dbname = NULL;
+        SNFORMAT_S_ALLOC(&dbname, 3,
+                         child->name, child->name_len,
+                         "/", (size_t) 1,
+                         DBNAME, DBNAME_LEN);
 
         sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
 
@@ -603,12 +601,11 @@ static int rollup_external_xattrs_delete(void *args, int count, char **data, cha
     const char     existed      = data[1][0] - '0';
 
     /* parent xattr db filename */
-    const size_t xattr_db_name_len = rexa->child_len + 1 + filename_len;
-    char *xattr_db_name = malloc(xattr_db_name_len + 1);
-    SNFORMAT_S(xattr_db_name, xattr_db_name_len + 1, 3,
-               rexa->child, rexa->child_len,
-               "/", (size_t) 1,
-               filename, filename_len);
+    char *xattr_db_name = NULL;
+    SNFORMAT_S_ALLOC(&xattr_db_name, 3,
+                     rexa->child, rexa->child_len,
+                     "/", (size_t) 1,
+                     filename, filename_len);
 
     /* this is a external xattr db that was created by the subdirectory before rollups */
     if (existed == 1) {
@@ -752,12 +749,11 @@ static int rollup_ascend(void *args) {
 
     /* get statistics out of BottomUp */
     struct DirStats *ds = malloc(sizeof(struct DirStats));
-    const size_t dbname_len = dir->data.name_len + 1 + DBNAME_LEN;
-    ds->path = malloc(dbname_len + 1); /* write "/db.db" and remove when not needed any more */
-    SNFORMAT_S(ds->path, dbname_len + 1, 3,
-               dir->data.name, dir->data.name_len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
+    ds->path = NULL; /* write "/db.db" and remove when not needed any more */
+    const size_t dbname_len = SNFORMAT_S_ALLOC(&ds->path, 3,
+                                               dir->data.name, dir->data.name_len,
+                                               "/", (size_t) 1,
+                                               DBNAME, DBNAME_LEN);
     ds->level = dir->data.level;
     ds->subdir_count = sll_get_size(&dir->data.subdirs);
     ds->subnondir_count = 0;

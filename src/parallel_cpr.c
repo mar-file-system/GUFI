@@ -81,13 +81,10 @@ struct PoolArgs {
 
 static str_t create_dst_name(const str_t *dst_root, struct work *work) {
     str_t dst;
-    str_alloc_existing(&dst, dst_root->len + 1 + work->name_len - work->root_parent.len);
-
-    SNFORMAT_S(dst.data, dst.len + 1, 3,
-               dst_root->data, dst_root->len,
-               "/", (size_t) 1,
-               work->name + work->root_parent.len, work->name_len - work->root_parent.len);
-
+    dst.len = SNFORMAT_S_ALLOC(&dst.data, 3,
+                               dst_root->data, dst_root->len,
+                               "/", (size_t) 1,
+                               work->name + work->root_parent.len, work->name_len - work->root_parent.len);
     return dst; /* return by value instead of returning newly allocated pointer that needs to be cleaned up */
 }
 

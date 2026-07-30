@@ -120,16 +120,13 @@ static char *template_path(const str_t *dir) {
     char *name = NULL;
 
     if (dir) {
-        const size_t name_len = dir->len + 1 + 6;
-        name = malloc(name_len + 1);
-        SNFORMAT_S(name, name_len + 1, 2,
-                   dir->data, dir->len,
-                   "/XXXXXX", (size_t) 7);
+        SNFORMAT_S_ALLOC(&name, 2,
+                         dir->data, dir->len,
+                         "/XXXXXX", (size_t) 7);
     }
     else {
-        name = malloc(6 + 1);
-        SNFORMAT_S(name, 6 + 1, 1,
-                   "XXXXXX", (size_t) 6);
+        SNFORMAT_S_ALLOC(&name, 1,
+                         "XXXXXX", (size_t) 6);
     }
 
     return name;
@@ -263,12 +260,11 @@ sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid
 
 /* create db.db with empty tables at the given directory (and leave it on the filesystem) */
 int create_empty_dbdb(struct template_db *tdb, str_t *dst, uid_t uid, gid_t gid) {
-    const size_t dbname_len = dst->len + 1 + DBNAME_LEN;
-    char *dbname = malloc(dbname_len + 1);
-    SNFORMAT_S(dbname, dbname_len + 1, 3,
-               dst->data, dst->len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 3,
+                     dst->data, dst->len,
+                     "/", (size_t) 1,
+                     DBNAME, DBNAME_LEN);
 
     /* if database file already exists, assume it's good */
     struct stat st;

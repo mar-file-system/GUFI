@@ -87,12 +87,11 @@ struct PoolArgs {
 /* TODO: possible optimization - pass in and modify parent name by adding entry's name to save on some copying */
 static int process_entries(str_t *tree_parent,
                            struct work *entry, struct entry_data *ed) {
-    const size_t path_len = tree_parent->len + 1 + entry->name_len;
-    char *path = malloc(path_len + 1);
-    SNFORMAT_S(path, path_len + 1, 3,
-               tree_parent->data, tree_parent->len,
-               "/", (size_t) 1,
-               entry->name, entry->name_len);
+    char *path = NULL;
+    SNFORMAT_S_ALLOC(&path, 3,
+                     tree_parent->data, tree_parent->len,
+                     "/", (size_t) 1,
+                     entry->name, entry->name_len);
 
     switch (ed->type) {
         case 'f':
@@ -149,12 +148,11 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     /* create the directory */
-    const size_t topath_len = pa->tree_parent.len + 1 + dir->name_len;
-    char *topath = malloc(topath_len + 1);
-    SNFORMAT_S(topath, topath_len + 1, 3,
-               pa->tree_parent.data, pa->tree_parent.len,
-               "/", (size_t) 1,
-               dir->name, dir->name_len);
+    char *topath = NULL;
+    SNFORMAT_S_ALLOC(&topath, 3,
+                     pa->tree_parent.data, pa->tree_parent.len,
+                     "/", (size_t) 1,
+                     dir->name, dir->name_len);
 
     /* have to dupdir here because directories can show up in any order */
     if (dupdir(topath, dir->statuso.st_mode, dir->statuso.st_uid, dir->statuso.st_gid)) {

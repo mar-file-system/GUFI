@@ -230,12 +230,11 @@ size_t external_read_file(struct input *in,
          * resolve to absolute paths
          */
         if (line[0] != '/')  {
-            size_t path_len = child->name_len - child->basename_len + len;
-            char *path = malloc(path_len + 1);
-            SNFORMAT_S(path, path_len + 1, 2,
-                       child->name, child->name_len - child->basename_len,
-                       /* basename does not include slash, so don't need to add another one */
-                       line, len);
+            char *path = NULL;
+            SNFORMAT_S_ALLOC(&path, 2,
+                             child->name, child->name_len - child->basename_len,
+                             /* basename does not include slash, so don't need to add another one */
+                             line, len);
 
             extdb_path = realpath(path, NULL);
             if (!extdb_path) {

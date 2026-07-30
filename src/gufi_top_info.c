@@ -112,15 +112,16 @@ static int check_summary_row_count(void *args, int count, char **data, char **co
  *         1 on bad path/error
  */
 static int check_at_top(const str_t *path) {
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 3,
-               path->data, path->len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 3,
+                     path->data, path->len,
+                     "/", (size_t) 1,
+                     DBNAME, DBNAME_LEN);
 
     /* make sure there is a db.db file */
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
     if (!db) {
+        free(dbname);
         return 1;
     }
 
@@ -132,6 +133,7 @@ static int check_at_top(const str_t *path) {
         sqlite_print_err_and_free(err, stderr, "Error: Failed to get " SUMMARY " table row count in \"%s\": %s\n",
                                   path->data, err);
         closedb(db);
+        free(dbname);
         return 1;
     }
 
@@ -139,10 +141,12 @@ static int check_at_top(const str_t *path) {
         fprintf(stderr, "Error: Not at the top: directory \"%s\" has contents in the summary table\n",
                 path->data);
         closedb(db);
+        free(dbname);
         return 1;
     }
 
     closedb(db);
+    free(dbname);
     return 0;
 }
 
@@ -401,17 +405,17 @@ int main(int argc, char *argv[]) {
     INSTALL_STR(&path, argv[idx++]);
     INSTALL_STR(&op,   argv[idx++]);
 
-    char dbname[MAXPATH];
+    char *dbname = NULL;
 
     if (check_at_top(&path) != 0) {
         rc = EXIT_FAILURE;
         goto cleanup;
     }
 
-    SNFORMAT_S(dbname, sizeof(dbname), 3,
-               path.data, path.len,
-               "/", (size_t) 1,
-               TOP_INFO_NAME, TOP_INFO_NAME_LEN);
+    SNFORMAT_S_ALLOC(&dbname, 3,
+                     path.data, path.len,
+                     "/", (size_t) 1,
+                     TOP_INFO_NAME, TOP_INFO_NAME_LEN);
 
     /* create the info file if it does not exist; do not overwrite existing data */
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0, create_top_info_table, NULL);
@@ -446,6 +450,7 @@ int main(int argc, char *argv[]) {
     closedb(db);
 
   cleanup:
+    free(dbname);
     input_fini(&in);
 
     return rc;

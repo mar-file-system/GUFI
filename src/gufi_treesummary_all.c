@@ -96,11 +96,10 @@ static int treesummary_found(void *args, int count, char **data, char **columns)
 static int treesummary_descend(void *args, int *keep_going) {
     struct BottomUp *dir = (struct BottomUp *) args;
 
-    const size_t dbname_len = dir->name_len + 1 + DBNAME_LEN;
-    char *dbname = malloc(dbname_len + 1);
-    SNFORMAT_S(dbname, dbname_len + 1, 2,
-               dir->name, dir->name_len,
-               "/" DBNAME, DBNAME_LEN + 1);
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 2,
+                     dir->name, dir->name_len,
+                     "/" DBNAME, DBNAME_LEN + 1);
 
     int rc = 0; /* keep going down even if the database file doesn't exist */
 
@@ -136,11 +135,10 @@ static int treesummary_ascend(void *args) {
     struct treesummary *ts = (struct treesummary *) args;
     struct BottomUp *dir = &ts->data;
 
-    const size_t dbname_len = dir->name_len + 1 + DBNAME_LEN;
-    char *dbname = malloc(dbname_len + 1);
-    SNFORMAT_S(dbname, dbname_len + 1, 2,
-               dir->name, dir->name_len,
-               "/" DBNAME, DBNAME_LEN + 1);
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 2,
+                     dir->name, dir->name_len,
+                     "/" DBNAME, DBNAME_LEN + 1);
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, NULL, NULL);
     if (!db) {

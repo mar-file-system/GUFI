@@ -81,15 +81,15 @@ void attach_extdbs(struct input *in, sqlite3 *db,
     sll_loop(&in->external_attach.setup, node) {
         eas_t *user = (eas_t *) sll_node_data(node);
 
-        char basename_comp[MAXSQL];
-        const size_t basename_comp_len = SNFORMAT_S(basename_comp, sizeof(basename_comp), 7,
-                                                    "(pinode == '", (size_t) 12,
-                                                    dir_inode, dir_inode_len,
-                                                    "')", (size_t) 2,
-                                                    " AND ", (size_t) 5,
-                                                    "(basename(filename) == '", (size_t) 24,
-                                                    user->basename.data, user->basename.len,
-                                                    "')", (size_t) 2);
+        char *basename_comp = NULL;
+        const size_t basename_comp_len = SNFORMAT_S_ALLOC(&basename_comp, 7,
+                                                          "(pinode == '", (size_t) 12,
+                                                          dir_inode, dir_inode_len,
+                                                          "')", (size_t) 2,
+                                                          " AND ", (size_t) 5,
+                                                          "(basename(filename) == '", (size_t) 24,
+                                                          user->basename.data, user->basename.len,
+                                                          "')", (size_t) 2);
 
         const str_t basename_comp_ref = REFSTR(basename_comp, basename_comp_len);
         static const str_t SELECT_STAR = REFSTR(" SELECT * FROM ", 15);
@@ -109,6 +109,7 @@ void attach_extdbs(struct input *in, sqlite3 *db,
                              NULL, NULL,
                              external_increment_attachname, extdb_count);
 
+        free(basename_comp);
     }
 }
 
@@ -175,22 +176,22 @@ void detach_extdbs(struct input *in, sqlite3 *db,
         eas_t *user = (eas_t *) sll_node_data(node);
 
         /* drop user defined view */
-        char drop_extdb_view[MAXSQL];
-        SNFORMAT_S(drop_extdb_view, sizeof(drop_extdb_view), 3,
-                   "DROP VIEW ", (size_t) 10,
-                   user->view.data, user->view.len,
-                   ";", (size_t) 1);
+        char *drop_extdb_view = NULL;
+        SNFORMAT_S_ALLOC(&drop_extdb_view, 3,
+                         "DROP VIEW ", (size_t) 10,
+                         user->view.data, user->view.len,
+                         ";", (size_t) 1);
 
         if (dir_inode && dir_inode_len) {
-            char basename_comp[MAXSQL];
-            const size_t basename_comp_len = SNFORMAT_S(basename_comp, sizeof(basename_comp), 7,
-                                                        "(pinode == '", (size_t) 12,
-                                                        dir_inode, dir_inode_len,
-                                                        "')", (size_t) 2,
-                                                        " AND ", (size_t) 5,
-                                                        "(basename(filename) == '", (size_t) 24,
-                                                        user->basename.data, user->basename.len,
-                                                        "')", (size_t) 2);
+            char *basename_comp = NULL;
+            const size_t basename_comp_len = SNFORMAT_S_ALLOC(&basename_comp, 7,
+                                                              "(pinode == '", (size_t) 12,
+                                                              dir_inode, dir_inode_len,
+                                                              "')", (size_t) 2,
+                                                              " AND ", (size_t) 5,
+                                                              "(basename(filename) == '", (size_t) 24,
+                                                              user->basename.data, user->basename.len,
+                                                              "')", (size_t) 2);
 
             const str_t basename_comp_ref = REFSTR(basename_comp, basename_comp_len);
 
@@ -199,6 +200,8 @@ void detach_extdbs(struct input *in, sqlite3 *db,
                                          &basename_comp_ref,
                                          external_decrement_attachname,
                                          extdb_count);
+
+            free(basename_comp);
         }
         else {
             char *err = NULL;
@@ -206,5 +209,7 @@ void detach_extdbs(struct input *in, sqlite3 *db,
                 sqlite_print_err_and_free(err, stderr, "Could not drop view %s: %s\n", user->view.data, err);
             }
         }
+
+        free(drop_extdb_view);
     }
 }

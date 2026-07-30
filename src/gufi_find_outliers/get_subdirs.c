@@ -138,12 +138,11 @@ void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
         }
 
         /* create the db.db path */
-        const size_t dbname_len = dd->path.len + 1 + DBNAME_LEN;
-        char *dbname = malloc(dbname_len + 1);
-        SNFORMAT_S(dbname, dbname_len + 1, 3,
-                   dd->path.data, dd->path.len,
-                   "/", (size_t) 1,
-                   DBNAME, DBNAME_LEN);
+        char *dbname = NULL;
+        SNFORMAT_S_ALLOC(&dbname, 3,
+                         dd->path.data, dd->path.len,
+                         "/", (size_t) 1,
+                         DBNAME, DBNAME_LEN);
 
         (*opendbs)++;
 

@@ -105,6 +105,13 @@ TEST(SNFORMAT_S, fill_buffer) {
     EXPECT_EQ(buf[4], '\0');
 }
 
+TEST(SNFORMAT_S, ALLOC) {
+    char *buf = nullptr;
+    EXPECT_EQ(SNFORMAT_S_ALLOC(&buf, 2, "abc", 3, "def", 3), (std::size_t) 6);
+    EXPECT_STREQ(buf, "abcdef");
+    free(buf);
+}
+
 TEST(get, queue_limit) {
     EXPECT_EQ(get_queue_limit(0,                0), (uint64_t) 0); // not set
     EXPECT_EQ(get_queue_limit(0,                1), (uint64_t) 0); // not set

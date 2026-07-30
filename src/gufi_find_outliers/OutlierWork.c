@@ -74,9 +74,8 @@ OutlierWork_t *OutlierWork_create(const str_t *path, const size_t level,
                                   const int is_outlier,
                                   const Stats_t *t, const Stats_t *s) {
     OutlierWork_t *ow = calloc(1, sizeof(OutlierWork_t));
-    ow->path.data = malloc(path->len + 1);
-    ow->path.len = SNFORMAT_S(ow->path.data, path->len + 1, 1,
-                              path->data, path->len);
+    ow->path.len = SNFORMAT_S_ALLOC(&ow->path.data, 1,
+                                    path->data, path->len);
     ow->path.free = free;
 
     ow->level = level;

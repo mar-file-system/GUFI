@@ -91,11 +91,10 @@ OF SUCH DAMAGE.
 #include "gufi_query/query_replacement.h"
 
 static char *save_matime(gqw_t *gqw, struct utimbuf *dbtime) {
-    const size_t dbpath_len = gqw->work.name_len + 1 + DBNAME_LEN;
-    char *dbpath = malloc(dbpath_len + 1);
-    SNFORMAT_S(dbpath, dbpath_len + 1, 2,
-               gqw->work.name, gqw->work.name_len,
-               "/" DBNAME, DBNAME_LEN + 1);
+    char *dbpath = NULL;
+    const size_t dbpath_len = SNFORMAT_S_ALLOC(&dbpath, 2,
+                                               gqw->work.name, gqw->work.name_len,
+                                               "/" DBNAME, DBNAME_LEN + 1);
 
     struct stat st;
     time_t crtime = 0;                        /* unused */
@@ -175,11 +174,10 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
     decompress_gqw(&gqw, data);
 
     /* path of db.db modified so that sqlite3 can open it */
-    const size_t dbname_len =  gqw->sqlite3_name_len + 1 + DBNAME_LEN;
-    char *dbname = malloc(dbname_len + 1);
-    SNFORMAT_S(dbname, dbname_len + 1, 2,
-               gqw->sqlite3_name, gqw->sqlite3_name_len,
-               "/" DBNAME, DBNAME_LEN + 1);
+    char *dbname = NULL;
+    const size_t dbname_len = SNFORMAT_S_ALLOC(&dbname, 2,
+                                               gqw->sqlite3_name, gqw->sqlite3_name_len,
+                                               "/" DBNAME, DBNAME_LEN + 1);
 
     /* filesystem path of db.db; only generated if keep_matime is set */
     char *dbpath = NULL;

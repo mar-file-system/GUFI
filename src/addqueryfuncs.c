@@ -691,9 +691,8 @@ static void return_error(sqlite3_context *context,
                          const char *prefix, const size_t prefix_size,
                          const char *str) {
     const size_t str_len = strlen(str);
-    const size_t err_len = prefix_size - 1 + str_len + 1; /* closing quote */
-    char *err = malloc(err_len + 1);
-    SNFORMAT_S(err, err_len + 1, 5,
+    char *err = NULL;
+    const size_t err_len = SNFORMAT_S_ALLOC(&err, 5,
                prefix, prefix_size - 1,
                " ", (size_t) 1,
                "'", (size_t) 1,
@@ -974,12 +973,11 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     struct work *work = (struct work *) sqlite3_user_data(context);
 
     if (str_exists(&work->orig_root)) {
-        const size_t user_dirname_len = work->orig_root.len + work->name_len - work->root_parent.len - work->root_basename_len;
-        char *user_dirname = malloc(user_dirname_len + 1);
+        char *user_dirname = NULL;
 
-        SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                   work->orig_root.data, work->orig_root.len,
-                   work->name + work->root_parent.len + work->root_basename_len, work->name_len - work->root_parent.len - work->root_basename_len);
+        const size_t user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 2,
+                                                         work->orig_root.data, work->orig_root.len,
+                                                         work->name + work->root_parent.len + work->root_basename_len, work->name_len - work->root_parent.len - work->root_basename_len);
         sqlite3_result_text(context, user_dirname, user_dirname_len, free);
     }
     else {
@@ -1029,20 +1027,19 @@ static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **ar
     const size_t root_len = work->root_parent.len + work->root_basename_len;
 
     if (isrolledup == 0) { /* use work->name */
-        user_dirname_len = prefix->len + work->name_len - root_len + entry_len;
-        user_dirname = malloc(user_dirname_len + 1);
+        user_dirname = NULL;
 
         if (entry) {
-            SNFORMAT_S(user_dirname, user_dirname_len + 1, 4,
-                       prefix->data, prefix->len,
-                       work->name + root_len, work->name_len - root_len,
-                       "/", (size_t) 1,
-                       entry, entry_len - 1);
+            user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 4,
+                                                prefix->data, prefix->len,
+                                                work->name + root_len, work->name_len - root_len,
+                                                "/", (size_t) 1,
+                                                entry, entry_len - 1);
         }
         else {
-            SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                       prefix->data, prefix->len,
-                       work->name + root_len, work->name_len - root_len);
+            user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 2,
+                                                prefix->data, prefix->len,
+                                                work->name + root_len, work->name_len - root_len);
         }
     }
     else { /* reconstruct full path out of argv[0] */
@@ -1054,29 +1051,25 @@ static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **ar
         /*
          * fullpath = work->name[:-work->basename_len] + input
          */
-        const size_t fullpath_len = work->name_len - work->basename_len + input.len;
-        char *fullpath = malloc(fullpath_len + 1);
-        SNFORMAT_S(fullpath, fullpath_len + 1, 2,
-                   work->name, work->name_len - work->basename_len,
-                   input.data, input.len);
+        char *fullpath = NULL;
+        const size_t fullpath_len = SNFORMAT_S_ALLOC(&fullpath, 2,
+                                                     work->name, work->name_len - work->basename_len,
+                                                     input.data, input.len);
 
         /*
          * replace fullpath in->source_prefix with original user input
          */
-        user_dirname_len = prefix->len + fullpath_len - root_len + entry_len;
-        user_dirname = malloc(user_dirname_len + 1);
-
         if (entry) {
-            SNFORMAT_S(user_dirname, user_dirname_len + 1, 4,
-                       prefix->data, prefix->len,
-                       fullpath + root_len, fullpath_len - root_len,
-                       "/", (size_t) 1,
-                       entry, entry_len - 1);
+            user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 4,
+                                                prefix->data, prefix->len,
+                                                fullpath + root_len, fullpath_len - root_len,
+                                                "/", (size_t) 1,
+                                                entry, entry_len - 1);
         }
         else {
-            SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                       prefix->data, prefix->len,
-                       fullpath + root_len, fullpath_len - root_len);
+            user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 2,
+                                                prefix->data, prefix->len,
+                                                fullpath + root_len, fullpath_len - root_len);
         }
 
         free(fullpath);

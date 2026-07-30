@@ -383,11 +383,9 @@ int SNPRINTF(char *str, size_t size, const char *format, ...) {
  * unnecessary calls to strlen). Make sure to typecast the lengths to
  * size_t or weird bugs may occur. Also, do not pass in NULL pointers.
 */
-size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
+static size_t _SNFORMAT_S(char *dst, const size_t dst_len, size_t count, va_list args) {
     size_t max_len = dst_len - 1;
 
-    va_list args;
-    va_start(args, count);
     for(size_t i = 0; i < count; i++) {
         const char *src = va_arg(args, char *);
         /* size_t does not work, but solution found at */
@@ -400,10 +398,43 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
         dst += copy_len;
         max_len -= copy_len;
     }
-    va_end(args);
 
     *dst = '\0';
     return dst_len - max_len - 1;
+}
+
+size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
+    va_list args;
+    va_start(args, count);
+    const size_t rc = _SNFORMAT_S(dst, dst_len, count, args);
+    va_end(args);
+    return rc;
+}
+
+size_t SNFORMAT_S_ALLOC(char **dst, size_t count, ...) {
+    size_t len = 0;
+
+    va_list args;
+    va_start(args, count);
+
+    va_list fwd;
+    va_copy(fwd, args);
+
+    /* precompute length */
+    for(size_t i = 0; i < count; i++) {
+        (void) va_arg(args, char *);
+        len += va_arg(args, unsigned int);
+    }
+
+    /* allocate for caller */
+    *dst = malloc(len + 1);
+
+    const size_t rc = _SNFORMAT_S(*dst, len + 1, count, fwd);
+
+    va_end(fwd);
+    va_end(args);
+
+    return rc;
 }
 
 /* convert a mode to a human readable string */
@@ -702,13 +733,12 @@ ssize_t copyfd(int src_fd, off_t src_off,
 char *present_user_path(const char *curr, size_t curr_len,
                          str_t *root_parent, const size_t root_basename_len, str_t *orig_root) {
     const size_t prefix = root_parent->len + root_basename_len;
-    const size_t buf_len = orig_root->len + curr_len - prefix;
-    char *buf = malloc(buf_len + 1);
 
     /* curr + prefix comes with / prefixed, so no need for extra / */
-    SNFORMAT_S(buf, buf_len + 1, 2,
-               orig_root->data, orig_root->len,
-               curr + prefix, curr_len - prefix);
+    char *buf = NULL;
+    SNFORMAT_S_ALLOC(&buf, 2,
+                     orig_root->data, orig_root->len,
+                     curr + prefix, curr_len - prefix);
 
     return buf;
 }
