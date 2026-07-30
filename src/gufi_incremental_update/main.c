@@ -115,31 +115,46 @@ static int validate_path(const char *type, const str_t *path,
 static int validate_source(str_t *argv_index, struct GenSnapshot *index,
                            str_t *argv_tree,  struct GenSnapshot *tree,
                            int *same) {
-    *same = 0;
+    {
+        char *real_index = realpath(argv_index->data, NULL);
+        if (!real_index) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not get realpath of \"%s\": %s (%d)\n",
+                    argv_index->data, strerror(err), err);
+            return 1;
+        }
 
-    tree->parent_len = trailing_non_match_index(argv_tree->data, argv_tree->len, "/", 1);
-    tree->parent_len = trailing_match_index(argv_tree->data, tree->parent_len, "/", 1);
-    if (validate_path("tree", argv_tree, tree->parent_len, &tree->work) != 0) {
-        return 1;
+        char *real_tree = realpath(argv_tree->data, NULL);
+        if (!real_tree) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not get realpath of \"%s\": %s (%d)\n",
+                    argv_tree->data, strerror(err), err);
+            free(real_index);
+            return 1;
+        }
+
+        *same = !strcmp(real_tree, real_index); /* both strings are NULL terminated, so not getting lengths */
+
+        /* not keeping real paths */
+        free(real_index);
+        free(real_tree);
     }
-
-    char *real_tree = realpath(argv_tree->data, NULL);
-    char *real_index = realpath(argv_index->data, NULL);
-    *same = !strcmp(argv_tree->data, argv_index->data); /* both strings are NULL terminated, so not getting lengths */
-    free(real_index);
-    free(real_tree);
 
     if (*same) {
         fprintf(stderr, "You are putting the index dbs in input directory\n");
     }
     else {
-        index->parent_len = trailing_non_match_index(argv_index->data, argv_index->len, "/", 1);
-        index->parent_len = trailing_match_index(argv_index->data, index->parent_len, "/", 1);
+        index->parent_len = dirname_len(argv_index->data, argv_index->len);
         if (validate_path("index", argv_index, index->parent_len, &index->work) != 0) {
-            free(tree->work);
-            tree->work = NULL;
             return 1;
         }
+    }
+
+    tree->parent_len = dirname_len(argv_tree->data, argv_tree->len);
+    if (validate_path("tree", argv_tree, tree->parent_len, &tree->work) != 0) {
+        free(index->work);
+        index->work = NULL;
+        return 1;
     }
 
     return 0;
@@ -469,6 +484,13 @@ int main(int argc, char *argv[]) {
         /* comparison is >, so subtract 1 to get correct wait condition */
         --pa.in.max_subtrees;
 
+        int has_slash = 0;
+        if (pa.same == 0) {
+            if (index.work->root_parent.len) {
+                has_slash = (index.work->name[index.work->root_parent.len - 1] == '/');
+            }
+        }
+
         /*
          * run (parallel) incremental update on subtrees one at a time
          * so that there are not pa.in.maxthreads in-memory dbs per
@@ -499,7 +521,7 @@ int main(int argc, char *argv[]) {
                 if (pa.same == 0) {
                     subindex = malloc(sizeof(*subindex));
                     *subindex = index;
-                    subindex->work = new_work_with_name(index.work->name, index.work->root_parent.len,
+                    subindex->work = new_work_with_name(index.work->name, index.work->root_parent.len - has_slash,
                                                         subtree->work->name + tree.parent_len,
                                                         subtree->work->name_len - tree.parent_len);
                 }

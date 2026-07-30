@@ -467,11 +467,11 @@ $ gufi_incremental_update -n 2 --suspect-time 0 --suspect-method 3 --keep-artifa
 #####################################
 # non-existent index
 $ gufi_incremental_update -x --suspect-method 3 "baddir/prefix" "prefix" "parking_lot" > /dev/null
-Error: Could not stat index "baddir/prefix": No such file or directory (2)
+Error: Could not get realpath of "baddir/prefix": No such file or directory (2)
 
 # non-existent tree
 $ gufi_incremental_update -x --suspect-method 3 "prefix" "baddir/prefix" "parking_lot" > /dev/null
-Error: Could not stat tree "baddir/prefix": No such file or directory (2)
+Error: Could not get realpath of "baddir/prefix": No such file or directory (2)
 
 # non-existent parking lot
 $ gufi_incremental_update -x --suspect-method 3 "prefix" "prefix" "baddir/parking_lot" > /dev/null

@@ -81,7 +81,7 @@ struct PoolArgs;
 
 /* used to generate snapshots of the index and tree */
 struct GenSnapshot {
-    size_t parent_len;     /* strlen(diriname(path) */
+    size_t parent_len;     /* strlen(dirname(path)) */
     struct work *work;
     void (*free_work)(void *);
     str_t snapshot;        /* name of the artifact */
@@ -91,7 +91,6 @@ struct GenSnapshot {
     pthread_mutex_t *mutex;
     pthread_cond_t  *cond;
     size_t          *counter;
-
 };
 
 struct SuspectInodes {
