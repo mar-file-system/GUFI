@@ -497,5 +497,9 @@ echo "# bad thread count"
 run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 -n 18446744073709551615 \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
 ) | @SED@ "s%${BADDIR}%baddir%g;" | tee "${OUTPUT}"
 
+# this prints a different message in cygwin
+echo "# parking lot with file in path segment"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${GUFI_INCREMENTAL_UPDATE}/parking_lot\" > /dev/null"
+
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_incremental_update.expected "${OUTPUT}"
 rm "${OUTPUT}"
