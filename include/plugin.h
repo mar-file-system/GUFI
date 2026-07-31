@@ -78,10 +78,9 @@ struct entry_data;
 struct sum;
 
 typedef enum {
-    PLUGIN_NONE        = 0,
-    PLUGIN_INDEX       = 1,
-    PLUGIN_QUERY       = 2,
-    PLUGIN_INCREMENTAL = 3,
+    PLUGIN_NONE  = 0,
+    PLUGIN_INDEX = 1,
+    PLUGIN_QUERY = 2,
 } plugin_type;
 
 typedef enum {

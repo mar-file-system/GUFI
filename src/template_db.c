@@ -216,7 +216,7 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     if (dst_db < 0) {
         *err = errno;
-        fprintf(stderr, "Error: copy_template dst db: %s (%d)\n", strerror(*err), *err);
+        fprintf(stderr, "Error: copy_template \"%s\": %s (%d)\n", dst, strerror(*err), *err);
         return -1;
     }
 

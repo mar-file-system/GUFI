@@ -103,9 +103,11 @@ struct SuspectInodes {
 
 struct PoolArgs {
     struct input in;
-    str_t parking_lot;     /* directory to place update db.dbs and directories */
-    str_t artifacts;       /* place artifacts under this directory (defaults to parking_lot and are deleted at end) */
-    struct template_db db; /* (optimization) db.db with empty tables for copying when creating update db.dbs */
+    str_t parking_lot;        /* directory to place update db.dbs and directories */
+    str_t artifacts;          /* place artifacts under this directory (defaults to parking_lot and are deleted at end if not changed) */
+    struct template_db db;    /* (optimization) db.db with empty tables for copying when creating update db.dbs */
+    struct template_db xattr; /* (optimization) xattr db with empty tables for copying */
+    /* FIXME: actually handle xattrs */
 
     QPTPool_ctx_t *ctx;
     sll_t *tops; /* per thread lists of struct work * */

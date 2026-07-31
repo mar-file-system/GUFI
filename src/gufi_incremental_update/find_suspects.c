@@ -246,15 +246,6 @@ int find_suspects(struct PoolArgs *pa, const ino_t inode, struct GenSnapshot *tr
         return 1;
     }
 
-    /* set up template db.db for copying instead of running SQL to create each table */
-    init_template_db(&pa->db);
-    if (create_dbdb_template(&pa->db, NULL) != 0) {
-        fprintf(stderr, "Could not create template file\n");
-        aggregate_fin(&tree->agg, pa->in.maxthreads);
-        str_free_existing(&tree->snapshot);
-        return 1;
-    }
-
     /* clone the original struct so that it can be freed without affecting the original */
     struct GenSnapshot *copy = malloc(sizeof(*copy));
     *copy = *tree;

@@ -116,7 +116,22 @@ static int setup_suspect_file(struct PoolArgs *pa) {
     return 0;
 }
 
+/* not handling cleanup on error - main will call fini */
 int PoolArgs_init(struct PoolArgs *pa) {
+    init_template_db(&pa->db);
+    init_template_db(&pa->xattr);
+
+    /* set up db.db template for copying instead of running SQL to create each table */
+    if (create_dbdb_template(&pa->db, NULL) != 0) {
+        return 1;
+    }
+
+    /* set up xattr template for copying instead of running SQL to create each table */
+    if (create_dbdb_template(&pa->xattr, NULL) != 0) {
+        fprintf(stderr, "Could not create xattr template file\n");
+        return 1;
+    }
+
     if (setup_suspect_file(pa) != 0) {
         return 1;
     }
@@ -157,5 +172,7 @@ void PoolArgs_fini(struct PoolArgs *pa) {
     plugins_global_exit(&pa->in.plugins, &pa->in);
     trie_free(pa->suspects.fl.inodes);
     trie_free(pa->suspects.dir.inodes);
+    close_template_db(&pa->xattr);
+    close_template_db(&pa->db);
     input_fini(&pa->in);
 }

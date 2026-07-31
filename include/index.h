@@ -62,80 +62,26 @@ OF SUCH DAMAGE.
 
 
 
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
+#ifndef GUFI_INDEX_H
+#define GUFI_INDEX_H
 
-#include "dbutils.h"
-#include "index.h"
+#include <dirent.h>
+#include <stddef.h>
+
+#include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
+#include "bf.h"
+#include "descend.h"
 #include "plugin.h"
+#include "str.h"
 #include "template_db.h"
 
-#include "gufi_incremental_update/incremental_update.h"
+int index_dir(str_t *topath, const int dir2index, /* if dir2index is set to 1, topath must end with db.db */
+              QPTPool_ctx_t *ctx, struct input *in,
+              struct template_db *temp_db, struct template_db *temp_xattr,
+              plugin_dir_action *process_dir,
+              struct work *work, struct entry_data *ed,
+              DIR *dir, QPTPool_f processdir,
+              struct descend_counters *ctrs);
 
-/* reindex the source directory */
-int reindex_dir(QPTPool_ctx_t *ctx,
-                struct work *work, struct entry_data *ed,
-                DIR *dir) {
-    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
-
-    str_t topath = {0};
-
-    /*
-     * if building in-tree, use existing db.db
-     * else, create the file in the parking lot with the directory's inode as the name
-     */
-    if (pa->same == 1) {
-        topath.len = SNFORMAT_S_ALLOC(&topath.data, 3,
-                                      work->name, work->name_len,
-                                      "/", (size_t) 1,
-                                      DBNAME, DBNAME_LEN);
-    }
-    else {
-        topath.data = malloc(pa->parking_lot.len + 1 + UINT64_DIGITS + 1);
-        topath.len = SNPRINTF(topath.data, MAXPATH, "%s/%" STAT_ino, pa->parking_lot.data, work->statuso.st_ino);
-    }
-
-    topath.free = free;
-
-    /* either way, truncate any existing db file */
-    if (truncate(topath.data, 0) != 0) {
-        const int err = errno;
-        if (err != ENOENT) {
-            fprintf(stderr, "Warning: Failed to truncate db file \"%s\": %s (%d)\n",
-                    topath.data, strerror(err), err);
-        }
-    }
-
-    rewinddir(dir);
-
-    plugin_dir_action process_dir = PLUGIN_NO_PROCESS_DIR;
-    int rc = index_dir(&topath, 0, ctx, &pa->in, &pa->db, &pa->xattr,
-                       &process_dir, work, ed, dir, NULL, NULL);
-    if (rc != 0) {
-        rc = (rc < 0);
-        goto cleanup;
-    }
-
-    /* set permissions on db file */
-    if (chmod(topath.data, (work->statuso.st_mode & ~(S_IXUSR | S_IXGRP | S_IXOTH)) | S_IRUSR) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Warning: Unable to set permission for \"%s\": %s (%d)\n",
-                topath.data, strerror(err), err);
-    }
-
-    /* set owners on db file */
-    if (chown(topath.data, work->statuso.st_uid, work->statuso.st_gid) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Warning: Unable to set owners for \"%s\": %s (%d)\n",
-                topath.data, strerror(err), err);
-    }
-
-    fprintf(stdout, "    Created update db \"%s\" for \"%s\"\n", topath.data, work->name);
-
-  cleanup:
-    str_free_existing(&topath);
-
-    return rc;
-}
+#endif

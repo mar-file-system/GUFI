@@ -240,7 +240,6 @@ static int compare_and_update(struct PoolArgs *pa,
     /* aggregate tree results into one file */
     aggregate_intermediate(&tree->agg, pa->in.maxthreads, pa->in.maxthreads);
     aggregate_fin(&tree->agg, pa->in.maxthreads);
-    close_template_db(&pa->db);
 
     if (rc == 0) {
         /* if the index is in the tree, databases have already been created/updated */
@@ -425,7 +424,7 @@ int main(int argc, char *argv[]) {
     process_args_and_maybe_exit(options, 3, "GUFI_tree dir parking_lot", &pa.in);
 
     /* fail early */
-    if (plugins_check_type(&pa.in.plugins, PLUGIN_INCREMENTAL) != pa.in.plugins.count) {
+    if (plugins_check_type(&pa.in.plugins, PLUGIN_INDEX) != pa.in.plugins.count) {
         input_fini(&pa.in);
         return EXIT_FAILURE;
     }
