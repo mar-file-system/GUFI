@@ -60,8 +60,6 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 */
 
-
-
 /*
  * MarFS GUFI indexing plugin
  *
@@ -71,37 +69,27 @@ OF SUCH DAMAGE.
  *
  * High level behavior:
  *
- * 1. Reads the MarFS config specified by MARFS_CONFIG_PATH and discovers all
- *    configured namespaces under the selected root namespace.
+ * 1. Reads the MarFS config specified by MARFS_CONFIG_PATH and the physical
+ *    MDAL sec-root specified by MARFS_SEC_ROOT. The GUFI source may be the
+ *    sec-root, a configured namespace, or a normal directory below one.
  *
- * 2. Builds a sorted list of namespace pairs:
- *      - namespace:        the real namespace path under sec-root
- *      - index_namespace:  the corresponding path GUFI will see in the
- *                          temporary index tree
+ * 2. Builds the full physical path of every configured namespace from the
+ *    configured sec-root. It separately builds temporary index paths only for
+ *    configured namespaces below the selected GUFI source.
  *
- * 3. Before indexing begins, rewrites the on-disk index layout to match the
- *    MarFS namespace structure expected by this plugin. In particular, it
- *    restores MDAL_subspaces directories and renames the indexed root from
- *    the MarFS mountpoint back to the configured root namespace so repeated
- *    indexing runs work correctly.
+ * 3. Before indexing begins, restores MDAL_subspaces directories in an
+ *    existing index so GUFI can update the physical traversal layout.
  *
- * 4. During traversal, filters out MarFS internal directories and files
- *    (such as MDAL_* entries) so GUFI does not index MarFS metadata as user
- *    content. It also skips namespaces that exist on disk but are no longer
- *    present in the current MarFS config.
+ * 4. During traversal, identifies MarFS metadata by checking whether its
+ *    parent is the configured sec-root or a configured namespace. This avoids
+ *    depending on GUFI traversal levels.
  *
- * 5. While processing files, removes MarFS specific database entries,
- *    decrements link counts to account for MarFS metadata links, and strips
- *    MarFS xattrs from the stored xattr list.
+ * 5. While processing files, removes MarFS xattrs, decrements link counts to
+ *    account for MarFS metadata links, and hides MarFS implementation files.
  *
- * 6. While processing directories, renames the indexed root namespace in the
- *    GUFI summary table so the final index presents the MarFS mountpoint name
- *    instead of the raw sec-root namespace name.
- *
- * 7. After indexing completes, restores the index tree into a cleaner final
- *    form by moving namespace directories up out of MDAL_subspaces, removing
- *    empty MDAL_subspaces directories, and renaming the indexed root back to
- *    the MarFS mountpoint basename.
+ * 6. After indexing completes, moves configured child namespaces out of
+ *    MDAL_subspaces in the generated index. The index root is renamed to the
+ *    MarFS mountpoint only when the selected source is the sec-root itself.
  *
  * build instruction:
  *
@@ -115,9 +103,10 @@ OF SUCH DAMAGE.
  *
  * run example:
  * MARFS_CONFIG_PATH=/path/to/marfs/install/etc/marfs-config.xml \
+ * MARFS_SEC_ROOT=/path/to/mdal-root/sec-root \
  *   src/gufi_dir2index \
  *   --plugin "GUFI_MARFS_PLUGIN:contrib/plugins/libmarfs_plugin.so" \
- *   /path/to/mdal-root/sec-root /home/$USER/gufi-index-dir
+ *   /path/to/mdal-root/sec-root/MDAL_subspaces/ns1/subdir /home/$USER/gufi-index-dir
  */
 
 #include <errno.h>
@@ -144,11 +133,11 @@ static const char MARFS_SUBSPACES_NAME[] = "MDAL_subspaces";
 static const size_t MARFS_SUBSPACES_NAME_LEN = sizeof(MARFS_SUBSPACES_NAME) - 1;
 static const char MARFS_XATTR_NAME[] = "user.MDAL_MARFS-FILE";
 static const size_t MARFS_XATTR_NAME_LEN = sizeof(MARFS_XATTR_NAME) - 1;
-static const size_t ROOT_NAMESPACE_LEVEL = 0;
 // marfs dir mode used for temporary additions of marfs specific directories during re-indexing
 static const mode_t MARFS_DIR_MODE = S_IRWXU | S_IXOTH;
 
 static const char* MARFS_CONFIG_ENV = "MARFS_CONFIG_PATH";
+static const char* MARFS_SEC_ROOT_ENV = "MARFS_SEC_ROOT";
 
 typedef struct {
     str_t namespace;
@@ -227,13 +216,68 @@ static int str_t_eq_cstr(str_t s, const char* cstr, size_t cstr_len) {
     return strncmp(s.data, cstr, cstr_len) == 0;
 }
 
+// install a path while removing trailing slashes, except for filesystem root
+static int install_path(str_t* dst, const char* path) {
+    if (!dst || !path || path[0] == '\0') return -1;
+
+    size_t len = strlen(path);
+    while (len > 1 && path[len - 1] == '/') len--;
+
+    if (!str_alloc_existing(dst, len)) return -1;
+
+    memcpy(dst->data, path, len);
+    dst->data[len] = '\0';
+    return 0;
+}
+
+static int path_eq(str_t lhs, str_t rhs) {
+    if (!lhs.data || !rhs.data || lhs.len != rhs.len) return 0;
+
+    return strncmp(lhs.data, rhs.data, lhs.len) == 0;
+}
+
+// check whether path is root itself or is below root on a path-component boundary
+static int path_is_at_or_below(str_t path, str_t root) {
+    if (!path.data || !root.data || path.len < root.len) return 0;
+    if (strncmp(path.data, root.data, root.len) != 0) return 0;
+    if (path.len == root.len) return 1;
+
+    if (root.len == 1 && root.data[0] == '/') return path.data[0] == '/';
+
+    return path.data[root.len] == '/';
+}
+
+static str_t get_relative_path(str_t path, str_t root) {
+    if (!path_is_at_or_below(path, root) || path_eq(path, root)) {
+        return (str_t)REFSTR(NULL, 0);
+    }
+
+    if (root.len == 1 && root.data[0] == '/') {
+        return (str_t)REFSTR(path.data + 1, path.len - 1);
+    }
+
+    return (str_t)REFSTR(path.data + root.len + 1, path.len - root.len - 1);
+}
+
+static str_t get_first_component(str_t path) {
+    if (!path.data || path.len == 0) return (str_t)REFSTR(NULL, 0);
+
+    size_t len = 0;
+    while (len < path.len && path.data[len] != '/') len++;
+
+    return (str_t)REFSTR(path.data, len);
+}
+
 struct marfs_plugin {
     namespace_pair* namespaces;
     size_t namespaces_count;
 
     str_t index_parent;  // actual index is placed at <index parent>/$(basename <src>)
     str_t marfs_mountpoint;
-    str_t root_namespace;
+    str_t source;
+    str_t sec_root;
+
+    int source_is_sec_root;
 
     marfs_config* marfs_cfg;
 };
@@ -251,10 +295,12 @@ static void marfs_plugin_cleanup(void) {
 
     str_free_existing(&g_state.index_parent);
     str_free_existing(&g_state.marfs_mountpoint);
-    str_free_existing(&g_state.root_namespace);
+    str_free_existing(&g_state.source);
+    str_free_existing(&g_state.sec_root);
 
     g_state.namespaces = NULL;
     g_state.namespaces_count = 0;
+    g_state.source_is_sec_root = 0;
 
     // cleanup marfs config
     config_term(g_state.marfs_cfg);
@@ -280,120 +326,171 @@ static size_t count_ns_paths(marfs_ns* ns) {
     return total;
 }
 
-// retrieve the namespace paths from the marfs config and build namespace pairs
-static int collect_ns_paths(marfs_ns* ns, str_t parent_path, namespace_pair* paths, size_t* index, str_t root_namespace,
-                            str_t index_parent, str_t rn_base) {
-    if (!ns || !paths || !index || !root_namespace.data || !index_parent.data || !rn_base.data) return -1;
-
+// retrieve the physical namespace paths from the marfs config
+static int collect_ns_paths(marfs_ns* ns, str_t parent_namespace, namespace_pair* paths, size_t* index) {
     for (size_t i = 0; i < ns->subnodecount; i++) {
         HASH_NODE* hn = &ns->subnodes[i];
         marfs_ns* child = (marfs_ns*)hn->content;
 
         if (!hn->name || !child) continue;
 
-        str_t path = {0};
+        namespace_pair* pair = &paths[*index];
         const size_t name_len = strlen(hn->name);
+        const size_t namespace_len = parent_namespace.len + 1 + MARFS_SUBSPACES_NAME_LEN + 1 + name_len;
 
-        if (parent_path.len == 0) {
-            const size_t path_len = name_len;
+        if (!str_alloc_existing(&pair->namespace, namespace_len)) return -1;
 
-            if (!str_alloc_existing(&path, path_len)) return -1;
-
-            snprintf(path.data, path_len + 1, "%s", hn->name);
-        } else {
-            // add an MDAL_subspaces dir into the path
-            const size_t path_len = parent_path.len + 1 + MARFS_SUBSPACES_NAME_LEN + 1 + name_len;
-
-            if (!str_alloc_existing(&path, path_len)) return -1;
-
-            snprintf(path.data, path_len + 1, "%.*s/%s/%s", (int)parent_path.len, parent_path.data,
-                     MARFS_SUBSPACES_NAME, hn->name);
-        }
-
-        // build namespace and index namespace paths
-        {
-            namespace_pair* pair = &paths[*index];
-            const size_t namespace_len = root_namespace.len + 1 + MARFS_SUBSPACES_NAME_LEN + 1 + path.len;
-            const size_t index_namespace_len =
-                index_parent.len + 1 + rn_base.len + 1 + MARFS_SUBSPACES_NAME_LEN + 1 + path.len;
-
-            if (!str_alloc_existing(&pair->namespace, namespace_len)) {
-                str_free_existing(&path);
-                return -1;
-            }
-
-            snprintf(pair->namespace.data, namespace_len + 1, "%.*s/%s/%.*s", (int)root_namespace.len,
-                     root_namespace.data, MARFS_SUBSPACES_NAME, (int)path.len, path.data);
-
-            if (!str_alloc_existing(&pair->index_namespace, index_namespace_len)) {
-                str_free_existing(&pair->namespace);
-                str_free_existing(&path);
-                return -1;
-            }
-
-            snprintf(pair->index_namespace.data, index_namespace_len + 1, "%.*s/%.*s/%s/%.*s", (int)index_parent.len,
-                     index_parent.data, (int)rn_base.len, rn_base.data, MARFS_SUBSPACES_NAME, (int)path.len, path.data);
-        }
+        snprintf(pair->namespace.data, namespace_len + 1, "%.*s/%s/%s", (int)parent_namespace.len,
+                 parent_namespace.data, MARFS_SUBSPACES_NAME, hn->name);
 
         (*index)++;
 
-        if (collect_ns_paths(child, path, paths, index, root_namespace, index_parent, rn_base) != 0) {
-            (*index)--;
-            str_free_existing(&paths[*index].namespace);
-            str_free_existing(&paths[*index].index_namespace);
-            str_free_existing(&path);
-            return -1;
-        }
-
-        str_free_existing(&path);
+        if (collect_ns_paths(child, pair->namespace, paths, index) != 0) return -1;
     }
 
     return 0;
 }
 
-// validate that we are actually pointed at the root namespace of a marfs-mdal (sec-root).
-// There should be an MDAL_subspaces directly under the root namespace
-// then there should be our first namespaces right under the MDAL_subspaces
-// NOTE: this requires that the namespaces be sorted beforehand
-static int validate_sec_root(void) {
-    struct stat st;
-    int ret = 0;
-    char* path = NULL;
-    int len;
+// simple check to determine if a provided file path is a namespace in the marfs config
+static int is_namespace(str_t path) {
+    if (!path.data) return 0;
 
-    if (!g_state.root_namespace.data || g_state.root_namespace.len == 0) goto cleanup;
-    if (!g_state.namespaces || g_state.namespaces_count == 0) goto cleanup;
+    for (size_t i = 0; i < g_state.namespaces_count; i++) {
+        if (path_eq(g_state.namespaces[i].namespace, path)) return 1;
+    }
 
-    // check if MDAL_subspaces exists under the target dir
-    len = snprintf(NULL, 0, "%s/%s", g_state.root_namespace.data, MARFS_SUBSPACES_NAME);
-    if (len < 0) goto cleanup;
-
-    path = malloc((size_t)len + 1);
-    if (!path) goto cleanup;
-
-    snprintf(path, (size_t)len + 1, "%s/%s", g_state.root_namespace.data, MARFS_SUBSPACES_NAME);
-
-    if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) goto cleanup;
-
-    // check if one of the top namespaces is in the first MDAL_subspaces
-    if (stat(g_state.namespaces[0].namespace.data, &st) != 0 || !S_ISDIR(st.st_mode)) goto cleanup;
-
-    ret = 1;
-
-cleanup:
-    free(path);
-    return ret;
+    return 0;
 }
 
-// cleanup_marfs_index will go through each namespace defined in the marfs config, move it up a directory, and delete
-// the empty MDAL_subspaces that remains. It also removes any empty MDAL_subspaces that exist within the namespace as
-// well as renaming the root directory to the basename of the specified mountpoint in the marfs config
+// sec-root and configured namespaces are the directories that own MDAL metadata
+static int is_mdal_owner(str_t path) { return path_eq(path, g_state.sec_root) || is_namespace(path); }
+
+static int is_mdal_subspaces_dir(str_t path) {
+    if (!path.data) return 0;
+
+    const str_t basename = get_basename(path);
+    if (!str_t_eq_cstr(basename, MARFS_SUBSPACES_NAME, MARFS_SUBSPACES_NAME_LEN)) return 0;
+
+    return is_mdal_owner(get_parent(path));
+}
+
+static int namespace_is_rewritten(str_t path) {
+    for (size_t i = 0; i < g_state.namespaces_count; i++) {
+        namespace_pair* pair = &g_state.namespaces[i];
+        if (path_eq(pair->namespace, path)) {
+            return pair->index_namespace.data && pair->index_namespace.len > 0;
+        }
+    }
+
+    return 0;
+}
+
+// build only the index paths for configured namespaces that are below the selected source
+static int build_index_namespace_paths(void) {
+    const str_t source_base = get_basename(g_state.source);
+    if (!source_base.data || source_base.len == 0) return -1;
+
+    for (size_t i = 0; i < g_state.namespaces_count; i++) {
+        namespace_pair* pair = &g_state.namespaces[i];
+
+        // the selected source is already the index root and does not need to be moved
+        if (path_eq(pair->namespace, g_state.source)) continue;
+
+        const str_t relative = get_relative_path(pair->namespace, g_state.source);
+        if (!relative.data || relative.len == 0) continue;
+
+        const size_t index_namespace_len = g_state.index_parent.len + 1 + source_base.len + 1 + relative.len;
+
+        if (!str_alloc_existing(&pair->index_namespace, index_namespace_len)) return -1;
+
+        snprintf(pair->index_namespace.data, index_namespace_len + 1, "%.*s/%.*s/%.*s", (int)g_state.index_parent.len,
+                 g_state.index_parent.data, (int)source_base.len, source_base.data, (int)relative.len, relative.data);
+    }
+
+    return 0;
+}
+
+// validate the configured sec-root and ensure the selected source is a usable path inside it
+static int validate_source(void) {
+    struct stat st;
+
+    if (g_state.sec_root.data[0] != '/' || g_state.source.data[0] != '/') {
+        fprintf(stderr, "Error: source and %s must both be absolute paths\n", MARFS_SEC_ROOT_ENV);
+        return -1;
+    }
+
+    if (stat(g_state.sec_root.data, &st) != 0 || !S_ISDIR(st.st_mode)) {
+        fprintf(stderr, "Error: %s (%s) is not a directory\n", MARFS_SEC_ROOT_ENV, g_state.sec_root.data);
+        return -1;
+    }
+
+    {
+        const str_t subspaces_name = REFSTR(MARFS_SUBSPACES_NAME, MARFS_SUBSPACES_NAME_LEN);
+        char* subspaces = join_path(g_state.sec_root, subspaces_name);
+
+        if (!subspaces) {
+            fprintf(stderr, "Error: could not build sec-root MDAL_subspaces path\n");
+            return -1;
+        }
+
+        if (stat(subspaces, &st) != 0 || !S_ISDIR(st.st_mode)) {
+            fprintf(stderr, "Error: %s (%s) does not contain %s\n", MARFS_SEC_ROOT_ENV, g_state.sec_root.data,
+                    MARFS_SUBSPACES_NAME);
+            free(subspaces);
+            return -1;
+        }
+
+        free(subspaces);
+    }
+
+    if (stat(g_state.source.data, &st) != 0 || !S_ISDIR(st.st_mode)) {
+        fprintf(stderr, "Error: source (%s) is not a directory\n", g_state.source.data);
+        return -1;
+    }
+
+    if (!path_is_at_or_below(g_state.source, g_state.sec_root)) {
+        fprintf(stderr, "Error: source (%s) is not within %s (%s)\n", g_state.source.data, MARFS_SEC_ROOT_ENV,
+                g_state.sec_root.data);
+        return -1;
+    }
+
+    /*
+     * Find the deepest configured namespace containing the source. Relative
+     * to that owner, a leading MDAL_* component means the user selected an
+     * internal MarFS implementation directory. Selecting the namespace itself
+     * is valid because it becomes the root of the generated index.
+     */
+    str_t owner = g_state.sec_root;
+
+    for (size_t i = 0; i < g_state.namespaces_count; i++) {
+        const str_t ns = g_state.namespaces[i].namespace;
+        if (ns.len > owner.len && path_is_at_or_below(g_state.source, ns)) owner = ns;
+    }
+
+    if (!path_eq(g_state.source, owner)) {
+        const str_t relative = get_relative_path(g_state.source, owner);
+        const str_t first = get_first_component(relative);
+
+        if (starts_with_mdal(first)) {
+            fprintf(stderr, "Error: source (%s) is inside MarFS internal directory %.*s\n", g_state.source.data,
+                    (int)first.len, first.data);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+// cleanup_marfs_index moves configured namespaces below the selected source out of
+// MDAL_subspaces directories. When indexing sec-root, it also renames the index root
+// to the basename of the MarFS mountpoint.
 static int cleanup_marfs_index(void) {
     int ret = 0;
 
-    // loop through our index namespaces and move them up a directory and delete the unecessary MDAL_subspaces
+    // deepest namespaces must be moved before their parents
     for (size_t i = g_state.namespaces_count; i-- > 0;) {
         const str_t old = g_state.namespaces[i].index_namespace;
+        if (!old.data || old.len == 0) continue;
 
         const str_t basename = get_basename(old);
         const str_t parent = get_parent(old);
@@ -403,10 +500,9 @@ static int cleanup_marfs_index(void) {
         char* parent_path = NULL;
         char* child_subspaces = NULL;
 
-        // check to see if there is an empty MDAL_subspaces within this namespace
+        // remove an empty MDAL_subspaces contained by this namespace
         {
-            size_t child_subspaces_len =
-                old.len + 1 + MARFS_SUBSPACES_NAME_LEN + 1;  // old + "/" + MDAL_subspaces + NUL
+            const size_t child_subspaces_len = old.len + 1 + MARFS_SUBSPACES_NAME_LEN + 1;
             child_subspaces = malloc(child_subspaces_len);
             if (!child_subspaces) {
                 fprintf(stderr, "malloc failed for child_subspaces\n");
@@ -415,18 +511,18 @@ static int cleanup_marfs_index(void) {
             }
 
             snprintf(child_subspaces, child_subspaces_len, "%.*s/%s", (int)old.len, old.data, MARFS_SUBSPACES_NAME);
-            if (rmdir(child_subspaces) != 0) {
-                if (errno != ENOTEMPTY && errno != ENOENT) {
-                    fprintf(stderr, "rmdir('%s') failed: %s\n", child_subspaces, strerror(errno));
-                    ret = -1;
-                }
+
+            if (rmdir(child_subspaces) != 0 && errno != ENOTEMPTY && errno != ENOENT) {
+                fprintf(stderr, "rmdir('%s') failed: %s\n", child_subspaces, strerror(errno));
+                ret = -1;
             }
+
             free(child_subspaces);
         }
 
-        // move this namespace up a directory (into its grandparent)
+        // move this namespace out of MDAL_subspaces
         {
-            size_t new_len = grandparent.len + 1 + basename.len + 1;  // gp + "/" + base + NUL
+            const size_t new_len = grandparent.len + 1 + basename.len + 1;
             new_path = malloc(new_len);
             if (!new_path) {
                 fprintf(stderr, "malloc failed for new_path\n");
@@ -442,15 +538,19 @@ static int cleanup_marfs_index(void) {
             }
 
             if (rename(old.data, new_path) != 0) {
-                fprintf(stderr, "rename('%s' -> '%s') failed: %s\n", old.data, new_path, strerror(errno));
+                if (errno != ENOENT) {
+                    fprintf(stderr, "rename('%s' -> '%s') failed: %s\n", old.data, new_path, strerror(errno));
+                    ret = -1;
+                }
+
                 free(new_path);
-                ret = -1;
                 continue;
             }
+
             free(new_path);
         }
 
-        // attempt to remove the old "parent" of the namespace
+        // remove the now-empty MDAL_subspaces directory
         {
             if (parent.len > 0) {
                 parent_path = malloc(parent.len + 1);
@@ -463,11 +563,9 @@ static int cleanup_marfs_index(void) {
                 memcpy(parent_path, parent.data, parent.len);
                 parent_path[parent.len] = '\0';
 
-                if (rmdir(parent_path) != 0) {
-                    if (errno != ENOTEMPTY) {
-                        fprintf(stderr, "rmdir('%s') failed: %s\n", parent_path, strerror(errno));
-                        ret = -1;
-                    }
+                if (rmdir(parent_path) != 0 && errno != ENOTEMPTY && errno != ENOENT) {
+                    fprintf(stderr, "rmdir('%s') failed: %s\n", parent_path, strerror(errno));
+                    ret = -1;
                 }
             }
 
@@ -475,69 +573,77 @@ static int cleanup_marfs_index(void) {
         }
     }
 
-    // rename the root namespace to the marfs mountpoint from the marfs config
-    const str_t rn_base = get_basename(g_state.root_namespace);
-    const str_t mm_base = get_basename(g_state.marfs_mountpoint);
+    if (g_state.source_is_sec_root) {
+        const str_t source_base = get_basename(g_state.source);
+        const str_t mountpoint_base = get_basename(g_state.marfs_mountpoint);
 
-    char* rn_path = join_path(g_state.index_parent, rn_base);
-    char* mm_path = join_path(g_state.index_parent, mm_base);
+        char* source_path = join_path(g_state.index_parent, source_base);
+        char* mountpoint_path = join_path(g_state.index_parent, mountpoint_base);
 
-    if (!mm_path || !rn_path) {
-        fprintf(stderr, "join_path failed\n");
-        free(mm_path);
-        free(rn_path);
-        return -1;
+        if (!source_path || !mountpoint_path) {
+            fprintf(stderr, "join_path failed\n");
+            free(source_path);
+            free(mountpoint_path);
+            return -1;
+        }
+
+        if (rename(source_path, mountpoint_path) != 0) {
+            fprintf(stderr, "rename('%s' -> '%s') failed: %s\n", source_path, mountpoint_path, strerror(errno));
+            free(source_path);
+            free(mountpoint_path);
+            return -1;
+        }
+
+        free(source_path);
+        free(mountpoint_path);
     }
-
-    if (rename(rn_path, mm_path) != 0) {
-        fprintf(stderr, "rename('%s' -> '%s') failed: %s\n", rn_path, mm_path, strerror(errno));
-        free(mm_path);
-        free(rn_path);
-        return -1;
-    }
-
-    free(mm_path);
-    free(rn_path);
 
     return ret;
 }
 
-// revert_marfs_index will undo everything that's in cleanup_marfs_index. This allows for indexing to be run over an
-// existing index tree without error
+// revert_marfs_index restores the physical MDAL_subspaces layout in an existing
+// index before GUFI updates it.
 static int revert_marfs_index(void) {
     int ret = 0;
 
-    // rename the marfs mountpoint from the marfs config to the root namespace
-    const str_t mm_base = get_basename(g_state.marfs_mountpoint);
-    const str_t rn_base = get_basename(g_state.root_namespace);
+    if (g_state.source_is_sec_root) {
+        const str_t mountpoint_base = get_basename(g_state.marfs_mountpoint);
+        const str_t source_base = get_basename(g_state.source);
 
-    char* mm_path = join_path(g_state.index_parent, mm_base);
-    char* rn_path = join_path(g_state.index_parent, rn_base);
+        char* mountpoint_path = join_path(g_state.index_parent, mountpoint_base);
+        char* source_path = join_path(g_state.index_parent, source_base);
 
-    if (!mm_path || !rn_path) {
-        fprintf(stderr, "join_path failed\n");
-        free(mm_path);
-        free(rn_path);
-        return -1;
-    }
-
-    if (rename(mm_path, rn_path) != 0) {
-        // if we failed to rename the root ns, then don't worry about the rest of the namespaces
-        if (errno != ENOENT) {
-            fprintf(stderr, "rename('%s' -> '%s') failed: %s\n", mm_path, rn_path, strerror(errno));
-            ret = -1;
+        if (!mountpoint_path || !source_path) {
+            fprintf(stderr, "join_path failed\n");
+            free(mountpoint_path);
+            free(source_path);
+            return -1;
         }
-        free(mm_path);
-        free(rn_path);
-        return ret;
+
+        if (rename(mountpoint_path, source_path) != 0) {
+            // if we failed to rename the root ns, then don't worry about the rest of the namespaces
+            if (errno != ENOENT) {
+                fprintf(stderr, "rename('%s' -> '%s') failed: %s\n", mountpoint_path, source_path, strerror(errno));
+                ret = -1;
+            }
+            free(mountpoint_path);
+            free(source_path);
+            return ret;
+        }
+
+        /*
+         * ENOENT is expected on the first run. Continue restoring namespace
+         * paths in case the source-named index root already exists from an
+         * interrupted earlier run.
+         */
+        free(mountpoint_path);
+        free(source_path);
     }
 
-    free(mm_path);
-    free(rn_path);
-
-    // loop through our index namespaces and add a subspaces into them. then move them down into each subspace
+    // parent namespaces must be restored before nested namespaces
     for (size_t i = 0; i < g_state.namespaces_count; i++) {
         const str_t old = g_state.namespaces[i].index_namespace;
+        if (!old.data || old.len == 0) continue;
 
         const str_t basename = get_basename(old);
         const str_t parent = get_parent(old);
@@ -546,8 +652,8 @@ static int revert_marfs_index(void) {
         char* indexed_path = NULL;
         char* parent_path = NULL;
 
-        size_t new_len = grandparent.len + 1 + basename.len + 1;  // gp + "/" + base + NUL
-        indexed_path = malloc(new_len);
+        const size_t indexed_path_len = grandparent.len + 1 + basename.len + 1;
+        indexed_path = malloc(indexed_path_len);
         if (!indexed_path) {
             fprintf(stderr, "malloc failed for indexed_path\n");
             ret = -1;
@@ -555,18 +661,16 @@ static int revert_marfs_index(void) {
         }
 
         if (grandparent.len == 1 && grandparent.data[0] == '/') {
-            snprintf(indexed_path, new_len, "/%.*s", (int)basename.len, basename.data);
+            snprintf(indexed_path, indexed_path_len, "/%.*s", (int)basename.len, basename.data);
         } else {
-            snprintf(indexed_path, new_len, "%.*s/%.*s", (int)grandparent.len, grandparent.data, (int)basename.len,
-                     basename.data);
+            snprintf(indexed_path, indexed_path_len, "%.*s/%.*s", (int)grandparent.len, grandparent.data,
+                     (int)basename.len, basename.data);
         }
 
-        // make an empty MDAL_subspaces in this namespace's parent
+        // create the namespace's MDAL_subspaces parent
         {
-            // parent is a slice, so make a real C string before mkdir()
             if (parent.len > 1) {
-                size_t parent_path_size = parent.len + 1;
-                parent_path = malloc(parent_path_size);
+                parent_path = malloc(parent.len + 1);
                 if (!parent_path) {
                     fprintf(stderr, "malloc failed for parent_path\n");
                     free(indexed_path);
@@ -574,36 +678,36 @@ static int revert_marfs_index(void) {
                     continue;
                 }
 
-                snprintf(parent_path, parent_path_size, "%.*s", (int)parent.len, parent.data);
+                snprintf(parent_path, parent.len + 1, "%.*s", (int)parent.len, parent.data);
 
-                if (mkdir(parent_path, MARFS_DIR_MODE) != 0) {
-                    if (errno != ENOTEMPTY && errno != EEXIST) {
-                        free(parent_path);
-                        free(indexed_path);
-                        continue;
-                    }
+                if (mkdir(parent_path, MARFS_DIR_MODE) != 0 && errno != EEXIST) {
+                    fprintf(stderr, "mkdir('%s') failed: %s\n", parent_path, strerror(errno));
+                    free(parent_path);
+                    free(indexed_path);
+                    ret = -1;
+                    continue;
                 }
 
                 free(parent_path);
             }
         }
 
-        // move this namespace into the MDAL_subspaces we just made
-        {
-            if (rename(indexed_path, old.data) != 0) {
+        if (rename(indexed_path, old.data) != 0) {
+            // The namespace may not be present in an existing partial index.
+            if (errno != ENOENT) {
                 fprintf(stderr, "rename('%s' -> '%s') failed: %s\n", indexed_path, old.data, strerror(errno));
-                free(indexed_path);
-                continue;
+                ret = -1;
             }
-
-            free(indexed_path);
         }
+
+        free(indexed_path);
     }
 
     return ret;
 }
 
-// marfs_indexing_global_init reads the marfs config and adds the namespaces to a global state.
+// marfs_indexing_global_init reads the MarFS config and builds paths relative to
+// the configured sec-root, independently of where GUFI starts indexing.
 static int marfs_indexing_global_init(struct input* in) {
     pthread_mutex_t marfs_erasurelock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -616,9 +720,22 @@ static int marfs_indexing_global_init(struct input* in) {
         return ret;
     }
 
-    // add index parent and root namespace to global state
-    INSTALL_STR(&g_state.index_parent, in->pos.argv[in->pos.argc - 1]);
-    INSTALL_STR(&g_state.root_namespace, in->pos.argv[0]);
+    if (install_path(&g_state.index_parent, in->pos.argv[in->pos.argc - 1]) != 0 ||
+        install_path(&g_state.source, in->pos.argv[0]) != 0) {
+        fprintf(stderr, "Error: could not store GUFI source or index path\n");
+        goto cleanup;
+    }
+
+    char* sec_root = getenv(MARFS_SEC_ROOT_ENV);
+    if (!sec_root || sec_root[0] == '\0') {
+        fprintf(stderr, "Error: %s is not set\n", MARFS_SEC_ROOT_ENV);
+        goto cleanup;
+    }
+
+    if (install_path(&g_state.sec_root, sec_root) != 0) {
+        fprintf(stderr, "Error: could not store %s\n", MARFS_SEC_ROOT_ENV);
+        goto cleanup;
+    }
 
     char* marfs_config_path = getenv(MARFS_CONFIG_ENV);
     if (!marfs_config_path || marfs_config_path[0] == '\0') {
@@ -634,11 +751,9 @@ static int marfs_indexing_global_init(struct input* in) {
         goto cleanup;
     }
 
-    // add marfs config mountpoint to global state
     INSTALL_STR(&g_state.marfs_mountpoint, g_state.marfs_cfg->mountpoint);
 
     g_state.namespaces_count = count_ns_paths(g_state.marfs_cfg->rootns);
-
     if (g_state.namespaces_count == 0) {
         fprintf(stderr, "Error: no namespaces found in MarFS config\n");
         goto cleanup;
@@ -650,15 +765,9 @@ static int marfs_indexing_global_init(struct input* in) {
         goto cleanup;
     }
 
-    {
-        const str_t rn_base = get_basename(g_state.root_namespace);
-        const str_t empty = REFSTR("", 0);
-
-        if (collect_ns_paths(g_state.marfs_cfg->rootns, empty, g_state.namespaces, &config_index,
-                             g_state.root_namespace, g_state.index_parent, rn_base) != 0) {
-            fprintf(stderr, "Error: collect_ns_paths failed\n");
-            goto cleanup;
-        }
+    if (collect_ns_paths(g_state.marfs_cfg->rootns, g_state.sec_root, g_state.namespaces, &config_index) != 0) {
+        fprintf(stderr, "Error: collect_ns_paths failed\n");
+        goto cleanup;
     }
 
     if (config_index != g_state.namespaces_count) {
@@ -669,56 +778,32 @@ static int marfs_indexing_global_init(struct input* in) {
 
     sort_namespace_pairs(g_state.namespaces, g_state.namespaces_count);
 
-    if (!validate_sec_root()) {
-        fprintf(stderr,
-                "Error: provided dir (%s) is not the root of the parent marfs namespace or marfs_config is incorrect\n",
-                g_state.root_namespace.data);
+    if (validate_source() != 0) goto cleanup;
+
+    g_state.source_is_sec_root = path_eq(g_state.source, g_state.sec_root);
+
+    if (build_index_namespace_paths() != 0) {
+        fprintf(stderr, "Error: build_index_namespace_paths failed\n");
         goto cleanup;
     }
 
-    if (revert_marfs_index() != 0) {
-        fprintf(stderr, "Error: revert_marfs_index failed\n");
-        goto cleanup;
-    }
+    // if (revert_marfs_index() != 0) {
+    //     fprintf(stderr, "Error: revert_marfs_index failed\n");
+    //     goto cleanup;
+    // }
 
     sqlite3_initialize();
 
     ret = 0;
 
 cleanup:
-    if (ret != 0) {
-        marfs_plugin_cleanup();
-    }
+    if (ret != 0) marfs_plugin_cleanup();
 
     return ret;
 }
 
-// simple check to determine if a provided file path is a namespace in the marfs config
-static int is_namespace(str_t path) {
-    if (!path.data) {
-        return 0;
-    }
-
-    for (size_t i = 0; i < g_state.namespaces_count; i++) {
-        str_t ns = g_state.namespaces[i].namespace;
-        if (!ns.data) {
-            continue;
-        }
-
-        if (ns.len != path.len) {
-            continue;
-        }
-
-        if (strncmp(ns.data, path.data, ns.len) == 0) {
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-// marfs_pre_processing_dir checks if we're about to process a marfs specific directory (MDAL_reference, MDAL_subspaces)
-// or a namespace that is no longer active in the marfs config
+// marfs_dir_action identifies MarFS implementation entries by their physical
+// owner path instead of assuming sec-root is GUFI traversal level 0.
 static plugin_dir_action marfs_dir_action(void* ptr) {
     PCS_t* pcs = ptr;
 
@@ -726,43 +811,21 @@ static plugin_dir_action marfs_dir_action(void* ptr) {
     const str_t basename = get_basename(path);
     const str_t parent = get_parent(path);
 
-    if (starts_with_mdal(basename)) {
-        // this directory starts with MDAL_
-
-        // determine if this is a marfs directory or a user dir.
-        // cases for being a marfs dir:
-        // 1. directly under sec-root
-        // 2. directly under a namespace
-        if (ROOT_NAMESPACE_LEVEL == pcs->work->level - 1 || is_namespace(parent)) {
-            if (str_t_eq_cstr(basename, MARFS_SUBSPACES_NAME, MARFS_SUBSPACES_NAME_LEN)) {
-                // this is a subspaces dir. do not process, but still descend
-                return PLUGIN_NO_PROCESS_DIR;
-            } else {
-                // this is any other marfs dir. do not process, do not descend
-                return PLUGIN_NO_PROCESS_NO_DESCEND_DIR;
-            }
-        } else {
-            return PLUGIN_PROCESS_DIR;
+    if (starts_with_mdal(basename) && is_mdal_owner(parent)) {
+        if (str_t_eq_cstr(basename, MARFS_SUBSPACES_NAME, MARFS_SUBSPACES_NAME_LEN)) {
+            // hide MDAL_subspaces itself, but descend into configured child namespaces
+            return PLUGIN_NO_PROCESS_DIR;
         }
+
+        // hide all other MDAL implementation directories
+        return PLUGIN_NO_PROCESS_NO_DESCEND_DIR;
     }
 
-    if (starts_with_mdal(get_basename(parent))) {
-        // parent directory starts with MDAL_
-        // check to see if it's even possible for this dir to be a marfs namespace
-        // cases for this being a marfs namespace:
-        // 1. grandparent is sec-root
-        // 2. grandparent is a namespace
-        const str_t grandparent = get_parent(parent);
-        if (ROOT_NAMESPACE_LEVEL == pcs->work->level - 2 || is_namespace(grandparent)) {
-            // it's possible for this to be a marfs namespace. check the marfs config to be sure that it is currently
-            // active
-            if (is_namespace(path)) {
-                return PLUGIN_PROCESS_DIR;
-            } else {
-                // this dir is not listed in the marfs config so do not process it or descend
-                return PLUGIN_NO_PROCESS_NO_DESCEND_DIR;
-            }
-        }
+    if (is_mdal_subspaces_dir(parent)) {
+        // Only namespaces present in the active config should be traversed.
+        if (is_namespace(path)) return PLUGIN_PROCESS_DIR;
+
+        return PLUGIN_NO_PROCESS_NO_DESCEND_DIR;
     }
 
     return PLUGIN_PROCESS_DIR;
@@ -829,8 +892,8 @@ static void* marfs_ctx_init(void* ptr) {
     return ctx;
 }
 
-// marfs_pre_process_file removes any marfs specific files from the gufi db, decrements every file nlink by 1, and
-// removes any marfs specific xattrs
+// marfs_pre_process_file removes MarFS xattrs, adjusts nlink, and hides MDAL files
+// directly owned by sec-root or a configured namespace.
 static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
     PCS_t* pcs = ptr;
     struct entry_data* ed = pcs->ed;
@@ -839,68 +902,51 @@ static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
     const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
 
-    // remove marfs xattr from entry
     const size_t removed = xattr_remove(&ed->xattrs, MARFS_XATTR_NAME, MARFS_XATTR_NAME_LEN);
 
-    // decrement nlink if the marfs xattr was removed
     if (removed > 0 && pcs->work->statuso.st_nlink > (nlink_t)0) {
         pcs->work->statuso.st_nlink--;
     }
 
-    // remove mdal specific files
-    if (basename.len >= MARFS_PREFIX_LEN && starts_with_mdal(basename)) {
-        // this files starts with MDAL_
-
-        const str_t parent = get_parent(path);
-
-        // determine if this is actual a marfs file or a user file
-        // cases for being a marfs file:
-        // 1. directly under sec-root
-        // 2. directly under a namespace
-        if (ROOT_NAMESPACE_LEVEL == pcs->work->level - 1 || is_namespace(parent)) {
-            // this is a marfs file. do not add it to the database
-            return PLUGIN_NO_PROCESS_FILE;
-        }
+    if (starts_with_mdal(basename) && is_mdal_owner(get_parent(path))) {
+        return PLUGIN_NO_PROCESS_FILE;
     }
 
     return PLUGIN_PROCESS_FILE;
 }
 
-// marfs_process_dir renames the root namespace in the gufi db summary table to match the mountpoint in the marfs
-// config. The actual dir gets renamed in cleanup_marfs_index. It also fixes pinode values for directories whose
-// parent is an MDAL_subspaces directory that will be removed from the final index.
+// Fix pinode only for configured namespaces whose MDAL_subspaces parent will be
+// removed from this particular index.
 static void marfs_pre_process_dir(void* ptr, void* user_data) {
     PCS_t* pcs = ptr;
     (void)user_data;
 
     const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
+
+    if (!namespace_is_rewritten(path)) return;
+
     const str_t parent = get_parent(path);
-    const str_t parent_basename = get_basename(parent);
+    if (!is_mdal_subspaces_dir(parent)) return;
 
-    // Fix pinode for directories whose parent is MDAL_subspaces (which will be removed)
-    // The pinode currently points to the MDAL_subspaces inode, but should point to the grandparent
-    if (parent_basename.data && str_t_eq_cstr(parent_basename, MARFS_SUBSPACES_NAME, MARFS_SUBSPACES_NAME_LEN)) {
-        const str_t grandparent = get_parent(parent);
+    const str_t grandparent = get_parent(parent);
+    if (!grandparent.data || grandparent.len == 0) return;
 
-        if (grandparent.data && grandparent.len > 0) {
-            size_t gp_path_size = grandparent.len + 1;
-            char* gp_path = malloc(gp_path_size);
-            if (gp_path) {
-                snprintf(gp_path, gp_path_size, "%.*s", (int)grandparent.len, grandparent.data);
-
-                struct stat st;
-                if (stat(gp_path, &st) == 0) {
-                    pcs->work->pinode = (long long int)st.st_ino;
-                } else {
-                    fprintf(stderr, "plugin: stat('%s') failed: %s\n", gp_path, strerror(errno));
-                }
-
-                free(gp_path);
-            } else {
-                fprintf(stderr, "malloc failed for gp_path\n");
-            }
-        }
+    char* grandparent_path = malloc(grandparent.len + 1);
+    if (!grandparent_path) {
+        fprintf(stderr, "malloc failed for grandparent_path\n");
+        return;
     }
+
+    snprintf(grandparent_path, grandparent.len + 1, "%.*s", (int)grandparent.len, grandparent.data);
+
+    struct stat st;
+    if (stat(grandparent_path, &st) == 0) {
+        pcs->work->pinode = (long long int)st.st_ino;
+    } else {
+        fprintf(stderr, "plugin: stat('%s') failed: %s\n", grandparent_path, strerror(errno));
+    }
+
+    free(grandparent_path);
 }
 
 // marfs_process_dir renames the root namespace in the gufi db summary table to match the mountpoint in the marfs
@@ -913,9 +959,8 @@ static void marfs_post_process_dir(void* ptr, void* user_data) {
     const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename = get_basename(path);
 
-    // determine if this is the root namespace dir
-    if (ROOT_NAMESPACE_LEVEL == pcs->work->level &&
-        str_t_eq_cstr(g_state.root_namespace, pcs->work->name, pcs->work->name_len)) {
+    // Only a sec-root index is renamed to the MarFS mountpoint.
+    if (g_state.source_is_sec_root && path_eq(path, g_state.source)) {
         // Rename root namespace to mountpoint in database
         const str_t mountpoint = get_basename(g_state.marfs_mountpoint);
 
