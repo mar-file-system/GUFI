@@ -175,7 +175,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
     count += fwrite(ed->osstext2, 1, osstext2_len, file);
     count += fwrite(&delim, 1, 1, file);
 
-    count += fprintf(file, "%lld%c",             work->pinode,             delim);
+    count += fprintf(file, "%" STAT_ino "%c",    work->pinode,             delim);
     count += fprintf(file, "\n");
 
     return count;
@@ -224,7 +224,7 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
     write_with_resize(buf, size, offset, "%" OSSTEXT_PREFIX_FORMAT, strlen(ed->osstext2));
     write_with_resize(buf, size, offset, "%s%c",               ed->osstext2,             delim);
 
-    write_with_resize(buf, size, offset, "%lld%c",             work->pinode,             delim);
+    write_with_resize(buf, size, offset, "%" STAT_ino "%c",    work->pinode,             delim);
     write_with_resize(buf, size, offset, "\n");
 
     return *offset - orig_offset;

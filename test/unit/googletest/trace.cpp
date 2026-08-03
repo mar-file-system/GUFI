@@ -181,7 +181,7 @@ static int new_format(char *line, const std::size_t size, struct work *work, str
                                "%s%c"
                                "%" OSSTEXT_PREFIX_FORMAT
                                "%s%c"
-                               "%lld%c"
+                               "%" STAT_ino "%c"
                                "\n",
                                              delim,
                                work->crtime, delim,
@@ -386,7 +386,7 @@ static int old_format(char *line, const std::size_t size, struct work *work, str
                                "%d%c"
                                "%s%c"
                                "%s%c"
-                               "%lld%c"
+                               "%" STAT_ino "%c"
                                "\n",
                                              delim,
                                work->crtime, delim,

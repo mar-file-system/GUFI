@@ -116,7 +116,7 @@ static int printits(struct input *in, struct work *pwork, struct entry_data *ed,
   /* this one is for create time which posix doesnt have */
   fprintf(out,"%c", in->delim);
   /* moved this to end because we would like to use this for input to gufi_trace2index load from file */
-  fprintf(out, "%lld%c", pwork->pinode, in->delim);
+  fprintf(out, "%" STAT_ino "%c", pwork->pinode, in->delim);
   fprintf(out, "%d%c", ed->suspect, in->delim);
   fprintf(out,"\n");
   return 0;

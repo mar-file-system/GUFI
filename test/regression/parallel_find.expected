@@ -144,24 +144,24 @@ group 1001
 
 # print path % directives for non-symlinks
 $ parallel_find -n 2 -t fd --format "%H %d %h %f %p %P %m %M %y\n" "prefix"
-prefix 0  prefix prefix  775 drwxrwxr-x d
-prefix 1 prefix/ .hidden prefix/.hidden .hidden 664 -rw-rw-r-- f
-prefix 1 prefix/ 1KB prefix/1KB 1KB 664 -rw-rw-r-- f
-prefix 1 prefix/ 1MB prefix/1MB 1MB 664 -rw-rw-r-- f
-prefix 1 prefix/ directory prefix/directory directory 775 drwxrwxr-x d
-prefix 1 prefix/ empty_directory prefix/empty_directory empty_directory 775 drwxrwxr-x d
-prefix 1 prefix/ leaf_directory prefix/leaf_directory leaf_directory 775 drwxrwxr-x d
-prefix 1 prefix/ old_file prefix/old_file old_file 664 -rw-rw-r-- f
-prefix 1 prefix/ repeat_name prefix/repeat_name repeat_name 664 -rw-rw-r-- f
-prefix 1 prefix/ unusual#? directory , prefix/unusual#? directory , unusual#? directory , 775 drwxrwxr-x d
-prefix 2 prefix/directory/ executable prefix/directory/executable directory/executable 777 -rwxrwxrwx f
-prefix 2 prefix/directory/ readonly prefix/directory/readonly directory/readonly 444 -r--r--r-- f
-prefix 2 prefix/directory/ subdirectory prefix/directory/subdirectory directory/subdirectory 775 drwxrwxr-x d
-prefix 2 prefix/directory/ writable prefix/directory/writable directory/writable 666 -rw-rw-rw- f
-prefix 2 prefix/leaf_directory/ leaf_file1 prefix/leaf_directory/leaf_file1 leaf_directory/leaf_file1 664 -rw-rw-r-- f
-prefix 2 prefix/leaf_directory/ leaf_file2 prefix/leaf_directory/leaf_file2 leaf_directory/leaf_file2 664 -rw-rw-r-- f
-prefix 2 prefix/unusual#? directory ,/ unusual, name?# prefix/unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 664 -rw-rw-r-- f
-prefix 3 prefix/directory/subdirectory/ repeat_name prefix/directory/subdirectory/repeat_name directory/subdirectory/repeat_name 664 -rw-rw-r-- f
+prefix 0 prefix prefix prefix  775 drwxrwxr-x d
+prefix 1 prefix .hidden prefix/.hidden .hidden 664 -rw-rw-r-- f
+prefix 1 prefix 1KB prefix/1KB 1KB 664 -rw-rw-r-- f
+prefix 1 prefix 1MB prefix/1MB 1MB 664 -rw-rw-r-- f
+prefix 1 prefix directory prefix/directory directory 775 drwxrwxr-x d
+prefix 1 prefix empty_directory prefix/empty_directory empty_directory 775 drwxrwxr-x d
+prefix 1 prefix leaf_directory prefix/leaf_directory leaf_directory 775 drwxrwxr-x d
+prefix 1 prefix old_file prefix/old_file old_file 664 -rw-rw-r-- f
+prefix 1 prefix repeat_name prefix/repeat_name repeat_name 664 -rw-rw-r-- f
+prefix 1 prefix unusual#? directory , prefix/unusual#? directory , unusual#? directory , 775 drwxrwxr-x d
+prefix 2 prefix/directory executable prefix/directory/executable directory/executable 777 -rwxrwxrwx f
+prefix 2 prefix/directory readonly prefix/directory/readonly directory/readonly 444 -r--r--r-- f
+prefix 2 prefix/directory subdirectory prefix/directory/subdirectory directory/subdirectory 775 drwxrwxr-x d
+prefix 2 prefix/directory writable prefix/directory/writable directory/writable 666 -rw-rw-rw- f
+prefix 2 prefix/leaf_directory leaf_file1 prefix/leaf_directory/leaf_file1 leaf_directory/leaf_file1 664 -rw-rw-r-- f
+prefix 2 prefix/leaf_directory leaf_file2 prefix/leaf_directory/leaf_file2 leaf_directory/leaf_file2 664 -rw-rw-r-- f
+prefix 2 prefix/unusual#? directory , unusual, name?# prefix/unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 664 -rw-rw-r-- f
+prefix 3 prefix/directory/subdirectory repeat_name prefix/directory/subdirectory/repeat_name directory/subdirectory/repeat_name 664 -rw-rw-r-- f
 
 # print path % directives for symlinks
 $ parallel_find -n 2 -t l --format "%p %l %m %M\n" "prefix" | awk '{ $3=777; $4="lrwxrwxrwx"; print }'
@@ -232,11 +232,11 @@ prefix/unusual#? directory ,/unusual, name?#
 
 # empty path
 $ parallel_find -n 2 ""
-Error: Cannot stat "": No such file or directory (2)
+Error: Cannot lstat "": No such file or directory (2)
 
 # nonexistent file
 $ parallel_find -n 2 "prefix/nonexistent_file"
-Error: Cannot stat "prefix/nonexistent_file": No such file or directory (2)
+Error: Cannot lstat "prefix/nonexistent_file": No such file or directory (2)
 
 # single unsupported type
 $ parallel_find -n 2 -t s "prefix" > /dev/null

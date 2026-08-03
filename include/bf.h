@@ -724,7 +724,7 @@ struct work {
     struct stat      statuso;
     time_t           crtime;
     StatCalled       stat_called;
-    long long int    pinode;
+    ino_t            pinode;
     size_t           recursion_level;
 
     /* probably shouldn't be here */

@@ -209,7 +209,7 @@ static int format_output(struct work *work, struct entry_data *ed,
                     break;
                 case 'h': /* dirname(work->name) */
                     {
-                        const size_t offset = work->name_len - work->basename_len;
+                        const size_t offset = work->name_len - work->basename_len - 1; /* -1 to remove trailing slash */
                         const char orig = work->name[offset];
                         work->name[offset] = '\0';
                         out += SNPRINTF(out, rem, "%s", work->name);
@@ -221,6 +221,9 @@ static int format_output(struct work *work, struct entry_data *ed,
                     break;
                 case 'i':
                     out += SNPRINTF(out, rem, "%" STAT_ino, work->statuso.st_ino);
+                    break;
+                case 'I': /* non-standard; incorrect at starting directory */
+                    out += SNPRINTF(out, rem, "%" STAT_ino, work->pinode);
                     break;
                 /* case 'k': */
                 case 'l':
@@ -414,6 +417,40 @@ static int processfile(QPTPool_ctx_t *ctx, void *data) {
     return rc;
 }
 
+static int get_root_pinode(struct work *work, const char *path, const size_t path_len) {
+    char *parent = NULL;
+
+    if (S_ISDIR(work->statuso.st_mode)) {
+        SNFORMAT_S_ALLOC(&parent, 2,
+                         path, path_len,
+                         "/..", (size_t) 3);
+    }
+    else {
+        const size_t dir_len = dirname_len(path, path_len);
+        if (dir_len == 0) {
+            SNFORMAT_S_ALLOC(&parent, 1,
+                             ".", (size_t) 1);
+        }
+        else {
+            SNFORMAT_S_ALLOC(&parent, 1,
+                             path, dir_len);
+        }
+    }
+
+    struct stat st;
+    if (lstat(parent, &st) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Cannot stat parent directory of \"%s\": %s (%d)\n",
+                path, strerror(err), err);
+        free(parent);
+        return 1;
+    }
+    free(parent);
+
+    work->pinode = st.st_ino;
+    return 0;
+}
+
 static void sub_help(void) {
    printf("input_dir...      walk one or more trees to search files\n");
    printf("\n");
@@ -478,11 +515,29 @@ int main(int argc, char *argv[]) {
         work->orig_root.data = (char *) path;
         work->orig_root.len = path_len + 1;  /* add 1 to remove the slash added from descend */
 
-        /* input path that are links are followed (find -H) */
-        if (stat(path, &work->statuso) != 0) {
+        if (lstat(path, &work->statuso) != 0) {
             const int err = errno;
-            fprintf(stderr, "Error: Cannot stat \"%s\": %s (%d)\n",
+            fprintf(stderr, "Error: Cannot lstat \"%s\": %s (%d)\n",
                     path, strerror(err), err);
+            free(work);
+            rc = 1;
+            continue;
+        }
+
+        /* find -H
+         *     if the input path is a symbolic link and the symbolic
+         *     link can be resolved, use stat pulled from the
+         *     target. otherwise, fall back to the lstat data
+         */
+        if (S_ISLNK(work->statuso.st_mode)) {
+            struct stat st;
+            if (stat(path, &st) == 0) {
+                work->statuso = st;
+            }
+        }
+
+        /* special case for getting parent of starting path */
+        if (get_root_pinode(work, path, path_len) != 0) {
             free(work);
             rc = 1;
             continue;
@@ -491,7 +546,8 @@ int main(int argc, char *argv[]) {
         if (S_ISDIR(work->statuso.st_mode)) {
             QPTPool_enqueue(ctx, processdir, work);
         }
-        else if (S_ISREG(work->statuso.st_mode)) {
+        else if (S_ISREG(work->statuso.st_mode) ||
+                 S_ISLNK(work->statuso.st_mode)) {
             QPTPool_enqueue(ctx, processfile, work);
         }
         else {
