@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #include "BottomUp.h"
+#include "config.h"
 #include "dbutils.h"
 #include "external_attach.h"
 #include "rollup.h"

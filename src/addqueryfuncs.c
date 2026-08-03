@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "addqueryfuncs.h"
+#include "config.h"
 #include "utils.h"
 
 static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)

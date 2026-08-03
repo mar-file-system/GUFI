@@ -77,6 +77,7 @@ OF SUCH DAMAGE.
 
 #include "addqueryfuncs.h"
 #include "bf.h"
+#include "config.h"
 #include "dbutils.h"
 
 static void test_str(const std::vector<std::pair <const char *, const char *> > &testcases,

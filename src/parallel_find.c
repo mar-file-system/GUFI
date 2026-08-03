@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 #include "OutputBuffers.h"
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "config.h"
 #include "descend.h"
 #include "print.h"
 #include "utils.h"

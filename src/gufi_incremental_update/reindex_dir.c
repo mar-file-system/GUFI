@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "dbutils.h"
 #include "index.h"
 #include "plugin.h"

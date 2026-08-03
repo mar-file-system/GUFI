@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "plugin.h"
 #include "trie.h"
 

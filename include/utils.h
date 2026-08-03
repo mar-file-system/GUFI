@@ -74,7 +74,6 @@ OF SUCH DAMAGE.
 
 #include "SinglyLinkedList.h"
 #include "bf.h"
-#include "config.h"
 #include "descend.h"
 #include "plugin.h"
 #include "xattrs.h"

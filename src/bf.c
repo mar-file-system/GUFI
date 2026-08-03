@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "bf.h"
+#include "config.h"
 #include "dbutils.h"
 #include "debug.h"
 #include "external_attach.h"

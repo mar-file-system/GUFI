@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "debug.h"
 #include "template_db.h"
 #include "str.h"

@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "config.h"
 #include "dbutils.h"
 #include "rollup.h"
 #include "str.h"

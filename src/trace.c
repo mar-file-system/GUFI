@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "SinglyLinkedList.h"
+#include "config.h"
 #include "trace.h"
 #include "utils.h"
 #include "xattrs.h"

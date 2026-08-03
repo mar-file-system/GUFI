@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "dbutils.h"
 #include "debug.h"
 #include "rollup.h"
