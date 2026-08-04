@@ -194,6 +194,7 @@ GENERATETREE="${CURRENT_BINARY_DIR}/generatetree.sh"
 GENERATEUIDSUMMARY="${BINARY_DIR}/examples/generateuidsummary"
 GENGIDSUMMARYAVOIDENTRIESSCAN="${BINARY_DIR}/examples/gengidsummaryavoidentriesscan"
 GENUIDSUMMARYAVOIDENTRIESSCAN="${BINARY_DIR}/examples/genuidsummaryavoidentriesscan"
+GEN_FS_CHANGES="${BINARY_DIR}/contrib/gen_fs_changes"
 GROUPFILESPACEHOG="${BINARY_DIR}/examples/groupfilespacehog"
 GROUPFILESPACEHOGUSESUMMARY="${BINARY_DIR}/examples/groupfilespacehogusesummary"
 GUFI_DIR2INDEX="${BINARY_DIR}/src/gufi_dir2index"
@@ -230,6 +231,7 @@ PARALLEL_FIND="${BINARY_DIR}/src/parallel_find"
 PARALLEL_RMR="${BINARY_DIR}/src/parallel_rmr"
 PUGSQL="${GUFI_TOOL} pugsql"
 QUERYDBS="${GUFI_TOOL} querydbs"
+REPLAY_FS_CHANGES="${BINARY_DIR}/contrib/replay_fs_changes.sh"
 RUN_VT="${BINARY_DIR}/src/run_vt"
 SBATCH_FAKE="${BINARY_DIR}/test/regression/sbatch.fake"
 SPLIT_TRACE="${BINARY_DIR}/contrib/split_trace"
@@ -299,6 +301,7 @@ replace() {
     s%${GENERATEUIDSUMMARY}%generateuidsummary%g;
     s%${GENGIDSUMMARYAVOIDENTRIESSCAN}%gengidsummaryavoidentriesscan%g;
     s%${GENUIDSUMMARYAVOIDENTRIESSCAN}%genuidsummaryavoidentriesscan%g;
+    s%${GEN_FS_CHANGES}%gen_fs_changes%g;
     s%${GROUPFILESPACEHOG}%groupfilespacehog%g;
     s%${GROUPFILESPACEHOGUSESUMMARY}%groupfilespacehogusesummary%g;
     s%${GUFI_DIR2INDEX}%gufi_dir2index%g;
@@ -335,6 +338,7 @@ replace() {
     s%${PARALLEL_RMR}%parallel_rmr%g;
     s%${PUGSQL}%pugsql%g;
     s%${QUERYDBS}%querydbs%g;
+    s%${REPLAY_FS_CHANGES}%replay_fs_changes%g;
     s%${RUN_VT}%run_vt%g;
     s%${SBATCH_FAKE}%sbatch%g;
     s%${SPLIT_TRACE}%split_trace%g;

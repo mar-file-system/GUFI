@@ -137,8 +137,17 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                "/", 1,
                DBNAME, DBNAME_LEN);
 
-    if (!attachdb(index_dbname, db, "tree", SQLITE_OPEN_READONLY, 1, NULL)) {
-        goto free_index_dbname;
+    /* TODO: keep track of uri so only basename needs converting */
+    const size_t attach_name_size = index_dbname_len * 3 + 1;
+    char *attach_name = malloc(attach_name_size);
+    size_t converted_len = index_dbname_len; /* unused */
+    const size_t attach_name_len = sqlite_uri_path(attach_name, attach_name_size,
+                                                   index_dbname, &converted_len);
+    attach_name[attach_name_len] = '\0';
+    free(index_dbname);
+
+    if (!attachdb(attach_name, db, "tree", SQLITE_OPEN_READONLY, 1, NULL)) {
+        goto free_attach_name;
     }
 
     char *err = NULL;
@@ -155,10 +164,10 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     sqlite3_finalize(res);
 
   detach_db:
-    detachdb(index_dbname, db, "tree", 1, NULL);
+    detachdb(attach_name, db, "tree", 1, NULL);
 
-  free_index_dbname:
-    free(index_dbname);
+  free_attach_name:
+    free(attach_name);
 
   close_dir:
     closedir(dir);

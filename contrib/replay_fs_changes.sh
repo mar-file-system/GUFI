@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,81 +61,25 @@
 
 
 
-set(CONTRIB_SOURCES
-  gen_fs_changes.c
-  gendir.c                # simple source tree generator
-)
+set -e
 
-# potentially useful C++ executables
-if (CMAKE_CXX_COMPILER)
-  list(APPEND CONTRIB_SOURCES
-    make_testindex.cpp    # a more complex index generator
-    verifytrace.cpp
-    verifytraceintree.cpp
-  )
-endif()
-
-# build C/C++ sources that depend on libGUFI
-foreach(SOURCE ${CONTRIB_SOURCES})
-  # NAME_WE removes the directory and the longest extension
-  get_filename_component(TARGET "${SOURCE}" NAME_WE)
-  add_executable("${TARGET}" "${SOURCE}")
-  target_link_libraries("${TARGET}" ${COMMON_LIBRARIES})
-  if (DEP_AI)
-    # not really needed but not all linkers remove unused libraries
-    set_property(TARGET "${TARGET}" PROPERTY BUILD_RPATH "${DEP_INSTALL_PREFIX}/llama.cpp/lib")
-  endif()
-  add_dependencies("${TARGET}" install_dependencies)
-endforeach()
-
-set(CHECKSTYLE)
-
-# add 'make shellcheck'
-find_program(SHELLCHECK shellcheck)
-if (SHELLCHECK)
-  message(STATUS "Found shellcheck: ${SHELLCHECK}")
-  configure_file(shellcheck.sh shellcheck.sh @ONLY)
-  add_custom_target(shellcheck
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/shellcheck.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE shellcheck)
-else()
-  message(STATUS "shellcheck not found")
-endif()
-
-# add 'make pylint'
-find_program(PYLINT pylint)
-if (PYLINT)
-  message(STATUS "Found pylint: ${PYLINT}")
-  configure_file(pylint.sh pylint.sh @ONLY)
-  add_custom_target(pylint
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/pylint.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE pylint)
-else()
-  message(STATUS "pylint not found")
-endif()
-
-# add 'make checkstyle'
-if (CHECKSTYLE)
-  message(STATUS "checkstyle will run: ${CHECKSTYLE}")
-  add_custom_target(checkstyle
-    DEPENDS ${CHECKSTYLE})
-else()
-  message(STATUS "checkstyle disabled")
-endif()
-
-# potentially useful scripts
-set(USEFUL
-  canned_queries.sh
-  gentrace.py
-  hashes.py
-  replay_fs_changes.sh
-  trace_anonymizer.py
-)
-
-foreach(file ${USEFUL})
-  configure_file("${file}" "${file}" @ONLY)
-endforeach()
-
-add_subdirectory(CI)
-add_subdirectory(plugins)
-add_subdirectory(stats)
+# read from stdin
+while IFS="|" read -r op type path mv_dst
+do
+    case "${op}" in
+        "create")
+            if [[ "${type}" == "dir" ]]
+            then
+                mkdir "${path}"
+            else
+                touch "${path}"
+            fi
+            ;;
+        "move")
+            mv "${path}" "${mv_dst}"
+            ;;
+        "delete")
+            rm -r "${path}"
+            ;;
+    esac
+done

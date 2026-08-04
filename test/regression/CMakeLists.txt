@@ -197,6 +197,7 @@ set(OTHERS
   deploy
   external_attach
   external_copy
+  fs_changes
   gufi_distributed
   gufi_find_outliers
   gufi_incremental_update
