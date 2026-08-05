@@ -191,7 +191,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     /* push actual work */
     descend(ctx, &pa->in, work, dir, 0,
-            wrap_work, tree,
+            try_skip_lstat, wrap_work, tree,
             processdir, func, &nda,
             &ctrs);
 

@@ -285,7 +285,7 @@ int index_dir(str_t *topath, const int dir2index,
         }
 
         descend(ctx, in, work, dir, 1,
-                NULL, NULL,
+                try_skip_lstat, NULL, NULL,
                 processdir, (*process_dir == PLUGIN_PROCESS_DIR)?index_nondir:NULL, &inda,
                 ctrs);
 

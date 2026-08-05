@@ -254,7 +254,7 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
 
     /* process children */
     descend(ctx, &pa->in, work, dir, 0,
-            NULL, NULL,
+            try_skip_lstat, NULL, NULL,
             cpr_dir,enqueue_nondir, &nondir_args,
             NULL);
 

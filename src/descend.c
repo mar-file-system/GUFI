@@ -80,7 +80,9 @@ static int work_serialize_and_free(const int fd, QPTPool_f func, void *work, siz
 }
 #endif
 
-struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint64_t *no_print_errno) {
+static struct work *try_skip_stat3_wrapper(struct dirent *entry, struct work *work, const uint64_t *no_print_errno,
+                                           int (*stat3_wrapper)(const char *name, struct stat *st, time_t *crtime,
+                                                                StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno)) {
     work->statuso.st_ino = entry->d_ino;
 
     switch (entry->d_type) {
@@ -101,14 +103,21 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint6
         case DT_UNKNOWN:
         default:
             /* some filesystems don't support d_type - fall back to calling lstat */
-            if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
+            if (stat3_wrapper(work->name, &work->statuso, &work->crtime,
                               &work->stat_called, 1, no_print_errno) != 0) {
                 return NULL;
             }
             break;
     }
-
     return work;
+}
+
+struct work *try_skip_stat(struct dirent *entry, struct work *work, const uint64_t *no_print_errno) {
+    return try_skip_stat3_wrapper(entry, work, no_print_errno, stat_wrapper);
+}
+
+struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint64_t *no_print_errno) {
+    return try_skip_stat3_wrapper(entry, work, no_print_errno, lstat_wrapper);
 }
 
 /*
@@ -124,6 +133,7 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint6
 int descend(QPTPool_ctx_t *ctx,
             struct input *in, struct work *work,
             DIR *dir, const int skip_db,
+            struct work *(*try_skip_stat3)(struct dirent *entry, struct work *work, const uint64_t *no_print_errno),
             wrap_dir_f wrap_dir, void *wrap_dir_ptr,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters) {
@@ -166,7 +176,7 @@ int descend(QPTPool_ctx_t *ctx,
 
             child->statuso.st_ino = dir_child->d_ino;
 
-            if (!try_skip_lstat(dir_child, child, in->no_print_errno)) {
+            if (!try_skip_stat3(dir_child, child, in->no_print_errno)) {
                 free(child);
                 continue;
             }

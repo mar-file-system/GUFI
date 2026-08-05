@@ -271,7 +271,7 @@ static int check_entries_count(struct PoolArgs *pa, struct work *work, size_t *c
         descend(ctx,
                 &pa->in, work,
                 dir, 1,
-                NULL, NULL,
+                try_skip_stat, NULL, NULL,
                 find_top, NULL, NULL,
                 NULL);
 
@@ -722,7 +722,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
         descend(ctx,
                 &pa->in, work,
                 dir, 1,
-                NULL, NULL,
+                try_skip_stat, NULL, NULL,
                 find_top, NULL, NULL,
                 NULL);
         goto close_dir;
@@ -812,7 +812,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
         descend(ctx,
                 &pa->in, work,
                 dir, 1,
-                NULL, NULL,
+                try_skip_lstat, NULL, NULL,
                 find_top, NULL, NULL,
                 NULL);
     }

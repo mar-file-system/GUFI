@@ -304,7 +304,7 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
     }
 
     descend(ctx, &pa->in, work, dir, 1,
-            NULL, NULL,
+            try_skip_lstat, NULL, NULL,
             processdir, NULL, NULL,
             NULL);
 

@@ -199,7 +199,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                  * not used to generate the new treesummary table
                  */
                 descend(ctx, &pa->in, passmywork, dir, 0,
-                        NULL, NULL,
+                        try_skip_stat, NULL, NULL,
                         processdir, NULL, NULL,
                         NULL);
 

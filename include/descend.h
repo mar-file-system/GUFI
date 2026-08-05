@@ -87,6 +87,7 @@ struct descend_counters {
     size_t external_dbs;
 };
 
+struct work *try_skip_stat (struct dirent *entry, struct work *work, const uint64_t *no_print_errno);
 struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint64_t *no_print_errno);
 
 /*
@@ -96,6 +97,7 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint6
 int descend(QPTPool_ctx_t *ctx,
             struct input *in, struct work *work,
             DIR *dir, const int skip_db,
+            struct work *(*try_skip_stat3)(struct dirent *entry, struct work *work, const uint64_t *no_print_errno),
             wrap_dir_f wrap_dir, void *wrap_dir_ptr,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters);

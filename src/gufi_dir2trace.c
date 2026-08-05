@@ -207,7 +207,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
   descend_tree:
     descend(ctx, in, work, dir, 1,
-            NULL, NULL,
+            try_skip_lstat, NULL, NULL,
             processdir, process_dir?process_nondir:NULL, &nda,
             &ctrs);
 

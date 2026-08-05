@@ -130,7 +130,7 @@ TEST(descend, builddir) {
 
     // bad work; rest of inputs don't matter
     EXPECT_EQ(descend(nullptr, nullptr, nullptr, nullptr, 0,
-                      nullptr, nullptr,
+                      try_skip_lstat, nullptr, nullptr,
                       nullptr, nullptr, nullptr,
                       nullptr), 1);
 
@@ -139,7 +139,7 @@ TEST(descend, builddir) {
         in.max_level = 0;
         work->level = 1;
         EXPECT_EQ(descend(nullptr, &in, work, dir, 0,
-                          nullptr, nullptr,
+                          try_skip_lstat, nullptr, nullptr,
                           nullptr, nullptr, nullptr,
                           &ctrs), 0);
 
@@ -155,7 +155,7 @@ TEST(descend, builddir) {
         in.max_level = 1;
         work->level = 0;
         EXPECT_EQ(descend(ctx, &in, work, dir, 0,
-                          nullptr, nullptr,
+                          try_skip_lstat, nullptr, nullptr,
                           [](QPTPool_ctx_t *, void *data) -> int {
                               free(data);
                               return 0;
@@ -173,7 +173,7 @@ TEST(descend, builddir) {
     {
         rewinddir(dir);
         EXPECT_EQ(descend(ctx, &in, work, dir, 1,
-                          nullptr, nullptr,
+                          try_skip_lstat, nullptr, nullptr,
                           [](QPTPool_ctx_t *, void *data) -> int {
                               free(data);
                               return 0;
@@ -191,7 +191,7 @@ TEST(descend, builddir) {
         rewinddir(dir);
         in.subdir_limit = 1;
         EXPECT_EQ(descend(ctx, &in, work, dir, 0,
-                          nullptr, nullptr,
+                          try_skip_lstat, nullptr, nullptr,
                           [](QPTPool_ctx_t *, void *data) -> int {
                               free(data);
                               return 0;
@@ -229,7 +229,7 @@ TEST(descend, null_processdir) {
     struct descend_counters ctrs = {};
 
     EXPECT_EQ(descend(ctx, &in, work, dir, 0,
-                      nullptr, nullptr,
+                      try_skip_lstat, nullptr, nullptr,
                       nullptr, nullptr, nullptr,
                       &ctrs), 0);
 
@@ -257,6 +257,7 @@ TEST(descend, wrap_dir) {
     EXPECT_EQ(QPTPool_start(ctx), 0);
 
     EXPECT_EQ(descend(ctx, &in, work, dir, 0,
+                      try_skip_lstat,
                       [](struct work *work, void *) -> void * {
                           free(work);
                           return NULL;
@@ -343,7 +344,7 @@ TEST(descend, swap) {
     struct descend_counters ctrs;
 
     EXPECT_EQ(descend(ctx, &in, work, dir, 0,
-                      nullptr, nullptr,
+                      try_skip_lstat, nullptr, nullptr,
                       [](QPTPool_ctx_t *, void *data) -> int {
                           free(data);
                           return 0;
