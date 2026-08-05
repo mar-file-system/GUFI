@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
+#include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -129,7 +130,7 @@ static int index_nondir(struct work *entry, struct entry_data *ed, void *args) {
        source (e.g. a pseudo-file read) instead of statx. If no plugin
        provides it, fall back to statx exactly as before. */
     if (!plugins_stat_file(&in->plugins, &pcs, inda->id)) {
-        if (fstatat_wrapper(entry, ed, 1, NULL) != 0) {
+        if (fstatat_wrapper(entry, ed, AT_SYMLINK_NOFOLLOW, 1, NULL) != 0) {
             rc = 1;
             goto out;
         }

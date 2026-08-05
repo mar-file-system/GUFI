@@ -110,6 +110,7 @@ struct UserArgs {
     size_t user_struct_size;
     size_t min_level;
     size_t max_level;
+    int nofollow_symlink; /* 0 or AT_SYMLINK_NOFOLLOW */
     BU_descend_f descend;
     BU_ascend_f ascend;
     int track_non_dirs;
@@ -331,7 +332,7 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
             struct entry_data ed;
             ed.parent_fd = dir_fd;
 
-            if (fstatat_wrapper(&child, &ed, 1, NULL) != 0) {
+            if (fstatat_wrapper(&child, &ed, ua->nofollow_symlink, 1, NULL) != 0) {
                 return 1;
             }
 
@@ -425,6 +426,7 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
 QPTPool_ctx_t *parallel_bottomup_init(const size_t thread_count,
                                       const size_t user_struct_size,
                                       const size_t min_level, const size_t max_level,
+                                      const int nofollow_symlink,
                                       BU_descend_f descend, BU_ascend_f ascend,
                                       const int track_non_dirs,
                                       const int generate_alt_name) {
@@ -438,6 +440,7 @@ QPTPool_ctx_t *parallel_bottomup_init(const size_t thread_count,
     ua->user_struct_size = user_struct_size;
     ua->min_level = min_level;
     ua->max_level = max_level;
+    ua->nofollow_symlink = nofollow_symlink,
     ua->descend = descend?descend:noop_descend;
     ua->ascend = ascend?ascend:noop_ascend;
     ua->track_non_dirs = track_non_dirs;
@@ -572,6 +575,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       const str_t *path_list,
                       const size_t thread_count,
                       const size_t user_struct_size,
+                      const int nofollow_symlink,
                       BU_descend_f descend, BU_ascend_f ascend,
                       const int track_non_dirs,
                       const int generate_alt_name,
@@ -585,6 +589,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
 
     QPTPool_ctx_t *ctx = parallel_bottomup_init(thread_count, user_struct_size,
                                                 min_level, max_level,
+                                                nofollow_symlink,
                                                 descend, ascend,
                                                 track_non_dirs, generate_alt_name);
     if (!ctx) {

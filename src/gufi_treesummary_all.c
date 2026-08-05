@@ -240,6 +240,7 @@ int main(int argc, char *argv[]) {
                                      &in.path_list,
                                      in.maxthreads,
                                      sizeof(struct treesummary),
+                                     0, /* descending an index, so allow for symlinks to subtrees */
                                      desc, treesummary_ascend,
                                      0,
                                      0,

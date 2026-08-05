@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <cstdio>
 #include <cstdlib>
+#include <fcntl.h>
 #include <string>
 #include <unistd.h>
 
@@ -100,6 +101,7 @@ static int parallel_bottomup_wrapper(char **root_names, const std::size_t root_c
                              nullptr,
                              thread_count,
                              user_struct_size,
+                             AT_SYMLINK_NOFOLLOW,
                              descend, ascend,
                              track_non_dirs,
                              generate_alt_name,

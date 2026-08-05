@@ -911,6 +911,7 @@ int main(int argc, char *argv[]) {
                                      &pa.in.path_list,
                                      pa.in.maxthreads,
                                      sizeof(struct RollUp),
+                                     0, /* descending an index, so allow for symlinks to subtrees */
                                      desc, rollup_ascend,
                                      0,
                                      1,

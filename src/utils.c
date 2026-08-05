@@ -967,7 +967,7 @@ int lstat_wrapper(const char *name, struct stat *st, time_t *crtime,
 }
 
 /* used by gufi_dir2index and gufi_dir2trace */
-int fstatat_wrapper(struct work *entry, struct entry_data *ed,
+int fstatat_wrapper(struct work *entry, struct entry_data *ed, const int nofollow_symlink,
                     const int print_err, const uint64_t *no_print_errno) {
     /* don't duplicate work */
     if (entry->stat_called != STAT_NOT_CALLED) {
@@ -979,7 +979,7 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed,
     #if HAVE_STATX
     struct statx stx;
     if (statx(ed->parent_fd, basename,
-              AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
+              AT_STATX_DONT_SYNC | nofollow_symlink,
               STATX_ALL, &stx) != 0) {
         if (print_err) {
             const int err = errno;
@@ -995,7 +995,7 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed,
 
     entry->stat_called = STATX_CALLED;
     #else
-    if (fstatat(ed->parent_fd, basename, &entry->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
+    if (fstatat(ed->parent_fd, basename, &entry->statuso, nofollow_symlink) != 0) {
         if (print_err) {
             const int err = errno;
             if (!no_print_errno_set(no_print_errno, err)) {

@@ -188,8 +188,7 @@ int stat_wrapper(const char *name, struct stat *st, time_t *crtime,
 /* try to call statx if available, otherwise, call lstat */
 int lstat_wrapper(const char *name, struct stat *st, time_t *crtime,
                   StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno);
-/* used by gufi_dir2index and gufi_dir2trace */
-int fstatat_wrapper(struct work *entry, struct entry_data *ed,
+int fstatat_wrapper(struct work *entry, struct entry_data *ed, const int nofollow_symlink, /* 0 or AT_SYMLINK_NOFOLLOW */
                     const int print_err, const uint64_t *no_print_errno);
 
 /* make sure --path-list is followed by at most 1 root directory argument */

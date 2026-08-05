@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -131,6 +132,7 @@ int main(int argc, char * argv[]) {
                                      NULL,
                                      in.maxthreads,
                                      sizeof(struct BottomUp),
+                                     AT_SYMLINK_NOFOLLOW, /* delete the symlink, not the thing pointed to */
                                      rm_nondir, rm_dir,
                                      1,
                                      0,

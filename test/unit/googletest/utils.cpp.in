@@ -1304,13 +1304,13 @@ TEST(fstatat_wrapper, bad) {
     for(int print_err : {0, 1}) {
         for(const uint64_t *bitfield : {NO_PRINT_ERRNO, PRINT_ERRNO}) {
             work->stat_called = STAT_NOT_CALLED;
-            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, bitfield), 1);
+            EXPECT_EQ(fstatat_wrapper(work, &ed, AT_SYMLINK_NOFOLLOW, print_err, bitfield), 1);
 
             work->stat_called = NOT_STATX_CALLED;
-            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, bitfield), 0);
+            EXPECT_EQ(fstatat_wrapper(work, &ed, AT_SYMLINK_NOFOLLOW, print_err, bitfield), 0);
 
             work->stat_called = STATX_CALLED;
-            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, bitfield), 0);
+            EXPECT_EQ(fstatat_wrapper(work, &ed, AT_SYMLINK_NOFOLLOW, print_err, bitfield), 0);
         }
     }
 

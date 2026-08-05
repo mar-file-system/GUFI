@@ -120,7 +120,7 @@ static int process_external(struct input *in, void *args,
 static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NondirArgs *nda = (struct NondirArgs *) args;
 
-    if (fstatat_wrapper(entry, ed, 1, NULL) != 0) {
+    if (fstatat_wrapper(entry, ed, AT_SYMLINK_NOFOLLOW, 1, NULL) != 0) {
         return 1;
     }
 
