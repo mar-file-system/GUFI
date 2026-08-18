@@ -126,6 +126,11 @@ TEST(trie, delete) {
     EXPECT_EQ(trie_delete(root,    nullptr, 0), 0);
     EXPECT_EQ(trie_delete(root,    str,     0), 0);
 
+    /* delete a nonexistent string before inserting */
+    EXPECT_EQ(trie_delete(root, str, str_len), 0);
+    EXPECT_NE(root, nullptr);
+    EXPECT_EQ(trie_search(root, str, str_len, nullptr), 0);
+
     {
         /* insert long string and sub string */
         trie_insert(root, str, str_len, nullptr, nullptr);
@@ -163,6 +168,11 @@ TEST(trie, delete) {
     /* deleteing the remaining long string deletes the entire chain */
     EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
     EXPECT_EQ(trie_delete(root, str, str_len), 1);
+    EXPECT_NE(root, nullptr);
+    EXPECT_EQ(trie_search(root, str, str_len, nullptr), 0);
+
+    /* delete a nonexistent string after deleting */
+    EXPECT_EQ(trie_delete(root, str, str_len), 0);
     EXPECT_NE(root, nullptr);
     EXPECT_EQ(trie_search(root, str, str_len, nullptr), 0);
 
