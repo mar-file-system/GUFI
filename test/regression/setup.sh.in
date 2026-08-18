@@ -434,7 +434,7 @@ order_tracefile() {
 }
 
 remove_time() {
-    @GREP@ -v "Scouts took \|Start Time:\|End Time:\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec\|Took \|Time Spent "
+    @GREP@ -v "Scouts took \|Start Time:\|End Time:\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec\|Took \|Time Spent \|Run Time:"
 }
 
 partial_indexing_setup() {

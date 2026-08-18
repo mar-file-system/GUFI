@@ -221,7 +221,7 @@ int main(int argc, char *argv[]) {
         FLAG_SET_XATTRS,
 
         /* input flags */
-        FLAG_DELIM,
+        FLAG_DELIM, FLAG_OLD_TRACE_FORMAT,
 
         FLAG_END
     };
@@ -258,6 +258,15 @@ int main(int argc, char *argv[]) {
         goto free_traces;
     }
 
+    fprintf(stdout, "Reconstructing tree %s with %zu threads\n", pa.tree_parent.data, pa.in.maxthreads);
+    fflush(stdout);
+
+    struct start_end rt;
+    clock_gettime(CLOCK_REALTIME, &rt.start);
+
+    struct start_end se;
+    clock_gettime(CLOCK_MONOTONIC, &se.start);
+
     /* parse the trace files and enqueue work */
     struct TraceStats stats;
     enqueue_traces(&pa.in.pos.argv[0], traces, trace_count,
@@ -269,6 +278,13 @@ int main(int argc, char *argv[]) {
 
     QPTPool_stop(ctx);
     QPTPool_destroy(ctx);
+
+    clock_gettime(CLOCK_MONOTONIC, &se.end);
+    clock_gettime(CLOCK_REALTIME, &rt.end);
+
+    fprintf(stderr, "Start Time:          %.6Lf\n",  sec(since_epoch(&rt.start)));
+    fprintf(stderr, "End Time:            %.6Lf\n",  sec(since_epoch(&rt.end)));
+    fprintf(stderr, "Run Time:            %.2Lfs\n", sec(nsec(&se)));
 
   free_traces:
     close_traces(traces, trace_count);
