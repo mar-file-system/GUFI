@@ -495,7 +495,7 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 --max-subtrees 0 \
 
 echo "# bad thread count"
 run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 -n 18446744073709551615 \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
-) | @SED@ "s%${BADDIR}%baddir%g;" | tee "${OUTPUT}"
+) | remove_time | @SED@ "s%${BADDIR}%baddir%g;" | tee "${OUTPUT}"
 
 # this prints a different message in cygwin
 echo "# parking lot with file in path segment"

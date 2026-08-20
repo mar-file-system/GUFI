@@ -441,6 +441,9 @@ int main(int argc, char *argv[]) {
     INSTALL_STR(&argv_tree,      pa.in.pos.argv[pa.in.pos.argc - 2]);
     INSTALL_STR(&pa.parking_lot, pa.in.pos.argv[pa.in.pos.argc - 1]);
 
+    struct start_end rt;
+    clock_gettime(CLOCK_MONOTONIC, &rt.start);
+
     int rc = 0;
 
     if (PoolArgs_init(&pa) != 0) {
@@ -474,8 +477,14 @@ int main(int argc, char *argv[]) {
     struct GenSnapshot tree = {0};
     if ((rc = validate_source(&argv_index, &index, &argv_tree, &tree, &pa.same)) == 0) {
         /* get tops of all subtrees that changed */
+        struct start_end ft;
+        clock_gettime(CLOCK_MONOTONIC, &ft.start);
+
         QPTPool_enqueue(pa.ctx, find_top, tree.work);
         QPTPool_wait(pa.ctx);
+
+        clock_gettime(CLOCK_MONOTONIC, &ft.end);
+        fprintf(stderr, "Time to find top of changed subtrees: %.2Lfs\n", sec(nsec(&ft)));
 
         /* tree.work is no longer valid */
         tree.work = NULL;
@@ -489,6 +498,9 @@ int main(int argc, char *argv[]) {
                 has_slash = (index.work->name[index.work->root_parent.len - 1] == '/');
             }
         }
+
+        struct start_end iu;
+        clock_gettime(CLOCK_MONOTONIC, &iu.start);
 
         /*
          * run (parallel) incremental update on subtrees one at a time
@@ -531,6 +543,9 @@ int main(int argc, char *argv[]) {
 
         free(index.work);
         /* tree.work would have been freed in find_top or compare_and_update */
+
+        clock_gettime(CLOCK_MONOTONIC, &iu.end);
+        fprintf(stderr, "Time to do incremental updates:       %.2Lfs\n", sec(nsec(&iu)));
     }
 
   cleanup_pl:
@@ -538,6 +553,9 @@ int main(int argc, char *argv[]) {
 
   cleanup:
     PoolArgs_fini(&pa);
+
+    clock_gettime(CLOCK_MONOTONIC, &rt.end);
+    fprintf(stderr, "Overall runtime:                      %.2Lfs\n", sec(nsec(&rt)));
 
     return (rc == 0)?EXIT_SUCCESS:EXIT_FAILURE;
 }
