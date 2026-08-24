@@ -245,7 +245,7 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
     q += FMT_LEN;                                                                   \
                                                                                     \
     if ((size_t) (end - q) < len) {                                                 \
-        fprintf(stderr, "Error: %s length goes past end of line: %zu (max: %zu)\n", \
+        fprintf(stderr, "Error: %s length goes past end of line: %zu (max: %td)\n", \
                 name, len, end - q);                                                \
         xattrs_cleanup(&ed->xattrs);                                                \
         free(new_work);                                                             \
