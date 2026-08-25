@@ -70,7 +70,7 @@ __gufi() {
     if [[ ! -f "${CONFIG}" ]]
     then
         >&2 echo "Could not find config file \"${CONFIG}\""
-        exit 1
+        return 1
     fi
 
     # shellcheck disable=2046
