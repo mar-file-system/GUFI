@@ -92,10 +92,10 @@ set(gufi_developer_inputs
     sections/external_attach.tex
     sections/querying.tex
     sections/gufi_query.tex
+    sections/virtual_tables.tex
     sections/gufi_sqlite3.tex
     sections/querydbs.tex
     sections/addqueryfuncs.tex
-    sections/virtual_tables.tex
     sections/gufi_stat_bin.tex
     sections/utility.tex
     sections/distributed.tex
@@ -128,10 +128,10 @@ set(gufi_administrator_inputs
     sections/external_attach.tex
     sections/querying.tex
     sections/gufi_query.tex
+    sections/virtual_tables.tex
     sections/gufi_sqlite3.tex
     sections/querydbs.tex
     sections/addqueryfuncs.tex
-    sections/virtual_tables.tex
     sections/gufi_stat_bin.tex
     sections/utility.tex
     sections/distributed.tex

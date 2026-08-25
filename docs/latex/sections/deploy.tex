@@ -62,14 +62,14 @@
 
 \section{Deployment}
 \label{sec:deploy}
-Other than Section~\ref{sec:distributed}, GUFI functionality as
-described so far has been local (source filesystem and index on the
-same node). However, this is not the expected way to deploy
-GUFI. Users should not log into the machine containing both the
-filesystems and indexes with an interactive shell. Instead, indexes
-are to be placed on a dedicated GUFI server (which may or may not be
-able to see the source filesystems) and users will call client scripts
-from client nodes to forward commands to the server via ssh.
+Most of the GUFI functionality as described so far has been local
+(source filesystem and index on the same node). However, this is not
+the expected way to deploy GUFI. Users should not log into the machine
+containing both the filesystems and indexes with an interactive
+shell. Instead, indexes are to be placed on a dedicated GUFI server
+(which may or may not be able to see the source filesystems) and users
+will call client scripts from client nodes to forward commands to the
+server via ssh.
 
 There are multiple reasons why GUFI is being deployed this way. First,
 indexes should not be colocated with the source filesystems in order
@@ -86,8 +86,8 @@ of resources.
 \subsection{User and Index Setup}
 In order to prevent users from seeing data they should not see, first
 ensure that the uids and gids point to the same people across all
-filesystems being indexed. This should not be an issue for filesystems
-whose users have fixed uids and gids.
+filesystems indexes that are to be queried on one system. This should
+not be an issue for filesystems whose users have fixed uids and gids.
 
 The \texttt{/etc/passwd} from each filesystem's source system should
 be merged into the existing one on the server in order to set up
