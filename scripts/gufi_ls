@@ -277,7 +277,7 @@ def run(argv, config_path, stdout=None, stderr=None):
 
         if not args.recursive:
             query_cmd += ['--min-level', '0',
-                          '--max-level', '2']
+                          '--max-level', '1']
 
         columns = [
             'fullpath', 'name', 'type', 'inode', 'nlink', 'size',
