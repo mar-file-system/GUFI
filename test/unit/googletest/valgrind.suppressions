@@ -3,130 +3,16 @@
    Memcheck:FishyValue
    malloc(size)
    fun:malloc
-   fun:getline_fd
-   fun:getline_fd_seekable
-   fun:_ZN24getline_fd_seekable_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
-   fun:_Z13RUN_ALL_TESTSv
-   fun:main
+   ...
+   fun:*TestBodyEv
 }
 {
    <insert_a_suppression_name_here>
    Memcheck:FishyValue
    realloc(size)
    fun:realloc
-   fun:getline_fd
-   fun:getline_fd_seekable
-   fun:_ZN24getline_fd_seekable_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:FishyValue
-   malloc(size)
-   fun:malloc
-   fun:getline_fd
-   fun:getline_fd_stream
-   fun:_ZN22getline_fd_stream_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
-   fun:_Z13RUN_ALL_TESTSv
-   fun:main
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:FishyValue
-   realloc(size)
-   fun:realloc
-   fun:getline_fd
-   fun:getline_fd_stream
-   fun:_ZN22getline_fd_stream_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:FishyValue
-   malloc(size)
-   fun:malloc
-   fun:OutputBuffer_init
-   fun:_ZN21OutputBuffer_bad_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
-   fun:_Z13RUN_ALL_TESTSv
-   fun:main
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:FishyValue
-   malloc(size)
-   fun:malloc
-   fun:OutputBuffer_init
-   fun:OutputBuffers_init
-   fun:_ZN22OutputBuffers_bad_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
-   fun:_Z13RUN_ALL_TESTSv
-   fun:main
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:FishyValue
-   malloc(size)
-   fun:malloc
-   fun:OutputBuffer_init
-   fun:PoolArgs_init
-   fun:_ZL26check_poolargs_init_failedR5inputP15pthread_mutex_t
-   fun:_ZN36PoolArgs_bad_output_buffer_size_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
+   ...
+   fun:*TestBodyEv
 }
 {
    <insert_a_suppression_name_here>
@@ -137,126 +23,32 @@
    fun:write_size
    fun:QPTPool_generic_serialize_and_free
    fun:_ZN56QueuePerThreadPool_generic_serialize_and_free_error_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
-   fun:_Z13RUN_ALL_TESTSv
-   fun:main
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:FishyValue
-   malloc(size)
-   fun:malloc
-   fun:QPTPool_generic_alloc_and_deserialize
-   fun:_ZN59QueuePerThreadPool_generic_alloc_and_deserialize_error_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
-   fun:_Z13RUN_ALL_TESTSv
-   fun:main
 }
 {
    <insert_a_suppression_name_here>
    Memcheck:Param
    read(buf)
-   fun:__libc_read
+   ...
    fun:read
    fun:read_size
    fun:QPTPool_generic_alloc_and_deserialize
    fun:_ZN59QueuePerThreadPool_generic_alloc_and_deserialize_error_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
-   fun:_Z13RUN_ALL_TESTSv
-   fun:main
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:Param
-   read(buf)
-   fun:read
-   fun:read_size
-   fun:QPTPool_generic_alloc_and_deserialize
-   fun:_ZN59QueuePerThreadPool_generic_alloc_and_deserialize_error_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
-   fun:_Z13RUN_ALL_TESTSv
-   fun:main
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:FishyValue
-   malloc(size)
-   fun:malloc
-   fun:replace_user_str
-   fun:_ZN28replace_user_str_enomem_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
-   fun:_Z13RUN_ALL_TESTSv
-   fun:main
-}
-{
-   <insert_a_suppression_name_here>
-   Memcheck:FishyValue
-   realloc(size)
-   fun:realloc
-   fun:replace_user_str
-   fun:_ZN28replace_user_str_enomem_Test8TestBodyEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing4Test3RunEv
-   fun:_ZN7testing8TestInfo3RunEv
-   fun:_ZN7testing9TestSuite3RunEv
-   fun:_ZN7testing8internal12UnitTestImpl11RunAllTestsEv
-   fun:_ZN7testing8internal38HandleSehExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS0_12UnitTestImplEbEET0_PT_MS4_FS3_vEPKc
-   fun:_ZN7testing8UnitTest3RunEv
 }
 {
    <insert_a_suppression_name_here>
    Memcheck:Leak
    match-leak-kinds: reachable
    fun:malloc
-   obj:/usr/lib/x86_64-linux-gnu/libgomp.so.1.0.0
-   obj:/usr/lib/x86_64-linux-gnu/libgomp.so.1.0.0
-   obj:/usr/lib/x86_64-linux-gnu/libgomp.so.1.0.0
-   fun:call_init.part.0
+   ...
    fun:call_init
    fun:_dl_init
-   obj:/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:_dl_open
 }
 {
    <insert_a_suppression_name_here>
@@ -264,4 +56,11 @@
    match-leak-kinds: reachable
    ...
    fun:getpwuid_r@@GLIBC_2.2.5
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:getgrgid_r@@GLIBC_2.2.5
 }
