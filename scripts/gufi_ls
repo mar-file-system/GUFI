@@ -109,12 +109,20 @@ def build_select(args, indexroot):
     else:
         display_name = 'name'
 
-    if args.long_listing or args.full_time:
+    if args.long_listing or args.numeric_uid_gid or args.full_time:
         select += ['modetotxt(mode)',
-                   'printf(\'%d\', nlink)',
-                   'uidtouser(uid)']
+                   'printf(\'%d\', nlink)']
+
+        if args.numeric_uid_gid:
+            select += ['uid']
+        else:
+            select += ['uidtouser(uid)']
+
         if not args.no_group:
-            select += ['gidtogroup(gid)']
+            if args.numeric_uid_gid:
+                select += ['gid']
+            else:
+                select += ['gidtogroup(gid)']
 
         # in GNU ls, order of arguments determines which one has precedence
         # here, --human-readable has precedence
@@ -215,6 +223,10 @@ def run(argv, config_path, stdout=None, stderr=None):
                         dest='long_listing',
                         action='store_true',
                         help='use a long listing format')
+    parser.add_argument('-n', '--numeric-uid-gid',
+                        dest='numeric_uid_gid',
+                        action='store_true',
+                        help='like -l, but list numeric user and group IDs')
     parser.add_argument('-r', '--reverse',
                         action='store_true',
                         help='reverse order while sorting')
@@ -345,7 +357,7 @@ def run(argv, config_path, stdout=None, stderr=None):
                                     None)
 
         # need to pad columns
-        if args.long_listing:
+        if args.long_listing or args.numeric_uid_gid:
              # columns before padding
             RESULTS = 'results'
             RESULTS_SCHEMA = ''

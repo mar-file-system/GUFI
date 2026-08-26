@@ -175,6 +175,14 @@ run_no_sort "${GUFI_LS} --block-size=1KiB ${BASENAME}/1KB"
 
 ) | @SED@ "s%${USER_NAME} ${GROUP_NAME}%${TEST_USER_NAME} ${TEST_GROUP_NAME}%g; s%${USER_NAME}%${TEST_USER_NAME}%g;"
 
+(
+echo "# -n"
+run_no_sort "${GUFI_LS} ${BASENAME} -n | @AWK@ '{ \$2=0; \$3=${TEST_USER_ID}; \$4=${TEST_GROUP_ID}; print }' | sort -n -k 5"
+
+echo "# -n takes precedence"
+run_no_sort "${GUFI_LS} ${BASENAME} -n | @AWK@ '{ \$2=0; \$3=${TEST_USER_ID}; \$4=${TEST_GROUP_ID}; print }' | sort -n -k 5"
+)
+
 # glob
 run_sort "${GUFI_LS} '${BASENAME}/*/'"
 
