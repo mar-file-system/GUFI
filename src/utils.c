@@ -1150,22 +1150,6 @@ static int get_id_err(const char *name, const int err, char **buf, char **err_ms
     return 1;
 }
 
-#define id_res(name, id, type, value, err_msg, err_len)                          \
-    if (!*res) {                                                                 \
-        *err_len = snprintf(NULL, 0,                                             \
-                            "Error: " name " could not find " id " %" type "\n", \
-                            value);                                              \
-        *err_msg = malloc(*err_len + 1);                                         \
-        SNPRINTF(*err_msg, *err_len + 1,                                         \
-                 "Error: " name " could not find " id " %" type "\n",            \
-                 value);                                                         \
-        free(*buf);                                                              \
-        *buf = NULL;                                                             \
-        return 1;                                                                \
-    }                                                                            \
-                                                                                 \
-    return 0
-
 int getpwuid_wrapper(const uid_t uid, struct passwd *pw, struct passwd **res, char **buf, char **err_msg, size_t *err_len) {
     /*
      * adapted from question by Tyler DiBartolo
@@ -1201,7 +1185,7 @@ int getpwuid_wrapper(const uid_t uid, struct passwd *pw, struct passwd **res, ch
         return get_id_err("getpwuid", errno, buf, err_msg, err_len);
     }
 
-    id_res("getpwuid", "uid", STAT_uid, uid, err_msg, err_len);
+    return 0;
 }
 
 int getgrgid_wrapper(const gid_t gid, struct group *grp, struct group **res, char **buf, char **err_msg, size_t *err_len) {
@@ -1239,5 +1223,5 @@ int getgrgid_wrapper(const gid_t gid, struct group *grp, struct group **res, cha
         return get_id_err("getgrgid", errno, buf, err_msg, err_len);
     }
 
-    id_res("getgrgid", "gid", STAT_gid, gid, err_msg, err_len);
+    return 0;
 }

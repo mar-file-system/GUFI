@@ -1446,13 +1446,13 @@ TEST(getpwuid, wrapper) {
     char *err_msg = nullptr;
     std::size_t err_len = 0;
 
-    EXPECT_EQ(getpwuid_wrapper(uid, &pw, &res, &buf, &err_msg, &err_len), 1);
+    EXPECT_EQ(getpwuid_wrapper(uid, &pw, &res, &buf, &err_msg, &err_len), 0);
     EXPECT_EQ(res, nullptr);
-    EXPECT_EQ(buf, nullptr);
-    EXPECT_NE(err_msg, nullptr);
-    EXPECT_GT(err_len, (std::size_t) 0);
+    EXPECT_NE(buf, nullptr);
+    EXPECT_EQ(err_msg, nullptr);
+    EXPECT_EQ(err_len, (std::size_t) 0);
 
-    free(err_msg);
+    free(buf);
 }
 
 TEST(getgrgid, wrapper) {
@@ -1468,11 +1468,11 @@ TEST(getgrgid, wrapper) {
     char *err_msg = nullptr;
     std::size_t err_len = 0;
 
-    EXPECT_EQ(getgrgid_wrapper(gid, &grp, &res, &buf, &err_msg, &err_len), 1);
+    EXPECT_EQ(getgrgid_wrapper(gid, &grp, &res, &buf, &err_msg, &err_len), 0);
     EXPECT_EQ(res, nullptr);
-    EXPECT_EQ(buf, nullptr);
-    EXPECT_NE(err_msg, nullptr);
-    EXPECT_GT(err_len, (std::size_t) 0);
+    EXPECT_NE(buf, nullptr);
+    EXPECT_EQ(err_msg, nullptr);
+    EXPECT_EQ(err_len, (std::size_t) 0);
 
-    free(err_msg);
+    free(buf);
 }

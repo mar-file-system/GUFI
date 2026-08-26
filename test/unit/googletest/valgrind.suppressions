@@ -258,3 +258,10 @@
    fun:_dl_init
    obj:/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:getpwuid_r@@GLIBC_2.2.5
+}
