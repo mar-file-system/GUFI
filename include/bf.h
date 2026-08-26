@@ -314,6 +314,10 @@ extern "C" {
 #define FLAG_KEEP_ARTIFACTS_LONG "keep-artifacts"
 #define FLAG_KEEP_ARTIFACTS {FLAG_KEEP_ARTIFACTS_LONG, required_argument, NULL, FLAG_KEEP_ARTIFACTS_SHORT}
 
+#define FLAG_PROCESS_SUBTREES_SHORT (FLAG_GROUP_INC + 6)
+#define FLAG_PROCESS_SUBTREES_LONG "process-subtrees"
+#define FLAG_PROCESS_SUBTREES {FLAG_PROCESS_SUBTREES_LONG, no_argument, NULL, FLAG_PROCESS_SUBTREES_SHORT}
+
 /* gufi_rollup flags */
 
 #define FLAG_ROLLUP_LIMIT_SHORT (FLAG_GROUP_ROLLUP + 0)
@@ -550,6 +554,7 @@ struct input {
         str_t dir;
         int keep;
     } artifacts;
+    int process_subtrees;          /* try to find subtrees to process instead of operating the entire tree at once */
 
     size_t min_level;              /* minimum level of recursion to reach before running queries */
     size_t max_level;              /* maximum level of recursion to run queries on */

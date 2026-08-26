@@ -127,6 +127,7 @@ static const std::string suspect_time                = "--suspect-time";   stati
 static const std::string suspect_stat                = "--suspect-stat";
 static const std::string max_subtrees                = "--max-subtrees"; static const std::string max_subtrees_arg = "2";
 static const std::string keep_artifacts              = "--keep-artifacts"; static const std::string keep_artifacts_arg = "artifacts";
+static const std::string process_subtrees            = "--process-subtrees";
 static const std::string rollup_limit                = "--limit"; static const std::string rollup_limit_arg = "1";
 static const std::string rollup_delete_below         = "--delete-below"; static const std::string rollup_delete_below_arg = "1";
 static const std::string external_attach_validate    = "--external-attach-validate";
@@ -205,6 +206,7 @@ static void check_input(const int /* argc */, const char **argv,
     #if HAVE_ZLIB
     EXPECT_EQ(in->compress,                                   flags);
     #endif
+    EXPECT_EQ(in->process_subtrees,                           flags);
     EXPECT_EQ(in->external_attach.validate,                   flags);
 
     if (options) {
@@ -369,13 +371,14 @@ TEST(parse_cmd_line, debug) {
         FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SETUP_RES_COL_TYPES,
         FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
         FLAG_SUSPECT_STAT, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
-        FLAG_SUSPECT_TIME, FLAG_MAX_SUBTREES, FLAG_KEEP_ARTIFACTS, FLAG_PATH,
-        FLAG_FILTER_TYPE, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
-        FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_KEEP_MATIME, FLAG_OUTPUT_BUFFER_SIZE,
-        FLAG_READ_WRITE, FLAG_FORMAT, FLAG_TERSE, FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT,
-        FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE, FLAG_DONT_REPROCESS,
-        FLAG_NO_PRINT_ERRNO, FLAG_NO_PRINT_SQL_ON_ERR, FLAG_OLD_TRACE_FORMAT,
-        FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
+        FLAG_SUSPECT_TIME, FLAG_MAX_SUBTREES, FLAG_KEEP_ARTIFACTS,
+        FLAG_PROCESS_SUBTREES, FLAG_PATH, FLAG_FILTER_TYPE, FLAG_MIN_LEVEL,
+        FLAG_MAX_LEVEL, FLAG_SQL_INTERM, FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG,
+        FLAG_KEEP_MATIME, FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT,
+        FLAG_TERSE, FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW,
+        FLAG_SKIP_FILE, FLAG_DONT_REPROCESS, FLAG_NO_PRINT_ERRNO,
+        FLAG_NO_PRINT_SQL_ON_ERR, FLAG_OLD_TRACE_FORMAT, FLAG_TARGET_MEMORY,
+        FLAG_SUBDIR_LIMIT, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -404,6 +407,7 @@ TEST(parse_cmd_line, debug) {
         suspect_time.c_str(), suspect_time_arg.c_str(),
         max_subtrees.c_str(), max_subtrees_arg.c_str(),
         keep_artifacts.c_str(), keep_artifacts_arg.c_str(),
+        process_subtrees.c_str(),
         path.c_str(), path_arg.c_str(),
         filter_type.c_str(), filter_type_arg.c_str(),
         min_level.c_str(), min_level_arg.c_str(),
@@ -463,6 +467,7 @@ TEST(parse_cmd_line, flags) {
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
+        FLAG_PROCESS_SUBTREES,
         FLAG_EXTERNAL_ATTACH_VALIDATE,
         FLAG_END
     };
@@ -483,6 +488,7 @@ TEST(parse_cmd_line, flags) {
         #ifdef HAVE_ZLIB
         compress.c_str(),
         #endif
+        process_subtrees.c_str(),
         external_attach_validate.c_str(),
         nullptr,
     };

@@ -303,6 +303,9 @@ replace_inodes() {
 
 run_no_sort "${GUFI_INCREMENTAL_UPDATE} --help"
 
+run_tests() {
+process_subtrees="$1" # do not quote when used
+
 (
     echo "#####################################"
     echo "# suspect method 0"
@@ -310,7 +313,8 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} --help"
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x --suspect-method 0 \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null")
+    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x ${process_subtrees} --suspect-method 0 \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null")
+
     echo "${out}" | head -n 1
     echo "${out}" | tail -n +2 | sort
     echo
@@ -340,7 +344,7 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} --help"
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x --suspect-method 1 --suspect-file \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
+    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x ${process_subtrees} --suspect-method 1 --suspect-file \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
     check_incremental_update | replace_inodes
     echo "#####################################"
     echo
@@ -353,7 +357,7 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} --help"
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
+    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x ${process_subtrees} --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
     check_incremental_update | replace_inodes
     echo "#####################################"
     echo
@@ -366,7 +370,7 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} --help"
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x --suspect-method 3 \"${SRCDIR}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
+    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x ${process_subtrees} --suspect-method 3 \"${SRCDIR}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
 
     # compare the indexes
     GOOD=$(run_query "${FULL_INDEX}/${BASENAME}" | @SED@ "s%^${FULL_INDEX}/%%g;")
@@ -392,7 +396,7 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} --help"
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x --suspect-method 3 --suspect-stat \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null" | replace_inodes)
+    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x ${process_subtrees} --suspect-method 3 --suspect-stat \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null" | replace_inodes)
     echo "${out}" | head -n 1
     echo "${out}" | tail -n +2 | sort
     echo
@@ -408,7 +412,7 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} --help"
 
     # stdout output is structured and cannot be sorted for consistent order, so it is discarded
     echo "# Update the original index via incremental update"
-    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x --suspect-method 3 --suspect-stat \"${INDEXROOT}/..//${BASENAME}/\" \"${SRCDIR}/\" \"${PARKING_LOT}\" > /dev/null" | replace_inodes)
+    out=$(run_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x ${process_subtrees} --suspect-method 3 --suspect-stat \"${INDEXROOT}/..//${BASENAME}/\" \"${SRCDIR}/\" \"${PARKING_LOT}\" > /dev/null" | replace_inodes)
     echo "${out}" | head -n 1
     echo "${out}" | tail -n +2 | sort
     echo
@@ -421,7 +425,7 @@ echo "#####################################"
 echo "# existing parking lot"
 run_no_sort "find -name \"${PARKING_LOT}\" 2>/dev/null"
 run_no_sort "mkdir \"${PARKING_LOT}\""
-run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null 2>&1"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} ${process_subtrees} --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null 2>&1"
 run_no_sort "find -name \"${PARKING_LOT}\" 2>/dev/null"
 rm -r "${PARKING_LOT}"
 echo "#####################################"
@@ -433,12 +437,12 @@ PREFIX_INODE=$(stat -c "%i" "${SRCDIR}")
 (
     echo "# artifacts directory exists"
     run_no_sort "mkdir \"${ARTIFACTS_DIR}\""
-    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${ARTIFACTS_DIR}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
+    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} ${process_subtrees} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${ARTIFACTS_DIR}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
     run_sort "find \"${ARTIFACTS_DIR}\" -type f"
 
     echo "# artifacts directory exists and only has rx permission (good)"
     run_no_sort "chmod 333 \"${ARTIFACTS_DIR}\""
-    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${ARTIFACTS_DIR}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
+    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} ${process_subtrees} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${ARTIFACTS_DIR}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
 
     # not testing with chmod 000 because ${ARTIFACTS_DIR} will be writable when running test as root
 
@@ -446,22 +450,26 @@ PREFIX_INODE=$(stat -c "%i" "${SRCDIR}")
 
     echo "# artifacts directory does not exist"
     run_no_sort "rm -rf \"${ARTIFACTS_DIR}\""
-    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${ARTIFACTS_DIR}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
+    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} ${process_subtrees} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${ARTIFACTS_DIR}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
 
     rm -rf "${PARKING_LOT}"
 
     echo "# artifacts directory is the parking lot created by ${GUFI_INCREMENTAL_UPDATE}" | replace
-    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${PARKING_LOT}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
+    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} ${process_subtrees} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${PARKING_LOT}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
 
     mkdir -p "${PARKING_LOT}"
 
     echo "# artifacts directory is an existing parking lot"
-    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${PARKING_LOT}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
+    run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} ${process_subtrees} --suspect-time 0 --suspect-method 3 --keep-artifacts \"${PARKING_LOT}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
 ) | @SED@ "s%${ARTIFACTS_DIR}%<artifacts_dir>%g; s%${PREFIX_INODE}%<inode>%g;"
 
     rm -rf "${PARKING_LOT}"
 echo "#####################################"
 echo
+}
+
+run_tests ""
+run_tests "--process-subtrees"
 
 # unit tests do --delete-artifact ALL
 

@@ -278,6 +278,7 @@ void print_help(const char* prog_name,
             case FLAG_SUSPECT_STAT_SHORT:                printf("      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime"); break;
             case FLAG_MAX_SUBTREES_SHORT:                printf("      --max-subtrees <count>        maximum number of subtrees to process in parallel (control maximum number of file descriptors used)"); break;
             case FLAG_KEEP_ARTIFACTS_SHORT:              printf("      --keep-artifacts <path>       place artifacts here so they are not automatically deleted (provided path must already exist)"); break;
+            case FLAG_PROCESS_SUBTREES_SHORT:            printf("      --process-subtrees            try to find and operate on subtrees instead of operating on the entire tree at once"); break;
 
             /* gufi_rollup flags */
             case FLAG_ROLLUP_LIMIT_SHORT:                printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
@@ -762,6 +763,10 @@ int parse_cmd_line(int                  argc,
             case FLAG_KEEP_ARTIFACTS_SHORT:
                 INSTALL_STR(&in->artifacts.dir, optarg);
                 in->artifacts.keep = 1;
+                break;
+
+            case FLAG_PROCESS_SUBTREES_SHORT:
+                in->process_subtrees = 1;
                 break;
 
             /* gufi_rollup flags */

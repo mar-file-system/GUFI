@@ -297,24 +297,15 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
         goto close_dir;
     }
 
-    int suspect = 0;
-
-    /* make sure timestamps are available before calling is_suspect() */
-    time_t crtime = 0; /* unused */
-    if (lstat_wrapper(tree->name, &tree->statuso, &crtime,
-                      &tree->stat_called, 1, NULL) != 0) {
-        suspect = 1; /* assume something changed? */
-    }
-
     /*
      * FIXME: if only doing mtime/ctime check (no suspect file/inodes), will miss
      * when files are modified because directory mtime/ctime are not updated
      */
-    suspect |= is_suspect(pa->in.suspect.method,
-                          &pa->suspects.dir,
-                          pa->in.suspect.stat,
-                          pa->in.suspect.time,
-                          tree);
+    const int suspect = is_suspect(pa->in.suspect.method,
+                                   &pa->suspects.dir,
+                                   pa->in.suspect.stat,
+                                   pa->in.suspect.time,
+                                   tree);
 
     /* found top - do incremental update on subtree */
     if (suspect) {
@@ -409,6 +400,7 @@ int main(int argc, char *argv[]) {
         /* processing flags */
         FLAG_SUSPECT_STAT, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
         FLAG_SUSPECT_TIME, FLAG_MAX_SUBTREES, FLAG_KEEP_ARTIFACTS,
+        FLAG_PROCESS_SUBTREES,
 
         FLAG_INDEX_XATTRS, FLAG_PLUGIN,
 
@@ -435,13 +427,13 @@ int main(int argc, char *argv[]) {
     }
 
     /* parse positional args, following the options */
-    str_t argv_index;
-    str_t argv_tree;
+    str_t argv_index = {0};
+    str_t argv_tree = {0};
     INSTALL_STR(&argv_index,     pa.in.pos.argv[pa.in.pos.argc - 3]);
     INSTALL_STR(&argv_tree,      pa.in.pos.argv[pa.in.pos.argc - 2]);
     INSTALL_STR(&pa.parking_lot, pa.in.pos.argv[pa.in.pos.argc - 1]);
 
-    struct start_end rt;
+    struct start_end rt = {0};
     clock_gettime(CLOCK_MONOTONIC, &rt.start);
 
     int rc = 0;
@@ -476,15 +468,20 @@ int main(int argc, char *argv[]) {
      */
     struct GenSnapshot tree = {0};
     if ((rc = validate_source(&argv_index, &index, &argv_tree, &tree, &pa.same)) == 0) {
-        /* get tops of all subtrees that changed */
-        struct start_end ft;
-        clock_gettime(CLOCK_MONOTONIC, &ft.start);
+        if (pa.in.process_subtrees) {
+            /* get tops of all subtrees that changed */
+            struct start_end ft;
+            clock_gettime(CLOCK_MONOTONIC, &ft.start);
 
-        QPTPool_enqueue(pa.ctx, find_top, tree.work);
-        QPTPool_wait(pa.ctx);
+            QPTPool_enqueue(pa.ctx, find_top, tree.work);
+            QPTPool_wait(pa.ctx);
 
-        clock_gettime(CLOCK_MONOTONIC, &ft.end);
-        fprintf(stderr, "Time to find top of changed subtrees: %.2Lfs\n", sec(nsec(&ft)));
+            clock_gettime(CLOCK_MONOTONIC, &ft.end);
+            fprintf(stderr, "Time to find top of changed subtrees: %.2Lfs\n", sec(nsec(&ft)));
+        }
+        else {
+            sll_push_back(&pa.tops[0], tree.work);
+        }
 
         /* tree.work is no longer valid */
         tree.work = NULL;
