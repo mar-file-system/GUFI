@@ -67,6 +67,7 @@ prefix|16893|uid|gid
 
 # State of incrementally updated index
 prefix/change|16893|uid|gid
+prefix/created|16893|uid|gid
 prefix/no-change|16893|uid|gid
 prefix/renamed|16893|uid|gid
 prefix|16893|uid|gid
@@ -74,8 +75,6 @@ prefix|16893|uid|gid
 # Compare index states
 1d0
 < prefix/change/new_file|33204|uid|gid
-3d1
-< prefix/created|16893|uid|gid
 # differences showed up because the directories were not marked as suspect and were not reindexed
 # when the update dbs were being applied, the directories that needed new db.dbs did not have them
 #####################################
@@ -893,6 +892,58 @@ Error: Refusing to save artifacts to the parking lot directory "parking_lot" bec
 
 # artifacts directory is an existing parking lot
 $ gufi_incremental_update -n 2 --process-subtrees --suspect-time 0 --suspect-method 3 --keep-artifacts "parking_lot" "prefix" "prefix" "parking_lot" > /dev/null
+
+#####################################
+
+#####################################
+# force a move across two subtrees
+# original tree
+$ find "prefix"
+prefix
+prefix/a
+prefix/a/b
+prefix/a/b/src
+prefix/a/b/src/c
+prefix/a/b/src/c/d
+prefix/a/b/src/c/d/file
+prefix/a/b/src/c/file
+prefix/a/dst
+
+# create the original index
+$ gufi_dir2index prefix search
+Creating GUFI tree search with 1 threads
+Total Dirs:          7
+Total Non-Dirs:      2
+
+# mark "prefix/a/b" and "prefix/a/dst" as the top of subtrees in "suspectfile"
+
+# move src under dst
+$ mv "prefix/a/b/src" "prefix/a/dst"
+
+# tree after modification
+$ find "prefix"
+prefix
+prefix/a
+prefix/a/b
+prefix/a/dst
+prefix/a/dst/src
+prefix/a/dst/src/c
+prefix/a/dst/src/c/d
+prefix/a/dst/src/c/d/file
+prefix/a/dst/src/c/file
+
+# create a new index of the modified tree
+$ gufi_dir2index prefix search2
+Creating GUFI tree search2 with 1 threads
+Total Dirs:          7
+Total Non-Dirs:      2
+
+# incrementally update original index
+$ gufi_incremental_update -n 2 --process-subtrees --suspect-method 1 --suspect-file "suspectfile" "prefix" "prefix" "parking_lot" > /dev/null
+
+# compare new index to updated index
+$ diff <(echo ${new_index}) <(echo ${updated_index})
+No difference
 
 #####################################
 

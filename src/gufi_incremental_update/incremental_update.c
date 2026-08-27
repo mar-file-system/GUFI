@@ -571,10 +571,63 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
     struct stat st;
     if (stat(plname, &st) != 0) {
         const int err = errno;
+        if (err == ENOENT) {
+            /*
+             * Moving between subtrees results in the move being split
+             * into a delete and a create dir (without a corresponding
+             * db file since the other side deleted the directory and
+             * the db file instead of moving them into the parking
+             * lot). This means that the entire subtree that was moved
+             * must be reindexed.
+             *
+             * TODO: Figure out how to detect moves
+             *     - without JOIN-ing the entire tree with the entire index
+             *     - without adding ordering requirements
+             * Not sure this is possible.
+             *
+             * A non-code solution is to just wait for the next index
+             * update. If a new index is created, the data for those
+             * directories will be generated. If the index is
+             * incrementally updated, the missing db files will be
+             * detected, generated, and moved in. This has the issue
+             * that the updated index has actual errors (missing db
+             * files) instead of simply missing data due to not
+             * guaranteeing a specific state.
+             *
+             * If using suspect lists, another category can be added
+             * to indicate that a delete is actually the first half of
+             * a move, and move the directory into the parking lot
+             * instead of actually deleting it. Not sure how to handle
+             * with suspect time.
+             */
+            struct work *work = new_work_with_name(NULL, 0, ud->treepath.data, ud->treepath.len);
+            work->basename_len = ud->treepath.len - dirname_len(ud->treepath.data, ud->treepath.len);
 
-        /* no changes, so no update db was created; otherwise, print error */
-        if (err != ENOENT) {
-            fprintf(stderr, "    Warning: Could not stat update " DBNAME " in parking lot \"%s\"", plname);
+            /* inode is already known, but need to lstat for remaining values */
+            if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
+                              &work->stat_called, 1, NULL) == 0) {
+                DIR *dir = opendir_wrapper(work->name, NULL);
+                if (dir) {
+                    struct entry_data ed = {0};
+                    const int rc = reindex_dir(pa->ctx, work, &ed, dir);
+                    closedir(dir);
+                    free(work);
+
+                    if (rc < 0) {
+                        free_ud(ud);
+                        return 0; /* always return ok */
+                    }
+
+                    goto move_update_db;
+                }
+            }
+
+            free(work);
+        }
+        else {
+            /* some other error */
+            fprintf(stderr, "    Warning: Could not stat update " DBNAME " in parking lot \"%s\": %s (%d)\n",
+                    plname, strerror(err), err);
         }
 
         free_ud(ud);
@@ -582,6 +635,11 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
         /* always return ok */
         return 0;
     }
+
+  move_update_db:
+    ;
+
+    /* move db in parking lot to the new path in the updated index */
 
     /* destination of the database file */
     char dbname[MAXPATH];

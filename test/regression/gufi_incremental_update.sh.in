@@ -76,8 +76,11 @@ ARTIFACTS_DIR=$(mktemp -d "XXXXXX") # this gets removed instantly
 
 BADDIR=$(mktemp -d "XXXXXX") # this gets removed instantly
 
+# shellcheck disable=SC2153
+SEARCH2="${SEARCH}2"
+
 cleanup() {
-    rm -rf "${PARKING_LOT}" "${FULL_INDEX}" "${SUSPECT_FILE}" "${ARTIFACTS_DIR}" "${BADDIR}"
+    rm -rf "${PARKING_LOT}" "${FULL_INDEX}" "${SUSPECT_FILE}" "${ARTIFACTS_DIR}" "${BADDIR}" "${SEARCH2}"
     rm -f "${SRCDIR}/../db.db" # in-place update creates the parent db.db
 }
 
@@ -470,6 +473,49 @@ echo
 
 run_tests ""
 run_tests "--process-subtrees"
+
+echo "#####################################"
+echo "# force a move across two subtrees"
+
+rm -rf "${SRCDIR}" "${SEARCH}"
+mkdir -p "${SRCDIR}/a/b/src/c/d"
+mkdir -p "${SRCDIR}/a/dst"
+touch "${SRCDIR}/a/b/src/c/file"
+touch "${SRCDIR}/a/b/src/c/d/file"
+
+echo "# original tree"
+run_sort "find \"${SRCDIR}\""
+
+echo "# create the original index"
+run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${SEARCH}" | remove_time
+
+echo "# mark \"${SRCDIR}/a/b\" and \"${SRCDIR}/a/dst\" as the top of subtrees in \"${SUSPECT_FILE}\""
+(
+    stat -c "%i d" "${SRCDIR}/a/b"
+    stat -c "%i d" "${SRCDIR}/a/dst"
+) > "${SUSPECT_FILE}"
+echo
+
+echo "# move src under dst"
+run_no_sort "mv \"${SRCDIR}/a/b/src\" \"${SRCDIR}/a/dst\""
+
+echo "# tree after modification"
+run_sort "find \"${SRCDIR}\""
+
+echo "# create a new index of the modified tree"
+run_no_sort "${GUFI_DIR2INDEX} ${SRCDIR} ${SEARCH2}" | remove_time
+
+echo "# incrementally update original index"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --process-subtrees --suspect-method 1 --suspect-file \"${SUSPECT_FILE}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null"
+
+echo "# compare new index to updated index"
+new_index=$("${GUFI_QUERY}" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "${SEARCH2}" | @SED@ "s%${SEARCH2}/%%g;" | sort)
+updated_index=$("${GUFI_QUERY}" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "${SEARCH}" | @SED@ "s%${SEARCH}/%%g;" | sort)
+echo "$ @DIFF@ <(echo \${new_index}) <(echo \${updated_index})" | replace
+@DIFF@ <(echo "${new_index}") <(echo "${updated_index}") && echo "No difference"
+echo
+echo "#####################################"
+echo
 
 # unit tests do --delete-artifact ALL
 
