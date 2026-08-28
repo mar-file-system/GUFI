@@ -5,6 +5,7 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <n>                 number of threads
+  -f, --force                       non-existent paths do not cause errors to be returned
 
 directory        directory to delete
 
@@ -22,6 +23,21 @@ $ ls -1 prefix
 db.db
 unusual#? directory ,
 
+# delete paths again
+$ parallel_rmr -n 2 "prefix/directory" "prefix/empty_directory" "prefix/leaf_directory"
+
+$ echo $?
+1
+
+# delete paths again with --force
+$ parallel_rmr -n 2 --force "prefix/directory" "prefix/empty_directory" "prefix/leaf_directory"
+
+$ echo $?
+0
+
 $ parallel_rmr -n 18446744073709551615 "prefix"
 Error: Failed to start thread pool
+
+$ parallel_rmr -n 18446744073709551615 --force "prefix"
+Error: Could not allocate buffer for 18446744073709551615 threads
 

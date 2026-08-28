@@ -161,6 +161,11 @@ extern "C" {
 #define FLAG_FILTER_TYPE_LONG "filter-type"
 #define FLAG_FILTER_TYPE {FLAG_FILTER_TYPE_LONG, required_argument, NULL, FLAG_FILTER_TYPE_SHORT}
 
+/* only used by parallel_rmr */
+#define FLAG_FORCE_SHORT 'f'
+#define FLAG_FORCE_LONG "force"
+#define FLAG_FORCE {FLAG_FORCE_LONG, no_argument, NULL, FLAG_FORCE_SHORT}
+
 /* no typable short flags */
 
 #define FLAG_GROUP_MISC    1000
@@ -630,6 +635,12 @@ struct input {
      * used by BottomUp programs
      */
     int dont_reprocess;
+
+    /*
+     * only used by parallel_rmr
+     * ignore threads_started != threads_completed
+     */
+    int force;
 
     struct plugins plugins;
 

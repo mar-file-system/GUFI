@@ -96,6 +96,7 @@ static const std::string w = "-w";
 
 static const std::string path                        = "--path"; static const std::string path_arg = "path arg";
 static const std::string filter_type                 = "--filter-type"; static const std::string filter_type_arg = "dfl";
+static const std::string force                       = "--force";
 static const std::string min_level                   = "--min-level"; static const std::string min_level_arg = "1";
 static const std::string max_level                   = "--max-level"; static const std::string max_level_arg = "1";
 static const std::string print_tlv                   = "--print-tlv";
@@ -191,6 +192,7 @@ static void check_input(const int /* argc */, const char **argv,
     EXPECT_NE(in->pos.argv,                                   &argv[in->pos.argc]);
     EXPECT_EQ(in->process_xattrs,                             flags);
     EXPECT_EQ(in->printdir,                                   flags);
+    EXPECT_EQ(in->force,                                      flags);
     EXPECT_EQ(in->types.print_tlv,                            flags);
     EXPECT_EQ(in->suspect.stat,                               flags);
     EXPECT_EQ(in->keep_matime,                                flags);
@@ -367,7 +369,7 @@ TEST(parse_cmd_line, version) {
 TEST(parse_cmd_line, debug) {
     const struct option opts[] = {
         FLAG_DEBUG, FLAG_XATTRS, FLAG_PRINTDIR,
-        FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
+        FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE, FLAG_FORCE,
         FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SETUP_RES_COL_TYPES,
         FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
         FLAG_SUSPECT_STAT, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
@@ -410,6 +412,7 @@ TEST(parse_cmd_line, debug) {
         process_subtrees.c_str(),
         path.c_str(), path_arg.c_str(),
         filter_type.c_str(), filter_type_arg.c_str(),
+        force.c_str(),
         min_level.c_str(), min_level_arg.c_str(),
         max_level.c_str(), max_level_arg.c_str(),
         J.c_str(), J_arg.c_str(),
@@ -460,7 +463,7 @@ TEST(parse_cmd_line, debug) {
 
 TEST(parse_cmd_line, flags) {
     const struct option opts[] = {
-        FLAG_XATTRS, FLAG_PRINTDIR, FLAG_PRINT_TLV,
+        FLAG_XATTRS, FLAG_PRINTDIR, FLAG_FORCE, FLAG_PRINT_TLV,
         FLAG_SUSPECT_STAT, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
         FLAG_TERSE, FLAG_DRY_RUN, FLAG_DONT_REPROCESS,
         FLAG_NO_PRINT_SQL_ON_ERR, FLAG_OLD_TRACE_FORMAT,
@@ -476,6 +479,7 @@ TEST(parse_cmd_line, flags) {
         exec.c_str(),
         x.c_str(),
         P.c_str(),
+        force.c_str(),
         print_tlv.c_str(),
         suspect_stat.c_str(),
         keep_matime.c_str(),

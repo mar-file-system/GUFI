@@ -105,7 +105,8 @@ static int parallel_bottomup_wrapper(char **root_names, const std::size_t root_c
                              descend, ascend,
                              track_non_dirs,
                              generate_alt_name,
-                             extra_args);
+                             extra_args,
+                             1);
 }
 
 static const std::string ROOT = "@CMAKE_BINARY_DIR@";
@@ -196,5 +197,5 @@ TEST(BottomUp, bad) {
 
     // bad pool into split API
     EXPECT_EQ(parallel_bottomup_enqueue(nullptr, nullptr, 0, nullptr), -1);
-    EXPECT_EQ(parallel_bottomup_fini(nullptr), -1);
+    EXPECT_EQ(parallel_bottomup_fini(nullptr, 0), -1);
 }

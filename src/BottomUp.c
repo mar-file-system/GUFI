@@ -541,7 +541,7 @@ static int parallel_bottomup_enqueue_subdirs(QPTPool_ctx_t *ctx,
     return 0;
 }
 
-int parallel_bottomup_fini(QPTPool_ctx_t *ctx) {
+int parallel_bottomup_fini(QPTPool_ctx_t *ctx, const int check_threads) {
     if (!ctx) {
         return -1;
     }
@@ -567,7 +567,7 @@ int parallel_bottomup_fini(QPTPool_ctx_t *ctx) {
 
     QPTPool_destroy(ctx);
 
-    return -(threads_started != threads_completed);
+    return check_threads?-(threads_started != threads_completed):0;
 }
 
 int parallel_bottomup(char **root_names, const size_t root_count,
@@ -579,7 +579,8 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       BU_descend_f descend, BU_ascend_f ascend,
                       const int track_non_dirs,
                       const int generate_alt_name,
-                      void *extra_args) {
+                      void *extra_args,
+                      const int check_threads) {
     if (min_level && str_exists(path_list)) {
         if (root_count > 1) {
             fprintf(stderr, "Error: Only one root may be provided when a --min-level and -D are both provided\n");
@@ -611,5 +612,5 @@ int parallel_bottomup(char **root_names, const size_t root_count,
         }
     }
 
-    return -(parallel_bottomup_fini(ctx) || (root_count != good_roots));
+    return -(parallel_bottomup_fini(ctx, check_threads) || (root_count != good_roots));
 }

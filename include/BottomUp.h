@@ -144,7 +144,7 @@ int parallel_bottomup_enqueue(QPTPool_ctx_t *ctx,
                               const char *path, const size_t len,
                               void *extra_args);
 
-int parallel_bottomup_fini(QPTPool_ctx_t *ctx);
+int parallel_bottomup_fini(QPTPool_ctx_t *ctx, const int check_threads);
 /* ****************************************************************** */
 
 /*
@@ -164,7 +164,8 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       BU_descend_f descend, BU_ascend_f ascend,
                       const int track_non_dirs,
                       const int generate_alt_name,
-                      void *extra_args);
+                      void *extra_args,
+                      const int check_threads);
 
 /* free a struct BottomUp */
 void bottomup_destroy(void *p);

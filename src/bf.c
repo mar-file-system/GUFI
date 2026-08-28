@@ -237,6 +237,7 @@ void print_help(const char* prog_name,
             case FLAG_READ_WRITE_SHORT:                  printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
             case FLAG_PATH_SHORT:                        printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
             case FLAG_FILTER_TYPE_SHORT:                 printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
+            case FLAG_FORCE_SHORT:                       printf("  -f, --force                       non-existent paths do not cause errors to be returned"); break;
 
             /* no typable short flags */
 
@@ -328,6 +329,7 @@ void show_input(struct input* in, int retval) {
     printf("in.open_flags               = %d\n",            in->open_flags);
     printf("in.source_prefix            = '%s'\n",          in->source_prefix.data);
     printf("in.filter_types             = %d\n",            in->filter_types);
+    printf("in.force                    = %d\n",            in->force);
 
     /* no typable short flags */
 
@@ -589,6 +591,10 @@ int parse_cmd_line(int                  argc,
                     }
                     ++optarg;
                 }
+                break;
+
+            case FLAG_FORCE_SHORT:
+                in->force = 1;
                 break;
 
             /* no typable short flags */

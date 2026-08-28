@@ -915,7 +915,8 @@ int main(int argc, char *argv[]) {
                                      desc, rollup_ascend,
                                      0,
                                      1,
-                                     &pa);
+                                     &pa,
+                                     0);
 
     /* also frees stats */
     print_stats(pa.in.pos.argv, pa.in.pos.argc, &pa.in, pa.stats);
