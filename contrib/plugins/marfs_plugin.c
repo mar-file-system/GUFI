@@ -60,6 +60,8 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 */
 
+
+
 /*
  * MarFS GUFI indexing plugin
  *
@@ -216,21 +218,7 @@ static int str_t_eq_cstr(str_t s, const char* cstr, size_t cstr_len) {
     return strncmp(s.data, cstr, cstr_len) == 0;
 }
 
-// install a path while removing trailing slashes, except for filesystem root
-static int install_path(str_t* dst, const char* path) {
-    if (!dst || !path || path[0] == '\0') return -1;
-
-    size_t len = strlen(path);
-    while (len > 1 && path[len - 1] == '/') len--;
-
-    if (!str_alloc_existing(dst, len)) return -1;
-
-    memcpy(dst->data, path, len);
-    dst->data[len] = '\0';
-    return 0;
-}
-
-static int path_eq(str_t lhs, str_t rhs) {
+static int str_t_eq(str_t lhs, str_t rhs) {
     if (!lhs.data || !rhs.data || lhs.len != rhs.len) return 0;
 
     return strncmp(lhs.data, rhs.data, lhs.len) == 0;
@@ -248,7 +236,7 @@ static int path_is_at_or_below(str_t path, str_t root) {
 }
 
 static str_t get_relative_path(str_t path, str_t root) {
-    if (!path_is_at_or_below(path, root) || path_eq(path, root)) {
+    if (!path_is_at_or_below(path, root) || str_t_eq(path, root)) {
         return (str_t)REFSTR(NULL, 0);
     }
 
@@ -356,14 +344,16 @@ static int is_namespace(str_t path) {
     if (!path.data) return 0;
 
     for (size_t i = 0; i < g_state.namespaces_count; i++) {
-        if (path_eq(g_state.namespaces[i].namespace, path)) return 1;
+        if (str_t_eq(g_state.namespaces[i].namespace, path)) return 1;
     }
 
     return 0;
 }
 
 // sec-root and configured namespaces are the directories that own MDAL metadata
-static int is_mdal_owner(str_t path) { return path_eq(path, g_state.sec_root) || is_namespace(path); }
+static int is_mdal_owner(str_t path) { 
+    return str_t_eq(path, g_state.sec_root) || is_namespace(path); 
+}
 
 static int is_mdal_subspaces_dir(str_t path) {
     if (!path.data) return 0;
@@ -377,7 +367,7 @@ static int is_mdal_subspaces_dir(str_t path) {
 static int namespace_is_rewritten(str_t path) {
     for (size_t i = 0; i < g_state.namespaces_count; i++) {
         namespace_pair* pair = &g_state.namespaces[i];
-        if (path_eq(pair->namespace, path)) {
+        if (str_t_eq(pair->namespace, path)) {
             return pair->index_namespace.data && pair->index_namespace.len > 0;
         }
     }
@@ -394,7 +384,7 @@ static int build_index_namespace_paths(void) {
         namespace_pair* pair = &g_state.namespaces[i];
 
         // the selected source is already the index root and does not need to be moved
-        if (path_eq(pair->namespace, g_state.source)) continue;
+        if (str_t_eq(pair->namespace, g_state.source)) continue;
 
         const str_t relative = get_relative_path(pair->namespace, g_state.source);
         if (!relative.data || relative.len == 0) continue;
@@ -467,7 +457,7 @@ static int validate_source(void) {
         if (ns.len > owner.len && path_is_at_or_below(g_state.source, ns)) owner = ns;
     }
 
-    if (!path_eq(g_state.source, owner)) {
+    if (!str_t_eq(g_state.source, owner)) {
         const str_t relative = get_relative_path(g_state.source, owner);
         const str_t first = get_first_component(relative);
 
@@ -720,8 +710,8 @@ static int marfs_indexing_global_init(struct input* in) {
         return ret;
     }
 
-    if (install_path(&g_state.index_parent, in->pos.argv[in->pos.argc - 1]) != 0 ||
-        install_path(&g_state.source, in->pos.argv[0]) != 0) {
+    if (INSTALL_STR(&g_state.index_parent, in->pos.argv[in->pos.argc - 1]) != 0 ||
+        INSTALL_STR(&g_state.source, in->pos.argv[0]) != 0) {
         fprintf(stderr, "Error: could not store GUFI source or index path\n");
         goto cleanup;
     }
@@ -732,7 +722,7 @@ static int marfs_indexing_global_init(struct input* in) {
         goto cleanup;
     }
 
-    if (install_path(&g_state.sec_root, sec_root) != 0) {
+    if (INSTALL_STR(&g_state.sec_root, sec_root) != 0) {
         fprintf(stderr, "Error: could not store %s\n", MARFS_SEC_ROOT_ENV);
         goto cleanup;
     }
@@ -780,7 +770,7 @@ static int marfs_indexing_global_init(struct input* in) {
 
     if (validate_source() != 0) goto cleanup;
 
-    g_state.source_is_sec_root = path_eq(g_state.source, g_state.sec_root);
+    g_state.source_is_sec_root = str_t_eq(g_state.source, g_state.sec_root);
 
     if (build_index_namespace_paths() != 0) {
         fprintf(stderr, "Error: build_index_namespace_paths failed\n");
@@ -960,7 +950,7 @@ static void marfs_post_process_dir(void* ptr, void* user_data) {
     const str_t basename = get_basename(path);
 
     // Only a sec-root index is renamed to the MarFS mountpoint.
-    if (g_state.source_is_sec_root && path_eq(path, g_state.source)) {
+    if (g_state.source_is_sec_root && str_t_eq(path, g_state.source)) {
         // Rename root namespace to mountpoint in database
         const str_t mountpoint = get_basename(g_state.marfs_mountpoint);
 
