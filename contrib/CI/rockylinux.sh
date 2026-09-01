@@ -90,7 +90,8 @@ dnf -y install \
     pkgconfig \
     python3 \
     python3-pip \
-    sudo
+    sudo \
+    util-linux
 
 # SQLAlchemy needs Python.h
 dnf -y install python3-devel

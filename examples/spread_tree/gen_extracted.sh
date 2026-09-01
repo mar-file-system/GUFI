@@ -61,55 +61,45 @@
 
 
 
-set -e
+# This is a stand-in script for generating data that will be sharded
+# across a spread tree and placed into external databases. This script
+# pulls data from the index and passes the inode, mtime, and a string
+# for each selected entry into a single SQLite 3 database file that
+# contains all data for all entries.
+#
+# Real source filesystem data extraction do not (and probably should
+# not) have to look anything like this:
+#     - The extracted data should come from the source filesystem, not
+#       the index.
+#
+#     - The landing area for the extracted data can be anything: a
+#       single SQLite 3 database, multiple SQLite 3 databases, a
+#       different storage format, an entire directory structure,
+#       etc. Data can even be extracted during spread tree creation.
+#
+# The only thing that matters is that a specific filesystem entry's
+# extracted data can be retrieved by the dataset+prefix specific
+# spread tree shard generator.
 
-# Set Timezone to skip an interactive prompt when running apt-get update
-TZ=America/Denver
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-apt update
-
-# install libraries
-apt -y install \
-    libattr1-dev \
-    libfuse-dev \
-    libomp-dev \
-    libpcre2-dev \
-    zlib1g-dev
-
-# install required packages
-apt -y install \
-    attr \
-    autoconf \
-    bsdmainutils \
-    clang \
-    cmake \
-    gettext \
-    git \
-    patch \
-    pkg-config \
-    python3 \
-    python3-pip \
-    sudo \
-    util-linux
-
-# packages for marfs
-apt -y install \
-    automake \
-    libfuse-dev \
-    libopenmpi-dev \
-    libreadline-dev \
-    libtool \
-    libxml2-dev \
-    nasm
-
-. /etc/os-release
-if [[ "${VERSION_ID}" =~ 26.* ]]
+if [[ "$#" -lt 2 ]]
 then
-    apt -y install libstdc++-16-dev
+    echo "Syntax: $0 index extracted_db [threads]"
+    exit 1
 fi
 
-# packages for presidio
-apt -y install \
-    libcjson-dev \
-    libcurl4-openssl-dev
+set -e
+
+INDEX="$1"
+EXTRACTED_DB="$2"
+THREADS="${3:-1}"
+
+rm -f "${EXTRACTED_DB}"
+
+gufi_query \
+    -n "${THREADS}" \
+    -I "CREATE TABLE intermediate(inode TEXT, mtime INT64, type TEXT, data TEXT);" \
+    -E "INSERT INTO intermediate SELECT inode, mtime, type, 'extracted from ' || name FROM vrpentries;" \
+    -K "CREATE TABLE extracted(inode TEXT, mtime INT64, type TEXT, data TEXT);" \
+    -J "INSERT INTO extracted SELECT * FROM intermediate;" \
+    -O "${EXTRACTED_DB}" \
+    "${INDEX}"

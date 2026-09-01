@@ -61,55 +61,60 @@
 
 
 
-set -e
+# example using an filesystem entry to pull data from some source
+# (actual source filesystem, extracted data file, etc.) and place that
+# data into a spread tree shard database file.
+#
+# In this example, the data has already been extracted and placed into
+# a global SQLite 3 database file, so this script does not do any
+# extraction, and copies directly from it to the shard, which is also
+# a SQLite 3 database file.
 
-# Set Timezone to skip an interactive prompt when running apt-get update
-TZ=America/Denver
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+DIR=$(dirname "${BASH_SOURCE[0]}")
 
-apt update
-
-# install libraries
-apt -y install \
-    libattr1-dev \
-    libfuse-dev \
-    libomp-dev \
-    libpcre2-dev \
-    zlib1g-dev
-
-# install required packages
-apt -y install \
-    attr \
-    autoconf \
-    bsdmainutils \
-    clang \
-    cmake \
-    gettext \
-    git \
-    patch \
-    pkg-config \
-    python3 \
-    python3-pip \
-    sudo \
-    util-linux
-
-# packages for marfs
-apt -y install \
-    automake \
-    libfuse-dev \
-    libopenmpi-dev \
-    libreadline-dev \
-    libtool \
-    libxml2-dev \
-    nasm
-
-. /etc/os-release
-if [[ "${VERSION_ID}" =~ 26.* ]]
+# all extraction scripts should have these arguments
+if [[ "$#" -lt 5 ]]
 then
-    apt -y install libstdc++-16-dev
+    echo "Syntax: $0 shard fsid entry inode mtime" 1>&2
+    exit 1
 fi
 
-# packages for presidio
-apt -y install \
-    libcjson-dev \
-    libcurl4-openssl-dev
+set -e
+
+SHARD="$1"    # path to the shard database where data should be copied to
+# FSID="$2"     # fsid of the filesystem
+# ENTRY="$3"    # path of the specific source entry whose data in the global sqlite3 db is being extracted
+INODE="$4"    # inode of the specific source entry whose data in the global sqlite3 db is being extracted
+MTIME="$5"    # mtime of the specific source entry whose data in the global sqlite3 db is being extracted
+
+# ############################
+
+# constants for this specific dataset + prefix
+# possibly source these variables instead of having them here
+
+SCHEMA="${DIR}/schema.sql"     # schema of the shard database
+PROCESSED_DATA="extracted.db"  # location of global extracted data file
+SRC_TABLE_NAME="extracted"     # name of table in extracted.db
+DST_TABLE_NAME="extracted"     # name of shard table
+
+# data has already been extracted, so no need to do it here
+
+# create the shard db
+(
+    # attach source data (source is also a SQLite 3 database)
+    ATTACH_NAME="contents"     # attach extracted.db with this name
+    echo "ATTACH 'file:${PROCESSED_DATA}?mode=ro' AS ${ATTACH_NAME};"
+
+    # set up tables
+    cat "${SCHEMA}"
+
+    # copy extracted data to the shard
+    echo "INSERT INTO ${DST_TABLE_NAME} "
+    echo "SELECT inode, mtime, data "
+    echo "FROM ${ATTACH_NAME}.${SRC_TABLE_NAME} "
+    echo "WHERE (inode == '${INODE}') AND (mtime == ${MTIME});"
+
+    # clean up
+    echo "DETACH ${ATTACH_NAME};" # not strictly necessary
+) | sqlite3 "${SHARD}"
+# ############################

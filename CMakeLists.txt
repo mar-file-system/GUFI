@@ -256,6 +256,7 @@ find_exec_dependency(AWK    awk gawk)
 find_exec_dependency(COLUMN column)
 find_exec_dependency(DIFF   colordiff diff)
 find_exec_dependency(FIND   find)
+find_exec_dependency(FLOCK  flock)
 find_exec_dependency(GREP   grep)
 find_exec_dependency(PATCH  patch)
 if (APPLE OR DARWIN)
@@ -506,6 +507,7 @@ option(ALLOW_DB_WRITES "Whether or not to allow gufi_query to write to databases
 
 set(SERVER_BIN "bin"       CACHE STRING "Directory to install executables at")
 set(SERVER_LIB "lib"       CACHE STRING "Directory to install libraries at")
+set(SERVER_ETC "etc"       CACHE STRING "Directory to install configuration files at")
 set(SERVER_MAN "share/man" CACHE STRING "Directory to install man pages at")
 
 if (CLIENT)
