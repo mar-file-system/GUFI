@@ -93,8 +93,7 @@ def get_blocksize(value):
 
     return int(str_val[:units]) * (multiplier ** exponent)
 
-def build_expression_parser():
-    # parse the arguments
+def parse_args(argv):
     parser = argparse.ArgumentParser('gufi_du', description='GUFI version of du', add_help=False)
 
     gufi_common.add_help_version(parser)
@@ -140,7 +139,7 @@ def build_expression_parser():
     # GUFI specific arguments
     gufi_common.add_verbose_flag(parser)
 
-    return parser
+    return parser.parse_args(argv[1:])
 
 # process files/links
 def nondir(args, name):
@@ -259,8 +258,7 @@ def run(argv, config_path, stdout=None, stderr=None):
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
 
-    parser = build_expression_parser()
-    args = parser.parse_args(argv[1:])
+    args = parse_args(argv)
 
     if args.inodes and (args.apparent_size or args.block_size):
         sys.stderr.write("warning: options --apparent-size and -b are ineffective with --inodes\n")

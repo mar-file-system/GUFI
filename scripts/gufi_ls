@@ -182,14 +182,7 @@ def build_order_by(args):
 
     return order_by
 
-# argv[0] should be the command name
-def run(argv, config_path, stdout=None, stderr=None):
-    # pylint: disable=too-many-statements,too-many-locals,too-many-branches,invalid-name
-
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
-
-    # parse the arguments
+def parse_args(argv):
     parser = argparse.ArgumentParser('gufi_ls', description='GUFI version of ls', add_help=False)
 
     gufi_common.add_help_version(parser)
@@ -256,7 +249,16 @@ def run(argv, config_path, stdout=None, stderr=None):
     # GUFI specific arguments
     gufi_common.add_common_flags(parser)
 
-    args = parser.parse_args(argv[1:])
+    return parser.parse_args(argv[1:])
+
+# argv[0] should be the command name
+def run(argv, config_path, stdout=None, stderr=None):
+    # pylint: disable=too-many-statements,too-many-locals,too-many-branches,invalid-name
+
+    # find and parse the configuration file first
+    config = gufi_config.Server(config_path)
+
+    args = parse_args(argv)
 
     # return code
     rc = 0

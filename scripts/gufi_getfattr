@@ -172,13 +172,7 @@ def getfattr(args, indexroot, dirname, nondirname):
 
     return query_args + [dirname]
 
-def run(argv, config_path, stdout=None, stderr=None):
-    # pylint: disable=invalid-name,too-many-locals
-
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
-
-    # parse the arguments
+def parse_args(argv):
     parser = argparse.ArgumentParser(
         'gufi_getfattr',
         description='GUFI version of getfattr\n\nNote: -h/--no-dereference and -P/--physical are always set',
@@ -210,7 +204,15 @@ def run(argv, config_path, stdout=None, stderr=None):
 
     gufi_common.add_common_flags(parser)
 
-    args = parser.parse_args(argv[1:])
+    return parser.parse_args(argv[1:])
+
+def run(argv, config_path, stdout=None, stderr=None):
+    # pylint: disable=invalid-name,too-many-locals
+
+    # find and parse the configuration file first
+    config = gufi_config.Server(config_path)
+
+    args = parse_args(argv)
 
     if args.pattern == '-':
         args.pattern = '.*'
