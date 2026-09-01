@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,55 +60,30 @@
 
 
 
-set -e
+set(SPREAD_TREE_CONFIG
+  extdbprefix.sql
+  fsid.sql
+)
 
-# Set Timezone to skip an interactive prompt when running apt-get update
-TZ=America/Denver
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+foreach(SRC ${SPREAD_TREE_CONFIG})
+  configure_file("${SRC}" "${SRC}" COPYONLY)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
+    DESTINATION "${SERVER_ETC}"
+    COMPONENT Server)
+endforeach()
 
-apt update
+set(SPREAD_TREE_SOURCES
+  gufi_spread_configs.sh         # create empty configuration files
 
-# install libraries
-apt -y install \
-    libattr1-dev \
-    libfuse-dev \
-    libomp-dev \
-    libpcre2-dev \
-    zlib1g-dev
+  gufi_spread_shard_path.sh      # compute where the data for this entry should go (default; users can provide their own if they want)
+  gufi_spread_tree.sh            # call this script to generate a spread tree
+  gufi_spread_copy_to_shard.sh   # call this script to generate a single shard in the spread tree
+  gufi_spread_to_extdb.sh        # call this script to copy data from a spread tree to the index
+)
 
-# install required packages
-apt -y install \
-    attr \
-    autoconf \
-    bsdmainutils \
-    clang \
-    cmake \
-    gettext \
-    git \
-    patch \
-    pkg-config \
-    python3 \
-    python3-pip \
-    sudo \
-    util-linux
-
-# packages for marfs
-apt -y install \
-    automake \
-    libfuse-dev \
-    libopenmpi-dev \
-    libreadline-dev \
-    libtool \
-    libxml2-dev \
-    nasm
-
-. /etc/os-release
-if [[ "${VERSION_ID}" =~ 26.* ]]
-then
-    apt -y install libstdc++-16-dev
-fi
-
-# packages for presidio
-apt -y install \
-    libcjson-dev \
-    libcurl4-openssl-dev
+foreach(SRC ${SPREAD_TREE_SOURCES})
+  configure_file("${SRC}" "${SRC}" COPYONLY)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
+    DESTINATION "${SERVER_BIN}"
+    COMPONENT Server)
+endforeach()

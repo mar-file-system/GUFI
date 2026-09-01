@@ -89,6 +89,7 @@ apk add \
     cmake \
     diffutils \
     findutils \
+    flock \
     gcc \
     gettext-envsubst \
     git \

@@ -79,6 +79,10 @@ done
 brew install diffutils
 paths="$(brew --prefix diffutils)/bin:${paths}"
 
+# flock is not installed in libexec/gnubin
+brew install flock
+paths="$(brew --prefix flock)/bin:${paths}"
+
 # install required packages
 brew install autoconf automake cmake gettext llvm libomp pcre2 pkgconf python
 

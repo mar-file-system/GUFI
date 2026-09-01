@@ -89,6 +89,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/processdir.h"
 #include "gufi_query/query.h"
 #include "gufi_query/query_replacement.h"
+#include "gufi_query/spread_tree.h"
 
 static char *save_matime(gqw_t *gqw, struct utimbuf *dbtime) {
     char *dbpath = NULL;
@@ -182,6 +183,14 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* filesystem path of db.db; only generated if keep_matime is set */
     char *dbpath = NULL;
 
+    /* spread tree udf state */
+    asfctx_t asfctx = {
+        .pa = pa,
+        .gqw = gqw,
+        .id = id,
+        .set_up = trie_alloc(),
+    };
+
     DIR *dir = opendir_wrapper(gqw->work.name, in->no_print_errno);
 
     /* if the directory can't be opened, don't bother with anything else */
@@ -212,6 +221,10 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
         /* add some query functions like path() uidtouser() gidtogroup() */
         if (addqueryfuncs_with_context(db, &aqfctx) != 0) {
             fprintf(stderr, "Warning: Could not add functions to sqlite\n");
+        }
+
+        if (addspreadfuncs(db, &asfctx) != 0) {
+            fprintf(stderr, "Warning: Could not add spread tree functions to sqlite\n");
         }
 
         /* ********************************************** */
@@ -438,6 +451,7 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
     closedir(dir);
 
   out_free:
+    trie_free(asfctx.set_up);
     free(dbpath);
     free(dbname);
     free(gqw->work.fullpath);

@@ -208,6 +208,7 @@ set(OTHERS
   parallel_rmr
   querydbs
   run_vt
+  spread_tree
 )
 
 if (DEP_AI)

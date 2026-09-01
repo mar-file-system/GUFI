@@ -80,3 +80,5 @@ foreach(EXAMPLE
   # copy the scropt into the build directory for easy access
   configure_file("${EXAMPLE}" "${EXAMPLE}" COPYONLY)
 endforeach()
+
+add_subdirectory(spread_tree)

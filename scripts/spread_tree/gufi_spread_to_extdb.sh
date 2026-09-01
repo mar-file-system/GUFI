@@ -63,53 +63,56 @@
 
 set -e
 
-# Set Timezone to skip an interactive prompt when running apt-get update
-TZ=America/Denver
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+THREADS=1
+WHERE=""
 
-apt update
+# https://stackoverflow.com/a/14203146
+# Bruno Bronosky
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
 
-# install libraries
-apt -y install \
-    libattr1-dev \
-    libfuse-dev \
-    libomp-dev \
-    libpcre2-dev \
-    zlib1g-dev
+case $key in
+    -n|--threads)
+        THREADS="$2"
+        shift # past count
+        ;;
+    --where)
+        WHERE="$2"
+        shift # past arg
+        ;;
+    *)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        ;;
+esac
+    shift # past flag
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
 
-# install required packages
-apt -y install \
-    attr \
-    autoconf \
-    bsdmainutils \
-    clang \
-    cmake \
-    gettext \
-    git \
-    patch \
-    pkg-config \
-    python3 \
-    python3-pip \
-    sudo \
-    util-linux
-
-# packages for marfs
-apt -y install \
-    automake \
-    libfuse-dev \
-    libopenmpi-dev \
-    libreadline-dev \
-    libtool \
-    libxml2-dev \
-    nasm
-
-. /etc/os-release
-if [[ "${VERSION_ID}" =~ 26.* ]]
-then
-    apt -y install libstdc++-16-dev
+if [[ "$#" -lt 4 ]]; then
+    echo "Syntax: $0 [-n|--threads <count>] [--where <WHERE clause>] fsid.db extdbprefix.db fsid prefix" 1>&2
+    exit 1
 fi
 
-# packages for presidio
-apt -y install \
-    libcjson-dev \
-    libcurl4-openssl-dev
+FSID_DB="$1"
+EXTDBPREFIX_DB="$2"
+FSID="$3"
+PREFIX="$4"
+
+if [[ -n "${WHERE}" ]]
+then
+    WHERE="WHERE ${WHERE}"
+fi
+
+SRC=$(sqlite3 "${FSID_DB}" "SELECT tree FROM fs WHERE id == '${FSID}';")
+INDEX=$(sqlite3 "${FSID_DB}" "SELECT gufi FROM fs WHERE id == '${FSID}';")
+
+# copy the spread tree to external databases for entries that match
+gufi_query \
+    --no-print-sql-on-err \
+    -n "${THREADS}" \
+    -I "ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;" \
+    -E "SELECT spread_to_external('${PREFIX}', '${FSID}', spath(sname, sroll, name), inode, mode, uid, gid, mtime, pinode, dmode, duid, dgid) FROM vrpentries ${WHERE};" \
+    -p "${SRC}" \
+    "${INDEX}"
