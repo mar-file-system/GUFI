@@ -60,25 +60,14 @@
 
 
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(EXAMPLE
-    deluidgidsummaryrecs
-    diffreadirplusdb
-    example_run
-    generategidsummary
-    generateuidsummary
-    gengidsummaryavoidentriesscan
-    genuidsummaryavoidentriesscan
-    groupfilespacehog
-    groupfilespacehogusesummary
-    listschemadb
-    listtablesdb
-    oldbigfiles
-    userfilespacehog
-    userfilespacehogusesummary)
-  # copy the scropt into the build directory for easy access
-  configure_file("${EXAMPLE}" "${EXAMPLE}" COPYONLY)
-endforeach()
+set(EXAMPLE_SPREAD_TREE_SOURCES
+  gen_extracted.sh    # example converting of source files to extract data
 
-add_subdirectory(spread_tree)
+  copy_to_shard.sh    # move data from the source location into a spread tree shard
+  schema.sql          # schema of the shard (and possibly the external databases prefix family)
+  shard_to_extdb.sql  # SQL for coping from a shard db to an external database
+)
+
+foreach(SRC ${EXAMPLE_SPREAD_TREE_SOURCES})
+  configure_file("${SRC}" "${SRC}" COPYONLY)
+endforeach()

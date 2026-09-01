@@ -89,6 +89,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/processdir.h"
 #include "gufi_query/query.h"
 #include "gufi_query/query_replacement.h"
+#include "gufi_query/spread_tree.h"
 
 static char *save_matime(gqw_t *gqw, struct utimbuf *dbtime) {
     char *dbpath = NULL;
@@ -212,6 +213,16 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
         /* add some query functions like path() uidtouser() gidtogroup() */
         if (addqueryfuncs_with_context(db, &aqfctx) != 0) {
             fprintf(stderr, "Warning: Could not add functions to sqlite\n");
+        }
+
+        asfctx_t asfctx = {
+            .pa = pa,
+            .gqw = gqw,
+            .id = id,
+        };
+
+        if (addspreadfuncs(db, &asfctx) != 0) {
+            fprintf(stderr, "Warning: Could not add spread tree functions to sqlite\n");
         }
 
         /* ********************************************** */

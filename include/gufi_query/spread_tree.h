@@ -62,37 +62,30 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_POOL_ARGS_H
-#define GUFI_QUERY_POOL_ARGS_H
+#ifndef GUFI_QUERY_SQLITE3_SPREAD_TREE_H
+#define GUFI_QUERY_SQLITE3_SPREAD_TREE_H
 
-#include <pthread.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <sqlite3.h>
 
-#include "OutputBuffers.h"
 #include "bf.h"
-#include "dbutils.h"
-#include "trie.h"
 
-typedef struct ThreadArgs {
-    char *dbname;
-    sqlite3 *outdb;                    /* either user named or in-memory */
-    FILE *outfile;                     /* always points to STDOUT or a user defined file */
-    trie_t *user_strs;                 /* per-thread user strings */
-    trie_t *sql_caches;                /* external database generation SQL cache */
-    struct OutputBuffer output_buffer; /* only used when outputting to STDOUT or OUTFILE */
-} ThreadArgs_t;
+#include "gufi_query/PoolArgs.h"
+#include "gufi_query/gqw.h"
 
-typedef struct PoolArgs {
-    struct input *in;                  /* save a reference here for convenience */
-    ThreadArgs_t *ta;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-    pthread_mutex_t *stdout_mutex;
+typedef struct AddSpreadFuncsContext {
+    struct PoolArgs *pa;
+    gqw_t *gqw;
+    int id; /* QPTPool thread id */
+} asfctx_t;
 
-    char detach[MAXSQL];               /* cache SQL statement for detaching index dbs */
-} PoolArgs_t;
+int addspreadfuncs(sqlite3 *db, asfctx_t *ctx);
 
-int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex);
-void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

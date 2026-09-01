@@ -179,6 +179,9 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             break;
         }
 
+        /* external database generation SQL cache */
+        ta->sql_caches = trie_alloc();
+
         char *err = NULL;
 
         if (sqlite3_runvt_init(ta->outdb, &err, NULL) != SQLITE_OK) {
@@ -302,6 +305,8 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
         plugins_thread_exit(&pa->in->plugins, ta->outdb);
 
         closedb(ta->outdb);
+
+        trie_free(ta->sql_caches);
 
         trie_free(ta->user_strs);
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,25 +61,57 @@
 
 
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(EXAMPLE
-    deluidgidsummaryrecs
-    diffreadirplusdb
-    example_run
-    generategidsummary
-    generateuidsummary
-    gengidsummaryavoidentriesscan
-    genuidsummaryavoidentriesscan
-    groupfilespacehog
-    groupfilespacehogusesummary
-    listschemadb
-    listtablesdb
-    oldbigfiles
-    userfilespacehog
-    userfilespacehogusesummary)
-  # copy the scropt into the build directory for easy access
-  configure_file("${EXAMPLE}" "${EXAMPLE}" COPYONLY)
-endforeach()
+if [[ "$#" -lt 6 ]]
+then
+    echo "Syntax: $0 extdbprefix.db prefix index entry inode mtime" 1>&2
+    exit 1
+fi
 
-add_subdirectory(spread_tree)
+set -e
+
+EXTDBPREFIX_DB="$1"   # the global external database prefix configuration file
+PREFIX="$2"           # the prefix this shard db will have when it is copied to the GUFI tree
+FSID="$3"             # fsid of the source filesystem
+ENTRY="$4"            # path  of the specific source file whose data in the global SQLite 3 db is being extracted
+INODE="$5"            # inode of the specific source file whose data in the global SQLite 3 db is being extracted
+MTIME="$6"            # mtime of the specific source file whose data in the global SQLite 3 db is being extracted
+
+# get the program for generating shard paths
+# defaults to gufi_spread_shard_path.sh, but does not have to be
+gen_shard_path=$(sqlite3 "${EXTDBPREFIX_DB}" "SELECT gen_shard_path FROM extdb WHERE prefix == '${PREFIX}';")
+if ! command -v "${gen_shard_path}" > /dev/null 2>&1
+then
+    echo "Error: Failed to locate shard path generator" 1>&2
+    exit 1
+fi
+
+spread_tree=$(sqlite3 "${EXTDBPREFIX_DB}" "SELECT spread_top FROM extdb WHERE prefix == '${PREFIX}';")
+# not checking for existance since it might not exist yet
+
+# generate the shard path
+shard_path=$("${gen_shard_path}" "${spread_tree}" "${PREFIX}" "${FSID}" "${ENTRY}" "${INODE}" "${MTIME}")
+if [[ -z "${shard_path}" ]]
+then
+    echo "Error: Failed to generate shard path" 1>&2
+    exit 1
+fi
+
+# create the shard parent if it doesn't already exist
+dir=$(dirname "${shard_path}")
+mkdir -p "${dir}"
+
+# get the program for generating a single shard database
+gen_shard=$(sqlite3 "${EXTDBPREFIX_DB}" "SELECT gen_shard FROM extdb WHERE prefix == '${PREFIX}';")
+if ! command -v "${gen_shard}" > /dev/null 2>&1
+then
+    echo "Error: Failed to locate shard generator" 1>&2
+    exit 1
+fi
+
+# generate the shard database
+# (run dataset-specific converter)
+# previous shard database file may or may not exist; sql should drop tables if necessary
+flock -x /tmp "${gen_shard}" "${shard_path}" "${FSID}" "${ENTRY}" "${INODE}" "${MTIME}"
+
+# does not print if gen_shard failed
+echo "${shard_path}"

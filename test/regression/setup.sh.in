@@ -256,6 +256,24 @@ GUFI_ROLLUP_DISTRIBUTED="${BINARY_DIR}/scripts/distributed/gufi_rollup"
 GUFI_TREESUMMARY_ALL_DISTRIBUTED="${BINARY_DIR}/scripts/distributed/gufi_treesummary_all"
 GUFI_UNROLLUP_DISTRIBUTED="${BINARY_DIR}/scripts/distributed/gufi_unrollup"
 
+# external data
+# constant (used for all conversions)
+SPREAD_TREE_CREATE_CONFIGS="${BINARY_DIR}/scripts/spread_tree/gufi_spread_configs.sh"
+SPREAD_TREE_EXTDBPREFIX_SQL="${BINARY_DIR}/scripts/spread_tree/extdbprefix.sql"
+SPREAD_TREE_FSID_SQL="${BINARY_DIR}/scripts/spread_tree/fsid.sql"
+SPREAD_TREE_GEN_SHARD_PATH="${BINARY_DIR}/scripts/spread_tree/gufi_spread_shard_path.sh"
+SPREAD_TREE_GEN_SPREAD_TREE="${BINARY_DIR}/scripts/spread_tree/gufi_spread_tree.sh"
+SPREAD_TREE_SPREAD_TO_EXTDB="${BINARY_DIR}/scripts/spread_tree/gufi_spread_to_extdb.sh"
+
+# example
+SPREAD_TREE_COPY_TO_SHARD="${BINARY_DIR}/examples/spread_tree/copy_to_shard.sh"
+SPREAD_TREE_SCHEMA="${BINARY_DIR}/examples/spread_tree/schema.sql"
+SPREAD_TREE_SHARD_TO_EXTDB="${BINARY_DIR}/examples/spread_tree/shard_to_extdb.sql"
+
+# this would normally be outside of GUFI's scope
+# needed here to "extract" data from the source tree
+SPREAD_TREE_GEN_EXTRACTED="${BINARY_DIR}/examples/spread_tree/gen_extracted.sh"
+
 # this is created and deleted by the test
 TEST_GUFI_JAIL="${CURRENT_BINARY_DIR}/gufi_jail"
 
@@ -360,6 +378,19 @@ replace() {
     s%${GUFI_ROLLUP_DISTRIBUTED}%gufi_rollup_distributed%g;
     s%${GUFI_TREESUMMARY_ALL_DISTRIBUTED}%gufi_treesummary_all_distributed%g;
     s%${GUFI_UNROLLUP_DISTRIBUTED}%gufi_unrollup_distributed%g;
+
+    s%${SPREAD_TREE_CREATE_CONFIGS}%gufi_spread_configs.sh%g;
+    s%${SPREAD_TREE_EXTDBPREFIX_SQL}%extdbprefix.sql%g;
+    s%${SPREAD_TREE_FSID_SQL}%fsid.sql%g;
+    s%${SPREAD_TREE_GEN_SHARD_PATH}%gufi_spread_shard_path.sh%g;
+    s%${SPREAD_TREE_GEN_SPREAD_TREE}%gufi_spread_tree.sh%g;
+    s%${SPREAD_TREE_SPREAD_TO_EXTDB}%gufi_spread_to_extdb.sh%g;
+
+    s%${SPREAD_TREE_COPY_TO_SHARD}%copy_to_shard.sh%g;
+    s%${SPREAD_TREE_SCHEMA}%schema.sql%g;
+    s%${SPREAD_TREE_SHARD_TO_EXTDB}%shard_to_extdb.sql%g;
+
+    s%${SPREAD_TREE_GEN_EXTRACTED}%gen_extracted.sh%g;
 
     s%${GUFI_INDEXING_PLUGIN}%indexing_plugin%g;
     s%${GUFI_QUERYING_PLUGIN}%querying_plugin%g;

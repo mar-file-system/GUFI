@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,25 +61,56 @@
 
 
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(EXAMPLE
-    deluidgidsummaryrecs
-    diffreadirplusdb
-    example_run
-    generategidsummary
-    generateuidsummary
-    gengidsummaryavoidentriesscan
-    genuidsummaryavoidentriesscan
-    groupfilespacehog
-    groupfilespacehogusesummary
-    listschemadb
-    listtablesdb
-    oldbigfiles
-    userfilespacehog
-    userfilespacehogusesummary)
-  # copy the scropt into the build directory for easy access
-  configure_file("${EXAMPLE}" "${EXAMPLE}" COPYONLY)
-endforeach()
+set -e
 
-add_subdirectory(spread_tree)
+THREADS=1
+WHERE=""
+
+# https://stackoverflow.com/a/14203146
+# Bruno Bronosky
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    -n|--threads)
+        THREADS="$2"
+        shift # past count
+        ;;
+    --where)
+        WHERE="$2"
+        shift # past arg
+        ;;
+    *)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        ;;
+esac
+    shift # past flag
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+if [[ "$#" -lt 4 ]]; then
+    echo "Syntax: $0 [-n|--threads <count>] [--where <WHERE clause>] fsid.db extdbprefix.db fsid prefix" 1>&2
+    exit 1
+fi
+
+FSID_DB="$1"
+EXTDBPREFIX_DB="$2"
+FSID="$3"
+PREFIX="$4"
+
+if [[ -n "${WHERE}" ]]
+then
+    WHERE="WHERE ${WHERE}"
+fi
+
+INDEX=$(sqlite3 "${FSID_DB}" "SELECT gufi FROM fs WHERE id == '${FSID}';")
+
+# copy the spread tree to external databases for entries that match
+gufi_query \
+    --no-print-sql-on-err \
+    -n "${THREADS}" \
+    -I "ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;" \
+    -E "SELECT spread_to_external('${PREFIX}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, duid, dgid) FROM vrpentries ${WHERE};" \
+    "${INDEX}"

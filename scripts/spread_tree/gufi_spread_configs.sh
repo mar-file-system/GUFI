@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,25 +61,20 @@
 
 
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(EXAMPLE
-    deluidgidsummaryrecs
-    diffreadirplusdb
-    example_run
-    generategidsummary
-    generateuidsummary
-    gengidsummaryavoidentriesscan
-    genuidsummaryavoidentriesscan
-    groupfilespacehog
-    groupfilespacehogusesummary
-    listschemadb
-    listtablesdb
-    oldbigfiles
-    userfilespacehog
-    userfilespacehogusesummary)
-  # copy the scropt into the build directory for easy access
-  configure_file("${EXAMPLE}" "${EXAMPLE}" COPYONLY)
-endforeach()
+# create empty configuration db files if they don't already exist
 
-add_subdirectory(spread_tree)
+set -e
+
+if [[ "$#" -lt 4 ]]
+then
+    echo "Syntax: $0 fsid.sql fsid_db extdbprefix.sql extdbprefix_db"
+    exit 1
+fi
+
+FSID_SQL="$1"
+FSID_DB="$2"
+EXTDBPREFIX_SQL="$3"
+EXTDBPREFIX_DB="$4"
+
+sqlite3 "${FSID_DB}" < "${FSID_SQL}"
+sqlite3 "${EXTDBPREFIX_DB}" < "${EXTDBPREFIX_SQL}"

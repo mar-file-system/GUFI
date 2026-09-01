@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,25 +61,45 @@
 
 
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(EXAMPLE
-    deluidgidsummaryrecs
-    diffreadirplusdb
-    example_run
-    generategidsummary
-    generateuidsummary
-    gengidsummaryavoidentriesscan
-    genuidsummaryavoidentriesscan
-    groupfilespacehog
-    groupfilespacehogusesummary
-    listschemadb
-    listtablesdb
-    oldbigfiles
-    userfilespacehog
-    userfilespacehogusesummary)
-  # copy the scropt into the build directory for easy access
-  configure_file("${EXAMPLE}" "${EXAMPLE}" COPYONLY)
-endforeach()
+# This is a stand-in script for generating data that will be sharded
+# across a spread tree and placed into external databases. This script
+# pulls data from the index and passes the inode, mtime, and a string
+# for each selected entry into a single SQLite 3 database file that
+# contains all data for all entries.
+#
+# Real source filesystem data extraction do not (and probably should
+# not) have to look anything like this:
+#     - The extracted data should come from the source filesystem, not
+#       the index.
+#
+#     - The landing area for the extracted data can be anything: a
+#       single SQLite 3 database, multiple SQLite 3 databases, a
+#       different storage format, an entire directory structure,
+#       etc. Data can even be extracted during spread tree creation.
+#
+# The only thing that matters is that a specific filesystem entry's
+# extracted data can be retrieved by the dataset+prefix specific
+# spread tree shard generator.
 
-add_subdirectory(spread_tree)
+if [[ "$#" -lt 2 ]]
+then
+    echo "Syntax: $0 index extracted_db [threads]"
+    exit 1
+fi
+
+set -e
+
+INDEX="$1"
+EXTRACTED_DB="$2"
+THREADS="${3:-1}"
+
+rm -f "${EXTRACTED_DB}"
+
+gufi_query \
+    -n "${THREADS}" \
+    -I "CREATE TABLE intermediate(inode TEXT, mtime INT64, type TEXT, data TEXT);" \
+    -E "INSERT INTO intermediate SELECT inode, mtime, type, 'extracted from ' || name FROM vrpentries;" \
+    -K "CREATE TABLE extracted(inode TEXT, mtime INT64, type TEXT, data TEXT);" \
+    -J "INSERT INTO extracted SELECT * FROM intermediate;" \
+    -O "${EXTRACTED_DB}" \
+    "${INDEX}"

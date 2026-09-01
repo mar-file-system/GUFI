@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,25 +61,23 @@
 
 
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(EXAMPLE
-    deluidgidsummaryrecs
-    diffreadirplusdb
-    example_run
-    generategidsummary
-    generateuidsummary
-    gengidsummaryavoidentriesscan
-    genuidsummaryavoidentriesscan
-    groupfilespacehog
-    groupfilespacehogusesummary
-    listschemadb
-    listtablesdb
-    oldbigfiles
-    userfilespacehog
-    userfilespacehogusesummary)
-  # copy the scropt into the build directory for easy access
-  configure_file("${EXAMPLE}" "${EXAMPLE}" COPYONLY)
-endforeach()
+# example program for generating a spread tree path
 
-add_subdirectory(spread_tree)
+if [[ "$#" -lt 6 ]]
+then
+    echo "Syntax: $0 spread_tree_root prefix fsid path inode mtime"
+    exit 1
+fi
+
+SPREAD_TREE_ROOT="$1"
+PREFIX="$2"
+FSID="$3"
+# PATH="$4"
+INODE="$5"
+# MTIME="$6"
+
+# make sure the inode is at least 6 chars long
+padded="000000${INODE}"
+
+# print path
+echo "${SPREAD_TREE_ROOT}/${PREFIX}/${FSID}/${padded: -2:2}/${padded: -4:2}/${padded: -6:2}.db"

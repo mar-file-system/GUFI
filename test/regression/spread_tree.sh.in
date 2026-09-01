@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+
+OUTPUT="spread_tree.out"
+
+FSID_DB="fsid.db"               # config
+FSID="fsid"                     # decided externally
+
+EXTDBPREFIX_DB="extdbprefix.db" # config
+PREFIX_FILE="prefix-file"       # decided externally
+PREFIX_LINK="prefix-link"       # decided externally
+
+EXTRACTED_DB="extracted.db"     # data from source tree
+SPREAD_TREE="spread_tree"       # decided externally
+
+cleanup() {
+    rm -rf "${FSID_DB}" "${EXTDBPREFIX_DB}" "${EXTRACTED_DB}" "${SPREAD_TREE}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+(
+# shellcheck disable=SC2155
+export PATH="$(dirname ${SQLITE3}):$(dirname ${SPREAD_TREE_GEN_SHARD_PATH}):${BINARY_DIR}/src:${PATH}"
+
+# restore test inode values
+"${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE entries SET inode = mtime;"
+"${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE summary SET inode = mtime;"
+
+echo "# Set up permanent location for tracking filesystems and prefixes"
+run_no_sort "${SPREAD_TREE_CREATE_CONFIGS} \"${SPREAD_TREE_FSID_SQL}\" \"${FSID_DB}\" \"${SPREAD_TREE_EXTDBPREFIX_SQL}\" \"${EXTDBPREFIX_DB}\""
+
+echo "# Insert a filesystem record"
+run_no_sort "${SQLITE3} \"${FSID_DB}\" \"INSERT INTO fs VALUES ('${FSID}', '${SRCDIR}', '${INDEXROOT}', 'test fs', 'for testing');\""
+
+echo "# Insert a prefix record"
+run_no_sort "${SQLITE3} \"${EXTDBPREFIX_DB}\" \"INSERT INTO extdb VALUES ('${PREFIX_FILE}', '${SPREAD_TREE_SCHEMA}', NULL, '${SPREAD_TREE_COPY_TO_SHARD}', '${SPREAD_TREE}', '${SPREAD_TREE_SHARD_TO_EXTDB}');\""
+
+echo "# Insert another prefix record"
+run_no_sort "${SQLITE3} \"${EXTDBPREFIX_DB}\" \"INSERT INTO extdb VALUES ('${PREFIX_LINK}', '${SPREAD_TREE_SCHEMA}', NULL, '${SPREAD_TREE_COPY_TO_SHARD}', '${SPREAD_TREE}', '${SPREAD_TREE_SHARD_TO_EXTDB}');\""
+
+echo "# Extract data from all non-directories in the source filesystem"
+echo "# Doing before spread tree creation (data can be extracted during spread tree creation with the correct code)"
+run_no_sort "${SPREAD_TREE_GEN_EXTRACTED} \"${INDEXROOT}\" \"${EXTRACTED_DB}\""
+
+echo "# Print extracted data"
+run_no_sort "${SQLITE3} \"${EXTRACTED_DB}\" \"SELECT inode, mtime, type, data FROM extracted ORDER BY mtime ASC;\""
+
+echo "# Generate a spread tree for only the files"
+run_no_sort "${SPREAD_TREE_GEN_SPREAD_TREE} -n ${THREADS} --where \"type == 'f'\" \"${FSID_DB}\" \"${EXTDBPREFIX_DB}\" \"${FSID}\" \"${PREFIX_FILE}\" > /dev/null"
+
+echo "# Generate a spread tree for only the links"
+run_no_sort "${SPREAD_TREE_GEN_SPREAD_TREE} -n ${THREADS} --where \"type == 'l'\" \"${FSID_DB}\" \"${EXTDBPREFIX_DB}\" \"${FSID}\" \"${PREFIX_LINK}\" > /dev/null"
+
+echo "# List spread tree shards"
+run_sort "find \"${SPREAD_TREE}\" -type f -exec \"${SQLITE3}\" {} \"SELECT '{}', * FROM extracted;\" \;"
+
+echo "# Copy the shards into external databases in the index"
+run_no_sort "${SPREAD_TREE_SPREAD_TO_EXTDB} -n ${THREADS} --where \"type == 'f'\" \"${FSID_DB}\" \"${EXTDBPREFIX_DB}\" \"${FSID}\" \"${PREFIX_FILE}\" > /dev/null" | @SED@ "\%^Failed to chown .*%d"
+
+run_no_sort "${SPREAD_TREE_SPREAD_TO_EXTDB} -n ${THREADS} --where \"type == 'l'\" \"${FSID_DB}\" \"${EXTDBPREFIX_DB}\" \"${FSID}\" \"${PREFIX_LINK}\" > /dev/null" | @SED@ "\%^Failed to chown .*%d"
+
+echo "# List external databases"
+# not printing uid/gid because different ones show up on different systems
+run_sort "find \"${INDEXROOT}\" -type f -name \"prefix-*.db\" -printf \"%M %p\n\""
+
+echo "# Query only the ${PREFIX_FILE} external databases in the index"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -I \"CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);\" --external-copy \"${PREFIX_FILE}\" \"INSERT INTO ext SELECT inode, data FROM extracted;\" -E \"INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;\" -K \"CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);\" -J \"INSERT INTO aggregate SELECT * FROM intermediate;\" -G \"SELECT * FROM aggregate;\" \"${INDEXROOT}\""
+
+echo "# Query only the ${PREFIX_LINK} external databases in the index"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -I \"CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);\" --external-copy \"${PREFIX_LINK}\" \"INSERT INTO ext SELECT inode, data FROM extracted;\" -E \"INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;\" -K \"CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);\" -J \"INSERT INTO aggregate SELECT * FROM intermediate;\" -G \"SELECT * FROM aggregate;\" \"${INDEXROOT}\""
+
+echo "# Query the external databases in the index, capturing both prefixes with the same pattern"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -I \"CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);\" --external-copy \"prefix-.*\" \"INSERT INTO ext SELECT inode, data FROM extracted;\" -E \"INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;\" -K \"CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);\" -J \"INSERT INTO aggregate SELECT * FROM intermediate;\" -G \"SELECT * FROM aggregate;\" \"${INDEXROOT}\""
+
+echo "# Query the external databases in the index, capturing both prefixes with different patterns"
+run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -I \"CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);\" --external-copy \"${PREFIX_FILE}\" \"INSERT INTO ext SELECT inode, data FROM extracted;\" --external-copy \"${PREFIX_LINK}\" \"INSERT INTO ext SELECT inode, data FROM extracted;\" -E \"INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;\" -K \"CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);\" -J \"INSERT INTO aggregate SELECT * FROM intermediate;\" -G \"SELECT * FROM aggregate;\" \"${INDEXROOT}\""
+
+echo "#####################################"
+echo "# Bad Inputs                        #"
+echo "#####################################"
+
+rm -rf "${SPREAD_TREE}"
+
+# gen_spread_tree
+
+echo "# bad prefix"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${FSID_DB}?mode=ro' AS fsid_config; ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT create_spread('${EXTDBPREFIX_DB}', 'bad-${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mtime) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+# not checking path, inode, and mtime because they are not checked for correctness/NULL
+
+# still no spread tree
+
+# spread_to_extdb
+
+echo "# try to copy non-existent shard"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\"" | @SED@ "\%^Failed to chown .*%d"
+
+echo "# missing extdbprefix.db"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# bad mode"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, 'bad_mode', uid, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# NULL mode"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, NULL, uid, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# bad uid"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, 'bad_uid', gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# NULL uid"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, NULL, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# bad gid"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, 'bad_gid', mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# NULL gid"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, NULL, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+# mtime is simply forwarded
+
+echo "# bad dmode"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, 'bad_dmode', duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# NULL dmode"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, NULL, duid, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# bad duid"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, 'bad_duid', dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# NULL duid"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, NULL, dgid) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# bad dgid"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, duid, 'bad_dgid') FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# NULL dgid"
+run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, duid, NULL) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+) | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/spread_tree.expected "${OUTPUT}"
+rm "${OUTPUT}"

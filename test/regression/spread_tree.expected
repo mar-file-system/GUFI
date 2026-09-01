@@ -1,0 +1,205 @@
+# Set up permanent location for tracking filesystems and prefixes
+$ gufi_spread_configs.sh "fsid.sql" "fsid.db" "extdbprefix.sql" "extdbprefix.db"
+
+# Insert a filesystem record
+$ sqlite3 "fsid.db" "INSERT INTO fs VALUES ('fsid', 'prefix', 'prefix', 'test fs', 'for testing');"
+
+# Insert a prefix record
+$ sqlite3 "extdbprefix.db" "INSERT INTO extdb VALUES ('prefix-file', 'schema.sql', NULL, 'copy_to_shard.sh', 'spread_tree', 'shard_to_extdb.sql');"
+
+# Insert another prefix record
+$ sqlite3 "extdbprefix.db" "INSERT INTO extdb VALUES ('prefix-link', 'schema.sql', NULL, 'copy_to_shard.sh', 'spread_tree', 'shard_to_extdb.sql');"
+
+# Extract data from all non-directories in the source filesystem
+# Doing before spread tree creation (data can be extracted during spread tree creation with the correct code)
+$ gen_extracted.sh "prefix" "extracted.db"
+
+# Print extracted data
+$ sqlite3 "extracted.db" "SELECT inode, mtime, type, data FROM extracted ORDER BY mtime ASC;"
+0|0|f|extracted from old_file
+1|1|f|extracted from executable
+2|2|f|extracted from readonly
+3|3|f|extracted from writable
+4|4|l|extracted from directory_symlink
+5|5|f|extracted from repeat_name
+9|9|l|extracted from file_symlink
+10|10|f|extracted from .hidden
+11|11|f|extracted from leaf_file1
+12|12|f|extracted from leaf_file2
+14|14|f|extracted from repeat_name
+15|15|f|extracted from unusual, name?#
+1024|1024|f|extracted from 1KB
+1048576|1048576|f|extracted from 1MB
+
+# Generate a spread tree for only the files
+$ gufi_spread_tree.sh -n 2 --where "type == 'f'" "fsid.db" "extdbprefix.db" "fsid" "prefix-file" > /dev/null
+
+# Generate a spread tree for only the links
+$ gufi_spread_tree.sh -n 2 --where "type == 'l'" "fsid.db" "extdbprefix.db" "fsid" "prefix-link" > /dev/null
+
+# List spread tree shards
+$ find "spread_tree" -type f -exec "sqlite3" {} "SELECT '{}', * FROM extracted;" \;
+spread_tree/prefix-file/fsid/00/00/00.db|0|0|extracted from old_file
+spread_tree/prefix-file/fsid/01/00/00.db|1|1|extracted from executable
+spread_tree/prefix-file/fsid/02/00/00.db|2|2|extracted from readonly
+spread_tree/prefix-file/fsid/03/00/00.db|3|3|extracted from writable
+spread_tree/prefix-file/fsid/05/00/00.db|5|5|extracted from repeat_name
+spread_tree/prefix-file/fsid/10/00/00.db|10|10|extracted from .hidden
+spread_tree/prefix-file/fsid/11/00/00.db|11|11|extracted from leaf_file1
+spread_tree/prefix-file/fsid/12/00/00.db|12|12|extracted from leaf_file2
+spread_tree/prefix-file/fsid/14/00/00.db|14|14|extracted from repeat_name
+spread_tree/prefix-file/fsid/15/00/00.db|15|15|extracted from unusual, name?#
+spread_tree/prefix-file/fsid/24/10/00.db|1024|1024|extracted from 1KB
+spread_tree/prefix-file/fsid/76/85/04.db|1048576|1048576|extracted from 1MB
+spread_tree/prefix-link/fsid/04/00/00.db|4|4|extracted from directory_symlink
+spread_tree/prefix-link/fsid/09/00/00.db|9|9|extracted from file_symlink
+
+# Copy the shards into external databases in the index
+$ gufi_spread_to_extdb.sh -n 2 --where "type == 'f'" "fsid.db" "extdbprefix.db" "fsid" "prefix-file" > /dev/null
+
+$ gufi_spread_to_extdb.sh -n 2 --where "type == 'l'" "fsid.db" "extdbprefix.db" "fsid" "prefix-link" > /dev/null
+
+# List external databases
+$ find "prefix" -type f -name "prefix-*.db" -printf "%M %p\n"
+-rw------- prefix/directory/prefix-file_ur.db
+-rw------- prefix/directory/subdirectory/prefix-file_ur.db
+-rw------- prefix/directory/subdirectory/prefix-link_ur.db
+-rw------- prefix/leaf_directory/prefix-file_ur.db
+-rw------- prefix/prefix-file_ur.db
+-rw------- prefix/prefix-link_ur.db
+-rw------- prefix/unusual#? directory ,/prefix-file_ur.db
+
+# Query only the prefix-file external databases in the index
+$ gufi_query -d "|" -n 2 -I "CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);" --external-copy "prefix-file" "INSERT INTO ext SELECT inode, data FROM extracted;" -E "INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" -K "CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);" -J "INSERT INTO aggregate SELECT * FROM intermediate;" -G "SELECT * FROM aggregate;" "prefix"
+prefix/.hidden|10|extracted from .hidden
+prefix/1KB|1024|extracted from 1KB
+prefix/1MB|1048576|extracted from 1MB
+prefix/directory/executable|1|extracted from executable
+prefix/directory/readonly|2|extracted from readonly
+prefix/directory/subdirectory/directory_symlink|4|
+prefix/directory/subdirectory/repeat_name|5|extracted from repeat_name
+prefix/directory/writable|3|extracted from writable
+prefix/file_symlink|9|
+prefix/leaf_directory/leaf_file1|11|extracted from leaf_file1
+prefix/leaf_directory/leaf_file2|12|extracted from leaf_file2
+prefix/old_file|0|extracted from old_file
+prefix/repeat_name|14|extracted from repeat_name
+prefix/unusual#? directory ,/unusual, name?#|15|extracted from unusual, name?#
+
+# Query only the prefix-link external databases in the index
+$ gufi_query -d "|" -n 2 -I "CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);" --external-copy "prefix-link" "INSERT INTO ext SELECT inode, data FROM extracted;" -E "INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" -K "CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);" -J "INSERT INTO aggregate SELECT * FROM intermediate;" -G "SELECT * FROM aggregate;" "prefix"
+prefix/.hidden|10|
+prefix/1KB|1024|
+prefix/1MB|1048576|
+prefix/directory/executable|1|
+prefix/directory/readonly|2|
+prefix/directory/subdirectory/directory_symlink|4|extracted from directory_symlink
+prefix/directory/subdirectory/repeat_name|5|
+prefix/directory/writable|3|
+prefix/file_symlink|9|extracted from file_symlink
+prefix/leaf_directory/leaf_file1|11|
+prefix/leaf_directory/leaf_file2|12|
+prefix/old_file|0|
+prefix/repeat_name|14|
+prefix/unusual#? directory ,/unusual, name?#|15|
+
+# Query the external databases in the index, capturing both prefixes with the same pattern
+$ gufi_query -d "|" -n 2 -I "CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);" --external-copy "prefix-.*" "INSERT INTO ext SELECT inode, data FROM extracted;" -E "INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" -K "CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);" -J "INSERT INTO aggregate SELECT * FROM intermediate;" -G "SELECT * FROM aggregate;" "prefix"
+prefix/.hidden|10|extracted from .hidden
+prefix/1KB|1024|extracted from 1KB
+prefix/1MB|1048576|extracted from 1MB
+prefix/directory/executable|1|extracted from executable
+prefix/directory/readonly|2|extracted from readonly
+prefix/directory/subdirectory/directory_symlink|4|extracted from directory_symlink
+prefix/directory/subdirectory/repeat_name|5|extracted from repeat_name
+prefix/directory/writable|3|extracted from writable
+prefix/file_symlink|9|extracted from file_symlink
+prefix/leaf_directory/leaf_file1|11|extracted from leaf_file1
+prefix/leaf_directory/leaf_file2|12|extracted from leaf_file2
+prefix/old_file|0|extracted from old_file
+prefix/repeat_name|14|extracted from repeat_name
+prefix/unusual#? directory ,/unusual, name?#|15|extracted from unusual, name?#
+
+# Query the external databases in the index, capturing both prefixes with different patterns
+$ gufi_query -d "|" -n 2 -I "CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);" --external-copy "prefix-file" "INSERT INTO ext SELECT inode, data FROM extracted;" --external-copy "prefix-link" "INSERT INTO ext SELECT inode, data FROM extracted;" -E "INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" -K "CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);" -J "INSERT INTO aggregate SELECT * FROM intermediate;" -G "SELECT * FROM aggregate;" "prefix"
+prefix/.hidden|10|extracted from .hidden
+prefix/1KB|1024|extracted from 1KB
+prefix/1MB|1048576|extracted from 1MB
+prefix/directory/executable|1|extracted from executable
+prefix/directory/readonly|2|extracted from readonly
+prefix/directory/subdirectory/directory_symlink|4|extracted from directory_symlink
+prefix/directory/subdirectory/repeat_name|5|extracted from repeat_name
+prefix/directory/writable|3|extracted from writable
+prefix/file_symlink|9|extracted from file_symlink
+prefix/leaf_directory/leaf_file1|11|extracted from leaf_file1
+prefix/leaf_directory/leaf_file2|12|extracted from leaf_file2
+prefix/old_file|0|extracted from old_file
+prefix/repeat_name|14|extracted from repeat_name
+prefix/unusual#? directory ,/unusual, name?#|15|extracted from unusual, name?#
+
+#####################################
+# Bad Inputs                        #
+#####################################
+# bad prefix
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:fsid.db?mode=ro' AS fsid_config; ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT create_spread('extdbprefix.db', 'bad-prefix-file', 'fsid', rpath(sname, sroll, name), inode, mtime) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Failed to locate shard path generator
+Error: Did not get result from gufi_spread_copy_to_shard.sh: prefix/db.db
+
+# try to copy non-existent shard
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Runtime error near line 1: unable to open database: file:spread_tree/prefix-file/fsid/10/00/00.db?mode=ro (14)
+Parse error near line 65: no such table: shard.extracted
+Error: sqlite3 errored: prefix/db.db
+
+# missing extdbprefix.db
+$ gufi_query --no-print-sql-on-err --max-level 0 -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Could not data from extdb: no such table: extdb: prefix/db.db
+
+# bad mode
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, 'bad_mode', uid, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Bad mode: bad_mode: prefix/db.db
+
+# NULL mode
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, NULL, uid, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Missing mode: prefix/db.db
+
+# bad uid
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, 'bad_uid', gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Bad uid: bad_uid: prefix/db.db
+
+# NULL uid
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, NULL, gid, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Missing uid: prefix/db.db
+
+# bad gid
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, 'bad_gid', mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Bad gid: bad_gid: prefix/db.db
+
+# NULL gid
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, NULL, mtime, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Missing gid: prefix/db.db
+
+# bad dmode
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, 'bad_dmode', duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Bad directory mode: bad_dmode: prefix/db.db
+
+# NULL dmode
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, NULL, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Missing directory mode: prefix/db.db
+
+# bad duid
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, 'bad_duid', dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Bad directory uid: bad_duid: prefix/db.db
+
+# NULL duid
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, NULL, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Missing directory uid: prefix/db.db
+
+# bad dgid
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, duid, 'bad_dgid') FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Bad directory gid: bad_dgid: prefix/db.db
+
+# NULL dgid
+$ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, dmode, duid, NULL) FROM vrpentries WHERE type == 'f';" "prefix"
+Error: Missing directory gid: prefix/db.db
+

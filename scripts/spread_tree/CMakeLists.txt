@@ -60,25 +60,30 @@
 
 
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(EXAMPLE
-    deluidgidsummaryrecs
-    diffreadirplusdb
-    example_run
-    generategidsummary
-    generateuidsummary
-    gengidsummaryavoidentriesscan
-    genuidsummaryavoidentriesscan
-    groupfilespacehog
-    groupfilespacehogusesummary
-    listschemadb
-    listtablesdb
-    oldbigfiles
-    userfilespacehog
-    userfilespacehogusesummary)
-  # copy the scropt into the build directory for easy access
-  configure_file("${EXAMPLE}" "${EXAMPLE}" COPYONLY)
+set(SPREAD_TREE_CONFIG
+  extdbprefix.sql
+  fsid.sql
+)
+
+foreach(SRC ${SPREAD_TREE_CONFIG})
+  configure_file("${SRC}" "${SRC}" COPYONLY)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
+    DESTINATION "${SERVER_ETC}"
+    COMPONENT Server)
 endforeach()
 
-add_subdirectory(spread_tree)
+set(SPREAD_TREE_SOURCES
+  gufi_spread_configs.sh         # create empty configuration files
+
+  gufi_spread_shard_path.sh      # compute where the data for this entry should go (default; users can provide their own if they want)
+  gufi_spread_tree.sh            # call this script to generate a spread tree
+  gufi_spread_copy_to_shard.sh   # call this script to generate a single shard in the spread tree
+  gufi_spread_to_extdb.sh        # call this script to copy data from a spread tree to the index
+)
+
+foreach(SRC ${SPREAD_TREE_SOURCES})
+  configure_file("${SRC}" "${SRC}" COPYONLY)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
+    DESTINATION "${SERVER_BIN}"
+    COMPONENT Server)
+endforeach()

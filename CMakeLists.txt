@@ -510,6 +510,7 @@ option(ALLOW_DB_WRITES "Whether or not to allow gufi_query to write to databases
 
 set(SERVER_BIN "bin"       CACHE STRING "Directory to install executables at")
 set(SERVER_LIB "lib"       CACHE STRING "Directory to install libraries at")
+set(SERVER_ETC "etc"       CACHE STRING "Directory to install server configuration files at")
 set(SERVER_MAN "share/man" CACHE STRING "Directory to install man pages at")
 
 if (CLIENT)
