@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,55 +60,14 @@
 
 
 
-set -e
+set(EXAMPLE_SPREAD_TREE_SOURCES
+  gen_extracted.sh    # example converting of source files to extract data
 
-# Set Timezone to skip an interactive prompt when running apt-get update
-TZ=America/Denver
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+  copy_to_shard.sh    # move data from the source location into a spread tree shard
+  schema.sql          # schema of the external database prefix family (and possibly the spread tree shard)
+  shard_to_extdb.sql  # SQL for copying from a shard db to an external database
+)
 
-apt update
-
-# install libraries
-apt -y install \
-    libattr1-dev \
-    libfuse-dev \
-    libomp-dev \
-    libpcre2-dev \
-    zlib1g-dev
-
-# install required packages
-apt -y install \
-    attr \
-    autoconf \
-    bsdmainutils \
-    clang \
-    cmake \
-    gettext \
-    git \
-    patch \
-    pkg-config \
-    python3 \
-    python3-pip \
-    sudo \
-    util-linux
-
-# packages for marfs
-apt -y install \
-    automake \
-    libfuse-dev \
-    libopenmpi-dev \
-    libreadline-dev \
-    libtool \
-    libxml2-dev \
-    nasm
-
-. /etc/os-release
-if [[ "${VERSION_ID}" =~ 26.* ]]
-then
-    apt -y install libstdc++-16-dev
-fi
-
-# packages for presidio
-apt -y install \
-    libcjson-dev \
-    libcurl4-openssl-dev
+foreach(SRC ${EXAMPLE_SPREAD_TREE_SOURCES})
+  configure_file("${SRC}" "${SRC}" COPYONLY)
+endforeach()

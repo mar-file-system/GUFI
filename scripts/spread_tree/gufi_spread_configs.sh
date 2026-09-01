@@ -61,55 +61,20 @@
 
 
 
+# create empty configuration db files if they don't already exist
+
 set -e
 
-# Set Timezone to skip an interactive prompt when running apt-get update
-TZ=America/Denver
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-apt update
-
-# install libraries
-apt -y install \
-    libattr1-dev \
-    libfuse-dev \
-    libomp-dev \
-    libpcre2-dev \
-    zlib1g-dev
-
-# install required packages
-apt -y install \
-    attr \
-    autoconf \
-    bsdmainutils \
-    clang \
-    cmake \
-    gettext \
-    git \
-    patch \
-    pkg-config \
-    python3 \
-    python3-pip \
-    sudo \
-    util-linux
-
-# packages for marfs
-apt -y install \
-    automake \
-    libfuse-dev \
-    libopenmpi-dev \
-    libreadline-dev \
-    libtool \
-    libxml2-dev \
-    nasm
-
-. /etc/os-release
-if [[ "${VERSION_ID}" =~ 26.* ]]
+if [[ "$#" -lt 4 ]]
 then
-    apt -y install libstdc++-16-dev
+    echo "Syntax: $0 fsid.sql fsid_db extdbprefix.sql extdbprefix_db"
+    exit 1
 fi
 
-# packages for presidio
-apt -y install \
-    libcjson-dev \
-    libcurl4-openssl-dev
+FSID_SQL="$1"
+FSID_DB="$2"
+EXTDBPREFIX_SQL="$3"
+EXTDBPREFIX_DB="$4"
+
+sqlite3 "${FSID_DB}" < "${FSID_SQL}"
+sqlite3 "${EXTDBPREFIX_DB}" < "${EXTDBPREFIX_SQL}"

@@ -201,6 +201,7 @@ add_library(gufi_query_lib OBJECT
   gufi_query/query.c
   gufi_query/query_replacement.c
   gufi_query/query_user_strs.c
+  gufi_query/spread_tree.c
 )
 
 add_dependencies(gufi_query_lib GUFI)

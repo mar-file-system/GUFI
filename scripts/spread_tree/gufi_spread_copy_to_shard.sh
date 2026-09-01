@@ -61,55 +61,59 @@
 
 
 
-set -e
-
-# Set Timezone to skip an interactive prompt when running apt-get update
-TZ=America/Denver
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-apt update
-
-# install libraries
-apt -y install \
-    libattr1-dev \
-    libfuse-dev \
-    libomp-dev \
-    libpcre2-dev \
-    zlib1g-dev
-
-# install required packages
-apt -y install \
-    attr \
-    autoconf \
-    bsdmainutils \
-    clang \
-    cmake \
-    gettext \
-    git \
-    patch \
-    pkg-config \
-    python3 \
-    python3-pip \
-    sudo \
-    util-linux
-
-# packages for marfs
-apt -y install \
-    automake \
-    libfuse-dev \
-    libopenmpi-dev \
-    libreadline-dev \
-    libtool \
-    libxml2-dev \
-    nasm
-
-. /etc/os-release
-if [[ "${VERSION_ID}" =~ 26.* ]]
+if [[ "$#" -lt 7 ]]
 then
-    apt -y install libstdc++-16-dev
+    echo "Syntax: $0 extdbprefix.db prefix index entry inode mtime flock_dir" 1>&2
+    exit 1
 fi
 
-# packages for presidio
-apt -y install \
-    libcjson-dev \
-    libcurl4-openssl-dev
+set -e
+
+EXTDBPREFIX_DB="$1" # the global external database prefix configuration file
+PREFIX="$2"         # the prefix this shard db will have when it is copied to the GUFI tree
+FSID="$3"           # fsid of the source filesystem
+ENTRY="$4"          # path  of the specific source file whose data in the global SQLite 3 db is being extracted
+INODE="$5"          # inode of the specific source file whose data in the global SQLite 3 db is being extracted
+MTIME="$6"          # mtime of the specific source file whose data in the global SQLite 3 db is being extracted
+FLOCK_DIR="$7"      # directory to place lock files - must exist before entering this script; caller is responsible for deleting
+
+# get the program for generating shard paths
+# defaults to gufi_spread_shard_path.sh, but does not have to be
+gen_shard_path=$(sqlite3 "${EXTDBPREFIX_DB}" "SELECT gen_shard_path FROM extdb WHERE prefix == '${PREFIX}';")
+if ! command -v "${gen_shard_path}" > /dev/null 2>&1
+then
+    echo "Error: Failed to locate shard path generator" 1>&2
+    exit 1
+fi
+
+spread_tree=$(sqlite3 "${EXTDBPREFIX_DB}" "SELECT spread_top FROM extdb WHERE prefix == '${PREFIX}';")
+# not checking for existence since it might not exist yet
+
+# generate the shard path
+shard_path=$("${gen_shard_path}" "${spread_tree}" "${PREFIX}" "${FSID}" "${ENTRY}" "${INODE}" "${MTIME}")
+if [[ -z "${shard_path}" ]]
+then
+    echo "Error: Failed to generate shard path" 1>&2
+    exit 1
+fi
+
+# create the shard parent if it doesn't already exist
+dir=$(dirname "${shard_path}")
+mkdir -p "${dir}"
+
+# get the program for generating a single shard database
+copy_to_shard=$(sqlite3 "${EXTDBPREFIX_DB}" "SELECT copy_to_shard FROM extdb WHERE prefix == '${PREFIX}';")
+if ! command -v "${copy_to_shard}" > /dev/null 2>&1
+then
+    echo "Error: Failed to locate shard generator" 1>&2
+    exit 1
+fi
+
+# generate the shard database
+# (run dataset-specific converter)
+# previous shard database file may or may not exist; sql should drop tables if necessary
+flock -x "${FLOCK_DIR}/${PREFIX}-${FSID}-$(basename ${shard_path})" \
+      "${copy_to_shard}" "${shard_path}" "${FSID}" "${ENTRY}" "${INODE}" "${MTIME}"
+
+# does not print if gen_shard failed
+echo "${shard_path}"
