@@ -62,15 +62,10 @@
 
 
 import argparse
-import os
-import subprocess
 import sys
 
 import gufi_common
 import gufi_config
-
-# location of this file
-PATH = os.path.realpath(__file__)
 
 def parse_args(argv):
     # parse the arguments
@@ -111,12 +106,9 @@ def parse_args(argv):
 
     return parser.parse_args(argv[1:])
 
-# argv[0] should be the command name
-def run(argv, config_path, stdout=None, stderr=None):
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
-
-    args = parse_args(argv)
+def gen_cmd(config, args, paths):
+    # no need to split path
+    # gufi_stat_bin does it
 
     # create the stat command
     stat_cmd = [config.stat]
@@ -127,33 +119,29 @@ def run(argv, config_path, stdout=None, stderr=None):
     if args.terse is True:
         stat_cmd += ['--terse']
 
-    paths = gufi_common.clean_paths(config, args.paths)
+    return stat_cmd + paths
 
-    if len(paths) == 0:
-        return 1, '', ''
+def gen_cmds(config, args):
+    '''
+    only returns 0 or 1 commands to run
+    gufi_stat_bin handles the paths
+    '''
 
-    if args.verbose:
-        gufi_common.print_query(stat_cmd + paths)
+    cleaned = gufi_common.clean_paths(args.paths, config.indexroot)
 
-    stat = subprocess.Popen(stat_cmd + paths,          # pylint: disable=consider-using-with
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            text=True)
-    out, err = stat.communicate()                      # block until stat finishes
+    if len(cleaned) == 0:
+        return []
 
-    if err:
-        err = err.replace(os.path.join(config.indexroot, ''), '')
-        if stderr is None:
-            sys.stderr.write(err)
-            err = None
+    # does not call gufi_common.gen_cmds
+    return [gen_cmd(config, args, cleaned)]
 
-    if len(out):
-        out = out.replace(os.path.join(config.indexroot, ''), '')
-        if stdout is None:
-            sys.stdout.write(out)
-            out = None
-
-    return stat.returncode, out, err
+# argv[0] should be the command name
+def run(argv, config_path, stdout=None, stderr=None):
+    config = gufi_config.Server(config_path)
+    args = parse_args(argv)
+    cmds = gen_cmds(config, args)
+    return gufi_common.run_cmds(args, cmds,
+                                1, 1, stdout, stderr)
 
 if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.PATH)[0])

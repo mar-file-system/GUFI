@@ -180,7 +180,7 @@ echo "# -n"
 run_no_sort "${GUFI_LS} ${BASENAME} -n | @AWK@ '{ \$2=0; \$3=${TEST_USER_ID}; \$4=${TEST_GROUP_ID}; print }' | sort -n -k 5"
 
 echo "# -n takes precedence"
-run_no_sort "${GUFI_LS} ${BASENAME} -n | @AWK@ '{ \$2=0; \$3=${TEST_USER_ID}; \$4=${TEST_GROUP_ID}; print }' | sort -n -k 5"
+run_no_sort "${GUFI_LS} ${BASENAME} -ln | @AWK@ '{ \$2=0; \$3=${TEST_USER_ID}; \$4=${TEST_GROUP_ID}; print }' | sort -n -k 5"
 )
 
 # glob

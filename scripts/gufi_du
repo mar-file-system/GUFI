@@ -63,12 +63,14 @@
 
 import argparse
 import math
-import os
 import subprocess
 import sys
 
 import gufi_common
 import gufi_config
+
+DELIM = ' '    # no need for delimiter flag - output format starts with integers followed by DELIM
+               # any other DELIMs would come after the second integer and not be parsed
 
 # convert 2K to 2048
 def get_blocksize(value):
@@ -251,11 +253,138 @@ def stream_or_cache(pipe, stream, results, data):
         results += data
     return results
 
+def gen_cmd(config, args, path):
+    path, basename = gufi_common.split_path(path, config.indexroot)
+
+    if path is None:
+        return None
+
+    # create the base command
+    query_cmd = [
+        config.query,
+        '--no-print-sql-on-err',
+        '-d', DELIM,
+        '-n', str(config.threads),
+    ]
+
+    # append the queries to run
+    if basename:
+        query_cmd += nondir(args, basename)
+    else:
+        if args.separate_dirs:
+            query_cmd += separate_dirs(args)
+        elif args.summarize:
+            query_cmd += summarize(args)
+        else:
+            query_cmd += none(args)
+
+    return query_cmd + [path]
+
+def gen_cmds(config, args):
+    '''
+    generate gufi_du cmds
+
+    loops on each path no matter what the path type is
+
+    returns [cmd, path], not cmd
+    '''
+
+    # at least 1 argument
+    if len(args.paths[0]) == 0:
+        args.paths[0] = ['.']
+
+    cleaned = gufi_common.clean_paths(args.paths[0], config.indexroot)
+
+    # does not call gufi_common.gen_cmds
+    return [[cmd, path]
+            for cmd, path in [
+                    [gen_cmd(config, args, path), path] for path in cleaned
+            ]
+            if cmd is not None]
+
+def post_process(args, path, popen,
+                 block_size,
+                 indexroot_len,  # len(config.indexroot) + 1
+                 stdout, stdout_results,
+                 stderr, stderr_results):
+    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-branches
+
+    rc = 0
+
+    # number of blocks used by the current input path (including rounding up)
+    dir_size = 0
+
+    # total_blocks for this input path, to be added to global value
+    total_blocks = 0
+
+    # track how many rows were returned
+    # if rows == 0, index might not have treesummary
+    rows = 0
+
+    while True:
+        line = popen.stdout.readline()
+        if not line:
+            break
+
+        # if line exists, there is content
+        line = line.strip()
+        level, isroot, raw, name = line.split(DELIM, 3)
+
+        rows += 1
+
+        raw = int(raw)
+
+        if args.inodes:
+            size = raw # count
+        else:
+            # number of blocks used by this directory (including rounding up)
+            # or logical size
+            if not args.apparent_size:
+                raw *= 512
+            size = (raw // block_size) + ((raw % block_size) != 0) # round up
+
+        # -s/--summarize removes individual prints
+        if not args.summarize:
+            entry_size = size
+            if args.human_readable:
+                entry_size = human_readable_size(entry_size)
+            stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results,
+                                             '{0} {1}\n'.format(entry_size, name[indexroot_len:]))
+
+        dir_size += size
+
+        if args.total:
+            if args.separate_dirs or ((not args.separate_dirs) and (level == '0') and (isroot == '1')):
+                total_blocks += size
+
+    out, err = popen.communicate() # block until query finishes
+    if out:
+        stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results, out)
+    if err:
+        stderr_results = stream_or_cache(stderr, sys.stderr, stderr_results, err)
+
+    # -s/--summarize prints a combined size at the end of the current input path
+    if args.summarize:
+        if args.human_readable:
+            dir_size = human_readable_size(dir_size) # int -> str
+        stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results,
+                                             '{0} {1}\n'.format(dir_size, path))
+
+    if popen.returncode != 0:
+        rc = popen.returncode
+
+    if rows == 0:
+        stderr_results = stream_or_cache(stderr, sys.stderr, stderr_results,
+                                         'Warning: Did not get any results from gufi_query.\n')
+        stderr_results = stream_or_cache(stderr, sys.stderr, stderr_results,
+                                         'Does "{0}" have treesummary data?\n'.format(path[indexroot_len:]))
+
+    return rc, total_blocks, stdout_results, stderr_results
+
 # argv[0] should be the command name
 def run(argv, config_path, stdout=None, stderr=None):
-    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+    # pylint: disable=too-many-locals
 
-    # find and parse the configuration file first
     config = gufi_config.Server(config_path)
 
     args = parse_args(argv)
@@ -263,24 +392,19 @@ def run(argv, config_path, stdout=None, stderr=None):
     if args.inodes and (args.apparent_size or args.block_size):
         sys.stderr.write("warning: options --apparent-size and -b are ineffective with --inodes\n")
 
+    cmds = gen_cmds(config, args)
+
     # cache the length of the indexroot + '/'
     INDEXROOT_LEN = len(config.indexroot) + 1
 
-    DELIM = ' '    # no need for delimiter flag - output format starts with integers followed by DELIM
-                   # any other DELIMs would come after the second integer and not be parsed
+    # get block size from user input
+    BLOCK_SIZE = args.block_size if args.block_size else 1024
 
     # return code
     rc = 0
 
-    # at least 1 argument
-    if len(args.paths[0]) == 0:
-        args.paths = [['.']]
-
     # make sure at least one path was processed
     processed_paths = 0
-
-    # get block size from user input
-    block_size = args.block_size if args.block_size else 1024
 
     # total blocks of all input paths for -c (including rounding up)
     # if treesummary is found, will not include rounding up
@@ -289,110 +413,26 @@ def run(argv, config_path, stdout=None, stderr=None):
     stdout_results = ''
     stderr_results = ''
 
-    for path in gufi_common.clean_paths(config, args.paths[0]):
-        # track how many rows were returned
-        # if rows == 0, index might not have treesummary
-        rows = 0
-
-        fullpath = path[:]
-        basename = None
-        if not os.path.isdir(fullpath):
-            fullpath, basename = fullpath.rsplit(os.path.sep, 1)
-            if not os.path.isdir(fullpath):
-                sys.stderr.write('"{0}" is not a path\n'.format(path[len(config.indexroot) + 1:]))
-                continue
-
+    for cmd, path in cmds:
         processed_paths += 1
 
-        # create the base command
-        query_cmd = [
-            config.query,
-            '--no-print-sql-on-err',
-            '-d', DELIM,
-            '-n', str(config.threads),
-        ]
-
-        # append the queries to run
-        if basename:
-            query_cmd += nondir(args, basename)
-        else:
-            if args.separate_dirs:
-                query_cmd += separate_dirs(args)
-            elif args.summarize:
-                query_cmd += summarize(args)
-            else:
-                query_cmd += none(args)
-
-        query_cmd += [fullpath]
-
         if args.verbose:
-            gufi_common.print_query(query_cmd)
+            gufi_common.print_query(cmd)
 
-        query = subprocess.Popen(query_cmd,              # pylint: disable=consider-using-with
+        query = subprocess.Popen(cmd,                    # pylint: disable=consider-using-with
                                  stdout=subprocess.PIPE, # capture stdout
                                  stderr=stderr,
                                  text=True)
 
-        # number of blocks used by the current input path (including rounding up)
-        dir_size = 0
+        loop_rc, blocks, stdout_results, stderr_results = post_process(args, path, query,
+                                                                       BLOCK_SIZE,
+                                                                       INDEXROOT_LEN,
+                                                                       stdout, stdout_results,
+                                                                       stderr, stderr_results)
+        total_blocks += blocks
 
-        while True:
-            line = query.stdout.readline()
-            if not line:
-                break
-
-            # if line exists, there is content
-            line = line.strip()
-            level, isroot, raw, name = line.split(DELIM, 3)
-
-            rows += 1
-
-            raw = int(raw)
-
-            if args.inodes:
-                size = raw # count
-            else:
-                # number of blocks used by this directory (including rounding up)
-                # or logical size
-                if not args.apparent_size:
-                    raw *= 512
-                size = (raw // block_size) + ((raw % block_size) != 0) # round up
-
-            # -s/--summarize removes individual prints
-            if not args.summarize:
-                entry_size = size
-                if args.human_readable:
-                    entry_size = human_readable_size(entry_size)
-                stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results,
-                                                 '{0} {1}\n'.format(entry_size, name[INDEXROOT_LEN:]))
-
-            dir_size += size
-
-            if args.total:
-                if args.separate_dirs or ((not args.separate_dirs) and (level == '0') and (isroot == '1')):
-                    total_blocks += size
-
-        out, err = query.communicate() # block until query finishes
-        if out:
-            stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results, out)
-        if err:
-            stderr_results = stream_or_cache(stderr, sys.stderr, stderr_results, err)
-
-        # -s/--summarize prints a combined size at the end of the current input path
-        if args.summarize:
-            if args.human_readable:
-                dir_size = human_readable_size(dir_size)
-            stdout_results = stream_or_cache(stdout, sys.stdout, stdout_results,
-                                             '{0} {1}\n'.format(dir_size, path))
-
-        if query.returncode != 0:
-            rc = query.returncode
-
-        if rows == 0:
-            stderr_results = stream_or_cache(stderr, sys.stderr, stderr_results,
-                                             'Warning: Did not get any results from gufi_query.\n')
-            stderr_results = stream_or_cache(stderr, sys.stderr, stderr_results,
-                                             'Does "{0}" have treesummary data?\n'.format(path[len(config.indexroot) + 1:]))
+        if loop_rc != 0:
+            rc = loop_rc
 
     # print total size of all input directories
     if args.total:

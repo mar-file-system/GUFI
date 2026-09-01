@@ -63,7 +63,7 @@
 
 from collections import OrderedDict
 import argparse
-import subprocess
+import os
 import sys
 import time
 
@@ -1689,22 +1689,11 @@ def parse_args(argv):
 
     return parser.parse_args(argv[1:])
 
-# argv[0] should be the command name
-def run(argv, config_path, stdout=None, stderr=None):
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
-
-    args = parse_args(argv)
-
-    # check args
-    if args.recursive and (args.stat in [key for key, _ in CUMULATIVE]):
-        sys.stderr.write('--recursive/-r has no effect on "{0}" statistic\n'.format(args.stat))
-    if args.cumulative and (args.stat in [key for key, _ in RECURSIVE]):
-        sys.stderr.write('--cumulative/-c has no effect on "{0}" statistic\n'.format(args.stat))
-    if (args.recursive or args.cumulative) and (args.stat in [key for key, _ in OTHERS]):
-        sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{0}" statistic\n'.format(args.stat))
-
-    paths = gufi_common.clean_paths(config, args.path, 'Error')
+def gen_cmd(config, args, paths):
+    # gufi_stats only handles directories
+    for path in paths:
+        if isinstance(path, list) or not os.path.isdir(path):
+            raise RuntimeError('gufi_stats only processes directories')
 
     # create the query command
     query_cmd = [
@@ -1718,17 +1707,27 @@ def run(argv, config_path, stdout=None, stderr=None):
     if args.skip:
         query_cmd += ['--skip-file', args.skip]
 
-    if args.verbose:
-        gufi_common.print_query(query_cmd + paths)
+    return query_cmd + paths # compute on all paths at once
 
-    query = subprocess.Popen(query_cmd + paths, # pylint: disable=consider-using-with
-                             stdout=stdout,
-                             stderr=stderr,
-                             text=True)
+def gen_cmds(config, args):
+    return gufi_common.gen_cmds(config, args, args.path, gen_cmd, 'Error')
 
-    out, err = query.communicate()              # block until query finishes
+# argv[0] should be the command name
+def run(argv, config_path, stdout=None, stderr=None):
+    config = gufi_config.Server(config_path)
+    args = parse_args(argv)
 
-    return query.returncode, out, err
+    # check args
+    if args.recursive and (args.stat in [key for key, _ in CUMULATIVE]):
+        sys.stderr.write('--recursive/-r has no effect on "{0}" statistic\n'.format(args.stat))
+    if args.cumulative and (args.stat in [key for key, _ in RECURSIVE]):
+        sys.stderr.write('--cumulative/-c has no effect on "{0}" statistic\n'.format(args.stat))
+    if (args.recursive or args.cumulative) and (args.stat in [key for key, _ in OTHERS]):
+        sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{0}" statistic\n'.format(args.stat))
+
+    cmds = gen_cmds(config, args)
+    return gufi_common.run_cmds(args, cmds,
+                                1, 1, stdout, stderr)
 
 if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.PATH)[0])

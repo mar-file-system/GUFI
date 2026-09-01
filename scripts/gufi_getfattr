@@ -62,9 +62,7 @@
 
 
 import argparse
-import errno
 import os
-import subprocess
 import sys
 
 from gufi_common import SQLITE3_TEXT
@@ -206,72 +204,50 @@ def parse_args(argv):
 
     return parser.parse_args(argv[1:])
 
-def run(argv, config_path, stdout=None, stderr=None):
-    # pylint: disable=invalid-name,too-many-locals
+def gen_cmd(config, args, path):
+    '''
+    path should be a single string
+    '''
 
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
+    path, basename = gufi_common.split_path(path, config.indexroot)
 
-    args = parse_args(argv)
+    if path is None:
+        return None
+
+    # create the query command
+    query_cmd = [
+        config.query,
+        '--no-print-sql-on-err',
+        '--threads', str(config.threads),
+        '--output-buffer-size', str(config.outputbuffer),
+        '--delim', args.delim
+    ] + getfattr(args, config.indexroot, path, basename)
+
+    return query_cmd
+
+def gen_cmds(config, args):
+    '''
+    generate gufi_getfattr cmds
+
+    loops on each path no matter what the path type is
+    (not strictly necessary - generated SQL does an
+    explicit check on the name in the summary table)
+    '''
 
     if args.pattern == '-':
         args.pattern = '.*'
 
-    rc = 0
+    cleaned = gufi_common.clean_paths(args.path, config.indexroot)
 
-    # make sure at least one path was processed
-    processed_paths = 0
+    # does not call gufi_common.gen_cmds
+    return [cmd for cmd in [gen_cmd(config, args, path) for path in cleaned] if cmd is not None]
 
-    stdout_results = ''
-    stderr_results = ''
-
-    # process one input arg at a time
-    # not sure if it makes sense/is possible to process all at once
-    for path in gufi_common.clean_paths(config, args.path):
-        dirname = path[:]
-
-        processed_paths += 1
-
-        nondir = None
-
-        if not os.path.isdir(dirname):
-            nondir = os.path.basename(dirname)
-            dirname = os.path.dirname(dirname)
-
-            # make sure parent is a directory
-            if not os.path.isdir(dirname):
-                raise OSError(errno.ENOTDIR, '"{0}" is not a directory.'.format(dirname))
-
-        # create the query command
-        query_cmd = [
-            config.query,
-            '--no-print-sql-on-err',
-            '--threads', str(config.threads),
-            '--output-buffer-size', str(config.outputbuffer),
-            '--delim', args.delim
-        ] + getfattr(args, config.indexroot, dirname, nondir)
-
-        if args.verbose:
-            gufi_common.print_query(query_cmd)
-
-        query = subprocess.Popen(query_cmd, # pylint: disable=consider-using-with
-                                 stdout=stdout,
-                                 stderr=stderr,
-                                 text=True)
-        out, err = query.communicate()      # block until query finishes
-
-        if query.returncode:
-            rc = query.returncode
-
-        if stdout is not None:
-            stdout_results += out
-        if stderr is not None:
-            stderr_results += err
-
-    if processed_paths == 0:
-        return 1, '', ''
-
-    return rc, stdout_results, stderr_results
+def run(argv, config_path, stdout=None, stderr=None):
+    config = gufi_config.Server(config_path)
+    args = parse_args(argv)
+    cmds = gen_cmds(config, args)
+    return gufi_common.run_cmds(args, cmds,
+                                1, 1, stdout, stderr)
 
 if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.PATH)[0])

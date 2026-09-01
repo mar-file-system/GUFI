@@ -674,7 +674,7 @@ Does "search" have treesummary data?
 
 # Non-existent path is discovered
 $ gufi_du "non/existent/path"
-"non/existent/path" is not a path
+Error: "non/existent" is not a directory
 
 # Outside of index
 $ gufi_du ".."

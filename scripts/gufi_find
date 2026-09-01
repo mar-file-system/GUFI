@@ -202,14 +202,17 @@ def build_aggregation_columns(args, path):
 
     return cols
 
-def build_where(args, table, root_uid=0, root_gid=0):
+def build_where(args, table, basename, root_uid=0, root_gid=0):
     '''Build the WHERE clause'''
 
     # pylint: disable=too-many-branches,unused-argument,too-many-locals,too-many-statements
 
+    now = time.time()
+
     where = []
 
-    now = time.time()
+    if basename is not None:
+        where += ['name == \'{0}\''.format(basename)]
 
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
     #     where += ['(uid == {0})'.format(os.getuid())]
@@ -539,7 +542,9 @@ def build_output(args, name):
 
     return output
 
-def parse_args(argv, offset):
+def parse_args(argv, offset=1):
+    # pylint: disable=too-many-statements
+
     EPILOG='''Report bugs to the GitHub Issues page at https://github.com/mar-file-system/GUFI/issues
 or by sending an email to <gufi-lanl@lanl.gov>'''
 
@@ -780,56 +785,29 @@ or by sending an email to <gufi-lanl@lanl.gov>'''
 
     gufi_common.add_common_flags(parser)
 
-    return parser.parse_known_args(argv[offset:])
-
-# argv[0] should be the command name
-def run(argv, config_path, stdout=None, stderr=None):
-    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
-
-    # parse 'real' options
-    # must be separate arguments
-    #
-    # results are ignored
-    real_handled = ['P']
-    real_not_handled = ['H', 'L', 'D', 'O']
-    arg_offset = 1 # offset this many arguments before passing into parser
-    while (arg_offset < len(argv)) and (argv[arg_offset][0] == '-'):
-        if argv[arg_offset][1:] not in (real_handled + real_not_handled):
-            break
-
-        if argv[arg_offset][1:] in real_not_handled:
-            sys.stderr.write('Found flag {0}. Ignoring.\n'.format(argv[arg_offset][1:]))
-
-        arg_offset += 1
-
-    # assume following arguments are paths until '-' is found
-
-    # parse paths
-    paths = []
-    while (arg_offset < len(argv)) and (argv[arg_offset][0] != '-'):
-        paths += [argv[arg_offset]]
-        arg_offset += 1
-    if len(paths) == 0:
-        paths = ['']
-
-    # all arguments afterwards are parsed as expressions
-
-    paths = gufi_common.clean_paths(config, paths)
-
     try:
-        # parse expressions without the 'real' and path arguments
-        args, unknown = parse_args(argv, arg_offset)
+        args, unknown = parser.parse_known_args(argv[offset:])
     except Exception as e: # pylint: disable=broad-exception-caught
         print(e, file=sys.stderr)
         sys.exit(1)
 
-    if len(paths) == 0:
-        return 1, '', ''
-
     if len(unknown) > 0:
         raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
+
+    return args
+
+def gen_cmd(config, args, paths):
+    '''
+    paths should be a list of directory path strings or a single pair
+    of [parent, basename] for a non-directory
+    '''
+
+    # pylint: disable=too-many-locals,too-many-branches
+
+    basename = None
+    if (len(paths) == 1) and (len(paths[0]) == 2):
+        basename = paths[0][1]
+        paths = [paths[0][0]]
 
     # create the query command
     query_cmd = [
@@ -877,7 +855,7 @@ def run(argv, config_path, stdout=None, stderr=None):
             gufi_common.build_query([col_select if col_select else col_name
                                      for col_select, col_name, _ in s_cols],
                                     [gufi_common.VRSUMMARY],
-                                    build_where(args, gufi_common.VRSUMMARY),
+                                    build_where(args, gufi_common.VRSUMMARY, basename),
                                     build_group_by(args),
                                     build_order_by(args),
                                     args.num_results))
@@ -887,7 +865,7 @@ def run(argv, config_path, stdout=None, stderr=None):
             gufi_common.build_query([col_select if col_select else col_name
                                      for col_select, col_name, _ in e_cols],
                                     [gufi_common.VRPENTRIES],
-                                    build_where(args, gufi_common.VRPENTRIES),
+                                    build_where(args, gufi_common.VRPENTRIES, basename),
                                     build_group_by(args),
                                     build_order_by(args),
                                     args.num_results))
@@ -927,14 +905,14 @@ def run(argv, config_path, stdout=None, stderr=None):
     else:
         S = gufi_common.build_query(build_output(args, VRSUMMARY_NAME),
                                     [gufi_common.VRSUMMARY],
-                                    build_where(args, gufi_common.VRSUMMARY),
+                                    build_where(args, gufi_common.VRSUMMARY, basename),
                                     build_group_by(args),
                                     build_order_by(args),
                                     args.num_results)
 
         E = gufi_common.build_query(build_output(args, VRPENTRIES_NAME),
                                     [gufi_common.VRPENTRIES],
-                                    build_where(args, gufi_common.VRPENTRIES),
+                                    build_where(args, gufi_common.VRPENTRIES, basename),
                                     build_group_by(args),
                                     build_order_by(args),
                                     args.num_results)
@@ -945,27 +923,67 @@ def run(argv, config_path, stdout=None, stderr=None):
 
     if args.maxdepth is not None:
         query_cmd += ['--max-level', str(args.maxdepth)]
+    elif basename is not None:
+        query_cmd += ['--max-level', '0']
 
     if args.mindepth is not None:
         query_cmd += ['--min-level', str(args.mindepth)]
+    elif basename is not None:
+        query_cmd += ['--min-level', '0']
 
     if args.skip:
         query_cmd += ['--skip-file', args.skip]
 
-    if args.verbose:
-        gufi_common.print_query(query_cmd + paths)
+    return query_cmd + paths
 
-    if args.fprint:
-        with open(args.fprint, 'wb') as out:
-            query = subprocess.Popen(query_cmd + paths, stdout=out)
-    else:
-        query = subprocess.Popen(query_cmd + paths, # pylint: disable=consider-using-with
-                                 stdout=stdout,
-                                 stderr=stderr,
-                                 text=True)
-    out, err = query.communicate()                  # block until query finishes
+def gen_cmds(config, args):
+    return gufi_common.gen_cmds(config, args, args.paths[0], gen_cmd)
 
-    return query.returncode, out, err
+# argv[0] should be the command name
+def run(argv, config_path, stdout=None, stderr=None):
+    config = gufi_config.Server(config_path)
+
+    # parse 'real' options
+    # must be separate arguments
+    #
+    # results are ignored
+    real_handled = ['P']
+    real_not_handled = ['H', 'L', 'D', 'O']
+    arg_offset = 1 # offset this many arguments before passing into parser
+    while (arg_offset < len(argv)) and (argv[arg_offset][0] == '-'):
+        if argv[arg_offset][1:] not in (real_handled + real_not_handled):
+            break
+
+        if argv[arg_offset][1:] in real_not_handled:
+            sys.stderr.write('Found flag {0}. Ignoring.\n'.format(argv[arg_offset][1:]))
+
+        arg_offset += 1
+
+    # assume following arguments are paths until '-' is found
+
+    # parse paths
+    paths = []
+    while (arg_offset < len(argv)) and (argv[arg_offset][0] != '-'):
+        paths += [argv[arg_offset]]
+        arg_offset += 1
+    if len(paths) == 0:
+        paths = ['']
+
+    # all arguments afterwards are parsed as expressions
+
+    # parse expressions without the 'real' and path arguments
+    args = parse_args(argv, arg_offset)
+    args.paths = [paths]
+
+    cmds = gen_cmds(config, args)
+
+    def fprint(cmd, _stdout, _stderr):
+        with open(args.fprint, 'ab') as out:
+            return subprocess.Popen(cmd, stdout=out)
+
+    return gufi_common.run_cmds(args, cmds,
+                                1, 1, stdout, stderr,
+                                fprint if args.fprint else None)
 
 if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.PATH)[0])

@@ -62,8 +62,6 @@
 
 
 import argparse
-import os
-import subprocess
 import sys
 
 from gufi_common import SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_ASC, SQLITE3_DESC
@@ -251,218 +249,195 @@ def parse_args(argv):
 
     return parser.parse_args(argv[1:])
 
+def gen_cmd(config, args, paths):
+    '''
+    paths should be a list of directory path strings or a single pair
+    of [parent, basename] for a non-directory
+    '''
+
+    # pylint: disable=too-many-locals,too-many-statements
+
+    basename = None
+    if (len(paths) == 1) and (len(paths[0]) == 2):
+        basename = paths[0][1]
+        paths = [paths[0][0]]
+
+    # create the base command
+    query_cmd = [
+        config.query,
+        '--no-print-sql-on-err',
+        '--threads', str(config.threads)
+    ]
+
+    if not args.recursive:
+        query_cmd += ['--min-level', '0',
+                      '--max-level', '1']
+
+    columns = [
+        'fullpath', 'name', 'type', 'inode', 'nlink', 'size',
+        'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
+        'atime', 'ctime', 'linkname', 'xattr_names', 'pinode'
+    ]
+
+    create_table_cols = ', '.join(
+        [
+            '{0} {1}'.format(column, type)
+            for column, type in zip(columns, # pylint: disable=redefined-builtin
+                                    [
+                                        SQLITE3_TEXT, SQLITE3_TEXT, SQLITE3_TEXT, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64,
+                                        SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64,
+                                        SQLITE3_INT64, SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_TEXT, SQLITE3_INT64
+                                    ]
+                                )
+        ]
+    )
+
+    I = 'CREATE TABLE {0} ({1});'.format(gufi_common.INTERMEDIATE_NAME, create_table_cols)
+
+    S_where = build_where(args, basename)
+    E_where = build_where(args, basename)
+
+    if args.recursive:
+        S_where += ['level() > 0']
+    else:
+        S_where += [gufi_common.ROLLUP_SUMMARY_WHERE]
+        # only get the pentries that were originally in this directory
+        E_where += ['atroot == 1', 'level() == 0']
+
+    S = 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
+                                     gufi_common.build_query(['rpath(sname, sroll)', 'basename(name)'] + columns[2:],
+                                                             [gufi_common.VRSUMMARY],
+                                                             S_where,
+                                                             None,
+                                                             None,
+                                                             None))
+
+    E = 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
+                                     gufi_common.build_query(['rpath(sname, sroll, name)'] +
+                                                             ['name'] + columns[2:],
+                                                             [gufi_common.VRPENTRIES],
+                                                             E_where,
+                                                             None,
+                                                             None,
+                                                             None))
+
+    J = 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
+                                     gufi_common.build_query(['*'],
+                                                             [gufi_common.INTERMEDIATE_NAME],
+                                                             None,
+                                                             None,
+                                                             None,
+                                                             None))
+
+    K = 'CREATE TABLE {0} ({1});'.format(gufi_common.AGGREGATE_NAME, create_table_cols)
+
+    G = gufi_common.build_query(build_select(args, config.indexroot),
+                                [gufi_common.AGGREGATE_NAME],
+                                None,
+                                None,
+                                build_order_by(args),
+                                None)
+
+    # need to pad columns
+    if args.long_listing or args.numeric_uid_gid:
+        # columns before padding
+        RESULTS = 'results'
+        RESULTS_SCHEMA = ''
+
+        # max width of each column
+        # mode width is constant
+        # name width doesn't matter
+        MAX_WIDTHS = 'max_widths'
+        MAX_WIDTHS_SCHEMA = ''
+        MAX_WIDTHS_INSERT = ''
+
+        # right pad each column
+        PADDED = ''
+
+        if args.inode:
+            RESULTS_SCHEMA    += 'inode {0}, '.format(SQLITE3_TEXT)
+            MAX_WIDTHS_SCHEMA += 'inode_len {0}, '.format(SQLITE3_INT64)
+            MAX_WIDTHS_INSERT += 'max(length(inode)), '
+            PADDED            += '''
+                                 rpad(inode, (SELECT inode_len FROM {0})),
+                                 '''
+
+        if args.size:
+            RESULTS_SCHEMA    += 'blocks {0}, '.format(SQLITE3_TEXT)
+            MAX_WIDTHS_SCHEMA += 'blocks_len {0}, '.format(SQLITE3_INT64)
+            MAX_WIDTHS_INSERT += 'max(length(blocks)), '
+            PADDED            += '''
+                                 rpad(blocks, (SELECT blocks_len FROM {0})),
+                                 '''
+
+        RESULTS_SCHEMA    += 'mode {0}, nlinks {0}, u {0}, '.format(SQLITE3_TEXT)
+        MAX_WIDTHS_SCHEMA += 'nlink_len {0}, u_len {0}, '.format(SQLITE3_INT64)
+        MAX_WIDTHS_INSERT += 'max(length(nlinks)), max(length(u)), '
+        PADDED            += '''
+                                 mode,
+                                 rpad(nlinks, (SELECT nlink_len FROM {0})),
+                                 rpad(u,      (SELECT u_len     FROM {0})),
+                             '''
+
+        if not args.no_group:
+            RESULTS_SCHEMA    += 'g {0}, '.format(SQLITE3_TEXT)
+            MAX_WIDTHS_SCHEMA += 'g_len {0}, '.format(SQLITE3_INT64)
+            MAX_WIDTHS_INSERT += 'max(length(g)), '
+            PADDED            += '''
+                                 rpad(g,      (SELECT g_len     FROM {0})),
+                                 '''
+        RESULTS_SCHEMA    += 'size {0}, time {0}, name {0}'.format(SQLITE3_TEXT)
+        MAX_WIDTHS_SCHEMA += 'size_len {0}, time_len {0}'.format(SQLITE3_INT64)
+        MAX_WIDTHS_INSERT += 'max(length(size)), max(length(time))'
+        PADDED            += '''
+                                 rpad(size,   (SELECT size_len  FROM {0})),
+                                 rpad(time,   (SELECT time_len  FROM {0})),
+                                 name
+                             '''
+
+        G = '''
+               CREATE TABLE {0} ({1});
+               INSERT INTO  {0} {2};
+               CREATE TABLE {3} ({4});
+               INSERT INTO  {3} SELECT {5} FROM {0};
+               SELECT {6} FROM {0};
+            '''.format(RESULTS, RESULTS_SCHEMA, G,
+                       MAX_WIDTHS, MAX_WIDTHS_SCHEMA, MAX_WIDTHS_INSERT,
+                       PADDED.format(MAX_WIDTHS))
+
+    query_cmd += [
+        '-I', I,
+        '-S', S,
+        '-E', E,
+        '-K', K,
+        '-J', J,
+        '-G', G,
+        '-a', '1',
+        '--output-buffer-size', str(config.outputbuffer)
+    ]
+
+    if args.delim:
+        query_cmd += ['--delim', args.delim]
+
+    if args.skip:
+        query_cmd += ['--skip-file', args.skip]
+
+    return query_cmd + paths
+
+def gen_cmds(config, args):
+    # at least 1 path
+    if len(args.paths[0]) == 0:
+        args.paths[0] = ['']
+
+    return gufi_common.gen_cmds(config, args, args.paths[0], gen_cmd)
+
 # argv[0] should be the command name
 def run(argv, config_path, stdout=None, stderr=None):
-    # pylint: disable=too-many-statements,too-many-locals,too-many-branches,invalid-name
-
-    # find and parse the configuration file first
     config = gufi_config.Server(config_path)
-
     args = parse_args(argv)
-
-    # return code
-    rc = 0
-
-    # at least 1 argument
-    if len(args.paths[0]) == 0:
-        args.paths = [['']]
-
-    # make sure at least one path was processed
-    processed_paths = 0
-
-    stdout_results = ''
-    stderr_results = ''
-
-    for path in gufi_common.clean_paths(config, args.paths[0]):
-        processed_paths += 1
-
-        match_name = None
-
-        if not os.path.isdir(path):
-            # split the path up for matching
-            path, match_name = os.path.split(path)
-
-        # create the base command
-        query_cmd = [
-            config.query,
-            '--no-print-sql-on-err',
-            '--threads', str(config.threads)
-        ]
-
-        if not args.recursive:
-            query_cmd += ['--min-level', '0',
-                          '--max-level', '1']
-
-        columns = [
-            'fullpath', 'name', 'type', 'inode', 'nlink', 'size',
-            'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
-            'atime', 'ctime', 'linkname', 'xattr_names', 'pinode'
-        ]
-
-        create_table_cols = ', '.join(
-            [
-                '{0} {1}'.format(column, type)
-                for column, type in zip(columns, # pylint: disable=redefined-builtin
-                                        [
-                                            SQLITE3_TEXT, SQLITE3_TEXT, SQLITE3_TEXT, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64,
-                                            SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64, SQLITE3_INT64,
-                                            SQLITE3_INT64, SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_TEXT, SQLITE3_INT64
-                                        ]
-                                    )
-            ]
-        )
-
-        I = 'CREATE TABLE {0} ({1});'.format(gufi_common.INTERMEDIATE_NAME, create_table_cols)
-
-        S_where = build_where(args, match_name)
-        E_where = build_where(args, match_name)
-
-        if args.recursive:
-            S_where += ['level() > 0']
-        else:
-            S_where += [gufi_common.ROLLUP_SUMMARY_WHERE]
-            # only get the pentries that were originally in this directory
-            E_where += ['atroot == 1', 'level() == 0']
-
-        S = 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
-                                         gufi_common.build_query(['rpath(sname, sroll)', 'basename(name)'] + columns[2:],
-                                                                 [gufi_common.VRSUMMARY],
-                                                                 S_where,
-                                                                 None,
-                                                                 None,
-                                                                 None))
-
-        E = 'INSERT INTO {0} {1}'.format(gufi_common.INTERMEDIATE_NAME,
-                                         gufi_common.build_query(['rpath(sname, sroll, name)'] +
-                                                                 ['name'] + columns[2:],
-                                                                 [gufi_common.VRPENTRIES],
-                                                                 E_where,
-                                                                 None,
-                                                                 None,
-                                                                 None))
-
-        J = 'INSERT INTO {0} {1}'.format(gufi_common.AGGREGATE_NAME,
-                                         gufi_common.build_query(['*'],
-                                                                 [gufi_common.INTERMEDIATE_NAME],
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None))
-
-        K = 'CREATE TABLE {0} ({1});'.format(gufi_common.AGGREGATE_NAME, create_table_cols)
-
-        G = gufi_common.build_query(build_select(args, config.indexroot),
-                                    [gufi_common.AGGREGATE_NAME],
-                                    None,
-                                    None,
-                                    build_order_by(args),
-                                    None)
-
-        # need to pad columns
-        if args.long_listing or args.numeric_uid_gid:
-             # columns before padding
-            RESULTS = 'results'
-            RESULTS_SCHEMA = ''
-
-            # max width of each column
-            # mode width is constant
-            # name width doesn't matter
-            MAX_WIDTHS = 'max_widths'
-            MAX_WIDTHS_SCHEMA = ''
-            MAX_WIDTHS_INSERT = ''
-
-            # right pad each column
-            PADDED = ''
-
-            if args.inode:
-                RESULTS_SCHEMA    += 'inode {0}, '.format(SQLITE3_TEXT)
-                MAX_WIDTHS_SCHEMA += 'inode_len {0}, '.format(SQLITE3_INT64)
-                MAX_WIDTHS_INSERT += 'max(length(inode)), '
-                PADDED            += '''
-                                     rpad(inode, (SELECT inode_len FROM {0})),
-                                     '''
-
-            if args.size:
-                RESULTS_SCHEMA    += 'blocks {0}, '.format(SQLITE3_TEXT)
-                MAX_WIDTHS_SCHEMA += 'blocks_len {0}, '.format(SQLITE3_INT64)
-                MAX_WIDTHS_INSERT += 'max(length(blocks)), '
-                PADDED            += '''
-                                     rpad(blocks, (SELECT blocks_len FROM {0})),
-                                     '''
-
-            RESULTS_SCHEMA    += 'mode {0}, nlinks {0}, u {0}, '.format(SQLITE3_TEXT)
-            MAX_WIDTHS_SCHEMA += 'nlink_len {0}, u_len {0}, '.format(SQLITE3_INT64)
-            MAX_WIDTHS_INSERT += 'max(length(nlinks)), max(length(u)), '
-            PADDED            += '''
-                                     mode,
-                                     rpad(nlinks, (SELECT nlink_len FROM {0})),
-                                     rpad(u,      (SELECT u_len     FROM {0})),
-                                 '''
-
-            if not args.no_group:
-                RESULTS_SCHEMA    += 'g {0}, '.format(SQLITE3_TEXT)
-                MAX_WIDTHS_SCHEMA += 'g_len {0}, '.format(SQLITE3_INT64)
-                MAX_WIDTHS_INSERT += 'max(length(g)), '
-                PADDED            += '''
-                                     rpad(g,      (SELECT g_len     FROM {0})),
-                                     '''
-            RESULTS_SCHEMA    += 'size {0}, time {0}, name {0}'.format(SQLITE3_TEXT)
-            MAX_WIDTHS_SCHEMA += 'size_len {0}, time_len {0}'.format(SQLITE3_INT64)
-            MAX_WIDTHS_INSERT += 'max(length(size)), max(length(time))'
-            PADDED            += '''
-                                     rpad(size,   (SELECT size_len  FROM {0})),
-                                     rpad(time,   (SELECT time_len  FROM {0})),
-                                     name
-                                 '''
-
-            G = '''
-                   CREATE TABLE {0} ({1});
-                   INSERT INTO  {0} {2};
-                   CREATE TABLE {3} ({4});
-                   INSERT INTO  {3} SELECT {5} FROM {0};
-                   SELECT {6} FROM {0};
-                '''.format(RESULTS, RESULTS_SCHEMA, G,
-                           MAX_WIDTHS, MAX_WIDTHS_SCHEMA, MAX_WIDTHS_INSERT,
-                           PADDED.format(MAX_WIDTHS))
-
-        query_cmd += [
-            '-I', I,
-            '-S', S,
-            '-E', E,
-            '-K', K,
-            '-J', J,
-            '-G', G,
-            '-a', '1',
-            '--output-buffer-size', str(config.outputbuffer)
-        ]
-
-        if args.delim:
-            query_cmd += ['--delim', args.delim]
-
-        if args.skip:
-            query_cmd += ['--skip-file', args.skip]
-
-        if args.verbose:
-            gufi_common.print_query(query_cmd + [path])
-
-        query = subprocess.Popen(query_cmd + [path], # pylint: disable=consider-using-with
-                                 stdout=stdout,
-                                 stderr=stderr,
-                                 text=True)
-        out, err = query.communicate()               # block until query finishes
-
-        if query.returncode != 0:
-            rc = 2
-
-        if stdout is not None:
-            stdout_results += out
-        if stderr is not None:
-            stderr_results += err
-
-    if processed_paths == 0:
-        return 2, '', ''
-
-    return rc, stdout_results, stderr_results
+    cmds = gen_cmds(config, args)
+    return gufi_common.run_cmds(args, cmds,
+                                1, 1, stdout, stderr)
 
 if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.PATH)[0])

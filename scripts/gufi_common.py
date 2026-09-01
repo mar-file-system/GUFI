@@ -67,6 +67,7 @@ import grp
 import os
 import pwd
 import re
+import subprocess
 import sys
 import time
 
@@ -441,8 +442,11 @@ def add_common_flags(parser):
     add_skip_flag(parser)
     add_verbose_flag(parser)
 
-# check if a path is at or underneath the index root
 def in_index(path, indexroot, orig, severity='Warning'):
+    '''
+    check if a path is at or underneath the index root
+    '''
+
     norm_path = os.path.normpath(path)
     term_path = os.path.join(norm_path, '')
     term_indexroot = os.path.join(indexroot, '')
@@ -454,16 +458,19 @@ def in_index(path, indexroot, orig, severity='Warning'):
         return False
     return True
 
-# convert input paths to index paths
-def clean_paths(config, paths, severity='Warning'):
+def clean_paths(paths, indexroot, severity='Warning'):
+    '''
+    convert input paths to index paths
+    '''
+
     cleaned = []
 
     for path in paths:
         # prepend input path with indexroot
         if path in ['', '.']:
-            prepended = config.indexroot
+            prepended = indexroot
         else:
-            prepended = os.path.sep.join([config.indexroot, path])
+            prepended = os.path.sep.join([indexroot, path])
 
         # expand any globs found
         expanded = glob.glob(prepended)
@@ -472,7 +479,138 @@ def clean_paths(config, paths, severity='Warning'):
             cleaned += [prepended]
         else:
             for e in expanded:
-                if in_index(e, config.indexroot, path, severity):
+                if in_index(e, indexroot, path, severity):
                     cleaned += [e]
 
     return cleaned
+
+def split_path(path, indexroot):
+    '''
+    basenames that are not paths should be removed for matching in the query
+    '''
+
+    if os.path.isdir(path):
+        return path, None
+
+    # split the path up for matching
+    parent, basename = os.path.split(path)
+
+    # make sure parent is a directory
+    if not os.path.isdir(parent):
+        # allow caller to keep going instead of throwing an exception
+        sys.stderr.write('Error: "{0}" is not a directory\n'.format(parent[len(indexroot) + 1:]))
+        return None, None
+
+    return parent, basename
+
+def group_paths(paths, indexroot, severity='Warning'):
+    '''
+    group paths by dir/nondir so that all dirs can be passed into
+    gufi_query at once and all nondirs can be passed into gufi_query
+    one at a time
+    '''
+
+    dirs = []
+    nondirs = []
+
+    for path in clean_paths(paths, indexroot, severity):
+        parent, basename = split_path(path, indexroot)
+
+        # error
+        if parent is None:
+            continue
+
+        if basename is None:
+            dirs += [parent]
+        else:
+            nondirs += [[parent, basename]]
+
+    return dirs, nondirs
+
+def gen_cmds(config, args, paths, gen_cmd, severity='Warning'):
+    '''
+    generic command list generator
+
+    split paths into directories and non-directories
+        directories are a list of strings
+        non-directories are a list of [parent, basename]
+
+    then run gen_cmd on each non-directory one at a time and all directories at once
+
+    returns a list of commands (list of strings):
+
+    [
+        ['gufi_query', ...],
+        ['gufi_query', ...],
+        ...
+    ]
+    '''
+
+    dirs, nondirs = group_paths(paths, config.indexroot, severity)
+
+    cmds = [gen_cmd(config, args, [path]) for path in nondirs]
+    if len(dirs) != 0:
+        cmds += [gen_cmd(config, args, dirs)]
+
+    return cmds
+
+def default_run(cmd, stdout, stderr):
+    return subprocess.Popen(cmd,           # pylint: disable=consider-using-with
+                            stdout=stdout,
+                            stderr=stderr,
+                            text=True)
+
+def single_run(args, cmd,
+               stdout, stderr, run_func):
+    # print it if requested
+    if args.verbose:
+        print_query(cmd)
+
+    # run the command
+    popen = run_func(cmd, stdout, stderr)
+
+    # process results
+    out, err = popen.communicate()  # block until query finishes
+
+    rc = 0
+    if popen.returncode != 0:
+        rc = 1
+
+    return rc, out, err
+
+def run_cmds(args, cmds,
+             err_rc, zero_processed_rc,
+             stdout=None, stderr=None,
+             run_func=default_run):
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+
+    rc = 0
+
+    # make sure at least one path was processed
+    processed_paths = 0
+
+    stdout_results = ''
+    stderr_results = ''
+
+    if run_func is None:
+        run_func = default_run
+
+    # process commands one at a time
+    for cmd in cmds:
+        loop_rc, out, err = single_run(args, cmd,
+                                       stdout, stderr, run_func)
+
+        processed_paths += 1
+
+        if loop_rc != 0:
+            rc = err_rc
+
+        if stdout is not None:
+            stdout_results += out
+        if stderr is not None:
+            stderr_results += err
+
+    if processed_paths == 0:
+        return zero_processed_rc, '', ''
+
+    return rc, stdout_results, stderr_results

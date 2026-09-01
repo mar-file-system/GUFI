@@ -658,6 +658,9 @@ Error: Ignoring path "..", which is not under index root "search"
 $ gufi_stats -r depth "prefix/../.."
 Error: Ignoring path "prefix/../..", which is not under index root "search"
 
+$ gufi_stats depth "prefix/old_file" 2>&1 | grep "RuntimeError:"
+RuntimeError: gufi_stats only processes directories
+
 $ gufi_stats    leaf-dirs "prefix"
 prefix/directory/subdirectory
 prefix/empty_directory

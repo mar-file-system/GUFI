@@ -262,6 +262,9 @@ run_no_sort "${GUFI_STATS} --skip \"${SKIP}.bad\" -r depth \"${BASENAME}\""
 run_no_sort "${GUFI_STATS} -r depth \"..\""
 run_no_sort "${GUFI_STATS} -r depth \"${BASENAME}/../..\""
 
+# file paths are not allowed
+run_no_sort "${GUFI_STATS} depth \"${BASENAME}/old_file\" 2>&1 | @GREP@ \"RuntimeError:\""
+
 # shellcheck disable=SC2194
 case "@CMAKE_SYSTEM_NAME@" in
     "APPLE" | "Darwin" | "CYGWIN")

@@ -678,6 +678,9 @@ prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 
+$ gufi_find prefix/old_file
+prefix/old_file
+
 $ gufi_find -uid   1001
 prefix
 prefix/.hidden
