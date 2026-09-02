@@ -403,17 +403,21 @@ replace() {
 }
 
 run_sort() {
+(
+    set +e # not using local - in case bash is old
+
     echo "$" "$@"                                  2>&1 | replace
     # shellcheck disable=SC2294
-    out=$(eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@" 2>&1 | replace)
+    out=$(eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@" 2>&1)
     # shellcheck disable=SC2181
     if [[ "$?" -eq 0 ]]
     then
-        echo -n "${out}" | sort
+        echo -n "${out}" | replace | sort
     else
-        echo -n "${out}"
+        echo    "${out}" | replace # -n ???
     fi
     echo
+)
 }
 
 run_no_sort() {
