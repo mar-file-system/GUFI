@@ -1,0 +1,28 @@
+# copied from example at https://github.com/marketplace/actions/clean-workflow-action#basic-scheduled-cleanup
+# licensed under MIT License
+# https://github.com/igorjs/gh-actions-clean-workflow/blob/main/LICENSE
+name: Clean Workflow Runs
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+  push:
+
+permissions:
+  actions: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: igorjs/gh-actions-clean-workflow@v8
+        with:
+          runs_older_than: 14
+          runs_to_keep: 8
+
+      - uses: igorjs/gh-actions-clean-workflow@v8
+        with:
+          workflow_names: "Clean Workflow Runs"
+          runs_older_than: 0
+          runs_to_keep: 0
