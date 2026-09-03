@@ -275,15 +275,6 @@ static str_t get_relative_path(str_t path, str_t root) {
     return (str_t)REFSTR(path.data + root.len + 1, path.len - root.len - 1);
 }
 
-static str_t get_first_component(str_t path) {
-    if (!path.data || path.len == 0) return (str_t)REFSTR(NULL, 0);
-
-    size_t len = 0;
-    while (len < path.len && path.data[len] != '/') len++;
-
-    return (str_t)REFSTR(path.data, len);
-}
-
 struct marfs_plugin {
     namespace_pair* namespaces;
     size_t namespaces_count;
@@ -491,7 +482,7 @@ static int validate_source(void) {
 
     if (!path_eq(g_state.source, owner)) {
         const str_t relative = get_relative_path(g_state.source, owner);
-        if (starts_with_mdal(get_first_component(relative))) {
+        if (starts_with_mdal(relative)) {
             fprintf(stderr, "Error: source (%s) is inside a MarFS internal directory\n", g_state.source.data);
             return 0;
         }
@@ -509,7 +500,6 @@ static int cleanup_marfs_index(void) {
     // loop through our index namespaces and move them up a directory and delete the unecessary MDAL_subspaces
     for (size_t i = g_state.namespaces_count; i-- > 0;) {
         const str_t old = g_state.namespaces[i].index_namespace;
-        if (!str_exists(&old)) continue;
 
         const str_t basename = get_basename(old);
         const str_t parent = get_parent(old);
