@@ -279,6 +279,8 @@ struct marfs_plugin {
     str_t root_namespace;
     str_t source;
 
+    int source_is_root;
+
     marfs_config* marfs_cfg;
 };
 
@@ -578,7 +580,7 @@ static int cleanup_marfs_index(void) {
     }
 
     // rename the root namespace to the marfs mountpoint from the marfs config
-    if (path_eq(g_state.source, g_state.root_namespace)) {
+    if (g_state.source_is_root) {
         const str_t rn_base = get_basename(g_state.root_namespace);
         const str_t mm_base = get_basename(g_state.marfs_mountpoint);
 
@@ -612,7 +614,7 @@ static int revert_marfs_index(void) {
     int ret = 0;
 
     // rename the marfs mountpoint from the marfs config to the root namespace
-    if (path_eq(g_state.source, g_state.root_namespace)) {
+    if (g_state.source_is_root) {
         const str_t mm_base = get_basename(g_state.marfs_mountpoint);
         const str_t rn_base = get_basename(g_state.root_namespace);
 
@@ -758,6 +760,8 @@ static int marfs_indexing_global_init(struct input* in) {
 
     INSTALL_STR(&g_state.root_namespace, sec_root);
     g_state.root_namespace = trim_trailing_slashes(g_state.root_namespace);
+
+    g_state.source_is_root = path_eq(g_state.source, g_state.root_namespace);
 
     char* marfs_config_path = getenv(MARFS_CONFIG_ENV);
     if (!marfs_config_path || marfs_config_path[0] == '\0') {
@@ -994,7 +998,7 @@ static void marfs_post_process_dir(void* ptr, void* user_data) {
     (void)user_data;
 
     // determine if this is the root namespace dir
-    if (!path_eq(g_state.source, g_state.root_namespace) || pcs->work->level != ROOT_NAMESPACE_LEVEL) {
+    if (!g_state.source_is_root || pcs->work->level != ROOT_NAMESPACE_LEVEL) {
         return;
     }
 
