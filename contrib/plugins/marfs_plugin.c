@@ -669,7 +669,6 @@ static int revert_marfs_index(void) {
     // loop through our index namespaces and add a subspaces into them. then move them down into each subspace
     for (size_t i = 0; i < g_state.namespaces_count; i++) {
         const str_t old = g_state.namespaces[i].index_namespace;
-        if (!old.data || old.len == 0) continue;
 
         const str_t basename = get_basename(old);
         const str_t parent = get_parent(old);
@@ -863,18 +862,6 @@ static int is_namespace(str_t path) {
 // sec-root and configured namespaces are the directories that own MDAL metadata
 static int is_mdal_owner(str_t path) { return path_eq(path, g_state.root_namespace) || is_namespace(path); }
 
-// check whether a namespace will be moved out of MDAL_subspaces in this index
-static int namespace_is_rewritten(str_t path) {
-    for (size_t i = 0; i < g_state.namespaces_count; i++) {
-        namespace_pair* pair = &g_state.namespaces[i];
-        if (path_eq(pair->namespace, path)) {
-            return pair->index_namespace.data && pair->index_namespace.len > 0;
-        }
-    }
-
-    return 0;
-}
-
 // marfs_pre_processing_dir checks if we're about to process a marfs specific directory (MDAL_reference, MDAL_subspaces)
 // or a namespace that is no longer active in the marfs config
 static plugin_dir_action marfs_dir_action(void* ptr) {
@@ -1037,8 +1024,8 @@ static void marfs_pre_process_dir(void* ptr, void* user_data) {
 
     // Fix pinode for directories whose parent is MDAL_subspaces (which will be removed)
     // The pinode currently points to the MDAL_subspaces inode, but should point to the grandparent
-    if (parent_basename.data && str_t_eq_cstr(parent_basename, MARFS_SUBSPACES_NAME, MARFS_SUBSPACES_NAME_LEN) &&
-        namespace_is_rewritten(path)) {
+    if (str_t_eq_cstr(parent_basename, MARFS_SUBSPACES_NAME, MARFS_SUBSPACES_NAME_LEN) && is_namespace(path) &&
+        !path_eq(path, g_state.source)) {
         const str_t grandparent = get_parent(parent);
 
         if (grandparent.data && grandparent.len > 0) {
