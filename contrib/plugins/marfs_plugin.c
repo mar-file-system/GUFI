@@ -208,6 +208,13 @@ static str_t get_parent(str_t path) {
     return (str_t)REFSTR(path.data, len);
 }
 
+static void trim_trailing_slashes_in_place(str_t* path) {
+    while (path->len > 1 && path->data[path->len - 1] == '/') {
+        path->len--;
+        path->data[path->len] = '\0';
+    }
+}
+
 // join two str_t file paths together
 static char* join_path(str_t lhs, str_t rhs) {
     size_t len = lhs.len + 1 + rhs.len + 1;
@@ -751,8 +758,8 @@ static int marfs_indexing_global_init(struct input* in) {
     // add index parent, selected source, and root namespace to global state
     INSTALL_STR(&g_state.index_parent, in->pos.argv[in->pos.argc - 1]);
     INSTALL_STR(&g_state.source, in->pos.argv[0]);
-    g_state.index_parent = trim_trailing_slashes(g_state.index_parent);
-    g_state.source = trim_trailing_slashes(g_state.source);
+    trim_trailing_slashes_in_place(&g_state.index_parent);
+    trim_trailing_slashes_in_place(&g_state.source);
 
     char* sec_root = getenv(MARFS_SEC_ROOT_ENV);
     if (!sec_root || sec_root[0] == '\0') {
