@@ -171,6 +171,15 @@ static void sort_namespace_pairs(namespace_pair* namespace_list, size_t namespac
     qsort(namespace_list, namespace_count, sizeof *namespace_list, cmp_str_t_ptr);
 }
 
+// return a path with trailing slashes removed, except for "/"
+static str_t trim_trailing_slashes(str_t path) {
+    while (path.len > 1 && path.data[path.len - 1] == '/') {
+        path.len--;
+    }
+
+    return path;
+}
+
 // returns the basename of a path
 static str_t get_basename(str_t path) {
     path = trim_trailing_slashes(path);
@@ -223,15 +232,6 @@ static int str_t_eq_cstr(str_t s, const char* cstr, size_t cstr_len) {
     return strncmp(s.data, cstr, cstr_len) == 0;
 }
 
-// return a path with trailing slashes removed, except for "/"
-static str_t trim_trailing_slashes(str_t path) {
-    while (path.len > 1 && path.data[path.len - 1] == '/') {
-        path.len--;
-    }
-
-    return path;
-}
-
 static void trim_trailing_slashes_in_place(str_t* path) {
     while (path->len > 1 && path->data[path->len - 1] == '/') {
         path->len--;
@@ -243,7 +243,9 @@ static int path_eq(str_t lhs, str_t rhs) {
     lhs = trim_trailing_slashes(lhs);
     rhs = trim_trailing_slashes(rhs);
 
-    return str_cmp(&lhs, &rhs) == 0;
+    if (lhs.len != rhs.len) return 0;
+
+    return strncmp(lhs.data, rhs.data, rhs.len) == 0;
 }
 
 // check whether path is root itself or is below root on a path-component boundary
@@ -264,7 +266,7 @@ static str_t get_relative_path(str_t path, str_t root) {
     path = trim_trailing_slashes(path);
     root = trim_trailing_slashes(root);
 
-    if (!path_is_at_or_below(path, root) || str_cmp(&path, &root)) {
+    if (!path_is_at_or_below(path, root) || path_eq(path, root)) {
         return (str_t)REFSTR(NULL, 0);
     }
 
@@ -500,6 +502,7 @@ static int cleanup_marfs_index(void) {
     // loop through our index namespaces and move them up a directory and delete the unecessary MDAL_subspaces
     for (size_t i = g_state.namespaces_count; i-- > 0;) {
         const str_t old = g_state.namespaces[i].index_namespace;
+        if (!str_exists(&old)) continue;
 
         const str_t basename = get_basename(old);
         const str_t parent = get_parent(old);
@@ -669,6 +672,7 @@ static int revert_marfs_index(void) {
     // loop through our index namespaces and add a subspaces into them. then move them down into each subspace
     for (size_t i = 0; i < g_state.namespaces_count; i++) {
         const str_t old = g_state.namespaces[i].index_namespace;
+        if (!str_exists(&old)) continue;
 
         const str_t basename = get_basename(old);
         const str_t parent = get_parent(old);
