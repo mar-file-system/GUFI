@@ -231,15 +231,37 @@ static int str_t_eq_cstr(str_t s, const char* cstr, size_t cstr_len) {
     return strncmp(s.data, cstr, cstr_len) == 0;
 }
 
+// return a path with trailing slashes removed, except for "/"
+static str_t trim_trailing_slashes(str_t path) {
+    while (path.len > 1 && path.data[path.len - 1] == '/') {
+        path.len--;
+    }
+
+    return path;
+}
+
+static void trim_trailing_slashes_in_place(str_t* path) {
+    while (path->len > 1 && path->data[path->len - 1] == '/') {
+        path->len--;
+        path->data[path->len] = '\0';
+    }
+}
+
 static int str_t_eq(str_t lhs, str_t rhs) {
-    if (!lhs.data || !rhs.data || lhs.len != rhs.len) return 0;
+    lhs = trim_trailing_slashes(lhs);
+    rhs = trim_trailing_slashes(rhs);
+
+    if (lhs.len != rhs.len) return 0;
 
     return strncmp(lhs.data, rhs.data, lhs.len) == 0;
 }
 
 // check whether path is root itself or is below root on a path-component boundary
 static int path_is_at_or_below(str_t path, str_t root) {
-    if (!path.data || !root.data || path.len < root.len) return 0;
+    path = trim_trailing_slashes(path);
+    root = trim_trailing_slashes(root);
+
+    if (path.len < root.len) return 0;
     if (strncmp(path.data, root.data, root.len) != 0) return 0;
     if (path.len == root.len) return 1;
 
@@ -249,6 +271,9 @@ static int path_is_at_or_below(str_t path, str_t root) {
 }
 
 static str_t get_relative_path(str_t path, str_t root) {
+    path = trim_trailing_slashes(path);
+    root = trim_trailing_slashes(root);
+
     if (!path_is_at_or_below(path, root) || str_t_eq(path, root)) {
         return (str_t)REFSTR(NULL, 0);
     }
@@ -747,6 +772,9 @@ static int marfs_indexing_global_init(struct input* in) {
     INSTALL_STR(&g_state.index_parent, in->pos.argv[in->pos.argc - 1]);
     INSTALL_STR(&g_state.source, in->pos.argv[0]);
 
+    trim_trailing_slashes_in_place(&g_state.index_parent);
+    trim_trailing_slashes_in_place(&g_state.source);
+
     char* sec_root = getenv(MARFS_SEC_ROOT_ENV);
     if (!sec_root || sec_root[0] == '\0') {
         fprintf(stderr, "Error: %s is not set\n", MARFS_SEC_ROOT_ENV);
@@ -754,6 +782,7 @@ static int marfs_indexing_global_init(struct input* in) {
     }
 
     INSTALL_STR(&g_state.root_namespace, sec_root);
+    trim_trailing_slashes_in_place(&g_state.root_namespace);
 
     char* marfs_config_path = getenv(MARFS_CONFIG_ENV);
     if (!marfs_config_path || marfs_config_path[0] == '\0') {
@@ -837,21 +866,13 @@ cleanup:
 
 // simple check to determine if a provided file path is a namespace in the marfs config
 static int is_namespace(str_t path) {
-    if (!path.data) {
-        return 0;
-    }
-
     for (size_t i = 0; i < g_state.namespaces_count; i++) {
         str_t ns = g_state.namespaces[i].namespace;
         if (!ns.data) {
             continue;
         }
 
-        if (ns.len != path.len) {
-            continue;
-        }
-
-        if (strncmp(ns.data, path.data, ns.len) == 0) {
+        if (str_t_eq(ns, path)) {
             return 1;
         }
     }
