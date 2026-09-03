@@ -881,9 +881,7 @@ static int is_namespace(str_t path) {
 }
 
 // sec-root and configured namespaces are the directories that own MDAL metadata
-static int is_mdal_owner(str_t path) {
-    return str_t_eq(path, g_state.root_namespace) || is_namespace(path);
-}
+static int is_mdal_owner(str_t path) { return str_t_eq(path, g_state.root_namespace) || is_namespace(path); }
 
 // check whether a namespace will be moved out of MDAL_subspaces in this index
 static int namespace_is_rewritten(str_t path) {
