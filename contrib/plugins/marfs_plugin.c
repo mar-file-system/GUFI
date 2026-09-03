@@ -173,38 +173,30 @@ static void sort_namespace_pairs(namespace_pair* namespace_list, size_t namespac
 
 // returns the basename of a path
 static str_t get_basename(str_t path) {
-    if (!path.data || path.len == 0) return (str_t)REFSTR(NULL, 0);
+    path = trim_trailing_slashes(path);
+    if (!str_exists(&path)) return (str_t)REFSTR(NULL, 0);
 
-    size_t len = path.len;
+    const size_t parent_len = dirname_len(path.data, path.len);
 
-    // trim trailing slashes except root
-    while (len > 1 && path.data[len - 1] == '/') len--;
-
-    size_t i = len;
-    while (i > 0 && path.data[i - 1] != '/') i--;
-
-    return (str_t)REFSTR(path.data + i, len - i);
+    return (str_t)REFSTR(path.data + parent_len, path.len - parent_len);
 }
 
 // returns the parent of a path
 static str_t get_parent(str_t path) {
-    if (!path.data || path.len == 0) return (str_t)REFSTR(NULL, 0);
+    path = trim_trailing_slashes(path);
+    if (!str_exists(&path)) return (str_t)REFSTR(NULL, 0);
 
-    size_t len = path.len;
+    if (path.len == 1 && path.data[0] == '/') {
+        return path;
+    }
 
-    // trim trailing slashes except root
-    while (len > 1 && path.data[len - 1] == '/') len--;
+    size_t len = dirname_len(path.data, path.len);
+    if (len == 0) return (str_t)REFSTR(NULL, 0);
 
-    // root stays root
-    if (len == 1 && path.data[0] == '/') return (str_t)REFSTR(path.data, 1);
+    // dirname_len includes the trailing '/'
+    if (len > 1) len--;
 
-    size_t i = len;
-    while (i > 0 && path.data[i - 1] != '/') i--;
-
-    if (i == 0) return (str_t)REFSTR(NULL, 0);
-
-    size_t parent_len = (i - 1 == 0) ? 1 : (i - 1);
-    return (str_t)REFSTR(path.data, parent_len);
+    return (str_t)REFSTR(path.data, len);
 }
 
 // join two str_t file paths together
@@ -247,13 +239,11 @@ static void trim_trailing_slashes_in_place(str_t* path) {
     }
 }
 
-static int str_t_eq(str_t lhs, str_t rhs) {
+static int path_eq(str_t lhs, str_t rhs) {
     lhs = trim_trailing_slashes(lhs);
     rhs = trim_trailing_slashes(rhs);
 
-    if (lhs.len != rhs.len) return 0;
-
-    return strncmp(lhs.data, rhs.data, lhs.len) == 0;
+    return str_cmp(&lhs, &rhs) == 0;
 }
 
 // check whether path is root itself or is below root on a path-component boundary
@@ -274,7 +264,7 @@ static str_t get_relative_path(str_t path, str_t root) {
     path = trim_trailing_slashes(path);
     root = trim_trailing_slashes(root);
 
-    if (!path_is_at_or_below(path, root) || str_t_eq(path, root)) {
+    if (!path_is_at_or_below(path, root) || str_cmp(&path, &root)) {
         return (str_t)REFSTR(NULL, 0);
     }
 
@@ -411,13 +401,13 @@ static int collect_ns_paths(marfs_ns* ns, str_t parent_path, namespace_pair* pat
 // build index paths only for configured namespaces below the selected source
 static int build_index_namespace_paths(void) {
     const str_t source_base = get_basename(g_state.source);
-    if (!source_base.data || source_base.len == 0) return -1;
+    if (!str_exists(&source_base)) return -1;
 
     for (size_t i = 0; i < g_state.namespaces_count; i++) {
         namespace_pair* pair = &g_state.namespaces[i];
 
         // the selected source is already the index root and does not need to be moved
-        if (str_t_eq(pair->namespace, g_state.source)) continue;
+        if (path_eq(pair->namespace, g_state.source)) continue;
 
         const str_t relative = get_relative_path(pair->namespace, g_state.source);
         if (!relative.data || relative.len == 0) continue;
@@ -499,7 +489,7 @@ static int validate_source(void) {
         if (ns.len > owner.len && path_is_at_or_below(g_state.source, ns)) owner = ns;
     }
 
-    if (!str_t_eq(g_state.source, owner)) {
+    if (!path_eq(g_state.source, owner)) {
         const str_t relative = get_relative_path(g_state.source, owner);
         if (starts_with_mdal(get_first_component(relative))) {
             fprintf(stderr, "Error: source (%s) is inside a MarFS internal directory\n", g_state.source.data);
@@ -519,7 +509,7 @@ static int cleanup_marfs_index(void) {
     // loop through our index namespaces and move them up a directory and delete the unecessary MDAL_subspaces
     for (size_t i = g_state.namespaces_count; i-- > 0;) {
         const str_t old = g_state.namespaces[i].index_namespace;
-        if (!old.data || old.len == 0) continue;
+        if (!str_exists(&old)) continue;
 
         const str_t basename = get_basename(old);
         const str_t parent = get_parent(old);
@@ -602,7 +592,7 @@ static int cleanup_marfs_index(void) {
     }
 
     // rename the root namespace to the marfs mountpoint from the marfs config
-    if (str_t_eq(g_state.source, g_state.root_namespace)) {
+    if (path_eq(g_state.source, g_state.root_namespace)) {
         const str_t rn_base = get_basename(g_state.root_namespace);
         const str_t mm_base = get_basename(g_state.marfs_mountpoint);
 
@@ -636,7 +626,7 @@ static int revert_marfs_index(void) {
     int ret = 0;
 
     // rename the marfs mountpoint from the marfs config to the root namespace
-    if (str_t_eq(g_state.source, g_state.root_namespace)) {
+    if (path_eq(g_state.source, g_state.root_namespace)) {
         const str_t mm_base = get_basename(g_state.marfs_mountpoint);
         const str_t rn_base = get_basename(g_state.root_namespace);
 
@@ -872,7 +862,7 @@ static int is_namespace(str_t path) {
             continue;
         }
 
-        if (str_t_eq(ns, path)) {
+        if (path_eq(ns, path)) {
             return 1;
         }
     }
@@ -881,13 +871,13 @@ static int is_namespace(str_t path) {
 }
 
 // sec-root and configured namespaces are the directories that own MDAL metadata
-static int is_mdal_owner(str_t path) { return str_t_eq(path, g_state.root_namespace) || is_namespace(path); }
+static int is_mdal_owner(str_t path) { return path_eq(path, g_state.root_namespace) || is_namespace(path); }
 
 // check whether a namespace will be moved out of MDAL_subspaces in this index
 static int namespace_is_rewritten(str_t path) {
     for (size_t i = 0; i < g_state.namespaces_count; i++) {
         namespace_pair* pair = &g_state.namespaces[i];
-        if (str_t_eq(pair->namespace, path)) {
+        if (path_eq(pair->namespace, path)) {
             return pair->index_namespace.data && pair->index_namespace.len > 0;
         }
     }
@@ -1093,7 +1083,7 @@ static void marfs_post_process_dir(void* ptr, void* user_data) {
     const str_t basename = get_basename(path);
 
     // determine if this is the root namespace dir
-    if (str_t_eq(g_state.source, g_state.root_namespace) && ROOT_NAMESPACE_LEVEL == pcs->work->level &&
+    if (path_eq(g_state.source, g_state.root_namespace) && ROOT_NAMESPACE_LEVEL == pcs->work->level &&
         str_t_eq_cstr(g_state.source, pcs->work->name, pcs->work->name_len)) {
         // Rename root namespace to mountpoint in database
         const str_t mountpoint = get_basename(g_state.marfs_mountpoint);
