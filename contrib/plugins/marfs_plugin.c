@@ -425,13 +425,15 @@ static int validate_sec_root(void) {
     if (!g_state.namespaces || g_state.namespaces_count == 0) goto cleanup;
 
     // check if MDAL_subspaces exists under the target dir
-    len = snprintf(NULL, 0, "%s/%s", g_state.root_namespace.data, MARFS_SUBSPACES_NAME);
+    len = snprintf(NULL, 0, "%.*s/%s", (int)g_state.root_namespace.len, g_state.root_namespace.data,
+                   MARFS_SUBSPACES_NAME);
     if (len < 0) goto cleanup;
 
     path = malloc((size_t)len + 1);
     if (!path) goto cleanup;
 
-    snprintf(path, (size_t)len + 1, "%s/%s", g_state.root_namespace.data, MARFS_SUBSPACES_NAME);
+    snprintf(path, (size_t)len + 1, "%.*s/%s", (int)g_state.root_namespace.len, g_state.root_namespace.data,
+             MARFS_SUBSPACES_NAME);
 
     if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) goto cleanup;
 
@@ -934,7 +936,7 @@ static plugin_file_action marfs_pre_process_file(void* ptr, void* user_data) {
     }
 
     // remove mdal specific files
-    if (basename.len >= MARFS_PREFIX_LEN && starts_with_mdal(basename)) {
+    if (starts_with_mdal(basename)) {
         // this files starts with MDAL_
 
         const str_t parent = get_parent(path);
@@ -1002,7 +1004,6 @@ static void marfs_post_process_dir(void* ptr, void* user_data) {
         return;
     }
 
-    const str_t path = REFSTR(pcs->work->name, pcs->work->name_len);
     const str_t basename =
         REFSTR(pcs->work->name + pcs->work->name_len - pcs->work->basename_len, pcs->work->basename_len);
     const str_t mountpoint = get_basename(g_state.marfs_mountpoint);
