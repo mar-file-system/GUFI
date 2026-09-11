@@ -71,40 +71,75 @@ OF SUCH DAMAGE.
 
 struct popen_argv_ret {
     pid_t pid;
-    int fd;
+    int fds[2];
 };
 
-popen_argv_t *popen_argv(const char **argv) {
+popen_argv_t *popen_argv(const char **argv, const int redirect_stdin) {
     if (!argv) {
         return NULL;
     }
 
-    int fds[2];
-    if (pipe(fds) != 0) {
+    int to_parent[2];              /* for parent to read */
+    if (pipe(to_parent) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not create read pipe: %s (%d)\n",
+                strerror(err), err);
         return NULL;
+    }
+
+    int to_child[2] = { -1, -1 };  /* for parent to write */
+    if (redirect_stdin) {
+        if (pipe(to_child) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not create write pipe: %s (%d)\n",
+                    strerror(err), err);
+            close(to_parent[1]);
+            close(to_parent[0]);
+            return NULL;
+        }
     }
 
     const pid_t pid = fork();
     if (pid == -1) {
-        close(fds[1]);
-        close(fds[0]);
+        const int err = errno;
+        fprintf(stderr, "Error: Could not fork: %s (%d)\n",
+                strerror(err), err);
+        close(to_parent[1]);
+        close(to_parent[0]);
+        close(to_child[1]);
+        close(to_child[0]);
         return NULL;
     }
 
     if (pid == 0) {     /* child */
-        close(fds[0]);  /* no need for input */
+        close(to_parent[0]);  /* child does not read parent's output */
+        close(to_child[1]);   /* child does not write to parent's input */
+
+        if (redirect_stdin) {
+            /* replace stdin */
+            if (dup2(to_child[0], STDIN_FILENO) != STDIN_FILENO) {
+                const int err = errno;
+                fprintf(stderr, "Error: Failed to replace stdin: %s (%d)\n",
+                        strerror(err), err);
+                close(to_parent[1]);
+                close(to_child[0]);
+                exit(1);
+            }
+        }
 
         /* replace stdout */
-        if (dup2(fds[1], STDOUT_FILENO) != STDOUT_FILENO) {
+        if (dup2(to_parent[1], STDOUT_FILENO) != STDOUT_FILENO) {
             const int err = errno;
-            fprintf(stderr, "Error: Failed to replace stdout: %s %d\n",
+            fprintf(stderr, "Error: Failed to replace stdout: %s (%d)\n",
                     strerror(err), err);
-            close(fds[1]);
+            close(to_parent[1]);
+            close(to_child[0]);
             exit(1);
         }
 
-        /* do not need original pipe end point */
-        close(fds[1]);
+        /* do not need original pipe end points */
+        close(to_parent[1]);
+        close(to_child[0]);
 
         /* run the command */
         if (execvp(argv[0], (char **) argv) != 0) {
@@ -116,18 +151,25 @@ popen_argv_t *popen_argv(const char **argv) {
         /* reaching here for any reason is an error */
         exit(1);
     }
+    else {
+        close(to_parent[1]);
+        close(to_child[0]);
+    }
 
     /* parent */
-    close(fds[1]);  /* no need for output */
-
     popen_argv_t *ret = calloc(1, sizeof(*ret));
     ret->pid = pid;
-    ret->fd = fds[0];
+    ret->fds[0] = to_child[1];  /* parent's input is child's output */
+    ret->fds[1] = to_parent[0]; /* parent's output is child's input */
     return ret;
 }
 
-int popen_argv_fd(popen_argv_t *ret) {
-    return ret?ret->fd:-1;
+int popen_argv_in(popen_argv_t *ret) {
+    return ret?ret->fds[0]:-1;
+}
+
+int popen_argv_out(popen_argv_t *ret) {
+    return ret?ret->fds[1]:-1;
 }
 
 int popen_argv_close(popen_argv_t *ret) {
@@ -137,6 +179,8 @@ int popen_argv_close(popen_argv_t *ret) {
 
     int rc = -1;
 
+    close(ret->fds[0]);
+
     int status = 0;
     if (waitpid(ret->pid, &status, 0) != 0) {
         if (WIFEXITED(status)) {
@@ -144,7 +188,7 @@ int popen_argv_close(popen_argv_t *ret) {
         }
     }
 
-    close(ret->fd);
+    close(ret->fds[1]);
     free(ret);
 
     return rc;

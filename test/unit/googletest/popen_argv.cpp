@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include <gtest/gtest.h>
 
 #include "popen_argv.h"
+#include "utils.h"
 
 TEST(popen_argv, cant_pipe) {
     struct rlimit orig_fds;
@@ -79,7 +80,7 @@ TEST(popen_argv, cant_pipe) {
     fewer_fds.rlim_cur = 3;
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
 
-    EXPECT_EQ(popen_argv(nullptr), nullptr);
+    EXPECT_EQ(popen_argv(nullptr, 0), nullptr);
 
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds),  0);
 }
@@ -93,7 +94,7 @@ TEST(popen_argv, cant_fork) {
     fewer_nprocs.rlim_cur = 1;
     ASSERT_EQ(setrlimit(RLIMIT_NPROC, &fewer_nprocs), 0);
 
-    EXPECT_EQ(popen_argv(nullptr), nullptr);
+    EXPECT_EQ(popen_argv(nullptr, 0), nullptr);
 
     ASSERT_EQ(setrlimit(RLIMIT_NPROC, &orig_nprocs),  0);
 }
@@ -102,10 +103,11 @@ TEST(popen_argv, cant_fork) {
 TEST(popen_argv, true) {
     const char *argv[] = {"true", NULL};
 
-    popen_argv_t *ret = popen_argv(argv);
+    popen_argv_t *ret = popen_argv(argv, 0);
     EXPECT_NE(ret, nullptr);
 
-    EXPECT_GT(popen_argv_fd(ret),       -1);
+    EXPECT_EQ(popen_argv_in(ret),       -1);
+    EXPECT_GT(popen_argv_out(ret),       0);
     EXPECT_EQ(popen_argv_close(ret),     0);
 
     EXPECT_EQ(popen_argv_close(nullptr), 0);
@@ -114,9 +116,33 @@ TEST(popen_argv, true) {
 TEST(popen_argv, false) {
     const char *argv[] = {"false", NULL};
 
-    popen_argv_t *ret = popen_argv(argv);
+    popen_argv_t *ret = popen_argv(argv, 0);
     EXPECT_NE(ret, nullptr);
 
-    EXPECT_GT(popen_argv_fd(ret),       -1);
+    EXPECT_EQ(popen_argv_in(ret),       -1);
+    EXPECT_GT(popen_argv_out(ret),      -1);
     EXPECT_NE(popen_argv_close(ret),     0);
+}
+
+TEST(popen_argv, redirect_stdin) {
+    const char *argv[] = {"cat", NULL};
+
+    popen_argv_t *ret = popen_argv(argv, 1);
+    EXPECT_NE(ret, nullptr);
+
+    const int in  = popen_argv_in(ret);
+    const int out = popen_argv_out(ret);
+    EXPECT_GT(in,                       -1);
+    EXPECT_GT(out,                       0);
+
+    // write some data
+    const char src[] = "abc";
+    EXPECT_EQ(write_size(in, src, sizeof(src)), (ssize_t) sizeof(src));
+
+    // read it back out
+    char dst[sizeof(src)] = {};
+    EXPECT_EQ(read_size(out, dst, sizeof(src)), (ssize_t) sizeof(src));
+    EXPECT_STREQ(dst, src);
+
+    EXPECT_EQ(popen_argv_close(ret),     0);
 }

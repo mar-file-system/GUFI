@@ -445,7 +445,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     }
 
     /* pass command to popen */
-    popen_argv_t *out = popen_argv(argv);
+    popen_argv_t *out = popen_argv(argv, 0);
 
     free(dir_match_gid);
     free(dir_match_uid);
@@ -477,7 +477,7 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
     char *curr = buf;
     struct column *cols = NULL;
 
-    const int fd = popen_argv_fd(pCur->output);
+    const int fd = popen_argv_out(pCur->output);
 
     char row_prefix[ROW_PREFIX_LEN + 1] = {0};
 
