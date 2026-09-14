@@ -144,11 +144,6 @@ function(build_and_install_one PATH LINK_GUFI TARGET)
   if (LINK_GUFI)
     target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
     add_dependencies(${TARGET} GUFI)
-
-    if (DEP_AI)
-      set_property(TARGET ${TARGET} PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/llama.cpp/lib")
-      set_property(TARGET ${TARGET} PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/llama.cpp/lib")
-    endif()
   endif()
 
   # install the executable
@@ -192,10 +187,7 @@ set_property(TARGET gufi_dir2index PROPERTY ENABLE_EXPORTS TRUE)
 build_and_install_one("${SERVER_BIN}" TRUE gufi_stat_bin gufi_stat.c)
 
 # gufi_sqlite3 loads AI extensions
-if (DEP_AI)
-  target_compile_definitions(gufi_sqlite3 PUBLIC -DHAVE_AI=1)
-  target_compile_options(gufi_sqlite3 PUBLIC "${OpenMP_C_FLAGS}")
-endif()
+add_ai(gufi_sqlite3 "libsqlite_vec0.a" "libsqlite_lembed0.a")
 
 # gufi_query is split up into multiple files
 add_library(gufi_query_lib OBJECT
@@ -211,21 +203,16 @@ add_library(gufi_query_lib OBJECT
   gufi_query/query_user_strs.c
 )
 
-if (DEP_AI)
-  set_property(SOURCE gufi_query/PoolArgs.c APPEND_STRING PROPERTY COMPILE_FLAGS -DHAVE_AI=1)
-endif()
-
 add_dependencies(gufi_query_lib GUFI)
 target_compile_definitions(gufi_query_lib PUBLIC SQLITE_CORE)
+add_ai(gufi_query_lib "libsqlite_vec0.a" "libsqlite_lembed0.a")
 
 build_and_install_one("${SERVER_BIN}" TRUE gufi_query
   gufi_query/main.c
   $<TARGET_OBJECTS:gufi_query_lib>
 )
 
-if (DEP_AI)
-  target_compile_options(gufi_query PUBLIC "${OpenMP_C_FLAGS}")
-endif()
+add_ai(gufi_query "libsqlite_vec0.a" "libsqlite_lembed0.a")
 
 if (ALLOW_DB_WRITES)
   target_compile_definitions(gufi_query PUBLIC ALLOW_DB_WRITES=1)
@@ -257,8 +244,6 @@ add_library(gufi_vt MODULE
   xattrs.c
 )
 set_property(TARGET gufi_vt PROPERTY PREFIX "")
-set_property(TARGET gufi_vt PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3-pcre")
-set_property(TARGET gufi_vt PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre")
 
 if (APPLE OR DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
@@ -271,12 +256,25 @@ endif()
 # libsqlite3-pcre needs to be installed manually (since it does not
 # have a package) in order for gufi_vt to be usable if using rpm
 # installed files
+add_dependencies(gufi_vt install_dependencies)
 target_link_libraries(gufi_vt
   "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
   "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
   pcre2-8
 )
-add_dependencies(gufi_vt install_dependencies)
+
+if (DEP_AI)
+  if (APPLE OR DARWIN)
+    set(AI_EXT "dylib")
+  elseif (CYGWIN)
+    set(AI_EXT "dll")
+  else ()
+    set(AI_EXT "so")
+  endif()
+endif()
+
+add_ai(gufi_vt "libvec0.${AI_EXT}" "liblembed0.${AI_EXT}")
+
 install(TARGETS gufi_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
 if (CLIENT)
   install(TARGETS gufi_vt DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)

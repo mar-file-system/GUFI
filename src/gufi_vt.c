@@ -72,6 +72,13 @@ OF SUCH DAMAGE.
 #include <sqlite3ext.h>
 SQLITE_EXTENSION_INIT1
 
+#include "pcre.h"
+
+#if HAVE_AI
+#include "sqlite-lembed.h"
+#include "sqlite-vec.h"
+#endif
+
 #include "SinglyLinkedList.h"
 #include "addqueryfuncs.h"
 #include "bf.h"
@@ -81,6 +88,9 @@ SQLITE_EXTENSION_INIT1
 #include "popen_argv.h"
 #include "print.h"
 #include "utils.h"
+
+/* local reference of SQLite 3 API struct for passing to extensions */
+const sqlite3_api_routines *SQLITE_API_ROUTINES = NULL;
 
 /*
  * GUFI Virtual Tables Module
@@ -1036,11 +1046,6 @@ static int parse_external_copy_args(sll_t *external_copy, char *arg) {
     return 0;
 }
 
-/* placeholder pcre2 extension REGEXP function */
-static void fake_regexp(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
-    (void) ctx; (void) argc; (void) argv;
-}
-
 static int gufi_vtpu_xConnect(sqlite3 *db,
                               void *pAux,
                               int argc, const char * const *argv,
@@ -1234,8 +1239,12 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     sqlite3 *tempdb = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
                              0, 0, create_dbdb_tables, NULL); /* not initializing extensions here */
 
-    /* fake REGEXP here - calling the real one will segfault */
-    sqlite3_create_function_v2(tempdb, "REGEXP", 2, SQLITE_UTF8, NULL, fake_regexp, NULL, NULL, NULL);
+    sqlite3_pcre2_init(tempdb, NULL, SQLITE_API_ROUTINES);
+
+    #if HAVE_AI
+    sqlite3_vec_init(tempdb, NULL, SQLITE_API_ROUTINES);
+    sqlite3_lembed_init(tempdb, NULL, SQLITE_API_ROUTINES);
+    #endif
 
     create_xattr_tables(SQLITE_MEMORY, tempdb, NULL);
 
@@ -1265,6 +1274,16 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         gq_cmd_destroy(&cmd);
         input_fini(&in);
         return SQLITE_CONSTRAINT;
+    }
+
+    if (str_exists(&cmd.I)) {
+        char *err = NULL;
+        if (sqlite3_exec(tempdb, cmd.I.data, NULL, NULL, &err) != SQLITE_OK) {
+            *pzErr = sqlite3_mprintf("Running -I \"%s\" failed: %s",
+                                     cmd.I.data, err);
+            sqlite3_free(err);
+            goto done;
+        }
     }
 
     if (str_exists(&cmd.T)) {
@@ -1712,6 +1731,8 @@ int sqlite3_gufivt_init(
     (void) pzErrMsg;
 
     SQLITE_EXTENSION_INIT2(pApi);
+
+    SQLITE_API_ROUTINES = pApi;
 
     addqueryfuncs(db);
 

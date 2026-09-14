@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,85 +61,22 @@
 
 
 
-# https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-include(CheckLanguage)
+OUTPUT="vec0.out"
 
-if (CMAKE_CXX_COMPILER)
-  option(RLIMIT_NPROC_UNIT_TESTS "Whether or not to run unit tests that use RLIMIT_NPROC" On)
+(
+    # derived from example found at
+    # https://github.com/asg017/sqlite-vec/blob/main/README.md
+    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" --max-level 0 -I \"CREATE VIRTUAL TABLE vec USING vec0(embedding float[4]); INSERT INTO vec (rowid, embedding) VALUES (0, '[0, 1, 2, 3]'), (1, '[4, 5, 6, 7]');\" -E \"SELECT rowid, ROUND(distance, 2) FROM vec WHERE embedding MATCH '[0, 0, 0, 0]' ORDER BY distance LIMIT 2;\" \"${INDEXROOT}\""
 
-  configure_file(valgrind.suppressions valgrind.suppressions COPYONLY)
-
-  include_directories("${DEP_INSTALL_PREFIX}/googletest/include")
-  set(TEST_SRC
-    OutputBuffers.cpp
-    PoolArgs.cpp
-    QueuePerThreadPool.cpp
-    SinglyLinkedList.cpp
-    addqueryfuncs.cpp
-    bf.cpp
-    compress.cpp
-    debug.cpp
-    handle_sql.cpp
-    histogram.cpp
-    plugin.cpp
-    popen_argv.cpp
-    print.cpp
-    query_user_str.cpp
-    rollup.cpp
-    str.cpp
-    template_db.cpp
-    trace.cpp
-    trie.cpp
-    xattrs.cpp
-  )
-
-  if (QPTPOOL_SWAP)
-    list(APPEND TEST_SRC
-      swap.cpp
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(max_level=0, I=\"CREATE VIRTUAL TABLE vec USING vec0(embedding float[4]); INSERT INTO vec (rowid, embedding) VALUES (0, '[0, 1, 2, 3]'), (1, '[4, 5, 6, 7]');\", E=\"SELECT rowid, ROUND(distance, 2) FROM vec WHERE embedding MATCH '[0, 0, 0, 0]' ORDER BY distance LIMIT 2;\", \"${INDEXROOT}\");"
+        echo "SELECT * FROM gufi;"
     )
-  endif()
+    gufi_vt "${query}" | replace
+) 2>&1 | tee "${OUTPUT}"
 
-  # these test files use CMake variables
-  set(NEED_PATH
-    BottomUp.cpp
-    aggregate.cpp
-    dbutils.cpp
-    descend.cpp
-    external_attach.cpp
-    path_list.cpp
-    utils.cpp
-  )
-  foreach(SRC ${NEED_PATH})
-    configure_file("${SRC}.in" "${SRC}" @ONLY)
-    list(APPEND TEST_SRC
-      "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
-    )
-  endforeach()
-
-  if (RLIMIT_NPROC_UNIT_TESTS)
-    set_source_files_properties(QueuePerThreadPool.cpp PROPERTIES COMPILE_FLAGS -DRLIMIT_NPROC_UNIT_TESTS=1)
-    set_source_files_properties(popen_argv.cpp         PROPERTIES COMPILE_FLAGS -DRLIMIT_NPROC_UNIT_TESTS=1)
-  endif()
-
-  add_executable(unit_tests main.cpp ${TEST_SRC} $<TARGET_OBJECTS:gufi_query_lib>)
-  if (CYGWIN)
-    target_compile_definitions(unit_tests PUBLIC _GNU_SOURCE)
-  endif()
-  target_link_libraries(unit_tests -L"${DEP_INSTALL_PREFIX}/googletest/lib" -L"${DEP_INSTALL_PREFIX}/googletest/lib64" gtest ${COMMON_LIBRARIES})
-  add_ai(unit_tests "libsqlite_vec0.a" "libsqlite_lembed0.a")
-
-  add_test(NAME unit_tests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/unit_tests" --gtest_shuffle
-    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-  if (CYGWIN)
-    if (DEP_AI)
-      set_property(TEST unit_tests APPEND PROPERTY ENVIRONMENT "PATH=${DEP_INSTALL_PREFIX}/llama.cpp/bin:$ENV{PATH}"
-    )
-    endif()
-  endif()
-  if (FSANITIZE)
-    set_property(TEST unit_tests APPEND PROPERTY ENVIRONMENT "ASAN_OPTIONS=allocator_may_return_null=1")
-    set_property(TEST unit_tests APPEND PROPERTY ENVIRONMENT "TSAN_OPTIONS=allocator_may_return_null=1")
-  endif()
-  set_property(TEST unit_tests APPEND PROPERTY LABELS "unit")
-endif()
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/vec0.expected "${OUTPUT}"
+rm "${OUTPUT}"

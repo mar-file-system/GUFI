@@ -1270,8 +1270,7 @@ int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols) {
             (*types)[i] = (uintptr_t) sql_type;
         }
         else {
-            fprintf(stderr, "Error: Got unknown type '%s'\n", type);
-            (*types)[i] = 0; /* unknown type */
+            (*types)[i] = SQLITE_BLOB; /* unknown type; let it through */
         }
     }
 

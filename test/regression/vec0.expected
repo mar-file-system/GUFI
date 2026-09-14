@@ -1,0 +1,12 @@
+$ gufi_query -d "|" --max-level 0 -I "CREATE VIRTUAL TABLE vec USING vec0(embedding float[4]); INSERT INTO vec (rowid, embedding) VALUES (0, '[0, 1, 2, 3]'), (1, '[4, 5, 6, 7]');" -E "SELECT rowid, ROUND(distance, 2) FROM vec WHERE embedding MATCH '[0, 0, 0, 0]' ORDER BY distance LIMIT 2;" "prefix"
+0|3.74
+1|11.22
+
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(max_level=0, I="CREATE VIRTUAL TABLE vec USING vec0(embedding float[4]); INSERT INTO vec (rowid, embedding) VALUES (0, '[0, 1, 2, 3]'), (1, '[4, 5, 6, 7]');", E="SELECT rowid, ROUND(distance, 2) FROM vec WHERE embedding MATCH '[0, 0, 0, 0]' ORDER BY distance LIMIT 2;", "prefix");
+SELECT * FROM gufi;"
+) | sqlite3
+0|3.74
+1|11.22
+

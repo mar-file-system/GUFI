@@ -65,7 +65,7 @@
 
 set -e
 
-CYGWIN="$1"
+SYSTEM="$1"
 OMP_FLAGS="$2"
 
 # install sqlite3 first
@@ -77,7 +77,7 @@ lembed_name="sqlite-lembed"
 lembed_prefix="${INSTALL_DIR}/${lembed_name}"
 llama_name="llama.cpp"
 llama_prefix="${INSTALL_DIR}/${llama_name}"
-if [[ ! -d "${lembed_prefix}" ]]; then
+if [[ ! -f "${lembed_prefix}/lib/libsqlite_lembed0.a" ]]; then
     lembed_build="${BUILD_DIR}/sqlite-lembed"
     if [[ ! -d "${lembed_build}" ]]; then
         lembed_tarball="${DOWNLOAD_DIR}/sqlite-lembed.tar.gz"
@@ -108,7 +108,7 @@ if [[ ! -d "${lembed_prefix}" ]]; then
     cd "${llama_build}"
     mkdir -p build
     cd build
-    if [[ "${CYGWIN}" == "true" ]]; then
+    if [[ "${SYSTEM}" == "CYGWIN" ]]; then
         # shellcheck disable=SC2089
         CYGWIN_FLAGS="-DCMAKE_CXX_FLAGS=-D_GNU_SOURCE"
     fi
@@ -138,6 +138,19 @@ if [[ ! -d "${lembed_prefix}" ]]; then
     sed -i "s%@DEP_INSTALL_PREFIX@%${INSTALL_DIR}%g;" Makefile
     make sqlite-lembed.h static loadable
     mkdir -p "${lembed_prefix}/include" "${lembed_prefix}/lib"
-    cp sqlite-lembed.h "${lembed_prefix}/include"
-    cp dist/libsqlite_lembed0.* dist/lembed0.* "${lembed_prefix}/lib"
+    cp -f sqlite-lembed.h "${lembed_prefix}/include"
+    cp -f -v dist/libsqlite_lembed0.* dist/lembed0.* "${lembed_prefix}/lib/"
+
+    case "${SYSTEM}" in
+        "MAC")
+            EXT="dylib"
+            ;;
+        "CYGWIN")
+            EXT="dll"
+            ;;
+        *)
+            EXT="so"
+            ;;
+    esac
+    ln -sfv "${lembed_prefix}/lib/lembed0.${EXT}" "${lembed_prefix}/lib/liblembed0.${EXT}"
 fi

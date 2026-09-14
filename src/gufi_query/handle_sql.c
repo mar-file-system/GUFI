@@ -65,6 +65,11 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 
+#if HAVE_AI
+#include "sqlite-lembed.h"
+#include "sqlite-vec.h"
+#endif
+
 #include "dbutils.h"
 #include "template_db.h"
 
@@ -168,6 +173,11 @@ static int gen_types(struct input *in) {
             return -1;
         }
 
+        #if HAVE_AI
+        sqlite3_vec_init(db, NULL, NULL);
+        sqlite3_lembed_init(db, NULL, NULL);
+        #endif
+
         int cols = 0; /* discarded */
 
         struct work work;
@@ -184,6 +194,15 @@ static int gen_types(struct input *in) {
 
         addqueryfuncs(db);
         addqueryfuncs_with_context(db, &ctx);
+
+        if (str_exists(&in->sql.init)) {
+            char *err = NULL;
+            if (sqlite3_exec(db, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
+                fprintf(stderr, "Error: Failed to set up table for getting result column types: %s\n", err);
+                sqlite3_free(err);
+                goto error;
+            }
+        }
 
         if (str_exists(&in->sql.tsum)) {
             if (create_table_wrapper(SQLITE_MEMORY, db, TREESUMMARY, TREESUMMARY_CREATE) != SQLITE_OK) {

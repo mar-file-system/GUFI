@@ -77,6 +77,12 @@ GENERATE_INDEX="$1"
 BINARY_DIR="@CMAKE_BINARY_DIR@"
 CURRENT_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
 
+DEP_AI=$(echo "@DEP_AI@" | tr '[:lower:]' '[:upper:]')
+if [[ "${DEP_AI}" == "ON" ]]
+then
+    export GGML_NO_BACKTRACE=1
+fi
+
 . "${CURRENT_BINARY_DIR}/os_specific.sh"
 
 SRCDIR="prefix" # DO NOT use this in user facing script tests

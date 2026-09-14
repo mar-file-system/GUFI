@@ -207,6 +207,13 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Fix Cache
+      run: >-
+           mkdir -p /usr/local/sqlite-vec/lib /usr/local/sqlite-lembed/lib &&
+           ln -sfv /usr/local/sqlite-vec/lib/vec0.dll /usr/local/sqlite-vec/lib/libvec0.dll &&
+           ln -sfv /usr/local/sqlite-lembed/lib/lembed0.dll /usr/local/sqlite-lembed/lib/liblembed0.dll
+      shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
+
     - name: Set Up Git
       run: >-
            export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&

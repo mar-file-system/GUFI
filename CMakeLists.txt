@@ -167,6 +167,23 @@ endif()
 set(DEP_AI ON CACHE BOOL "Whether or not to build and link with SQLite AI modules")
 if (DEP_AI)
   message(STATUS "AI dependencies enabled")
+
+  function(check_env_for VAR STR)
+    string(FIND "$ENV{${VAR}}" "${STR}" IDX)
+    if (IDX EQUAL -1)
+      message(WARNING "Make sure \"${STR}\" is in your ${VAR}")
+    endif()
+  endfunction()
+
+  function(check_ai_paths VAR LLAMA)
+    check_env_for("${VAR}" "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
+    check_env_for("${VAR}" "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
+    check_env_for("${VAR}" "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA}")
+  endfunction()
+
+  if(CYGWIN)
+    check_ai_paths("PATH" "bin")
+  endif()
 endif()
 
 # Only enable C++ if support is found or if llama.cpp is rquired
@@ -345,10 +362,15 @@ if (DEP_USE_JEMALLOC)
     set(JEMALLOC "${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a")
   endif()
 endif()
+if (APPLE OR DARWIN)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --mac)
+elseif (CYGWIN)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --cygwin)
+endif()
 if (DEP_AI)
   set(DEP_OPTIONS ${DEP_OPTIONS} --AI)
   if (CYGWIN)
-    set(DEP_OPTIONS ${DEP_OPTIONS} --cygwin --OMP "-DOpenMP_C_FLAGS=\"${OpenMP_C_FLAGS}\" -DOpenMP_C_LIB_NAMES=\"${OpenMP_C_LIB_NAMES}\" -DOpenMP_libgomp_LIBRARY=\"${OpenMP_libgomp_LIBRARY}\"")
+    set(DEP_OPTIONS ${DEP_OPTIONS} --OMP "-DOpenMP_C_FLAGS=\"${OpenMP_C_FLAGS}\" -DOpenMP_C_LIB_NAMES=\"${OpenMP_C_LIB_NAMES}\" -DOpenMP_libgomp_LIBRARY=\"${OpenMP_libgomp_LIBRARY}\"")
   endif()
 endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
@@ -357,6 +379,10 @@ add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/d
 if (DEP_AI)
   find_package(OpenMP REQUIRED COMPONENTS C)
   message(STATUS "OpenMP libraries located in ${OpenMP_C_LIBRARIES}")
+
+  if (APPLE OR DARWIN)
+    find_library(ACCELERATE Accelerate REQUIRED)
+  endif()
 endif()
 
 # Find zlib
@@ -452,36 +478,6 @@ set(COMMON_LIBRARIES
   ${PCRE2_LDFLAGS}
 )
 
-if (DEP_AI)
-  if (APPLE OR DARWIN)
-    find_library(ACCELERATE Accelerate REQUIRED)
-
-    list(APPEND COMMON_LIBRARIES
-      ${ACCELERATE}
-      ${METAL}
-    )
-  endif()
-
-  list(APPEND COMMON_INCLUDES
-    "${DEP_INSTALL_PREFIX}/sqlite-vec/include"
-    "${DEP_INSTALL_PREFIX}/sqlite-lembed/include"
-    "${DEP_INSTALL_PREFIX}/llama.cpp/include"
-  )
-
-  list(APPEND COMMON_LIBRARIES
-    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libsqlite_vec0.a"
-    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/libsqlite_lembed0.a"
-    -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml ${OpenMP_C_FLAGS}
-    -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
-    )
-
-  if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    list(APPEND COMMON_LIBRARIES
-      omp
-    )
-  endif()
-endif()
-
 if (ZLIB_FOUND)
   list(APPEND COMMON_LIBRARIES
     z
@@ -540,6 +536,55 @@ if (HAVE_STATX)
 else()
   message(STATUS "statx(2) not found. Falling back to lstat(2).")
 endif()
+
+# add flags for AI dependencies
+function(add_ai target vec_basename lembed_basename)
+  if (APPLE OR DARWIN)
+    set(LLAMA_LIB "lib")
+  elseif(CYGWIN)
+    set(LLAMA_LIB "bin")
+  else()
+    set(LLAMA_LIB "lib")
+  endif()
+
+  if (DEP_AI)
+    target_include_directories("${target}" SYSTEM PUBLIC "${DEP_INSTALL_PREFIX}/sqlite-vec/include")
+    target_include_directories("${target}" SYSTEM PUBLIC "${DEP_INSTALL_PREFIX}/sqlite-lembed/include")
+    target_include_directories("${target}" SYSTEM PUBLIC "${DEP_INSTALL_PREFIX}/llama.cpp/include")
+
+    target_compile_definitions("${target}" PUBLIC -DHAVE_AI=1)
+
+    if (APPLE OR DARWIN)
+      target_link_libraries("${target}"
+        ${ACCELERATE}
+        ${METAL}
+      )
+    endif()
+
+    # link static libraries
+    target_link_libraries("${target}"
+      "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/${vec_basename}"
+      "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/${lembed_basename}"
+      -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml ${OpenMP_C_FLAGS}
+      -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
+    )
+
+    set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
+    set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
+    set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
+    set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
+    set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA_LIB}")
+    set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA_LIB}")
+
+    if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+      target_link_libraries("${target}"
+        omp
+      )
+    endif()
+
+    target_compile_options("${target}" PUBLIC "${OpenMP_C_FLAGS}")
+  endif()
+endfunction()
 
 # enable "make test"
 enable_testing()

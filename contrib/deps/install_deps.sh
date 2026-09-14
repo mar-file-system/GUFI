@@ -84,7 +84,7 @@ BUILD_CXX="false"
 PATCH_SQLITE3_OPEN="false"
 JEMALLOC="false"
 AI="false"
-CYGWIN="false"
+SYSTEM="LINUX"
 OMP_FLAGS=""
 
 # https://stackoverflow.com/a/14203146
@@ -111,8 +111,11 @@ case $key in
     --AI)
         AI="true"
         ;;
+    --mac)
+        SYSTEM="MAC"
+        ;;
     --cygwin)
-        CYGWIN="true"
+        SYSTEM="CYGWIN"
         ;;
     --OMP)
         OMP_FLAGS="$2"
@@ -163,10 +166,10 @@ source "${SCRIPT_PATH}/sqlite3-pcre.sh"
 
 if [[ "${AI}" == "true" ]]; then
     echo "Installing SQLite3 vec"
-    source "${SCRIPT_PATH}/sqlite-vec.sh"
+    source "${SCRIPT_PATH}/sqlite-vec.sh" "${SYSTEM}"
 
     echo "Installing SQLite3 lembed"
-    source "${SCRIPT_PATH}/sqlite-lembed.sh" "${CYGWIN}" "${OMP_FLAGS}"
+    source "${SCRIPT_PATH}/sqlite-lembed.sh" "${SYSTEM}" "${OMP_FLAGS}"
 fi
 
 if [[ "${JEMALLOC}" == "true" ]]; then

@@ -319,7 +319,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure -E "dsi|import|presidio|query_multiple_remotes|vt"
+      run:  ctest --output-on-failure -E "dsi|import|presidio|query_multiple_remotes|vec0|vt"
 
   Memcheck:
     needs: [ShellCheck, Pylint]

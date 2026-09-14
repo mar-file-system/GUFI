@@ -63,11 +63,40 @@
 
 # source this file instead of using it as a command to only check OS once
 
+DEP_AI=$(echo "@DEP_AI@" | tr '[:lower:]' '[:upper:]')
+
 # shellcheck disable=SC2194
 case "@CMAKE_SYSTEM_NAME@" in
+    "APPLE" | "Darwin")
+        export DYLD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite3-pcre:${DYLD_LIBRARY_PATH}"
+
+        if [[ "${DEP_AI}" == "ON" ]]
+        then
+            export DYLD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite-vec/lib:${DYLD_LIBRARY_PATH}"
+            export DYLD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite-lembed/lib:${DYLD_LIBRARY_PATH}"
+            export DYLD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/llama.cpp/lib:${DYLD_LIBRARY_PATH}"
+        fi
+        ;;
+    "Linux")
+        export LD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite3-pcre:${LD_LIBRARY_PATH}"
+
+        if [[ "${DEP_AI}" == "ON" ]]
+        then
+            export LD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite-vec/lib:${LD_LIBRARY_PATH}"
+            export LD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite-lembed/lib:${LD_LIBRARY_PATH}"
+            export LD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/llama.cpp/lib:${LD_LIBRARY_PATH}"
+        fi
+        ;;
     "CYGWIN")
         # https://cygwin.com/pipermail/cygwin/2005-May/133368.html
         export PATH="@DEP_INSTALL_PREFIX@/sqlite3-pcre:${PATH}"
+
+        if [[ "${DEP_AI}" == "ON" ]]
+        then
+            export PATH="@DEP_INSTALL_PREFIX@/sqlite-vec/lib:${PATH}"
+            export PATH="@DEP_INSTALL_PREFIX@/sqlite-lembed/lib:${PATH}"
+            export PATH="@DEP_INSTALL_PREFIX@/llama.cpp/bin:${PATH}"
+        fi
         ;;
 esac
 

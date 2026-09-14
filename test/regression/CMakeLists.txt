@@ -210,6 +210,12 @@ set(OTHERS
   run_vt
 )
 
+if (DEP_AI)
+  list(APPEND OTHERS
+    vec0
+  )
+endif()
+
 if (COMPOPT EQUAL 0)
   list(APPEND OTHERS
     bash_completion
