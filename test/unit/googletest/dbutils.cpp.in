@@ -404,7 +404,7 @@ TEST(get, col_names) {
               SQLITE_OK);
 
     // good db, bad sql
-    sql = REFSTR("", 0);
+    sql = NULL_STR;
     EXPECT_EQ(get_col_names(db,  &sql, &names, &lens, &cols), -1);
 
     // good sql

@@ -942,7 +942,7 @@ TEST(addqueryfuncs_with_context, path) {
     const char dirname[] = "dirname";
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
-    work->root_parent = REFSTR("", 0);
+    work->root_parent = NULL_STR;
     work->basename_len = strlen(dirname);
 
     sqlite3 *db = nullptr;
@@ -969,7 +969,7 @@ TEST(addqueryfuncs_with_context, path) {
 
     // empty orig_root
     {
-        work->orig_root = REFSTR("", 0);
+        work->orig_root = NULL_STR;
         work->root_basename_len = work->orig_root.len;
 
         EXPECT_EQ(sqlite3_exec(db, "SELECT path();", copy_columns_callback, &output, nullptr), SQLITE_OK);
@@ -985,7 +985,7 @@ TEST(addqueryfuncs_with_context, path) {
         free(output);
         output = nullptr;
 
-        work->orig_root = REFSTR(nullptr, 0);
+        work->orig_root = NULL_STR;
         work->root_basename_len = work->orig_root.len;
 
         EXPECT_EQ(sqlite3_exec(db, "SELECT path();", copy_columns_callback, &output, nullptr), SQLITE_OK);
@@ -1060,7 +1060,7 @@ TEST(addqueryfuncs_with_context, rpath) {
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
     work->orig_root = REFSTR("index_root", 10);
-    work->root_parent = REFSTR("", 0);
+    work->root_parent = NULL_STR;
     work->root_basename_len = work->orig_root.len;
     work->basename_len = strlen(dirname);
 
@@ -1119,7 +1119,7 @@ TEST(addqueryfuncs_with_context, spath) {
 
     struct work *work = new_work_with_name("index_root", 10, dirname, strlen(dirname));
     work->orig_root = REFSTR("index_root", 10);
-    work->root_parent = REFSTR("", 0);
+    work->root_parent = NULL_STR;
     work->root_basename_len = work->orig_root.len;
     work->basename_len = strlen(dirname);
 

@@ -95,7 +95,7 @@ int replace_sql(const str_t *orig, const sll_t *idx,
     }
 
     size_t orig_start = 0;
-    str_t replaced = REFSTR(NULL, 0);
+    str_t replaced = NULL_STR;
     size_t allocd = 0;
 
     sll_loop(idx, node) {

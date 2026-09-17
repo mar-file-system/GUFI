@@ -79,17 +79,23 @@ typedef struct {
 } str_t;
 
 #ifdef __cplusplus
-#define REFSTR(buf, buflen) {   \
+#define REFSTR(buf, buflen)     \
+{                               \
     (char *) (buf),             \
     (buflen),                   \
     nullptr,                    \
 }
+
+#define NULL_STR REFSTR(nullptr, 0)
 #else
-#define REFSTR(buf, buflen) {   \
+#define REFSTR(buf, buflen)     \
+{                               \
     .data = (char *) (buf),     \
     .len = (buflen),            \
     .free = NULL,               \
 }
+
+#define NULL_STR REFSTR(NULL, 0)
 #endif
 
 /*
