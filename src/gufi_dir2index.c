@@ -142,18 +142,20 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     topath.len -= 1 + DBNAME_LEN;
     topath.data[topath.len] = '\0';
 
-    /* set permissions on index directory */
-    if (chmod(topath.data, work->statuso.st_mode) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Warning: Unable to set permission for \"%s\": %s (%d)\n",
-                topath.data, strerror(err), err);
-    }
+    if (process_dir != PLUGIN_NO_PROCESS_NO_DESCEND_DIR){
+        /* set permissions on index directory */
+        if (chmod(topath.data, work->statuso.st_mode) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Warning: Unable to set permission for \"%s\": %s (%d)\n",
+                    topath.data, strerror(err), err);
+        }
 
-    /* set owners on index directory */
-    if (chown(topath.data, work->statuso.st_uid, work->statuso.st_gid) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Warning: Unable to set owners for \"%s\": %s (%d)\n",
-                topath.data, strerror(err), err);
+        /* set owners on index directory */
+        if (chown(topath.data, work->statuso.st_uid, work->statuso.st_gid) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Warning: Unable to set owners for \"%s\": %s (%d)\n",
+                    topath.data, strerror(err), err);
+        }
     }
 
   free_topath:
