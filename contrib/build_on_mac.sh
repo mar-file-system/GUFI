@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,94 +61,33 @@
 
 
 
-# allow for the test working directory to be moved
-set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
-execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}"
-    COMMAND_ERROR_IS_FATAL ANY)
+# after running contrib/CI/macos.sh, run this
+# script from the GUFI repository root
 
-# LeakSanitizer suppressions
-configure_file("lsan.suppressions" "lsan.suppressions" COPYONLY)
+# these paths should have been exported after running
+# contrib/CI/macos.sh, but explicitly doing so here
+# just in case they were not
+# shellcheck disable=SC2155
+export PATH="$(brew --prefix cmake)/bin:${PATH}"
+export PATH="$(brew --prefix coreutils)/libexec/gnubin:${PATH}"
+export PATH="$(brew --prefix diffutils)/bin:${PATH}"
+export PATH="$(brew --prefix findutils)/libexec/gnubin:${PATH}"
+export PATH="$(brew --prefix flock)/bin:${PATH}"
+export PATH="$(brew --prefix gnu-sed)/libexec/gnubin:${PATH}"
+export PATH="$(brew --prefix gpatch)/libexec/gnubin:${PATH}"
+export PATH="$(brew --prefix grep)/libexec/gnubin:${PATH}"
+export PATH="$(brew --prefix python3)/bin:${PATH}"
 
-# ThreadSanitizer suppressions
-configure_file("tsan.suppressions" "tsan.suppressions" COPYONLY)
+mkdir -p build
+# shellcheck disable=SC2164
+cd build
 
-# UndefinedBehaviorSanitizer suppressions
-configure_file("ubsan.suppressions" "ubsan.suppressions" COPYONLY)
+CC="$(brew --prefix llvm)/bin/clang" \
+CXX="$(brew --prefix llvm)/bin/clang++" \
+cmake .. \
+    -DDEP_AI=On \
+    -DDEP_INSTALL_PREFIX="${HOME}/.local" \
+    -DDEP_BUILD_THREADS="$(nproc --ignore 1)" \
+    -DCMAKE_OSX_SYSROOT=macosx
 
-if (ALLOW_DB_WRITES)
-  # copy test scripts into the test directory within the build directory
-  # list these explicitly to prevent random garbage from getting in
-  foreach(TEST
-      bfwiflat2gufitest
-      dfw2gufitest
-      gufitest.py
-      robinhoodin
-      runbffuse
-      runbfq
-      runbfqforfuse
-      runbfti
-      runbfwi
-      rundfw
-      rungenuidgidsummaryavoidentriesscan
-      rungroupfilespacehog
-      rungroupfilespacehogusesummary
-      runlistschemadb
-      runlisttablesdb
-      runoldbigfiles
-      runquerydbs
-      runuidgidsummary
-      runuidgidummary
-      runuserfilespacehog
-      runuserfilespacehogusesummary
-      runtests
-      )
-    # copy the script into the build directory for easy access
-    configure_file("${TEST}" "${TEST}" @ONLY)
-  endforeach()
-
-  set(TESTTAR "${CMAKE_CURRENT_SOURCE_DIR}/testdir.tar")
-  set(TESTDIR "${TEST_WORKING_DIRECTORY}/testdir")
-  set(TESTDST "${TEST_WORKING_DIRECTORY}/gary")
-
-  add_test(
-    NAME gary
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/runtests" "${TESTTAR}" "${TESTDIR}" "${TESTDST}"
-    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-
-  set_property(TEST gary PROPERTY ENVIRONMENT "PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:$ENV{PATH}")
-  if (DEP_AI AND CYGWIN)
-    # append does not work
-    set_property(TEST gary PROPERTY ENVIRONMENT "PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:${DEP_INSTALL_PREFIX}/llama.cpp/bin:$ENV{PATH}")
-  endif()
-  set_property(TEST gary APPEND PROPERTY LABELS "manual")
-endif()
-
-# add regression tests
-if (ALLOW_DB_WRITES) # required to clean up test indexes
-  foreach(type index query)
-    add_library("test_${type}ing_plugin" SHARED "test_${type}ing_plugin.c")
-    add_dependencies("test_${type}ing_plugin" install_dependencies)
-  endforeach()
-
-  if (DARWIN)
-    # Apple needs to be told to explicitly not try to resolve symbols at compile time when
-    # building the plugin. (They will be resolved dynamically when the plugin is dlopen()ed).
-    foreach(type index query)
-      target_link_libraries("test_${type}ing_plugin" -Wl,-undefined -Wl,dynamic_lookup)
-    endforeach()
-  elseif(CYGWIN)
-    # Cygwin needs to use an "import library" (reference: https://cygwin.com/cygwin-ug-net/dll.html)
-    # to get the symbol definitions it uses from gufi_dir2index.
-    target_link_libraries(test_indexing_plugin gufi_dir2index)
-    target_link_libraries(test_querying_plugin gufi_query)
-  else()
-    foreach(type index query)
-      target_link_libraries("test_${type}ing_plugin" "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
-    endforeach()
-  endif()
-
-  add_subdirectory(regression)
-endif()
-
-# add unit tests
-add_subdirectory(unit)
+make -j

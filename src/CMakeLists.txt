@@ -250,30 +250,39 @@ add_library(gufi_vt MODULE
 set_property(TARGET gufi_vt PROPERTY PREFIX "")
 target_compile_definitions(gufi_vt PUBLIC GUFI_VT=1)
 
-if (APPLE OR DARWIN)
+if (DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_property(TARGET gufi_vt PROPERTY SUFFIX ".${EXT}")
 endif()
 
-# libsqlite3 needs to be linked in order to get sqlite3_initialize
-# and sqlite3_shutdown
-#
-# libsqlite3-pcre needs to be installed manually (since it does not
-# have a package) in order for gufi_vt to be usable if using rpm
-# installed files
 add_dependencies(gufi_vt install_dependencies)
 target_link_libraries(gufi_vt
+  # libsqlite3 needs to be linked in order to get sqlite3_initialize
+  # and sqlite3_shutdown
   "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
+
+  # libsqlite3-pcre needs to be installed manually (since it does not
+  # have a package) in order for gufi_vt to be usable if using rpm
+  # installed files
   "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
   pcre2-8
 )
 
+set_property(TARGET gufi_vt APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3/lib")
+set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3/lib")  # make install
+set_property(TARGET gufi_vt APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3-pcre")
+set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre") # make install
+set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${SERVER_LIB}")  # package install
+if (CLIENT)
+  set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${CLIENT_LIB}")  # package install
+endif()
+
 if (DEP_AI)
-  if (APPLE OR DARWIN)
+  if (DARWIN)
     set(AI_EXT "dylib")
   elseif (CYGWIN)
     set(AI_EXT "dll")
-  else ()
+  elseif (UNIX)
     set(AI_EXT "so")
   endif()
 endif()
@@ -283,13 +292,6 @@ add_ai(gufi_vt "libvec0.${AI_EXT}" "liblembed0.${AI_EXT}")
 install(TARGETS gufi_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
 if (CLIENT)
   install(TARGETS gufi_vt DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
-
-  # need to install because gufi_vt is really server side code (and
-  # needs to link with sqlite3-pcre), but is being installed on the
-  # client
-  install(FILES "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
-          DESTINATION "${CLIENT_LIB}"
-          COMPONENT Client EXCLUDE_FROM_ALL)
 endif()
 
 add_library(run_vt MODULE
@@ -297,7 +299,7 @@ add_library(run_vt MODULE
 )
 set_property(TARGET run_vt PROPERTY PREFIX "")
 add_dependencies(run_vt install_dependencies)
-if (APPLE OR DARWIN)
+if (DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_property(TARGET run_vt PROPERTY SUFFIX ".${EXT}")
 endif()
