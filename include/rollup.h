@@ -104,7 +104,8 @@ size_t check_pair_permissions(struct Permissions *parent,
 
 /* used for rollup and unrollup */
 extern const char   ROLLUP_CLEANUP[];
-extern const size_t ROLLUP_CLEANUP_SIZE;
+#define ROLLUP_CLEANUP_SIZE sizeof(ROLLUP_CLEANUP)
+  
 int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns);
 
 /* remove any existing roll up data for the target db */

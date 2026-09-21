@@ -63,13 +63,11 @@
 
 set -e
 
-CLIENT="$1"
-
 # install rpmbuild
 dnf install -y rpm-build
 
 # reconfigure CMake
-cmake @CMAKE_SOURCE_DIR@
+cmake "@CMAKE_SOURCE_DIR@"
 
 # make the RPM
 make package
@@ -80,44 +78,28 @@ rpm -ql gufi-server*.rpm | sed '/.*\.build-id/d' | sort
 # install the RPM
 dnf install -y gufi-server-*.rpm
 
-(
-    set -x
-
-    # compare the configuration files
-    @DIFF@ server.example "$(dirname @SERVER_CONFIG@)/server.example"
-
-    # make sure the Python3 library files can be imported
-    python3 -c "import gufi_common, gufi_config"
-
-    # make sure server programs work
-    gufi_query --help
-
-    cp /etc/GUFI/server.example /etc/GUFI/config
-    gufi_find --help
-
-    echo ".load /usr/@SERVER_LIB@/gufi_vt" | sqlite3
-) 2>&1
+"@CMAKE_BINARY_DIR@/contrib/test_install.sh" "/usr" 2>&1
 
 # uninstall GUFI-Server
 dnf autoremove -y GUFI-Server
 
-if [[ "${CLIENT}" == "On" ]]; then
-    # list the files in the client RPM
-    rpm -ql gufi-client*.rpm | sort
+# ####################################
 
-    # install the client RPM
-    dnf install -y gufi-client-*.rpm
+# list the files in the client RPM
+rpm -ql gufi-client*.rpm | sort
 
-    (
-        set -x
+# install the client RPM
+dnf install -y gufi-client-*.rpm
 
-        # compare the configuration files
-        @DIFF@ client.example "$(dirname @CLIENT_CONFIG@)/client.example"
+(
+    set -x
 
-        # make sure the Python3 library files can be imported
-        python3 -c "import gufi_common, gufi_config"
-    ) 2>&1
+    # compare the configuration files
+    @DIFF@ client.example "$(dirname @CLIENT_CONFIG@)/client.example"
 
-    # uninstall GUFI-Server
-    dnf autoremove -y GUFI-Client
-fi
+    # make sure the Python3 library files can be imported
+    python3 -c "import gufi_common, gufi_config"
+) 2>&1
+
+# uninstall GUFI-Server
+dnf autoremove -y GUFI-Client

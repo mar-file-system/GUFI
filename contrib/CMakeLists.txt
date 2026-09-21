@@ -135,6 +135,8 @@ foreach(file ${USEFUL})
   configure_file("${file}" "${file}" @ONLY)
 endforeach()
 
+configure_file(test_install.sh.in test_install.sh @ONLY)
+
 add_subdirectory(CI)
 add_subdirectory(plugins)
 add_subdirectory(stats)
