@@ -66,7 +66,8 @@
 set -e
 
 SYSTEM="$1"
-OMP_FLAGS="$2"
+shift 1
+OMP_FLAGS=("$@")
 
 # install sqlite3 first
 "${SCRIPT_PATH}/sqlite3.sh"
@@ -115,20 +116,20 @@ if [[ ! -f "${lembed_prefix}/lib/libsqlite_lembed0.a" ]]; then
 
     # RPATH only finds the location of llama.so and not its dependencies,
     # so set CMAKE_SHARED_LINKER_FLAGS to find llama.so's dependencies
-    CC="${CC}" CXX="${CXX}" CXXFLAGS="-I${INSTALL_DIR}/sqlite3" "${CMAKE}" .. \
+    CC="${CC}" CXX="${CXX}" "${CMAKE}" .. \
       -DCMAKE_INSTALL_LIBDIR=lib \
       -DCMAKE_INSTALL_PREFIX="${llama_prefix}" \
       -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-rpath,${llama_prefix}/lib" \
       -DGGML_BUILD_EXAMPLES=Off \
       -DGGML_BUILD_TESTS=Off \
       -DGGML_CCACHE=Off \
-      -DGGML_METAL=OFF \
-      -DGGML_METAL_EMBED_LIBRARY=Off \
+      -DGGML_METAL=On \
+      -DGGML_METAL_EMBED_LIBRARY=On \
       -DLLAMA_BUILD_EXAMPLES=Off \
       -DLLAMA_BUILD_SERVER=Off \
       -DLLAMA_BUILD_TESTS=Off \
-      ${CYGWIN_FLAGS} \
-      ${OMP_FLAGS} # not quoting OMP_FLAGS
+      "${OMP_FLAGS[@]}" \
+      ${CYGWIN_FLAGS} 
 
     make -j "${THREADS}"
     make -j "${THREADS}" install

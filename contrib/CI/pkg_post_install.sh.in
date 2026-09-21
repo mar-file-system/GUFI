@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,74 +61,14 @@
 
 
 
-include(ProcessorCount)
-ProcessorCount(CORES)
+# if Python3 library files were installed under @CMAKE_INSTALL_PREFIX@/@SERVER_LIB@, move them to site-packages
+if [ -f "Applications/@SERVER_LIB@/gufi_common.py" ]
+then
+    # Copied from answer by Peterino
+    # https://stackoverflow.com/a/46071447
+    site=$("@Python3_EXECUTABLE@" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
 
-set(CONFIG_DEFAULT "/etc/GUFI/config")
-
-function(config_file var_name type)
-  set("${var_name}" "${CONFIG_DEFAULT}" CACHE FILEPATH "Where high level GUFI tools will look for the ${type} configuration")
-  if (NOT IS_ABSOLUTE "${${var_name}}")
-    message(FATAL_ERROR "${var_name} must be set to absolute path")
-  endif()
-  if (EXISTS "${${var_name}}")
-    execute_process(COMMAND stat --dereference --format "%F" "${${var_name}}"
-      OUTPUT_VARIABLE CONFIG_FILE_TYPE
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
-      message(FATAL_ERROR "${var_name} must point to a file. Got ${CONFIG_FILE_TYPE}")
-    endif()
-  endif()
-  if (NOT "${${var_name}}" STREQUAL "${CONFIG_DEFAULT}")
-    message(WARNING "${var_name} ${${var_name}} may conflict with filesystem package when installing GUFI RPMs")
-  endif()
-endfunction()
-
-config_file(SERVER_CONFIG "server")
-if (CLIENT)
-  config_file(CLIENT_CONFIG "client")
-endif()
-
-if (CLIENT)
-  get_filename_component(CLIENT_CONFIG_PARENT "${CLIENT_CONFIG}" DIRECTORY)
-
-  # client config
-  # copy the hard coded client example file
-  configure_file(client.example.in "${CMAKE_BINARY_DIR}/client.example" @ONLY)
-
-  # make install and rpm
-  install(FILES "${CMAKE_BINARY_DIR}/client.example"
-          DESTINATION "${CLIENT_CONFIG_PARENT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-          COMPONENT Client)
-endif()
-
-get_filename_component(SERVER_CONFIG_PARENT "${SERVER_CONFIG}" DIRECTORY)
-
-# server config
-# copy the hard coded server example file
-set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-configure_file(server.example.in "${CMAKE_BINARY_DIR}/server.example" @ONLY)
-unset(INSTALL_PREFIX)
-
-# make install
-install(FILES "${CMAKE_BINARY_DIR}/server.example"
-  DESTINATION "${SERVER_CONFIG_PARENT}"
-  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-  COMPONENT Server)
-
-if (RPMBUILD)
-  # copy the hard coded server example file
-  set(INSTALL_PREFIX "/usr") # this should be CPACK_PACKAGING_INSTALL_PREFIX, but it's not set yet
-  configure_file(server.example.in "${CMAKE_BINARY_DIR}/rpm_server.example" @ONLY)
-  unset(INSTALL_PREFIX)
-
-  # overwrite make install version of server.example
-  install(FILES "${CMAKE_BINARY_DIR}/rpm_server.example"
-          RENAME "server.example"
-          DESTINATION "${SERVER_CONFIG_PARENT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-          COMPONENT Server
-          EXCLUDE_FROM_ALL)
-endif()
+    mkdir -p "${site}"
+    mv "Applications/@SERVER_LIB@/gufi_common.py" "${site}/gufi_common.py"
+    mv "Applications/@SERVER_LIB@/gufi_config.py" "${site}/gufi_config.py"
+fi

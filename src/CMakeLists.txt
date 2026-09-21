@@ -245,7 +245,7 @@ add_library(gufi_vt MODULE
 )
 set_property(TARGET gufi_vt PROPERTY PREFIX "")
 
-if (APPLE OR DARWIN)
+if (DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_property(TARGET gufi_vt PROPERTY SUFFIX ".${EXT}")
 endif()
@@ -262,9 +262,11 @@ target_link_libraries(gufi_vt
   "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
   pcre2-8
 )
+set_property(TARGET gufi_vt APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3-pcre")
+set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre")
 
 if (DEP_AI)
-  if (APPLE OR DARWIN)
+  if (DARWIN)
     set(AI_EXT "dylib")
   elseif (CYGWIN)
     set(AI_EXT "dll")
@@ -292,7 +294,7 @@ add_library(run_vt MODULE
 )
 set_property(TARGET run_vt PROPERTY PREFIX "")
 add_dependencies(run_vt install_dependencies)
-if (APPLE OR DARWIN)
+if (DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_property(TARGET run_vt PROPERTY SUFFIX ".${EXT}")
 endif()

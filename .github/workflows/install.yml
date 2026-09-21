@@ -68,7 +68,7 @@ env:
   CC: clang
   CXX: clang++
   DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-Wall -Werror -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wold-style-definition -Wpedantic -Wstrict-prototypes -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Werror -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DDEP_AI=On -DMARFS_PREFIX="${DEP_INSTALL_PREFIX}/marfs" -DPRESIDIO_PLUGIN=On
+  COMMON_CONFIG: -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-Wall -Werror -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wold-style-definition -Wpedantic -Wstrict-prototypes -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Werror -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DDEP_AI=On -DMARFS_PREFIX="${DEP_INSTALL_PREFIX}/marfs"
   PIP_BREAK_SYSTEM_PACKAGES: 1
 
 permissions: {}
@@ -76,10 +76,6 @@ permissions: {}
 jobs:
   RPMs:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        client: [ Off, On ]
 
     container:
       image: rockylinux/rockylinux:10
@@ -102,7 +98,15 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCLIENT="${{ matrix.client }}"
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCLIENT=On
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      run:  |
+        cd ${{ github.workspace }}/build
+        ctest --output-on-failure
 
     - name: Build and Test RPMs
       run:  |
@@ -111,7 +115,7 @@ jobs:
 
     - name: Upload RPMs
       uses: softprops/action-gh-release@master
-      if:   startsWith(github.ref, 'refs/tags/') && (matrix.client == 'On')
+      if:   startsWith(github.ref, 'refs/tags/')
       with:
         files: ${{ github.workspace }}/build/*.rpm
 
@@ -148,6 +152,10 @@ jobs:
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
 
+    - name: Test
+      run:  ctest --output-on-failure
+      working-directory: ${{ github.workspace }}/build
+
     - name: CMake Install
       if:   matrix.type == 'CMake'
       run:  sudo cmake --install .
@@ -165,3 +173,47 @@ jobs:
             which "${name}"
         done < <(find src scripts -maxdepth 1 \( -name "gufi_*" -a -not -name "*.*" \) -type f -executable -printf "%P\0" | sort -z)
       working-directory: ${{ github.workspace }}/build
+
+  PKG:
+    strategy:
+      matrix:
+        os: [ "macos-15", "macos-26", "xcode-27" ]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@main
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ matrix.os }}
+
+    - name: macOS Prerequisites
+      run:  contrib/CI/macos.sh | tail -n 1 >> "${GITHUB_PATH}"
+
+    - name: Install Python Packages
+      run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Configure CMake
+      run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -UMARFS_PREFIX -DCLIENT=on -DCMAKE_OSX_SYSROOT=macosx
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      run:  ctest --output-on-failure
+      working-directory: ${{ github.workspace }}/build
+
+    - name: Build and Test PKGs
+      run:  contrib/CI/pkg.sh
+      working-directory: ${{ github.workspace }}/build
+
+    - name: Upload PKGs
+      uses: softprops/action-gh-release@master
+      if:   startsWith(github.ref, 'refs/tags/') && (matrix.os == 'xcode-27')
+      with:
+        files: ${{ github.workspace }}/build/*.pkg

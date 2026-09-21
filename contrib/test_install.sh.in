@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,74 +61,45 @@
 
 
 
-include(ProcessorCount)
-ProcessorCount(CORES)
+# Basic tests to see if a GUFI install works
+#
+# Environment variables should be set up before calling this script
+#     PATH
+#     [DY]LD_LIBRARY_PATH
+#     PYTHONPATH
+#
+# A SQLite 3 install from GUFI or the system may be used
+#
+# NOTE: This file creates a config file if one is not found.
+#       The paths may not be correct, so double check the file.
+#
 
-set(CONFIG_DEFAULT "/etc/GUFI/config")
+set -e
 
-function(config_file var_name type)
-  set("${var_name}" "${CONFIG_DEFAULT}" CACHE FILEPATH "Where high level GUFI tools will look for the ${type} configuration")
-  if (NOT IS_ABSOLUTE "${${var_name}}")
-    message(FATAL_ERROR "${var_name} must be set to absolute path")
-  endif()
-  if (EXISTS "${${var_name}}")
-    execute_process(COMMAND stat --dereference --format "%F" "${${var_name}}"
-      OUTPUT_VARIABLE CONFIG_FILE_TYPE
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
-      message(FATAL_ERROR "${var_name} must point to a file. Got ${CONFIG_FILE_TYPE}")
-    endif()
-  endif()
-  if (NOT "${${var_name}}" STREQUAL "${CONFIG_DEFAULT}")
-    message(WARNING "${var_name} ${${var_name}} may conflict with filesystem package when installing GUFI RPMs")
-  endif()
-endfunction()
+INSTALL_PREFIX="$1"
+SERVER_CONFIG="${2:-/etc/GUFI/config}"
 
-config_file(SERVER_CONFIG "server")
-if (CLIENT)
-  config_file(CLIENT_CONFIG "client")
-endif()
+SERVER_CONFIG_DIR=$(dirname "${SERVER_CONFIG}")
+SERVER_CONFIG_EXAMPLE="${SERVER_CONFIG_DIR}/server.example"
 
-if (CLIENT)
-  get_filename_component(CLIENT_CONFIG_PARENT "${CLIENT_CONFIG}" DIRECTORY)
+set -x
 
-  # client config
-  # copy the hard coded client example file
-  configure_file(client.example.in "${CMAKE_BINARY_DIR}/client.example" @ONLY)
+tail -n 23 "${SERVER_CONFIG_EXAMPLE}"
 
-  # make install and rpm
-  install(FILES "${CMAKE_BINARY_DIR}/client.example"
-          DESTINATION "${CLIENT_CONFIG_PARENT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-          COMPONENT Client)
-endif()
+# the C binaries run
+gufi_query --help
+gufi_sqlite3 --help
 
-get_filename_component(SERVER_CONFIG_PARENT "${SERVER_CONFIG}" DIRECTORY)
+# the extensions load
+echo ".load ${INSTALL_PREFIX}/lib/gufi_vt" | sqlite3
+echo ".load ${INSTALL_PREFIX}/lib/run_vt"  | sqlite3
 
-# server config
-# copy the hard coded server example file
-set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-configure_file(server.example.in "${CMAKE_BINARY_DIR}/server.example" @ONLY)
-unset(INSTALL_PREFIX)
+# the Python3 library files can be imported
+python3 -c "import gufi_common, gufi_config"
 
-# make install
-install(FILES "${CMAKE_BINARY_DIR}/server.example"
-  DESTINATION "${SERVER_CONFIG_PARENT}"
-  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-  COMPONENT Server)
-
-if (RPMBUILD)
-  # copy the hard coded server example file
-  set(INSTALL_PREFIX "/usr") # this should be CPACK_PACKAGING_INSTALL_PREFIX, but it's not set yet
-  configure_file(server.example.in "${CMAKE_BINARY_DIR}/rpm_server.example" @ONLY)
-  unset(INSTALL_PREFIX)
-
-  # overwrite make install version of server.example
-  install(FILES "${CMAKE_BINARY_DIR}/rpm_server.example"
-          RENAME "server.example"
-          DESTINATION "${SERVER_CONFIG_PARENT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-          COMPONENT Server
-          EXCLUDE_FROM_ALL)
-endif()
+# the user facing scripts work
+if [[ ! -f "${SERVER_CONFIG}" ]]
+then
+    cp "${SERVER_CONFIG_EXAMPLE}" "${SERVER_CONFIG}"
+fi
+gufi_find --help

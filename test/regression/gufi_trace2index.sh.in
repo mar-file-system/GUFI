@@ -70,6 +70,7 @@ THREADS=4 # need at least 2 scout threads
 TRACES=()
 for (( i = 0; i < THREADS; i++ ));
 do
+    # shellcheck disable=SC2153
     TRACES+=("${TRACE}.${i}")
 done
 

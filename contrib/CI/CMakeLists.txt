@@ -60,7 +60,12 @@
 
 
 
-configure_file(rpm_post_install.sh.in  rpm_post_install.sh  @ONLY)
-configure_file(rpm_pre_uninstall.sh.in rpm_pre_uninstall.sh @ONLY)
-
-configure_file(rpms.sh.in              rpms.sh              @ONLY)
+if (DARWIN)
+  configure_file(pkg_post_install.sh.in pkg_post_install.sh @ONLY)
+  configure_file(pkg.sh.in pkg.sh @ONLY)
+elseif (CYGWIN)
+else()
+  configure_file(rpm_post_install.sh.in rpm_post_install.sh @ONLY)
+  configure_file(rpm_pre_uninstall.sh.in rpm_pre_uninstall.sh @ONLY)
+  configure_file(rpms.sh.in rpms.sh @ONLY)
+endif()

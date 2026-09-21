@@ -82,6 +82,14 @@ endif()
 
 project(GUFI VERSION 0.7.0 LANGUAGES C)
 
+if (APPLE)
+  if (NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    message(FATAL_ERROR "Can only build on macOS")
+  endif()
+
+  set(DARWIN 1)
+endif()
+
 # print version info
 find_package(Git)                     # not required
 set(VERSION_STRING "${GUFI_VERSION}") # default to CMake project version
@@ -241,7 +249,7 @@ if (CLIENT)
 endif()
 
 # dynamically loaded module extension
-if (APPLE OR DARWIN)
+if (DARWIN)
   set(EXT "dylib")
 elseif (CYGWIN)
   set(EXT "dll.a")
@@ -256,7 +264,7 @@ set(CPACK_RPM_PACKAGE_REQUIRES "sqlite3 >= 3.43.1")
 find_package(Python3 3.9 COMPONENTS Interpreter REQUIRED)
 set(Python3_SHEBANG "/usr/bin/env python3" CACHE STRING "Set Python3 shebang")
 
-set(APPEND CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python(abi) >= 3.9")
+set(APPEND CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python(abi) >= ${Python3_VERSION}")
 
 # require find_program to return executables with -r+x permissions
 if (POLICY CMP0109)
@@ -279,7 +287,7 @@ find_exec_dependency(DIFF   colordiff diff)
 find_exec_dependency(FIND   find)
 find_exec_dependency(GREP   grep)
 find_exec_dependency(PATCH  patch)
-if (APPLE OR DARWIN)
+if (DARWIN)
   find_exec_dependency(SED   gsed sed)
   find_exec_dependency(STAT  gstat stat) # stat is from coreutils, but macOS/brew installs the GNU version elsewhere
   find_exec_dependency(XATTR xattr)
@@ -320,7 +328,7 @@ if (XATTR_SYS_XATTR_HEADER)
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_SYS_XATTR_H")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_SYS_XATTR_H")
 endif()
-if (APPLE OR DARWIN)
+if (DARWIN)
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_DARWIN_XATTRS")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_DARWIN_XATTRS")
 elseif (CYGWIN)
@@ -383,18 +391,28 @@ if (DEP_USE_JEMALLOC)
     set(JEMALLOC "${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a")
   endif()
 endif()
-if (APPLE OR DARWIN)
+if (DARWIN)
   set(DEP_OPTIONS ${DEP_OPTIONS} --mac)
 elseif (CYGWIN)
   set(DEP_OPTIONS ${DEP_OPTIONS} --cygwin)
 endif()
 if (DEP_AI)
   set(DEP_OPTIONS ${DEP_OPTIONS} --AI)
-  if (CYGWIN)
-    set(DEP_OPTIONS ${DEP_OPTIONS} --OMP "-DOpenMP_C_FLAGS=\"${OpenMP_C_FLAGS}\" -DOpenMP_C_LIB_NAMES=\"${OpenMP_C_LIB_NAMES}\" -DOpenMP_libgomp_LIBRARY=\"${OpenMP_libgomp_LIBRARY}\"")
+
+  # llama.cpp uses OpenMP (not required, but left enabled)
+  find_package(OpenMP REQUIRED COMPONENTS C CXX)
+
+  if (DARWIN)
+    find_library(ACCELERATE Accelerate REQUIRED)
   endif()
+
+  set(OMP_FLAGS
+    --OMP "-DOpenMP_ROOT=\"${OpenMP_ROOT}\""
+  )
+
+  set(DEP_OPTIONS ${DEP_OPTIONS} ${OMP_FLAGS})
 endif()
-add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
+add_custom_target(install_dependencies ALL COMMAND "${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh" ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
 # copy dependencies into packages
 # not copying sqlite libraries - use local version
@@ -413,15 +431,7 @@ if (CLIENT)
   )
 endif()
 
-# llama.cpp uses OpenMP (not required, but left enabled)
 if (DEP_AI)
-  find_package(OpenMP REQUIRED COMPONENTS C)
-  message(STATUS "OpenMP libraries located in ${OpenMP_C_LIBRARIES}")
-
-  if (APPLE OR DARWIN)
-    find_library(ACCELERATE Accelerate REQUIRED)
-  endif()
-
   # copy dependencies into packages
   install(FILES
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
@@ -485,18 +495,7 @@ else()
 endif()
 
 # search for FUSE on Linux, or OSXFUSE on OSX
-if (UNIX AND NOT APPLE AND NOT DARWIN AND NOT CYGWIN)
-  pkg_search_module(FUSE fuse)
-  if (FUSE_FOUND)
-    message(STATUS "FUSE headers located in ${FUSE_INCLUDEDIR}")
-    message(STATUS "FUSE libraries located in ${FUSE_LIBDIR}")
-
-    set(MY_FUSE_FOUND YES)
-    set(MY_FUSE_CFLAGS ${FUSE_CFLAGS})
-    set(MY_FUSE_LDFLAGS ${FUSE_LDFLAGS})
-    set(MY_FUSE_VERSION ${FUSE_VERSION})
-  endif()
-elseif (APPLE OR DARWIN)
+if (DARWIN)
   pkg_search_module(OSXFUSE osxfuse)
   if (OSXFUSE_FOUND)
     message(STATUS "OSXFUSE headers located in ${OSXFUSE_INCLUDEDIR}")
@@ -506,6 +505,17 @@ elseif (APPLE OR DARWIN)
     set(MY_FUSE_CFLAGS ${OSXFUSE_CFLAGS})
     set(MY_FUSE_LDFLAGS ${OSXFUSE_LDFLAGS})
     set(MY_FUSE_VERSION ${OSXFUSE_VERSION})
+  endif()
+elseif (UNIX AND NOT CYGWIN)
+  pkg_search_module(FUSE fuse)
+  if (FUSE_FOUND)
+    message(STATUS "FUSE headers located in ${FUSE_INCLUDEDIR}")
+    message(STATUS "FUSE libraries located in ${FUSE_LIBDIR}")
+
+    set(MY_FUSE_FOUND YES)
+    set(MY_FUSE_CFLAGS ${FUSE_CFLAGS})
+    set(MY_FUSE_LDFLAGS ${FUSE_LDFLAGS})
+    set(MY_FUSE_VERSION ${FUSE_VERSION})
   endif()
 endif()
 
@@ -627,7 +637,7 @@ endif()
 
 # add flags for AI dependencies
 function(add_ai target vec_basename lembed_basename)
-  if (APPLE OR DARWIN)
+  if (DARWIN)
     set(LLAMA_LIB "lib")
   elseif(CYGWIN)
     set(LLAMA_LIB "bin")
@@ -642,18 +652,18 @@ function(add_ai target vec_basename lembed_basename)
 
     target_compile_definitions("${target}" PUBLIC -DHAVE_AI=1)
 
-    if (APPLE OR DARWIN)
+    if (DARWIN)
       target_link_libraries("${target}"
         ${ACCELERATE}
         ${METAL}
       )
     endif()
 
-    # link static libraries
+    # link libraries
     target_link_libraries("${target}"
       "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/${vec_basename}"
       "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/${lembed_basename}"
-      -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml ${OpenMP_C_FLAGS}
+      -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml OpenMP::OpenMP_C
       -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
     )
 
@@ -663,14 +673,6 @@ function(add_ai target vec_basename lembed_basename)
     set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
     set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA_LIB}")
     set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA_LIB}")
-
-    if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-      target_link_libraries("${target}"
-        omp
-      )
-    endif()
-
-    target_compile_options("${target}" PUBLIC "${OpenMP_C_FLAGS}")
   endif()
 endfunction()
 
@@ -702,78 +704,89 @@ add_subdirectory(examples)
 # Generate Packages
 #
 
-# Generate RPMs
-find_program(RPMBUILD rpmbuild)
-if (RPMBUILD)
-  message(STATUS "Found rpmbuild: ${RPMBUILD}")
+# These variables have to be set before include(CPack)
+set(CPACK_PACKAGE_NAME "GUFI")
+set(CPACK_PACKAGE_VENDOR "LANL")
+set(CPACK_PACKAGE_VERSION_MAJOR ${GUFI_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${GUFI_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${GUFI_VERSION_PATCH})
+set(CPACK_PACKAGE_DESCRIPTION "Grand Unified File Index")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/mar-file-system/GUFI")
 
-  # get the architecture of this machine
-  # assumes that we are not cross compiling
-  execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY)
+# get the architecture of this machine
+# assumes that we are not cross compiling
+execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  COMMAND_ERROR_IS_FATAL ANY)
 
-  # These variables have to be set before include(CPack)
-  set(CPACK_PACKAGE_VERSION_MAJOR ${GUFI_VERSION_MAJOR})
-  set(CPACK_PACKAGE_VERSION_MINOR ${GUFI_VERSION_MINOR})
-  set(CPACK_PACKAGE_VERSION_PATCH ${GUFI_VERSION_PATCH})
+set(CPACK_MONOLITHIC_INSTALL Off)
+set(CPACK_COMPONENTS_ALL Server)
+if (CLIENT)
+  list(APPEND CPACK_COMPONENTS_ALL Client)
+endif()
 
-  set(CPACK_GENERATOR "RPM")
-  set(CPACK_RPM_COMPONENT_INSTALL On)
-  set(CPACK_COMPONENTS_ALL Server)
-  if (CLIENT)
-    list(APPEND CPACK_COMPONENTS_ALL Client)
+if (DARWIN)
+  # Generate PKG
+  find_program(PRODUCTBUILD productbuild)
+  if (PRODUCTBUILD)
+    message(STATUS "Found productbuild: ${PRODUCTBUILD}")
+    set(CPACK_GENERATOR "productbuild")
+    set(CPACK_PRODUCTBUILD_COMPONENT_INSTALL On)
+    cmake_policy(SET CMP0161 NEW) # https://cmake.org/cmake/help/latest/cpack_gen/productbuild.html#variable:CPACK_PRODUCTBUILD_DOMAINS
+    set(CPACK_PRODUCTBUILD_DOMAINS_USER TRUE)
+    set(CPACK_PREFLIGHT_SERVER_SCRIPT "${CMAKE_BINARY_DIR}/contrib/CI/pkg_post_install.sh")
+    include(CPack)
   endif()
-  set(CPACK_RPM_PACKAGE_AUTOREQ Off)
-  set(CPACK_RPM_PACKAGE_SUMMARY "Grand Unified File Index")
-  set(CPACK_RPM_PACKAGE_NAME "GUFI")
-  set(CPACK_RPM_PACKAGE_VERSION "${GUFI_VERSION}")
-  set(CPACK_RPM_PACKAGE_RELEASE 1)
-  set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
-  set(CPACK_RPM_PACKAGE_VENDOR "LANL")
-  set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
-  set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_post_install.sh")
-  set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_pre_uninstall.sh")
-
-  if (DEP_AI)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      set(EXTRA_DEPS ", libgomp")
-    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-      set(EXTRA_DEPS ", libomp")
-    else()
-      message(WARNING "Please ensure OpenMP is available")
-    endif()
-  endif()
-
-  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES} ${EXTRA_DEPS}")
-  set(CPACK_RPM_PACKAGE_RELOCATABLE On)
-  set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
-
-  set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
-  set(CPACK_RPM_Server_PACKAGE_AUTOREQ Off)
-  set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
-  set(CPACK_RPM_Server_POST_INSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_post_install.sh")
-  set(CPACK_RPM_Server_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_pre_uninstall.sh")
-
-  if (CLIENT)
-    set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
-    set(CPACK_RPM_Client_PACKAGE_REQUIRES "python(abi) >= 3.9, openssh")
-    set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
-    set(CPACK_RPM_Client_POST_INSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_post_install.sh")
-    set(CPACK_RPM_Client_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_pre_uninstall.sh")
-  endif()
-
-  # Turn off build-id link creation by RPM to manually control
-  # Also need to keep shebang templating
-  set(CPACK_RPM_SPEC_MORE_DEFINE
-    "%global _build_id_links none\n%global _missing_build_ids_terminate_build 0\n%undefine __brp_mangle_shebangs\n%global __brp_check_rpaths %{nil}"
-  )
-
-  # Generate source RPM
-  set(CPACK_SOURCE_PACKAGE_FILE_NAME "gufi-${GUFI_VERSION}")
-  set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}/" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.github/" "${CMAKE_SOURCE_DIR}/.gitignore")
-
-  include(CPack)
+elseif(CYGWIN)
 else()
-  message(STATUS "rpmbuild not found. 'make package' will not be available.")
+  # Generate RPMs
+  find_program(RPMBUILD rpmbuild)
+  if (RPMBUILD)
+    message(STATUS "Found rpmbuild: ${RPMBUILD}")
+    set(CPACK_GENERATOR "RPM")
+    set(CPACK_RPM_COMPONENT_INSTALL On)
+    set(CPACK_RPM_PACKAGE_AUTOREQ Off)
+    set(CPACK_RPM_PACKAGE_NAME "GUFI") # do not delete
+    set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
+    set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_post_install.sh")
+    set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_BINARY_DIR}/contrib/CI/rpm_pre_uninstall.sh")
+
+    if (DEP_AI)
+      if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(EXTRA_DEPS ", libgomp")
+      elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(EXTRA_DEPS ", libomp")
+      else()
+        message(WARNING "Please ensure OpenMP is available")
+      endif()
+    endif()
+
+    set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES} ${EXTRA_DEPS}")
+    set(CPACK_RPM_PACKAGE_RELOCATABLE On)
+    set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
+
+    set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
+    set(CPACK_RPM_Server_PACKAGE_AUTOREQ Off)
+    set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
+
+    if (CLIENT)
+      set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
+      set(CPACK_RPM_Client_PACKAGE_REQUIRES "python(abi) >= 3.9, openssh")
+      set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
+    endif()
+
+    # Turn off build-id link creation by RPM to manually control
+    # Also need to keep shebang templating
+    set(CPACK_RPM_SPEC_MORE_DEFINE
+      "%global _build_id_links none\n%global _missing_build_ids_terminate_build 0\n%undefine __brp_mangle_shebangs\n%global __brp_check_rpaths %{nil}"
+    )
+
+    # Generate source RPM
+    set(CPACK_SOURCE_PACKAGE_FILE_NAME "gufi-${GUFI_VERSION}")
+    set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}/" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.github/" "${CMAKE_SOURCE_DIR}/.gitignore")
+
+    include(CPack)
+  else()
+    message(STATUS "rpmbuild not found. 'make package' will not be available.")
+  endif()
 endif()

@@ -168,8 +168,6 @@ const char ROLLUP_CLEANUP[] =
     "UPDATE " SUMMARY " SET canrollup = 1, isrolledup = 0;"; /* keep this last to allow it to be modified easily */
                                                              /* set canrollup = 1 because this SQL should only be used on directories that have been rolled up */
 
-const size_t ROLLUP_CLEANUP_SIZE = sizeof(ROLLUP_CLEANUP);
-
 static int count_pwd(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 

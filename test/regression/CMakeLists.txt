@@ -306,7 +306,7 @@ endif()
 # do all of above for tests that require sudo
 find_program(SUDO sudo)
 if (SUDO)
-  if (APPLE OR DARWIN)
+  if (DARWIN)
     set(SUDO sudo)
   endif()
 

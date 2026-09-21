@@ -85,7 +85,7 @@ PATCH_SQLITE3_OPEN="false"
 JEMALLOC="false"
 AI="false"
 SYSTEM="LINUX"
-OMP_FLAGS=""
+OMP_FLAGS=()
 
 # https://stackoverflow.com/a/14203146
 # Bruno Bronosky
@@ -118,7 +118,7 @@ case $key in
         SYSTEM="CYGWIN"
         ;;
     --OMP)
-        OMP_FLAGS="$2"
+        OMP_FLAGS+=("$2")
         shift
         ;;
     *)    # unknown option
@@ -161,15 +161,15 @@ export THREADS
 echo "Installing SQLite3"
 source "${SCRIPT_PATH}/sqlite3.sh" "${PATCH_SQLITE3_OPEN}"
 
-echo "Installing SQLite3 PCRE"
+echo "Installing sqlite3-pcre"
 source "${SCRIPT_PATH}/sqlite3-pcre.sh"
 
 if [[ "${AI}" == "true" ]]; then
-    echo "Installing SQLite3 vec"
+    echo "Installing sqlite-vec"
     source "${SCRIPT_PATH}/sqlite-vec.sh" "${SYSTEM}"
 
-    echo "Installing SQLite3 lembed"
-    source "${SCRIPT_PATH}/sqlite-lembed.sh" "${SYSTEM}" "${OMP_FLAGS}"
+    echo "Installing sqlite-lembed"
+    source "${SCRIPT_PATH}/sqlite-lembed.sh" "${SYSTEM}" "${OMP_FLAGS[@]}"
 fi
 
 if [[ "${JEMALLOC}" == "true" ]]; then

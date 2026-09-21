@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,74 +61,67 @@
 
 
 
-include(ProcessorCount)
-ProcessorCount(CORES)
+set -e
 
-set(CONFIG_DEFAULT "/etc/GUFI/config")
+# The SQLite 3 CLI does not need to be available
+# for normal GUFI usage, so it is not installed
+# by the dependency installer. GUFI uses a
+# custom built SQLite 3 and the CLI of this build
+# is not necessarily visible to users, so
+# installing a system SQLite 3 here to test gufi_vt.
+brew install -y sqlite3
+# shellcheck disable=SC2155
+export PATH="$(brew --prefix sqlite3)/bin:${PATH}"
 
-function(config_file var_name type)
-  set("${var_name}" "${CONFIG_DEFAULT}" CACHE FILEPATH "Where high level GUFI tools will look for the ${type} configuration")
-  if (NOT IS_ABSOLUTE "${${var_name}}")
-    message(FATAL_ERROR "${var_name} must be set to absolute path")
-  endif()
-  if (EXISTS "${${var_name}}")
-    execute_process(COMMAND stat --dereference --format "%F" "${${var_name}}"
-      OUTPUT_VARIABLE CONFIG_FILE_TYPE
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
-      message(FATAL_ERROR "${var_name} must point to a file. Got ${CONFIG_FILE_TYPE}")
-    endif()
-  endif()
-  if (NOT "${${var_name}}" STREQUAL "${CONFIG_DEFAULT}")
-    message(WARNING "${var_name} ${${var_name}} may conflict with filesystem package when installing GUFI RPMs")
-  endif()
-endfunction()
+arch="$(uname --machine)"
 
-config_file(SERVER_CONFIG "server")
-if (CLIENT)
-  config_file(CLIENT_CONFIG "client")
-endif()
+# make the PKGs
+# doing in 2 steps because productbuild likes to
+# merge all components into a monolithic PKG
 
-if (CLIENT)
-  get_filename_component(CLIENT_CONFIG_PARENT "${CLIENT_CONFIG}" DIRECTORY)
+# make the server PKG
+# requires root to stage @SERVER_CONFIG@ for copying into PKG
+sudo cpack -G productbuild -DCPACK_COMPONENTS_ALL=Server -B "@CMAKE_BINARY_DIR@"
+pkg="GUFI-@CMAKE_PROJECT_VERSION@-Darwin.pkg"
+server=$(echo "${pkg}" | sed "s%GUFI%gufi-server%g; s%-Darwin-Server%.macOS.${arch}%g;")
+sudo mv "${pkg}" "${server}"
+sudo chown "${USER}" "${server}"
 
-  # client config
-  # copy the hard coded client example file
-  configure_file(client.example.in "${CMAKE_BINARY_DIR}/client.example" @ONLY)
+# make the client PKG
+# requires root to stage @CLIENT_CONFIG@ for copying into PKG
+sudo cpack -G productbuild -DCPACK_COMPONENTS_ALL=Client -B "@CMAKE_BINARY_DIR@"
+pkg="GUFI-@CMAKE_PROJECT_VERSION@-Darwin.pkg"
+client=$(echo "${pkg}" | sed "s%GUFI%gufi-client%g; s%-Darwin-Client%.macOS.${arch}%g;")
+sudo mv "${pkg}" "${client}"
+sudo chown "${USER}" "${client}"
 
-  # make install and rpm
-  install(FILES "${CMAKE_BINARY_DIR}/client.example"
-          DESTINATION "${CLIENT_CONFIG_PARENT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-          COMPONENT Client)
-endif()
+# list the files
+pkgutil --payload-files "${server}" | sort
+pkgutil --payload-files "${client}" | sort
 
-get_filename_component(SERVER_CONFIG_PARENT "${SERVER_CONFIG}" DIRECTORY)
+# install the server
+sudo installer -verbose -pkg "${server}" -target /
 
-# server config
-# copy the hard coded server example file
-set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-configure_file(server.example.in "${CMAKE_BINARY_DIR}/server.example" @ONLY)
-unset(INSTALL_PREFIX)
+# set up environment
+INSTALL_PREFIX="/Applications"
+export PATH="${INSTALL_PREFIX}/bin:${PATH}"
+export DYLD_LIBRARY_PATH="${INSTALL_PREFIX}/lib:${DYLD_LIBRARY_PATH}"
+export PYTHONPATH="${INSTALL_PREFIX}/lib:${PYTHONPATH}"
 
-# make install
-install(FILES "${CMAKE_BINARY_DIR}/server.example"
-  DESTINATION "${SERVER_CONFIG_PARENT}"
-  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-  COMPONENT Server)
+# /etc/GUFI would have been created by the installer
+CONFIG="/etc/GUFI/config"
 
-if (RPMBUILD)
-  # copy the hard coded server example file
-  set(INSTALL_PREFIX "/usr") # this should be CPACK_PACKAGING_INSTALL_PREFIX, but it's not set yet
-  configure_file(server.example.in "${CMAKE_BINARY_DIR}/rpm_server.example" @ONLY)
-  unset(INSTALL_PREFIX)
+COPIED=0
+if [[ ! -f "${CONFIG}" ]]
+then
+    # GitHub macOS runner does not run as root, so test_install.sh would fail on copy
+    sudo cp "/etc/GUFI/server.example" "${CONFIG}"
+    COPIED=1
+fi
 
-  # overwrite make install version of server.example
-  install(FILES "${CMAKE_BINARY_DIR}/rpm_server.example"
-          RENAME "server.example"
-          DESTINATION "${SERVER_CONFIG_PARENT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-          COMPONENT Server
-          EXCLUDE_FROM_ALL)
-endif()
+"@CMAKE_BINARY_DIR@/contrib/test_install.sh" "${INSTALL_PREFIX}" "${CONFIG}" 2>&1
+
+if [[ "${COPIED}" -eq 1 ]]
+then
+    sudo rm "${CONFIG}"
+fi

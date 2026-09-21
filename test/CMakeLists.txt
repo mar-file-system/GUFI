@@ -129,7 +129,7 @@ if (ALLOW_DB_WRITES) # required to clean up test indexes
     add_dependencies("test_${type}ing_plugin" install_dependencies)
   endforeach()
 
-  if (APPLE OR DARWIN)
+  if (DARWIN)
     # Apple needs to be told to explicitly not try to resolve symbols at compile time when
     # building the plugin. (They will be resolved dynamically when the plugin is dlopen()ed).
     foreach(type index query)
