@@ -69,22 +69,22 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 paths=""
 
 # Install GNU version of tools
-for tool in coreutils findutils gnu-sed gpatch grep
+for tool in coreutils findutils gnu-sed gpatch grep make
 do
-    brew install "${tool}"
+    brew install -y "${tool}"
     paths="$(brew --prefix ${tool})/libexec/gnubin:${paths}"
 done
 
 # diff is not installed in libexec/gnubin
-brew install diffutils
+brew install -y diffutils
 paths="$(brew --prefix diffutils)/bin:${paths}"
 
 # flock is not installed in libexec/gnubin
-brew install flock
+brew install -y flock
 paths="$(brew --prefix flock)/bin:${paths}"
 
 # install required packages
-brew install autoconf automake cmake gettext llvm libomp pcre2 pkgconf python
+brew install -y autoconf automake cjson cmake gettext llvm libomp pcre2 pkgconf python3
 
 echo "tail -n 1 the output of this script and add it to your PATH:"
 echo "${paths}"

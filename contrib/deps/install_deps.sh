@@ -161,14 +161,14 @@ export THREADS
 echo "Installing SQLite3"
 source "${SCRIPT_PATH}/sqlite3.sh" "${PATCH_SQLITE3_OPEN}"
 
-echo "Installing SQLite3 PCRE"
+echo "Installing sqlite3-pcre"
 source "${SCRIPT_PATH}/sqlite3-pcre.sh"
 
 if [[ "${AI}" == "true" ]]; then
-    echo "Installing SQLite3 vec"
+    echo "Installing sqlite-vec"
     source "${SCRIPT_PATH}/sqlite-vec.sh" "${SYSTEM}"
 
-    echo "Installing SQLite3 lembed"
+    echo "Installing sqlite-lembed"
     source "${SCRIPT_PATH}/sqlite-lembed.sh" "${SYSTEM}" "${OMP_FLAGS}"
 fi
 
