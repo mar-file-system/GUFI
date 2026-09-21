@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,94 +61,45 @@
 
 
 
-# allow for the test working directory to be moved
-set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
-execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}"
-    COMMAND_ERROR_IS_FATAL ANY)
+# Basic tests to see if a GUFI install works
+#
+# Environment variables should be set up before calling this script
+#     PATH
+#     [DY]LD_LIBRARY_PATH
+#     PYTHONPATH
+#
+# A SQLite 3 install from GUFI or the system may be used
+#
+# NOTE: This file creates a config file if one is not found.
+#       The paths may not be correct, so double check the file.
+#
 
-# LeakSanitizer suppressions
-configure_file("lsan.suppressions" "lsan.suppressions" COPYONLY)
+set -e
 
-# ThreadSanitizer suppressions
-configure_file("tsan.suppressions" "tsan.suppressions" COPYONLY)
+INSTALL_PREFIX="$1"
+SERVER_CONFIG="${2:-/etc/GUFI/config}"
 
-# UndefinedBehaviorSanitizer suppressions
-configure_file("ubsan.suppressions" "ubsan.suppressions" COPYONLY)
+SERVER_CONFIG_DIR=$(dirname "${SERVER_CONFIG}")
+SERVER_CONFIG_EXAMPLE="${SERVER_CONFIG_DIR}/server.example"
 
-if (ALLOW_DB_WRITES)
-  # copy test scripts into the test directory within the build directory
-  # list these explicitly to prevent random garbage from getting in
-  foreach(TEST
-      bfwiflat2gufitest
-      dfw2gufitest
-      gufitest.py
-      robinhoodin
-      runbffuse
-      runbfq
-      runbfqforfuse
-      runbfti
-      runbfwi
-      rundfw
-      rungenuidgidsummaryavoidentriesscan
-      rungroupfilespacehog
-      rungroupfilespacehogusesummary
-      runlistschemadb
-      runlisttablesdb
-      runoldbigfiles
-      runquerydbs
-      runuidgidsummary
-      runuidgidummary
-      runuserfilespacehog
-      runuserfilespacehogusesummary
-      runtests
-      )
-    # copy the script into the build directory for easy access
-    configure_file("${TEST}" "${TEST}" @ONLY)
-  endforeach()
+set -x
 
-  set(TESTTAR "${CMAKE_CURRENT_SOURCE_DIR}/testdir.tar")
-  set(TESTDIR "${TEST_WORKING_DIRECTORY}/testdir")
-  set(TESTDST "${TEST_WORKING_DIRECTORY}/gary")
+tail -n 23 "${SERVER_CONFIG_EXAMPLE}"
 
-  add_test(
-    NAME gary
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/runtests" "${TESTTAR}" "${TESTDIR}" "${TESTDST}"
-    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
+# the C binaries run
+gufi_query --help
+gufi_sqlite3 --help
 
-  set_property(TEST gary PROPERTY ENVIRONMENT "PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:$ENV{PATH}")
-  if (DEP_AI AND CYGWIN)
-    # append does not work
-    set_property(TEST gary PROPERTY ENVIRONMENT "PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:${DEP_INSTALL_PREFIX}/llama.cpp/bin:$ENV{PATH}")
-  endif()
-  set_property(TEST gary APPEND PROPERTY LABELS "manual")
-endif()
+# the extensions load
+echo ".load ${INSTALL_PREFIX}/lib/gufi_vt" | sqlite3
+echo ".load ${INSTALL_PREFIX}/lib/run_vt"  | sqlite3
 
-# add regression tests
-if (ALLOW_DB_WRITES) # required to clean up test indexes
-  foreach(type index query)
-    add_library("test_${type}ing_plugin" SHARED "test_${type}ing_plugin.c")
-    add_dependencies("test_${type}ing_plugin" install_dependencies)
-  endforeach()
+# the Python3 library files can be imported
+python3 -c "import gufi_common, gufi_config"
 
-  if (DARWIN)
-    # Apple needs to be told to explicitly not try to resolve symbols at compile time when
-    # building the plugin. (They will be resolved dynamically when the plugin is dlopen()ed).
-    foreach(type index query)
-      target_link_libraries("test_${type}ing_plugin" -Wl,-undefined -Wl,dynamic_lookup)
-    endforeach()
-  elseif(CYGWIN)
-    # Cygwin needs to use an "import library" (reference: https://cygwin.com/cygwin-ug-net/dll.html)
-    # to get the symbol definitions it uses from gufi_dir2index.
-    target_link_libraries(test_indexing_plugin gufi_dir2index)
-    target_link_libraries(test_querying_plugin gufi_query)
-  else()
-    foreach(type index query)
-      target_link_libraries("test_${type}ing_plugin" "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")
-    endforeach()
-  endif()
-
-  add_subdirectory(regression)
-endif()
-
-# add unit tests
-add_subdirectory(unit)
+# the user facing scripts work
+if [[ ! -f "${SERVER_CONFIG}" ]]
+then
+    cp "${SERVER_CONFIG_EXAMPLE}" "${SERVER_CONFIG}"
+fi
+gufi_find --help

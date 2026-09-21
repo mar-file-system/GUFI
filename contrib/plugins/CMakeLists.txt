@@ -120,8 +120,8 @@ if (PRESIDIO_PLUGIN)
     "${CMAKE_SOURCE_DIR}/src/SinglyLinkedList.c"
     "${CMAKE_SOURCE_DIR}/src/str.c"
   )
-  target_include_directories(presidio_plugin SYSTEM PUBLIC "${CURL_INCLUDE_DIRS}" "${PCRE2_INCLUDEDIR}")
-  target_link_libraries(presidio_plugin PUBLIC CURL::libcurl "${CJSON_LDFLAGS}")
+  target_include_directories(presidio_plugin SYSTEM PUBLIC "${CURL_INCLUDE_DIRS}" "${CJSON_INCLUDE_DIRS}" "${PCRE2_INCLUDEDIR}")
+  target_link_libraries(presidio_plugin PUBLIC CURL::libcurl "${CJSON_LDFLAGS}" -L "${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3)
   add_dependencies(presidio_plugin install_dependencies)
   install(TARGETS presidio_plugin DESTINATION "${SERVER_LIB}" COMPONENT Server)
   if (CLIENT)

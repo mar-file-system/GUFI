@@ -77,11 +77,6 @@ jobs:
   RPMs:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        client: [ Off, On ]
-      fail-fast: false
-
     permissions:
       contents: write
 
@@ -106,16 +101,29 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B build ${{ env.COMMON_CONFIG }} -DCLIENT="${{ matrix.client }}"
+      run:  cmake -B build ${{ env.COMMON_CONFIG }} -DCLIENT=On
 
     - name: Build and Test RPMs
       run:  |
         cd build
-        contrib/CI/rpms.sh "${{ matrix.client }}"
+        contrib/CI/rpms.sh
+
+    - name: Build
+      run:  cmake --build build -j
+
+    - name: Test
+      run:  |
+        cd build
+        ctest --output-on-failure
+
+    - name: Build and Test RPMs
+      run:  |
+        cd build
+        contrib/CI/rpms.sh
 
     - name: Upload RPMs
       uses: softprops/action-gh-release@master
-      if:   startsWith(github.ref, 'refs/tags/') && (matrix.client == 'On')
+      if:   startsWith(github.ref, 'refs/tags/')
       with:
         files: build/*.rpm
         fail_on_unmatched_files: true
@@ -154,6 +162,10 @@ jobs:
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
 
+    - name: Test
+      run:  ctest --output-on-failure
+      working-directory: ${{ github.workspace }}/build
+
     - name: CMake Install
       if:   matrix.type == 'CMake'
       run:  sudo cmake --install .
@@ -171,3 +183,50 @@ jobs:
             which "${name}"
         done < <(find src scripts -maxdepth 1 \( -name "gufi_*" -a -not -name "*.*" \) -type f -executable -printf "%P\0" | sort -z)
       working-directory: ${{ github.workspace }}/build
+
+  PKG:
+    strategy:
+      matrix:
+        os: [ "macos-15", "macos-26", "xcode-27" ]
+
+    runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@main
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ matrix.os }}
+
+    - name: macOS Prerequisites
+      run:  contrib/CI/macos.sh | tail -n 1 >> "${GITHUB_PATH}"
+
+    - name: Install Python Packages
+      run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Configure CMake
+      run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -UMARFS_PREFIX -DPRESIDIO_PLUGIN=Off -DCLIENT=on -DCMAKE_OSX_SYSROOT=macosx
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      run:  ctest --output-on-failure
+      working-directory: ${{ github.workspace }}/build
+
+    - name: Build and Test Server PKG
+      run:  contrib/CI/pkg.sh
+      working-directory: ${{ github.workspace }}/build
+
+    - name: Upload PKGs
+      uses: softprops/action-gh-release@master
+      if:   startsWith(github.ref, 'refs/tags/') && (matrix.os == 'xcode-27')
+      with:
+        files: ${{ github.workspace }}/build/*.pkg

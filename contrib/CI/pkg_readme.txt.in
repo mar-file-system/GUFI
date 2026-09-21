@@ -1,0 +1,9 @@
+After installing this .pkg, add the following export:
+
+export DYLD_LIBRARY_PATH="@CPACK_PACKAGING_INSTALL_PREFIX@/lib:${DYLD_LIBRARY_PATH}"
+
+If user facing scripts (gufi_find, gufi_ls, etc.) are required,
+
+export PYTHONPATH="@CPACK_PACKAGING_INSTALL_PREFIX@/lib:${PYTHONPATH}"
+
+or move @CPACK_PACKAGING_INSTALL_PREFIX@/lib/gufi_common.py and @CPACK_PACKAGING_INSTALL_PREFIX@/lib/gufi_config.py to another directory and add that directory to PYTHONPATH

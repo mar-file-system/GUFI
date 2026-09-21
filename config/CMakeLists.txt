@@ -63,81 +63,57 @@
 include(ProcessorCount)
 ProcessorCount(CORES)
 
-set(CONFIG_DEFAULT "/etc/GUFI/config")
+if (DARWIN)
+  set(CONFIG_DEFAULT "${CPACK_PACKAGING_INSTALL_PREFIX}/etc/GUFI/config")
+else()
+  set(CONFIG_DEFAULT "/etc/GUFI/config")
+endif()
 
-function(config_file var_name type)
+function(config_file var_name type comp)
   set("${var_name}" "${CONFIG_DEFAULT}" CACHE FILEPATH "Where high level GUFI tools will look for the ${type} configuration")
+
+  # path must be absolute
   if (NOT IS_ABSOLUTE "${${var_name}}")
     message(FATAL_ERROR "${var_name} must be set to absolute path")
   endif()
+
+  # if the path already exists, make sure it is a regular file
   if (EXISTS "${${var_name}}")
-    if (APPLE OR DARWIN)
-      execute_process(COMMAND stat -L -f "%HT" "${${var_name}}"
-        OUTPUT_VARIABLE CONFIG_FILE_TYPE
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-      )
-      if (NOT CONFIG_FILE_TYPE STREQUAL "Regular File")
-        message(FATAL_ERROR "${var_name} must point to a file. Got ${CONFIG_FILE_TYPE}")
-      endif()
-    else()
-      execute_process(COMMAND stat --dereference --format "%F" "${${var_name}}"
-        OUTPUT_VARIABLE CONFIG_FILE_TYPE
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-      )
-      if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
-        message(FATAL_ERROR "${var_name} must point to a file. Got ${CONFIG_FILE_TYPE}")
-      endif()
+    execute_process(COMMAND stat --dereference --format "%F" "${${var_name}}"
+      OUTPUT_VARIABLE CONFIG_FILE_TYPE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
+      message(FATAL_ERROR "${var_name} must point to a file. Got ${CONFIG_FILE_TYPE}")
     endif()
   endif()
-  if (NOT "${${var_name}}" STREQUAL "${CONFIG_DEFAULT}")
-    message(WARNING "${var_name} ${${var_name}} may conflict with filesystem package when installing GUFI RPMs")
+
+  get_filename_component(CONFIG_PARENT "${${var_name}}" DIRECTORY)
+
+  if (DARWIN)
+    if (IS_ABSOLUTE "${CONFIG_PARENT}")
+      if (NOT "${CONFIG_PARENT}" MATCHES "^${CPACK_PACKAGING_INSTALL_PREFIX}")
+        message(FATAL_ERROR "${type} config must go under ${CPACK_PACKAGING_INSTALL_PREFIX}. Reconfigure with -D${var_name}=...")
+      endif()
+
+      file(RELATIVE_PATH CONFIG_PARENT "${CPACK_PACKAGING_INSTALL_PREFIX}" "${CONFIG_PARENT}")
+    endif()
   endif()
-endfunction()
 
-config_file(SERVER_CONFIG "server")
-if (CLIENT)
-  config_file(CLIENT_CONFIG "client")
-endif()
-
-if (CLIENT)
-  get_filename_component(CLIENT_CONFIG_PARENT "${CLIENT_CONFIG}" DIRECTORY)
-
-  # client config
-  # copy the hard coded client example file
-  configure_file(client.example.in "${CMAKE_BINARY_DIR}/client.example" @ONLY)
-
-  # make install and rpm
-  install(FILES "${CMAKE_BINARY_DIR}/client.example"
-          DESTINATION "${CLIENT_CONFIG_PARENT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-          COMPONENT Client)
-endif()
-
-get_filename_component(SERVER_CONFIG_PARENT "${SERVER_CONFIG}" DIRECTORY)
-
-# server config
-# copy the hard coded server example file
-set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-configure_file(server.example.in "${CMAKE_BINARY_DIR}/server.example" @ONLY)
-unset(INSTALL_PREFIX)
-
-# make install
-install(FILES "${CMAKE_BINARY_DIR}/server.example"
-  DESTINATION "${SERVER_CONFIG_PARENT}"
-  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-  COMPONENT Server)
-
-if (RPMBUILD)
-  # copy the hard coded server example file
-  set(INSTALL_PREFIX "/usr") # this should be CPACK_PACKAGING_INSTALL_PREFIX, but it's not set yet
-  configure_file(server.example.in "${CMAKE_BINARY_DIR}/rpm_server.example" @ONLY)
+  # copy the example config
+  set(INSTALL_PREFIX "${CPACK_PACKAGING_INSTALL_PREFIX}")
+  configure_file(server.example.in "${CMAKE_BINARY_DIR}/${type}.example" @ONLY)
   unset(INSTALL_PREFIX)
 
-  # overwrite make install version of server.example
-  install(FILES "${CMAKE_BINARY_DIR}/rpm_server.example"
-          RENAME "server.example"
-          DESTINATION "${SERVER_CONFIG_PARENT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-          COMPONENT Server
-          EXCLUDE_FROM_ALL)
+  # make install the config
+  install(FILES "${CMAKE_BINARY_DIR}/${type}.example"
+    DESTINATION "${CONFIG_PARENT}"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
+    COMPONENT "${comp}")
+endfunction()
+
+if (CLIENT)
+  config_file(CLIENT_CONFIG "client" Client)
 endif()
+
+config_file(SERVER_CONFIG "server" Server)
