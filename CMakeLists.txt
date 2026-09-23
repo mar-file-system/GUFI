@@ -230,12 +230,33 @@ else()
   message(STATUS "Not compiling C++ sources")
 endif()
 
+set(SERVER_BIN "bin"       CACHE STRING "Directory to install executables at")
+set(SERVER_LIB "lib"       CACHE STRING "Directory to install libraries at")
+set(SERVER_MAN "share/man" CACHE STRING "Directory to install man pages at")
+
+if (CLIENT)
+  set(CLIENT_BIN "${SERVER_BIN}" CACHE STRING "Directory to install client executables at")
+  set(CLIENT_LIB "${SERVER_LIB}" CACHE STRING "Directory to install client libraries at")
+  set(CLIENT_MAN "${SERVER_MAN}" CACHE STRING "Directory to install client man pages at")
+endif()
+
+# dynamically loaded module extension
+if (APPLE OR DARWIN)
+  set(EXT "dylib")
+elseif (CYGWIN)
+  set(EXT "dll.a")
+else ()
+  set(EXT "so")
+endif()
+
+# this is the first CPACK_RPM_PACKAGE_REQUIRES
+set(CPACK_RPM_PACKAGE_REQUIRES "sqlite3 >= 3.43.1")
+
 # Python3.9+ is required
 find_package(Python3 3.9 COMPONENTS Interpreter REQUIRED)
 set(Python3_SHEBANG "/usr/bin/env python3" CACHE STRING "Set Python3 shebang")
 
-# this is the first CPACK_RPM_PACKAGE_REQUIRES
-set(CPACK_RPM_PACKAGE_REQUIRES "python(abi) >= 3.9")
+set(APPEND CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python(abi) >= 3.9")
 
 # require find_program to return executables with -r+x permissions
 if (POLICY CMP0109)
@@ -375,6 +396,23 @@ if (DEP_AI)
 endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
+# copy dependencies into packages
+# not copying sqlite libraries - use local version
+install(FILES
+  "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
+  DESTINATION "${SERVER_LIB}"
+  COMPONENT Server
+  EXCLUDE_FROM_ALL # do not copy if running 'make install'
+)
+if (CLIENT)
+  install(FILES
+    "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
+    DESTINATION "${CLIENT_LIB}"
+    COMPONENT Client
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+endif()
+
 # llama.cpp uses OpenMP (not required, but left enabled)
 if (DEP_AI)
   find_package(OpenMP REQUIRED COMPONENTS C)
@@ -382,6 +420,56 @@ if (DEP_AI)
 
   if (APPLE OR DARWIN)
     find_library(ACCELERATE Accelerate REQUIRED)
+  endif()
+
+  # copy dependencies into packages
+  install(FILES
+    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
+    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
+    DESTINATION "${SERVER_LIB}"
+    COMPONENT Server
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+  install(CODE
+    "
+    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}\")
+    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}\")
+    "
+    COMPONENT Server
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+  install(DIRECTORY
+    "${DEP_INSTALL_PREFIX}/llama.cpp/lib/" # keep trailing slash
+    DESTINATION "${SERVER_LIB}"
+    COMPONENT Server
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    PATTERN "cmake" EXCLUDE
+    PATTERN "pkgconfig" EXCLUDE
+  )
+  if (CLIENT)
+    install(FILES
+      "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
+      "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
+      DESTINATION "${CLIENT_LIB}"
+      COMPONENT Client
+      EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    )
+    install(CODE
+      "
+      file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}\")
+      file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}\")
+      "
+      COMPONENT Client
+      EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    )
+    install(DIRECTORY
+      "${DEP_INSTALL_PREFIX}/llama.cpp/lib/" # keep trailing slash
+      DESTINATION "${CLIENT_LIB}"
+      COMPONENT Client
+      EXCLUDE_FROM_ALL # do not copy if running 'make install'
+      PATTERN "cmake" EXCLUDE
+      PATTERN "pkgconfig" EXCLUDE
+    )
   endif()
 endif()
 
@@ -489,6 +577,25 @@ if (DEP_USE_JEMALLOC)
     "${JEMALLOC}"
     stdc++ # required by alpine linux
   )
+
+  install(DIRECTORY
+    "${DEP_INSTALL_PREFIX}/jemalloc/lib/" # keep trailing slash
+    DESTINATION "${SERVER_LIB}"
+    COMPONENT Server
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    FILES_MATCHING PATTERN "libjemalloc.${EXT}*"
+    PATTERN "pkgconfig" EXCLUDE
+  )
+  if (CLIENT)
+    install(DIRECTORY
+      "${DEP_INSTALL_PREFIX}/jemalloc/lib/" # keep trailing slash
+      DESTINATION "${CLIENT_LIB}"
+      COMPONENT Client
+      EXCLUDE_FROM_ALL # do not copy if running 'make install'
+      FILES_MATCHING PATTERN "libjemalloc.${EXT}*"
+      PATTERN "pkgconfig" EXCLUDE
+    )
+  endif()
 endif()
 
 list(APPEND COMMON_LIBRARIES
@@ -503,25 +610,6 @@ option(QPTPOOL_SWAP "Whether or not to enable swapping in QueuePerThreadPool" On
 set(QPTPOOL_STACK_SIZE 0 CACHE STRING "QueuePerThreadPool Stack Size")
 
 option(ALLOW_DB_WRITES "Whether or not to allow gufi_query to write to databases" On)
-
-set(SERVER_BIN "bin"       CACHE STRING "Directory to install executables at")
-set(SERVER_LIB "lib"       CACHE STRING "Directory to install libraries at")
-set(SERVER_MAN "share/man" CACHE STRING "Directory to install man pages at")
-
-if (CLIENT)
-  set(CLIENT_BIN "${SERVER_BIN}" CACHE STRING "Directory to install client executables at")
-  set(CLIENT_LIB "${SERVER_LIB}" CACHE STRING "Directory to install client libraries at")
-  set(CLIENT_MAN "${SERVER_MAN}" CACHE STRING "Directory to install client man pages at")
-endif()
-
-# dynamically loaded module extension
-if (APPLE OR DARWIN)
-  set(EXT "dylib")
-elseif (CYGWIN)
-  set(EXT "dll.a")
-else ()
-  set(EXT "so")
-endif()
 
 include(CheckSymbolExists)
 
