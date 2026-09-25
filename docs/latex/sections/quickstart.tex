@@ -143,6 +143,10 @@ Some particularly useful ones are listed here: \\
     bundled dependencies here. Used to keep the dependencies when the
     build directory is deleted. \\
     \hline
+    \texttt{OpenMP\_ROOT=<directory path>} & Directory where OpenMP is
+    located. If \texttt{DEP\_AI=On} and CMake cannot find OpenMP, try
+    using this flag. On macOS, use \texttt{"\$(brew --prefix libomp)"}. \\
+    \hline
     \texttt{SERVER\_CONFIG=<file path>} & Name of file used to
     configure user facing tools on the server side (explained
     later). A copy of \texttt{server.example} will be placed into the
@@ -176,12 +180,22 @@ but are used in later text, and so are defined here:
   \end{tabularx}
 \end{table}
 
-Configuring CMake on macOS is trickier than building on Linux,
-especially with \texttt{DEP\_AI=On}. See the latest macOS CMake
+Configuring CMake on macOS has the caveat that the system tools and
+libraries should be provided by \texttt{brew}, not the ones that come
+with macOS (see \texttt{contrib/CI/macos.sh}). After installing the
+\texttt{brew} packages, explicitly set \texttt{CC} and \texttt{CXX}
+with \texttt{brew} provided compilers and add one extra flag: \\
+\texttt{-DCMAKE\_OSX\_SYSROOT=macosx}. See the latest macOS CMake
 configuration in \texttt{.github/workflows/test.yml}.
 
-Configuring CMake on cygwin has a few caveats as well. See the latest
-cygwin CMake configuration in \texttt{.github/workflows/test.yml}.
+Configuring CMake on cygwin requires turning features off. cygwin does
+not have a built-in \texttt{sudo} replacement, so set
+\texttt{ENABLE\_SUDO\_TESTS=Off}. cygwin \texttt{sudo} replacements do
+exist, but have not been tested. jemalloc has been reported to build
+on cygwin, but requires changes that have not been tested for GUFI, so
+it should be disabled with \texttt{DEP\_USE\_JEMALLOC=Off}. See the
+latest cygwin CMake configuration in
+\texttt{.github/workflows/test.yml}.
 
 \subsection{Build}
 \indent \indent \texttt{make}

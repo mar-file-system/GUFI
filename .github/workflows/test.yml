@@ -223,7 +223,7 @@ jobs:
     - name: Configure CMake
       run: >-
            export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
-           cmake . -B build ${{ env.COMMON_CONFIG }} -DDEP_INSTALL_PREFIX="/usr/local" -DENABLE_SUDO_TESTS=Off -DCLIENT=On -DDEP_USE_JEMALLOC=Off -DOpenMP_C_FLAGS="-fopenmp" -DOpenMP_C_LIB_NAMES="libgomp" -DOpenMP_libgomp_LIBRARY="/usr/bin/cyggomp-1.dll"
+           cmake . -B build ${{ env.COMMON_CONFIG }} -DDEP_INSTALL_PREFIX="/usr/local" -DENABLE_SUDO_TESTS=Off -DCLIENT=On -DDEP_USE_JEMALLOC=Off
       shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
 
     - name: Build
