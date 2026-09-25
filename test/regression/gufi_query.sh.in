@@ -155,6 +155,15 @@ run_sort "${GUFI_QUERY} -d \" \" -I \"SELECT setstr('-I', 'init');\" -S \"SELECT
 
 run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT thread_id();\" \"${INDEXROOT}\""
 
+echo "# Read globally accessible data during -S and -E"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 --global-db \"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\" -S \"SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;\" -E \"SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;\" \"${INDEXROOT}\""
+
+echo "# Read globally accessible data during -J"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 --global-db \"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\" -I \"CREATE TABLE out(path TEXT, inode TEXT);\" -K \"CREATE TABLE aggregate(path TEXT, inode TEXT, i INTEGER, t TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, inode, i, t FROM out JOIN data ON out.inode <= data.i;\" -G \"SELECT * FROM aggregate;\" \"${INDEXROOT}\""
+
+echo "# Read globally accessible data during -G"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 --global-db \"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\" -I \"CREATE TABLE out(path TEXT, inode TEXT);\" -K \"CREATE TABLE aggregate(path TEXT, inode TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, inode FROM out;\" -G \"SELECT path, inode, i, t FROM aggregate JOIN data ON aggregate.inode <= data.i;\" \"${INDEXROOT}\""
+
 echo "#####################################"
 echo "# Invalid Inputs                    #"
 echo "#####################################"
@@ -291,6 +300,9 @@ run_no_sort "${GUFI_QUERY} -I \"SELECT abc;\" --no-print-sql-on-err \"${SEARCH}\
 
 echo "# error message without SQL"
 run_no_sort "${GUFI_QUERY} -E \"SELECT abc;\" --no-print-sql-on-err \"${SEARCH}\" 2>&1 | @GREP@ \"Error:\" | sort | head -n 1"
+
+echo "# Bad global db set up"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --global-db \"CREATE TABLE;\" -E \"SELECT rpath(sname, sroll, name), inode FROM vrpentries;\" \"${INDEXROOT}\""
 ) 2>&1 | tee "${OUTPUT}"
 
 echo "# Print terse debug timestamps (not part of expected results)"

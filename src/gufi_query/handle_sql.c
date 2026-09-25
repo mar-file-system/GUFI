@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "template_db.h"
 
+#include "gufi_query/PoolArgs.h"
 #include "gufi_query/handle_sql.h"
 #include "gufi_query/query_replacement.h"
 
@@ -163,6 +164,7 @@ static int validate(struct input *in) {
 
 static int gen_types(struct input *in) {
     sqlite3 *db = NULL;
+    sqlite3 *global_db = NULL;
 
     /* generate types if necessary */
     if ((in->types.print_tlv == 1) && ((in->output == STDOUT) || (in->output == OUTFILE))) {
@@ -177,6 +179,33 @@ static int gen_types(struct input *in) {
         sqlite3_vec_init(db, NULL, NULL);
         sqlite3_lembed_init(db, NULL, NULL);
         #endif
+
+        if (str_exists(&in->global_db)) {
+            global_db = opendb(GUFI_QUERY_GLOBAL_DB_FILENAME, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                               0, 1, NULL, NULL);
+            if (!global_db) {
+                closedb(db);
+                return -1;
+            }
+
+            char *err = NULL;
+            if (sqlite3_exec(global_db, in->global_db.data, NULL, NULL, &err) != SQLITE_OK) {
+                sqlite_print_err_and_free(err, stderr,
+                                          "Error: Could not initiailize global db with \"%s\": %s\n",
+                                          in->global_db.data, err);
+                closedb(global_db);
+                closedb(db);
+                return -1;
+            }
+
+            /* attach to the db after initializing the global db */
+            if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, db,
+                              GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
+                closedb(global_db);
+                closedb(db);
+                return -1;
+            }
+        }
 
         int cols = 0; /* discarded */
 
@@ -198,8 +227,9 @@ static int gen_types(struct input *in) {
         if (str_exists(&in->sql.init)) {
             char *err = NULL;
             if (sqlite3_exec(db, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
-                fprintf(stderr, "Error: Failed to set up table for getting result column types: %s\n", err);
-                sqlite3_free(err);
+                sqlite_print_err_and_free(err, stderr,
+                                          "Error: Failed to set up table for getting result column types: %s\n",
+                                          err);
                 goto error;
             }
         }
@@ -216,8 +246,9 @@ static int gen_types(struct input *in) {
         if (str_exists(&in->sql.setup_res_col_types)) {
             char *err = NULL;
             if (sqlite3_exec(db, in->sql.setup_res_col_types.data, NULL, NULL, &err) != SQLITE_OK) {
-                fprintf(stderr, "Error: Failed to set up table for getting result column types: %s\n", err);
-                sqlite3_free(err);
+                sqlite_print_err_and_free(err, stderr,
+                                          "Error: Failed to set up table for getting result column types: %s\n",
+                                          err);
                 goto error;
             }
         }
@@ -255,8 +286,9 @@ static int gen_types(struct input *in) {
             /* run -K so -G can pull the final columns */
             char *err = NULL;
             if (sqlite3_exec(db, in->sql.init_agg.data, NULL, NULL, &err) != SQLITE_OK) {
-                fprintf(stderr, "Error: -K SQL failed while getting columns types: %s\n", err);
-                sqlite3_free(err);
+                sqlite_print_err_and_free(err, stderr,
+                                          "Error: -K SQL failed while getting columns types: %s\n",
+                                          err);
                 goto error;
             }
 
@@ -268,6 +300,7 @@ static int gen_types(struct input *in) {
         plugins_ctx_exit(&in->plugins, db, 0);
         plugins_thread_exit(&in->plugins, db);
 
+        closedb(global_db);
         closedb(db);
     }
 
@@ -275,6 +308,7 @@ static int gen_types(struct input *in) {
 
   error:
     plugins_ctx_exit(&in->plugins, db, 0);
+    closedb(global_db);
     closedb(db);
     return -1;
 }

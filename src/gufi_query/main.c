@@ -262,6 +262,8 @@ int main(int argc, char *argv[])
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
+        FLAG_GLOBAL_DB,
+
         /* SQL flags */
         FLAG_SQL_INIT,
         FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT,

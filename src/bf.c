@@ -259,6 +259,7 @@ void print_help(const char* prog_name,
             case FLAG_NO_PRINT_SQL_ON_ERR_SHORT:         printf("      --no-print-sql-on-err         do not print SQL with error messages"); break;
             case FLAG_OLD_TRACE_FORMAT_SHORT:            printf("      --old-trace-format            read old format traces"); break;
             case FLAG_USE_EXACT_PATH_SHORT:              printf("      --use-exact-path              create the index under the exact source path that was passed in instead of just the basename"); break;
+            case FLAG_GLOBAL_DB_SHORT:                   printf("      --global-db <SQL>             SQL to set up global table(s) that will be accessible at all times. ATTACH-ed with 'global' namespace"); break;
 
             /* memory usage flags */
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:          printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
@@ -364,6 +365,7 @@ void show_input(struct input* in, int retval) {
     printf("in.no_print_sql_on_err      = %d\n",            in->no_print_sql_on_err);
     printf("in.old_trace_format         = %d\n",            in->old_trace_format);
     printf("in.use_exact_path           = %d\n",            in->use_exact_path);
+    printf("in.global_db                = '%s'\n",          in->global_db.data);
 
     /* memory usage flags */
 
@@ -711,6 +713,10 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_USE_EXACT_PATH_SHORT:
                 in->use_exact_path = 1;
+                break;
+
+            case FLAG_GLOBAL_DB_SHORT:
+                INSTALL_STR(&in->global_db, optarg);
                 break;
 
             /* memory usage flags */

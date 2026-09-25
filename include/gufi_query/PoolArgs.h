@@ -74,6 +74,9 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "trie.h"
 
+#define GUFI_QUERY_GLOBAL_DB_ATTACHNAME "global"
+#define GUFI_QUERY_GLOBAL_DB_FILENAME "file:global?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI
+
 typedef struct ThreadArgs {
     char *dbname;
     sqlite3 *outdb;                    /* either user named or in-memory */
@@ -84,6 +87,7 @@ typedef struct ThreadArgs {
 
 typedef struct PoolArgs {
     struct input *in;                  /* save a reference here for convenience */
+    sqlite3 *global_db;                /* db accessible at all times */
     ThreadArgs_t *ta;
 
     pthread_mutex_t *stdout_mutex;

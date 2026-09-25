@@ -122,10 +122,36 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         pa->stdout_mutex = global_mutex;
     }
 
+    /* create a common read-only database to all threads */
+    if (str_exists(&in->global_db)) {
+        pa->global_db = opendb(GUFI_QUERY_GLOBAL_DB_FILENAME, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                               1, 1, NULL, NULL);
+        if (!pa->global_db) {
+            return 1;
+        }
+
+        char *err = NULL;
+        if (sqlite3_exec(pa->global_db, in->global_db.data, NULL, NULL, &err) != SQLITE_OK) {
+            if (!in->no_print_sql_on_err) {
+                sqlite_print_err_and_free(err, stderr, "Error: Could not initiailize global db with \"%s\": %s\n",
+                                          in->global_db.data, err);
+            }
+            else {
+                sqlite_print_err_and_free(err, stderr, "Error: Could not initialize global db: %s\n",
+                                          err);
+            }
+
+            closedb(pa->global_db);
+            input_fini(pa->in);
+            return 1;
+        }
+    }
+
     /* catch this failure - it can be handled cleanly */
     pa->ta = calloc(in->maxthreads, sizeof(ThreadArgs_t));
     if (!pa->ta) {
         fprintf(stderr, "Error: Could not allocate %zu thread structures\n", in->maxthreads);
+        closedb(pa->global_db);
         input_fini(pa->in);
         return 1;
     }
@@ -151,6 +177,13 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         if (!ta->outdb) {
             fprintf(stderr, "Error: Could not open per-thread database file \"%s\"\n", ta->dbname);
             break;
+        }
+
+        /* make global db available to per-thread db */
+        if (str_exists(&in->global_db)) {
+            if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, ta->outdb, GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
+                break;
+            }
         }
 
         addqueryfuncs(ta->outdb);
@@ -204,11 +237,11 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         if (sqlite3_exec(ta->outdb, XATTRS_TEMPLATE_CREATE,
                          NULL, NULL, &err) != SQLITE_OK) {
             if (!in->no_print_sql_on_err) {
-                sqlite_print_err_and_free(err, stderr, "Error: Could create xattr template \"%s\" on %s: %s\n",
+                sqlite_print_err_and_free(err, stderr, "Error: Could not create xattr template \"%s\" on %s: %s\n",
                                           in->sql.init.data, ta->dbname, err);
             }
             else {
-                sqlite_print_err_and_free(err, stderr, "Error: Could create xattr template: %s\n",
+                sqlite_print_err_and_free(err, stderr, "Error: Could not create xattr template: %s\n",
                                           err);
             }
             break;
@@ -319,6 +352,9 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
 
     free(pa->ta);
     pa->ta = NULL;
+
+    closedb(pa->global_db);
+    pa->global_db = NULL;
 
     plugins_global_exit(&pa->in->plugins, pa->in);
     input_fini(pa->in);

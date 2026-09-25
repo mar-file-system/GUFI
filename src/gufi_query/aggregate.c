@@ -68,6 +68,7 @@ OF SUCH DAMAGE.
 #include "print.h"
 
 #include "gufi_query/aggregate.h"
+#include "gufi_query/PoolArgs.h"
 
 /* must have shared cache */
 static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
@@ -135,13 +136,21 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
     }
 
     /* always open an aggregate db */
-    if (!(aggregate->db = aggregate_setup(dbname, in->sql.init_agg.data, !in->no_print_sql_on_err))) {
-        free(dbname);
+    aggregate->db = aggregate_setup(dbname, in->sql.init_agg.data, !in->no_print_sql_on_err);
+
+    free(dbname);
+
+    if (!aggregate->db) {
         aggregate_fin(aggregate, in);
         return NULL;
     }
 
-    free(dbname);
+    /* attach the globally accessible database here */
+    if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, aggregate->db,
+                      GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
+        aggregate_fin(aggregate, in);
+        return NULL;
+    }
 
     return aggregate;
 }

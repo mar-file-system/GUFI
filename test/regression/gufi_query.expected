@@ -5,6 +5,7 @@ options:
   -H, --debug                       show assigned input values (debugging)
   -v, --version                     version
   -n, --threads <n>                 number of threads
+      --global-db <SQL>             SQL to set up global table(s) that will be accessible at all times. ATTACH-ed with 'global' namespace
   -I <SQL_init>                     SQL init
   -T <SQL_tsum>                     SQL for tree-summary table
   -S <SQL_sum>                      SQL for summary table
@@ -328,6 +329,33 @@ $ gufi_query -d " " -E "SELECT thread_id();" "prefix"
 0
 0
 
+# Read globally accessible data during -S and -E
+$ gufi_query -d " " -n 2 -a 1 --global-db "CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');" -S "SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;" -E "SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;" "prefix"
+prefix/directory/executable 1 1 global data 1
+prefix/directory/executable 1 2 global data 2
+prefix/directory/readonly 2 2 global data 2
+prefix/old_file 0 0 global data 0
+prefix/old_file 0 1 global data 1
+prefix/old_file 0 2 global data 2
+
+# Read globally accessible data during -J
+$ gufi_query -d " " -n 2 -a 1 --global-db "CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');" -I "CREATE TABLE out(path TEXT, inode TEXT);" -K "CREATE TABLE aggregate(path TEXT, inode TEXT, i INTEGER, t TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, inode, i, t FROM out JOIN data ON out.inode <= data.i;" -G "SELECT * FROM aggregate;" "prefix"
+prefix/directory/executable 1 1 global data 1
+prefix/directory/executable 1 2 global data 2
+prefix/directory/readonly 2 2 global data 2
+prefix/old_file 0 0 global data 0
+prefix/old_file 0 1 global data 1
+prefix/old_file 0 2 global data 2
+
+# Read globally accessible data during -G
+$ gufi_query -d " " -n 2 -a 1 --global-db "CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');" -I "CREATE TABLE out(path TEXT, inode TEXT);" -K "CREATE TABLE aggregate(path TEXT, inode TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, inode FROM out;" -G "SELECT path, inode, i, t FROM aggregate JOIN data ON aggregate.inode <= data.i;" "prefix"
+prefix/directory/executable 1 1 global data 1
+prefix/directory/executable 1 2 global data 2
+prefix/directory/readonly 2 2 global data 2
+prefix/old_file 0 0 global data 0
+prefix/old_file 0 1 global data 1
+prefix/old_file 0 2 global data 2
+
 #####################################
 # Invalid Inputs                    #
 #####################################
@@ -557,4 +585,8 @@ Error: Could not run SQL Init no such column: abc
 # error message without SQL
 $ gufi_query -E "SELECT abc;" --no-print-sql-on-err "search" 2>&1 | grep "Error:" | sort | head -n 1
 Error: no such column: abc: search/db.db
+
+# Bad global db set up
+$ gufi_query -d " " -n 2 --global-db "CREATE TABLE;" -E "SELECT rpath(sname, sroll, name), inode FROM vrpentries;" "prefix"
+Error: Could not initiailize global db with "CREATE TABLE;": near ";": syntax error
 

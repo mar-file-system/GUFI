@@ -399,6 +399,27 @@ query=$(
 )
 query_vt "${query}" | @SED@ '\%prefix/%d;'
 
+echo "# query global database during -S and -E"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", a=1, global_db=\"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\", S=\"SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;\", E=\"SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# query global database during -J"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", a=1, global_db=\"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\", I=\"CREATE TABLE out(path TEXT, inode TEXT);\", S=\"INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;\", E=\"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\", K=\"CREATE TABLE aggregate(path TEXT, inode TEXT, i INTEGER, t TEXT);\", J=\"INSERT INTO aggregate SELECT path, inode, i, t FROM out JOIN data ON out.inode <= data.i;\", G=\"SELECT * FROM aggregate;\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# query global database during -G"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", a=1, global_db=\"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\", I=\"CREATE TABLE out(path TEXT, inode TEXT);\", S=\"INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;\", E=\"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\", K=\"CREATE TABLE aggregate(path TEXT, inode TEXT);\", J=\"INSERT INTO aggregate SELECT path, inode FROM out;\", G=\"SELECT path, inode, i, t FROM aggregate JOIN data ON aggregate.inode <= data.i;\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
 echo "# ######################################"
 echo "# errors"
 
@@ -624,6 +645,12 @@ query=$(
 )
 query_vt "${query}"
 
+echo "# bad global db set up"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", global_db=\"CREATE TABLE;\", E=\"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
 ) | replace | tee "${OUTPUT}"
 
 # FIXME: cygwin is having trouble with plugin tests.

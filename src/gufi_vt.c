@@ -89,6 +89,8 @@ SQLITE_EXTENSION_INIT1
 #include "print.h"
 #include "utils.h"
 
+#include "gufi_query/PoolArgs.h"
+
 /* local reference of SQLite 3 API struct for passing to extensions */
 const sqlite3_api_routines *SQLITE_API_ROUTINES = NULL;
 
@@ -129,6 +131,8 @@ typedef struct gufi_query_cmd {
     int dir_match_uid_set;
     str_t dir_match_gid;
     int dir_match_gid_set;
+
+    str_t global_db;
 
     /* sql */
 
@@ -288,6 +292,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--dir-match-gid ");
         }
 
+        flatten_argv(argc, argv, "--global-db",           cmd->global_db);
         flatten_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
         flatten_argv(argc, argv, "-I",                    cmd->I);
         flatten_argv(argc, argv, "-T",                    cmd->T);
@@ -340,7 +345,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     else {
         /* can keep arguments separate */
 
-        max_argc = 35; /* 3 fixed args, 15 pairs of flags, 2 single argv flags */
+        max_argc = 37; /* 3 fixed args, 16 pairs of flags, 2 single argv flags */
         max_argc += sll_get_size(&cmd->no_print_errno) * 2;
         max_argc += sll_get_size(&cmd->plugins) * 2;
         max_argc += sll_get_size(&cmd->external_attach) * 5;
@@ -397,6 +402,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = dir_match_gid;
         }
 
+        set_argv(argc, argv, "--global-db",           cmd->global_db);
         set_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
         set_argv(argc, argv, "-I",                    cmd->I);
         set_argv(argc, argv, "-T",                    cmd->T);
@@ -878,6 +884,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     max_level               =  <non-negative integer>
  *     dir_match_uid           =  <uid> (if just want euid, pass in no value i.e. dir_match_uid=)
  *     dir_match_gid           =  <gid> (if just want egid, pass in no value i.e. dir_match_gid=)
+ *     global_db               = '<SQL>'
  *     setup_res_col_type      = '<SQL>' (set up single temporary table to make columns available for getting result column types)
  *     I                       = '<SQL>'
  *     T                       = '<SQL>'
@@ -1145,6 +1152,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                 return SQLITE_MISUSE;
             }
         }
+        else if (strncmp(key, "global_db", 10) == 0) {
+            set_refstr(&cmd.global_db, value);
+        }
         else if (strncmp(key, "min_level", 10) == 0) {
             /* let gufi_query check value */
             set_refstr(&cmd.min_level, value);
@@ -1245,6 +1255,43 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     sqlite3_vec_init(tempdb, NULL, SQLITE_API_ROUTINES);
     sqlite3_lembed_init(tempdb, NULL, SQLITE_API_ROUTINES);
     #endif
+
+    /* create a common read-only database to all threads */
+    sqlite3 *global_db = NULL;
+    if (str_exists(&cmd.global_db)) {
+        global_db = opendb(GUFI_QUERY_GLOBAL_DB_FILENAME, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                           0, 0, NULL, NULL); /* not initializing extensions here */
+        if (!global_db) {
+            closedb(tempdb);
+            plugins_destroy(&in.plugins);
+            gq_cmd_destroy(&cmd);
+            input_fini(&in);
+            return SQLITE_CONSTRAINT;
+        }
+
+        char *err = NULL;
+        if (sqlite3_exec(global_db, cmd.global_db.data, NULL, NULL, &err) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr, "Error: Could not initiailize global db with \"%s\": %s\n",
+                                      cmd.global_db.data, err);
+            closedb(global_db);
+            closedb(tempdb);
+            plugins_destroy(&in.plugins);
+            gq_cmd_destroy(&cmd);
+            input_fini(&in);
+            return SQLITE_CONSTRAINT;
+        }
+
+        /* attach to the db after initializing the global db */
+        if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, tempdb,
+                          GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
+            closedb(global_db);
+            closedb(tempdb);
+            plugins_destroy(&in.plugins);
+            gq_cmd_destroy(&cmd);
+            input_fini(&in);
+            return SQLITE_CONSTRAINT;
+        }
+    }
 
     create_xattr_tables(SQLITE_MEMORY, tempdb, NULL);
 
@@ -1374,6 +1421,8 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     plugins_thread_exit(&in.plugins, tempdb);
     plugins_global_exit(&in.plugins, &in);
     plugins_destroy(&in.plugins);
+
+    closedb(global_db);
 
     closedb(tempdb);
     input_fini(&in);

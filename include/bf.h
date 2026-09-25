@@ -257,6 +257,10 @@ extern "C" {
 #define FLAG_USE_EXACT_PATH_LONG "use-exact-path"
 #define FLAG_USE_EXACT_PATH {FLAG_USE_EXACT_PATH_LONG, no_argument, NULL, FLAG_USE_EXACT_PATH_SHORT}
 
+#define FLAG_GLOBAL_DB_SHORT (FLAG_GROUP_MISC + 20)
+#define FLAG_GLOBAL_DB_LONG "global-db"
+#define FLAG_GLOBAL_DB {FLAG_GLOBAL_DB_LONG, required_argument, NULL, FLAG_GLOBAL_DB_SHORT}
+
 /* memory utilization flags */
 
 #define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
@@ -525,6 +529,7 @@ struct input {
     int  no_print_sql_on_err;      /* if there is an SQL error, do not print the SQL in the error message */
     int  old_trace_format;         /* used to read old traces only - do not generate new traces with the old format */
     int use_exact_path;            /* create index at <search>/<path>, not <search>/$(basename <path>)*/
+    str_t global_db;               /* db file path for read-only data that all threads should have access to */
     int  buildindex;
     size_t maxthreads;
     struct {

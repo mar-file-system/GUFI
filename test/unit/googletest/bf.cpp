@@ -114,6 +114,7 @@ static const std::string no_print_errno              = "--no-print-errno"; stati
 static const std::string no_print_sql_on_err         = "--no-print-sql-on-err";
 static const std::string old_trace_format            = "--old-trace-format";
 static const std::string use_exact_path              = "--use-exact-path";
+static const std::string global_db                   = "--global-db"; static const std::string global_db_arg = "data.db";
 
 static const std::string output_buffer_size          = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
 static const std::string target_memory               = "--target-memory"; static const std::string target_memory_arg = "1";
@@ -237,6 +238,7 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->filter_types,                           FILTER_TYPE_DIR | FILTER_TYPE_FILE | FILTER_TYPE_LINK);
         EXPECT_EQ(in->min_level,                              (std::size_t) 1);
         EXPECT_EQ(in->max_level,                              (std::size_t) 1);
+        EXPECT_EQ(in->global_db.data,                         global_db_arg);
         EXPECT_EQ(in->output_buffer_size,                     (std::size_t) 1);
         EXPECT_EQ(in->format,                                 format_arg);
         EXPECT_EQ(in->rollup.entries_limit,                   (std::size_t) 1);
@@ -299,6 +301,7 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->filter_types,                           0);
         EXPECT_EQ(in->min_level,                              (std::size_t) 0);
         EXPECT_EQ(in->max_level,                              (std::size_t) -1);
+        EXPECT_EQ(in->global_db.data,                         nullptr);
         EXPECT_EQ(in->output_buffer_size,                     (std::size_t) 4096);
         EXPECT_EQ(in->format,                                 empty);
         EXPECT_EQ(in->rollup.entries_limit,                   (std::size_t) 0);
@@ -382,8 +385,8 @@ TEST(parse_cmd_line, debug) {
         FLAG_TERSE, FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW,
         FLAG_SKIP_FILE, FLAG_DONT_REPROCESS, FLAG_NO_PRINT_ERRNO,
         FLAG_NO_PRINT_SQL_ON_ERR, FLAG_OLD_TRACE_FORMAT,
-        FLAG_USE_EXACT_PATH, FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT,
-        FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
+        FLAG_USE_EXACT_PATH, FLAG_GLOBAL_DB, FLAG_TARGET_MEMORY,
+        FLAG_SUBDIR_LIMIT, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -435,6 +438,7 @@ TEST(parse_cmd_line, debug) {
         no_print_sql_on_err.c_str(),
         old_trace_format.c_str(),
         use_exact_path.c_str(),
+        global_db.c_str(), global_db_arg.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
         #ifdef HAVE_ZLIB
@@ -519,8 +523,8 @@ TEST(parse_cmd_line, options) {
         FLAG_SQL_ENT, FLAG_SQL_FIN, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
         FLAG_SUSPECT_TIME, FLAG_MAX_SUBTREES, FLAG_KEEP_ARTIFACTS, FLAG_PATH,
         FLAG_FILTER_TYPE, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
-        FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_OUTPUT_BUFFER_SIZE, FLAG_FORMAT,
-        FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE,
+        FLAG_SQL_CREATE_AGG, FLAG_SQL_AGG, FLAG_GLOBAL_DB, FLAG_OUTPUT_BUFFER_SIZE,
+        FLAG_FORMAT, FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE,
         FLAG_NO_PRINT_ERRNO, FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT,
         FLAG_SWAP_PREFIX, FLAG_PATH_LIST, FLAG_EXTERNAL_ATTACH,
         FLAG_EXTERNAL_COPY,
@@ -550,6 +554,7 @@ TEST(parse_cmd_line, options) {
         J.c_str(), J_arg.c_str(),
         K.c_str(), K_arg.c_str(),
         G.c_str(), G_arg.c_str(),
+        global_db.c_str(), global_db_arg.c_str(),
         output_buffer_size.c_str(), output_buffer_size_arg.c_str(),
         format.c_str(), format_arg.c_str(),
         rollup_limit.c_str(), rollup_limit_arg.c_str(),
