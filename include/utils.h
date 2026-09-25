@@ -105,6 +105,12 @@ static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
     return (lhs > rhs)?lhs:rhs;
 }
 
+static inline void set_no_print_errno(uint64_t *bitfield, const int err) {
+    if (bitfield) {
+        bitfield[err >> 6] |= 1 << (err & 0x3f);
+    }
+}
+
 /* if bit is set, do not print error message */
 static inline int no_print_errno_set(const uint64_t *bitfield, const int err) {
     if (!bitfield) { return 0; }

@@ -113,6 +113,7 @@ static const std::string dir_match_gid               = "--dir-match-gid"; static
 static const std::string no_print_errno              = "--no-print-errno"; static const std::string no_print_errno_arg = "2";
 static const std::string no_print_sql_on_err         = "--no-print-sql-on-err";
 static const std::string old_trace_format            = "--old-trace-format";
+static const std::string use_exact_path              = "--use-exact-path";
 
 static const std::string output_buffer_size          = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
 static const std::string target_memory               = "--target-memory"; static const std::string target_memory_arg = "1";
@@ -205,6 +206,7 @@ static void check_input(const int /* argc */, const char **argv,
     EXPECT_EQ(in->dir_match.gid,                              getegid());
     EXPECT_EQ(in->no_print_sql_on_err,                        flags);
     EXPECT_EQ(in->old_trace_format,                           flags);
+    EXPECT_EQ(in->use_exact_path,                             flags);
     #if HAVE_ZLIB
     EXPECT_EQ(in->compress,                                   flags);
     #endif
@@ -379,8 +381,9 @@ TEST(parse_cmd_line, debug) {
         FLAG_KEEP_MATIME, FLAG_OUTPUT_BUFFER_SIZE, FLAG_READ_WRITE, FLAG_FORMAT,
         FLAG_TERSE, FLAG_DRY_RUN, FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW,
         FLAG_SKIP_FILE, FLAG_DONT_REPROCESS, FLAG_NO_PRINT_ERRNO,
-        FLAG_NO_PRINT_SQL_ON_ERR, FLAG_OLD_TRACE_FORMAT, FLAG_TARGET_MEMORY,
-        FLAG_SUBDIR_LIMIT, FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
+        FLAG_NO_PRINT_SQL_ON_ERR, FLAG_OLD_TRACE_FORMAT,
+        FLAG_USE_EXACT_PATH, FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT,
+        FLAG_SWAP_PREFIX, FLAG_PATH_LIST,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -431,6 +434,7 @@ TEST(parse_cmd_line, debug) {
         no_print_errno.c_str(), no_print_errno_arg.c_str(),
         no_print_sql_on_err.c_str(),
         old_trace_format.c_str(),
+        use_exact_path.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
         #ifdef HAVE_ZLIB
@@ -467,6 +471,7 @@ TEST(parse_cmd_line, flags) {
         FLAG_SUSPECT_STAT, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
         FLAG_TERSE, FLAG_DRY_RUN, FLAG_DONT_REPROCESS,
         FLAG_NO_PRINT_SQL_ON_ERR, FLAG_OLD_TRACE_FORMAT,
+        FLAG_USE_EXACT_PATH,
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
@@ -489,6 +494,7 @@ TEST(parse_cmd_line, flags) {
         dont_reprocess.c_str(),
         no_print_sql_on_err.c_str(),
         old_trace_format.c_str(),
+        use_exact_path.c_str(),
         #ifdef HAVE_ZLIB
         compress.c_str(),
         #endif

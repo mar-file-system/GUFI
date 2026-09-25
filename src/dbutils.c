@@ -238,7 +238,7 @@ static sqlite3 *attachdb_internal(const char *name, const char *attach, sqlite3 
     if (rc != SQLITE_OK) {
         if (print_err) {
             if ((rc != SQLITE_CANTOPEN) ||
-                ((rc == SQLITE_CANTOPEN) && !no_print_errno_set(no_print_errno, EACCES))) {
+                ((rc == SQLITE_CANTOPEN) && !(no_print_errno_set(no_print_errno, ENOENT)))) {
                 sqlite_print_err_and_free(err, stderr, "Cannot attach database \"%s\" as \"%s\": %s\n",
                                           name, dbn, err);
             }

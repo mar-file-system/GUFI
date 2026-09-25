@@ -232,7 +232,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     return rc;
 }
 
-static int validate_source(const char *path, struct work **work) {
+static int validate_source(const char *path, struct work **work, const int use_exact_path) {
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) != 0) {
@@ -250,7 +250,7 @@ static int validate_source(const char *path, struct work **work) {
     struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
     new_work->root_parent.data = (char *) path;
-    new_work->root_parent.len = dirname_len(path, new_work->name_len);
+    new_work->root_parent.len = use_exact_path?0:dirname_len(path, new_work->name_len);
     new_work->level = 0;
     new_work->basename_len = new_work->name_len - new_work->root_parent.len;
     new_work->root_basename_len = new_work->basename_len;
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
         FLAG_INDEX_XATTRS, FLAG_SKIP_FILE,
 
         /* miscellaneous flags */
-        FLAG_EXTERNAL_ATTACH_VALIDATE,
+        FLAG_EXTERNAL_ATTACH_VALIDATE, FLAG_USE_EXACT_PATH,
 
         /* output flags */
         FLAG_DELIM,
@@ -339,7 +339,7 @@ int main(int argc, char *argv[]) {
         }
         else if (root_count == 1) {
             struct work *root = NULL;
-            if (validate_source(pa.in.pos.argv[0], &root) == 0) {
+            if (validate_source(pa.in.pos.argv[0], &root, pa.in.use_exact_path) == 0) {
                 process_path_list(&pa.in, root, ctx, processdir);
             }
             else {
@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
         for(int i = 0; i < pa.in.pos.argc; i++) {
             /* get first work item by validating source path */
             struct work *root = NULL;
-            if (validate_source(pa.in.pos.argv[i], &root) != 0) {
+            if (validate_source(pa.in.pos.argv[i], &root, pa.in.use_exact_path) != 0) {
                 continue;
             }
 

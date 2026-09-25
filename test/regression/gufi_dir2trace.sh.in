@@ -140,7 +140,7 @@ echo "# partial indexing (first half)"
 run_no_sort "cat \"${DISTRIBUTED_0}\""
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --path-list \"${DISTRIBUTED_0}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print substr(\$1, 5) }' | sort"
+run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print substr(\$1, 5) }'"
 echo "# ######################################"
 echo
 echo "# ######################################"
@@ -148,7 +148,7 @@ echo "# partial indexing (second half)"
 run_no_sort "cat \"${DISTRIBUTED_1}\""
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --path-list \"${DISTRIBUTED_1}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
-run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print substr(\$1, 5) }' | sort"
+run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print substr(\$1, 5) }'"
 echo "# ######################################"
 echo
 echo "# ######################################"
@@ -157,9 +157,15 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --path-list \"${DISTRIBUTE
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --path-list \"${DISTRIBUTED_1}\" --min-level ${DISTRIBUTED_LEVEL} \"${SRCDIR}\" \"${SECOND}\""
 run_no_sort "${GUFI_DIR2TRACE} -d \"|\" -n ${THREADS} --max-level 0 \"${SRCDIR}\" \"${TRACE}\""
 # shellcheck disable=SC2145
-run_no_sort "cat ${TRACES[@]} ${FIRST}.* ${SECOND}.* | @AWK@ -F '|' '{ print substr(\$1, 5) }' | sort"
+run_sort "cat ${TRACES[@]} ${FIRST}.* ${SECOND}.* | @AWK@ -F '|' '{ print substr(\$1, 5) }'"
 echo "# ######################################"
 echo
+
+echo "# keep input path instead of using basename"
+rm "${TRACES[@]}"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} --use-exact-path \"${SRCDIR}/directory/subdirectory\" \"${TRACE}\""
+# shellcheck disable=SC2145
+run_sort "cat ${TRACES[@]} | @AWK@ -F '|' '{ print substr(\$1, 5) }'"
 
 echo "# write to stdout"
 run_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"-\" 2>/dev/null | @AWK@ -F \"${DELIM}\" '{ print substr(\$1, 5), \$2 }'"

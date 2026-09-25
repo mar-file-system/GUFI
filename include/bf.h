@@ -253,6 +253,10 @@ extern "C" {
 #define FLAG_OLD_TRACE_FORMAT_LONG "old-trace-format"
 #define FLAG_OLD_TRACE_FORMAT {FLAG_OLD_TRACE_FORMAT_LONG, no_argument, NULL, FLAG_OLD_TRACE_FORMAT_SHORT}
 
+#define FLAG_USE_EXACT_PATH_SHORT (FLAG_GROUP_MISC + 19)
+#define FLAG_USE_EXACT_PATH_LONG "use-exact-path"
+#define FLAG_USE_EXACT_PATH {FLAG_USE_EXACT_PATH_LONG, no_argument, NULL, FLAG_USE_EXACT_PATH_SHORT}
+
 /* memory utilization flags */
 
 #define FLAG_OUTPUT_BUFFER_SIZE_SHORT (FLAG_GROUP_MEM + 0)
@@ -520,6 +524,7 @@ struct input {
     uint64_t no_print_errno[4];    /* errno bitfield to not print errors for when they occur */
     int  no_print_sql_on_err;      /* if there is an SQL error, do not print the SQL in the error message */
     int  old_trace_format;         /* used to read old traces only - do not generate new traces with the old format */
+    int use_exact_path;            /* create index at <search>/<path>, not <search>/$(basename <path>)*/
     int  buildindex;
     size_t maxthreads;
     struct {

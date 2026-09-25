@@ -258,6 +258,7 @@ void print_help(const char* prog_name,
             case FLAG_NO_PRINT_ERRNO_SHORT:              printf("      --no-print-errno <int>        one errno value (e.g. 2 for ENOENT; range: [1, 255]) to not print errors for when encounted. Use multiple times to hide multiple error message types"); break;
             case FLAG_NO_PRINT_SQL_ON_ERR_SHORT:         printf("      --no-print-sql-on-err         do not print SQL with error messages"); break;
             case FLAG_OLD_TRACE_FORMAT_SHORT:            printf("      --old-trace-format            read old format traces"); break;
+            case FLAG_USE_EXACT_PATH_SHORT:              printf("      --use-exact-path              create the index under the exact source path that was passed in instead of just the basename"); break;
 
             /* memory usage flags */
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:          printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
@@ -362,6 +363,7 @@ void show_input(struct input* in, int retval) {
                                                             in->no_print_errno[0]);
     printf("in.no_print_sql_on_err      = %d\n",            in->no_print_sql_on_err);
     printf("in.old_trace_format         = %d\n",            in->old_trace_format);
+    printf("in.use_exact_path           = %d\n",            in->use_exact_path);
 
     /* memory usage flags */
 
@@ -694,7 +696,7 @@ int parse_cmd_line(int                  argc,
                     int err = 0;
                     INSTALL_INT(&err, optarg, 1, 255, "--no-print-errno", &retval);
                     if ((0 < err) && (err < 256)) { /* just in case retval was set somewhere else */
-                        in->no_print_errno[err >> 6] |= 1 << (err & 0x3f);
+                        set_no_print_errno(in->no_print_errno, err);
                     }
                 }
                 break;
@@ -705,6 +707,10 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_OLD_TRACE_FORMAT_SHORT:
                 in->old_trace_format = 1;
+                break;
+
+            case FLAG_USE_EXACT_PATH_SHORT:
+                in->use_exact_path = 1;
                 break;
 
             /* memory usage flags */

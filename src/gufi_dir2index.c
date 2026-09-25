@@ -125,7 +125,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     topath.len = SNFORMAT_S_ALLOC(&topath.data, 4,
                                   pa->index_parent.data, pa->index_parent.len,
                                   "/", (size_t) 1,
-                                  work->name + work->root_parent.len, work->name_len - work->root_parent.len, /* remove prefix */
+                                  work->name + work->root_parent.len, work->name_len - work->root_parent.len, /* remove prefix if not using exact path */
                                   "/" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     topath.free = free;
@@ -172,17 +172,80 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     return rc;
 }
 
+/*
+ * Duplicate the path between the GUFI tree parent and the actual
+ * index root. Although stat(2) is used to get the correct permissions
+ * and owners, these directories are not being indexed, so empty db.db
+ * files will not be created.
+ *
+ * index_parent should have been created before calling this function
+ */
+static int create_intermediate_paths(const str_t *index_parent, char *path) {
+    for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
+        *p = '\0';
+
+        /* stat the original path */
+        struct stat st;
+        if (stat(path, &st) != 0) { /* stat(2) not lstat(2) */
+            const int err = errno;
+            if (err != ENOENT) {
+                fprintf(stderr, "Error: Cannot stat directory \"%s\": %s (%d)\n",
+                        path, strerror(err), err);
+                *p = '/';
+                return 1;
+            }
+        }
+
+        if (!S_ISDIR(st.st_mode)) {
+            fprintf(stderr, "Error: \"%s\" is not a directory\n", path);
+            *p = '/';
+            return 1;
+        }
+
+        char *topath = NULL;
+        SNFORMAT_S_ALLOC(&topath, 3,
+                         index_parent->data, index_parent->len,
+                         "/", (size_t) 1,
+                         path, strlen(path));
+
+        if (mkdir(topath, st.st_mode) == -1) {
+            const int err = errno;
+            if (err != EEXIST) {
+                fprintf(stderr, "Error: Could not make \"%s\": %s (%d)\n",
+                        topath, strerror(err), err);
+                free(topath);
+                *p = '/';
+                return 1;
+            }
+        }
+        else {
+            if (chmod(topath, st.st_mode) != 0) {
+                const int err = errno;
+                if (err != EEXIST) {
+                    fprintf(stderr, "Warning: Could not chmod \"%s\": %s (%d)\n",
+                            topath, strerror(err), err);
+                }
+            }
+            if (chown(topath, st.st_uid, st.st_gid) != 0) {
+                const int err = errno;
+                if (err != EEXIST) {
+                    fprintf(stderr, "Warning: Could not chown \"%s\": %s (%d)\n",
+                            topath, strerror(err), err);
+                }
+            }
+        }
+        free(topath);
+
+        *p = '/';
+    }
+
+    return 0;
+}
+
 /* set up parent for a single subtree root in the index and enqueue subtree root as normal work */
 static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
     struct work *subtree_root = (struct work *) data;
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
-
-    /* offset by root_parent.len to remove prefix */
-    char *topath = NULL;
-    SNFORMAT_S_ALLOC(&topath, 3,
-                     pa->index_parent.data, pa->index_parent.len,
-                     "/", (size_t) 1,
-                     subtree_root->name + subtree_root->root_parent.len, subtree_root->name_len - subtree_root->root_parent.len);
 
     /*
      * create directories up to parent with correct permissions and owners
@@ -191,52 +254,15 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
      *
      * empty db.db files are not created
      */
-    for (char *p = strchr(topath + 1, '/'); p; p = strchr(p + 1, '/')) {
-        *p = '\0';
-
-        struct stat st;
-        if (stat(topath, &st) != 0) { /* stat(2) not lstat(2) */
-            const int err = errno;
-            if (err != ENOENT) {
-                fprintf(stderr, "Error: Cannot stat subtree root parent \"%s\": %s (%d)\n",
-                        topath, strerror(err), err);
-                goto error;
-            }
-        }
-
-        if (!S_ISDIR(st.st_mode)) {
-            fprintf(stderr, "Error: Subtree root parent is not a directory \"%s\"\n", topath);
-            goto error;
-        }
-
-        if (mkdir(topath, st.st_mode) == -1) {
-            const int err = errno;
-            if (err != EEXIST) {
-                fprintf(stderr, "Error: Could not make subtree root parent \"%s\": %s (%d)\n",
-                        topath, strerror(err), err);
-                *p = '/';
-                goto error;
-            }
-        }
-        else {
-            chmod(topath, st.st_mode);
-            chown(topath, st.st_uid, st.st_gid);
-        }
-
-        *p = '/';
+    if (create_intermediate_paths(&pa->index_parent, subtree_root->name + subtree_root->root_parent.len) != 0) {
+        free(subtree_root);
+        return 1;
     }
-
-    free(topath);
 
     struct work *copy = compress_struct(pa->in.compress, subtree_root, struct_work_size(subtree_root));
     QPTPool_enqueue(ctx, processdir, copy);
 
     return 0;
-
-  error:
-    free(topath);
-    free(subtree_root);
-    return 1;
 }
 
 /*
@@ -268,7 +294,7 @@ static int setup_dst(char *index_parent) {
     return 0;
 }
 
-static int validate_source(str_t *index_parent, const char *path, struct work **work) {
+static int validate_source(str_t *index_parent, const char *path, struct work **work, const int use_exact_path) {
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) != 0) {
@@ -283,10 +309,16 @@ static int validate_source(str_t *index_parent, const char *path, struct work **
         return 1;
     }
 
+    if (use_exact_path) {
+        if (create_intermediate_paths(index_parent, (char *) path) != 0) {
+            return 1;
+        }
+    }
+
     struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
     new_work->root_parent.data = (char *) path;
-    new_work->root_parent.len = dirname_len(path, new_work->name_len);
+    new_work->root_parent.len = use_exact_path?0:dirname_len(path, new_work->name_len);
     new_work->level = 0;
     new_work->basename_len = new_work->name_len - new_work->root_parent.len;
     new_work->root_basename_len = new_work->basename_len;
@@ -332,6 +364,7 @@ int main(int argc, char *argv[]) {
 
         /* miscellaneous flags */
         FLAG_EXTERNAL_ATTACH_VALIDATE, FLAG_PLUGIN,
+        FLAG_USE_EXACT_PATH,
 
         /* memory usage flags */
         FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX, FLAG_SUBDIR_LIMIT,
@@ -423,7 +456,8 @@ int main(int argc, char *argv[]) {
         }
         else if (root_count == 1) {
             struct work *root = NULL;
-            if (validate_source(&pa.index_parent, pa.in.pos.argv[0], &root) == 0) {
+            if (validate_source(&pa.index_parent, pa.in.pos.argv[0],
+                                &root, pa.in.use_exact_path) == 0) {
                 process_path_list(&pa.in, root, ctx, process_subtree_root);
             }
             else {
@@ -436,7 +470,8 @@ int main(int argc, char *argv[]) {
             for(int i = 0; i < pa.in.pos.argc; i++) {
                 /* get first work item by validating source path */
                 struct work *root = NULL;
-                if (validate_source(&pa.index_parent, pa.in.pos.argv[i], &root) != 0) {
+                if (validate_source(&pa.index_parent, pa.in.pos.argv[i],
+                                    &root, pa.in.use_exact_path) != 0) {
                     continue;
                 }
 

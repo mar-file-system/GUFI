@@ -12,6 +12,7 @@ options:
       --skip-file <filename>        file containing directory names to skip
   -q, --external-attach-validate    check that external databases are valid before tracking during indexing
       --plugin <entrypoint>:<path>  plugin library for modifying tree processing
+      --use-exact-path              create the index under the exact source path that was passed in instead of just the basename
       --target-memory <bytes>       target memory utilization (soft limit)
       --swap-prefix <path>          File name prefix for swap files
       --subdir-limit <count>        Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
@@ -277,7 +278,6 @@ Total Dirs:          3
 Total Non-Dirs:      5
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
-Cannot attach database "prefix/db.db" as "tree": unable to open database: file:prefix/db.db?mode=ro
 prefix/directory
 prefix/directory/executable
 prefix/directory/readonly
@@ -303,7 +303,6 @@ Total Dirs:          2
 Total Non-Dirs:      3
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
-Cannot attach database "prefix/db.db" as "tree": unable to open database: file:prefix/db.db?mode=ro
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
@@ -356,6 +355,23 @@ prefix/unusual#? directory ,
 prefix/unusual#? directory ,/unusual, name?#
 
 # ######################################
+
+# keep input path instead of using basename
+$ gufi_dir2index -n 2 --use-exact-path "prefix/directory/subdirectory" "search"
+Creating GUFI tree search with 2 threads
+Total Dirs:          1
+Total Non-Dirs:      2
+
+$ find "prefix"
+prefix
+prefix/directory
+prefix/directory/subdirectory
+prefix/directory/subdirectory/db.db
+
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
 
 # no source path
 $ gufi_dir2index -n 2 "search"

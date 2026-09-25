@@ -205,6 +205,12 @@ run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;
 echo "# ######################################"
 echo
 
+echo "# keep input path instead of using basename"
+rm -r "${SEARCH}"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} --use-exact-path \"${SRCDIR}/directory/subdirectory\" \"${SEARCH}\""
+run_sort "find \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \"${INDEXROOT}\""
+
 rm -r "${SEARCH}"
 
 echo "# no source path"

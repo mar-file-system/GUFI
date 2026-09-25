@@ -351,6 +351,9 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    /* do not print errors on missing database files */
+    set_no_print_errno(in.no_print_errno, ENOENT);
+
     /* initial set up done, can start processing and printing results */
 
     if (doing_partial_walk(&in, root_count)) {
