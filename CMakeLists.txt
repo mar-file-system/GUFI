@@ -575,8 +575,13 @@ endif()
 if (DEP_USE_JEMALLOC)
   list(APPEND COMMON_LIBRARIES
     "${JEMALLOC}"
-    stdc++ # required by alpine linux
   )
+
+  if (NOT APPLE AND NOT DARWIN AND NOT CYGWIN)
+    list(APPEND COMMON_LIBRARIES
+      stdc++
+    )
+  endif()
 
   install(DIRECTORY
     "${DEP_INSTALL_PREFIX}/jemalloc/lib/" # keep trailing slash
