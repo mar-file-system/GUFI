@@ -88,14 +88,14 @@ jobs:
     steps:
     - uses: actions/checkout@main
 
-    - name: GNU tar for Alpine Linux caching
+    - name: Install Dependencies for Alpine Linux Caching
       if:   matrix.img == 'alpine:edge'
       run:  |
         apk update
 
         # install GNU tar for actions/cache
         # https://stackoverflow.com/a/64187955/341683
-        apk add --no-cache tar
+        apk add --no-cache gzip nodejs tar zstd
 
     - uses: actions/cache@main
       with:
