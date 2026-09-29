@@ -145,11 +145,13 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
         return NULL;
     }
 
-    /* attach the globally accessible database here */
-    if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, aggregate->db,
-                      GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
-        aggregate_fin(aggregate, in);
-        return NULL;
+    if (str_exists(&in->global_db)) {
+        /* attach the globally accessible database here */
+        if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, aggregate->db,
+                          GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
+            aggregate_fin(aggregate, in);
+            return NULL;
+        }
     }
 
     return aggregate;
