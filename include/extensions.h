@@ -62,40 +62,29 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_POOL_ARGS_H
-#define GUFI_QUERY_POOL_ARGS_H
+#ifndef GUFI_EXTENSIONS_H
+#define GUFI_EXTENSIONS_H
 
-#include <pthread.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <sqlite3.h>
 
-#include "OutputBuffers.h"
-#include "bf.h"
-#include "dbutils.h"
-#include "trie.h"
+#include "str.h"
 
-#define GUFI_QUERY_GLOBAL_DB_FILENAME "file:/global?vfs=memdb"
-#define GUFI_QUERY_GLOBAL_DB_ATTACHNAME "global"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef struct ThreadArgs {
-    char *dbname;
-    sqlite3 *outdb;                    /* either user named or in-memory */
-    FILE *outfile;                     /* always points to STDOUT or a user defined file */
-    trie_t *user_strs;                 /* per-thread user strings */
-    struct OutputBuffer output_buffer; /* only used when outputting to STDOUT or OUTFILE */
-} ThreadArgs_t;
+/*
+ * this source is compiled separately from the GUFI library so that
+ * sqlite-vec and sqlite-lembed do not become unnecessary dependencies
+ */
 
-typedef struct PoolArgs {
-    struct input *in;                  /* save a reference here for convenience */
-    sqlite3 *global_db;                /* db accessible at all times */
-    ThreadArgs_t *ta;
+int augment_db(sqlite3 *db, const sqlite3_api_routines *pApi);
+int set_up_global_db(str_t *sql, sqlite3 **db,
+                     const sqlite3_api_routines *pApi,
+                     const int no_print_sql_on_err);
 
-    pthread_mutex_t *stdout_mutex;
-
-    char detach[MAXSQL];               /* cache SQL statement for detaching index dbs */
-} PoolArgs_t;
-
-int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex);
-void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

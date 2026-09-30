@@ -164,6 +164,9 @@ run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 --global-db \"CREATE TABLE d
 echo "# Read globally accessible data during -G"
 run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 --global-db \"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\" -I \"CREATE TABLE out(path TEXT, inode TEXT);\" -K \"CREATE TABLE aggregate(path TEXT, inode TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path, inode FROM out;\" -G \"SELECT path, inode, i, t FROM aggregate JOIN data ON aggregate.inode <= data.i;\" \"${INDEXROOT}\""
 
+echo "# Use contextless functions during --global-db"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} -a 1 --global-db \"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, modetotxt(0)), (1, modetotxt(1)), (2, modetotxt(2));\" -S \"SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;\" -E \"SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;\" \"${INDEXROOT}\""
+
 echo "#####################################"
 echo "# Invalid Inputs                    #"
 echo "#####################################"

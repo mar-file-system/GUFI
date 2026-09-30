@@ -356,6 +356,15 @@ prefix/old_file 0 0 global data 0
 prefix/old_file 0 1 global data 1
 prefix/old_file 0 2 global data 2
 
+# Use contextless functions during --global-db
+$ gufi_query -d " " -n 2 -a 1 --global-db "CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, modetotxt(0)), (1, modetotxt(1)), (2, modetotxt(2));" -S "SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;" -E "SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;" "prefix"
+prefix/directory/executable 1 1 ---------x
+prefix/directory/executable 1 2 --------w-
+prefix/directory/readonly 2 2 --------w-
+prefix/old_file 0 0 ----------
+prefix/old_file 0 1 ---------x
+prefix/old_file 0 2 --------w-
+
 #####################################
 # Invalid Inputs                    #
 #####################################
@@ -588,5 +597,5 @@ Error: no such column: abc: search/db.db
 
 # Bad global db set up
 $ gufi_query -d " " -n 2 --global-db "CREATE TABLE;" -E "SELECT rpath(sname, sroll, name), inode FROM vrpentries;" "prefix"
-Error: Could not initiailize global db with "CREATE TABLE;": near ";": syntax error
+Error: Could not set up global db with "CREATE TABLE;": near ";": syntax error
 

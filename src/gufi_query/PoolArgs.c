@@ -65,11 +65,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-#if HAVE_AI
-#include "sqlite-lembed.h"
-#include "sqlite-vec.h"
-#endif
-
+#include "extensions.h"
 #include "plugin.h"
 
 #include "gufi_query/PoolArgs.h"
@@ -122,29 +118,10 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         pa->stdout_mutex = global_mutex;
     }
 
-    /* create a common read-only database to all threads */
-    if (str_exists(&in->global_db)) {
-        pa->global_db = opendb(GUFI_QUERY_GLOBAL_DB_FILENAME, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-                               1, 1, NULL, NULL);
-        if (!pa->global_db) {
-            return 1;
-        }
-
-        char *err = NULL;
-        if (sqlite3_exec(pa->global_db, in->global_db.data, NULL, NULL, &err) != SQLITE_OK) {
-            if (!in->no_print_sql_on_err) {
-                sqlite_print_err_and_free(err, stderr, "Error: Could not initiailize global db with \"%s\": %s\n",
-                                          in->global_db.data, err);
-            }
-            else {
-                sqlite_print_err_and_free(err, stderr, "Error: Could not initialize global db: %s\n",
-                                          err);
-            }
-
-            closedb(pa->global_db);
-            input_fini(pa->in);
-            return 1;
-        }
+    if (set_up_global_db(&in->global_db, &pa->global_db,
+                         NULL, in->no_print_sql_on_err) != 0) {
+        input_fini(pa->in);
+        return 1;
     }
 
     /* catch this failure - it can be handled cleanly */
@@ -186,7 +163,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             }
         }
 
-        addqueryfuncs(ta->outdb);
+        /* add per-thread functions */
 
         /* user string storage */
         ta->user_strs = trie_alloc();
@@ -212,26 +189,16 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             break;
         }
 
+        if (augment_db(ta->outdb, NULL) != 0) {
+            break;
+        }
+
         char *err = NULL;
 
         if (sqlite3_runvt_init(ta->outdb, &err, NULL) != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr, "Error: Could not initialize runvt: %s\n", err);
-            break;
+            return 1;
         }
-
-        #if HAVE_AI
-        /* load the sqlite-vec extension */
-        if (sqlite3_vec_init(ta->outdb, &err, NULL) != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Error: Could not initialize sqlite3-vec: %s\n", err);
-            break;
-        }
-
-        /* load the sqlite-lembed extension */
-        if (sqlite3_lembed_init(ta->outdb, &err, NULL) != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Error: Could not initialize sqlite3-lembed: %s\n", err);
-            break;
-        }
-        #endif
 
         /* create empty xattr tables to UNION to */
         if (sqlite3_exec(ta->outdb, XATTRS_TEMPLATE_CREATE,

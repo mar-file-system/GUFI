@@ -420,6 +420,13 @@ query=$(
 )
 query_vt "${query}"
 
+echo "# Use contextless functions during --global_db"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", a=1, global_db=\"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, modetotxt(0)), (1, modetotxt(1)), (2, modetotxt(2));\", S=\"SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;\", E=\"SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
 echo "# ######################################"
 echo "# errors"
 

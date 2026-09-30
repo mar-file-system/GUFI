@@ -187,10 +187,12 @@ set_property(TARGET gufi_dir2index PROPERTY ENABLE_EXPORTS TRUE)
 build_and_install_one("${SERVER_BIN}" TRUE gufi_stat_bin gufi_stat.c)
 
 # gufi_sqlite3 loads AI extensions
+target_sources(gufi_sqlite3 PRIVATE extensions.c)
 add_ai(gufi_sqlite3 "libsqlite_vec0.a" "libsqlite_lembed0.a")
 
 # gufi_query is split up into multiple files
 add_library(gufi_query_lib OBJECT
+  extensions.c
   gufi_query/PoolArgs.c
   gufi_query/aggregate.c
   gufi_query/external_attach.c
@@ -231,6 +233,7 @@ add_library(gufi_vt MODULE
   bf.c
   dbutils.c
   debug.c
+  extensions.c
   external_attach.c
   external_copy.c
   histogram.c
@@ -244,6 +247,7 @@ add_library(gufi_vt MODULE
   xattrs.c
 )
 set_property(TARGET gufi_vt PROPERTY PREFIX "")
+target_compile_definitions(gufi_vt PUBLIC GUFI_VT=1)
 
 if (APPLE OR DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189

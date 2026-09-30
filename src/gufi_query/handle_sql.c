@@ -65,12 +65,8 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 
-#if HAVE_AI
-#include "sqlite-lembed.h"
-#include "sqlite-vec.h"
-#endif
-
 #include "dbutils.h"
+#include "extensions.h"
 #include "template_db.h"
 
 #include "gufi_query/PoolArgs.h"
@@ -175,36 +171,18 @@ static int gen_types(struct input *in) {
             return -1;
         }
 
-        #if HAVE_AI
-        sqlite3_vec_init(db, NULL, NULL);
-        sqlite3_lembed_init(db, NULL, NULL);
-        #endif
+        if (set_up_global_db(&in->global_db, &global_db,
+                             NULL, in->no_print_sql_on_err) != 0) {
+            closedb(db);
+            return -1;
+        }
 
-        if (str_exists(&in->global_db)) {
-            global_db = opendb(GUFI_QUERY_GLOBAL_DB_FILENAME, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-                               0, 1, NULL, NULL);
-            if (!global_db) {
-                closedb(db);
-                return -1;
-            }
-
-            char *err = NULL;
-            if (sqlite3_exec(global_db, in->global_db.data, NULL, NULL, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr,
-                                          "Error: Could not initiailize global db with \"%s\": %s\n",
-                                          in->global_db.data, err);
-                closedb(global_db);
-                closedb(db);
-                return -1;
-            }
-
-            /* attach to the db after initializing the global db */
-            if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, db,
-                              GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
-                closedb(global_db);
-                closedb(db);
-                return -1;
-            }
+        /* attach to the db after initializing the global db */
+        if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, db,
+                          GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
+            closedb(global_db);
+            closedb(db);
+            return -1;
         }
 
         int cols = 0; /* discarded */
@@ -222,6 +200,7 @@ static int gen_types(struct input *in) {
         }
 
         addqueryfuncs(db);
+        augment_db(db, NULL);
         addqueryfuncs_with_context(db, &ctx);
 
         if (str_exists(&in->sql.init)) {

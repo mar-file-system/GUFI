@@ -74,15 +74,11 @@ SQLITE_EXTENSION_INIT1
 
 #include "pcre.h"
 
-#if HAVE_AI
-#include "sqlite-lembed.h"
-#include "sqlite-vec.h"
-#endif
-
 #include "SinglyLinkedList.h"
 #include "addqueryfuncs.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "extensions.h"
 #include "external_attach.h"
 #include "external_copy.h"
 #include "popen_argv.h"
@@ -292,7 +288,9 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--dir-match-gid ");
         }
 
-        flatten_argv(argc, argv, "--global-db",           cmd->global_db);
+        if (str_exists(&cmd->global_db)) {
+            flatten_argv(argc, argv, "--global-db",           cmd->global_db);
+        }
         flatten_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
         flatten_argv(argc, argv, "-I",                    cmd->I);
         flatten_argv(argc, argv, "-T",                    cmd->T);
@@ -402,7 +400,9 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = dir_match_gid;
         }
 
-        set_argv(argc, argv, "--global-db",           cmd->global_db);
+        if (str_exists(&cmd->global_db)) {
+            set_argv(argc, argv, "--global-db",           cmd->global_db);
+        }
         set_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
         set_argv(argc, argv, "-I",                    cmd->I);
         set_argv(argc, argv, "-T",                    cmd->T);
@@ -1250,37 +1250,19 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                              0, 0, create_dbdb_tables, NULL); /* not initializing extensions here */
 
     sqlite3_pcre2_init(tempdb, NULL, SQLITE_API_ROUTINES);
-
-    #if HAVE_AI
-    sqlite3_vec_init(tempdb, NULL, SQLITE_API_ROUTINES);
-    sqlite3_lembed_init(tempdb, NULL, SQLITE_API_ROUTINES);
-    #endif
+    augment_db(tempdb, SQLITE_API_ROUTINES);
 
     /* create a common read-only database to all threads */
     sqlite3 *global_db = NULL;
-    if (str_exists(&cmd.global_db)) {
-        global_db = opendb(GUFI_QUERY_GLOBAL_DB_FILENAME, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-                           0, 0, NULL, NULL); /* not initializing extensions here */
-        if (!global_db) {
-            closedb(tempdb);
-            plugins_destroy(&in.plugins);
-            gq_cmd_destroy(&cmd);
-            input_fini(&in);
-            return SQLITE_CONSTRAINT;
-        }
+    if (set_up_global_db(&cmd.global_db, &global_db, SQLITE_API_ROUTINES, 0) != 0) {
+        closedb(tempdb);
+        plugins_destroy(&in.plugins);
+        gq_cmd_destroy(&cmd);
+        input_fini(&in);
+        return SQLITE_CONSTRAINT;
+    }
 
-        char *err = NULL;
-        if (sqlite3_exec(global_db, cmd.global_db.data, NULL, NULL, &err) != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Error: Could not initiailize global db with \"%s\": %s\n",
-                                      cmd.global_db.data, err);
-            closedb(global_db);
-            closedb(tempdb);
-            plugins_destroy(&in.plugins);
-            gq_cmd_destroy(&cmd);
-            input_fini(&in);
-            return SQLITE_CONSTRAINT;
-        }
-
+    if (global_db) {
         /* attach to the db after initializing the global db */
         if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, tempdb,
                           GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
@@ -1783,7 +1765,8 @@ int sqlite3_gufivt_init(
 
     SQLITE_API_ROUTINES = pApi;
 
-    addqueryfuncs(db);
+    sqlite3_pcre2_init(db, pzErrMsg, pApi);
+    augment_db(db, pApi);
 
     /* fixed schemas - SELECT directly from these */
     create_module("gufi_vt_treesummary",   NULL,                gufi_vt_TConnect);
