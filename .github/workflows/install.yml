@@ -97,27 +97,28 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-rockylinux/rockylinux:10
 
-    - name: Install Marfs & ISA-L
-      run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+    # - name: Install Marfs & ISA-L
+    #   run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCLIENT=On
+      run:  cmake -B build ${{ env.COMMON_CONFIG }} -DCLIENT=On -DDEP_AI=Off -UMARFS_PREFIX -DDEP_USE_JEMALLOC=Off
 
     - name: Build
-      run:  cmake --build ${{ github.workspace }}/build -j
+      run:  cmake --build build -j
 
     # - name: Test
     #   run:  |
-    #     cd ${{ github.workspace }}/build
+    #     cd build
     #     ctest --output-on-failure
 
     - name: Build and Test RPMs
       run:  |
-        cd ${{ github.workspace }}/build
-        contrib/CI/rpms.sh "${{ matrix.client }}"
+        cd build
+        contrib/CI/rpms.sh
 
     - name: Upload RPMs
       uses: softprops/action-gh-release@master
       if:   startsWith(github.ref, 'refs/tags/')
       with:
-        files: build/*.rpm
+        files: "build/*.rpm"
+        fail_on_unmatched_files: true
