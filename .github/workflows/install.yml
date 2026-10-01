@@ -88,16 +88,16 @@ jobs:
     steps:
     - uses: actions/checkout@main
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-rockylinux/rockylinux:10
-
     - name: Rocky Linux Prerequisites
       run:  contrib/CI/rockylinux.sh
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-rockylinux/rockylinux:10
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
@@ -130,16 +130,16 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-${{ matrix.type }}-Install
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-${{ matrix.type }}-Install
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2

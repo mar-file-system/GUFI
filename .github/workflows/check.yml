@@ -122,11 +122,6 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-old-cmake
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
@@ -135,6 +130,11 @@ jobs:
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-old-cmake
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
@@ -179,16 +179,16 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-test-directory
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-test-directory
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
@@ -214,16 +214,16 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-no-db-writes
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-no-db-writes
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
@@ -263,16 +263,16 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-ASAN-LSAN-UBSAN
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-ASAN-LSAN-UBSAN
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
@@ -298,16 +298,16 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-TSAN
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-TSAN
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
@@ -332,16 +332,16 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-memcheck
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Valgrind
       run:  sudo apt -y install valgrind
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-memcheck
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX="" -DPRESIDIO_PLUGIN=Off
@@ -373,16 +373,16 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-without-jemalloc
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-without-jemalloc
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2

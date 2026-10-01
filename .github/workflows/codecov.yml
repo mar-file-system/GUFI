@@ -93,16 +93,16 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-CodeCoverage
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-CodeCoverage
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2

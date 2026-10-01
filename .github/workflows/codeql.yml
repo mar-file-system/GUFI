@@ -99,15 +99,15 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-CodeQL
 
-    - uses: github/codeql-action/init@main
-      with:
-        queries: security-and-quality
-
     - name: Ubuntu Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: github/codeql-action/init@main
+      with:
+        queries: security-and-quality
 
     - name: Install Marfs & ISA-L
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2

@@ -67,6 +67,13 @@ set -e
 # install Extra Packages for Enterprise Linux (EPEL)
 dnf -y install epel-release
 
+# actions/cache dependencies
+dnf -y install \
+    gzip \
+    nodejs \
+    tar \
+    zstd
+
 # install libraries
 dnf -y --enablerepo=devel install \
     fuse-devel \

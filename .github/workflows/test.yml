@@ -88,20 +88,6 @@ jobs:
     steps:
     - uses: actions/checkout@main
 
-    - name: Install Dependencies for Alpine Linux Caching
-      if:   matrix.img == 'alpine:edge'
-      run:  |
-        apk update
-
-        # install GNU tar for actions/cache
-        # https://stackoverflow.com/a/64187955/341683
-        apk add --no-cache gzip nodejs tar zstd
-
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-${{ matrix.img }}
-
     - name: AlmaLinux Prerequisites
       if:   startsWith(matrix.img, 'almalinux:')
       run:  contrib/CI/almalinux.sh
@@ -120,6 +106,11 @@ jobs:
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-${{ matrix.img }}
 
     - name: Install Marfs & ISA-L
       if:   matrix.img != 'alpine:edge'
@@ -154,16 +145,16 @@ jobs:
         fetch-depth: 0
         fetch-tags: false
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ matrix.os }}
-
     - name: macOS Prerequisites
       run:  contrib/CI/macos.sh | tail -n 1 >> "${GITHUB_PATH}"
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ matrix.os }}
 
     - name: Configure CMake
       run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_OSX_SYSROOT=macosx
@@ -191,11 +182,6 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - uses: actions/cache@main
-      with:
-        path: D:\cygwin
-        key:  ${{ runner.os }}-cygwin
-
     - name: Install Cygwin
       uses: cygwin/cygwin-install-action@master
       with:
@@ -206,6 +192,11 @@ jobs:
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
+
+    - uses: actions/cache@main
+      with:
+        path: D:\cygwin
+        key:  ${{ runner.os }}-cygwin
 
     - name: Fix Cache
       run: >-

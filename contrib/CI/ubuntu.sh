@@ -69,6 +69,13 @@ ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 apt update
 
+# actions/cache dependencies
+apt -y install \
+    gzip \
+    nodejs \
+    tar \
+    zstd
+
 # install libraries
 apt -y install \
     libattr1-dev \
