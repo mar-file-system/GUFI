@@ -82,6 +82,9 @@ jobs:
         client: [ Off, On ]
       fail-fast: false
 
+    permissions:
+      contents: write
+
     container:
       image: rockylinux/rockylinux:10
 
@@ -103,18 +106,27 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCLIENT="${{ matrix.client }}"
+      run:  cmake -B build ${{ env.COMMON_CONFIG }} -DCLIENT="${{ matrix.client }}"
+
+    - name: Build
+      run:  cmake --build build -j
+
+    - name: Test
+      run:  |
+        cd build
+        ctest --output-on-failure
 
     - name: Build and Test RPMs
       run:  |
-        cd ${{ github.workspace }}/build
+        cd build
         contrib/CI/rpms.sh "${{ matrix.client }}"
 
     - name: Upload RPMs
       uses: softprops/action-gh-release@master
       if:   startsWith(github.ref, 'refs/tags/') && (matrix.client == 'On')
       with:
-        files: ${{ github.workspace }}/build/*.rpm
+        files: build/*.rpm
+        fail_on_unmatched_files: true
 
   Install:
     runs-on: ubuntu-latest
