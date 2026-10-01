@@ -80,7 +80,7 @@ jobs:
     strategy:
       matrix:
         img: [ "almalinux:latest", "alpine:edge", "rockylinux/rockylinux:9", "rockylinux/rockylinux:10", "ubuntu:22.04", "ubuntu:24.04", "ubuntu:26.04" ]
-      fail-fast: true
+      fail-fast: false
 
     container:
       image: ${{ matrix.img }}
@@ -152,7 +152,7 @@ jobs:
     - uses: actions/checkout@main
       with:
         fetch-depth: 0
-        fetch-tags: true
+        fetch-tags: false
 
     - uses: actions/cache@main
       with:

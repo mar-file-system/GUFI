@@ -80,6 +80,7 @@ jobs:
     strategy:
       matrix:
         client: [ Off, On ]
+      fail-fast: false
 
     container:
       image: rockylinux/rockylinux:10
@@ -121,6 +122,7 @@ jobs:
     strategy:
       matrix:
         type: [ 'CMake', 'Make' ]
+      fail-fast: false
 
     steps:
     - uses: actions/checkout@main
