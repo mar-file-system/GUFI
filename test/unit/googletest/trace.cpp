@@ -130,16 +130,16 @@ static struct work *get_work(struct entry_data *ed) {
     return new_work;
 }
 
-static int to_string(char *line, const std::size_t size, struct work *work, struct entry_data *ed) {
+static int new_format(char *line, const std::size_t size, struct work *work, struct entry_data *ed) {
     const int part1 = snprintf(line, size,
                                "%" PATH_PREFIX_FORMAT
                                "%s%c"
                                "%c%c"
                                "%" STAT_ino "%c"
-                               "%d%c"
+                               "%" STAT_mode "%c"
                                "%" STAT_nlink "%c"
-                               "%d%c"
-                               "%d%c"
+                               "%" STAT_uid "%c"
+                               "%" STAT_gid "%c"
                                "%" STAT_size "%c"
                                "%" STAT_bsize "%c"
                                "%" STAT_blocks "%c"
@@ -181,7 +181,7 @@ static int to_string(char *line, const std::size_t size, struct work *work, stru
                                "%s%c"
                                "%" OSSTEXT_PREFIX_FORMAT
                                "%s%c"
-                               "%lld%c"
+                               "%" STAT_ino "%c"
                                "\n",
                                              delim,
                                work->crtime, delim,
@@ -218,7 +218,7 @@ TEST(trace, worktofile) {
 
     // generate the string to compare with
     char line[4096];
-    const int rc = to_string(line, sizeof(line), work, &ed);
+    const int rc = new_format(line, sizeof(line), work, &ed);
 
     ASSERT_GT(rc, -1);
     ASSERT_LT(rc, (int) sizeof(line));
@@ -249,7 +249,7 @@ TEST(trace, worktobuffer) {
 
     // generate the string to compare with
     char line[4096];
-    const int rc = to_string(line, sizeof(line), work, &ed);
+    const int rc = new_format(line, sizeof(line), work, &ed);
 
     ASSERT_GT(rc, -1);
     ASSERT_LT(rc, (int) sizeof(line));
@@ -298,7 +298,7 @@ TEST(trace, linetowork) {
 
     // write the known struct to a string using an alternative write function
     char line[4096];
-    const int rc = to_string(line, sizeof(line), src, &src_ed);
+    const int rc = new_format(line, sizeof(line), src, &src_ed);
     ASSERT_GT(rc, -1);
     ASSERT_LT(rc, (int) sizeof(line));
 
@@ -316,35 +316,148 @@ TEST(trace, linetowork) {
 
     xattrs_cleanup(&ed.xattrs);
     free(work);
+
+    // name does not end with delimiter (do this before modifying length)
+    line[PATH_PREFIX_LEN + src->name_len] = '\0';
+    EXPECT_EQ(linetowork(line,    rc, delim, &work,   &ed,     0), -1);
+    line[PATH_PREFIX_LEN + src->name_len] = delim;
+
     free(src);
 
-    EXPECT_EQ(linetowork(nullptr, rc, delim, &work, &ed,  0), -1);
-    EXPECT_EQ(linetowork(line, rc, delim, nullptr,  &ed,  0), -1);
-    EXPECT_EQ(linetowork(line, rc, delim, &work, nullptr, 0), -1);
+    // name characters are not valid
+    for(size_t i = 0; i < PATH_PREFIX_LEN; i++) {
+        line[i] = '-';
+    };
+    EXPECT_EQ(linetowork(line,    rc, delim, &work,   &ed,     0), -1);
+
+    // name length is too long
+    for(size_t i = 0; i < PATH_PREFIX_LEN; i++) {
+        line[i] = 'f';
+    };
+    EXPECT_EQ(linetowork(line,    rc, delim, &work,   &ed,     0), -1);
+
+    EXPECT_EQ(linetowork(nullptr, rc, delim, &work,   &ed,     0), -1);
+    EXPECT_EQ(linetowork(line,    rc, delim, nullptr, &ed,     0), -1);
+    EXPECT_EQ(linetowork(line,    rc, delim, &work,   nullptr, 0), -1);
+}
+
+static int old_format(char *line, const std::size_t size, struct work *work, struct entry_data *ed) {
+    const int part1 = snprintf(line, size,
+                               "%s%c"
+                               "%c%c"
+                               "%" STAT_ino "%c"
+                               "%" STAT_mode "%c"
+                               "%" STAT_nlink "%c"
+                               "%" STAT_uid "%c"
+                               "%" STAT_gid "%c"
+                               "%" STAT_size "%c"
+                               "%" STAT_bsize "%c"
+                               "%" STAT_blocks "%c"
+                               "%ld%c"
+                               "%ld%c"
+                               "%ld%c"
+                               "%s%c",
+                               work->name,               delim,
+                               ed->type,                 delim,
+                               work->statuso.st_ino,     delim,
+                               work->statuso.st_mode,    delim,
+                               work->statuso.st_nlink,   delim,
+                               work->statuso.st_uid,     delim,
+                               work->statuso.st_gid,     delim,
+                               work->statuso.st_size,    delim,
+                               work->statuso.st_blksize, delim,
+                               work->statuso.st_blocks,  delim,
+                               work->statuso.st_atime,   delim,
+                               work->statuso.st_mtime,   delim,
+                               work->statuso.st_ctime,   delim,
+                               ed->linkname,             delim);
+
+    line += part1;
+
+    memcpy(line, EXPECTED_XATTRS_STR + 8, EXPECTED_XATTRS_STR_LEN - 8);
+    line += EXPECTED_XATTRS_STR_LEN - 8;
+
+    const int part2 = snprintf(line, size,
+                               "%c"
+                               "%ld%c"
+                               "%d%c"
+                               "%d%c"
+                               "%d%c"
+                               "%d%c"
+                               "%s%c"
+                               "%s%c"
+                               "%" STAT_ino "%c"
+                               "\n",
+                                             delim,
+                               work->crtime, delim,
+                               ed->ossint1,  delim,
+                               ed->ossint2,  delim,
+                               ed->ossint3,  delim,
+                               ed->ossint4,  delim,
+                               ed->osstext1, delim,
+                               ed->osstext2, delim,
+                               work->pinode, delim);
+
+    line += part2;
+    *line = '\0';
+
+    return part1 + EXPECTED_XATTRS_STR_LEN - 8 + part2;
+}
+
+TEST(old_trace, linetowork) {
+    struct entry_data src_ed;
+    struct work *src = get_work(&src_ed);
+
+    // write the known struct to a string using an alternative write function
+    char line[4096];
+    const int len = old_format(line, sizeof(line), src, &src_ed);
+
+    // read the string
+    struct work *work = nullptr;
+    struct entry_data ed;
+    EXPECT_EQ(linetowork(line, len, delim, &work, &ed, 1), 0);
+
+    COMPARE(src, &src_ed, work, &ed);
+
+    EXPECT_STREQ(ed.xattrs.pairs[0].name,  EXPECTED_XATTRS.pairs[0].name);
+    EXPECT_STREQ(ed.xattrs.pairs[0].value, EXPECTED_XATTRS.pairs[0].value);
+    EXPECT_STREQ(ed.xattrs.pairs[1].name,  EXPECTED_XATTRS.pairs[1].name);
+    EXPECT_STREQ(ed.xattrs.pairs[1].value, EXPECTED_XATTRS.pairs[1].value);
+
+    xattrs_cleanup(&ed.xattrs);
+    free(work);
+    free(src);
 }
 
 TEST(open_traces, too_many) {
     EXPECT_EQ(open_traces(nullptr, (size_t) -1), nullptr);
 }
 
-TEST(scout, trace) {
+static void write_first_line(int fd, const int old_fmt, std::size_t &len) {
+    // write valid first line
     struct entry_data src_ed;
     struct work *src = get_work(&src_ed);
     src_ed.type = 'd';
 
-    // write the known struct to a string using an alternative write function
     char line[4096];
-    const int rc = to_string(line, sizeof(line), src, &src_ed);
+    const int rc = (old_fmt?old_format:new_format)(line, sizeof(line), src, &src_ed);
     free(src);
+
     ASSERT_GT(rc, -1);
-    const std::size_t len = strlen(line);
+    len = strlen(line);
     ASSERT_EQ(rc, (int) len);
+
+    EXPECT_EQ(write(fd, line, len), (ssize_t) len);
+}
+
+TEST(scout_trace, good) {
+    std::size_t len = 0;
 
     // write trace to file
     char tracename[] = "XXXXXX";
     const int fd = mkstemp(tracename);
     ASSERT_GT(fd, -1);
-    ASSERT_EQ(write(fd, line, len), (ssize_t) len);
+    write_first_line(fd, 0, len);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     struct TraceStats stats = {};
@@ -457,7 +570,21 @@ TEST(scout, trace) {
     EXPECT_EQ(remove(tracename), 0);
 }
 
-TEST(enqueue_traces, bad) {
+TEST(scout_trace, bad_range) {
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    struct TraceStats ts = {};
+    ts.mutex = &mutex;
+
+    struct ScoutTraceArgs sta = {};
+    sta.tr.start = 1; // after sta.tr.end
+    sta.stats = &ts;
+
+    // bad sta.tr.end
+    EXPECT_EQ(scout_trace(nullptr, &sta), 1);
+}
+
+TEST(enqueue_traces, bad_fd) {
     char tracename[] = "trace";
     char *tracenameptr = tracename;
     int tracefd = -1;
@@ -466,23 +593,13 @@ TEST(enqueue_traces, bad) {
     EXPECT_EQ(enqueue_traces(&tracenameptr, &tracefd, 1, '|', 10, 0, nullptr, nullptr, &stats), (std::size_t) 0);
 }
 
-TEST(scout, stream) {
-    struct entry_data src_ed;
-    struct work *src = get_work(&src_ed);
-    src_ed.type = 'd';
-
-    // write the known struct to a string using an alternative write function
-    char line[4096];
-    const int rc = to_string(line, sizeof(line), src, &src_ed);
-    free(src);
-    ASSERT_GT(rc, -1);
-    const std::size_t len = strlen(line);
-    ASSERT_EQ(rc, (int) len);
+TEST(scout_stream, good) {
+    std::size_t len = 0;
 
     // write trace to pipe
     int fds[2];
     ASSERT_EQ(pipe(fds),0);
-    ASSERT_EQ(write(fds[1], line, len), (ssize_t) len);
+    write_first_line(fds[1], 0, len);
     EXPECT_EQ(close(fds[1]), 0);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -523,4 +640,73 @@ TEST(scout, stream) {
     EXPECT_EQ(stats.empty,      (size_t)   1);
 
     EXPECT_EQ(close(fds[0]), 0);
+}
+
+TEST(scout_stream, bad) {
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    struct TraceStats stats = {};
+    stats.mutex = &mutex;
+
+    /* malloc sta because normally free branch is not triggered */
+    struct ScoutTraceArgs sta = {};
+    sta.delim      = delim;
+    sta.old_format = 0;
+    sta.tracename  = "-";
+    sta.tr.start   = 0;
+    sta.tr.end     = (std::size_t) -1;
+    sta.processdir = [] (QPTPool_ctx_t *, void *data) {
+        struct row *row = (struct row *) data;
+        row_destroy(&row);
+        return 0;
+    };
+    sta.free       = nullptr;
+    sta.stats      = &stats;
+
+    // bad file descriptor
+    sta.tr.fd      = -1;
+    EXPECT_EQ(scout_stream(nullptr, &sta), 1);
+
+    int fds[2];
+
+    for(int old_format : {0, 1}) {
+        sta.old_format = old_format;
+
+        // empty line
+        ASSERT_EQ(pipe(fds),0);
+        sta.tr.fd = fds[0];
+        EXPECT_EQ(write(fds[1], "\n", 1), 1);
+        EXPECT_EQ(close(fds[1]), 0);
+        EXPECT_EQ(scout_stream(nullptr, &sta), 1);
+        EXPECT_EQ(close(fds[0]), 0);
+
+        // no delimiter
+        ASSERT_EQ(pipe(fds),0);
+        sta.tr.fd = fds[0];
+        EXPECT_EQ(write(fds[1], "    \n", 4), 4);
+        EXPECT_EQ(close(fds[1]), 0);
+        EXPECT_EQ(scout_stream(nullptr, &sta), 1);
+        EXPECT_EQ(close(fds[0]), 0);
+
+        // first line is not a directory
+        ASSERT_EQ(pipe(fds),0);
+        sta.tr.fd = fds[0];
+        EXPECT_EQ(write(fds[1], (std::string(1, delim) + "t\n").c_str(), 4), 4);
+        EXPECT_EQ(close(fds[1]), 0);
+        EXPECT_EQ(scout_stream(nullptr, &sta), 1);
+        EXPECT_EQ(close(fds[0]), 0);
+
+        // not testing empty line
+
+        // valid first line + no delimiter on second line
+        ASSERT_EQ(pipe(fds),0);
+        sta.tr.fd = fds[0];
+        std::size_t len = 0; // unused
+        write_first_line(fds[1], old_format, len);
+        EXPECT_EQ(write(fds[1], "    \n", 4), 4);
+        EXPECT_EQ(close(fds[1]), 0);
+        EXPECT_EQ(scout_stream(nullptr, &sta), 1);
+        EXPECT_EQ(close(fds[0]), 0);
+
+        // not testing bad type
+    }
 }

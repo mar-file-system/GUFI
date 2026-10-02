@@ -91,6 +91,8 @@ int create_xattrs_template(struct template_db *tdb, const str_t *dir);
 int create_dbdb_tables(const char *name, sqlite3 *db, void *args);
 int create_dbdb_template(struct template_db *tdb, const str_t *dir);
 
+int create_rollup_template(struct template_db *tdb, const str_t *dir);
+
 int close_template_db(struct template_db *tdb);
 
 int copy_template(struct template_db *tdb, const char * dst, uid_t uid, gid_t gid, int *err);

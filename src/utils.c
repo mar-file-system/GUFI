@@ -75,6 +75,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <utime.h>
 
+#include "config.h"
 #include "external_attach.h"
 #include "str.h"
 #include "utils.h"
@@ -290,7 +291,7 @@ int tsumit(struct sum *sumin, struct sum *smout) {
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
 //
-int mkpath(const char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
+int mkpath(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
     for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
         if (mkdir(path, mode) == -1) {
@@ -309,7 +310,7 @@ int mkpath(const char *path, const mode_t mode, const uid_t uid, const gid_t gid
     return mkdir(path,mode);
 }
 
-int dupdir(const char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
+int dupdir(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
     // the writer must be able to create the index files into this directory so or in S_IWRITE
     if (mkdir(path, mode) != 0) {
         const int err = errno;
@@ -383,27 +384,58 @@ int SNPRINTF(char *str, size_t size, const char *format, ...) {
  * unnecessary calls to strlen). Make sure to typecast the lengths to
  * size_t or weird bugs may occur. Also, do not pass in NULL pointers.
 */
-size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
+static size_t _SNFORMAT_S(char *dst, const size_t dst_len, size_t count, va_list args) {
     size_t max_len = dst_len - 1;
 
-    va_list args;
-    va_start(args, count);
     for(size_t i = 0; i < count; i++) {
         const char *src = va_arg(args, char *);
         /* size_t does not work, but solution found at */
         /* https://stackoverflow.com/a/12864069/341683 */
         /* does not seem to fix it either */
         const size_t len = va_arg(args, unsigned int);
-        const size_t copy_len = (len < max_len)?len:max_len;
+        const size_t copy_len = min(len, max_len);
         /* not checking for NULL pointers */
         memcpy(dst, src, copy_len);
         dst += copy_len;
         max_len -= copy_len;
     }
-    va_end(args);
 
     *dst = '\0';
     return dst_len - max_len - 1;
+}
+
+size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
+    va_list args;
+    va_start(args, count);
+    const size_t rc = _SNFORMAT_S(dst, dst_len, count, args);
+    va_end(args);
+    return rc;
+}
+
+size_t SNFORMAT_S_ALLOC(char **dst, size_t count, ...) {
+    size_t len = 0;
+
+    va_list args;
+    va_start(args, count);
+
+    va_list fwd;
+    va_copy(fwd, args);
+
+    /* precompute length */
+    for(size_t i = 0; i < count; i++) {
+        (void) va_arg(args, char *);
+        len += va_arg(args, unsigned int);
+    }
+
+    /* allocate for caller */
+    *dst = malloc(len + 1);
+
+    const size_t rc = _SNFORMAT_S(*dst, len + 1, count, fwd);
+
+    va_end(fwd);
+    va_end(args);
+
+    return rc;
 }
 
 /* convert a mode to a human readable string */
@@ -414,18 +446,22 @@ char *modetostr(char *str, const size_t size, const mode_t mode)
     }
 
     if (str) {
+        static const char SETUGID[]   = "-xSs";
+        static const char SETSTICKY[] = "-xTt";
+
         SNPRINTF(str, size, "----------");
         if (S_ISDIR(mode))  str[0] = 'd';
         if (S_ISLNK(mode))  str[0] = 'l';
         if (mode & S_IRUSR) str[1] = 'r';
         if (mode & S_IWUSR) str[2] = 'w';
-        if (mode & S_IXUSR) str[3] = 'x';
+        str[3] = SETUGID[((!!(mode & S_ISUID)) << 1) | !!(mode & S_IXUSR)];
         if (mode & S_IRGRP) str[4] = 'r';
         if (mode & S_IWGRP) str[5] = 'w';
-        if (mode & S_IXGRP) str[6] = 'x';
+        str[6] = SETUGID[((!!(mode & S_ISGID)) << 1) | !!(mode & S_IXGRP)];
         if (mode & S_IROTH) str[7] = 'r';
         if (mode & S_IWOTH) str[8] = 'w';
         if (mode & S_IXOTH) str[9] = 'x';
+        str[9] = SETSTICKY[((!!(mode & S_ISVTX)) << 1) | !!(mode & S_IXOTH)];
     }
 
     return str;
@@ -659,7 +695,7 @@ ssize_t copyfd(int src_fd, off_t src_off,
     ssize_t copied = 0;
     while ((size_t) copied < size) {
         const size_t rem = size - copied;
-        const ssize_t r = pread(src_fd, buf, (rem < buf_size)?rem:buf_size, src_off);
+        const ssize_t r = pread(src_fd, buf, min(rem, buf_size), src_off);
         if (r == 0) {
             break;
         }
@@ -695,15 +731,17 @@ ssize_t copyfd(int src_fd, off_t src_off,
 #endif
 
 /* replace root of actual path being walked with original user inputted root */
-size_t present_user_path(const char *curr, size_t curr_len,
-                         str_t *root_parent, const size_t root_basename_len, str_t *orig_root,
-                         char *buf, size_t len) {
+char *present_user_path(const char *curr, size_t curr_len,
+                         str_t *root_parent, const size_t root_basename_len, str_t *orig_root) {
     const size_t prefix = root_parent->len + root_basename_len;
 
     /* curr + prefix comes with / prefixed, so no need for extra / */
-    return SNFORMAT_S(buf, len, 2,
-                      orig_root->data, orig_root->len,
-                      curr + prefix, curr_len - prefix);
+    char *buf = NULL;
+    SNFORMAT_S_ALLOC(&buf, 2,
+                     orig_root->data, orig_root->len,
+                     curr + prefix, curr_len - prefix);
+
+    return buf;
 }
 
 /* print errors, but keep going */
@@ -870,7 +908,7 @@ void statx_to_work(struct statx *stx, struct stat *st, time_t *crtime) {
 static int stat_func_wrapper(int (*func)(const char *, struct stat *),
                              const char *name, struct stat *st, time_t *crtime,
                              StatCalled *stat_called,
-                             const int print_err, const int print_eacces) {
+                             const int print_err, const uint64_t *no_print_errno) {
     /* don't duplicate work */
     if (*stat_called != STAT_NOT_CALLED) {
         return 0;
@@ -885,7 +923,7 @@ static int stat_func_wrapper(int (*func)(const char *, struct stat *),
               STATX_ALL, &stx) != 0) {
         const int err = errno;
         if (print_err) {
-            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            if (!no_print_errno_set(no_print_errno, err)) {
                 fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
                         name, strerror(err), err);
             }
@@ -900,7 +938,7 @@ static int stat_func_wrapper(int (*func)(const char *, struct stat *),
     if (func(name, st) != 0) {
         if (print_err) {
             const int err = errno;
-            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            if (!no_print_errno_set(no_print_errno, err)) {
                 fprintf(stderr, "Error: Could not lstat \"%s\": %s (%d)\n",
                         name, strerror(err), err);
             }
@@ -918,19 +956,19 @@ static int stat_func_wrapper(int (*func)(const char *, struct stat *),
 
 /* try to call statx if available, otherwise, call stat */
 int stat_wrapper(const char *name, struct stat *st, time_t *crtime,
-                 StatCalled *stat_called, const int print_err, const int print_eacces) {
-    return stat_func_wrapper(stat, name, st, crtime, stat_called, print_err, print_eacces);
+                 StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno) {
+    return stat_func_wrapper(stat, name, st, crtime, stat_called, print_err, no_print_errno);
 }
 
 /* try to call statx if available, otherwise, call lstat */
 int lstat_wrapper(const char *name, struct stat *st, time_t *crtime,
-                  StatCalled *stat_called, const int print_err, const int print_eacces) {
-    return stat_func_wrapper(lstat, name, st, crtime, stat_called, print_err, print_eacces);
+                  StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno) {
+    return stat_func_wrapper(lstat, name, st, crtime, stat_called, print_err, no_print_errno);
 }
 
 /* used by gufi_dir2index and gufi_dir2trace */
-int fstatat_wrapper(struct work *entry, struct entry_data *ed,
-                    const int print_err, const int print_eacces) {
+int fstatat_wrapper(struct work *entry, struct entry_data *ed, const int nofollow_symlink,
+                    const int print_err, const uint64_t *no_print_errno) {
     /* don't duplicate work */
     if (entry->stat_called != STAT_NOT_CALLED) {
         return 0;
@@ -941,11 +979,11 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed,
     #if HAVE_STATX
     struct statx stx;
     if (statx(ed->parent_fd, basename,
-              AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC,
+              AT_STATX_DONT_SYNC | nofollow_symlink,
               STATX_ALL, &stx) != 0) {
         if (print_err) {
             const int err = errno;
-            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            if (!no_print_errno_set(no_print_errno, err)) {
                 fprintf(stderr, "Error: Could not statx \"%s\": %s (%d)\n",
                         entry->name, strerror(err), err);
             }
@@ -957,10 +995,10 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed,
 
     entry->stat_called = STATX_CALLED;
     #else
-    if (fstatat(ed->parent_fd, basename, &entry->statuso, AT_SYMLINK_NOFOLLOW) != 0) {
+    if (fstatat(ed->parent_fd, basename, &entry->statuso, nofollow_symlink) != 0) {
         if (print_err) {
             const int err = errno;
-            if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+            if (!no_print_errno_set(no_print_errno, err)) {
                 fprintf(stderr, "Error: Could not fstatat \"%s\": %s (%d)\n",
                         entry->name, strerror(err), err);
             }
@@ -978,7 +1016,7 @@ int fstatat_wrapper(struct work *entry, struct entry_data *ed,
 
 /* not the same as !doing_partial_walk */
 int bad_partial_walk(struct input *in, const size_t root_count) {
-    if ((in->path_list.data && in->path_list.len) &&
+    if (str_exists(&in->path_list) &&
         (root_count > 1)) {
         fprintf(stderr, "Error: When -D is passed in, only one root directory may be specified\n");
         return 1;
@@ -1057,11 +1095,11 @@ int dir_match(struct input *in, struct stat *st) {
     return rc;
 }
 
-DIR *opendir_wrapper(const char *name, const int print_eacces) {
+DIR *opendir_wrapper(const char *name, const uint64_t *no_print_errno) {
     DIR *dir = opendir(name);
     if (!dir) {
         const int err = errno;
-        if ((err != EACCES) || ((err == EACCES) && print_eacces)) {
+        if (!no_print_errno_set(no_print_errno, err)) {
             fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
                     name, strerror(err), err);
         }
@@ -1099,5 +1137,91 @@ size_t args_to_plugins(sll_t *args, struct plugins *plugins, const size_t nthrea
         }
     }
 
+    plugins->count = count;
     return count;
+}
+
+static int get_id_err(const char *name, const int err, char **buf, char **err_msg, size_t *err_len) {
+    *err_len = snprintf(NULL, 0, "%s: %s (%d)", name, strerror(err), err);
+    *err_msg = malloc(*err_len + 1);
+    SNPRINTF(*err_msg, *err_len + 1, "%s: %s (%d)", name, strerror(err), err);
+    free(*buf);
+    *buf = NULL;
+    return 1;
+}
+
+int getpwuid_wrapper(const uid_t uid, struct passwd *pw, struct passwd **res, char **buf, char **err_msg, size_t *err_len) {
+    /*
+     * adapted from question by Tyler DiBartolo
+     * https://stackoverflow.com/q/47462890
+     */
+
+    const long init_len = sysconf(_SC_GETPW_R_SIZE_MAX);
+    size_t len = 1024;
+    if (init_len != -1) {
+        len = init_len;
+    }
+
+    *res = NULL;
+    *buf = malloc(len);
+    *err_msg = NULL;
+    *err_len = 0;
+
+    errno = 0;
+
+    int rc = 0;
+    while ((rc = getpwuid_r(uid, pw, *buf, len, res)) == ERANGE) {
+        void *new_buf = realloc(*buf, len * 2);
+
+        if (!new_buf) {
+            return get_id_err("realloc", errno, buf, err_msg, err_len);
+        }
+
+        *buf = new_buf;
+        len *= 2;
+    }
+
+    if (rc != 0) {
+        return get_id_err("getpwuid", errno, buf, err_msg, err_len);
+    }
+
+    return 0;
+}
+
+int getgrgid_wrapper(const gid_t gid, struct group *grp, struct group **res, char **buf, char **err_msg, size_t *err_len) {
+    /*
+     * adapted from question by Tyler DiBartolo
+     * https://stackoverflow.com/q/47462890
+     */
+
+    const long init_len = sysconf(_SC_GETGR_R_SIZE_MAX);
+    size_t len = 1024;
+    if (init_len != -1) {
+        len = init_len;
+    }
+
+    *res = NULL;
+    *buf = malloc(len);
+    *err_msg = NULL;
+    *err_len = 0;
+
+    errno = 0;
+
+    int rc = 0;
+    while ((rc = getgrgid_r(gid, grp, *buf, len, res)) == ERANGE) {
+        void *new_buf = realloc(*buf, len * 2);
+
+        if (!new_buf) {
+            return get_id_err("realloc", errno, buf, err_msg, err_len);
+        }
+
+        *buf = new_buf;
+        len *= 2;
+    }
+
+    if (rc != 0) {
+        return get_id_err("getgrgid", errno, buf, err_msg, err_len);
+    }
+
+    return 0;
 }

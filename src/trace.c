@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "SinglyLinkedList.h"
+#include "config.h"
 #include "trace.h"
 #include "utils.h"
 #include "xattrs.h"
@@ -174,7 +175,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
     count += fwrite(ed->osstext2, 1, osstext2_len, file);
     count += fwrite(&delim, 1, 1, file);
 
-    count += fprintf(file, "%lld%c",             work->pinode,             delim);
+    count += fprintf(file, "%" STAT_ino "%c",    work->pinode,             delim);
     count += fprintf(file, "\n");
 
     return count;
@@ -223,29 +224,29 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
     write_with_resize(buf, size, offset, "%" OSSTEXT_PREFIX_FORMAT, strlen(ed->osstext2));
     write_with_resize(buf, size, offset, "%s%c",               ed->osstext2,             delim);
 
-    write_with_resize(buf, size, offset, "%lld%c",             work->pinode,             delim);
+    write_with_resize(buf, size, offset, "%" STAT_ino "%c",    work->pinode,             delim);
     write_with_resize(buf, size, offset, "\n");
 
     return *offset - orig_offset;
 }
 
-#define read_prefixed(name, buf, FMT, LEN)                                          \
+#define read_prefixed(name, buf, FMT, FMT_LEN)                                      \
     size_t len = 0;                                                                 \
     int chars = 0;                                                                  \
     if ((sscanf(p, "%" FMT "%n", &len, &chars) != 1) ||                             \
-        (chars != LEN)) {                                                           \
-        fprintf(stderr, "Error: Bad %s \"%.*s\"\n", name, LEN, p);                  \
+        (chars != FMT_LEN)) {                                                       \
+        fprintf(stderr, "Error: Bad %s \"%.*s\"\n", name, FMT_LEN, p);              \
         xattrs_cleanup(&ed->xattrs);                                                \
         free(new_work);                                                             \
         *work = NULL;                                                               \
         return -1;                                                                  \
     }                                                                               \
                                                                                     \
-    q += LEN;                                                                       \
+    q += FMT_LEN;                                                                   \
                                                                                     \
-    if (len >= sizeof(buf)) {                                                       \
-        fprintf(stderr, "Error: %s length is too big: %zu (max: %zu)\n",            \
-                name, len, sizeof(buf) - 1);                                        \
+    if ((size_t) (end - q) < len) {                                                 \
+        fprintf(stderr, "Error: %s length goes past end of line: %zu (max: %td)\n", \
+                name, len, end - q);                                                \
         xattrs_cleanup(&ed->xattrs);                                                \
         free(new_work);                                                             \
         *work = NULL;                                                               \
@@ -724,7 +725,7 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
  *      0 - found end
  *      1 - end of file
  */
-int find_stanza_end(const int fd, off_t *end, void *args) {
+static int find_stanza_end(const int fd, off_t *end, void *args) {
     /* Not checking arguments */
 
     struct ScoutTraceArgs *sta = (struct ScoutTraceArgs *) args;
@@ -927,6 +928,8 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
     char *first_delim = NULL;
     int delim_mismatch = 0;
 
+    struct row *work = NULL;
+
     /*
      * keep current directory while finding next directory
      * in order to find out whether or not the current
@@ -965,7 +968,7 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
         goto done;
     }
 
-    struct row *work = row_init(sta->tr.fd, first_delim - line, line, len, 0);
+    work = row_init(sta->tr.fd, first_delim - line, line, len, 0);
 
     /* don't free line - the pointer is now owned by work */
 
@@ -1061,8 +1064,14 @@ int scout_stream(QPTPool_ctx_t *ctx, void *data) {
     QPTPool_enqueue(ctx, sta->processdir, work);
     #endif
 
+    work = NULL; /* don't deallocate enqueued work */
+
   done:
     free(line);
+    if (work) {
+        free(work->line);
+        free(work);
+    }
 
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 

@@ -163,6 +163,10 @@ static int trie_have_children(trie_t *curr)
 // Recursive function to delete a string in Trie.
 static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i, const size_t len)
 {
+    if (!*curr) {
+        return 0;
+    }
+
     // if we have not reached the end of the string
     if (i < len)
     {
@@ -170,48 +174,52 @@ static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i,
 
         // recurse for the node corresponding to next character in
         // the string and if it returns 1, delete current node
-        // (if it is non-leaf)
         //
         // *curr and (*curr)->character[c] can never be
         // NULL unless the trie was modified externally
-        if (trie_delete_recursive(&((*curr)->character[c]), str, i + 1, len) &&
-            (*curr)->isLeaf == 0)
-        {
-            // not a leaf - just clean up
-            // this node can't have user data
+        if (!trie_delete_recursive(&((*curr)->character[c]), str, i + 1, len)) {
+            return 0; /* don't delete its parent nodes */
+        }
+
+        /* if the current nodes is a leaf, the parents should not be deleted, so return 0 */
+        if ((*curr)->isLeaf == 1) {
+            return 0; /* don't delete its parent nodes */
+        }
+
+        /* the deleted character might have had siblings */
+        if (!trie_have_children(*curr)) {
             free(*curr);
             (*curr) = NULL;
-            return 1;
+            return 1; /* this node was deleted, so the parent has the option to delete itself */
         }
+
+        return 0; /* don't delete its parent nodes */
     }
 
     // if we have reached the end of the string
     else if ((*curr)->isLeaf)
     {
+        /* free the user data at this node */
+        if ((*curr)->free_user) {
+            (*curr)->free_user((*curr)->user_data);
+            (*curr)->user_data = NULL;
+            (*curr)->free_user = NULL;
+        }
+
         // if current node is a leaf node and have children
         if (trie_have_children(*curr))
         {
-            if ((*curr)->free_user) {
-                (*curr)->free_user((*curr)->user_data);
-                (*curr)->user_data = NULL;
-                (*curr)->free_user = NULL;
-            }
-
             // mark current node as non-leaf node (DON'T DELETE IT)
             (*curr)->isLeaf = 0;
-            return 0;       // don't delete its parent nodes
+            return 0;    // don't delete its parent nodes
         }
 
         // if current node is a leaf node and don't have any children
         else
         {
-            if ((*curr)->free_user) {
-                (*curr)->free_user((*curr)->user_data);
-            }
-
             free(*curr); // delete current node
             (*curr) = NULL;
-            return 1; // delete non-leaf parent nodes
+            return 1;    // delete non-leaf parent nodes
         }
     }
 

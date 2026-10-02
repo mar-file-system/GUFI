@@ -65,6 +65,8 @@
 
 set -e
 
+SYSTEM="$1"
+
 # install sqlite3 first
 "${SCRIPT_PATH}/sqlite3.sh"
 
@@ -72,7 +74,7 @@ set -e
 
 vec_name="sqlite-vec"
 vec_prefix="${INSTALL_DIR}/${vec_name}"
-if [[ ! -d "${vec_prefix}" ]]; then
+if [[ ! -f "${vec_prefix}/lib/libsqlite_vec0.a" ]]; then
     vec_build="${BUILD_DIR}/sqlite-vec-main"
     if [[ ! -d "${vec_build}" ]]; then
         vec_tarball="${DOWNLOAD_DIR}/sqlite-vec.tar.gz"
@@ -89,5 +91,18 @@ if [[ ! -d "${vec_prefix}" ]]; then
     make -j "${THREADS}" static loadable
     mkdir -p "${vec_prefix}/include" "${vec_prefix}/lib"
     cp -f sqlite-vec.h "${vec_prefix}/include"
-    cp -f dist/libsqlite_vec0.* dist/vec0.* "${vec_prefix}/lib"
+    cp -f -v dist/libsqlite_vec0.* dist/vec0.* "${vec_prefix}/lib"
+
+    case "${SYSTEM}" in
+        "MAC")
+            EXT="dylib"
+            ;;
+        "CYGWIN")
+            EXT="dll"
+            ;;
+        *)
+            EXT="so"
+            ;;
+    esac
+    ln -sfv "${vec_prefix}/lib/vec0.${EXT}" "${vec_prefix}/lib/libvec0.${EXT}"
 fi

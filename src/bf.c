@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 #endif
 
 #include <errno.h>
+#include <inttypes.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -75,6 +76,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "bf.h"
+#include "config.h"
 #include "dbutils.h"
 #include "debug.h"
 #include "external_attach.h"
@@ -116,7 +118,8 @@ struct input *input_init(struct input *in) {
         in->dir_match.uid           = geteuid();              /* always successful */
         in->dir_match.gid           = getegid();              /* always successful */
         in->process_sql             = RUN_ON_ROW;
-        in->suspecttime             = time(NULL);
+        in->suspect.time            = time(NULL);             /* time_set is still 0 */
+        in->max_subtrees            = 1;
         in->max_level               = -1;                     // default to all the way down
         sll_init(&in->sql_format.tsum);
         sll_init(&in->sql_format.sum);
@@ -220,7 +223,7 @@ void print_help(const char* prog_name,
                                                             "                                    1 - skip T, run S and E whether or not a row was returned (old -a)\n"
                                                             "                                    2 - run T, S, and E whether or not a row was returned"); break;
             case FLAG_THREADS_SHORT:                     printf("  -n, --threads <n>                 number of threads"); break;
-            case FLAG_DELIM_SHORT:                       printf("  -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
+            case FLAG_DELIM_SHORT:                       printf("  -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x%02X]", (unsigned int) fielddelim); break;
             case FLAG_OUTPUT_FILE_SHORT:                 printf("  -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)"); break;
             case FLAG_OUTPUT_DB_SHORT:                   printf("  -O, --output-db <out_DB>          output DB"); break;
             case FLAG_SQL_INIT_SHORT:                    printf("  -I <SQL_init>                     SQL init"); break;
@@ -234,6 +237,7 @@ void print_help(const char* prog_name,
             case FLAG_READ_WRITE_SHORT:                  printf("  -w, --read-write                  open the database files in read-write mode instead of read only mode"); break;
             case FLAG_PATH_SHORT:                        printf("  -p, --path <path>                 Source path prefix for %%s in SQL"); break;
             case FLAG_FILTER_TYPE_SHORT:                 printf("  -t, --filter-type <filter_type>   one or more types to keep ('f', 'd', 'l')"); break;
+            case FLAG_FORCE_SHORT:                       printf("  -f, --force                       non-existent paths do not cause errors to be returned"); break;
 
             /* no typable short flags */
 
@@ -251,9 +255,11 @@ void print_help(const char* prog_name,
             case FLAG_DONT_REPROCESS_SHORT:              printf("      --dont-reprocess              if a directory was previously processed, skip descending the subtree"); break;
             case FLAG_NEWLINE_SHORT:                     printf("      --newline <c>                 character used to separate lines (default: '\\n') [use 0 for NULL character]"); break;
             case FLAG_SUPPRESS_NEWLINE_SHORT:            printf("      --suppress-newline            do not print the line separator"); break;
-            case FLAG_PRINT_EACCES_SHORT:                printf("      --print-eacces                print messages when errno is EACCES"); break;
+            case FLAG_NO_PRINT_ERRNO_SHORT:              printf("      --no-print-errno <int>        one errno value (e.g. 2 for ENOENT; range: [1, 255]) to not print errors for when encounted. Use multiple times to hide multiple error message types"); break;
             case FLAG_NO_PRINT_SQL_ON_ERR_SHORT:         printf("      --no-print-sql-on-err         do not print SQL with error messages"); break;
             case FLAG_OLD_TRACE_FORMAT_SHORT:            printf("      --old-trace-format            read old format traces"); break;
+            case FLAG_USE_EXACT_PATH_SHORT:              printf("      --use-exact-path              create the index under the exact source path that was passed in instead of just the basename"); break;
+            case FLAG_GLOBAL_DB_SHORT:                   printf("      --global-db <SQL>             SQL to set up global table(s) that will be accessible at all times. ATTACH-ed with 'global' namespace"); break;
 
             /* memory usage flags */
             case FLAG_OUTPUT_BUFFER_SIZE_SHORT:          printf("      --output-buffer-size <bytes>  size of each thread's output buffer in bytes"); break;
@@ -273,6 +279,9 @@ void print_help(const char* prog_name,
             case FLAG_SUSPECT_METHOD_SHORT:              printf("      --suspect-method <0|1|3>      suspect method (0 no suspects, 1 suspect file_dfl, 3 suspect stat_dfl)"); break;
             case FLAG_SUSPECT_TIME_SHORT:                printf("      --suspect-time <s>            time in seconds since epoch for suspect comparision"); break;
             case FLAG_SUSPECT_STAT_SHORT:                printf("      --suspect-stat                if an entry is suspect, stat it to get timestamps to compare against suspecttime"); break;
+            case FLAG_MAX_SUBTREES_SHORT:                printf("      --max-subtrees <count>        maximum number of subtrees to process in parallel (control maximum number of file descriptors used)"); break;
+            case FLAG_KEEP_ARTIFACTS_SHORT:              printf("      --keep-artifacts <path>       place artifacts here so they are not automatically deleted (provided path must already exist)"); break;
+            case FLAG_PROCESS_SUBTREES_SHORT:            printf("      --process-subtrees            try to find and operate on subtrees instead of operating on the entire tree at once"); break;
 
             /* gufi_rollup flags */
             case FLAG_ROLLUP_LIMIT_SHORT:                printf("      --limit <count>               Highest number of files/links in a directory allowed to be rolled up"); break;
@@ -304,7 +313,7 @@ void show_input(struct input* in, int retval) {
     printf("in.buildindex               = %d\n",            in->buildindex);
     printf("in.maxthreads               = %zu\n",           in->maxthreads);
     printf("in.delim                    = '%c'\n",          in->delim);
-    printf("in.dir_match_owner.on       = %d\n",            in->dir_match.on);
+    printf("in.dir_match_owner.on       = %d\n",            (int) in->dir_match.on);
     printf("in.dir_match_owner.uid      = %" STAT_uid "\n", in->dir_match.uid);
     printf("in.dir_match_owner.gid      = %" STAT_gid "\n", in->dir_match.gid);
     printf("in.process_sql              = %d\n",            (int) in->process_sql);
@@ -322,6 +331,7 @@ void show_input(struct input* in, int retval) {
     printf("in.open_flags               = %d\n",            in->open_flags);
     printf("in.source_prefix            = '%s'\n",          in->source_prefix.data);
     printf("in.filter_types             = %d\n",            in->filter_types);
+    printf("in.force                    = %d\n",            in->force);
 
     /* no typable short flags */
 
@@ -333,7 +343,7 @@ void show_input(struct input* in, int retval) {
     printf("in.dry_run                  = %d\n",            in->dry_run);
 
     for(size_t i = 0; i < in->plugins.count; i++) {
-        printf("in.plugins[%zu]         = '%s'\n",          i, in->plugins.plugins[i]->filename);
+        printf("in.plugins[%zu]               = '%s'\n",    i, in->plugins.plugins[i]->filename);
     }
 
     printf("in.path_list                = '%s'\n",          in->path_list.data);
@@ -343,9 +353,19 @@ void show_input(struct input* in, int retval) {
     printf("in.dont_reprocess           = %d\n",            in->dont_reprocess);
     printf("in.newline                  = '%c'\n",          in->newline);
     printf("in.suppress_newline         = %d\n",            in->suppress_newline);
-    printf("in.print_eacces             = %d\n",            in->print_eacces);
+    printf("in.no_print_errno           = %08" PRIu64
+                                         "%08" PRIu64
+                                         "%08" PRIu64
+                                         "%08" PRIu64
+                                         "\n",
+                                                            in->no_print_errno[3],
+                                                            in->no_print_errno[2],
+                                                            in->no_print_errno[1],
+                                                            in->no_print_errno[0]);
     printf("in.no_print_sql_on_err      = %d\n",            in->no_print_sql_on_err);
     printf("in.old_trace_format         = %d\n",            in->old_trace_format);
+    printf("in.use_exact_path           = %d\n",            in->use_exact_path);
+    printf("in.global_db                = '%s'\n",          in->global_db.data);
 
     /* memory usage flags */
 
@@ -361,11 +381,12 @@ void show_input(struct input* in, int retval) {
 
     /* gufi_incremental_update flags */
 
-    printf("in.insuspect                = '%s'\n",          in->insuspect.data);
-    printf("in.suspectfile              = '%d'\n",          in->suspectfile);
-    printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
-    printf("in.suspecttime              = '%d'\n",          in->suspecttime);
-    printf("in.suspectstat              = '%d'\n",          in->suspectstat);
+    printf("in.suspect.filename         = '%s'\n",          in->suspect.filename.data);
+    printf("in.suspect.method           = %d\n",            in->suspect.method);
+    printf("in.suspect.time             = %d\n",            in->suspect.time);
+    printf("in.suspect.stat             = %d\n",            in->suspect.stat);
+    printf("in.max_subtrees             = %zu\n",           in->max_subtrees);
+    printf("in.artifacts.dir            = '%s'\n",          in->artifacts.dir.data);
 
     /* gufi_rollup flags */
 
@@ -455,9 +476,9 @@ int parse_cmd_line(int                  argc,
 
     char *getopt_str = build_getopt_str(options);
 
-    int show                    = 0;
-    int retval                  = 0;
-    int bad_skipfile            = 0;
+    int show          = 0;
+    int retval        = 0;
+    int bad_skipfile  = 0;
     int ch;
     setenv("POSIXLY_CORRECT", "1", 1); /* don't check errors? */
     optind = 0;                        /* man 3 getopt_long */
@@ -576,6 +597,10 @@ int parse_cmd_line(int                  argc,
                 }
                 break;
 
+            case FLAG_FORCE_SHORT:
+                in->force = 1;
+                break;
+
             /* no typable short flags */
 
             case FLAG_MIN_LEVEL_SHORT:
@@ -668,8 +693,14 @@ int parse_cmd_line(int                  argc,
                 }
                 break;
 
-            case FLAG_PRINT_EACCES_SHORT:
-                in->print_eacces = 1;
+            case FLAG_NO_PRINT_ERRNO_SHORT:
+                {
+                    int err = 0;
+                    INSTALL_INT(&err, optarg, 1, 255, "--no-print-errno", &retval);
+                    if ((0 < err) && (err < 256)) { /* just in case retval was set somewhere else */
+                        set_no_print_errno(in->no_print_errno, err);
+                    }
+                }
                 break;
 
             case FLAG_NO_PRINT_SQL_ON_ERR_SHORT:
@@ -678,6 +709,14 @@ int parse_cmd_line(int                  argc,
 
             case FLAG_OLD_TRACE_FORMAT_SHORT:
                 in->old_trace_format = 1;
+                break;
+
+            case FLAG_USE_EXACT_PATH_SHORT:
+                in->use_exact_path = 1;
+                break;
+
+            case FLAG_GLOBAL_DB_SHORT:
+                INSTALL_STR(&in->global_db, optarg);
                 break;
 
             /* memory usage flags */
@@ -717,23 +756,35 @@ int parse_cmd_line(int                  argc,
             /* gufi_incremental_update flags */
 
             case FLAG_SUSPECT_FILE_SHORT:
-                INSTALL_STR(&in->insuspect, optarg);
-                in->suspectfile = 1;
+                INSTALL_STR(&in->suspect.filename, optarg);
                 break;
 
             case FLAG_SUSPECT_METHOD_SHORT:
-                INSTALL_INT(&in->suspectmethod, optarg, 0, 3,
+                INSTALL_INT(&in->suspect.method, optarg, 0, 3,
                             "--" FLAG_SUSPECT_METHOD_LONG, &retval);
                 break;
 
             case FLAG_SUSPECT_TIME_SHORT:
-                INSTALL_INT(&in->suspecttime, optarg, 0, 2147483646,
+                INSTALL_INT(&in->suspect.time, optarg, 0, 2147483646,
                             "--" FLAG_SUSPECT_TIME_LONG, &retval);
-                in->suspecttime_set = 1;
                 break;
 
             case FLAG_SUSPECT_STAT_SHORT:
-                in->suspectstat = 1;
+                in->suspect.stat = 1;
+                break;
+
+            case FLAG_MAX_SUBTREES_SHORT:
+                INSTALL_SIZE(&in->max_subtrees, optarg, 1, (size_t) -1,
+                             "--" FLAG_MAX_SUBTREES_LONG, &retval);
+                break;
+
+            case FLAG_KEEP_ARTIFACTS_SHORT:
+                INSTALL_STR(&in->artifacts.dir, optarg);
+                in->artifacts.keep = 1;
+                break;
+
+            case FLAG_PROCESS_SUBTREES_SHORT:
+                in->process_subtrees = 1;
                 break;
 
             /* gufi_rollup flags */
@@ -804,7 +855,7 @@ int parse_cmd_line(int                  argc,
 
             default:
                 retval = -1;
-                fprintf(stderr, "?? getopt returned character code 0%o ??\n", ch);
+                fprintf(stderr, "?? getopt returned character code 0%o ??\n", (unsigned int) ch);
         };
     }
     free(getopt_str);

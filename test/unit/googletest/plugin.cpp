@@ -69,7 +69,7 @@ OF SUCH DAMAGE.
 #include "plugin.h"
 
 TEST(plugin, bad_arg) {
-    char name[1024];
+    char name[1024] = {};
     std::size_t len = 0;
 
     len = 10;
@@ -88,27 +88,44 @@ TEST(plugin, bad_arg) {
 // thread count cannot be 0
 static const std::size_t THREADS = 2;
 
-static int test_global_init(void *global) {
-    return !!global;
+static int test_global_init(struct input *in) {
+    return !!in;
+}
+
+static int test_thread_init(sqlite3 *db) {
+    return !!db;
 }
 
 static void *test_ctx_init(void *ptr) {
     return ptr; /* ptr and user_data are the same */
 }
 
-static void test_process_dir(void *, void *user_data) {
+static void test_pre_process_dir(void *, void *user_data) {
     std::size_t *value = static_cast<std::size_t *>(user_data);
     (*value)++;
 }
 
-static void test_process_file(void *, void *user_data) {
+static plugin_file_action test_pre_process_file(void *, void *user_data) {
+    std::size_t *value = static_cast<std::size_t *>(user_data);
+    (*value)++;
+    return PLUGIN_PROCESS_FILE;
+}
+
+static void test_post_process_dir(void *, void *user_data) {
+    std::size_t *value = static_cast<std::size_t *>(user_data);
+    (*value)++;
+}
+
+static void test_post_process_file(void *, void *user_data) {
     std::size_t *value = static_cast<std::size_t *>(user_data);
     (*value)++;
 }
 
 static void test_ctx_exit(void *, void *) {}
 
-static void test_global_exit(void *) {}
+static void test_thread_exit(sqlite3 *) {}
+
+static void test_global_exit(struct input *) {}
 
 TEST(plugins, good) {
     // 0 plugins
@@ -123,10 +140,14 @@ TEST(plugins, good) {
     struct plugin_operations full_ops;
     full_ops.type              = TEST_PLUGIN_TYPE;
     full_ops.global_init       = test_global_init;
+    full_ops.thread_init       = test_thread_init;
     full_ops.ctx_init          = test_ctx_init;
-    full_ops.process_dir       = test_process_dir;
-    full_ops.process_file      = test_process_file;
+    full_ops.pre_process_dir   = test_pre_process_dir;
+    full_ops.pre_process_file  = test_pre_process_file;
+    full_ops.post_process_dir  = test_post_process_dir;
+    full_ops.post_process_file = test_post_process_file;
     full_ops.ctx_exit          = test_ctx_exit;
+    full_ops.thread_exit       = test_thread_exit;
     full_ops.global_exit       = test_global_exit;
 
     struct plugin *full_plugin = (struct plugin *) malloc(sizeof(*full_plugin));
@@ -153,19 +174,24 @@ TEST(plugins, good) {
     EXPECT_EQ(plugins_check_type(&plugins, (plugin_type) 4), count);
 
     // fail
-    EXPECT_EQ(plugins_global_init(&plugins, &plugins), (std::size_t) 0);
+    EXPECT_EQ(plugins_global_init(&plugins, reinterpret_cast<struct input *>(&plugins)), (std::size_t) 0);
+    EXPECT_EQ(plugins_thread_init(&plugins, reinterpret_cast<sqlite3 *>     (&plugins)), (std::size_t) 0);
 
     // ctx
     std::size_t value = 0;
 
     // success
     EXPECT_EQ(plugins_global_init(&plugins, nullptr),  count);
-    plugins_ctx_init    (&plugins, &value,  0);
-    plugins_process_dir (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
-    plugins_process_file(&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
-    plugins_ctx_exit    (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
-    plugins_global_exit (&plugins, nullptr);
-    EXPECT_EQ(value, (std::size_t) 2);
+    plugins_thread_init      (&plugins, nullptr);
+    plugins_ctx_init         (&plugins, &value,  0);
+    plugins_pre_process_dir  (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
+    plugins_pre_process_file (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
+    plugins_post_process_dir (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
+    plugins_post_process_file(&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
+    plugins_ctx_exit         (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
+    plugins_thread_exit      (&plugins, nullptr);
+    plugins_global_exit      (&plugins, nullptr);
+    EXPECT_EQ(value, (std::size_t) 4);
 
     plugins_destroy(&plugins);
 }

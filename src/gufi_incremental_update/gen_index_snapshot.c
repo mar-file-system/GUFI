@@ -72,18 +72,12 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "debug.h"
 #include "descend.h"
+#include "str.h"
 
 #include "gufi_incremental_update/aggregate.h"
 #include "gufi_incremental_update/incremental_update.h"
 
 #define INDEX_SNAPSHOT_EXT "index"
-
-size_t gen_index_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size) {
-    return SNFORMAT_S(name, name_size, 3,
-                      pa->in.outname.data, pa->in.outname.len,
-                      ".", (size_t) 1,
-                      INDEX_SNAPSHOT_EXT, sizeof(INDEX_SNAPSHOT_EXT) - 1);
-}
 
 static const char UPDATE_WORK_SQL[] = "SELECT inode, pinode FROM " SUMMARY " WHERE isroot == 1;";
 
@@ -92,7 +86,7 @@ static int update_work(void *args, int count, char **data, char **columns) {
 
     struct work *work = (struct work *) args;
     return !((sscanf(data[0], "%" STAT_ino, &work->statuso.st_ino) == 1) &&
-             (sscanf(data[1], "%lld",       &work->pinode)         == 1));
+             (sscanf(data[1], "%" STAT_ino, &work->pinode)         == 1));
 }
 
 /* place directory data into per-thread database (merged later) */
@@ -103,42 +97,57 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     const size_t id = QPTPool_get_id(ctx);
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
-    struct work *work = NULL;
-    DIR *dir = NULL;
+    struct GenSnapshot *index = (struct GenSnapshot *) data;
+    struct work *work = index->work; /* no compression */
 
-    decompress_work(&work, data);
-
-    dir = opendir_wrapper(work->name, 1);
+    DIR *dir = opendir(work->name);
     if (!dir) {
+        const int err = errno;
+        if (err != ENOENT) { /* new directory in source tree but not yet in index */
+            fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
+                    work->name, strerror(err), err);
+        }
         rc = 1;
         goto cleanup;
     }
 
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                      &work->stat_called, 1, 1) != 0) {
+                      &work->stat_called, 1, NULL) != 0) {
         rc = 1;
         goto close_dir;
     }
 
-    /* push more work first */
+    struct descend_counters ctrs = {0};
     descend(ctx, &pa->in, work, dir, 0,
-            processdir, NULL, NULL, NULL);
+            try_skip_lstat, wrap_work, index,
+            processdir, NULL, NULL,
+            &ctrs);
 
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
     ed.type = 'd';
 
-    sqlite3 *db = pa->index.agg.dbs[id]; /* partial snapshot db */
+    sqlite3 *db = index->agg.dbs[id]; /* partial snapshot db */
 
     /* attach db.db from index to get information from index, not tree walk */
-    char index_dbname[MAXPATH];
-    SNFORMAT_S(index_dbname, sizeof(index_dbname), 3,
+    const size_t index_dbname_len = work->name_len + 1 + DBNAME_LEN;
+    char *index_dbname = malloc(index_dbname_len + 1);
+    SNFORMAT_S(index_dbname, index_dbname_len + 1, 3,
                work->name, work->name_len,
                "/", 1,
                DBNAME, DBNAME_LEN);
 
-    if (!attachdb(index_dbname, db, "tree", SQLITE_OPEN_READONLY, 1, 1)) {
-        goto close_dir;
+    /* TODO: keep track of uri so only basename needs converting */
+    const size_t attach_name_size = index_dbname_len * 3 + 1;
+    char *attach_name = malloc(attach_name_size);
+    size_t converted_len = index_dbname_len; /* unused */
+    const size_t attach_name_len = sqlite_uri_path(attach_name, attach_name_size,
+                                                   index_dbname, &converted_len);
+    attach_name[attach_name_len] = '\0';
+    free(index_dbname);
+
+    if (!attachdb(attach_name, db, "tree", SQLITE_OPEN_READONLY, 1, NULL)) {
+        goto free_attach_name;
     }
 
     char *err = NULL;
@@ -151,36 +160,55 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     /* insert this directory into the index snapshot db */
     sqlite3_stmt *res = insertdbprep(db, SNAPSHOT_INSERT);
-    insert_snapshot_row(work, &ed, res, pa->index.parent_len);
+    insert_snapshot_row(work, &ed, res, index->parent_len);
     sqlite3_finalize(res);
 
   detach_db:
-    detachdb(index_dbname, db, "tree", 1, 1);
+    detachdb(attach_name, db, "tree", 1, NULL);
+
+  free_attach_name:
+    free(attach_name);
 
   close_dir:
     closedir(dir);
 
   cleanup:
-    free(work);
+    pthread_mutex_lock(index->mutex);
+    --(*index->counter);
+    pthread_cond_broadcast(index->cond);
+    pthread_mutex_unlock(index->mutex);
+
+    if (index->free_work) {
+        index->free_work(index->work);
+    }
+    free(index);
 
     return rc;
 }
 
-int gen_index_snapshot(struct PoolArgs *pa, struct work *work) {
-    char index_snapshot_name[MAXPATH];
-    gen_index_snapshot_name(pa, index_snapshot_name, sizeof(index_snapshot_name));
+int gen_index_snapshot(struct PoolArgs *pa, const ino_t inode, struct GenSnapshot *index) {
+    str_alloc_existing(&index->snapshot, pa->artifacts.len + 1 + UINT64_DIGITS + 1 + sizeof(INDEX_SNAPSHOT_EXT) - 1);
+    SNPRINTF(index->snapshot.data, index->snapshot.len + 1,
+             "%s/%" STAT_ino "." INDEX_SNAPSHOT_EXT,
+             pa->artifacts.data, inode);
 
     /* set up per-thread databases to write to */
-    if (aggregate_init(&pa->index.agg, pa->in.maxthreads, index_snapshot_name, 0) != 0) {
+    if (aggregate_init(&index->agg, pa->in.maxthreads, index->snapshot.data, 0) != 0) {
+        str_free_existing(&index->snapshot);
         return 1;
     }
 
     fprintf(stdout, "Pulling directory data from index \"%s\" with %zu threads\n",
-            pa->index.path.data, pa->in.maxthreads);
-    fflush(stdout);
+            index->work->name, pa->in.maxthreads);
+
+    /* clone the original struct so that it can be freed without affecting the original */
+    struct GenSnapshot *copy = malloc(sizeof(*copy));
+    *copy = *index;
+    copy->free_work = NULL;
+    copy->snapshot.free = NULL;
 
     /* walk the old index and get snapshot of directories */
-    QPTPool_enqueue(pa->ctx, processdir, work);
+    QPTPool_enqueue(pa->ctx, processdir, copy);
 
     return 0;
 }

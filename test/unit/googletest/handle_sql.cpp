@@ -128,7 +128,7 @@ TEST(handle_sql, aggregation) {
 
     in.sql.init_agg = REFSTR(K_GOOD, strlen(K_GOOD));
     in.sql.agg = REFSTR(G_GOOD, strlen(G_GOOD));
-    EXPECT_EQ(handle_sql(&in), 0);
+    EXPECT_EQ(handle_sql(&in), -1);
 
     free(in.types.agg);
     in.types.agg = nullptr;

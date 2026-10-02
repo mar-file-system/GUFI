@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "plugin.h"
 #include "trie.h"
 
@@ -80,10 +81,10 @@ static int setup_suspect_file(struct PoolArgs *pa) {
     pa->suspects.fl.min = (ino_t) -1;
     pa->suspects.fl.max = 0;
 
-    if (pa->in.suspectfile > 0) {
-        FILE *f = fopen(pa->in.insuspect.data, "r"); /* --suspect-file */
+    if (str_exists(&pa->in.suspect.filename)) {
+        FILE *f = fopen(pa->in.suspect.filename.data, "r"); /* --suspect-file */
         if(!f) {
-            fprintf(stderr, "Can't open suspect file %s\n", pa->in.insuspect.data);
+            fprintf(stderr, "Can't open suspect file %s\n", pa->in.suspect.filename.data);
             return 1;
         }
 
@@ -116,9 +117,21 @@ static int setup_suspect_file(struct PoolArgs *pa) {
     return 0;
 }
 
+/* not handling cleanup on error - main will call fini */
 int PoolArgs_init(struct PoolArgs *pa) {
-    pa->index.parent_len = trailing_match_index(pa->index.path.data, pa->index.path.len, "/", 1);
-    pa->tree.parent_len = trailing_match_index(pa->tree.path.data, pa->tree.path.len, "/", 1);
+    init_template_db(&pa->db);
+    init_template_db(&pa->xattr);
+
+    /* set up db.db template for copying instead of running SQL to create each table */
+    if (create_dbdb_template(&pa->db, NULL) != 0) {
+        return 1;
+    }
+
+    /* set up xattr template for copying instead of running SQL to create each table */
+    if (create_dbdb_template(&pa->xattr, NULL) != 0) {
+        fprintf(stderr, "Could not create xattr template file\n");
+        return 1;
+    }
 
     if (setup_suspect_file(pa) != 0) {
         return 1;
@@ -130,14 +143,37 @@ int PoolArgs_init(struct PoolArgs *pa) {
         return 1;
     }
 
+    pa->tops = malloc(pa->in.maxthreads * sizeof(*pa->tops));
+    if (!pa->tops) {
+        fprintf(stderr, "Error: Failed to allocate %zu per-thread lists\n", pa->in.maxthreads);
+        return 1;
+    }
+    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+        sll_init(&pa->tops[i]);
+    }
+
+    pthread_mutex_init(&pa->mutex, NULL);
+    pthread_cond_init(&pa->cond, NULL);
+    pa->active = 0;
+
     return 0;
 }
 
 void PoolArgs_fini(struct PoolArgs *pa) {
     QPTPool_stop(pa->ctx);
     QPTPool_destroy(pa->ctx);
+    pthread_cond_destroy(&pa->cond);
+    pthread_mutex_destroy(&pa->mutex);
+    if (pa->tops) {
+        for(size_t i = 0; i < pa->in.maxthreads; i++) {
+            sll_destroy(&pa->tops[i], NULL);
+        }
+        free(pa->tops);
+    }
     plugins_global_exit(&pa->in.plugins, &pa->in);
     trie_free(pa->suspects.fl.inodes);
     trie_free(pa->suspects.dir.inodes);
+    close_template_db(&pa->xattr);
+    close_template_db(&pa->db);
     input_fini(&pa->in);
 }

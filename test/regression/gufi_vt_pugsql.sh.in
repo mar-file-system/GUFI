@@ -140,7 +140,7 @@ query_vt() {
 
 (
     echo "# Generate treesummary tables in all directories"
-    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;'
+    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d;' | remove_time
 
     generate_queries_sql
 

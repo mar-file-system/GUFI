@@ -65,9 +65,15 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 
+#if HAVE_AI
+#include "sqlite-lembed.h"
+#include "sqlite-vec.h"
+#endif
+
 #include "dbutils.h"
 #include "template_db.h"
 
+#include "gufi_query/PoolArgs.h"
 #include "gufi_query/handle_sql.h"
 #include "gufi_query/query_replacement.h"
 
@@ -101,35 +107,35 @@ static int validate(struct input *in) {
      * outfile     stdout                                 | Get final results
      *                                                    | -G SELECT * FROM <aggregate name>
      */
-     if ((in->output == OUTDB) || in->sql.init_agg.len) {
+    if ((in->output == OUTDB) || str_exists(&in->sql.init_agg)) {
         /* -I (required) */
-        if (!in->sql.init.len) {
+        if (!str_exists(&in->sql.init)) {
             fprintf(stderr, "Error: Missing -I\n");
             return -1;
         }
     }
 
     /* not aggregating */
-    if (!in->sql.init_agg.len) {
-        if (in->sql.intermediate.len) {
+    if (!str_exists(&in->sql.init_agg)) {
+        if (str_exists(&in->sql.intermediate)) {
             fprintf(stderr, "Warning: Got -J even though not aggregating. Ignoring\n");
         }
 
-        if (in->sql.agg.len) {
+        if (str_exists(&in->sql.agg)) {
             fprintf(stderr, "Warning: Got -G even though not aggregating. Ignoring\n");
         }
     }
     /* aggregating */
     else {
         /* need -J to write to aggregate db */
-        if (!in->sql.intermediate.len) {
+        if (!str_exists(&in->sql.intermediate)) {
             fprintf(stderr, "Error: Missing -J\n");
             return -1;
         }
 
         if ((in->output == STDOUT) || (in->output == OUTFILE)) {
             /* need -G to write out results */
-            if (!in->sql.agg.len) {
+            if (!str_exists(&in->sql.agg)) {
                 fprintf(stderr, "Error: Missing -G\n");
                 return -1;
             }
@@ -139,7 +145,7 @@ static int validate(struct input *in) {
 
     /* -Q/--external-attach requires -I */
     if (sll_get_size(&in->external_attach.setup)) {
-        if (!in->sql.init.len) {
+        if (!str_exists(&in->sql.init)) {
             fprintf(stderr, "Attaching external databases require template files attached with -I\n");
             return -1;
         }
@@ -147,7 +153,7 @@ static int validate(struct input *in) {
 
     /* --external-copy requires -I */
     if (sll_get_size(&in->external_copy.setup)) {
-        if (!in->sql.init.len) {
+        if (!str_exists(&in->sql.init)) {
             fprintf(stderr, "Copying external databases require tables created with -I\n");
             return -1;
         }
@@ -158,6 +164,7 @@ static int validate(struct input *in) {
 
 static int gen_types(struct input *in) {
     sqlite3 *db = NULL;
+    sqlite3 *global_db = NULL;
 
     /* generate types if necessary */
     if ((in->types.print_tlv == 1) && ((in->output == STDOUT) || (in->output == OUTFILE))) {
@@ -166,6 +173,38 @@ static int gen_types(struct input *in) {
                     0, 1, create_dbdb_tables, NULL);
         if (!db) {
             return -1;
+        }
+
+        #if HAVE_AI
+        sqlite3_vec_init(db, NULL, NULL);
+        sqlite3_lembed_init(db, NULL, NULL);
+        #endif
+
+        if (str_exists(&in->global_db)) {
+            global_db = opendb(GUFI_QUERY_GLOBAL_DB_FILENAME, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                               0, 1, NULL, NULL);
+            if (!global_db) {
+                closedb(db);
+                return -1;
+            }
+
+            char *err = NULL;
+            if (sqlite3_exec(global_db, in->global_db.data, NULL, NULL, &err) != SQLITE_OK) {
+                sqlite_print_err_and_free(err, stderr,
+                                          "Error: Could not initiailize global db with \"%s\": %s\n",
+                                          in->global_db.data, err);
+                closedb(global_db);
+                closedb(db);
+                return -1;
+            }
+
+            /* attach to the db after initializing the global db */
+            if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, db,
+                              GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
+                closedb(global_db);
+                closedb(db);
+                return -1;
+            }
         }
 
         int cols = 0; /* discarded */
@@ -185,25 +224,37 @@ static int gen_types(struct input *in) {
         addqueryfuncs(db);
         addqueryfuncs_with_context(db, &ctx);
 
-        if (in->sql.tsum.len) {
+        if (str_exists(&in->sql.init)) {
+            char *err = NULL;
+            if (sqlite3_exec(db, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
+                sqlite_print_err_and_free(err, stderr,
+                                          "Error: Failed to set up table for getting result column types: %s\n",
+                                          err);
+                goto error;
+            }
+        }
+
+        if (str_exists(&in->sql.tsum)) {
             if (create_table_wrapper(SQLITE_MEMORY, db, TREESUMMARY, TREESUMMARY_CREATE) != SQLITE_OK) {
                 goto error;
             }
         }
 
         plugins_ctx_init(&in->plugins, db, 0);
+        plugins_thread_init(&in->plugins, db);
 
-        if (in->sql.setup_res_col_types.data && in->sql.setup_res_col_types.len) {
+        if (str_exists(&in->sql.setup_res_col_types)) {
             char *err = NULL;
             if (sqlite3_exec(db, in->sql.setup_res_col_types.data, NULL, NULL, &err) != SQLITE_OK) {
-                fprintf(stderr, "Error: Failed to set up table for getting result column types: %s\n", err);
-                sqlite3_free(err);
+                sqlite_print_err_and_free(err, stderr,
+                                          "Error: Failed to set up table for getting result column types: %s\n",
+                                          err);
                 goto error;
             }
         }
 
         /* if not aggregating, get types for T, S, and E */
-        if (!in->sql.init_agg.len) {
+        if (!str_exists(&in->sql.init_agg)) {
             /*
              * Types for all available SQL must be generated even if
              * only one produces the final results. If this is not
@@ -214,17 +265,17 @@ static int gen_types(struct input *in) {
              * SQL in a single T/S/E option must SELECT first and do
              * other operations afterwards.
              */
-            if (in->sql.tsum.len) {
+            if (str_exists(&in->sql.tsum)) {
                 if (get_col_types(db, &in->sql.tsum, &in->types.tsum, &cols) != 0) {
                     goto error;
                 }
             }
-            if (in->sql.sum.len) {
+            if (str_exists(&in->sql.sum)) {
                 if (get_col_types(db, &in->sql.sum,  &in->types.sum,  &cols) != 0) {
                     goto error;
                 }
             }
-            if (in->sql.ent.len) {
+            if (str_exists(&in->sql.ent)) {
                 if (get_col_types(db, &in->sql.ent,  &in->types.ent,  &cols) != 0) {
                     goto error;
                 }
@@ -235,8 +286,9 @@ static int gen_types(struct input *in) {
             /* run -K so -G can pull the final columns */
             char *err = NULL;
             if (sqlite3_exec(db, in->sql.init_agg.data, NULL, NULL, &err) != SQLITE_OK) {
-                fprintf(stderr, "Error: -K SQL failed while getting columns types: %s\n", err);
-                sqlite3_free(err);
+                sqlite_print_err_and_free(err, stderr,
+                                          "Error: -K SQL failed while getting columns types: %s\n",
+                                          err);
                 goto error;
             }
 
@@ -246,7 +298,9 @@ static int gen_types(struct input *in) {
         }
 
         plugins_ctx_exit(&in->plugins, db, 0);
+        plugins_thread_exit(&in->plugins, db);
 
+        closedb(global_db);
         closedb(db);
     }
 
@@ -254,6 +308,7 @@ static int gen_types(struct input *in) {
 
   error:
     plugins_ctx_exit(&in->plugins, db, 0);
+    closedb(global_db);
     closedb(db);
     return -1;
 }

@@ -228,14 +228,14 @@ TEST(create_empty_dbdb, good) {
     str_t dst = REFSTR(dirname, strlen(dirname));
 
     // <dirname>/db.db
-    char dbname[MAXPATH];
+    char dbname[sizeof(dirname) + 1 + DBNAME_LEN];
     SNFORMAT_S(dbname, sizeof(dbname), 3,
                dst.data, dst.len,
                "/", (std::size_t) 1,
                DBNAME, DBNAME_LEN);
 
     // create file under dirname not called db.db
-    char filename[MAXPATH];
+    char filename[sizeof(dirname) + 7];
     SNFORMAT_S(filename, sizeof(filename), 2,
                dst.data, dst.len,
                "/XXXXXX", (std::size_t) 7);
@@ -250,7 +250,7 @@ TEST(create_empty_dbdb, good) {
     EXPECT_EQ(unlink(filename), 0);
 
     // symlink to <dirname>
-    char symlinktarget[MAXPATH];
+    char symlinktarget[sizeof(dirname) + 3];
     SNFORMAT_S(symlinktarget, sizeof(symlinktarget), 2,
                dst.data, dst.len,
                "/..", (std::size_t) 3);

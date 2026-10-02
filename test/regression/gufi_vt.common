@@ -67,7 +67,7 @@ run_tests() {
     func="$1"
 
     echo "# Generate treesummary tables in all directories"
-    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | @SED@ '\%^Started .*$%d'
+    run_no_sort "${GUFI_TREESUMMARY_ALL} \"${INDEXROOT}\"" | remove_time | @SED@ '\%^Started .*$%d'
 
     echo "# Query treesummary"
     "${func}" "SELECT minsize, maxsize, minmtime, maxmtime FROM gufi_vt_treesummary('${INDEXROOT}', ${THREADS}) ORDER BY minsize ASC, maxsize ASC;"
@@ -86,6 +86,9 @@ run_tests() {
 
     echo "# Paths"
     "${func}" "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"
+
+    echo "# SELECT rightmost columns to make sure column index checking is correct"
+    "${func}" "SELECT ossint1, ossint2, ossint3, ossint4, osstext1, osstext2, pinode, ppinode FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE ((name != 'directory_symlink') AND (name != 'repeat_name')) ORDER BY mtime ASC;"
 
     echo "# Make sure all types work"
     "${func}" "SELECT name, size, size * 1.0, CAST(name AS BLOB), NULL FROM gufi_vt_pentries('${INDEXROOT}', ${THREADS}) WHERE name == '.hidden';"

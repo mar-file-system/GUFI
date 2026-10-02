@@ -71,7 +71,6 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-/* ****************************************************** */
 /* simple string */
 typedef struct {
     char *data;           /* always managed by str API */
@@ -80,17 +79,23 @@ typedef struct {
 } str_t;
 
 #ifdef __cplusplus
-#define REFSTR(buf, buflen) {   \
+#define REFSTR(buf, buflen)     \
+{                               \
     (char *) (buf),             \
     (buflen),                   \
     nullptr,                    \
 }
+
+#define NULL_STR REFSTR(nullptr, 0)
 #else
-#define REFSTR(buf, buflen) {   \
+#define REFSTR(buf, buflen)     \
+{                               \
     .data = (char *) (buf),     \
     .len = (buflen),            \
     .free = NULL,               \
 }
+
+#define NULL_STR REFSTR(NULL, 0)
 #endif
 
 /*
@@ -119,7 +124,9 @@ void str_free_existing(str_t *str);
 
 /* compare strings like strncmp(3) */
 int str_cmp(const str_t *lhs, const str_t *rhs);
-/* ****************************************************** */
+
+/* return 1 if str points to a buffer and has length > 0 */
+int str_exists(const str_t *str);
 
 #ifdef __cplusplus
 }

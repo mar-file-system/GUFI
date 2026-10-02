@@ -69,7 +69,7 @@ import gufi_common
 
 SQL_FLAGS = ['I', 'T', 'S', 'E', 'K', 'J', 'G', 'F']
 
-def build_arg_parser():
+def parse_args(argv):
     parser = argparse.ArgumentParser('gufi_query_multiple_remotes',
                                      description='run gufi_query (via gufi_vt) across multiple remotes and join results',
                                      add_help=False)
@@ -163,7 +163,7 @@ def build_arg_parser():
                             metavar='index',
                             help='common index path across all remotes')
 
-    return parser
+    return parser.parse_args(argv[1:])
 
 def common_vt_flags(args):
     flags = []
@@ -196,9 +196,9 @@ def common_vt_flags(args):
 #
 # this has the downside of running on remotes sequentially
 # instead of in parallel (limitation of SQLite 3)
-def ssh(conn, parser, args):
+def ssh(conn, args):
     if len(args.uri_index) % 2:
-        parser.error('Missing index path')
+        raise RuntimeError('Missing index path')
 
     # build CREATE VIRTUAL TABLE SQL
     create_vt = 'CREATE VIRTUAL TABLE vt{0} USING gufi_vt('
@@ -227,7 +227,7 @@ def ssh(conn, parser, args):
     return conn.execute(sql), sql
 
 # run gufi_vt with pdsh, which sends commands to all remotes in parallel
-def pdsh(conn, _parser, args):
+def pdsh(conn, args):
     # build CREATE VIRTUAL TABLE SQL
     create_vt = 'CREATE VIRTUAL TABLE vt USING gufi_vt('
 
@@ -252,8 +252,7 @@ def pdsh(conn, _parser, args):
     return conn.execute(sql), sql
 
 def run(argv, _config=None, stdout=None, stderr=None):
-    parser = build_arg_parser()
-    args = parser.parse_args(argv[1:])
+    args = parse_args(argv)
 
     stdout_results = ''
     stderr_results = ''
@@ -267,7 +266,7 @@ def run(argv, _config=None, stdout=None, stderr=None):
         if args.remote_type == 'pdsh':
             func = pdsh
 
-        res, sql = func(conn, parser, args)
+        res, sql = func(conn, args)
 
         # have to call here because gufi_vt(verbose=1) does not print
         # until SELECT is run, so this would print first if placed

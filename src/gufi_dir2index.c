@@ -78,6 +78,7 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #include "dbutils.h"
 #include "external_attach.h"
+#include "index.h"
 #include "path_list.h"
 #include "plugin.h"
 #include "template_db.h"
@@ -95,277 +96,150 @@ struct PoolArgs {
     uint64_t *total_nondirs;
 };
 
-/*
- * values passed to process_nondir
- *
- * serves double duty as state within processdir
- */
-struct NonDirArgs {
-    struct input *in;
-    str_t *index_parent;
-
-    /* thread args */
-    size_t id;
-    struct template_db *temp_db;
-    struct template_db *temp_xattr;
-    struct work *work;
-    struct entry_data ed;
-
-    /* index path */
-    str_t topath;
-
-    /* summary of the current directory */
-    struct sum summary;
-
-    /* db.db */
-    sqlite3 *db;
-
-    /* prepared statements */
-    sqlite3_stmt *entries_res;
-    sqlite3_stmt *xattrs_res;
-    sqlite3_stmt *xattr_files_res;
-
-    /* list of xattr dbs */
-    sll_t xattr_db_list;
-};
-
-static int process_external(struct input *in, void *args,
-                            const long long int pinode,
-                            const char *filename) {
-    (void) in;
-    return external_insert((sqlite3 *) args, EXTERNAL_TYPE_USER_DB_NAME, pinode, filename);
-}
-
-static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
-    struct NonDirArgs *nda = (struct NonDirArgs *) args;
-    struct input *in = nda->in;
-    int rc = 0;
-
-    if (fstatat_wrapper(entry, ed, 1, 1) != 0) {
-        rc = 1;
-        goto out;
-    }
-
-    if (in->process_xattrs) {
-        insertdbgo_xattrs(in, &nda->work->statuso, entry, ed,
-                          &nda->xattr_db_list, nda->temp_xattr,
-                          nda->topath.data, nda->topath.len,
-                          nda->xattrs_res, nda->xattr_files_res);
-    }
-
-    /* read external files before modifying the entry's path */
-    if (strncmp(entry->name + entry->name_len - entry->basename_len,
-                EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
-        external_read_file(in, entry, process_external, nda->db);
-    }
-
-    /* update summary table */
-    sumit(&nda->summary, entry, ed);
-
-    /* add entry + xattr names into bulk insert */
-    insertdbgo(entry, ed, nda->entries_res);
-
-    PCS_t pcs = {
-        .db = nda->db,
-        .work = entry,
-        .ed = ed,
-    };
-
-    plugins_process_file(&nda->in->plugins, &pcs, nda->id);
-
-out:
-    return rc;
-}
-
 static int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
+    struct work *work = NULL;
+    decompress_work(&work, data);
+    struct entry_data ed = {0};
+    ed.type = 'd';
+
+    plugin_dir_action process_dir = PLUGIN_NO_PROCESS_DIR;
+    struct descend_counters ctrs = {0};
+
     int rc = 0;
 
-    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
-
-    struct NonDirArgs nda;
-    nda.in         = &pa->in;
-    nda.id         = QPTPool_get_id(ctx);
-    nda.temp_db    = &pa->db;
-    nda.temp_xattr = &pa->xattr;
-    nda.work       = NULL;
-    memset(&nda.ed, 0, sizeof(nda.ed));
-    nda.ed.type    = 'd';
-    nda.topath     = (str_t) REFSTR(NULL, 0);
-
-    PCS_t pcs; /* references passed into plugin */
-    memset(&pcs, 0, sizeof(pcs));
-
-    DIR *dir = NULL;
-
-    decompress_work(&nda.work, data);
-
-    pcs.work = nda.work;
-
-    // if we're in the min-max range use the result of the plugins "dir_action" to determine process_dir
-    plugin_dir_action process_dir = PLUGIN_NO_PROCESS_DIR;
-
-    if (pa->in.min_level <= nda.work->level && nda.work->level <= pa->in.max_level) {
-        process_dir = plugins_dir_action(&pa->in.plugins, &pcs);
-    }
-
-    dir = opendir_wrapper(nda.work->name, 1);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
-        rc = 0;
-        goto cleanup;
+        rc = 0; /* return ok, not error */
+        goto done;
     }
 
-    if (lstat_wrapper(nda.work->name, &nda.work->statuso, &nda.work->crtime,
-                      &nda.work->stat_called, 1, 1) != 0) {
-        rc = 0;
-        goto close_dir;
-    }
-
-    /* offset by work->root_len to remove prefix */
-    nda.topath.len = pa->index_parent.len + 1 + nda.work->name_len - nda.work->root_parent.len;
+    str_t topath = {0};
 
     /*
-     * allocate space for "/db.db" in nda.topath
-     *
-     * extra buffer is not needed and save on memcpy-ing
+     * allocate space for "/db.db" in topath so that an extra buffer
+     * is not needed to switch between directory and db paths
      */
-    const size_t topath_size = nda.topath.len + 1 + DBNAME_LEN + 1;
+    topath.len = SNFORMAT_S_ALLOC(&topath.data, 4,
+                                  pa->index_parent.data, pa->index_parent.len,
+                                  "/", (size_t) 1,
+                                  work->name + work->root_parent.len, work->name_len - work->root_parent.len, /* remove prefix if not using exact path */
+                                  "/" DBNAME, (size_t) 1 + DBNAME_LEN);
 
-    nda.topath.data = malloc(topath_size);
-    SNFORMAT_S(nda.topath.data, topath_size, 4,
-               pa->index_parent.data, pa->index_parent.len,
-               "/", (size_t) 1,
-               nda.work->name + nda.work->root_parent.len, nda.work->name_len - nda.work->root_parent.len,
-               "\0" DBNAME, (size_t) 1 + DBNAME_LEN);
+    topath.free = free;
 
-    /* don't need recursion because parent is guaranteed to exist */
-    if (process_dir != PLUGIN_NO_PROCESS_NO_DESCEND_DIR && mkdir(nda.topath.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+    rc = index_dir(&topath, 1, ctx, &pa->in, &pa->db, &pa->xattr,
+                   &process_dir, work, &ed, dir, processdir, &ctrs);
+
+    if (rc != 0) {
+        rc = (rc < 0);
+        goto free_topath;
+    }
+
+    /* remove db.db */
+    topath.len -= 1 + DBNAME_LEN;
+    topath.data[topath.len] = '\0';
+
+    /* set permissions on index directory */
+    if (chmod(topath.data, work->statuso.st_mode) != 0) {
         const int err = errno;
-        if (err != EEXIST) {
-            fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath.data, err, strerror(err));
-            rc = (err == ENOSPC);
-            goto close_dir;
-        }
+        fprintf(stderr, "Warning: Unable to set permission for \"%s\": %s (%d)\n",
+                topath.data, strerror(err), err);
     }
 
-    /*
-     * set up for processing, but keep to minimum to quickly hit
-     * descend (and enqueue more work, keeping queues fed)
-     */
-    if (process_dir == PLUGIN_PROCESS_DIR) {
-        /* restore "/db.db" */
-        nda.topath.data[nda.topath.len] = '/';
-
-        int copy_err = 0;
-        nda.db = template_to_db(nda.temp_db, nda.topath.data,
-                                nda.work->statuso.st_uid, nda.work->statuso.st_gid,
-                                &copy_err);
-
-        /* remove "/db.db" */
-        nda.topath.data[nda.topath.len] = '\0';
-
-        if (!nda.db) {
-            rc = (copy_err == ENOSPC);
-            goto close_dir;
-        }
-
-        pcs.db = nda.db;
-        pcs.work = nda.work;
-        pcs.ed = &nda.ed;
-        pcs.data = &pa->index_parent;
-
-        /* prepare to insert into the database */
-        zeroit(&nda.summary);
-
-        /* prepared statements within db.db */
-        nda.entries_res = insertdbprep(nda.db, ENTRIES_INSERT);
-        nda.xattrs_res = NULL;
-        nda.xattr_files_res = NULL;
-
-        if (nda.in->process_xattrs) {
-            nda.xattrs_res = insertdbprep(nda.db, XATTRS_PWD_INSERT);
-            nda.xattr_files_res = insertdbprep(nda.db, EXTERNAL_DBS_PWD_INSERT);
-
-            /* external per-user and per-group dbs */
-            sll_init(&nda.xattr_db_list);
-        }
-
-        startdb(nda.db);
-
-        /* run light-weight plugin setup */
-        plugins_ctx_init(&pa->in.plugins, &pcs, nda.id);
-   }
-
-    struct descend_counters ctrs;
-
-    if (process_dir != PLUGIN_NO_PROCESS_NO_DESCEND_DIR){
-        descend(ctx, nda.in, nda.work, dir, 1,
-            processdir, process_dir == PLUGIN_PROCESS_DIR?process_nondir:NULL, &nda, &ctrs);
+    /* set owners on index directory */
+    if (chown(topath.data, work->statuso.st_uid, work->statuso.st_gid) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Warning: Unable to set owners for \"%s\": %s (%d)\n",
+                topath.data, strerror(err), err);
     }
 
-    /*
-     * now that subdirectories have been enqueued,
-     * do slower processing on this directory
-     */
-    if (process_dir == PLUGIN_PROCESS_DIR) {
-        stopdb(nda.db);
+  free_topath:
+    str_free_existing(&topath);
 
-        /* entries and xattrs have been inserted */
-
-        if (nda.in->process_xattrs) {
-            /* write out per-user and per-group xattrs */
-            sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
-
-            /* keep track of per-user and per-group xattr dbs */
-            insertdbfin(nda.xattr_files_res);
-
-            /* pull this directory's xattrs because they were not pulled by the parent */
-            xattrs_setup(&nda.ed.xattrs);
-            xattrs_get(nda.work->name, &nda.ed.xattrs);
-
-            /* directory xattrs go into the same table as entries xattrs */
-            insertdbgo_xattrs_avail(nda.work, &nda.ed, nda.xattrs_res);
-            insertdbfin(nda.xattrs_res);
-        }
-        insertdbfin(nda.entries_res);
-
-        /* insert this directory's summary data */
-        /* the xattrs go into the xattrs_avail table in db.db */
-        insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len,
-                    nda.work, &nda.ed, &nda.summary);
-
-        /* run plugin before destroying data */
-        plugins_process_dir(&pa->in.plugins, &pcs, nda.id);
-
-        if (nda.in->process_xattrs) {
-            xattrs_cleanup(&nda.ed.xattrs);
-        }
-
-        plugins_ctx_exit(&pa->in.plugins, &pcs, nda.id);
-
-        closedb(nda.db);
-        nda.db = NULL;
-    }
-
-    /* ignore errors */
-    chmod(nda.topath.data, nda.work->statuso.st_mode);
-    chown(nda.topath.data, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
-
-  close_dir:
-    closedir(dir);
-
-  cleanup:
+  done:
     if (process_dir == PLUGIN_PROCESS_DIR) {
         const size_t id = QPTPool_get_id(ctx);
         pa->total_dirs[id]++;
         pa->total_nondirs[id] += ctrs.nondirs_processed;
     }
 
-    free(nda.topath.data);
-    free(nda.work);
+    closedir(dir);
+    free(work);
 
     return rc;
+}
+
+/*
+ * Duplicate the path between the GUFI tree parent and the actual
+ * index root. Although stat(2) is used to get the correct permissions
+ * and owners, these directories are not being indexed, so empty db.db
+ * files will not be created.
+ *
+ * index_parent should have been created before calling this function
+ */
+static int create_intermediate_paths(const str_t *index_parent, char *path) {
+    for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
+        *p = '\0';
+
+        /* stat the original path */
+        struct stat st;
+        if (stat(path, &st) != 0) { /* stat(2) not lstat(2) */
+            const int err = errno;
+            if (err != ENOENT) {
+                fprintf(stderr, "Error: Cannot stat directory \"%s\": %s (%d)\n",
+                        path, strerror(err), err);
+                *p = '/';
+                return 1;
+            }
+        }
+
+        if (!S_ISDIR(st.st_mode)) {
+            fprintf(stderr, "Error: \"%s\" is not a directory\n", path);
+            *p = '/';
+            return 1;
+        }
+
+        char *topath = NULL;
+        SNFORMAT_S_ALLOC(&topath, 3,
+                         index_parent->data, index_parent->len,
+                         "/", (size_t) 1,
+                         path, strlen(path));
+
+        if (mkdir(topath, st.st_mode) == -1) {
+            const int err = errno;
+            if (err != EEXIST) {
+                fprintf(stderr, "Error: Could not make \"%s\": %s (%d)\n",
+                        topath, strerror(err), err);
+                free(topath);
+                *p = '/';
+                return 1;
+            }
+        }
+        else {
+            if (chmod(topath, st.st_mode) != 0) {
+                const int err = errno;
+                if (err != EEXIST) {
+                    fprintf(stderr, "Warning: Could not chmod \"%s\": %s (%d)\n",
+                            topath, strerror(err), err);
+                }
+            }
+            if (chown(topath, st.st_uid, st.st_gid) != 0) {
+                const int err = errno;
+                if (err != EEXIST) {
+                    fprintf(stderr, "Warning: Could not chown \"%s\": %s (%d)\n",
+                            topath, strerror(err), err);
+                }
+            }
+        }
+        free(topath);
+
+        *p = '/';
+    }
+
+    return 0;
 }
 
 /* set up parent for a single subtree root in the index and enqueue subtree root as normal work */
@@ -373,64 +247,17 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
     struct work *subtree_root = (struct work *) data;
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
-    /* offset by root_parent.len to remove prefix */
-    const size_t topath_len = pa->index_parent.len + 1 + subtree_root->name_len - subtree_root->root_parent.len;
-
-    char *topath = malloc(topath_len + 1);
-    SNFORMAT_S(topath, topath_len + 1, 3,
-               pa->index_parent.data, pa->index_parent.len,
-               "/", (size_t) 1,
-               subtree_root->name + subtree_root->root_parent.len, subtree_root->name_len - subtree_root->root_parent.len);
-
     /*
-     * create directories up to parent with corrrect permissions and owners
+     * create directories up to parent with correct permissions and owners
      * so that processdir can maintain assumption that the parent directory
      * already exists
      *
      * empty db.db files are not created
      */
-    for (char *p = strchr(topath + 1, '/'); p; p = strchr(p + 1, '/')) {
-        *p = '\0';
-
-        struct stat st;
-        if (stat(topath, &st) != 0) { /* stat(2) not lstat(2) */
-            const int err = errno;
-            if (err != ENOENT) {
-                fprintf(stderr, "Error: Cannot stat subtree root parent \"%s\": %s (%d)\n",
-                        topath, strerror(err), err);
-                free(topath);
-                free(subtree_root);
-                return 1;
-            }
-        }
-
-        if (!S_ISDIR(st.st_mode)) {
-            fprintf(stderr, "Error: Subtree root parent is not a directory \"%s\"\n", topath);
-            free(topath);
-            free(subtree_root);
-            return 1;
-        }
-
-        if (mkdir(topath, st.st_mode) == -1) {
-            const int err = errno;
-            if (err != EEXIST) {
-                fprintf(stderr, "Error: Could not make subtree root parent \"%s\": %s (%d)\n",
-                        topath, strerror(err), err);
-                *p = '/';
-                free(topath);
-                free(subtree_root);
-                return 1;
-            }
-        }
-        else {
-            chmod(topath, st.st_mode);
-            chown(topath, st.st_uid, st.st_gid);
-        }
-
-        *p = '/';
+    if (create_intermediate_paths(&pa->index_parent, subtree_root->name + subtree_root->root_parent.len) != 0) {
+        free(subtree_root);
+        return 1;
     }
-
-    free(topath);
 
     struct work *copy = compress_struct(pa->in.compress, subtree_root, struct_work_size(subtree_root));
     QPTPool_enqueue(ctx, processdir, copy);
@@ -444,7 +271,7 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
  * note that the provided directories go into
  * individual directories underneath this one
  */
-static int setup_dst(const char *index_parent) {
+static int setup_dst(char *index_parent) {
     /* check if the destination path already exists (not an error) */
     struct stat dst_st;
     if (lstat(index_parent, &dst_st) == 0) {
@@ -467,7 +294,7 @@ static int setup_dst(const char *index_parent) {
     return 0;
 }
 
-static int validate_source(str_t *index_parent, const char *path, struct work **work) {
+static int validate_source(str_t *index_parent, const char *path, struct work **work, const int use_exact_path) {
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) != 0) {
@@ -482,27 +309,39 @@ static int validate_source(str_t *index_parent, const char *path, struct work **
         return 1;
     }
 
+    if (use_exact_path) {
+        if (create_intermediate_paths(index_parent, (char *) path) != 0) {
+            return 1;
+        }
+    }
+
     struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
     new_work->root_parent.data = (char *) path;
-    new_work->root_parent.len = dirname_len(path, new_work->name_len);
+    new_work->root_parent.len = use_exact_path?0:dirname_len(path, new_work->name_len);
     new_work->level = 0;
     new_work->basename_len = new_work->name_len - new_work->root_parent.len;
     new_work->root_basename_len = new_work->basename_len;
     new_work->orig_root.data = (char *) path;
     new_work->orig_root.len = strlen(new_work->orig_root.data);
 
-    char expathin[MAXPATH];
-    char expathout[MAXPATH];
-    char expathtst[MAXPATH];
+    const size_t expathtst_len = index_parent->len + 1 + new_work->name_len - new_work->root_parent.len;
+    char *expathtst = malloc(expathtst_len + 1);
+    SNPRINTF(expathtst, expathtst_len + 1, "%s/%s", index_parent->data, new_work->root_parent.data + new_work->root_parent.len);
 
-    SNPRINTF(expathtst, MAXPATH,"%s/%s", index_parent->data, new_work->root_parent.data + new_work->root_parent.len);
-    realpath(expathtst, expathout);
-    realpath(new_work->root_parent.data, expathin);
+    char *expathout = realpath(expathtst, NULL);
+    if (expathout)  {
+        char *expathin = realpath(new_work->root_parent.data, NULL);
 
-    if (!strcmp(expathin, expathout)) {
-        fprintf(stderr,"You are putting the index dbs in input directory\n");
+        if (!strcmp(expathin, expathout)) {
+            fprintf(stderr,"You are putting the index dbs in input directory\n");
+        }
+
+        free(expathin);
+        free(expathout);
     }
+
+    free(expathtst);
 
     *work = new_work;
 
@@ -525,6 +364,7 @@ int main(int argc, char *argv[]) {
 
         /* miscellaneous flags */
         FLAG_EXTERNAL_ATTACH_VALIDATE, FLAG_PLUGIN,
+        FLAG_USE_EXACT_PATH,
 
         /* memory usage flags */
         FLAG_TARGET_MEMORY, FLAG_SWAP_PREFIX, FLAG_SUBDIR_LIMIT,
@@ -616,7 +456,8 @@ int main(int argc, char *argv[]) {
         }
         else if (root_count == 1) {
             struct work *root = NULL;
-            if (validate_source(&pa.index_parent, pa.in.pos.argv[0], &root) == 0) {
+            if (validate_source(&pa.index_parent, pa.in.pos.argv[0],
+                                &root, pa.in.use_exact_path) == 0) {
                 process_path_list(&pa.in, root, ctx, process_subtree_root);
             }
             else {
@@ -629,7 +470,8 @@ int main(int argc, char *argv[]) {
             for(int i = 0; i < pa.in.pos.argc; i++) {
                 /* get first work item by validating source path */
                 struct work *root = NULL;
-                if (validate_source(&pa.index_parent, pa.in.pos.argv[i], &root) != 0) {
+                if (validate_source(&pa.index_parent, pa.in.pos.argv[i],
+                                    &root, pa.in.use_exact_path) != 0) {
                     continue;
                 }
 

@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,6 +84,11 @@ static int rm_nondir(void *args, int *keep_going) {
             const int err = errno;
             fprintf(stderr, "Warning: Failed to delete \"%s\": %s\n", entry->name, strerror(err));
             *keep_going = 0;
+
+            int *rcs = (int *) dir->extra_args;
+            if (rcs) {
+                rcs[dir->tid.down] = -1;
+            }
         }
     }
 
@@ -105,6 +111,12 @@ static int rm_dir(void *args) {
     if (rmdir(dir->name) != 0) {
         const int err = errno;
         fprintf(stderr, "Warning: Failed to remove \"%s\": %s\n", dir->name, strerror(err));
+
+        int *rcs = (int *) dir->extra_args;
+        if (rcs) {
+            rcs[dir->tid.up] = -1;
+        }
+
         return 1;
     }
 
@@ -120,21 +132,46 @@ int main(int argc, char * argv[]) {
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
+        FLAG_FORCE,
+
         FLAG_END
     };
 
     struct input in;
     process_args_and_maybe_exit(options, 1, "directory ...", &in);
 
-    const int rc = parallel_bottomup(argv + idx, argc - idx,
-                                     0, (size_t) -1,
-                                     NULL,
-                                     in.maxthreads,
-                                     sizeof(struct BottomUp),
-                                     rm_nondir, rm_dir,
-                                     1,
-                                     0,
-                                     NULL);
+    int *rcs = NULL;
+
+    if (in.force) {
+        rcs = calloc(in.maxthreads, sizeof(*rcs));
+        if (!rcs) {
+            fprintf(stderr, "Error: Could not allocate buffer for %zu threads\n", in.maxthreads);
+            input_fini(&in);
+            return EXIT_FAILURE;
+        }
+    }
+
+    int rc = parallel_bottomup(argv + idx, argc - idx,
+                               0, (size_t) -1,
+                               NULL,
+                               in.maxthreads,
+                               sizeof(struct BottomUp),
+                               AT_SYMLINK_NOFOLLOW, /* delete the symlink, not the thing pointed to */
+                               rm_nondir, rm_dir,
+                               1,
+                               0,
+                               rcs,
+                               !in.force);
+
+    /* if forced, a bad path is not an error, but a failed unlink/rmdir is */
+    if (in.force) {
+        for(size_t i = 0; i < in.maxthreads; i++) {
+            if (rcs[i] != 0) {
+                rc = rcs[i];
+            }
+        }
+        free(rcs);
+    }
 
     input_fini(&in);
 

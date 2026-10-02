@@ -116,6 +116,22 @@ int close_template_db(struct template_db *tdb) {
     return init_template_db(tdb);
 }
 
+static char *template_path(const str_t *dir) {
+    char *name = NULL;
+
+    if (dir) {
+        SNFORMAT_S_ALLOC(&name, 2,
+                         dir->data, dir->len,
+                         "/XXXXXX", (size_t) 7);
+    }
+    else {
+        SNFORMAT_S_ALLOC(&name, 1,
+                         "XXXXXX", (size_t) 6);
+    }
+
+    return name;
+}
+
 /* create the database file to copy from */
 int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
                     const char *name) {
@@ -146,63 +162,45 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
     return !tdb->size;
 }
 
-static char *template_path(const str_t *dir) {
-    char *name = NULL;
+/* not merging this into create_template */
+static int create_template_temp(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
+                                const str_t *dir) {
+    char *name = template_path(dir);
+    const int fd = mkstemp(name); /* duplicate open */
 
-    if (dir) {
-        const size_t name_len = dir->len + 1 + 6;
-        name = malloc(name_len + 1);
-        SNFORMAT_S(name, name_len + 1, 2,
-                   dir->data, dir->len,
-                   "/XXXXXX", (size_t) 7);
+    if (fd < 0) {
+        const int err = errno;
+        fprintf(stderr, "Error: Could not create temporary db \"%s\": %s (%d)\n",
+                name, strerror(err), err);
+        remove(name);             /* file is possibly created */
+        free(name);
+        return -1;
     }
-    else {
-        name = malloc(6 + 1);
-        SNFORMAT_S(name, 6 + 1, 1,
-                   "XXXXXX", (size_t) 6);
-    }
+    close(fd);
 
-    return name;
+    const int rc = create_template(tdb, create_tables, name);
+    free(name);
+    return rc;
 }
 
 /* create the initial xattrs database file to copy from */
 int create_xattrs_template(struct template_db *tdb, const str_t *dir) {
-    char *name = template_path(dir);
-    const int fd = mkstemp(name); /* duplicate open */
-
-    if (fd < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not create temporary xattrs db: %s (%d)\n",
-                strerror(err), err);
-        remove(name);             /* file is possibly created */
-        free(name);
-        return -1;
-    }
-    close(fd);
-
-    const int rc = create_template(tdb, create_xattr_tables, name);
-    free(name);
-    return rc;
+    return create_template_temp(tdb, create_xattr_tables, dir);
 }
 
 /* create the initial main database file to copy from */
 int create_dbdb_template(struct template_db *tdb, const str_t *dir) {
-    char *name = template_path(dir);
-    const int fd = mkstemp(name); /* duplicate open */
+    return create_template_temp(tdb, create_dbdb_tables, dir);
+}
 
-    if (fd < 0) {
-        const int err = errno;
-        fprintf(stderr, "Error: Could not create temporary db.db: %s (%d)\n",
-                strerror(err), err);
-        remove(name);             /* file is possibly created */
-        free(name);
-        return -1;
-    }
-    close(fd);
+static int create_rollup_tables(const char *name, sqlite3 *db, void *args) {
+    return (create_dbdb_tables(name, db, args) ||
+            create_treesummary_tables(name, db, args));
+}
 
-    const int rc = create_template(tdb, create_dbdb_tables, name);
-    free(name);
-    return rc;
+/* create the initial main database file to copy from with a treesummary table */
+int create_rollup_template(struct template_db *tdb, const str_t *dir) {
+    return create_template_temp(tdb, create_rollup_tables, dir);
 }
 
 /* copy the template file instead of creating a new database and new tables for each work item */
@@ -218,7 +216,7 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     if (dst_db < 0) {
         *err = errno;
-        fprintf(stderr, "Error: copy_template dst db: %s (%d)\n", strerror(*err), *err);
+        fprintf(stderr, "Error: copy_template \"%s\": %s (%d)\n", dst, strerror(*err), *err);
         return -1;
     }
 
@@ -262,15 +260,16 @@ sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid
 
 /* create db.db with empty tables at the given directory (and leave it on the filesystem) */
 int create_empty_dbdb(struct template_db *tdb, str_t *dst, uid_t uid, gid_t gid) {
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 3,
-               dst->data, dst->len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 3,
+                     dst->data, dst->len,
+                     "/", (size_t) 1,
+                     DBNAME, DBNAME_LEN);
 
     /* if database file already exists, assume it's good */
     struct stat st;
     if (stat(dbname, &st) == 0) {  /* following links */
+        free(dbname);
         return -!S_ISREG(st.st_mode);
     }
 
@@ -280,8 +279,11 @@ int create_empty_dbdb(struct template_db *tdb, str_t *dst, uid_t uid, gid_t gid)
     if (err != ENOENT) {
         fprintf(stderr, "Error: Empty db.db path '%s': %s (%d)\n",
                 dst->data, strerror(err), err);
+        free(dbname);
         return -1;
     }
 
-    return copy_template(tdb, dbname, uid, gid, NULL);
+    const int rc = copy_template(tdb, dbname, uid, gid, NULL);
+    free(dbname);
+    return rc;
 }

@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
+
+OUTPUT="presidio_plugin.out"
+
+# this script requires the presidio docker containers to be running
+# see contrib/CI/presidio.sh
+
+(
+    echo "# set some osstext1"
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'name = Gufi Devs' WHERE name == '1KB';\""
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'email = gufi-lanl@lanl.gov' WHERE name == '1MB';\""
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'phone = 0 (123) 456-7890' WHERE name == '.hidden';\""
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'time = 00:00 AM' WHERE name == 'old_file';\""
+    run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'date = Jan 1, 1970' WHERE name == 'repeat_name';\""
+
+    echo "# query without presidio"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), osstext1 FROM vrxpentries\" \"${SEARCH}\" | @SED@ '\%.*|$%d'"
+
+    echo "# analyze with presidio"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_analyze(osstext1) FROM vrxpentries;\" \"${SEARCH}\" | @SED@ '\%.*|$%d'" | @SED@ 's%: [0-9]\+\(\.[0-9]\+\)\?%: #%g;'
+
+    echo "# analyze with presidio through gufi_vt"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        # deliberately SELECT-ing (osstext1 == '') to make sure empty
+        # strings get passed into presidio plugin functions
+        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, presidio_analyze(osstext1) AS analyze, (osstext1 == '') AS empty FROM vrpentries;\", "
+        echo "    plugin=\"presidio:${PRESIDIO_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT fullpath, analyze FROM gufi WHERE empty == '0';"
+    )
+    gufi_vt "${query}" 2>&1 | replace | @SED@ 's%: [0-9]\+\(\.[0-9]\+\)\?%: #%g;'
+
+    echo "# anonymize with presidio"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;\" \"${SEARCH}\" | @SED@ '\%.*|$%d'"
+
+    echo "# anonymize with presidio through gufi_vt"
+    query=$(
+        echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("
+        # deliberately SELECT-ing (osstext1 == '') to make sure empty
+        # strings get passed into presidio plugin functions
+        echo "    E=\"SELECT rpath(sname, sroll, name) AS fullpath, presidio_anonymize(osstext1) AS anonymized, (osstext1 == '') AS empty FROM vrpentries;\", "
+        echo "    plugin=\"presidio:${PRESIDIO_QUERYING_PLUGIN}\", "
+        echo "    \"${INDEXROOT}\");"
+        echo "SELECT fullpath, anonymized FROM gufi WHERE empty == '0';"
+    )
+    gufi_vt "${query}" 2>&1 | replace
+
+    echo "# anonymize with presidio with values set by environment variables"
+    run_sort "PRESIDIO_PLUGIN_ANALYZE_URL=\"127.0.0.1:5002/analyze\" PRESIDIO_PLUGIN_ANONYMIZE_URL=\"127.0.0.1:5001/anonymize\" PRESIDIO_PLUGIN_LANGUAGE=\"en\" ${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries WHERE osstext1 != '';\" \"${SEARCH}\""
+
+    echo "# empty default language"
+    run_no_sort "PRESIDIO_PLUGIN_LANGUAGE=\"\" ${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries;\" \"${SEARCH}\""
+
+    echo "# empty language"
+    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1, '') FROM vrxpentries WHERE osstext1 != '';\" \"${SEARCH}\""
+
+    echo "# unknown default language"
+    run_no_sort "PRESIDIO_PLUGIN_LANGUAGE=\"unknown\" ${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1) FROM vrxpentries WHERE osstext1 != '';\" \"${SEARCH}\""
+
+    echo "# unknown language"
+    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" -E \"SELECT rpath(sname, sroll, name), presidio_anonymize(osstext1, 'unknown') FROM vrxpentries WHERE osstext1 != '';\" \"${SEARCH}\""
+
+    echo "# try to load presidio plugin multiple times"
+    run_sort "${GUFI_QUERY} --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\" --plugin \"presidio:${PRESIDIO_QUERYING_PLUGIN}\""
+) | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/presidio_plugin.expected "${OUTPUT}"
+rm "${OUTPUT}"

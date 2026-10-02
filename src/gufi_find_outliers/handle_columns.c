@@ -397,7 +397,7 @@ trie_t *setup_column_functions(void) {
     REFSTR("totcrtime",       9),
 
 #define LAST                             \
-    REFSTR(NULL,              0),
+    NULL_STR,
 
 static const str_t T_ONLYS[] = {
     T_ONLY_COLS

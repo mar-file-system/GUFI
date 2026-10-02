@@ -73,7 +73,9 @@ static const char INTERMEDIATE_ATTACH_FORMAT[] = "file:memory%zu?mode=memory&cac
 #define INTERMEDIATE_ATTACH_NAME "intermediate"
 
 int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *name, const size_t offset) {
-    /* Not checking arguments */
+    if (!name) {
+        return 0;
+    }
 
     /* create per-thread in-memory dbs */
     aggregate->dbs = calloc(threads, sizeof(aggregate->dbs[0]));
@@ -93,14 +95,15 @@ int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *nam
         addqueryfuncs(aggregate->dbs[i]);
     }
 
-    /* always open an aggregate db */
     aggregate->agg = opendb(name, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
                             1, 1, create_snapshot_table, NULL);
     if (!aggregate->agg) {
-        fprintf(stderr, "Could not open final aggregation database \"%s\"\n", dbname);
+        fprintf(stderr, "Could not open final aggregation database \"%s\"\n", name);
         aggregate_fin(aggregate, threads);
         return 1;
     }
+
+    fprintf(stdout, "Created artifact %s\n", name);
 
     /* don't need addqueryfuncs */
 
@@ -108,7 +111,9 @@ int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *nam
 }
 
 void aggregate_intermediate(Aggregate_t *aggregate, const size_t threads, const size_t offset) {
-    /* Not checking arguments */
+    if (!aggregate->agg) {
+        return;
+    }
 
     /*
      * attach intermediate databases to aggregate database
@@ -120,14 +125,14 @@ void aggregate_intermediate(Aggregate_t *aggregate, const size_t threads, const 
     for(size_t i = 0; i < threads; i++) {
         SNPRINTF(dbname, MAXPATH, INTERMEDIATE_ATTACH_FORMAT, i + offset);
 
-        if (attachdb_raw(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1, 1)) {
+        if (attachdb_raw(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1, NULL)) {
             char *err = NULL;
             if ((sqlite3_exec(aggregate->agg, "INSERT INTO " SNAPSHOT " SELECT * FROM " INTERMEDIATE_ATTACH_NAME "." SNAPSHOT, NULL, NULL, &err) != SQLITE_OK)) {
                 sqlite_print_err_and_free(err, stderr, "Error: Cannot aggregate intermediate databases: %s\n", err);
             }
         }
 
-        detachdb(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1, 1);
+        detachdb(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1, NULL);
     }
 }
 

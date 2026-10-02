@@ -78,6 +78,9 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "utils.h"
 
+static const uint64_t    PRINT_ERRNO[4] = {0x00000000ULL, 0x00000000ULL, 0x00000000ULL, 0x00000000ULL};
+static const uint64_t NO_PRINT_ERRNO[4] = {0xffffffffULL, 0xffffffffULL, 0xffffffffULL, 0xffffffffULL};
+
 TEST(SNPRINTF, bad) {
     char buf[1];
     const std::size_t size = sizeof(buf);
@@ -100,6 +103,13 @@ TEST(SNFORMAT_S, fill_buffer) {
     EXPECT_EQ(SNFORMAT_S(buf, 5, 1, "0123456789", (size_t) 10), (size_t) 4);
     EXPECT_STREQ(buf, "0123");
     EXPECT_EQ(buf[4], '\0');
+}
+
+TEST(SNFORMAT_S, ALLOC) {
+    char *buf = nullptr;
+    EXPECT_EQ(SNFORMAT_S_ALLOC(&buf, 2, "abc", 3, "def", 3), (std::size_t) 6);
+    EXPECT_STREQ(buf, "abcdef");
+    free(buf);
 }
 
 TEST(get, queue_limit) {
@@ -441,8 +451,8 @@ TEST(shortpath, split) {
     #define LAST "e"
     #define SRC PATH "/" LAST
 
-    char dst[MAXPATH];
-    char endname[MAXPATH];
+    char dst[sizeof(SRC)];
+    char endname[sizeof(SRC)];
 
     // path ending with basename
     EXPECT_EQ(shortpath(SRC, dst, endname), 0);
@@ -469,14 +479,14 @@ TEST(dupdir, parentfirst) {
     char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
-    char parent[MAXPATH];
+    char parent[14];
     EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[MAXPATH];
+    char child[20];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
@@ -509,23 +519,23 @@ TEST(dupdir, parentfirst) {
     EXPECT_EQ(orig_child_stat.st_gid,             child_stat.st_gid);
 }
 
-TEST(dupdir, childtfirst) {
+TEST(dupdir, childfirst) {
     char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
-    char parent[MAXPATH];
+    char parent[14];
     EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
-    orig_parent_stat.st_uid = geteuid();
-    orig_parent_stat.st_gid = getegid();
+    orig_parent_stat.st_uid  = geteuid();
+    orig_parent_stat.st_gid  = getegid();
 
-    char child[MAXPATH];
+    char child[20];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
-    orig_child_stat.st_uid = geteuid();
-    orig_child_stat.st_gid = getegid();
+    orig_child_stat.st_uid  = geteuid();
+    orig_child_stat.st_gid  = getegid();
 
     // remove leftover directories
     rmdir(child);
@@ -533,7 +543,7 @@ TEST(dupdir, childtfirst) {
 
     const mode_t prev_umask = umask(0);
 
-    ASSERT_EQ(dupdir(child,  orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid), 0);
+    ASSERT_EQ(dupdir(child, orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid), 0);
 
     // parent path should have the same permissions as the child path
     {
@@ -569,7 +579,7 @@ TEST(dupdir, childtfirst) {
     EXPECT_EQ(orig_parent_stat.st_uid,            parent_stat.st_uid);
     EXPECT_EQ(orig_parent_stat.st_gid,            parent_stat.st_gid);
 
-    EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR,  child_stat.st_mode);
+    EXPECT_EQ(orig_child_stat.st_mode  | S_IFDIR, child_stat.st_mode);
     EXPECT_EQ(orig_child_stat.st_uid,             child_stat.st_uid);
     EXPECT_EQ(orig_child_stat.st_gid,             child_stat.st_gid);
 }
@@ -580,7 +590,7 @@ TEST(dupdir, fileasdir) {
     ASSERT_GE(fd, -1);
     EXPECT_EQ(close(fd), 0);
 
-    char child[MAXPATH];
+    char child[13];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
 
     EXPECT_NE(dupdir(parent, S_IRWXU, geteuid(), getegid()), 0);
@@ -588,18 +598,25 @@ TEST(dupdir, fileasdir) {
     EXPECT_EQ(remove(parent), 0);
 }
 
+TEST(dupdir, exists) {
+    char root[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(root), nullptr);
+    EXPECT_EQ(dupdir(root, S_IRWXU, geteuid(), getegid()), 0);
+    rmdir(root);
+}
+
 TEST(mkpath, parentfirst) {
     char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
-    char parent[MAXPATH];
+    char parent[14];
     EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[MAXPATH];
+    char child[20];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
@@ -616,6 +633,10 @@ TEST(mkpath, parentfirst) {
     ASSERT_EQ(chown (parent, orig_parent_stat.st_uid, orig_parent_stat.st_gid), 0);
     #endif
     ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid),  0);
+
+    #ifdef __CYGWIN__
+    ASSERT_EQ(chmod(child, orig_child_stat.st_mode),  0);
+    #endif
 
     struct stat parent_stat;
     struct stat child_stat;
@@ -641,14 +662,14 @@ TEST(mkpath, childfirst) {
     char root[] = "XXXXXX";
     ASSERT_NE(mkdtemp(root), nullptr);
 
-    char parent[MAXPATH];
+    char parent[14];
     EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[MAXPATH];
+    char child[20];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
@@ -660,8 +681,12 @@ TEST(mkpath, childfirst) {
     rmdir(parent);
 
     const mode_t prev_umask = umask(0);
-    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid),   0);
-    ASSERT_EQ(mkpath(parent, orig_parent_stat.st_mode, orig_parent_stat.st_uid, orig_parent_stat.st_gid),  -1); // EEXISTS
+    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode,  orig_child_stat.st_uid,  orig_child_stat.st_gid),   0);
+    ASSERT_EQ(mkpath(parent, orig_parent_stat.st_mode, orig_parent_stat.st_uid, orig_parent_stat.st_gid), -1); // EEXISTS
+
+    #ifdef __CYGWIN__
+    ASSERT_EQ(chmod(child, orig_child_stat.st_mode), 0);
+    #endif
 
     struct stat parent_stat;
     struct stat child_stat;
@@ -690,7 +715,7 @@ TEST(mkpath, fileasdir) {
     EXPECT_EQ(close(fd), 0);
 
     // need 2 levels due to how mkpath is implemented
-    char child[MAXPATH];
+    char child[18];
     EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/dir/subdir", parent), 0);
     EXPECT_EQ(mkpath(child, S_IRWXU, geteuid(), getegid()), -1);
 
@@ -730,30 +755,54 @@ TEST(modetostr, error) {
     }
 }
 
-TEST(modetostr, files) {
+static void modetostr_type(const mode_t type) {
     char actual[11];
     char expected[11];
     for(mode_t i = 0; i < 01000; i++) {
-        EXPECT_STREQ(modetostr(actual, 11, i), another_modetostr(expected, i));
+        const mode_t mode = i | type;
+        EXPECT_STREQ(modetostr(actual, 11, mode), another_modetostr(expected, mode));
     }
+}
+
+TEST(modetostr, files) {
+    modetostr_type(S_IFREG);
 }
 
 TEST(modetostr, links) {
-    char actual[11];
-    char expected[11];
-    for(mode_t i = 0; i < 01000; i++) {
-        const mode_t mode = i | S_IFLNK;
-        EXPECT_STREQ(modetostr(actual, 11, mode), another_modetostr(expected, mode));
-    }
+    modetostr_type(S_IFLNK);
 }
 
 TEST(modetostr, directories) {
+    modetostr_type(S_IFDIR);
+}
+
+static char SETUGID[]   = "-xSs";
+static char SETSTICKY[] = "-xTt";
+
+static void modetostr_setbits(const int idx, const mode_t x, const mode_t bits, const char *chars) {
     char actual[11];
     char expected[11];
-    for(mode_t i = 0; i < 01000; i++) {
-        const mode_t mode = i | S_IFDIR;
-        EXPECT_STREQ(modetostr(actual, 11, mode), another_modetostr(expected, mode));
+    for(mode_t mode = 0; mode < 01000; mode++) {
+        another_modetostr(expected, mode);
+        for(int set = 0; set < 4; set++) {
+            mode |= (set & 2)?bits:0;
+            expected[idx] = chars[(set & 2) | !!(mode & x)];
+            EXPECT_STREQ(modetostr(actual, 11, mode), expected);
+        }
+        mode &= ~bits;
     }
+}
+
+TEST(modetostr, setuid) {
+    modetostr_setbits(3, S_IXUSR, S_ISUID, SETUGID);
+}
+
+TEST(modetostr, setgid) {
+    modetostr_setbits(6, S_IXGRP, S_ISGID, SETUGID);
+}
+
+TEST(modetostr, sticky) {
+    modetostr_setbits(9, S_IXOTH, S_ISVTX, SETSTICKY);
 }
 
 TEST(trailing_match_index, paths) {
@@ -818,8 +867,8 @@ TEST(dirname, len) {
 
 TEST(split, delims) {
     const char delims[] = "\xfe\xff";
-    char line[MAXPATH];
-    const std::size_t line_len = SNFORMAT_S(line, MAXPATH, 6,
+    char line[7];
+    const std::size_t line_len = SNFORMAT_S(line, sizeof(line), 6,
                                        "a", 1,
                                        delims, 1,
                                        "b", 1,
@@ -859,6 +908,9 @@ TEST(split, delims) {
     EXPECT_EQ(next, nullptr);
 
     next = split(line, delims, 2, nullptr);
+    EXPECT_EQ(next, nullptr);
+
+    next = split((char *) end, delims, 2, end);
     EXPECT_EQ(next, nullptr);
 
     next = split((char *) end + 1, delims, 2, end);
@@ -1132,7 +1184,7 @@ TEST(set_metadata, bad) {
     char dir[] = "XXXXXX";
     ASSERT_NE(mkdtemp(dir), nullptr);
 
-    char path[MAXPATH];
+    char path[12];
     snprintf(path, sizeof(path), "%s/file", dir);
 
     struct stat st;
@@ -1202,18 +1254,18 @@ TEST(stat_wrapper, bad) {
     struct work *work = new_work_with_name(nullptr, 0, name, strlen(name));
 
     for(int print_err : {0, 1}) {
-        for(int print_eacces: {0, 1}) {
+        for(const uint64_t *bitfield : {NO_PRINT_ERRNO, PRINT_ERRNO}) {
             work->stat_called = STAT_NOT_CALLED;
             EXPECT_EQ(stat_wrapper(work->name, &work->statuso, &work->crtime,
-                                   &work->stat_called, print_err, print_eacces), 1);
+                                   &work->stat_called, print_err, bitfield), 1);
 
             work->stat_called = NOT_STATX_CALLED;
             EXPECT_EQ(stat_wrapper(work->name, &work->statuso, &work->crtime,
-                                   &work->stat_called, print_err, print_eacces), 0);
+                                   &work->stat_called, print_err, bitfield), 0);
 
             work->stat_called = STATX_CALLED;
             EXPECT_EQ(stat_wrapper(work->name, &work->statuso, &work->crtime,
-                                   &work->stat_called, print_err, print_eacces), 0);
+                                   &work->stat_called, print_err, bitfield), 0);
         }
     }
 
@@ -1225,18 +1277,18 @@ TEST(lstat_wrapper, bad) {
     struct work *work = new_work_with_name(nullptr, 0, name, strlen(name));
 
     for(int print_err : {0, 1}) {
-        for(int print_eacces: {0, 1}) {
+        for(const uint64_t *bitfield : {NO_PRINT_ERRNO, PRINT_ERRNO}) {
             work->stat_called = STAT_NOT_CALLED;
             EXPECT_EQ(lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                                    &work->stat_called, print_err, print_eacces), 1);
+                                    &work->stat_called, print_err, bitfield), 1);
 
             work->stat_called = NOT_STATX_CALLED;
             EXPECT_EQ(lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                                    &work->stat_called, print_err, print_eacces), 0);
+                                    &work->stat_called, print_err, bitfield), 0);
 
             work->stat_called = STATX_CALLED;
             EXPECT_EQ(lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                                    &work->stat_called, print_err, print_eacces), 0);
+                                    &work->stat_called, print_err, bitfield), 0);
         }
     }
 
@@ -1250,15 +1302,15 @@ TEST(fstatat_wrapper, bad) {
     ed.parent_fd = -1;
 
     for(int print_err : {0, 1}) {
-        for(int print_eacces: {0, 1}) {
+        for(const uint64_t *bitfield : {NO_PRINT_ERRNO, PRINT_ERRNO}) {
             work->stat_called = STAT_NOT_CALLED;
-            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, print_eacces), 1);
+            EXPECT_EQ(fstatat_wrapper(work, &ed, AT_SYMLINK_NOFOLLOW, print_err, bitfield), 1);
 
             work->stat_called = NOT_STATX_CALLED;
-            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, print_eacces), 0);
+            EXPECT_EQ(fstatat_wrapper(work, &ed, AT_SYMLINK_NOFOLLOW, print_err, bitfield), 0);
 
             work->stat_called = STATX_CALLED;
-            EXPECT_EQ(fstatat_wrapper(work, &ed, print_err, print_eacces), 0);
+            EXPECT_EQ(fstatat_wrapper(work, &ed, AT_SYMLINK_NOFOLLOW, print_err, bitfield), 0);
         }
     }
 
@@ -1327,6 +1379,33 @@ TEST(write_with_resize, good) {
     free(buf);
 }
 
+TEST(opendir, wrapper) {
+    char path[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(path), nullptr);
+
+    const uint64_t no_print_errno[4] = {1ULL << 2, 0, 0, 0};
+
+    for(const uint64_t *bitfield: {(const uint64_t *) nullptr, no_print_errno}) {
+        // open existing directory
+        {
+            DIR *dir = opendir_wrapper(path, bitfield);
+            EXPECT_NE(dir, nullptr);
+            closedir(dir);
+        }
+
+        // open nonexistent directory
+        {
+            char subdir[] = "XXXXXX/nonexistent";
+            memcpy(subdir, path, strlen(path));
+
+            DIR *dir = opendir_wrapper(subdir, bitfield);
+            EXPECT_EQ(dir, nullptr);
+        }
+    }
+
+    rmdir(path);
+}
+
 TEST(dir, match) {
     struct input in;
     in.dir_match.uid = 1;
@@ -1352,4 +1431,48 @@ TEST(dir, match) {
             EXPECT_EQ(dir_match(&in, &st), (uid == in.dir_match.uid) && (gid == in.dir_match.gid));
         }
     }
+}
+
+TEST(getpwuid, wrapper) {
+    /* start with known uid */
+    uid_t uid = geteuid();
+
+    /* find unknown uid */
+    while (getpwuid(++uid));
+
+    struct passwd pw = {};
+    struct passwd *res = nullptr;
+    char *buf = nullptr;
+    char *err_msg = nullptr;
+    std::size_t err_len = 0;
+
+    EXPECT_EQ(getpwuid_wrapper(uid, &pw, &res, &buf, &err_msg, &err_len), 0);
+    EXPECT_EQ(res, nullptr);
+    EXPECT_NE(buf, nullptr);
+    EXPECT_EQ(err_msg, nullptr);
+    EXPECT_EQ(err_len, (std::size_t) 0);
+
+    free(buf);
+}
+
+TEST(getgrgid, wrapper) {
+    /* start with known gid */
+    gid_t gid = getegid();
+
+    /* find unknown gid */
+    while (getgrgid(++gid));
+
+    struct group grp = {};
+    struct group *res = nullptr;
+    char *buf = nullptr;
+    char *err_msg = nullptr;
+    std::size_t err_len = 0;
+
+    EXPECT_EQ(getgrgid_wrapper(gid, &grp, &res, &buf, &err_msg, &err_len), 0);
+    EXPECT_EQ(res, nullptr);
+    EXPECT_NE(buf, nullptr);
+    EXPECT_EQ(err_msg, nullptr);
+    EXPECT_EQ(err_len, (std::size_t) 0);
+
+    free(buf);
 }

@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include "external_attach.h"
 #include "external_copy.h"
 #include "print.h"
+#include "rollup.h"
 #include "str.h"
 #include "utils.h"
 
@@ -92,18 +93,33 @@ static int gqw_serialize_and_free(const int fd, QPTPool_f func, void *work, size
  * path is the current directory + basename
  */
 static void maybe_copy_external(sqlite3 *db, struct input *in,
-                                const char *basename, const size_t len,
-                                const char *path) {
+                                const char *path, const size_t path_len,
+                                const size_t basename_len) {
     /* constant namespace/alias of the external database being attached in each loop */
     static const char EXTDB[] = "extdb";
+
+    /* make sure path is usable by sqlite3 */
+    const size_t clean_path_size = path_len * 3 + 1;
+    char *clean_path = malloc(clean_path_size);
+    size_t used_chars = path_len; /* unused */
+    const size_t clean_path_len = sqlite_uri_path(clean_path, clean_path_size,
+                                                  path, &used_chars);
+
+    /*
+     * skip checking if path_len == used_chars because
+     * clean_path should always have enough space
+     */
+
+    clean_path[clean_path_len] = '\0';
 
     /* find a basename pattern match */
     sll_loop(&in->external_copy.setup, node) {
         ecs_t *ecs = (ecs_t *) sll_node_data(node);
-        if (ecs_match(ecs, basename, len) == 1) {
+        if (ecs_match(ecs, path + path_len - basename_len, basename_len) == 1) {
             str_t *sql = &ecs->sql;
 
-            if (attachdb(path, db, EXTDB, SQLITE_OPEN_READONLY, 1, in->print_eacces)) {
+
+            if (attachdb(clean_path, db, EXTDB, SQLITE_OPEN_READONLY, 1, in->no_print_errno)) {
                 char *err = NULL;
 
                 /* run user provided SQL */
@@ -119,12 +135,14 @@ static void maybe_copy_external(sqlite3 *db, struct input *in,
                     sqlite3_free(err);
                 }
 
-                detachdb(path, db, EXTDB, 1, in->print_eacces);
+                detachdb(path, db, EXTDB, 1, in->no_print_errno);
             }
 
             /* do not break - might have multiple matches */
         }
     }
+
+    free(clean_path);
 }
 
 /* Push the subdirectories in the current directory onto the queue */
@@ -160,7 +178,7 @@ static size_t gq_descend(QPTPool_ctx_t *ctx,
                                              entry->d_name, len,
                                              entry, next_level,
                                              gqw->sqlite3_name, gqw->sqlite3_name_len,
-                                             in->print_eacces);
+                                             in->no_print_errno);
             if (!child) {
                 continue;
             }
@@ -191,7 +209,7 @@ static size_t gq_descend(QPTPool_ctx_t *ctx,
                     (child->work.level >= in->min_level)) {
                     /* lstat(2)/statx(2) is not normally called during descent */
                     if (lstat_wrapper(child->work.name, &child->work.statuso, &child->work.crtime,
-                                      &child->work.stat_called, 1, in->print_eacces) != 0) {
+                                      &child->work.stat_called, 1, in->no_print_errno) != 0) {
                         free(child);
                         continue;
                     }
@@ -221,7 +239,7 @@ static size_t gq_descend(QPTPool_ctx_t *ctx,
             else if (S_ISREG(child->work.statuso.st_mode) ||
                      S_ISLNK(child->work.statuso.st_mode)) {
                 /* db.db and ignored basenames are not processed here */
-                maybe_copy_external(db, in, entry->d_name, len, child->work.name);
+                maybe_copy_external(db, in, child->work.name, child->work.name_len, len);
 
                 free(child);
             }
@@ -242,8 +260,8 @@ static size_t gq_descend(QPTPool_ctx_t *ctx,
 static void subdirs(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc; (void) argv;
 
-    const int rollupscore = sqlite3_value_int(argv[1]);
-    if (rollupscore == 0) {
+    const int isrolledup = sqlite3_value_int(argv[1]);
+    if (isrolledup == 0) {
         size_t *subdirs_walked_count = (size_t *) sqlite3_user_data(context);
         sqlite3_result_int64(context, *subdirs_walked_count);
     }
@@ -273,13 +291,13 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
          * ignore errors - if the db wasn't opened, or if
          * summary is missing the columns, keep descending
          */
-        int rollupscore = 0;
+        int isrolledup = 0;
         if (db) {
-            get_rollupscore(db, &rollupscore);
+            get_isrolledup(db, &isrolledup);
         }
 
         /* push subdirectories into the queue */
-        if (rollupscore == 0) {
+        if (isrolledup == 0) {
             *subdirs_walked_count =
                 gq_descend(ctx, in, db, gqw, dir, in->skip, processdir);
         }
@@ -302,14 +320,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
                                       sqlite3_errmsg(db), sqlite3_errcode(db));
         }
 
-        char shortname[MAXPATH];
-        char endname[MAXPATH];
-
-        /* run query on summary, print it if printing is needed, if returns none */
-        /* and we are doing AND, skip querying the entries db */
-        shortpath(gqw->work.name, shortname, endname);
-
-        if (in->sql.sum.len) {
+        if (str_exists(&in->sql.sum)) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
 
             /* replace {} */
@@ -342,7 +353,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
 
         /* if we have recs (or are running an OR) query the entries table */
         if (recs > 0) {
-            if (in->sql.ent.len) {
+            if (str_exists(&in->sql.ent)) {
                 /* replace {} */
                 char *ent = NULL;
                 if (replace_sql(&in->sql.ent, &in->sql_format.ent,

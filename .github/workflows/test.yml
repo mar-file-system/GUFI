@@ -68,29 +68,34 @@ env:
   CC: clang
   CXX: clang++
   DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On -DCLIENT=On -DDEP_AI=On
+  COMMON_CONFIG: -DCMAKE_C_FLAGS="-Wall -Werror -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wold-style-definition -Wpedantic -Wstrict-prototypes -Wwrite-strings" -DCMAKE_CXX_FLAGS="-Wall -Werror -Wextra -Wformat -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs -Wpedantic -Wwrite-strings" -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On -DCLIENT=On -DDEP_AI=On
   PIP_BREAK_SYSTEM_PACKAGES: 1
+
+permissions: {}
 
 jobs:
   Linux:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        img: [ "almalinux:latest", "alpine:edge", "rockylinux/rockylinux:9", "rockylinux/rockylinux:10", "ubuntu:22.04", "ubuntu:24.04" ]
+        img: [ "almalinux:latest", "alpine:edge", "rockylinux/rockylinux:9", "rockylinux/rockylinux:10", "ubuntu:22.04", "ubuntu:24.04", "ubuntu:26.04" ]
       fail-fast: true
+
     container:
       image: ${{ matrix.img }}
+
     steps:
     - uses: actions/checkout@main
 
-    - name: GNU tar for Alpine Linux caching
+    - name: Install Dependencies for Alpine Linux Caching
       if:   matrix.img == 'alpine:edge'
       run:  |
         apk update
 
         # install GNU tar for actions/cache
         # https://stackoverflow.com/a/64187955/341683
-        apk add --no-cache tar
+        apk add --no-cache gzip nodejs tar zstd
 
     - uses: actions/cache@main
       with:
@@ -122,7 +127,7 @@ jobs:
 
     - name: Configure CMake
       if:   matrix.img == 'alpine:edge'
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DQPTPOOL_STACK_SIZE=1048576
 
     - name: Configure CMake
       if:   matrix.img != 'alpine:edge'
@@ -139,8 +144,10 @@ jobs:
   macOS:
     strategy:
       matrix:
-        os: [ "macos-15" ]
+        os: [ "macos-15", "macos-26", "xcode-27" ]
+
     runs-on: ${{ matrix.os }}
+
     steps:
     - uses: actions/checkout@main
       with:
@@ -159,7 +166,7 @@ jobs:
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
     - name: Configure CMake
-      run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_OSX_SYSROOT=macosx -DOpenMP_C_LIB_NAMES="libomp" -DOpenMP_C_FLAGS="-fopenmp" -DOpenMP_C_INCLUDE_DIRS="$(brew --prefix libomp)/include" -DOpenMP_libomp_LIBRARY="$(brew --prefix libomp)/lib/libomp.dylib"
+      run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_OSX_SYSROOT=macosx
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -170,7 +177,9 @@ jobs:
 
   Windows:
     runs-on: windows-latest
+
     name: Windows (cygwin)
+
     env: # llama.cpp does not compile with clang
       CC: gcc
       CXX: g++
@@ -198,6 +207,13 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
+    - name: Fix Cache
+      run: >-
+           mkdir -p /usr/local/sqlite-vec/lib /usr/local/sqlite-lembed/lib &&
+           ln -sfv /usr/local/sqlite-vec/lib/vec0.dll /usr/local/sqlite-vec/lib/libvec0.dll &&
+           ln -sfv /usr/local/sqlite-lembed/lib/lembed0.dll /usr/local/sqlite-lembed/lib/liblembed0.dll
+      shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
+
     - name: Set Up Git
       run: >-
            export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
@@ -207,7 +223,7 @@ jobs:
     - name: Configure CMake
       run: >-
            export PATH=/usr/bin:$(cygpath ${SYSTEMROOT})/system32 &&
-           cmake . -B build ${{ env.COMMON_CONFIG }} -DDEP_INSTALL_PREFIX="/usr/local" -DENABLE_SUDO_TESTS=Off -DCLIENT=On -DDEP_USE_JEMALLOC=Off -DOpenMP_C_FLAGS="-fopenmp" -DOpenMP_C_LIB_NAMES="libgomp" -DOpenMP_libgomp_LIBRARY="/usr/bin/cyggomp-1.dll"
+           cmake . -B build ${{ env.COMMON_CONFIG }} -DDEP_INSTALL_PREFIX="/usr/local" -DENABLE_SUDO_TESTS=Off -DCLIENT=On -DDEP_USE_JEMALLOC=Off
       shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
 
     - name: Build

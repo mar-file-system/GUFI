@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "addqueryfuncs.h"
+#include "config.h"
 #include "utils.h"
 
 static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -97,46 +98,20 @@ static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
         return;
     }
 
-    /*
-     * adapted from question by Tyler DiBartolo
-     * https://stackoverflow.com/q/47462890
-     */
-
-    const long init_len = sysconf(_SC_GETPW_R_SIZE_MAX);
-    size_t len = 1024;
-    if (init_len != -1) {
-        len = init_len;
-    }
-
-    void *buf = malloc(len);
-
-    struct passwd pwd;
+    struct passwd pw = {0};
     struct passwd *res = NULL;
-    int rc = 0;
-    while ((rc = getpwuid_r(uid, &pwd, buf, len, &res)) == ERANGE) {
-        void *new_buf = realloc(buf, len * 2);
+    char *buf = NULL;
+    char *err = NULL;
+    size_t err_len = 0;
 
-        if (!new_buf) {
-            sqlite3_result_error_nomem(context);
-            free(buf);
-            return;
-        }
-
-        buf = new_buf;
-        len *= 2;
-    }
-
-    if (rc != 0) {
-        const int err = errno;
-        char errmsg[1024];
-        const size_t errmsg_len = SNPRINTF(errmsg, sizeof(errmsg), "getpwuid: %s (%d)\n", strerror(err), err);
-        sqlite3_result_error(context, errmsg, errmsg_len);
+    if (getpwuid_wrapper(uid, &pw, &res, &buf, &err, &err_len) == 0) {
+        sqlite3_result_text(context, res?res->pw_name:text, -1, SQLITE_TRANSIENT);
         free(buf);
-        return;
     }
-
-    sqlite3_result_text(context, res?res->pw_name:text, -1, SQLITE_TRANSIENT);
-    free(buf);
+    else {
+        sqlite3_result_error(context, err, err_len);
+        free(err);
+    }
 }
 
 static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -162,46 +137,20 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
         return;
     }
 
-    /*
-     * adapted from question by Tyler DiBartolo
-     * https://stackoverflow.com/q/47462890
-     */
-
-    const long init_len = sysconf(_SC_GETGR_R_SIZE_MAX);
-    size_t len = 1024;
-    if (init_len != -1) {
-        len = init_len;
-    }
-
-    void *buf = malloc(len);
-
-    struct group grp;
+    struct group grp = {0};
     struct group *res = NULL;
-    int rc = 0;
-    while ((rc = getgrgid_r(gid, &grp, buf, len, &res)) == ERANGE) {
-        void *new_buf = realloc(buf, len * 2);
+    char *buf = NULL;
+    char *err = NULL;
+    size_t err_len = 0;
 
-        if (!new_buf) {
-            sqlite3_result_error_nomem(context);
-            free(buf);
-            return;
-        }
-
-        buf = new_buf;
-        len *= 2;
-    }
-
-    if (rc != 0) {
-        const int err = errno;
-        char errmsg[1024];
-        const size_t errmsg_len = SNPRINTF(errmsg, sizeof(errmsg), "getgrgid: %s (%d)\n", strerror(err), err);
-        sqlite3_result_error(context, errmsg, errmsg_len);
+    if (getgrgid_wrapper(gid, &grp, &res, &buf, &err, &err_len) == 0) {
+        sqlite3_result_text(context, res?res->gr_name:text, -1, SQLITE_TRANSIENT);
         free(buf);
-        return;
     }
-
-    sqlite3_result_text(context, res?res->gr_name:text, -1, SQLITE_TRANSIENT);
-    free(buf);
+    else {
+        sqlite3_result_error(context, err, err_len);
+        free(err);
+    }
 }
 
 static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -221,7 +170,7 @@ static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value *
     const char *fmt = (char *) sqlite3_value_text(argv[0]); /* format    */
     const time_t t = sqlite3_value_int64(argv[1]);          /* timestamp */
 
-    char buf[MAXPATH];
+    char buf[MAXSTRFTIME];
     #ifdef LOCALTIME_R
     struct tm tm;
     strftime(buf, sizeof(buf), fmt, localtime_r(&t, &tm));
@@ -624,7 +573,7 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 
     const uint64_t blocks = (size / unit_size) + (!!(size % unit_size));
 
-    char buf[MAXPATH];
+    char buf[20 + 2 + 1]; /* uint64_t max 20 decimal chars + max 2 unit chars */
     size_t buf_len = snprintf(buf, sizeof(buf), "%" PRIu64, blocks);
 
     /* add unit to block count */
@@ -639,7 +588,7 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 static void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
-    char buf[MAXPATH];
+    char buf[4 + 1 + 1 + 3 + 1]; /* max 4 integer digits + decimal point + 1 decimal precision + 3 unit chars */
 
     const char *size_s = (const char *) sqlite3_value_text(argv[0]);
     double size = 0;
@@ -743,9 +692,8 @@ static void return_error(sqlite3_context *context,
                          const char *prefix, const size_t prefix_size,
                          const char *str) {
     const size_t str_len = strlen(str);
-    const size_t err_len = prefix_size - 1 + str_len + 1; /* closing quote */
-    char *err = malloc(err_len + 1);
-    SNFORMAT_S(err, err_len + 1, 5,
+    char *err = NULL;
+    const size_t err_len = SNFORMAT_S_ALLOC(&err, 5,
                prefix, prefix_size - 1,
                " ", (size_t) 1,
                "'", (size_t) 1,
@@ -869,9 +817,11 @@ static void blobop(sqlite3_context *context, int argc, sqlite3_value **argv) {
         }
     }
 
+    const int read_error = ferror(p);
+
     pclose(p);
 
-    if ((char) got == EOF) {
+    if (read_error) {
         sqlite3_result_error_code(context, SQLITE_ERROR);
         free(data);
         return;
@@ -1023,13 +973,12 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
 
-    if (work->orig_root.data && work->orig_root.len) {
-        const size_t user_dirname_len = work->orig_root.len + work->name_len - work->root_parent.len - work->root_basename_len;
-        char *user_dirname = malloc(user_dirname_len + 1);
+    if (str_exists(&work->orig_root)) {
+        char *user_dirname = NULL;
 
-        SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                   work->orig_root.data, work->orig_root.len,
-                   work->name + work->root_parent.len + work->root_basename_len, work->name_len - work->root_parent.len - work->root_basename_len);
+        const size_t user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 2,
+                                                         work->orig_root.data, work->orig_root.len,
+                                                         work->name + work->root_parent.len + work->root_basename_len, work->name_len - work->root_parent.len - work->root_basename_len);
         sqlite3_result_text(context, user_dirname, user_dirname_len, free);
     }
     else {
@@ -1064,7 +1013,7 @@ static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **argv,
                           struct work *work, str_t *prefix)
 {
-    const int rollupscore = sqlite3_value_int(argv[1]);
+    const int isrolledup = sqlite3_value_int(argv[1]);
 
     const char *entry = NULL;
     size_t entry_len = 0;
@@ -1078,21 +1027,20 @@ static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **ar
 
     const size_t root_len = work->root_parent.len + work->root_basename_len;
 
-    if (rollupscore == 0) { /* use work->name */
-        user_dirname_len = prefix->len + work->name_len - root_len + entry_len;
-        user_dirname = malloc(user_dirname_len + 1);
+    if (isrolledup == 0) { /* use work->name */
+        user_dirname = NULL;
 
         if (entry) {
-            SNFORMAT_S(user_dirname, user_dirname_len + 1, 4,
-                       prefix->data, prefix->len,
-                       work->name + root_len, work->name_len - root_len,
-                       "/", (size_t) 1,
-                       entry, entry_len - 1);
+            user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 4,
+                                                prefix->data, prefix->len,
+                                                work->name + root_len, work->name_len - root_len,
+                                                "/", (size_t) 1,
+                                                entry, entry_len - 1);
         }
         else {
-            SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                       prefix->data, prefix->len,
-                       work->name + root_len, work->name_len - root_len);
+            user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 2,
+                                                prefix->data, prefix->len,
+                                                work->name + root_len, work->name_len - root_len);
         }
     }
     else { /* reconstruct full path out of argv[0] */
@@ -1104,29 +1052,25 @@ static void modify_prefix(sqlite3_context *context, int argc, sqlite3_value **ar
         /*
          * fullpath = work->name[:-work->basename_len] + input
          */
-        const size_t fullpath_len = work->name_len - work->basename_len + input.len;
-        char *fullpath = malloc(fullpath_len + 1);
-        SNFORMAT_S(fullpath, fullpath_len + 1, 2,
-                   work->name, work->name_len - work->basename_len,
-                   input.data, input.len);
+        char *fullpath = NULL;
+        const size_t fullpath_len = SNFORMAT_S_ALLOC(&fullpath, 2,
+                                                     work->name, work->name_len - work->basename_len,
+                                                     input.data, input.len);
 
         /*
          * replace fullpath in->source_prefix with original user input
          */
-        user_dirname_len = prefix->len + fullpath_len - root_len + entry_len;
-        user_dirname = malloc(user_dirname_len + 1);
-
         if (entry) {
-            SNFORMAT_S(user_dirname, user_dirname_len + 1, 4,
-                       prefix->data, prefix->len,
-                       fullpath + root_len, fullpath_len - root_len,
-                       "/", (size_t) 1,
-                       entry, entry_len - 1);
+            user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 4,
+                                                prefix->data, prefix->len,
+                                                fullpath + root_len, fullpath_len - root_len,
+                                                "/", (size_t) 1,
+                                                entry, entry_len - 1);
         }
         else {
-            SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
-                       prefix->data, prefix->len,
-                       fullpath + root_len, fullpath_len - root_len);
+            user_dirname_len = SNFORMAT_S_ALLOC(&user_dirname, 2,
+                                                prefix->data, prefix->len,
+                                                fullpath + root_len, fullpath_len - root_len);
         }
 
         free(fullpath);
@@ -1172,7 +1116,7 @@ static void spath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     aqfctx_t *ctx = (aqfctx_t *) sqlite3_user_data(context);
     struct input *in = ctx->in;
-    if (!in->source_prefix.data || !in->source_prefix.len) {
+    if (!str_exists(&in->source_prefix)) {
         static const char ERR[] = "spath() requires source path (-p)";
         sqlite3_result_error(context, ERR, sizeof(ERR) - 1);
         return;

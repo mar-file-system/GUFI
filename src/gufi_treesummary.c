@@ -74,7 +74,9 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "config.h"
 #include "dbutils.h"
+#include "rollup.h"
 #include "str.h"
 #include "utils.h"
 
@@ -114,7 +116,7 @@ static int printits(struct input *in, struct work *pwork, struct entry_data *ed,
   /* this one is for create time which posix doesnt have */
   fprintf(out,"%c", in->delim);
   /* moved this to end because we would like to use this for input to gufi_trace2index load from file */
-  fprintf(out, "%lld%c", pwork->pinode, in->delim);
+  fprintf(out, "%" STAT_ino "%c", pwork->pinode, in->delim);
   fprintf(out, "%d%c", ed->suspect, in->delim);
   fprintf(out,"\n");
   return 0;
@@ -133,13 +135,13 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
 
-    DIR *dir = opendir_wrapper(passmywork->name, 1);
+    DIR *dir = opendir_wrapper(passmywork->name, NULL);
     if (!dir) {
         goto out_free;
     }
 
     if (lstat_wrapper(passmywork->name, &passmywork->statuso, &passmywork->crtime,
-                      &passmywork->stat_called, 1, 1) != 0) {
+                      &passmywork->stat_called, 1, NULL) != 0) {
         goto close_dir;
     }
 
@@ -148,8 +150,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         printits(&pa->in, passmywork, &ed, stdout);
     }
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
+    const size_t dbname_len = passmywork->name_len + 1 + DBNAME_LEN;
+    char *dbname = malloc(dbname_len + 1);
+    SNFORMAT_S(dbname, dbname_len + 1, 2,
                passmywork->name, passmywork->name_len,
                "/" DBNAME, DBNAME_LEN + 1);
 
@@ -159,9 +162,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         struct sum sum;
         zeroit(&sum);
 
-        int rollupscore = 0;
-        get_rollupscore(db, &rollupscore);
-        if (rollupscore != 0) {
+        int isrolledup = 0;
+        get_isrolledup(db, &isrolledup);
+        if (isrolledup != 0) {
             /*
              * this directory has been rolled up, so all information is
              * available here: compute the treesummary, no need to go
@@ -196,7 +199,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                  * not used to generate the new treesummary table
                  */
                 descend(ctx, &pa->in, passmywork, dir, 0,
-                        processdir, NULL, NULL, NULL);
+                        try_skip_stat, NULL, NULL,
+                        processdir, NULL, NULL,
+                        NULL);
 
                 /* add summary data from this directory */
                 querytsdb(passmywork->name, &sum, db, 0);
@@ -210,6 +215,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     closedb(db);
+    free(dbname);
 
   close_dir:
     closedir(dir);
@@ -231,8 +237,9 @@ static int compute_treesummary(struct PoolArgs *pa) {
         sumout.totsubdirs--; /* subtract another 1 because starting directory is not a subdirectory of itself */
     }
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
+    const size_t dbname_len = pa->index.len + 1 + DBNAME_LEN;
+    char *dbname = malloc(dbname_len + 1);
+    SNFORMAT_S(dbname, dbname_len + 1, 2,
                pa->index.data, pa->index.len,
                "/" DBNAME, DBNAME_LEN + 1);
 
@@ -258,9 +265,12 @@ static int compute_treesummary(struct PoolArgs *pa) {
         if(utime(dbname, &utimeStruct) != 0) {
             const int err = errno;
             fprintf(stderr, "ERROR: utime failed with error number: %d on %s\n", err, dbname);
+            free(dbname);
             return 1;
         }
     }
+
+    free(dbname);
 
     printf("totals:\n");
     printf("totfiles %lld totlinks %lld\n",

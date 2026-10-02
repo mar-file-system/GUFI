@@ -74,10 +74,11 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "debug.h"
 #include "external_attach.h"
+#include "rollup.h"
 #include "utils.h"
 
 struct Unrollup {
-    char name[MAXPATH];
+    char *name;
     size_t name_len;
     size_t level;
     int rolledup; /* set by parent, can be modified by self */
@@ -98,13 +99,14 @@ static struct Unrollup *unrollup_create(const char *name, const size_t name_len,
      */
     struct Unrollup *work = malloc(sizeof(struct Unrollup));
     if (subpath && subpath_len) {
-        work->name_len = SNFORMAT_S(work->name, MAXPATH, 3,
-                                    name, name_len,
-                                    "/", (size_t) 1,
-                                    subpath, subpath_len);
+        work->name_len = SNFORMAT_S_ALLOC(&work->name, 3,
+                                          name, name_len,
+                                          "/", (size_t) 1,
+                                          subpath, subpath_len);
     }
     else {
-        work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, name, name_len);
+        work->name_len = SNFORMAT_S_ALLOC(&work->name, 1,
+                                          name, name_len);
     }
     work->level = level;
     work->rolledup = 0; /* assume this path was not rolled up */
@@ -112,12 +114,14 @@ static struct Unrollup *unrollup_create(const char *name, const size_t name_len,
     struct stat st;
     if (lstat(work->name, &st) != 0) {
         fprintf(stderr, "Could not stat '%s'\n", work->name);
+        free(work->name);
         free(work);
         return NULL;
     }
 
     if (!S_ISDIR(st.st_mode)) {
         fprintf(stderr, "'%s' is not a directory\n", work->name);
+        free(work->name);
         free(work);
         return NULL;
     }
@@ -134,7 +138,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct Unrollup *work = (struct Unrollup *) data;
     int rc = 0;
 
-    DIR *dir = opendir_wrapper(work->name, 1);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         rc = 1;
         goto cleanup;
@@ -143,22 +147,22 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     sqlite3 *db = NULL;
 
     if (deep_enough(in, work)) {
-        char dbname[MAXPATH];
-        SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, work->name);
+        const size_t dbname_len = work->name_len + 1 + DBNAME_LEN;
+        char *dbname = malloc(dbname_len + 1);
+        SNPRINTF(dbname, dbname_len + 1, "%s/" DBNAME, work->name);
 
         db = opendb(dbname, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
         rc = !db;
-    }
 
-    /* get roll up status set by parent */
-    int rolledup = work->rolledup;
+        free(dbname);
+    }
 
     /*
      * if parent of this directory was rolled up, all children are rolled up, so skip this check
      * if parent of this directory was not rolled up, this directory might be
      */
-    if (deep_enough(in, work) && db && !rolledup) {
-        rc = !!get_rollupscore(db, &rolledup);
+    if (deep_enough(in, work) && db && !work->rolledup) {
+        rc = !!get_isrolledup(db, &work->rolledup);
     }
 
     /*
@@ -198,7 +202,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
             if (subdir) {
                 /* set child rolledup status so that if this dir */
                 /* was rolled up, child can skip roll up check */
-                subdir->rolledup = rolledup;
+                subdir->rolledup = work->rolledup;
 
                 QPTPool_enqueue(ctx, processdir, subdir);
             }
@@ -206,7 +210,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     /* now that work has been pushed onto the queue, clean up this db */
-    if (deep_enough(in, work) && db && rolledup) {
+    if (deep_enough(in, work) && db && work->rolledup) {
         str_t name = REFSTR(work->name, work->name_len);
 
         char *err = NULL;
@@ -225,6 +229,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     closedir(dir);
 
   cleanup:
+    free(work->name);
     free(work);
 
     return rc;
@@ -258,6 +263,7 @@ static int enqueue_subtree_roots(struct input *in, struct Unrollup *root,
 
     free(line);
     fclose(file);
+    free(root->name);
     free(root);
 
     return 0;

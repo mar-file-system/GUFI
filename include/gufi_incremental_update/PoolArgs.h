@@ -65,9 +65,11 @@ OF SUCH DAMAGE.
 #ifndef GUFI_INCREMENTAL_UPDATE_POOLARGS_H
 #define GUFI_INCREMENTAL_UPDATE_POOLARGS_H
 
+#include <pthread.h>
 #include <sys/types.h>
 
 #include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
 #include "bf.h"
 #include "str.h"
 #include "template_db.h"
@@ -75,11 +77,20 @@ OF SUCH DAMAGE.
 
 #include "gufi_incremental_update/aggregate.h"
 
+struct PoolArgs;
+
 /* used to generate snapshots of the index and tree */
 struct GenSnapshot {
-    str_t path;            /* argv */
-    size_t parent_len;     /* strlen(diriname(path) */
+    size_t parent_len;     /* strlen(dirname(path)) */
+    struct work *work;
+    void (*free_work)(void *);
+    str_t snapshot;        /* name of the artifact */
     Aggregate_t agg;       /* per-thread in-memory databases that are merged at end to get final results */
+    struct PoolArgs *pa;   /* only needed for index */
+
+    pthread_mutex_t *mutex;
+    pthread_cond_t  *cond;
+    size_t          *counter;
 };
 
 struct SuspectInodes {
@@ -92,13 +103,14 @@ struct SuspectInodes {
 
 struct PoolArgs {
     struct input in;
-    str_t parking_lot;     /* directory to place update db.dbs and directories */
-    struct template_db db; /* (optimization) db.db with empty tables for copying when creating update db.dbs */
+    str_t parking_lot;        /* directory to place update db.dbs and directories */
+    str_t artifacts;          /* place artifacts under this directory (defaults to parking_lot and are deleted at end if not changed) */
+    struct template_db db;    /* (optimization) db.db with empty tables for copying when creating update db.dbs */
+    struct template_db xattr; /* (optimization) xattr db with empty tables for copying */
+    /* FIXME: actually handle xattrs */
 
     QPTPool_ctx_t *ctx;
-
-    struct GenSnapshot index;
-    struct GenSnapshot tree;
+    sll_t *tops; /* per thread lists of struct work * */
 
     int same;   /* is the index in the tree? */
 
@@ -107,6 +119,10 @@ struct PoolArgs {
         struct SuspectInodes dir;  /* directory inodes (used only in suspect method 1) */
         struct SuspectInodes fl;   /* file/link inodes (used in suspect methods 1 and 2) */
     } suspects;
+
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    size_t active;                 /* number of subtrees currently in the thread pool */
 };
 
 int PoolArgs_init(struct PoolArgs *pa);

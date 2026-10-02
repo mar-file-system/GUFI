@@ -97,7 +97,7 @@ struct plugin *load_plugin_library(const char *plugin_arg, const size_t len) {
         return NULL;
     }
 
-    void *lib = dlopen(filename, RTLD_NOW);
+    void *lib = dlopen(filename, RTLD_NOW | RTLD_NODELETE);
     if (!lib) {
         fprintf(stderr, "Error: Could not open plugin library %s\n",
                 dlerror());
@@ -151,8 +151,8 @@ struct plugins *plugins_init(struct plugins *plugins, const size_t count, const 
         for(size_t i = 0; i < nthreads; i++) {
             user_data[i] = calloc(count, sizeof(**user_data));
             if (!user_data[i]) {
-                for(size_t j = 0; j < i; j++) {
-                    free(user_data[j]);
+                for(size_t j = i; j > 0; j--) {
+                    free(user_data[j - 1]);
                 }
                 free(user_data);
                 return NULL;
@@ -195,7 +195,7 @@ static int plugin_check_type(struct plugin *plugin, const plugin_type accepted) 
     if ((plugin->ops->type != PLUGIN_NONE) &&
         (plugin->ops->type != accepted)) {
         fprintf(stderr, "Error: \"%s\" has bad plugin type. Expected %d. Got: %d\n",
-                plugin->filename, accepted, plugin->ops->type);
+                plugin->filename, (int) accepted, (int) plugin->ops->type);
         return 0;
     }
     return 1;
@@ -212,13 +212,13 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted) {
     return plugins->count;
 }
 
-size_t plugins_global_init(struct plugins *plugins, void *global) {
+size_t plugins_global_init(struct plugins *plugins, struct input *in) {
     /* Not checking arguments */
 
     for(size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->global_init) {
-            if (plugins->plugins[i]->ops->global_init(global) != 0) {
-                plugins_global_exit(plugins, global);
+            if (plugins->plugins[i]->ops->global_init(in) != 0) {
+                plugins_global_exit(plugins, in);
                 break;
             }
         }
@@ -226,6 +226,26 @@ size_t plugins_global_init(struct plugins *plugins, void *global) {
     }
 
     return plugins->initialized;
+}
+
+size_t plugins_thread_init(struct plugins *plugins, sqlite3 *db) {
+    /* Not checking arguments */
+
+    size_t i = 0;
+    for(i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->thread_init) {
+            if (plugins->plugins[i]->ops->thread_init(db) != 0) {
+                for(size_t j = i; j > 0; j--) {
+                    if (plugins->plugins[j - 1]->ops->thread_exit) {
+                        plugins->plugins[j - 1]->ops->thread_exit(db);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    return i;
 }
 
 plugin_dir_action plugins_dir_action(struct plugins* plugins, void* ctx) {
@@ -255,22 +275,69 @@ void plugins_ctx_init(struct plugins *plugins, void *ctx, const size_t tid) {
     }
 }
 
-void plugins_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
+int plugins_stat_file(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
+    /* The first plugin whose stat_file reports success provides the
+       stat metadata; the caller then skips statx. Plugins that leave
+       stat_file NULL (the augment case, e.g. lustre/marfs) are skipped
+       here and still run in process_file. Returns 1 if stat was
+       provided, 0 to fall back to statx (GUFI#196). */
+    for(size_t i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->stat_file) {
+            if (plugins->plugins[i]->ops->stat_file(ctx, plugins->user_data[tid][i])) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+void plugins_pre_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 
     for(size_t i = 0; i < plugins->count; i++) {
-        if (plugins->plugins[i]->ops->process_dir) {
-            plugins->plugins[i]->ops->process_dir(ctx, plugins->user_data[tid][i]);
+        if (plugins->plugins[i]->ops->pre_process_dir) {
+            plugins->plugins[i]->ops->pre_process_dir(ctx, plugins->user_data[tid][i]);
         }
     }
 }
 
-void plugins_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
+plugin_file_action plugins_pre_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
+    plugin_file_action ret = PLUGIN_PROCESS_FILE;
+
+
+    for(size_t i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->pre_process_file) {
+            plugin_file_action pda = plugins->plugins[i]->ops->pre_process_file(ctx, plugins->user_data[tid][i]);
+
+            // choose the most restrictive action returned by any plugin
+            if (pda < ret) {
+                ret = pda;
+            }
+        }
+    }
+
+    return ret;
+}
+
+void plugins_post_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 
     for(size_t i = 0; i < plugins->count; i++) {
-        if (plugins->plugins[i]->ops->process_file) {
-            plugins->plugins[i]->ops->process_file(ctx, plugins->user_data[tid][i]);
+        if (plugins->plugins[i]->ops->post_process_dir) {
+            plugins->plugins[i]->ops->post_process_dir(ctx, plugins->user_data[tid][i]);
+        }
+    }
+}
+
+void plugins_post_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
+    /* Not checking arguments */
+
+    for(size_t i = 0; i < plugins->count; i++) {
+        if (plugins->plugins[i]->ops->post_process_file) {
+            plugins->plugins[i]->ops->post_process_file(ctx, plugins->user_data[tid][i]);
         }
     }
 }
@@ -288,13 +355,23 @@ void plugins_ctx_exit(struct plugins *plugins, void *ctx, const size_t tid) {
     /* not zero-ing, but all user_data[i] should be invalid at this point */
 }
 
-void plugins_global_exit(struct plugins *plugins, void *global) {
+void plugins_thread_exit(struct plugins *plugins, sqlite3 *db) {
+    /* Not checking arguments */
+
+    for(size_t i = plugins->count; i > 0; i--) {
+        if (plugins->plugins[i - 1]->ops->thread_exit) {
+            plugins->plugins[i - 1]->ops->thread_exit(db);
+        }
+    }
+}
+
+void plugins_global_exit(struct plugins *plugins, struct input *in) {
     /* Not checking arguments */
 
     /* stack unwind */
     for(size_t i = plugins->initialized; i > 0; i--) {
         if (plugins->plugins[i - 1]->ops->global_exit) {
-            plugins->plugins[i - 1]->ops->global_exit(global);
+            plugins->plugins[i - 1]->ops->global_exit(in);
         }
     }
 }

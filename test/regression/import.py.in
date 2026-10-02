@@ -71,10 +71,32 @@ import gufi_tool
 # not really a unit test
 class TestImportingUserFacingScripts(unittest.TestCase):
     def setUp(self):
+        self.config = gufi_config.Server(gufi_tool.CONFIG_PATH)
         self.path = 'prefix'
+        self.nondir = os.path.join(self.path, 'old_file')
 
-    def expect(self, tool, args, stdout_eq=None, stderr_ne=None):
-        tool = gufi_tool.import_tool('', gufi_tool.TOOLS[tool][1])
+    # test generating commands (for processing and passing to some
+    # other function such as subprocess.Popen or gufi_vt)
+    def gen_cmds(self, name, flags, paths, expected_count):
+        tool = gufi_tool.import_tool('', gufi_tool.TOOLS[name][1])
+        argv = [name]
+
+        if name == 'find':
+            argv += flags # paths would have already been read
+        else:
+            argv += flags + paths
+
+        args = tool.parse_args(argv)
+
+        if name == 'find':
+            args.paths = [paths]
+
+        cmds = tool.gen_cmds(self.config, args)
+        self.assertEqual(len(cmds), expected_count)
+
+    # call <gufi_tool>.run() (unittest.TestCase.run already exists)
+    def call(self, name, args, stdout_eq=None, stderr_ne=None):
+        tool = gufi_tool.import_tool('', gufi_tool.TOOLS[name][1])
         rc, out, err = tool.run([''] + args, gufi_tool.CONFIG_PATH,
                                 subprocess.PIPE, subprocess.PIPE)
         self.assertEqual(rc, 0)
@@ -91,48 +113,97 @@ class TestImportingUserFacingScripts(unittest.TestCase):
         else:
             self.assertNotEqual(err, stderr_ne)
 
+    # gen_cmds tests:
+    #     [self.path] should always return 1 command
+    #     [self.path, self.path]
+    #         - returns 1 when multiple paths can be processed by one call
+    #         - returns 2 when multiple paths cannot be processed by one call
+    #     [self.path, self.nondir] should always return 2
+
     def test_gufi_du(self):
-        self.expect('du', [self.path])
+        DU = 'du'
+
+        self.gen_cmds(DU, [], [self.path],              1)
+        self.gen_cmds(DU, [], [self.path, self.path],   2)
+        self.gen_cmds(DU, [], [self.path, self.nondir], 2)
+
+        self.call(DU, [self.path])
 
     def test_gufi_find(self):
-        self.expect('find', [self.path])
+        FIND = 'find'
+
+        self.gen_cmds(FIND, [], [self.path],              1)
+        self.gen_cmds(FIND, [], [self.path, self.path],   1)
+        self.gen_cmds(FIND, [], [self.path, self.nondir], 2)
+
+        self.call(FIND, [self.path])
 
     def test_gufi_getfattr(self):
-        self.expect('getfattr', ['-d', '-m', '.*', os.path.join(self.path, '1MB')])
+        GETFATTR = 'getfattr'
+
+        self.gen_cmds(GETFATTR, [], [self.path],              1)
+        self.gen_cmds(GETFATTR, [], [self.path, self.path],   2)
+        self.gen_cmds(GETFATTR, [], [self.path, self.nondir], 2)
+
+        self.call(GETFATTR, ['-d', '-m', '.*', os.path.join(self.path, '1MB')])
 
     def test_gufi_ls(self):
-        self.expect('ls', ['-al', self.path])
+        LS = 'ls'
+
+        self.gen_cmds(LS, [], [self.path],              1)
+        self.gen_cmds(LS, [], [self.path, self.path],   1)
+        self.gen_cmds(LS, [], [self.path, self.nondir], 2)
+
+        self.call(LS, ['-al', self.path])
 
     def test_gufi_query(self):
-        indexroot = gufi_config.Server(gufi_tool.CONFIG_PATH).indexroot
-        self.expect('query.py', ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;', indexroot])
+        QUERY_PY = 'query.py'
+
+        self.call(QUERY_PY, ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;', self.config.indexroot])
 
     def test_gufi_query_multiple_remotes(self):
-        indexroot = gufi_config.Server(gufi_tool.CONFIG_PATH).indexroot
-        self.expect('query_multiple_remotes',
-                           ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;',
-                            '--verbose',
-                            '@CMAKE_BINARY_DIR@/src/gufi_vt',
-                            'ssh',
-                            '--remote-cmd', '@CMAKE_CURRENT_BINARY_DIR@/ssh.fake',
-                            'remote1', indexroot,
-                            'remote2', indexroot],
-                           stderr_ne='')
-        self.expect('query_multiple_remotes',
-                           ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;',
-                            '--verbose',
-                            '@CMAKE_BINARY_DIR@/src/gufi_vt',
-                            'pdsh',
-                            '--remote-cmd', '@CMAKE_CURRENT_BINARY_DIR@/pdsh.fake',
-                            'remote1', 'remote2',
-                            indexroot],
-                           stderr_ne='')
+        QMR = 'query_multiple_remotes'
+
+        self.call(QMR,
+                  ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;',
+                   '--verbose',
+                   '@CMAKE_BINARY_DIR@/src/gufi_vt',
+                   'ssh',
+                   '--remote-cmd', '@CMAKE_CURRENT_BINARY_DIR@/ssh.fake',
+                   'remote1', self.config.indexroot,
+                   'remote2', self.config.indexroot],
+                  stderr_ne='')
+        self.call(QMR,
+                  ['-E', 'SELECT rpath(sname, sroll, name) FROM vrpentries;',
+                   '--verbose',
+                   '@CMAKE_BINARY_DIR@/src/gufi_vt',
+                   'pdsh',
+                   '--remote-cmd', '@CMAKE_CURRENT_BINARY_DIR@/pdsh.fake',
+                   'remote1',
+                   'remote2',
+                   self.config.indexroot],
+                  stderr_ne='')
 
     def test_gufi_stat(self):
-        self.expect('stat', [self.path])
+        STAT = 'stat'
+
+        # gufi_stat always generates 1 command when there are valid paths
+        self.gen_cmds(STAT, [], [self.path],              1)
+        self.gen_cmds(STAT, [], [self.path, self.path],   1)
+        self.gen_cmds(STAT, [], [self.path, self.nondir], 1)
+
+        self.call(STAT, [self.path])
 
     def test_gufi_stats(self):
-        self.expect('stats', ['--recursive', 'depth', self.path])
+        STATS = 'stats'
+
+        FLAGS = ['--recursive', 'depth']
+
+        self.gen_cmds(STATS, FLAGS, [self.path],            1)
+        self.gen_cmds(STATS, FLAGS, [self.path, self.path], 1)
+        # not testing self.nondir - gufi_stats only processes directories
+
+        self.call(STATS, FLAGS + [self.path])
 
 if __name__ == '__main__':
     unittest.main()

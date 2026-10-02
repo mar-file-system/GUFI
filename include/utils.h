@@ -66,12 +66,14 @@ OF SUCH DAMAGE.
 #define UTILS_H
 
 #include <dirent.h>
+#include <grp.h>
+#include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
 
 #include "SinglyLinkedList.h"
 #include "bf.h"
-#include "config.h"
 #include "descend.h"
 #include "plugin.h"
 #include "xattrs.h"
@@ -89,11 +91,30 @@ int SNPRINTF(char *str, size_t size, const char *format, ...);
    to size_t or weird bugs may occur */
 size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...);
 
+/* same as SNFORMAT_S, but allocates space for caller */
+size_t SNFORMAT_S_ALLOC(char **dst, size_t count, ...);
+
 #define MIN_ASSIGN_LHS(lhs, rhs) if ((lhs) > (rhs)) { (lhs) = (rhs); }
 #define MAX_ASSIGN_LHS(lhs, rhs) if ((lhs) < (rhs)) { (lhs) = (rhs); }
 
+static inline uint64_t min(const uint64_t lhs, const uint64_t rhs) {
+    return (lhs < rhs)?lhs:rhs;
+}
+
 static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
     return (lhs > rhs)?lhs:rhs;
+}
+
+static inline void set_no_print_errno(uint64_t *bitfield, const int err) {
+    if (bitfield) {
+        bitfield[err >> 6] |= 1 << (err & 0x3f);
+    }
+}
+
+/* if bit is set, do not print error message */
+static inline int no_print_errno_set(const uint64_t *bitfield, const int err) {
+    if (!bitfield) { return 0; }
+    return (bitfield[err >> 6] >> (err & 0x3f)) & 1;
 }
 
 uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads);
@@ -107,9 +128,9 @@ int tsumit (struct sum *sumin, struct sum *smout);
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
 //
-int mkpath(const char *path, const mode_t mode, const uid_t uid, const gid_t gid);
+int mkpath(char *path, const mode_t mode, const uid_t uid, const gid_t gid);
 
-int dupdir(const char *path, const mode_t mode, const uid_t uid, const gid_t gid);
+int dupdir(char *path, const mode_t mode, const uid_t uid, const gid_t gid);
 
 int shortpath(const char *name, char *nameout, char *endname);
 
@@ -145,9 +166,8 @@ ssize_t copyfd(int src_fd, off_t src_off,
                size_t size);
 
 /* replace root of actual path being walked with original user inputted root */
-size_t present_user_path(const char *path, size_t path_len,
-                         str_t *root_parent, const size_t root_basename_len, str_t *orig_root,
-                         char *buf, size_t len);
+char *present_user_path(const char *path, size_t path_len,
+                        str_t *root_parent, const size_t root_basename_len, str_t *orig_root);
 
 /* set metadata on given path */
 void set_metadata(const char *path, struct stat *st, struct xattrs *xattrs);
@@ -170,13 +190,12 @@ void statx_to_work(struct statx *stx, struct stat *st, time_t *crtime);
 
 /* try to call statx if available, otherwise, call stat */
 int stat_wrapper(const char *name, struct stat *st, time_t *crtime,
-                 StatCalled *stat_called, const int print_err, const int print_eacces);
+                 StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno);
 /* try to call statx if available, otherwise, call lstat */
 int lstat_wrapper(const char *name, struct stat *st, time_t *crtime,
-                  StatCalled *stat_called, const int print_err, const int print_eacces);
-/* used by gufi_dir2index and gufi_dir2trace */
-int fstatat_wrapper(struct work *entry, struct entry_data *ed,
-                    const int print_err, const int print_eacces);
+                  StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno);
+int fstatat_wrapper(struct work *entry, struct entry_data *ed, const int nofollow_symlink, /* 0 or AT_SYMLINK_NOFOLLOW */
+                    const int print_err, const uint64_t *no_print_errno);
 
 /* make sure --path-list is followed by at most 1 root directory argument */
 int bad_partial_walk(struct input *in, const size_t root_count);
@@ -203,10 +222,13 @@ int write_with_resize(char **buf, size_t *size, size_t *offset,
 int dir_match(struct input *in, struct stat *st);
 
 /* common opendir code wrapper */
-DIR *opendir_wrapper(const char *name, const int print_eacces);
+DIR *opendir_wrapper(const char *name, const uint64_t *no_print_errno);
 
 /* convert aggregated list of --plugin strings to a struct plugins */
 size_t args_to_plugins(sll_t *args, struct plugins *plugins, const size_t nthreads);
+
+int getpwuid_wrapper(const uid_t uid, struct passwd *pw, struct passwd **res, char **buf, char **err_msg, size_t *err_len);
+int getgrgid_wrapper(const gid_t gid, struct group *grp, struct group **res,  char **buf, char **err_msg, size_t *err_len);
 
 #ifdef __cplusplus
 }

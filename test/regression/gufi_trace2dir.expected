@@ -7,6 +7,7 @@ options:
   -n, --threads <n>                 number of threads
   -x, --set-xattrs                  set xattrs
   -d, --delim <c>                   delimiter (one char)  [use 'x' for 0x1E]
+      --old-trace-format            read old format traces
 
 trace...          read these trace files
 dir               reconstruct the tree under here
@@ -20,6 +21,7 @@ Total Files:         14
 $ cat trace.0 trace.1 > "trace"
 
 $ gufi_trace2dir -n 2 -d "|" -x "trace" "reconstructed"
+Reconstructing tree reconstructed with 2 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
@@ -34,6 +36,7 @@ $ rm -rf "reconstructed"
 
 # reconstruct tree with an external database record
 $ gufi_trace2dir -n 2 -d "|" -x trace "reconstructed"
+Reconstructing tree reconstructed with 2 threads
 Dirs:                6 (1 empty)
 Files:               14
 Total:               20
@@ -51,6 +54,7 @@ Could not create directory prefix/old_file
 $ rm -rf "reconstructed/prefix/directory/readonly"
 
 $ gufi_trace2dir -d "|" trace "reconstructed"
+Reconstructing tree reconstructed with 1 threads
 Dirs:                7 (2 empty)
 Files:               14
 Total:               21

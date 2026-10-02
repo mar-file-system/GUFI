@@ -72,14 +72,15 @@ extern "C" {
 #endif
 
 /* forward declarations */
+struct input;
 struct work;
 struct entry_data;
+struct sum;
 
 typedef enum {
-    PLUGIN_NONE        = 0,
-    PLUGIN_INDEX       = 1,
-    PLUGIN_QUERY       = 2,
-    PLUGIN_INCREMENTAL = 3,
+    PLUGIN_NONE  = 0,
+    PLUGIN_INDEX = 1,
+    PLUGIN_QUERY = 2,
 } plugin_type;
 
 typedef enum {
@@ -90,6 +91,11 @@ typedef enum {
     // Process this directory and allow normal traversal
     PLUGIN_PROCESS_DIR = 2,
 } plugin_dir_action;
+
+typedef enum {
+    PLUGIN_NO_PROCESS_FILE = 0,
+    PLUGIN_PROCESS_FILE = 1,
+} plugin_file_action;
 
 /*
  * Operations for a user-defined plugin library, allowing the user to make custom
@@ -105,10 +111,19 @@ struct plugin_operations {
      *
      * If the plugin does SQLite 3 operations, should call sqlite3_initialize()
      */
-    int (*global_init)(void *global);
+    int (*global_init)(struct input *in);
 
-    /* 
-     * Returns whether a directory should be processed and/or 
+    /*
+     * One-time initialization of a database instance when each thread
+     * is being set up
+     *
+     * Generally expected to be used to define SQLite3 UDFs that do
+     * not need context
+     */
+    int (*thread_init)(sqlite3 *db);
+
+    /*
+     * Returns whether a directory should be processed and/or
      * descended into
      */
     plugin_dir_action (*dir_action)(void *ptr);
@@ -120,21 +135,49 @@ struct plugin_operations {
      */
     void *(*ctx_init)(void *ptr);
 
-    /* Process a directory */
-    void (*process_dir)(void *ptr, void *user_data);
+    /*
+     * Provide an entry's stat metadata from the plugin's own data
+     * source instead of calling statx (GUFI#196).
+     *
+     * Called before the entry is inserted, so the plugin can fully
+     * populate work->statuso (and entry_data, e.g. type / linkname)
+     * that the insert and the summary/treesummary rollups depend on.
+     *
+     * Return 1 if the plugin fully populated the stat metadata (the
+     * caller then SKIPS statx); return 0 to fall back to statx.
+     *
+     * This is the per-plugin "PROVIDES_STAT" capability: a plugin that
+     * implements this REPLACES statx for the entries it handles; a
+     * plugin that leaves it NULL (the default) AUGMENTS the
+     * statx-derived row in process_file as before. Existing plugins
+     * (lustre, marfs, ...) are unaffected.
+     */
+    int (*stat_file)(void *ptr, void *user_data);
 
-    /* Process a file */
-    void (*process_file)(void *ptr, void *user_data);
+    /* Process a directory before it gets inserted into the database */
+    void (*pre_process_dir)(void *ptr, void *user_data);
+
+    /* Process a file before it gets inserted into the database */
+    plugin_file_action (*pre_process_file)(void *ptr, void *user_data);
+
+    /* Process a directory after it gets inserted into the database */
+    void (*post_process_dir)(void *ptr, void *user_data);
+
+    /* Process a file after it gets inserted into the database*/
+    void (*post_process_file)(void *ptr, void *user_data);
 
     /* Clean up any state for the current context */
     void (*ctx_exit)(void *ptr, void *user_data);
+
+    /* Clean up any thread_init state */
+    void (*thread_exit)(sqlite3 *db);
 
     /*
      * One-time cleanup
      *
      * If the plugin does SQLite 3 operations, should call sqlite3_shutdown()
      */
-    void (*global_exit)(void *global);
+    void (*global_exit)(struct input *in);
 };
 
 /* none of these pointers can be NULL */
@@ -188,19 +231,31 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted);
  *         on error, stop, call plugins_global_exit() for previously
  *         successfully initialized plugins, and return error
  */
-size_t            plugins_global_init (struct plugins* plugins, void* global);
-plugin_dir_action plugins_dir_action  (struct plugins* plugins, void* ctx);
-void              plugins_ctx_init    (struct plugins* plugins, void* ctx, const size_t tid);
-void              plugins_process_dir (struct plugins* plugins, void* ctx, const size_t tid);
-void              plugins_process_file(struct plugins* plugins, void* ctx, const size_t tid);
-void              plugins_ctx_exit    (struct plugins* plugins, void* ctx, const size_t tid);
-void              plugins_global_exit (struct plugins* plugins, void* global);
+size_t             plugins_global_init      (struct plugins* plugins, struct input *in);
+size_t             plugins_thread_init      (struct plugins *plugins, sqlite3 *db);
+plugin_dir_action  plugins_dir_action       (struct plugins* plugins, void* ctx);
+void               plugins_ctx_init         (struct plugins* plugins, void* ctx, const size_t tid);
+/*
+ * Give plugins a chance to provide stat metadata instead of statx.
+ * Returns 1 if some plugin fully populated the entry's stat (caller
+ * should SKIP statx), 0 otherwise (caller should call statx). See the
+ * stat_file hook in struct plugin_operations (GUFI#196).
+ */
+int                plugins_stat_file        (struct plugins* plugins, void* ctx, const size_t tid);
+void               plugins_pre_process_dir  (struct plugins* plugins, void* ctx, const size_t tid);
+plugin_file_action plugins_pre_process_file (struct plugins* plugins, void* ctx, const size_t tid);
+void               plugins_post_process_dir (struct plugins* plugins, void* ctx, const size_t tid);
+void               plugins_post_process_file(struct plugins* plugins, void* ctx, const size_t tid);
+void               plugins_ctx_exit         (struct plugins* plugins, void* ctx, const size_t tid);
+void               plugins_thread_exit      (struct plugins *plugins, sqlite3 *db);
+void               plugins_global_exit      (struct plugins* plugins, struct input *in);
 
 /* common plugin ptr struct (don't have to use; here to reduce duplicate struct definitions) */
 typedef struct PluginCommonStruct {
     sqlite3 *db;
     struct work *work;
     struct entry_data *ed;
+    struct sum *summary;
     void *data; /* any extra data to pass along */
 } PCS_t;
 

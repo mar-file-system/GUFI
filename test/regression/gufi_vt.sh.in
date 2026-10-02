@@ -68,10 +68,9 @@ set -e
 OUTPUT="gufi_vt.out"
 
 PATH_LIST="path_list"
-BADDIR=$(mktemp -d "${INDEXROOT}.XXXXXX")
 
 cleanup() {
-    rm -rf "${PATH_LIST}" "${BADDIR}"
+    rm -rf "${PATH_LIST}"
 }
 
 cleanup_exit() {
@@ -368,7 +367,7 @@ query_vt "${query}"
 echo "# No results with LIKE (not an error)"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%no_match%';\");"
-    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
 )
 query_vt "${query}"
 
@@ -382,7 +381,42 @@ query_vt "${query}"
 echo "# No results with REGEXP (not an error)"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*no_match.*';\");"
-    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+)
+query_vt "${query}"
+
+echo "# no_print_errno"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\", no_print_errno=13, verbose=1);"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+)
+query_vt "${query}" | @SED@ '\%prefix/%d;'
+
+echo "# no_print_errno with remote"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\", no_print_errno=13, verbose=1, remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+)
+query_vt "${query}" | @SED@ '\%prefix/%d;'
+
+echo "# query global database during -S and -E"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", a=1, global_db=\"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\", S=\"SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;\", E=\"SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# query global database during -J"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", a=1, global_db=\"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\", I=\"CREATE TABLE out(path TEXT, inode TEXT);\", S=\"INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;\", E=\"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\", K=\"CREATE TABLE aggregate(path TEXT, inode TEXT, i INTEGER, t TEXT);\", J=\"INSERT INTO aggregate SELECT path, inode, i, t FROM out JOIN data ON out.inode <= data.i;\", G=\"SELECT * FROM aggregate;\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# query global database during -G"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", a=1, global_db=\"CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');\", I=\"CREATE TABLE out(path TEXT, inode TEXT);\", S=\"INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;\", E=\"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\", K=\"CREATE TABLE aggregate(path TEXT, inode TEXT);\", J=\"INSERT INTO aggregate SELECT path, inode FROM out;\", G=\"SELECT path, inode, i, t FROM aggregate JOIN data ON aggregate.inode <= data.i;\");"
+    echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
 
@@ -501,7 +535,7 @@ query_vt "${query}" | @SED@ 's%plugin library.*%plugin library%g;'
 
 echo "# Bad plugin (global_init fails)"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"test_querying_plugin_bad_ops:${GUFI_QUERYING_PLUGIN}\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"test_querying_plugin_bad_global:${GUFI_QUERYING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
@@ -603,6 +637,20 @@ query=$(
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
+
+echo "# Bad no_print_errno"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;\", no_print_errno=-1, no_print_errno=0, no_print_errno=256, verbose=1);"
+    echo -n "SELECT * FROM gufi ORDER BY fullpath ASC;"
+)
+query_vt "${query}"
+
+echo "# bad global db set up"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", global_db=\"CREATE TABLE;\", E=\"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
 ) | replace | tee "${OUTPUT}"
 
 # FIXME: cygwin is having trouble with plugin tests.
@@ -637,6 +685,13 @@ query_vt "${query}"
 echo "# Plugin with aggregation + remote"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", I=\"CREATE TABLE intermediate (filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"INSERT INTO intermediate SELECT * FROM plugin_query_view;\", K=\"CREATE TABLE aggregate(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", J=\"INSERT INTO aggregate SELECT * FROM intermediate;\", G=\"SELECT * FROM aggregate ORDER BY filetype ASC, count ASC;\", plugin=\"${TEST_QUERYING_PLUGIN_OPS}:${GUFI_QUERYING_PLUGIN}\", remote_cmd=\"${SSH_FAKE}\", remote_arg=\"remote\");"
+    echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# Bad plugin (thread_init fails)"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\", plugin=\"test_querying_plugin_bad_thread:${GUFI_QUERYING_PLUGIN}\");"
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"

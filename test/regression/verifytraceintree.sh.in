@@ -203,7 +203,7 @@ echo "# empty line (Pass)"
     echo
 ) > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${SEARCH}\""
-) 2>&1 | remove_indexing_time | @SED@ '\%qptpool.*%d;' | tee "${OUTPUT}"
+) 2>&1 | remove_time | @SED@ '\%qptpool.*%d;' | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${OUTPUT}"
 rm "${OUTPUT}"

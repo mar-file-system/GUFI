@@ -167,6 +167,23 @@ endif()
 set(DEP_AI ON CACHE BOOL "Whether or not to build and link with SQLite AI modules")
 if (DEP_AI)
   message(STATUS "AI dependencies enabled")
+
+  function(check_env_for VAR STR)
+    string(FIND "$ENV{${VAR}}" "${STR}" IDX)
+    if (IDX EQUAL -1)
+      message(WARNING "Make sure \"${STR}\" is in your ${VAR}")
+    endif()
+  endfunction()
+
+  function(check_ai_paths VAR LLAMA)
+    check_env_for("${VAR}" "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
+    check_env_for("${VAR}" "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
+    check_env_for("${VAR}" "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA}")
+  endfunction()
+
+  if(CYGWIN)
+    check_ai_paths("PATH" "bin")
+  endif()
 endif()
 
 # Only enable C++ if support is found or if llama.cpp is rquired
@@ -213,12 +230,33 @@ else()
   message(STATUS "Not compiling C++ sources")
 endif()
 
+set(SERVER_BIN "bin"       CACHE STRING "Directory to install executables at")
+set(SERVER_LIB "lib"       CACHE STRING "Directory to install libraries at")
+set(SERVER_MAN "share/man" CACHE STRING "Directory to install man pages at")
+
+if (CLIENT)
+  set(CLIENT_BIN "${SERVER_BIN}" CACHE STRING "Directory to install client executables at")
+  set(CLIENT_LIB "${SERVER_LIB}" CACHE STRING "Directory to install client libraries at")
+  set(CLIENT_MAN "${SERVER_MAN}" CACHE STRING "Directory to install client man pages at")
+endif()
+
+# dynamically loaded module extension
+if (APPLE OR DARWIN)
+  set(EXT "dylib")
+elseif (CYGWIN)
+  set(EXT "dll.a")
+else ()
+  set(EXT "so")
+endif()
+
+# this is the first CPACK_RPM_PACKAGE_REQUIRES
+set(CPACK_RPM_PACKAGE_REQUIRES "sqlite3 >= 3.43.1")
+
 # Python3.9+ is required
 find_package(Python3 3.9 COMPONENTS Interpreter REQUIRED)
 set(Python3_SHEBANG "/usr/bin/env python3" CACHE STRING "Set Python3 shebang")
 
-# this is the first CPACK_RPM_PACKAGE_REQUIRES
-set(CPACK_RPM_PACKAGE_REQUIRES "python(abi) >= 3.9")
+set(APPEND CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python(abi) >= 3.9")
 
 # require find_program to return executables with -r+x permissions
 if (POLICY CMP0109)
@@ -345,18 +383,94 @@ if (DEP_USE_JEMALLOC)
     set(JEMALLOC "${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a")
   endif()
 endif()
+if (APPLE OR DARWIN)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --mac)
+elseif (CYGWIN)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --cygwin)
+endif()
 if (DEP_AI)
   set(DEP_OPTIONS ${DEP_OPTIONS} --AI)
   if (CYGWIN)
-    set(DEP_OPTIONS ${DEP_OPTIONS} --cygwin --OMP "-DOpenMP_C_FLAGS=\"${OpenMP_C_FLAGS}\" -DOpenMP_C_LIB_NAMES=\"${OpenMP_C_LIB_NAMES}\" -DOpenMP_libgomp_LIBRARY=\"${OpenMP_libgomp_LIBRARY}\"")
+    set(DEP_OPTIONS ${DEP_OPTIONS} --OMP "-DOpenMP_C_FLAGS=\"${OpenMP_C_FLAGS}\" -DOpenMP_C_LIB_NAMES=\"${OpenMP_C_LIB_NAMES}\" -DOpenMP_libgomp_LIBRARY=\"${OpenMP_libgomp_LIBRARY}\"")
   endif()
 endif()
-add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}" "${CMAKE_VERSION}" "${CMAKE_SYSTEM_NAME}")
+add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
+
+# copy dependencies into packages
+# not copying sqlite libraries - use local version
+install(FILES
+  "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
+  DESTINATION "${SERVER_LIB}"
+  COMPONENT Server
+  EXCLUDE_FROM_ALL # do not copy if running 'make install'
+)
+if (CLIENT)
+  install(FILES
+    "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
+    DESTINATION "${CLIENT_LIB}"
+    COMPONENT Client
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+endif()
 
 # llama.cpp uses OpenMP (not required, but left enabled)
 if (DEP_AI)
   find_package(OpenMP REQUIRED COMPONENTS C)
   message(STATUS "OpenMP libraries located in ${OpenMP_C_LIBRARIES}")
+
+  if (APPLE OR DARWIN)
+    find_library(ACCELERATE Accelerate REQUIRED)
+  endif()
+
+  # copy dependencies into packages
+  install(FILES
+    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
+    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
+    DESTINATION "${SERVER_LIB}"
+    COMPONENT Server
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+  install(CODE
+    "
+    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}\")
+    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}\")
+    "
+    COMPONENT Server
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+  install(DIRECTORY
+    "${DEP_INSTALL_PREFIX}/llama.cpp/lib/" # keep trailing slash
+    DESTINATION "${SERVER_LIB}"
+    COMPONENT Server
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    PATTERN "cmake" EXCLUDE
+    PATTERN "pkgconfig" EXCLUDE
+  )
+  if (CLIENT)
+    install(FILES
+      "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
+      "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
+      DESTINATION "${CLIENT_LIB}"
+      COMPONENT Client
+      EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    )
+    install(CODE
+      "
+      file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}\")
+      file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}\")
+      "
+      COMPONENT Client
+      EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    )
+    install(DIRECTORY
+      "${DEP_INSTALL_PREFIX}/llama.cpp/lib/" # keep trailing slash
+      DESTINATION "${CLIENT_LIB}"
+      COMPONENT Client
+      EXCLUDE_FROM_ALL # do not copy if running 'make install'
+      PATTERN "cmake" EXCLUDE
+      PATTERN "pkgconfig" EXCLUDE
+    )
+  endif()
 endif()
 
 # Find zlib
@@ -452,36 +566,6 @@ set(COMMON_LIBRARIES
   ${PCRE2_LDFLAGS}
 )
 
-if (DEP_AI)
-  if (APPLE OR DARWIN)
-    find_library(ACCELERATE Accelerate REQUIRED)
-
-    list(APPEND COMMON_LIBRARIES
-      ${ACCELERATE}
-      ${METAL}
-    )
-  endif()
-
-  list(APPEND COMMON_INCLUDES
-    "${DEP_INSTALL_PREFIX}/sqlite-vec/include"
-    "${DEP_INSTALL_PREFIX}/sqlite-lembed/include"
-    "${DEP_INSTALL_PREFIX}/llama.cpp/include"
-  )
-
-  list(APPEND COMMON_LIBRARIES
-    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libsqlite_vec0.a"
-    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/libsqlite_lembed0.a"
-    -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml ${OpenMP_C_FLAGS}
-    -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
-    )
-
-  if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    list(APPEND COMMON_LIBRARIES
-      omp
-    )
-  endif()
-endif()
-
 if (ZLIB_FOUND)
   list(APPEND COMMON_LIBRARIES
     z
@@ -491,8 +575,32 @@ endif()
 if (DEP_USE_JEMALLOC)
   list(APPEND COMMON_LIBRARIES
     "${JEMALLOC}"
-    stdc++ # required by alpine linux
   )
+
+  if (NOT APPLE AND NOT DARWIN AND NOT CYGWIN)
+    list(APPEND COMMON_LIBRARIES
+      stdc++
+    )
+  endif()
+
+  install(DIRECTORY
+    "${DEP_INSTALL_PREFIX}/jemalloc/lib/" # keep trailing slash
+    DESTINATION "${SERVER_LIB}"
+    COMPONENT Server
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    FILES_MATCHING PATTERN "libjemalloc.${EXT}*"
+    PATTERN "pkgconfig" EXCLUDE
+  )
+  if (CLIENT)
+    install(DIRECTORY
+      "${DEP_INSTALL_PREFIX}/jemalloc/lib/" # keep trailing slash
+      DESTINATION "${CLIENT_LIB}"
+      COMPONENT Client
+      EXCLUDE_FROM_ALL # do not copy if running 'make install'
+      FILES_MATCHING PATTERN "libjemalloc.${EXT}*"
+      PATTERN "pkgconfig" EXCLUDE
+    )
+  endif()
 endif()
 
 list(APPEND COMMON_LIBRARIES
@@ -504,27 +612,9 @@ list(APPEND COMMON_LIBRARIES
 include_directories(${COMMON_INCLUDES})
 
 option(QPTPOOL_SWAP "Whether or not to enable swapping in QueuePerThreadPool" On)
+set(QPTPOOL_STACK_SIZE 0 CACHE STRING "QueuePerThreadPool Stack Size")
 
 option(ALLOW_DB_WRITES "Whether or not to allow gufi_query to write to databases" On)
-
-set(SERVER_BIN "bin"       CACHE STRING "Directory to install executables at")
-set(SERVER_LIB "lib"       CACHE STRING "Directory to install libraries at")
-set(SERVER_MAN "share/man" CACHE STRING "Directory to install man pages at")
-
-if (CLIENT)
-  set(CLIENT_BIN "${SERVER_BIN}" CACHE STRING "Directory to install client executables at")
-  set(CLIENT_LIB "${SERVER_LIB}" CACHE STRING "Directory to install client libraries at")
-  set(CLIENT_MAN "${SERVER_MAN}" CACHE STRING "Directory to install client man pages at")
-endif()
-
-# dynamically loaded module extension
-if (APPLE OR DARWIN)
-  set(EXT "dylib")
-elseif (CYGWIN)
-  set(EXT "dll.a")
-else ()
-  set(EXT "so")
-endif()
 
 include(CheckSymbolExists)
 
@@ -539,6 +629,55 @@ if (HAVE_STATX)
 else()
   message(STATUS "statx(2) not found. Falling back to lstat(2).")
 endif()
+
+# add flags for AI dependencies
+function(add_ai target vec_basename lembed_basename)
+  if (APPLE OR DARWIN)
+    set(LLAMA_LIB "lib")
+  elseif(CYGWIN)
+    set(LLAMA_LIB "bin")
+  else()
+    set(LLAMA_LIB "lib")
+  endif()
+
+  if (DEP_AI)
+    target_include_directories("${target}" SYSTEM PUBLIC "${DEP_INSTALL_PREFIX}/sqlite-vec/include")
+    target_include_directories("${target}" SYSTEM PUBLIC "${DEP_INSTALL_PREFIX}/sqlite-lembed/include")
+    target_include_directories("${target}" SYSTEM PUBLIC "${DEP_INSTALL_PREFIX}/llama.cpp/include")
+
+    target_compile_definitions("${target}" PUBLIC -DHAVE_AI=1)
+
+    if (APPLE OR DARWIN)
+      target_link_libraries("${target}"
+        ${ACCELERATE}
+        ${METAL}
+      )
+    endif()
+
+    # link static libraries
+    target_link_libraries("${target}"
+      "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/${vec_basename}"
+      "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/${lembed_basename}"
+      -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml ${OpenMP_C_FLAGS}
+      -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
+    )
+
+    set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
+    set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
+    set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
+    set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
+    set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA_LIB}")
+    set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA_LIB}")
+
+    if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+      target_link_libraries("${target}"
+        omp
+      )
+    endif()
+
+    target_compile_options("${target}" PUBLIC "${OpenMP_C_FLAGS}")
+  endif()
+endfunction()
 
 # enable "make test"
 enable_testing()
@@ -632,7 +771,7 @@ if (RPMBUILD)
   # Turn off build-id link creation by RPM to manually control
   # Also need to keep shebang templating
   set(CPACK_RPM_SPEC_MORE_DEFINE
-    "%global _build_id_links none\n%global _missing_build_ids_terminate_build 0\n%undefine __brp_mangle_shebangs"
+    "%global _build_id_links none\n%global _missing_build_ids_terminate_build 0\n%undefine __brp_mangle_shebangs\n%global __brp_check_rpaths %{nil}"
   )
 
   # Generate source RPM

@@ -34,6 +34,12 @@ Does "prefix" have treesummary data?
 0 prefix
 0 total
 
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT totsize FROM summary;" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT SUM(size) FROM pentries WHERE type == 'f';" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
+
 $ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix
 Warning: Did not get any results from gufi_query.
 Does "prefix" have treesummary data?
@@ -123,10 +129,10 @@ minmtime 1 maxmtime 5
 minatime 1 maxatime 5
 totxattr 0
 mincrtime 0 maxcrtime 0
-minossint1 0 maxossint1 0 totossint1 0
-minossint2 0 maxossint2 0 totossint2 0
-minossint3 0 maxossint3 0 totossint3 0
-minossint4 0 maxossint4 0 totossint4 0
+minossint1 1 maxossint1 5 totossint1 15
+minossint2 2 maxossint2 10 totossint2 30
+minossint3 3 maxossint3 15 totossint3 45
+minossint4 4 maxossint4 20 totossint4 60
 totsubdirs 1 maxsubdirfiles 3 maxsubdirlinks 1 maxsubdirsize 6
 totextdbs 0
 
@@ -199,6 +205,12 @@ $ gufi_du --apparent-size --block-size 1 --summarize prefix
 $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 prefix
 1049673 total
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT totsize FROM summary;" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT SUM(size) FROM pentries WHERE type == 'f';" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
 
 $ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix
 1.0M prefix
@@ -328,6 +340,12 @@ $ gufi_du --apparent-size --block-size 1 --summarize prefix
 $ gufi_du --apparent-size --block-size 1 --total --summarize prefix
 1049673 prefix
 1049673 total
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT totsize FROM summary;" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT SUM(size) FROM pentries WHERE type == 'f';" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix
+1049673
 
 $ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix
 1.0M prefix
@@ -460,6 +478,12 @@ $ gufi_du --apparent-size --block-size 1 --total --summarize prefix/*/
 23 prefix/leaf_directory/
 15 prefix/unusual#? directory ,/
 49 total
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT totsize FROM summary;" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix/*/
+49
+
+$ gufi_query -I "CREATE TABLE intermediate(size INT64);" -E "INSERT INTO intermediate SELECT SUM(size) FROM pentries WHERE type == 'f';" -K "CREATE TABLE aggregate(size INT64);" -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" -G "SELECT SUM(size) FROM aggregate;" prefix/*/
+49
 
 $ gufi_du --apparent-size --block-size 1 --total --summarize --human-readable prefix/*/
 11.0 prefix/directory/
@@ -650,7 +674,7 @@ Does "search" have treesummary data?
 
 # Non-existent path is discovered
 $ gufi_du "non/existent/path"
-"non/existent/path" is not a path
+Error: "non/existent" is not a directory
 
 # Outside of index
 $ gufi_du ".."

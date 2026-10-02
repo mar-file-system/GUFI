@@ -71,12 +71,15 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 #include "bf.h"
+#include "config.h"
+#include "debug.h"
 #include "dbutils.h"
+#include "rollup.h"
 #include "utils.h"
 
 struct treesummary {
     struct BottomUp data;
-    int modified; /* whether or not this directory was modified; informs parent if it needs to be modified */
+    int canrollup;  /* used by parent */
 };
 
 static int treesummary_found(void *args, int count, char **data, char **columns) {
@@ -93,14 +96,14 @@ static int treesummary_found(void *args, int count, char **data, char **columns)
 static int treesummary_descend(void *args, int *keep_going) {
     struct BottomUp *dir = (struct BottomUp *) args;
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
-               dir->name, dir->name_len,
-               "/" DBNAME, DBNAME_LEN + 1);
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 2,
+                     dir->name, dir->name_len,
+                     "/" DBNAME, DBNAME_LEN + 1);
+
+    int rc = 0; /* keep going down even if the database file doesn't exist */
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
-
-    int rc = !db;
     if (db) {
         char *err = NULL;
         /* check if treesummary table exists - if it does, don't descend */
@@ -112,58 +115,93 @@ static int treesummary_descend(void *args, int *keep_going) {
     }
 
     closedb(db);
+    free(dbname);
 
     return rc;
+}
+
+static int get_uidgid_callback(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+    struct stat *st = (struct stat *) args;
+
+    /* mark that this callback was called */
+    st->st_size++; /* doing ++ instead of = 1 just in case this is somehow called multiple times */
+
+    return !((sscanf(data[0], "%" STAT_uid, &st->st_uid) == 1) &&
+             (sscanf(data[0], "%" STAT_gid, &st->st_gid) == 1));
 }
 
 static int treesummary_ascend(void *args) {
     struct treesummary *ts = (struct treesummary *) args;
     struct BottomUp *dir = &ts->data;
-    struct input *in = (struct input *) dir->extra_args;
 
-    /* this directory has not been modified yet */
-    ts->modified = 0;
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 2,
+                     dir->name, dir->name_len,
+                     "/" DBNAME, DBNAME_LEN + 1);
 
-    /* check if any subdirs were modified */
-    int subdir_modified = 0;
-    sll_loop(&dir->subdirs, node) {
-        struct treesummary *subdir = (struct treesummary *) sll_node_data(node);
-        subdir_modified |= subdir->modified;
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, NULL, NULL);
+    if (!db) {
+        free(dbname);
+        return 1;
     }
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
-               dir->name, dir->name_len,
-               "/" DBNAME, DBNAME_LEN + 1);
+    int rc = 0;
 
-    /* check if this treesummary table needs to be updated */
-    if (!subdir_modified && in->suspecttime) {
-        struct stat st;
-        time_t crtime = 0; /* unused */
-        StatCalled stat_called = STAT_NOT_CALLED;
+    char *err = NULL;
 
-        if (lstat_wrapper(dbname, &st, &crtime,
-                          &stat_called, 1, 1) != 0) {
-            return 1;
+    /* pull uid and gid for bttomup_collect_treesummary */
+    struct stat st = {0};
+    if (sqlite3_exec(db, "SELECT uid, gid FROM " SUMMARY " WHERE isroot == 1;",
+                     get_uidgid_callback, &st, &err) != SQLITE_OK) {
+        sqlite_print_err_and_free(err, stderr,
+                                  "Error: Could not get data from " SUMMARY " table at \"%s\": %s\n",
+                                  dir->name, err);
+        rc = 1;
+        goto cleanup;
+    }
+
+    if (sqlite3_exec(db,
+                     /* create treesummary table if it doesn't already exist */
+                     TREESUMMARY_SCHEMA(TREESUMMARY, "")
+                     /* delete old treesummary data for just this directory (in case the index is rolled up) */
+                     "DELETE FROM " TREESUMMARY " "
+                     "WHERE inode == (SELECT " SUMMARY ".inode "
+                     "                FROM " SUMMARY " JOIN " TREESUMMARY " ON " SUMMARY ".inode == " TREESUMMARY ".inode "
+                     "                WHERE " SUMMARY ".isroot == 1);",
+                     NULL, NULL, &err) != SQLITE_OK) {
+        sqlite_print_err_and_free(err, stderr,
+                                  "Error: Could not set up " TREESUMMARY " table at \"%s\": %s\n",
+                                  dir->name, err);
+        rc = 1;
+        goto cleanup;
+    }
+
+    /* the callback would not have run if the database file is empty (such as at the top) */
+    if (st.st_size != 1) {
+        rc = (st.st_size > 1); /* if count is 0, don't error - just finish this thread without writing the treesummary data */
+        goto cleanup;
+    }
+
+    rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ISROLLEDUP_CHECK,
+                                      st.st_uid, st.st_gid, &ts->canrollup);
+
+    if (rc == 0) {
+        /* update summary canrollup */
+        char update_canrollup[] = "UPDATE " SUMMARY " SET canrollup = 0 WHERE isroot == 1;";
+        update_canrollup[sizeof(update_canrollup) - sizeof("0 WHERE isroot == 1;")] = '0' + ts->canrollup;
+
+        if (sqlite3_exec(db, update_canrollup, NULL, NULL, &err) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr,
+                                      "Error: Could not get update " SUMMARY ".canrollup at \"%s\": %s\n",
+                                      dir->name, err);
+            rc = 1;
         }
-
-        /* suspect time is more recent than mtime/ctime -> nothing to update */
-        if ((st.st_mtime < in->suspecttime) &&
-            (st.st_ctime < in->suspecttime)) {
-            return 0;
-        }
     }
 
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, create_treesummary_tables, NULL);
-
-    int rc = !db;
-    if (db) {
-        /* the treesummary table was not found, so create it */
-        rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ROLLUPSCORE_CHECK);
-        ts->modified = 1;
-    }
-
+  cleanup:
     closedb(db);
+    free(dbname);
 
     return rc;
 }
@@ -186,34 +224,32 @@ int main(int argc, char *argv[]) {
         /* processing/tree walk flags */
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST, FLAG_DONT_REPROCESS,
 
-         /*
-          * if --suspect-time is not passed in, the suspecttime is set to 0,
-          * skipping the lstat/statx calls
-          */
-        FLAG_SUSPECT_TIME,
-
         FLAG_END
     };
 
     struct input in;
     process_args_and_maybe_exit(options, 1, "GUFI_tree", &in);
 
-    /* default to create/update treesummary tables for all directories */
-    if (!in.suspecttime_set) {
-        in.suspecttime = 0;
-    }
-
     BU_descend_f desc = in.dont_reprocess?treesummary_descend:NULL;
+
+    struct start_end after_init;
+    clock_gettime(CLOCK_MONOTONIC, &after_init.start);
 
     const int rc = parallel_bottomup(in.pos.argv, in.pos.argc,
                                      in.min_level, in.max_level,
                                      &in.path_list,
                                      in.maxthreads,
                                      sizeof(struct treesummary),
+                                     0, /* descending an index, so allow for symlinks to subtrees */
                                      desc, treesummary_ascend,
                                      0,
                                      0,
-                                     &in);
+                                     NULL,
+                                     0);
+
+    clock_gettime(CLOCK_MONOTONIC, &after_init.end);
+    const long double processtime = sec(nsec(&after_init));
+    fprintf(stderr, "Time Spent Computing Tree Summary tables: %.2Lfs\n", processtime);
 
     input_fini(&in);
 

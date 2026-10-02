@@ -120,6 +120,11 @@ static void dsi_uuid(sqlite3_context *context, int argc, sqlite3_value **argv) {
     }
 
     const char *value = (char *) sqlite3_value_text(argv[1]);
+    if (!value || (strlen(value) < DSI_VALUE_PREFIX_LEN)) {
+        sqlite3_result_error(context, "Cannot get DSI UUID", -1);
+        return;
+    }
+
     sqlite3_result_text(context, value, DSI_VALUE_UUID_LEN, SQLITE_TRANSIENT);
 }
 
@@ -140,20 +145,22 @@ static void dsi_dbpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     }
 
     const char *value = (char *) sqlite3_value_text(argv[1]);
+    if (!value || (strlen(value) < DSI_VALUE_PREFIX_LEN)) {
+        sqlite3_result_error(context, "Cannot get DSI collection database path", -1);
+        return;
+    }
+
     sqlite3_result_text(context, value + DSI_VALUE_PREFIX_LEN, -1, SQLITE_TRANSIENT);
 }
 
-static int dsi_querying_global_init(void *global) {
-    struct input *in = (struct input *) global;
+static int dsi_querying_global_init(struct input *in) {
     in->process_xattrs = 1; /* automatically enable xattr processing if not already */
 
     sqlite3_initialize();
     return 0;
 }
 
-static void *dsi_querying_ctx_init(void *ptr) {
-    sqlite3 *db = (sqlite3 *) ptr;
-
+static int dsi_querying_thread_init(sqlite3 *db) {
     if ((sqlite3_create_function(db,   "dsi_collection_name", 1, SQLITE_UTF8,
                                  NULL, &dsi_collection_name,  NULL, NULL) != SQLITE_OK) ||
         (sqlite3_create_function(db,   "dsi_uuid",            2, SQLITE_UTF8,
@@ -161,23 +168,29 @@ static void *dsi_querying_ctx_init(void *ptr) {
         (sqlite3_create_function(db,   "dsi_dbpath",          2, SQLITE_UTF8,
                                  NULL, &dsi_dbpath,           NULL, NULL) != SQLITE_OK)) {
         fprintf(stderr, "Error: Could not create DSI functions\n");
+        return 1;
     }
 
-    return NULL;
+    return 0;
 }
 
-static void dsi_querying_global_exit(void *global) {
-    (void) global;
+static void dsi_querying_global_exit(struct input *in) {
+    (void) in;
     sqlite3_shutdown();
 }
 
 struct plugin_operations gufi_plugin_operations = {
     .type = PLUGIN_QUERY,
     .global_init = dsi_querying_global_init,
+    .thread_init = dsi_querying_thread_init,
     .dir_action = NULL,
-    .ctx_init = dsi_querying_ctx_init,
-    .process_dir = NULL,
-    .process_file = NULL,
+    .ctx_init = NULL,
+    .stat_file = NULL,
+    .pre_process_dir = NULL,
+    .pre_process_file = NULL,
+    .post_process_dir = NULL,
+    .post_process_file = NULL,
     .ctx_exit = NULL,
+    .thread_exit = NULL,
     .global_exit = dsi_querying_global_exit,
 };

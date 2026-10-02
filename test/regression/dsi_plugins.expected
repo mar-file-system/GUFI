@@ -95,3 +95,80 @@ prefix/leaf_directory/leaf_file1|7
 prefix/leaf_directory/leaf_file2|8
 prefix/repeat_name|9
 
+# dsi_collection_name with bad xxatr names
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT dsi_collection_name(NULL), dsi_collection_name('') FROM vrxpentries;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi LIMIT 1;"
+) | sqlite3
+|
+
+# dsi_uuid with bad xattr names
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT dsi_uuid(NULL, NULL), dsi_uuid('', NULL) FROM vrxpentries;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi LIMIT 1;"
+) | sqlite3
+|
+
+# dsi_uuid with NULL xattr value
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT dsi_uuid('user.COL.file.collection', NULL) FROM vrxpentries WHERE level() == 0;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi;"
+) | sqlite3
+Error: Cannot get DSI UUID: prefix/db.db: "SELECT dsi_uuid('user.COL.file.collection', NULL) FROM vrxpentries WHERE level() == 0;"
+
+# dsi_uuid with empty xattr value
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT dsi_uuid('user.COL.file.collection', '') FROM vrxpentries WHERE level() == 0;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi;"
+) | sqlite3
+Error: Cannot get DSI UUID: prefix/db.db: "SELECT dsi_uuid('user.COL.file.collection', '') FROM vrxpentries WHERE level() == 0;"
+
+# dsi_dbpath calls
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT dsi_dbpath('user.COL.file.collection', '00000000-0000-0000-0000-000000000000./collection/db/path'), dsi_dbpath(NULL, NULL), dsi_dbpath('', NULL) FROM vrxpentries;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi LIMIT 1;"
+) | sqlite3
+/collection/db/path||
+
+# dsi_dbpath with NULL xattr value
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT dsi_dbpath('user.COL.file.collection', NULL) FROM vrxpentries WHERE level() == 0;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi;"
+) | sqlite3
+Error: Cannot get DSI collection database path: prefix/db.db: "SELECT dsi_dbpath('user.COL.file.collection', NULL) FROM vrxpentries WHERE level() == 0;"
+
+# dsi_dbpath with empty xattr value
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(
+    E="SELECT dsi_dbpath('user.COL.file.collection', '') FROM vrxpentries WHERE level() == 0;",
+    plugin="gufi_plugin_operations:dsi_querying_plugin",
+    "prefix");
+SELECT * FROM gufi;"
+) | sqlite3
+Error: Cannot get DSI collection database path: prefix/db.db: "SELECT dsi_dbpath('user.COL.file.collection', '') FROM vrxpentries WHERE level() == 0;"
+

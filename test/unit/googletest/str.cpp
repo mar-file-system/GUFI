@@ -107,3 +107,25 @@ TEST(str, cmp) {
         str_free_existing(&lhs);
     }
 }
+
+TEST(str, free_reference) {
+    str_t *str = (str_t *) calloc(1, sizeof(*str));
+    // str->free is NULL
+    str_free(str);
+}
+
+TEST(str, exists) {
+    str_t *str = (str_t *) calloc(1, sizeof(*str));
+    EXPECT_EQ(str_exists(str), 0); // not pointing to anything
+
+    str->data = (char *) str;
+    EXPECT_EQ(str_exists(str), 0); // pointing to a buffer, but no length
+
+    str->len = 1;
+    EXPECT_EQ(str_exists(str), 1);
+
+    str->data = nullptr;
+    EXPECT_EQ(str_exists(str), 0); // length but no buffer
+
+    str_free(str);
+}

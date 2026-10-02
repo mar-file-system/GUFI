@@ -81,13 +81,10 @@ struct PoolArgs {
 
 static str_t create_dst_name(const str_t *dst_root, struct work *work) {
     str_t dst;
-    str_alloc_existing(&dst, dst_root->len + 1 + work->name_len - work->root_parent.len);
-
-    SNFORMAT_S(dst.data, dst.len + 1, 3,
-               dst_root->data, dst_root->len,
-               "/", (size_t) 1,
-               work->name + work->root_parent.len, work->name_len - work->root_parent.len);
-
+    dst.len = SNFORMAT_S_ALLOC(&dst.data, 3,
+                               dst_root->data, dst_root->len,
+                               "/", (size_t) 1,
+                               work->name + work->root_parent.len, work->name_len - work->root_parent.len);
     return dst; /* return by value instead of returning newly allocated pointer that needs to be cleaned up */
 }
 
@@ -227,7 +224,7 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
 
     int rc = 0;
 
-    DIR *dir = opendir_wrapper(work->name, 1);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         goto cleanup;
     }
@@ -257,7 +254,9 @@ static int cpr_dir(QPTPool_ctx_t *ctx, void *data) {
 
     /* process children */
     descend(ctx, &pa->in, work, dir, 0,
-            cpr_dir,enqueue_nondir, &nondir_args, NULL);
+            try_skip_lstat, NULL, NULL,
+            cpr_dir,enqueue_nondir, &nondir_args,
+            NULL);
 
     if (pa->in.process_xattrs) {
         struct xattrs xattrs;

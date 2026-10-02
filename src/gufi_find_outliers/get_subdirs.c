@@ -96,7 +96,7 @@ static int is_subdir(const char *path, struct dirent *entry) {
             time_t crtime = 0; /* unused */
             StatCalled stat_called = STAT_NOT_CALLED;
             if (stat_wrapper(path, &st, &crtime,
-                             &stat_called, 1, 1) != 0) {
+                             &stat_called, 1, NULL) != 0) {
                 return -1;
             }
             return S_ISDIR(st.st_mode);
@@ -108,7 +108,7 @@ static int is_subdir(const char *path, struct dirent *entry) {
 /* go down only one level */
 void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
                  QPTPool_ctx_t *ctx) {
-    DIR *dir = opendir_wrapper(ow->path.data, 1);
+    DIR *dir = opendir_wrapper(ow->path.data, NULL);
     if (!dir) {
         return;
     }
@@ -138,12 +138,11 @@ void get_subdirs(OutlierWork_t *ow, sll_t *subdirs, size_t *opendbs,
         }
 
         /* create the db.db path */
-        const size_t dbname_len = dd->path.len + 1 + DBNAME_LEN;
-        char *dbname = malloc(dbname_len + 1);
-        SNFORMAT_S(dbname, dbname_len + 1, 3,
-                   dd->path.data, dd->path.len,
-                   "/", (size_t) 1,
-                   DBNAME, DBNAME_LEN);
+        char *dbname = NULL;
+        SNFORMAT_S_ALLOC(&dbname, 3,
+                         dd->path.data, dd->path.len,
+                         "/", (size_t) 1,
+                         DBNAME, DBNAME_LEN);
 
         (*opendbs)++;
 

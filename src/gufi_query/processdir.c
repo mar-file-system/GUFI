@@ -90,12 +90,11 @@ OF SUCH DAMAGE.
 #include "gufi_query/query.h"
 #include "gufi_query/query_replacement.h"
 
-static inline int save_matime(gqw_t *gqw,
-                              char *dbpath, const size_t dbpath_size,
-                              struct utimbuf *dbtime) {
-    const size_t dbpath_len = SNFORMAT_S(dbpath, dbpath_size, 2,
-                                         gqw->work.name, gqw->work.name_len,
-                                         "/" DBNAME, DBNAME_LEN + 1);
+static char *save_matime(gqw_t *gqw, struct utimbuf *dbtime) {
+    char *dbpath = NULL;
+    const size_t dbpath_len = SNFORMAT_S_ALLOC(&dbpath, 2,
+                                               gqw->work.name, gqw->work.name_len,
+                                               "/" DBNAME, DBNAME_LEN + 1);
 
     struct stat st;
     time_t crtime = 0;                        /* unused */
@@ -105,21 +104,22 @@ static inline int save_matime(gqw_t *gqw,
     if (rc != 0) {
         const int err = errno;
 
-        char buf[MAXPATH];
-        present_user_path(dbpath, dbpath_len,
-                          &gqw->work.root_parent, gqw->work.root_basename_len, &gqw->work.orig_root,
-                          buf, sizeof(buf));
+        char *buf = present_user_path(dbpath, dbpath_len,
+                                      &gqw->work.root_parent, gqw->work.root_basename_len, &gqw->work.orig_root);
 
         fprintf(stderr, "Could not set database file's timestamps \"%s\": %s (%d)\n",
                 buf, strerror(err), err);
 
-        return 1;
+        free(buf);
+        free(dbpath);
+
+        return NULL;
     }
 
     dbtime->actime  = st.st_atime;
     dbtime->modtime = st.st_mtime;
 
-    return 0;
+    return dbpath;
 }
 
 static inline int restore_matime(const char *dbpath, struct utimbuf *dbtime) {
@@ -162,7 +162,6 @@ static int collect_dir_inodes(void *args, int count, char **data, char **columns
 int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* Not checking arguments */
 
-    DIR *dir = NULL;
     sqlite3 *db = NULL;
     struct utimbuf dbtime;
 
@@ -174,30 +173,31 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
     gqw_t *gqw = NULL;
     decompress_gqw(&gqw, data);
 
-    char dbpath[MAXPATH];  /* filesystem path of db.db; only generated if keep_matime is set */
-    char dbname[MAXPATH];  /* path of db.db modified so that sqlite3 can open it */
-    const size_t dbname_len = SNFORMAT_S(dbname, MAXPATH, 2,
-                                         gqw->sqlite3_name, gqw->sqlite3_name_len,
-                                         "/" DBNAME, DBNAME_LEN + 1);
+    /* path of db.db modified so that sqlite3 can open it */
+    char *dbname = NULL;
+    const size_t dbname_len = SNFORMAT_S_ALLOC(&dbname, 2,
+                                               gqw->sqlite3_name, gqw->sqlite3_name_len,
+                                               "/" DBNAME, DBNAME_LEN + 1);
 
-    dir = opendir_wrapper(gqw->work.name, in->print_eacces);
+    /* filesystem path of db.db; only generated if keep_matime is set */
+    char *dbpath = NULL;
+
+    DIR *dir = opendir_wrapper(gqw->work.name, in->no_print_errno);
 
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
         goto out_free;
     }
 
-    int rc = 0;
     if (in->keep_matime) {
-        rc = save_matime(gqw, dbpath, sizeof(dbpath), &dbtime);
-    }
-
-    if (rc != 0) {
-        goto close_dir;
+        dbpath = save_matime(gqw, &dbtime);
+        if (!dbpath) {
+            goto close_dir;
+        }
     }
 
     if (gqw->work.level >= in->min_level) {
-        db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1, in->print_eacces);
+        db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1, in->no_print_errno);
     }
 
     /* get number of subdirs walked on first call to process_queries */
@@ -237,7 +237,7 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
          * database view for treesummary, so run once here to not
          * get duplicate results when querying treesummary
          */
-        if (in->sql.tsum.len) {
+        if (str_exists(&in->sql.tsum)) {
             /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
             /* if this is OR, as well as no-sql-to-run, skip this query */
             if (in->process_sql != RUN_SE) {
@@ -424,7 +424,7 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
 
   detach:
     if (db) {
-        detachdb_cached(dbname, db, pa->detach, 1, in->print_eacces);
+        detachdb_cached(dbname, db, pa->detach, 1, in->no_print_errno);
     }
 
     /* restore mtime and atime */
@@ -438,6 +438,8 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
     closedir(dir);
 
   out_free:
+    free(dbpath);
+    free(dbname);
     free(gqw->work.fullpath);
     free(gqw);
 

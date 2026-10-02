@@ -68,6 +68,9 @@ execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIR
 # LeakSanitizer suppressions
 configure_file("lsan.suppressions" "lsan.suppressions" COPYONLY)
 
+# ThreadSanitizer suppressions
+configure_file("tsan.suppressions" "tsan.suppressions" COPYONLY)
+
 # UndefinedBehaviorSanitizer suppressions
 configure_file("ubsan.suppressions" "ubsan.suppressions" COPYONLY)
 
@@ -135,8 +138,8 @@ if (ALLOW_DB_WRITES) # required to clean up test indexes
   elseif(CYGWIN)
     # Cygwin needs to use an "import library" (reference: https://cygwin.com/cygwin-ug-net/dll.html)
     # to get the symbol definitions it uses from gufi_dir2index.
-    target_link_libraries("test_indexing_plugin" "${CMAKE_BINARY_DIR}/src/libgufi_dir2index.dll.a")
-    target_link_libraries("test_querying_plugin" "${CMAKE_BINARY_DIR}/src/libgufi_query.dll.a")
+    target_link_libraries(test_indexing_plugin gufi_dir2index)
+    target_link_libraries(test_querying_plugin gufi_query)
   else()
     foreach(type index query)
       target_link_libraries("test_${type}ing_plugin" "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}")

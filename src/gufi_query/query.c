@@ -89,16 +89,16 @@ void querydb(struct work *work,
 
     char *err = NULL;
     if (sqlite3_exec(db, sql, callback, &args, &err) != SQLITE_OK) {
-        char buf[MAXPATH];
-        present_user_path(dbname, dbname_len,
-                          &work->root_parent, work->root_basename_len, &work->orig_root,
-                          buf, sizeof(buf));
+        char *buf = present_user_path(dbname, dbname_len,
+                                      &work->root_parent, work->root_basename_len, &work->orig_root);
         if (!pa->in->no_print_sql_on_err) {
             sqlite_print_err_and_free(err, stderr, "Error: %s: %s: \"%s\"\n", err, buf, sql);
         }
         else {
             sqlite_print_err_and_free(err, stderr, "Error: %s: %s\n", err, buf);
         }
+
+        free(buf);
     }
 
     *rc = args.rows;

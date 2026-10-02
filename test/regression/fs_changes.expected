@@ -1,0 +1,132 @@
+# Get tree structure to generate modifications for
+$ inode pinode 2 --format "%y %i %I %p\n" "prefix" | tee "paths" | sort -k 4
+d inode pinode prefix
+f inode pinode prefix/.hidden
+f inode pinode prefix/1KB
+f inode pinode prefix/1MB
+d inode pinode prefix/directory
+f inode pinode prefix/directory/executable
+f inode pinode prefix/directory/readonly
+d inode pinode prefix/directory/subdirectory
+l inode pinode prefix/directory/subdirectory/directory_symlink
+f inode pinode prefix/directory/subdirectory/repeat_name
+f inode pinode prefix/directory/writable
+d inode pinode prefix/empty_directory
+l inode pinode prefix/file_symlink
+d inode pinode prefix/leaf_directory
+f inode pinode prefix/leaf_directory/leaf_file1
+f inode pinode prefix/leaf_directory/leaf_file2
+f inode pinode prefix/old_file
+f inode pinode prefix/repeat_name
+d inode pinode prefix/unusual#? directory ,
+f inode pinode prefix/unusual#? directory ,/unusual, name?#
+
+# Generate some changes
+$ gen_fs_changes -n 2 --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths "paths" > "ops" 2>/dev/null
+
+# Expecting 20 lines of changes to make
+$ cat "ops" | wc -l
+20
+
+# Get "changelog" (inodes of changes)
+# Apply changes to the source tree
+$ replay_fs_changes < "ops"
+
+# Directly index updated tree
+$ gufi_dir2index -n 2 "prefix" "search2" > /dev/null 2>&1
+
+# Do incremental update on the original index
+$ gufi_incremental_update -n 2 --suspect-method 1 --suspect-file "suspects" "prefix" "prefix" "parking_lot" > /dev/null
+
+# Difference between indexes
+$ diff <(echo ${new_index}) <(echo ${updated_index})
+
+# Set seed and delimiter and exit early
+$ gen_fs_changes -n 2 --seed 0 --delim " " --ops 20 --create 0 --move 0 --delete 1 --dir 1 --nondir 0 --paths "paths" 2>&1 > /dev/null
+Found 6 directories containing 14 files
+Found root path "prefix" (inode, pinode)
+Warning: Exiting early
+Warning: No non-root directories to delete. Rerolling.
+
+# Trigger resize
+$ gen_fs_changes -n 2 --seed 0 --ops 40 --create 1 --move 0 --delete 0 --dir 1 --nondir 0 --paths "paths" 2>/dev/null | wc -l
+40
+
+# Pass in paths without pinodes
+$ parallel_find -n 2 --format "%y %i %p\n" "prefix" > "paths"
+
+$ gen_fs_changes -n 2 --seed 0 --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths "paths" 2>/dev/null | wc -l
+20
+
+# Line ends with CRLF
+$ (printf 'd 0 1 dir\r\n') | gen_fs_changes -n 2 --ops 1 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 2>&1 > /dev/null | grep '\(.*, .*\)'
+Found root path "dir" (0, 1)
+
+# Line ends without newline
+$ (printf 'd 0 1 dir') | gen_fs_changes -n 2 --ops 1 --create 1 --move 0 --delete 0 --dir 1 --nondir 1 2>&1 > /dev/null
+Found 1 directories containing 0 files
+Found root path "dir" (0, 1)
+
+# no tree
+$ echo -n | gen_fs_changes --ops 20
+Found 0 directories containing 0 files
+Error: No directories found
+
+# no directories
+$ echo 'f 0 1 file' | gen_fs_changes --ops 20
+Found 0 directories containing 1 files
+Error: No directories found
+
+# no op weights
+$ echo 'd 0 1 root' | gen_fs_changes --ops 20 --dir 1 --nondir 1
+Found 1 directories containing 0 files
+Found root path "root" (0, 1)
+Error: Op weights must add up to at least 1
+
+# no type weights
+$ echo 'd 0 1 root' | gen_fs_changes --ops 20 --create 1 --move 1 --delete 1
+Found 1 directories containing 0 files
+Found root path "root" (0, 1)
+Error: Type weights must add up to at least 1
+
+# Bad file
+$ gen_fs_changes -n 2 --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths "bad_paths"
+Error: Could not open file "bad_paths"
+
+# Empty line
+$ echo | gen_fs_changes --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1
+Warning: Ignoring bad line: ""
+Found 0 directories containing 0 files
+Error: No directories found
+
+# Bad path
+$ echo 'd 0 1' | gen_fs_changes --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1
+Warning: Ignoring path with length 0 on line "d 0 1"
+Found 0 directories containing 0 files
+Error: No directories found
+
+# Bad path (with trailing whitespace)
+$ echo 'd 0 1 ' | gen_fs_changes --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1
+Warning: Ignoring path with length 0 on line "d 0 1 "
+Found 0 directories containing 0 files
+Error: No directories found
+
+# Bad path without pinodes
+$ echo 'd -1 bad/path' >> "paths"
+
+$ gen_fs_changes -n 2 --seed 0 --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths "paths" 2>&1 > /dev/null | grep "Error"
+Error: Could not lstat parent of "bad/path": No such file or directory (2)
+
+# File with unknown parent
+$ (echo 'd 0 1 dir'; echo 'f 2 3 file') | gen_fs_changes -n 2 --ops 1 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 2>&1 > /dev/null | grep '\(.*, .*\)'
+Found root path "dir" (0, 1)
+Warning: Found non-directory with unknown parent: "file" (2, 3)
+
+Bad flag
+$ gen_fs_changes -n 2 --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths "paths" --bad-flag 2>&1 | grep -o "gen_fs_changes: "
+gen_fs_changes:
+
+Bad thread count
+$ gen_fs_changes -n 18446744073709551615 --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths "paths"
+Failed to allocate per-thread node list
+

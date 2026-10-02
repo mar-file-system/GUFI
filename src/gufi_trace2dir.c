@@ -87,11 +87,11 @@ struct PoolArgs {
 /* TODO: possible optimization - pass in and modify parent name by adding entry's name to save on some copying */
 static int process_entries(str_t *tree_parent,
                            struct work *entry, struct entry_data *ed) {
-    char path[MAXPATH];
-    SNFORMAT_S(path, sizeof(path), 3,
-               tree_parent->data, tree_parent->len,
-               "/", (size_t) 1,
-               entry->name, entry->name_len);
+    char *path = NULL;
+    SNFORMAT_S_ALLOC(&path, 3,
+                     tree_parent->data, tree_parent->len,
+                     "/", (size_t) 1,
+                     entry->name, entry->name_len);
 
     switch (ed->type) {
         case 'f':
@@ -122,6 +122,8 @@ static int process_entries(str_t *tree_parent,
         /*     return 1; */
     }
 
+    free(path);
+
     return 0;
 }
 
@@ -146,19 +148,20 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     }
 
     /* create the directory */
-    char topath[MAXPATH];
-    SNFORMAT_S(topath, MAXPATH, 3,
-               pa->tree_parent.data, pa->tree_parent.len,
-               "/", (size_t) 1,
-               dir->name, dir->name_len);
+    char *topath = NULL;
+    SNFORMAT_S_ALLOC(&topath, 3,
+                     pa->tree_parent.data, pa->tree_parent.len,
+                     "/", (size_t) 1,
+                     dir->name, dir->name_len);
 
     /* have to dupdir here because directories can show up in any order */
     if (dupdir(topath, dir->statuso.st_mode, dir->statuso.st_uid, dir->statuso.st_gid)) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
-        xattrs_cleanup(&ed.xattrs);
+        free(topath);
         free(dir);
+        xattrs_cleanup(&ed.xattrs);
         row_destroy(&w);
         return 1;
     }
@@ -196,6 +199,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     set_metadata(topath, &dir->statuso, &ed.xattrs);
 
     free(line); /* reuse line and only alloc+free once */
+    free(topath);
     free(dir);
 
     xattrs_cleanup(&ed.xattrs);
@@ -203,7 +207,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     return 0;
 }
 
-void sub_help(void) {
+static void sub_help(void) {
    printf("trace...          read these trace files\n");
    printf("dir               reconstruct the tree under here\n");
    printf("\n");
@@ -217,7 +221,7 @@ int main(int argc, char *argv[]) {
         FLAG_SET_XATTRS,
 
         /* input flags */
-        FLAG_DELIM,
+        FLAG_DELIM, FLAG_OLD_TRACE_FORMAT,
 
         FLAG_END
     };
@@ -254,6 +258,15 @@ int main(int argc, char *argv[]) {
         goto free_traces;
     }
 
+    fprintf(stdout, "Reconstructing tree %s with %zu threads\n", pa.tree_parent.data, pa.in.maxthreads);
+    fflush(stdout);
+
+    struct start_end rt;
+    clock_gettime(CLOCK_REALTIME, &rt.start);
+
+    struct start_end se;
+    clock_gettime(CLOCK_MONOTONIC, &se.start);
+
     /* parse the trace files and enqueue work */
     struct TraceStats stats;
     enqueue_traces(&pa.in.pos.argv[0], traces, trace_count,
@@ -265,6 +278,13 @@ int main(int argc, char *argv[]) {
 
     QPTPool_stop(ctx);
     QPTPool_destroy(ctx);
+
+    clock_gettime(CLOCK_MONOTONIC, &se.end);
+    clock_gettime(CLOCK_REALTIME, &rt.end);
+
+    fprintf(stderr, "Start Time:          %.6Lf\n",  sec(since_epoch(&rt.start)));
+    fprintf(stderr, "End Time:            %.6Lf\n",  sec(since_epoch(&rt.end)));
+    fprintf(stderr, "Run Time:            %.2Lfs\n", sec(nsec(&se)));
 
   free_traces:
     close_traces(traces, trace_count);

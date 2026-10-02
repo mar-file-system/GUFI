@@ -65,24 +65,20 @@ OF SUCH DAMAGE.
 #include <errno.h>
 #include <dirent.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "debug.h"
 #include "template_db.h"
+#include "str.h"
 #include "utils.h"
 
 #include "gufi_incremental_update/aggregate.h"
 #include "gufi_incremental_update/incremental_update.h"
 
 #define TREE_SNAPSHOT_EXT "tree"
-
-size_t gen_tree_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size) {
-    return SNFORMAT_S(name, name_size, 3,
-                      pa->in.outname.data, pa->in.outname.len,
-                      ".", (size_t) 1,
-                      TREE_SNAPSHOT_EXT, sizeof(TREE_SNAPSHOT_EXT) - 1);
-}
 
 /* search the list of suspect inodes */
 static int find_inode(struct SuspectInodes *suspectinodes, const ino_t inode) {
@@ -97,12 +93,11 @@ static int find_inode(struct SuspectInodes *suspectinodes, const ino_t inode) {
 struct NonDirArgs {
     struct PoolArgs *pa;
     struct entry_data *ed; /* current directory's data */
-    sqlite3_stmt *res;     /* used for inserting into snapshot db */
 };
 
 static int compare_suspect_time(struct work *work, const time_t suspect_time) {
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                      &work->stat_called, 1, 1) != 0) {
+                      &work->stat_called, 1, NULL) != 0) {
         return 1; /* something broke - try to reindex */
     }
 
@@ -110,34 +105,44 @@ static int compare_suspect_time(struct work *work, const time_t suspect_time) {
             (work->statuso.st_mtime >= suspect_time));
 }
 
+int is_suspect(const int suspectmethod,
+               struct SuspectInodes *suspectinodes,
+               const int suspectstat,
+               const time_t suspecttime,
+               struct work *work) {
+    switch (suspectmethod) {
+        /* case 0: /\* no suspects *\/ */
+        /*     break; */
+        case 1: /* suspect directories/files/links (from suspect file) */
+            {
+                /* check if this inode shows up in the suspect file */
+                const int found = find_inode(suspectinodes, work->statuso.st_ino);
+                if (found && suspectstat) {
+                    return compare_suspect_time(work, suspecttime);
+                }
+                return found;
+            }
+        case 3: /* compare timestamps with given suspect time */
+            return compare_suspect_time(work, suspecttime);
+        /* no default */
+    }
+
+    return 0;
+}
+
 /* check if any non-directory were changed */
 static int process_nondir(struct work *nondir, struct entry_data *ed, void *nondir_args) {
     struct NonDirArgs *nda = (struct NonDirArgs *) nondir_args;
+    struct PoolArgs *pa = nda->pa;
 
     if (ed->suspect == 0) {
         /* mark the parent directory as suspect */
-        switch (nda->pa->in.suspectmethod) {
-            /* case 0: /\* no suspects *\/ */
-            /*     /\* do nothing - this was already done by processdir *\/ */
-            /*     break; */
-            case 1: /* suspect directories/files/links (from suspect file) */
-                {
-                    /* check if this file/link inode shows up in the suspect file */
-                    const int found = find_inode(&nda->pa->suspects.fl, nondir->statuso.st_ino);
-                    if (found && nda->pa->in.suspectstat) {
-                        nda->ed->suspect |= compare_suspect_time(nondir, nda->pa->in.suspecttime);
-                    }
-                    else {
-                        nda->ed->suspect |= found;
-                    }
-                }
-                break;
-            case 3: /* compare file/link timestamps with given suspect time */
-                /* don't overwrite ed.suspect if the ctime/mtime are not newer than the suspect time */
-                nda->ed->suspect |= compare_suspect_time(nondir, nda->pa->in.suspecttime);
-                break;
-            /* no default */
-        }
+        /* OR with existing suspect value instead of overwriting */
+        nda->ed->suspect |= is_suspect(pa->in.suspect.method,
+                                       &pa->suspects.fl,
+                                       pa->in.suspect.stat,
+                                       pa->in.suspect.time,
+                                       nondir);
     }
 
     return 0;
@@ -152,14 +157,11 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     int rc = 0;
 
-    const size_t id = QPTPool_get_id(ctx);
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
-    struct work *work = NULL;
-    DIR *dir = NULL;
+    struct GenSnapshot *tree = (struct GenSnapshot *) data;
+    struct work *work = tree->work; /* no compression */
 
-    decompress_work(&work, data);
-
-    dir = opendir_wrapper(work->name, 1);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         rc = 1;
         goto cleanup;
@@ -168,100 +170,98 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
     ed.type = 'd';
-    ed.suspect = 0;
 
-    sqlite3 *db = pa->tree.agg.dbs[id]; /* partial snapshot db */
-    sqlite3_stmt *res = insertdbprep(db, SNAPSHOT_INSERT);
-
-    if (ed.suspect == 0) {
-        switch (pa->in.suspectmethod) {
-            /* case 0: /\* no suspects *\/ */
-            /*     /\* do nothing - just insert record *\/ */
-            /*     break; */
-            case 1: /* suspect directories/files/links (from suspect file) */
-                {
-                    const int found = find_inode(&pa->suspects.dir, work->statuso.st_ino);
-                    if (found && pa->in.suspectstat) {
-                        ed.suspect |= compare_suspect_time(work, pa->in.suspecttime);
-                    }
-                    else {
-                        ed.suspect |= found;
-                    }
-                }
-                break;
-            case 3: /* compare directory timestamps with suspect time */
-                /* don't overwrite ed.suspect if the ctime/mtime are not newer than the suspect time */
-                ed.suspect |= compare_suspect_time(work, pa->in.suspecttime);
-                break;
-            /* no default */
-        }
-    }
+    /* set whether or not this directory is suspect before processing children */
+    ed.suspect = is_suspect(pa->in.suspect.method,
+                            &pa->suspects.dir,
+                            pa->in.suspect.stat,
+                            pa->in.suspect.time,
+                            work);
 
     struct NonDirArgs nda = {
         .pa  = pa,
         .ed  = &ed,
-        .res = res,
     };
 
+    /* get number of subdirectories (cannot trust treesummary, which may or may not exist) */
+    struct descend_counters ctrs = {0};
+
     /* only process files/links if checking for file/link suspects or comparing timestamps */
-    process_nondir_f func = (pa->in.suspectmethod > 1)?process_nondir:NULL;
+    process_nondir_f func = (pa->in.suspect.method > 1)?process_nondir:NULL;
+
+    /* push actual work */
     descend(ctx, &pa->in, work, dir, 0,
-            processdir, func, &nda, NULL);
+            try_skip_lstat, wrap_work, tree,
+            processdir, func, &nda,
+            &ctrs);
 
-    /*
-     * if this directory is a suspect, insert it
-     *
-     * if this directory is not a suspect, insert it anyways so that
-     * it is not treated as having been deleted
-     */
-    insert_snapshot_row(work, &ed, res, pa->tree.parent_len);
+    const size_t id = QPTPool_get_id(ctx);
 
-    sqlite3_finalize(res);
+    if (pa->same == 0) {
+        /*
+         * if this directory is a suspect, insert it
+         *
+         * if this directory is not a suspect, insert it anyways so that
+         * it is not treated as having been deleted
+         */
+        sqlite3 *db = tree->agg.dbs[id]; /* partial snapshot db */
+        sqlite3_stmt *res = insertdbprep(db, SNAPSHOT_INSERT);
+        insert_snapshot_row(work, &ed, res, tree->parent_len);
+        sqlite3_finalize(res);
+    }
 
     /* reindex the directory if it needs to be reindexed */
     if (ed.suspect == 1) {
-        reindex_dir(pa, work, &ed, dir, id);
+        reindex_dir(ctx, work, &ed, dir);
     }
 
     closedir(dir);
 
   cleanup:
-    free(work);
+    pthread_mutex_lock(tree->mutex);
+    --(*tree->counter);
+    pthread_cond_broadcast(tree->cond);
+    pthread_mutex_unlock(tree->mutex);
+
+    if (tree->free_work) {
+        tree->free_work(tree->work);
+    }
+    free(tree);
 
     return rc;
 }
 
-int find_suspects(struct PoolArgs *pa, struct work *work) {
+int find_suspects(struct PoolArgs *pa, const ino_t inode, struct GenSnapshot *tree) {
     /* parking lot already set up */
 
-    char tree_snapshot_name[MAXPATH];
-    gen_tree_snapshot_name(pa, tree_snapshot_name, sizeof(tree_snapshot_name));
+    if (pa->same == 0) {
+        str_alloc_existing(&tree->snapshot, pa->artifacts.len + 1 + UINT64_DIGITS + 1 + sizeof(TREE_SNAPSHOT_EXT) - 1);
+        SNPRINTF(tree->snapshot.data, tree->snapshot.len + 1,
+                 "%s/%" STAT_ino "." TREE_SNAPSHOT_EXT,
+                 pa->artifacts.data, inode);
+    }
 
     /* set up per-thread databases to write to */
-    if (aggregate_init(&pa->tree.agg, pa->in.maxthreads, tree_snapshot_name, pa->in.maxthreads) != 0) {
-        free(work);
+    if (aggregate_init(&tree->agg, pa->in.maxthreads, tree->snapshot.data, pa->in.maxthreads) != 0) {
+        str_free_existing(&tree->snapshot);
         return 1;
     }
 
-    /* set up template db.db for copying instead of running SQL to create each table */
-    init_template_db(&pa->db);
-    if (create_dbdb_template(&pa->db, NULL) != 0) {
-        fprintf(stderr, "Could not create template file\n");
-        aggregate_fin(&pa->tree.agg, pa->in.maxthreads);
-        free(work);
-        return 1;
-    }
+    /* clone the original struct so that it can be freed without affecting the original */
+    struct GenSnapshot *copy = malloc(sizeof(*copy));
+    *copy = *tree;
+    copy->free_work = NULL;
+    copy->snapshot.free = NULL;
 
     fprintf(stdout, "Scanning current state of \"%s\" with %zu threads\n",
-            pa->tree.path.data, pa->in.maxthreads);
-    fflush(stdout);
+            tree->work->name, pa->in.maxthreads);
 
     /*
      * do tree walk
      * get per-thread treewalk records
      * put per-directory update dbs into parking lot
      */
-    QPTPool_enqueue(pa->ctx, processdir, work);
+    QPTPool_enqueue(pa->ctx, processdir, copy);
 
     return 0;
 }
