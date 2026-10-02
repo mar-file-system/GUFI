@@ -81,10 +81,12 @@ int insert_snapshot_row(struct work *work, struct entry_data *ed,
                         sqlite3_stmt *res, const size_t offset_name) {
     char *zname = sqlite3_mprintf("%q", work->name + offset_name); /* remove parents of starting paths */
     char *ztype = sqlite3_mprintf("%c", ed->type);
+    char *zino  = sqlite3_mprintf("%" PRIu64, work->statuso.st_ino);
+    char *zpino = sqlite3_mprintf("%" PRIu64, work->pinode);
     sqlite3_bind_text (res, 1, zname, -1, SQLITE_TRANSIENT);
     sqlite3_bind_text (res, 2, ztype, -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int64(res, 3, work->statuso.st_ino);
-    sqlite3_bind_int64(res, 4, work->pinode);
+    sqlite3_bind_text (res, 3, zino,  -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text (res, 4, zpino, -1, SQLITE_TRANSIENT);
     sqlite3_bind_int64(res, 5, work->level);
     sqlite3_bind_int64(res, 6, ed->suspect);
 
@@ -100,6 +102,8 @@ int insert_snapshot_row(struct work *work, struct entry_data *ed,
                 work->name, error, sqlite3_errstr(error));
     }
 
+    sqlite3_free(zpino);
+    sqlite3_free(zino);
     sqlite3_free(ztype);
     sqlite3_free(zname);
     sqlite3_reset(res);
