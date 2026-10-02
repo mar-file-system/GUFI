@@ -215,6 +215,25 @@ endif()
 set_target_properties(gufi_query PROPERTIES ENABLE_EXPORTS TRUE)
 install(TARGETS gufi_query DESTINATION bin/index)
 
+# Rescans the directories a suspect file names and applies moved, added and removed
+# directories; the Watch index sync drives it. Takes the indexing plugin as
+# beegfs_index_ops, so it exports symbols for plugins like the tools above.
+add_executable(gufi_incremental_update
+  "${GUFI_SRC}/gufi_incremental_update/main.c"
+  "${GUFI_SRC}/gufi_incremental_update/PoolArgs.c"
+  "${GUFI_SRC}/gufi_incremental_update/aggregate.c"
+  "${GUFI_SRC}/gufi_incremental_update/find_suspects.c"
+  "${GUFI_SRC}/gufi_incremental_update/gen_index_snapshot.c"
+  "${GUFI_SRC}/gufi_incremental_update/incremental_update.c"
+  "${GUFI_SRC}/gufi_incremental_update/parking_lot.c"
+  "${GUFI_SRC}/gufi_incremental_update/reindex_dir.c"
+  "${GUFI_SRC}/gufi_incremental_update/snapshot.c"
+)
+target_link_libraries(gufi_incremental_update ${COMMON_LIBRARIES})
+add_dependencies(gufi_incremental_update GUFI)
+set_target_properties(gufi_incremental_update PROPERTIES ENABLE_EXPORTS TRUE)
+install(TARGETS gufi_incremental_update DESTINATION bin/index)
+
 foreach(_plugin beegfs_indexing beegfs_querying)
   add_library(${_plugin} SHARED "${BEEGFS_SRC}/${_plugin}.c" "${BEEGFS_SRC}/beegfs_shared.c")
   add_dependencies(${_plugin} install_dependencies)
