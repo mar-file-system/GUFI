@@ -609,7 +609,7 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
                 DIR *dir = opendir_wrapper(work->name, NULL);
                 if (dir) {
                     struct entry_data ed = {0};
-                    const int rc = reindex_dir(pa->ctx, work, &ed, dir);
+                    const int rc = reindex_dir(ctx, work, &ed, dir);
                     closedir(dir);
                     free(work);
 
