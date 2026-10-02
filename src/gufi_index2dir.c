@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "config.h"
 #include "dbutils.h"
 #include "external_attach.h"
 #include "str.h"
@@ -199,11 +200,12 @@ static int process_entries(void *args, int count, char **data, char **columns) {
     const char *name = data[0];
     const char type = data[1][0];
 
-    char entry[MAXPATH];
-    SNFORMAT_S(entry, sizeof(entry), 3,
-               dcba->nameto, dcba->nameto_len,
-               "/", (size_t) 1,
-               name, strlen(name));
+    const size_t name_len = strlen(name);
+    char *entry = NULL;
+    SNFORMAT_S_ALLOC(&entry, 3,
+                     dcba->nameto, dcba->nameto_len,
+                     "/", (size_t) 1,
+                     name, name_len);
 
     switch (type) {
         case 'f':
@@ -259,6 +261,8 @@ static int process_entries(void *args, int count, char **data, char **columns) {
         /*     return 1; */
     }
 
+    free(entry);
+
     return 0;
 }
 
@@ -269,7 +273,7 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
     sqlite3 *db = NULL;
     int rc = 0;
 
-    DIR *dir = opendir_wrapper(work->name, 1);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         rc = 1;
         goto cleanup;
@@ -277,17 +281,17 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
 
     // get source directory info
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                      &work->stat_called, 1, 1) != 0) {
+                      &work->stat_called, 1, NULL) != 0) {
         rc = 1;
         goto close_dir;
     }
 
     // create the destination directory using the source directory
-    char topath[MAXPATH];
-    const size_t topath_len = SNFORMAT_S(topath, MAXPATH, 3,
-                                         pa->dir.data, pa->dir.len,
-                                         "/", (size_t) 1,
-                                         work->name + pa->index_dirname_len, work->name_len - pa->index_dirname_len);
+    char *topath = NULL;
+    const size_t topath_len = SNFORMAT_S_ALLOC(&topath, 3,
+                                               pa->dir.data, pa->dir.len,
+                                               "/", (size_t) 1,
+                                               work->name + pa->index_dirname_len, work->name_len - pa->index_dirname_len);
 
     rc = mkdir(topath, work->statuso.st_mode); /* don't need recursion because parent is guaranteed to exist */
     if (rc < 0) {
@@ -295,23 +299,25 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", topath, err, strerror(err));
             rc = 1;
-            goto close_dir;
+            goto free_topath;
         }
     }
 
     descend(ctx, &pa->in, work, dir, 1,
-            processdir, NULL, NULL, NULL);
+            try_skip_lstat, NULL, NULL,
+            processdir, NULL, NULL,
+            NULL);
 
     /* open the index db.db */
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 2,
-               work->name, work->name_len,
-               "/" DBNAME, (size_t) (DBNAME_LEN + 1));
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 2,
+                     work->name, work->name_len,
+                     "/" DBNAME, (size_t) (DBNAME_LEN + 1));
 
     db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
     if (!db) {
         rc = 1;
-        goto close_dir;
+        goto free_dbname;
     }
 
     size_t ext_xattrs = 0;
@@ -353,6 +359,12 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
 
     closedb(db);
 
+  free_dbname:
+    free(dbname);
+
+  free_topath:
+    free(topath);
+
   close_dir:
     closedir(dir);
 
@@ -362,13 +374,13 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
     return rc;
 }
 
-struct work *validate_inputs(struct PoolArgs *pa) {
-    if (!pa->index.len) {
+static struct work *validate_inputs(struct PoolArgs *pa) {
+    if (!str_exists(&pa->index)) {
         fprintf(stderr, "Error: GUFI_tree path is empty\n");
         return NULL;
     }
 
-    if (!pa->dir.len) {
+    if (!str_exists(&pa->dir)) {
         fprintf(stderr, "Error: dir path is empty\n");
         return NULL;
     }
@@ -379,17 +391,23 @@ struct work *validate_inputs(struct PoolArgs *pa) {
     pa->index_dirname_len = dirname_len(pa->index.data,
                                         pa->index.len - (pa->index.data[pa->index.len - 1] == '/'));
 
-    char expathin[MAXPATH];
-    char expathout[MAXPATH];
-    char expathtst[MAXPATH];
+    const size_t expathtst_len = pa->dir.len + 1 + pa->index.len;
+    char *expathtst = malloc(expathtst_len + 1);
+    SNPRINTF(expathtst, expathtst_len + 1, "%s/%s", pa->dir.data, pa->index.data);
 
-    SNPRINTF(expathtst, MAXPATH, "%s/%s", pa->dir.data, pa->index.data);
-    realpath(expathtst, expathout);
-    realpath(pa->index.data, expathin);
+    char *expathout = realpath(expathtst, NULL);
+    if (expathout) {
+        char *expathin = realpath(pa->index.data, NULL);
 
-    if (!strcmp(expathin, expathout)) {
-        fprintf(stderr,"You are putting the tree in the index directory\n");
+        if (!strcmp(expathin, expathout)) {
+            fprintf(stderr,"You are putting the tree in the index directory\n");
+        }
+
+        free(expathin);
+        free(expathout);
     }
+
+    free(expathtst);
 
     // get input path metadata
     struct stat src_st;
@@ -419,20 +437,23 @@ struct work *validate_inputs(struct PoolArgs *pa) {
     // create the source root under the destination directory using
     // the source directory's permissions and owners
     // this allows for the threads to not have to recursively create directories
-    char dst_path[MAXPATH];
-    SNFORMAT_S(dst_path, MAXPATH, 3,
-               pa->dir.data, pa->dir.len,
-               "/", (size_t) 1,
-               pa->index.data + pa->index_dirname_len, pa->index.len - pa->index_dirname_len);
+    char *dst_path = NULL;
+    SNFORMAT_S_ALLOC(&dst_path, 3,
+                     pa->dir.data, pa->dir.len,
+                     "/", (size_t) 1,
+                     pa->index.data + pa->index_dirname_len, pa->index.len - pa->index_dirname_len);
     if (dupdir(dst_path, src_st.st_mode, src_st.st_uid, src_st.st_gid)) {
         fprintf(stderr, "Could not create %s under %s\n", pa->index.data, pa->dir.data);
+        free(dst_path);
         return NULL;
     }
+
+    free(dst_path);
 
     return new_work_with_name(NULL, 0, pa->index.data, pa->index.len);
 }
 
-void sub_help(void) {
+static void sub_help(void) {
    printf("GUFI_tree         walk this GUFI tree to produce a source tree\n");
    printf("dir               reconstruct the source tree under here\n");
    printf("\n");

@@ -92,7 +92,7 @@ gqw_t *new_gqw_with_name(const char *prefix, const size_t prefix_len,
                          const char *basename, const size_t basename_len,
                          struct dirent *entry, const int next_level,
                          const char *sqlite3_prefix, const size_t sqlite3_prefix_len,
-                         const int print_eacces) {
+                         const uint64_t *no_print_errno) {
     /* +1 for path separator */
     const size_t name_len = prefix_len + 1 + basename_len;
 
@@ -120,7 +120,7 @@ gqw_t *new_gqw_with_name(const char *prefix, const size_t prefix_len,
         gqw->work.stat_called = NOT_STATX_CALLED;
     }
     else {
-        if (!try_skip_lstat(entry, &gqw->work, print_eacces)) {
+        if (!try_skip_lstat(entry, &gqw->work, no_print_errno)) {
             free(gqw);
             return NULL;
         }

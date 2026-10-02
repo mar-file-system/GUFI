@@ -74,6 +74,9 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+/* only used to wrap child directory work structures */
+typedef void *(*wrap_dir_f)(struct work *dir, void *ptr);
+
 typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
 
 struct descend_counters {
@@ -84,7 +87,8 @@ struct descend_counters {
     size_t external_dbs;
 };
 
-struct work *try_skip_lstat(struct dirent *entry, struct work *work, const int print_eacces);
+struct work *try_skip_stat (struct dirent *entry, struct work *work, const uint64_t *no_print_errno);
+struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint64_t *no_print_errno);
 
 /*
  * Push the subdirectories in the current directory onto the queue
@@ -93,6 +97,8 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work, const int p
 int descend(QPTPool_ctx_t *ctx,
             struct input *in, struct work *work,
             DIR *dir, const int skip_db,
+            struct work *(*try_skip_stat3)(struct dirent *entry, struct work *work, const uint64_t *no_print_errno),
+            wrap_dir_f wrap_dir, void *wrap_dir_ptr,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters);
 

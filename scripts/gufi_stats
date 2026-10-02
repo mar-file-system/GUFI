@@ -63,7 +63,7 @@
 
 from collections import OrderedDict
 import argparse
-import subprocess
+import os
 import sys
 import time
 
@@ -210,7 +210,7 @@ def entries_count(config, args, where, type): # pylint: disable=redefined-builti
     '''
 
     queries = [
-        '-E', build_query((['substr(rpath({0}.name, {0}.rollupscore), {1})'.format(VRSUMMARY, len(config.indexroot) + 2)] if args.recursive else []) +
+        '-E', build_query((['substr(rpath({0}.name, {0}.sroll), {1})'.format(VRSUMMARY, len(config.indexroot) + 2)] if args.recursive else []) +
                           ['COUNT({0}.inode)'.format(VRPENTRIES)],
                           ['{0} LEFT JOIN {1} ON (({0}.inode == {1}.pinode) AND {1}.type == \'{2}\')'.format(VRSUMMARY, VRPENTRIES, type)],
                           where,
@@ -1470,6 +1470,89 @@ def dir_age_mtime_hist(_config, args, _where):
 def dir_age_ctime_hist(_config, args, _where):
     return age_bins_hist(args, 'ctime', 'd')
 
+def unique_col_count(args, col, table, where):
+    '''
+    Get number of unique column values
+
+    default returns count for 1 directory
+    with --recursive, count for each directory
+    with --cumulative, count for all directories
+
+    This query cannot take advantage of summary/treesummary
+    because it needs the actual values from the entries table
+    '''
+
+    if args.cumulative:
+        queries = [
+            '-I', build_create(INTERMEDIATE_NAME, ['{0} {1}'.format(col, SQLITE3_INTEGER)]),
+
+            # cannot get count right here - need to compare across directories
+            '-E', 'INSERT INTO {0} {1}'.format(INTERMEDIATE_NAME,
+                                               build_query(['DISTINCT {0}'.format(col)],
+                                                           [table],
+                                                           where,
+                                                           None,
+                                                           None,
+                                                           None,
+                                                           None)),
+
+            '-K', build_create(AGGREGATE_NAME, ['{0} {1}'.format(col, SQLITE3_INTEGER)]),
+
+            '-J', 'INSERT INTO {0} {1}'.format(AGGREGATE_NAME,
+                                               build_query(['DISTINCT {0}'.format(col)],
+                                                           [INTERMEDIATE_NAME],
+                                                           None,
+                                                           None,
+                                                           None,
+                                                           None,
+                                                           None)),
+
+            '-G', build_query(['COUNT(DISTINCT {0})'.format(col)],
+                              [AGGREGATE_NAME],
+                              None,
+                              None,
+                              None,
+                              None,
+                              None),
+        ]
+    else:
+        _, E_path, _ = path_sql(args)
+
+        queries = [
+            '-E', build_query(E_path + ['COUNT(DISTINCT {0})'.format(col)],
+                              [table],
+                              where,
+                              ['pinode'] if table == VRPENTRIES else None,
+                              None,
+                              None,
+                              None),
+        ]
+
+        if not args.recursive:
+            queries += [
+                '--max-level', '0'
+            ]
+
+    return queries
+
+def unique_file_uid_count(_config, args, _where):
+    return unique_col_count(args, 'uid', VRPENTRIES, ['type == \'f\''])
+
+def unique_file_gid_count(_config, args, _where):
+    return unique_col_count(args, 'gid', VRPENTRIES, ['type == \'f\''])
+
+def unique_link_uid_count(_config, args, _where):
+    return unique_col_count(args, 'uid', VRPENTRIES, ['type == \'l\''])
+
+def unique_link_gid_count(_config, args, _where):
+    return unique_col_count(args, 'gid', VRPENTRIES, ['type == \'l\''])
+
+def unique_dir_uid_count(_config, args, _where):
+    return unique_col_count(args, 'uid', VRSUMMARY, None)
+
+def unique_dir_gid_count(_config, args, _where):
+    return unique_col_count(args, 'gid', VRSUMMARY, None)
+
 # mapping of desired statistics to functions
 
 # normally only computes for current directory
@@ -1537,6 +1620,13 @@ BOTH = [
     ['dir-age-atime-hist',             dir_age_atime_hist],
     ['dir-age-mtime-hist',             dir_age_mtime_hist],
     ['dir-age-ctime-hist',             dir_age_ctime_hist],
+
+    ['unique-file-uid-count',          unique_file_uid_count],
+    ['unique-file-gid-count',          unique_file_gid_count],
+    ['unique-link-uid-count',          unique_link_uid_count],
+    ['unique-link-gid-count',          unique_link_gid_count],
+    ['unique-dir-uid-count',           unique_dir_uid_count],
+    ['unique-dir-gid-count',           unique_dir_gid_count],
 ]
 
 # does not use either
@@ -1555,14 +1645,10 @@ OTHERS = [
     ['gid-size',                       gid_size],
 ]
 
-# argv[0] should be the command name
-def run(argv, config_path, stdout=None, stderr=None):
-    stats = OrderedDict(RECURSIVE + CUMULATIVE + BOTH + OTHERS)
+# all stats in the order they are listed abov
+STATS = OrderedDict(RECURSIVE + CUMULATIVE + BOTH + OTHERS)
 
-    # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
-
-    # parse the arguments
+def parse_args(argv):
     parser = argparse.ArgumentParser('gufi_stats', description='GUFI statistics', add_help=False)
 
     gufi_common.add_help_version(parser)
@@ -1592,7 +1678,7 @@ def run(argv, config_path, stdout=None, stderr=None):
                         type=gufi_common.get_non_negative,
                         help='time used to compare timestamps with')
     parser.add_argument('stat',
-                        choices=stats.keys(),
+                        choices=STATS.keys(),
                         help='statistic to get')
     parser.add_argument('path',
                         type=str,
@@ -1601,7 +1687,35 @@ def run(argv, config_path, stdout=None, stderr=None):
 
     gufi_common.add_common_flags(parser)
 
-    args = parser.parse_args(argv[1:])
+    return parser.parse_args(argv[1:])
+
+def gen_cmd(config, args, paths):
+    # gufi_stats only handles directories
+    for path in paths:
+        if isinstance(path, list) or not os.path.isdir(path):
+            raise RuntimeError('gufi_stats only processes directories')
+
+    # create the query command
+    query_cmd = [
+        config.query,
+        '--no-print-sql-on-err',
+        '--threads', str(config.threads),
+        '--output-buffer-size', str(config.outputbuffer),
+        '--delim', args.delim
+    ] + STATS[args.stat](config, args, build_where(args))
+
+    if args.skip:
+        query_cmd += ['--skip-file', args.skip]
+
+    return query_cmd + paths # compute on all paths at once
+
+def gen_cmds(config, args):
+    return gufi_common.gen_cmds(config, args, args.path, gen_cmd, 'Error')
+
+# argv[0] should be the command name
+def run(argv, config_path, stdout=None, stderr=None):
+    config = gufi_config.Server(config_path)
+    args = parse_args(argv)
 
     # check args
     if args.recursive and (args.stat in [key for key, _ in CUMULATIVE]):
@@ -1611,31 +1725,9 @@ def run(argv, config_path, stdout=None, stderr=None):
     if (args.recursive or args.cumulative) and (args.stat in [key for key, _ in OTHERS]):
         sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{0}" statistic\n'.format(args.stat))
 
-    paths = gufi_common.clean_paths(config, args.path, 'Error')
-
-    # create the query command
-    query_cmd = [
-        config.query,
-        '--no-print-sql-on-err',
-        '--threads', str(config.threads),
-        '--output-buffer-size', str(config.outputbuffer),
-        '--delim', args.delim
-    ] + stats[args.stat](config, args, build_where(args))
-
-    if args.skip:
-        query_cmd += ['--skip-file', args.skip]
-
-    if args.verbose:
-        gufi_common.print_query(query_cmd + paths)
-
-    query = subprocess.Popen(query_cmd + paths, # pylint: disable=consider-using-with
-                             stdout=stdout,
-                             stderr=stderr,
-                             text=True)
-
-    out, err = query.communicate()              # block until query finishes
-
-    return query.returncode, out, err
+    cmds = gen_cmds(config, args)
+    return gufi_common.run_cmds(args, cmds,
+                                1, 1, stdout, stderr)
 
 if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.PATH)[0])

@@ -342,7 +342,7 @@ echo "# write output to database"
         -E "UPDATE entries SET mtime = atime, ctime = atime;" \
         "${SEARCH}"
 
-    "${GUFI_TREESUMMARY_ALL}" -n ${THREADS} "${SEARCH}"
+    "${GUFI_TREESUMMARY_ALL}" -n ${THREADS} "${INDEXROOT}"
 
     run_no_sort "${GUFI_FIND_OUTLIERS} -d \"${DELIM}\" -n ${THREADS} -O \"${OUTDB}\" \"${INDEXROOT}\" totatime"
     run_no_sort "${GUFI_SQLITE3} -d \"|\" \"${OUTDB}\" \"SELECT * FROM outliers;\""

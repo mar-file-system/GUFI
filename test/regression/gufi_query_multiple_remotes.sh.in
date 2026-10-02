@@ -93,7 +93,7 @@ run_no_sort "${BINARY_DIR}/scripts/gufi_query_multiple_remotes --help"
     run_no_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" --extra-sql \"LIMIT 1\" --verbose \"${GUFI_VT}\" pdsh --remote-cmd \"${PDSH_FAKE}\" remote1 remote2 \"${SEARCH}\""
 
     echo "# Bad ssh URI + Index Path Pair"
-    run_no_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\" --extra-sql \"ORDER BY fullpath ASC LIMIT 1\" --verbose \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 2>&1 | @GREP@ \"error:\""
+    run_no_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -E \"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\" --extra-sql \"ORDER BY fullpath ASC LIMIT 1\" --verbose \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 2>&1 | @GREP@ \"Error: \""
 
     echo "# Use flags to do nothing"
     run_no_sort "${GUFI_QUERY_MULTIPLE_REMOTES} -a 1 -I \"\" -T \"\" -S \"\" -E \"\" -K \"\" -J \"\" -G \"\" -F \"\" --external-attach \"^$\" \"tab\" \"template.tab\" \"v\" --external-copy \"\^\$\" \"SELECT 0;\" --verbose \"${GUFI_VT}\" ssh --remote-cmd \"${SSH_FAKE}\" remote1 \"${SEARCH}\" remote2 \"${SEARCH}\" 2>&1 | @GREP@ \"Error\""

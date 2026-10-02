@@ -63,5 +63,6 @@
 leak:*python*
 leak:*sed*
 leak:*ssh*
+leak:curl_easy_perform
 leak:sqlite3MemMalloc
 leak:sqlite3MemRealloc

@@ -1,0 +1,249 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+set -e
+. @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+
+# this is basically testing gufi_incremental_update with random changes
+
+OP_COUNT=20
+PATHS="paths"
+OPS="ops"
+CREATES="creates" # move dst and create
+DELETES="deletes" # move src and delete
+SUSPECTS="suspects"
+PARKING_LOT="parking_lot"
+# shellcheck disable=SC2153
+SEARCH2="${SEARCH}2"
+BAD_PATHS="bad_paths"
+
+OUTPUT="fs_changes.out"
+
+cleanup() {
+    rm -rf "${PATHS}" "${OPS}" "${CREATES}" "${DELETES}" "${SUSPECTS}" "${PARKING_LOT}" "${SEARCH2}" "${BAD_PATHS}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+query() {
+    path="$1"
+    echo "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -S \"SELECT type, rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT type, rpath(sname, sroll, name) FROM vrpentries;\" \"${path}\""
+}
+
+(
+# generate the tree
+"${GENERATETREE}" "${SRCDIR}"
+
+# generate the index (don't clean up)
+"${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}"
+
+echo "# Get tree structure to generate modifications for"
+# shellcheck disable=SC2016
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%y %i %I %p\n\" \"${SRCDIR}\" | tee \"${PATHS}\" | sort -k 4" | @AWK@ 'NF > 0 { $2="inode"; $3="pinode" } { print }'
+
+echo "# Generate some changes"
+run_no_sort "${GEN_FS_CHANGES} -n ${THREADS} --ops ${OP_COUNT} --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths \"${PATHS}\" > \"${OPS}\" 2>/dev/null" | @SED@ 's%(.*, .*)%(inode, pinode)%g;'
+
+echo "# Expecting ${OP_COUNT} lines of changes to make"
+run_no_sort "cat \"${OPS}\" | wc -l"
+
+echo "# Get \"changelog\" (inodes of changes)"
+while IFS="${DELIM}" read -r type path
+do
+    if [[ "${type}" == "dir" ]]
+    then
+        stat -c "%i d" "${path}" 2> /dev/null || true
+    else
+        parent=$(dirname "${path}")
+        stat -c "%i d" "${parent}" 2> /dev/null || true
+    fi
+done < <(
+    # shellcheck disable=2016
+    @GREP@ "move"   "${OPS}" | @AWK@ -F "|" -v OFS="${DELIM}" '{ print $2, $3 }'
+    # shellcheck disable=2016
+    @GREP@ "delete" "${OPS}" | @AWK@ -F "|" -v OFS="${DELIM}" '{ print $2, $3 }'
+) | sort -u > "${DELETES}"
+
+sleep 1 # make sure last even happened at least 1 full second ago
+last_index_time="$(date +%s)"
+sleep 1 # make sure next event happens at least 2 seconds after last event
+
+echo "# Apply changes to the source tree"
+run_no_sort "${REPLAY_FS_CHANGES} < \"${OPS}\""
+
+while IFS= read -r path
+do
+    if [[ -d "${path}" ]]
+    then
+        stat -c "%i d" "${path}" 2> /dev/null || true
+    else
+        parent=$(dirname "${path}")
+        stat -c "%i d" "${parent}" 2> /dev/null || true
+    fi
+done < <(
+    # Need to use timestamp here because there is no log to pull from
+    # so it is possible to miss inodes if only using paths:
+    #
+    #     create|dir|prefix/a
+    #     move|dir|prefix/a|prefix/directory/a
+    #
+    # After applying the changes, prefix/a will not be stat-able and
+    # stat-ing prefix/directory will not find and mark
+    # prefix/directory/a as suspect for indexing during the tree walk.
+    # A real log would have recorded the creating of prefix/a when it
+    # was created.
+    find "${SRCDIR}" -newermt "@${last_index_time}" -newerct "@${last_index_time}" -printf "%p\n"
+) | sort -u > "${CREATES}"
+
+sort -u "${DELETES}" "${CREATES}" > "${SUSPECTS}"
+
+echo "# Directly index updated tree"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SEARCH2}\" > /dev/null 2>&1"
+
+echo "# Do incremental update on the original index"
+run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --suspect-method 1 --suspect-file \"${SUSPECTS}\" \"${INDEXROOT}\" \"${SRCDIR}\" \"${PARKING_LOT}\" > /dev/null" | remove_time
+
+echo "# Difference between indexes"
+echo "$ @DIFF@ <(echo \${new_index}) <(echo \${updated_index})" | replace
+# shellcheck disable=2046
+new_index=$(eval $(query "${SEARCH2}/${BASENAME}") | sort -t "${DELIM}" -k 2)
+# shellcheck disable=2046
+updated_index=$(eval $(query "${INDEXROOT}") | sort -t "${DELIM}" -k 2)
+set +e
+@DIFF@ <(echo "${new_index}" | @SED@ "s%${SEARCH2}/%%g;") <(echo "${updated_index}" | @SED@ "s%${SEARCH}/%%g;") && echo
+rc="$?"
+set -e
+
+if [[ "${rc}" -ne 0 ]]
+then
+    echo
+    cat "${OPS}"
+fi
+
+echo "# Set seed and delimiter and exit early"
+run_sort "${GEN_FS_CHANGES} -n ${THREADS} --seed 0 --delim \" \" --ops ${OP_COUNT} --create 0 --move 0 --delete 1 --dir 1 --nondir 0 --paths \"${PATHS}\" 2>&1 > /dev/null" | uniq | @SED@ 's%(.*, .*)%(inode, pinode)%g;'
+
+echo "# Trigger resize"
+line_count=$(wc -l < "${PATHS}")
+run_sort "${GEN_FS_CHANGES} -n ${THREADS} --seed 0 --ops $(( line_count * 2)) --create 1 --move 0 --delete 0 --dir 1 --nondir 0 --paths \"${PATHS}\" 2>/dev/null | wc -l"
+
+echo "# Pass in paths without pinodes"
+run_no_sort "${PARALLEL_FIND} -n ${THREADS} --format \"%y %i %p\n\" \"${SRCDIR}\" > \"${PATHS}\""
+run_sort "${GEN_FS_CHANGES} -n ${THREADS} --seed 0 --ops ${OP_COUNT} --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths \"${PATHS}\" 2>/dev/null | wc -l"
+
+echo "# Line ends with CRLF"
+run_no_sort "(printf 'd 0 1 dir\\r\\n') | ${GEN_FS_CHANGES} -n ${THREADS} --ops 1 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 2>&1 > /dev/null | @GREP@ '\(.*, .*\)'"
+
+echo "# Line ends without newline"
+run_no_sort "(printf 'd 0 1 dir') | ${GEN_FS_CHANGES} -n ${THREADS} --ops 1 --create 1 --move 0 --delete 0 --dir 1 --nondir 1 2>&1 > /dev/null"
+
+# errors
+
+echo "# no tree"
+run_no_sort "echo -n | ${GEN_FS_CHANGES} --ops ${OP_COUNT}"
+
+echo "# no directories"
+run_no_sort "echo 'f 0 1 file' | ${GEN_FS_CHANGES} --ops ${OP_COUNT}"
+
+echo "# no op weights"
+run_no_sort "echo 'd 0 1 root' | ${GEN_FS_CHANGES} --ops ${OP_COUNT} --dir 1 --nondir 1"
+
+echo "# no type weights"
+run_no_sort "echo 'd 0 1 root' | ${GEN_FS_CHANGES} --ops ${OP_COUNT} --create 1 --move 1 --delete 1"
+
+echo "# Bad file"
+rm -f "${BAD_PATHS}"
+run_no_sort "${GEN_FS_CHANGES} -n ${THREADS} --ops ${OP_COUNT} --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths \"${BAD_PATHS}\""
+
+echo "# Empty line"
+run_no_sort "echo | ${GEN_FS_CHANGES} --ops ${OP_COUNT} --create 1 --move 1 --delete 1 --dir 1 --nondir 1"
+
+echo "# Bad path"
+run_no_sort "echo 'd 0 1' | ${GEN_FS_CHANGES} --ops ${OP_COUNT} --create 1 --move 1 --delete 1 --dir 1 --nondir 1"
+
+echo "# Bad path (with trailing whitespace)"
+run_no_sort "echo 'd 0 1 ' | ${GEN_FS_CHANGES} --ops ${OP_COUNT} --create 1 --move 1 --delete 1 --dir 1 --nondir 1"
+
+echo "# Bad path without pinodes"
+run_no_sort "echo 'd -1 bad/path' >> \"${PATHS}\""
+run_no_sort "${GEN_FS_CHANGES} -n ${THREADS} --seed 0 --ops ${OP_COUNT} --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths \"${PATHS}\" 2>&1 > /dev/null | @GREP@ \"Error\""
+
+echo "# File with unknown parent"
+run_no_sort "(echo 'd 0 1 dir'; echo 'f 2 3 file') | ${GEN_FS_CHANGES} -n ${THREADS} --ops 1 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 2>&1 > /dev/null | @GREP@ '\(.*, .*\)'"
+
+echo "Bad flag"
+run_no_sort "${GEN_FS_CHANGES} -n ${THREADS} --ops ${OP_COUNT} --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths \"${PATHS}\" --bad-flag 2>&1 | @GREP@ -o \"gen_fs_changes: \""
+
+echo "Bad thread count"
+run_no_sort "${GEN_FS_CHANGES} -n 18446744073709551615 --ops ${OP_COUNT} --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths \"${PATHS}\"" | @SED@ '\%AddressSanitizer failed to allocate%d;'
+) | @SED@ '\%seconds%d;' | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/fs_changes.expected "${OUTPUT}"
+rm "${OUTPUT}"

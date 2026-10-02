@@ -67,7 +67,9 @@ OF SUCH DAMAGE.
 
 #include <dirent.h>
 #include <stddef.h>
+#include <sys/types.h>
 
+#include "QueuePerThreadPool.h"
 #include "bf.h"
 
 #include "gufi_incremental_update/PoolArgs.h"
@@ -75,6 +77,13 @@ OF SUCH DAMAGE.
 /* directory for placing update databases and moved directories */
 int setup_parking_lot(const char *path);
 int cleanup_parking_lot(const char *path, const int created);
+
+/* check if a filesystem entry is suspect */
+int is_suspect(const int suspectmethod,
+               struct SuspectInodes *suspectinodes,
+               const int suspectstat,
+               const time_t suspecttime,
+               struct work *work);
 
 /* table for containing snapshot information */
 #define SNAPSHOT      "snapshot"
@@ -96,8 +105,7 @@ int insert_snapshot_row(struct work *work, struct entry_data *ed,
 
 /* *********************************************************** */
 /* walk the old index and generate a readdirplus table in <snapshot>.index */
-size_t gen_index_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size);
-int gen_index_snapshot(struct PoolArgs *pa, struct work *work); /* TODO: reuse gufi_query code */
+int gen_index_snapshot(struct PoolArgs *pa, const ino_t inode, struct GenSnapshot *gs); /* TODO: reuse gufi_query code */
 /* *********************************************************** */
 
 /* *********************************************************** */
@@ -108,16 +116,20 @@ int gen_index_snapshot(struct PoolArgs *pa, struct work *work); /* TODO: reuse g
  *
  * TODO: reuse gufi_dir2index code
  */
-int reindex_dir(struct PoolArgs *pa,
+int reindex_dir(QPTPool_ctx_t *ctx,
                 struct work *work, struct entry_data *ed,
-                DIR *dir, const size_t id);
+                DIR *dir);
 
 /* walk the current index and generate a readdirplus table in <snapshot>.tree */
-size_t gen_tree_snapshot_name(struct PoolArgs *pa, char *name, const size_t name_size);
-int find_suspects(struct PoolArgs *pa, struct work *work);
+int find_suspects(struct PoolArgs *pa, const ino_t inode, struct GenSnapshot *gs);
 /* *********************************************************** */
 
+/* convert descend() work item into a GenSnapshot */
+void *wrap_work(struct work *work, void *ptr);
+
+void delete_artifact(const char *path);
+
 /* do the incremental update after getting snapshots from the original index and updated tree */
-int incremental_update(struct PoolArgs *pa);
+int incremental_update(struct PoolArgs *pa, const ino_t inode, struct GenSnapshot *index, struct GenSnapshot *tree);
 
 #endif

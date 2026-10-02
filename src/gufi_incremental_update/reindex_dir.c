@@ -62,169 +62,81 @@ OF SUCH DAMAGE.
 
 
 
+#include <errno.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "dbutils.h"
+#include "index.h"
 #include "plugin.h"
 #include "template_db.h"
 
 #include "gufi_incremental_update/incremental_update.h"
 
 /* reindex the source directory */
-int reindex_dir(struct PoolArgs *pa,
+int reindex_dir(QPTPool_ctx_t *ctx,
                 struct work *work, struct entry_data *ed,
-                DIR *dir, const size_t id) {
-    if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                      &work->stat_called, 1, 1) != 0) {
-        return 1;
-    }
+                DIR *dir) {
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
-    /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
-    if (pa->in.process_xattrs) {
-        xattrs_setup(&ed->xattrs);
-        xattrs_get(work->name, &ed->xattrs);
-    }
+    str_t topath = {0};
 
     /*
-     * if building in-tree, wipe the db.db and recreate it
+     * if building in-tree, use existing db.db
      * else, create the file in the parking lot with the directory's inode as the name
      */
-    char dbpath[MAXPATH];
     if (pa->same == 1) {
-        SNPRINTF(dbpath, MAXPATH, "%s/%s", work->name, DBNAME);
-        truncate(dbpath, 0);
-    } else {
-        SNPRINTF(dbpath, MAXPATH, "%s/%" STAT_ino, pa->parking_lot.data, work->statuso.st_ino);
+        topath.len = SNFORMAT_S_ALLOC(&topath.data, 3,
+                                      work->name, work->name_len,
+                                      "/", (size_t) 1,
+                                      DBNAME, DBNAME_LEN);
+    }
+    else {
+        topath.data = malloc(pa->parking_lot.len + 1 + UINT64_DIGITS + 1);
+        topath.len = SNPRINTF(topath.data, MAXPATH, "%s/%" STAT_ino, pa->parking_lot.data, work->statuso.st_ino);
     }
 
-    sqlite3 *db = template_to_db(&pa->db, dbpath, -1, -1, NULL);
-    if (!db) {
-        return -1;
+    topath.free = free;
+
+    /* either way, truncate any existing db file */
+    if (truncate(topath.data, 0) != 0) {
+        const int err = errno;
+        if (err != ENOENT) {
+            fprintf(stderr, "Warning: Failed to truncate db file \"%s\": %s (%d)\n",
+                    topath.data, strerror(err), err);
+        }
     }
 
-    addqueryfuncs(db);
-
-    sqlite3_stmt *res = insertdbprep(db, ENTRIES_INSERT);
-    startdb(db);
-    struct sum summary;
-    zeroit(&summary);
-
-    /* rewind the directory */
     rewinddir(dir);
 
-    PCS_t pcs = {
-        .db = db,
-        .work = work,
-        .ed = ed,
-    };
-
-    /* run light-weight plugin setup before information is available */
-    plugins_ctx_init(&pa->in.plugins, &pcs, id);
-
-    /*
-     * loop over dirents, if link push it on the queue, if file or
-     * link print it, fill up qwork structure for each
-     */
-    struct dirent *entry = NULL;
-    while ((entry = readdir(dir))) {
-        const size_t len = strlen(entry->d_name);
-
-        const int skip = (
-            /* skip ., .., and anything else in skip_names */
-            trie_search(pa->in.skip, entry->d_name, len, NULL) ||
-            /* skip db.db */
-            ((len >= DBNAME_LEN) && (strncmp(entry->d_name + len - DBNAME_LEN, DBNAME, DBNAME_LEN) == 0))
-        );
-
-        if (skip) {
-            continue;
-        }
-
-        struct work *child = new_work_with_name(work->name, work->name_len, entry->d_name, len);
-        child->basename_len = len;
-
-        if (!try_skip_lstat(entry, child, 1)) {
-            free(child);
-            continue;
-        }
-
-        /* only processing non-directories here */
-        if (S_ISDIR(child->statuso.st_mode)) {
-            free(child);
-            continue;
-        }
-        else if (S_ISLNK(child->statuso.st_mode)) {}
-        else if (S_ISREG(child->statuso.st_mode)) {}
-        else {
-            free(child);
-            continue;
-        }
-
-        /* need actual values of files/links */
-        if (lstat_wrapper(child->name, &child->statuso, &child->crtime,
-                          &child->stat_called, 1, 1) != 0) {
-            free(child);
-            continue;
-        }
-
-        child->basename_len = len;
-        child->pinode = work->statuso.st_ino;
-
-        struct entry_data child_ed;
-        memset(&child_ed, 0, sizeof(child_ed));
-        child_ed.parent_fd = -1;
-
-        if (S_ISLNK(child->statuso.st_mode)) {
-            child_ed.type = 'l';
-            readlink(child->name, child_ed.linkname, MAXPATH);
-        }
-        else if (S_ISREG(child->statuso.st_mode)) {
-            child_ed.type = 'f';
-        }
-
-        if (pa->in.process_xattrs) {
-            xattrs_setup(&child_ed.xattrs);
-            xattrs_get(child->name, &child_ed.xattrs);
-        }
-
-        sumit(&summary, child, &child_ed);
-        insertdbgo(child, &child_ed, res);
-
-        PCS_t child_pcs = {
-            .db = db,
-            .work = child,
-            .ed = &child_ed,
-        };
-        plugins_process_file(&pa->in.plugins, &child_pcs, id);
-
-        if (pa->in.process_xattrs) {
-            xattrs_cleanup(&child_ed.xattrs);
-        }
-
-        free(child);
+    plugin_dir_action process_dir = PLUGIN_NO_PROCESS_DIR;
+    int rc = index_dir(&topath, 0, ctx, &pa->in, &pa->db, &pa->xattr,
+                       &process_dir, work, ed, dir, NULL, NULL);
+    if (rc != 0) {
+        rc = (rc < 0);
+        goto cleanup;
     }
 
-    stopdb(db);
-    insertdbfin(res);
-
-    insertsumdb(db, work->name, work, ed, &summary);
-
-    /* run plugin before destroying data */
-    plugins_process_dir(&pa->in.plugins, &pcs, id);
-
-    if (pa->in.process_xattrs) {
-        xattrs_cleanup(&ed->xattrs);
+    /* set permissions on db file */
+    if (chmod(topath.data, (work->statuso.st_mode & ~(S_IXUSR | S_IXGRP | S_IXOTH)) | S_IRUSR) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Warning: Unable to set permission for \"%s\": %s (%d)\n",
+                topath.data, strerror(err), err);
     }
 
-    plugins_ctx_exit(&pa->in.plugins, &pcs, id);
+    /* set owners on db file */
+    if (chown(topath.data, work->statuso.st_uid, work->statuso.st_gid) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Warning: Unable to set owners for \"%s\": %s (%d)\n",
+                topath.data, strerror(err), err);
+    }
 
-    closedb(db);
+    fprintf(stdout, "    Created update db \"%s\" for \"%s\"\n", topath.data, work->name);
 
-    chown(dbpath, work->statuso.st_uid, work->statuso.st_gid);
-    chmod(dbpath, (work->statuso.st_mode & ~(S_IXUSR | S_IXGRP | S_IXOTH)) | S_IRUSR);
+  cleanup:
+    str_free_existing(&topath);
 
-    fprintf(stdout, "    Created update db \"%s\" for \"%s\"\n", dbpath, work->name);
-
-    return 0;
+    return rc;
 }

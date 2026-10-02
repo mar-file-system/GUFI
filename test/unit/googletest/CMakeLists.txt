@@ -65,6 +65,8 @@
 include(CheckLanguage)
 
 if (CMAKE_CXX_COMPILER)
+  option(RLIMIT_NPROC_UNIT_TESTS "Whether or not to run unit tests that use RLIMIT_NPROC" On)
+
   configure_file(valgrind.suppressions valgrind.suppressions COPYONLY)
 
   include_directories("${DEP_INSTALL_PREFIX}/googletest/include")
@@ -83,6 +85,7 @@ if (CMAKE_CXX_COMPILER)
     popen_argv.cpp
     print.cpp
     query_user_str.cpp
+    rollup.cpp
     str.cpp
     template_db.cpp
     trace.cpp
@@ -113,13 +116,25 @@ if (CMAKE_CXX_COMPILER)
     )
   endforeach()
 
+  if (RLIMIT_NPROC_UNIT_TESTS)
+    set_source_files_properties(QueuePerThreadPool.cpp PROPERTIES COMPILE_FLAGS -DRLIMIT_NPROC_UNIT_TESTS=1)
+    set_source_files_properties(popen_argv.cpp         PROPERTIES COMPILE_FLAGS -DRLIMIT_NPROC_UNIT_TESTS=1)
+  endif()
+
   add_executable(unit_tests main.cpp ${TEST_SRC} $<TARGET_OBJECTS:gufi_query_lib>)
+  if (CYGWIN)
+    target_compile_definitions(unit_tests PUBLIC _GNU_SOURCE)
+  endif()
   target_link_libraries(unit_tests -L"${DEP_INSTALL_PREFIX}/googletest/lib" -L"${DEP_INSTALL_PREFIX}/googletest/lib64" gtest ${COMMON_LIBRARIES})
+  add_ai(unit_tests "libsqlite_vec0.a" "libsqlite_lembed0.a")
 
   add_test(NAME unit_tests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/unit_tests" --gtest_shuffle
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-  if (DEP_AI)
-    set_property(TARGET unit_tests PROPERTY BUILD_RPATH "${DEP_INSTALL_PREFIX}/llama.cpp/lib")
+  if (CYGWIN)
+    if (DEP_AI)
+      set_property(TEST unit_tests APPEND PROPERTY ENVIRONMENT "PATH=${DEP_INSTALL_PREFIX}/llama.cpp/bin:$ENV{PATH}"
+    )
+    endif()
   endif()
   if (FSANITIZE)
     set_property(TEST unit_tests APPEND PROPERTY ENVIRONMENT "ASAN_OPTIONS=allocator_may_return_null=1")

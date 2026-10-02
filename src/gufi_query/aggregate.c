@@ -62,10 +62,13 @@ OF SUCH DAMAGE.
 
 
 
+#include <string.h>
+
 #include "dbutils.h"
 #include "print.h"
 
 #include "gufi_query/aggregate.h"
+#include "gufi_query/PoolArgs.h"
 
 /* must have shared cache */
 static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
@@ -104,15 +107,17 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
 
     aggregate->outfile = stdout;
 
-    char dbname[MAXPATH];
+    char *dbname = NULL;
     if ((in->output == STDOUT) || (in->output == OUTFILE)) {
-        SNPRINTF(dbname, MAXPATH, AGGREGATE_FILE_NAME);
+        dbname = malloc(sizeof(AGGREGATE_FILE_NAME));
+        memcpy(dbname, AGGREGATE_FILE_NAME, sizeof(AGGREGATE_FILE_NAME));
 
         /* only open a final file if OUTFILE */
         if (in->output == OUTFILE) {
             aggregate->outfile = fopen(in->outname.data, "w");
             if (!aggregate->outfile) {
                 fprintf(stderr, "Error: Could not open output file %s\n", in->outname.data);
+                free(dbname);
                 aggregate_fin(aggregate, in);
                 return NULL;
             }
@@ -120,16 +125,29 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
 
         if (!OutputBuffer_init(&aggregate->ob, in->output_buffer_size)) {
             fprintf(stderr, "Error: Could not set up output buffers\n");
+            free(dbname);
             aggregate_fin(aggregate, in);
             return NULL;
         }
     }
     else if (in->output == OUTDB) {
-        SNFORMAT_S(dbname, MAXPATH, 1, in->outname.data, in->outname.len);
+        dbname = malloc(in->outname.len + 1);
+        memcpy(dbname, in->outname.data, in->outname.len + 1);
     }
 
     /* always open an aggregate db */
-    if (!(aggregate->db = aggregate_setup(dbname, in->sql.init_agg.data, !in->no_print_sql_on_err))) {
+    aggregate->db = aggregate_setup(dbname, in->sql.init_agg.data, !in->no_print_sql_on_err);
+
+    free(dbname);
+
+    if (!aggregate->db) {
+        aggregate_fin(aggregate, in);
+        return NULL;
+    }
+
+    /* attach the globally accessible database here */
+    if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, aggregate->db,
+                      GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
         aggregate_fin(aggregate, in);
         return NULL;
     }
@@ -150,7 +168,7 @@ void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input
         ThreadArgs_t *ta = &(pa->ta[i]);
 
         /* print all errors here, regardless of input args */
-        if (attachdb_raw(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1, 1)) {
+        if (attachdb_raw(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1, NULL)) {
             char *err = NULL;
             if ((sqlite3_exec(aggregate->db, in->sql.intermediate.data, NULL, NULL, &err) != SQLITE_OK)) {
                 if (!in->no_print_sql_on_err) {
@@ -165,7 +183,7 @@ void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input
         }
 
         /* print all errors here, regardless of input args */
-        detachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1, 1);
+        detachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1, NULL);
     }
 }
 
@@ -173,7 +191,7 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
     int rc = 0;
 
     /* normally expect STDOUT/OUTFILE to have SQL to run, but OUTDB can have SQL to run as well */
-    if ((in->output != OUTDB) || in->sql.agg.len) {
+    if ((in->output != OUTDB) || str_exists(&in->sql.agg)) {
         PrintArgs_t pa = {
             .output_buffer = &aggregate->ob,
             .delim = in->delim,

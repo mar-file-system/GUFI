@@ -223,7 +223,6 @@ size_t external_read_file(struct input *in,
     size_t len = 0;
     off_t offset = 0;
     while (getline_fd_seekable(&line, &len, extdb_list, &offset, 512) > 0) {
-        char extdb_path_stack[MAXPATH];
         char *extdb_path = line;
 
         /*
@@ -231,27 +230,33 @@ size_t external_read_file(struct input *in,
          * resolve to absolute paths
          */
         if (line[0] != '/')  {
-            char path[MAXPATH];
-            SNFORMAT_S(path, sizeof(path), 2,
-                       child->name, child->name_len - child->basename_len,
-                       /* basename does not include slash, so don't need to add another one */
-                       line, len);
+            char *path = NULL;
+            SNFORMAT_S_ALLOC(&path, 2,
+                             child->name, child->name_len - child->basename_len,
+                             /* basename does not include slash, so don't need to add another one */
+                             line, len);
 
-            if (!realpath(path, extdb_path_stack)) {
+            extdb_path = realpath(path, NULL);
+            if (!extdb_path) {
                 const int err = errno;
                 fprintf(stderr, "Error: Could not resolve external database path %s: %s (%d)\n",
                         path, strerror(err), err);
+                free(path);
                 free(line);
                 line = NULL;
                 len = 0;
                 continue;
             }
 
-            extdb_path = extdb_path_stack;
+            free(path);
         }
 
         if (check_is_db(in->external_attach.validate, extdb_path) == 1){
             rc += !func(in, args, child->pinode, extdb_path);
+        }
+
+        if (extdb_path != line) {
+            free(extdb_path);
         }
 
         free(line);
@@ -323,8 +328,23 @@ int external_concatenate(sqlite3 *db,
             const size_t attachname_len = set_attachname(attachname, sizeof(attachname),
                                                          attachname_args);
 
+            /* make sure path is usable by sqlite3 */
+            const size_t filename_len = strlen(filename);
+            const size_t clean_path_size = filename_len * 3 + 1;
+            char *clean_path = malloc(clean_path_size);
+            size_t used_chars = filename_len; /* unused */
+            const size_t clean_path_len = sqlite_uri_path(clean_path, clean_path_size,
+                                                          filename, &used_chars);
+
+            /*
+             * skip checking if path_len == used_chars because
+             * clean_path should always have enough space
+             */
+
+            clean_path[clean_path_len] = '\0';
+
             /* if attach fails, you don't have access to the database - just continue */
-            if (attachdb(filename, db, attachname, SQLITE_OPEN_READONLY, 0, 0)) {
+            if (attachdb(clean_path, db, attachname, SQLITE_OPEN_READONLY, 0, 0)) {
                 /* SELECT * FROM <attach name>.<table name> UNION */
                 unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 6,
                                         select->data, select->len,
@@ -335,6 +355,8 @@ int external_concatenate(sqlite3 *db,
                                         " UNION", (size_t) 6);
                 rec_count++;
             }
+
+            free(clean_path);
         }
         sqlite3_finalize(res);
     }

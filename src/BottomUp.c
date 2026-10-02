@@ -110,6 +110,7 @@ struct UserArgs {
     size_t user_struct_size;
     size_t min_level;
     size_t max_level;
+    int nofollow_symlink; /* 0 or AT_SYMLINK_NOFOLLOW */
     BU_descend_f descend;
     BU_ascend_f ascend;
     int track_non_dirs;
@@ -163,36 +164,42 @@ static void new_pathname(struct BottomUp *work, const char *dirname, size_t dirn
 static int new_alt_pathname(struct BottomUp *work, const char *dirname, size_t dirname_len,
                              const char *basename, size_t basename_len) {
     // Alternate name may be longer than the provided dirname and basename together
-    char buf[MAXPATH] = { 0 };
-    size_t bufsize = sizeof(buf);
+    char *buf = NULL;
     size_t new_len = 0;
 
     if (basename) {
+        size_t orig_size = dirname_len + 1 + 3 * basename_len + 1;
+        buf = malloc(orig_size);
+
         // Assume dirname is already sanitized, only need to sanitize basename:
-        new_len = SNFORMAT_S(buf, bufsize, 2, dirname, dirname_len, "/", (size_t) 1);
+        new_len = SNFORMAT_S(buf, orig_size, 2, dirname, dirname_len, "/", (size_t) 1);
 
         size_t converted_len = basename_len;
-        new_len += sqlite_uri_path(buf + new_len, bufsize - new_len, basename, &converted_len);
+        new_len += sqlite_uri_path(buf + new_len, orig_size - new_len, basename, &converted_len);
 
-        if (converted_len < basename_len) {
-            // uh-oh ... didn't convert entire string
-            return -1;
-        }
+        /* not possible */
+        /* if (converted_len < basename_len) { */
+        /*     // uh-oh ... didn't convert entire string */
+        /*     free(buf); */
+        /*     return -1; */
+        /* } */
     } else {
+        new_len = 3 * dirname_len;
+        buf = malloc(new_len + 1);
+
         // Need to sanitize dirname:
         size_t converted_len = dirname_len;
-        new_len = sqlite_uri_path(buf, bufsize, dirname, &converted_len);
+        new_len = sqlite_uri_path(buf, new_len + 1, dirname, &converted_len);
 
-        if (converted_len < dirname_len) {
-            // uh-oh ... didn't convert entire string
-            return -1;
-        }
+        /* not possible */
+        /* if (converted_len < dirname_len) { */
+        /*     // uh-oh ... didn't convert entire string */
+        /*     free(buf); */
+        /*     return -1; */
+        /* } */
     }
 
-    char *path = calloc(new_len + 1, sizeof(char));
-    memcpy(path, buf, new_len);
-
-    work->alt_name = path;
+    work->alt_name = buf;
     work->alt_name_len = new_len;
 
     return 0;
@@ -281,7 +288,7 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
     /* keep track of which thread was used to walk downwards */
     bu->tid.down = QPTPool_get_id(ctx);
 
-    DIR *dir = opendir_wrapper(bu->name, 1);
+    DIR *dir = opendir_wrapper(bu->name, NULL);
 
     if (!dir) {
         sll_destroy(&bu->subdirs, bottomup_destroy);
@@ -325,7 +332,7 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
             struct entry_data ed;
             ed.parent_fd = dir_fd;
 
-            if (fstatat_wrapper(&child, &ed, 1, 1) != 0) {
+            if (fstatat_wrapper(&child, &ed, ua->nofollow_symlink, 1, NULL) != 0) {
                 return 1;
             }
 
@@ -419,6 +426,7 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
 QPTPool_ctx_t *parallel_bottomup_init(const size_t thread_count,
                                       const size_t user_struct_size,
                                       const size_t min_level, const size_t max_level,
+                                      const int nofollow_symlink,
                                       BU_descend_f descend, BU_ascend_f ascend,
                                       const int track_non_dirs,
                                       const int generate_alt_name) {
@@ -432,6 +440,7 @@ QPTPool_ctx_t *parallel_bottomup_init(const size_t thread_count,
     ua->user_struct_size = user_struct_size;
     ua->min_level = min_level;
     ua->max_level = max_level;
+    ua->nofollow_symlink = nofollow_symlink,
     ua->descend = descend?descend:noop_descend;
     ua->ascend = ascend?ascend:noop_ascend;
     ua->track_non_dirs = track_non_dirs;
@@ -532,7 +541,7 @@ static int parallel_bottomup_enqueue_subdirs(QPTPool_ctx_t *ctx,
     return 0;
 }
 
-int parallel_bottomup_fini(QPTPool_ctx_t *ctx) {
+int parallel_bottomup_fini(QPTPool_ctx_t *ctx, const int check_threads) {
     if (!ctx) {
         return -1;
     }
@@ -558,7 +567,7 @@ int parallel_bottomup_fini(QPTPool_ctx_t *ctx) {
 
     QPTPool_destroy(ctx);
 
-    return -(threads_started != threads_completed);
+    return check_threads?-(threads_started != threads_completed):0;
 }
 
 int parallel_bottomup(char **root_names, const size_t root_count,
@@ -566,11 +575,13 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       const str_t *path_list,
                       const size_t thread_count,
                       const size_t user_struct_size,
+                      const int nofollow_symlink,
                       BU_descend_f descend, BU_ascend_f ascend,
                       const int track_non_dirs,
                       const int generate_alt_name,
-                      void *extra_args) {
-    if (min_level && path_list->data && path_list->len) {
+                      void *extra_args,
+                      const int check_threads) {
+    if (min_level && str_exists(path_list)) {
         if (root_count > 1) {
             fprintf(stderr, "Error: Only one root may be provided when a --min-level and -D are both provided\n");
             return -1;
@@ -579,6 +590,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
 
     QPTPool_ctx_t *ctx = parallel_bottomup_init(thread_count, user_struct_size,
                                                 min_level, max_level,
+                                                nofollow_symlink,
                                                 descend, ascend,
                                                 track_non_dirs, generate_alt_name);
     if (!ctx) {
@@ -590,7 +602,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
 
     /* enqueue all root directories */
     size_t good_roots = 0;
-    if (min_level && path_list->data && path_list->len) {
+    if (min_level && str_exists(path_list)) {
         good_roots += !parallel_bottomup_enqueue_subdirs(ctx, root_names[0], strlen(root_names[0]),
                                                          min_level, path_list, extra_args);
     }
@@ -600,5 +612,5 @@ int parallel_bottomup(char **root_names, const size_t root_count,
         }
     }
 
-    return -(parallel_bottomup_fini(ctx) || (root_count != good_roots));
+    return -(parallel_bottomup_fini(ctx, check_threads) || (root_count != good_roots));
 }

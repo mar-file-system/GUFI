@@ -109,3 +109,24 @@ if (MARFS_PREFIX)
 else()
   message(STATUS "MARFS_PREFIX not set. Not building marfs plugin.")
 endif()
+
+# presidio plugin
+option(PRESIDIO_PLUGIN "Build presidio querying plugin" Off)
+if (PRESIDIO_PLUGIN)
+  find_package(CURL REQUIRED)
+  pkg_search_module(CJSON REQUIRED libcjson)
+
+  message(STATUS "Building presidio querying plugin. Presidio analysis and anonymizer services must be available when used.")
+  add_library(presidio_plugin SHARED
+    presidio_plugin.c
+    "${CMAKE_SOURCE_DIR}/src/SinglyLinkedList.c"
+    "${CMAKE_SOURCE_DIR}/src/str.c"
+  )
+  target_include_directories(presidio_plugin SYSTEM PUBLIC "${CURL_INCLUDE_DIRS}" "${PCRE2_INCLUDEDIR}")
+  target_link_libraries(presidio_plugin PUBLIC CURL::libcurl "${CJSON_LDFLAGS}")
+  add_dependencies(presidio_plugin install_dependencies)
+  install(TARGETS presidio_plugin DESTINATION "${SERVER_LIB}" COMPONENT Server)
+  if (CLIENT)
+    install(TARGETS presidio_plugin DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
+  endif()
+endif()

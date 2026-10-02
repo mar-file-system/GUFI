@@ -80,7 +80,9 @@ static int work_serialize_and_free(const int fd, QPTPool_f func, void *work, siz
 }
 #endif
 
-struct work *try_skip_lstat(struct dirent *entry, struct work *work, const int print_eacces) {
+static struct work *try_skip_stat3_wrapper(struct dirent *entry, struct work *work, const uint64_t *no_print_errno,
+                                           int (*stat3_wrapper)(const char *name, struct stat *st, time_t *crtime,
+                                                                StatCalled *stat_called, const int print_err, const uint64_t *no_print_errno)) {
     work->statuso.st_ino = entry->d_ino;
 
     switch (entry->d_type) {
@@ -101,14 +103,21 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work, const int p
         case DT_UNKNOWN:
         default:
             /* some filesystems don't support d_type - fall back to calling lstat */
-            if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                              &work->stat_called, 1, print_eacces) != 0) {
+            if (stat3_wrapper(work->name, &work->statuso, &work->crtime,
+                              &work->stat_called, 1, no_print_errno) != 0) {
                 return NULL;
             }
             break;
     }
-
     return work;
+}
+
+struct work *try_skip_stat(struct dirent *entry, struct work *work, const uint64_t *no_print_errno) {
+    return try_skip_stat3_wrapper(entry, work, no_print_errno, stat_wrapper);
+}
+
+struct work *try_skip_lstat(struct dirent *entry, struct work *work, const uint64_t *no_print_errno) {
+    return try_skip_stat3_wrapper(entry, work, no_print_errno, lstat_wrapper);
 }
 
 /*
@@ -124,6 +133,8 @@ struct work *try_skip_lstat(struct dirent *entry, struct work *work, const int p
 int descend(QPTPool_ctx_t *ctx,
             struct input *in, struct work *work,
             DIR *dir, const int skip_db,
+            struct work *(*try_skip_stat3)(struct dirent *entry, struct work *work, const uint64_t *no_print_errno),
+            wrap_dir_f wrap_dir, void *wrap_dir_ptr,
             QPTPool_f processdir, process_nondir_f processnondir, void *nondir_args,
             struct descend_counters *counters) {
     if (!work) {
@@ -165,7 +176,7 @@ int descend(QPTPool_ctx_t *ctx,
 
             child->statuso.st_ino = dir_child->d_ino;
 
-            if (!try_skip_lstat(dir_child, child, in->print_eacces)) {
+            if (!try_skip_stat3(dir_child, child, in->no_print_errno)) {
                 free(child);
                 continue;
             }
@@ -190,47 +201,66 @@ int descend(QPTPool_ctx_t *ctx,
                 if (next_level <= in->max_level) {
                     child_ed.type = 'd';
 
-                    if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
-                        struct work *copy = compress_struct(in->compress, child, struct_work_size(child));
-                        #ifdef QPTPOOL_SWAP
-                        QPTPool_enqueue_swappable(ctx, processdir, copy,
-                                                  work_serialize_and_free, QPTPool_generic_alloc_and_deserialize);
-                        #else
-                        QPTPool_enqueue(ctx, processdir, copy);
-                        #endif
+                    if (processdir) {
+                        if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
+                            if (wrap_dir) {
+                                /* wrapped child structs are not compressed */
+                                QPTPool_enqueue(ctx, processdir, wrap_dir(child, wrap_dir_ptr));
+                            }
+                            else {
+                                struct work *copy = compress_struct(in->compress, child, struct_work_size(child));
+                                #ifdef QPTPOOL_SWAP
+                                QPTPool_enqueue_swappable(ctx, processdir, copy,
+                                                          work_serialize_and_free, QPTPool_generic_alloc_and_deserialize);
+                                #else
+                                QPTPool_enqueue(ctx, processdir, copy);
+                                #endif
+                            }
+                        }
+                        else {
+                            /*
+                             * If this directory has too many subdirectories,
+                             * process the current subdirectory here instead
+                             * of enqueuing it. This only allows for one
+                             * subdirectory work item to be allocated at a
+                             * time instead of all of them, reducing overall
+                             * memory usage. This branch is only applied at
+                             * this level, so small subdirectories will still
+                             * enqueue work, and large subdirectories will
+                             * still enqueue some work and process the
+                             * remaining in-situ.
+                             *
+                             * Return value should probably be used.
+                             */
+                            child->recursion_level = recursion_level;
+                            if (wrap_dir) {
+                                processdir(ctx, wrap_dir(child, wrap_dir_ptr));
+                            }
+                            else {
+                                processdir(ctx, child);
+                            }
+
+                            ctrs.dirs_insitu++;
+                        }
                     }
                     else {
-                        /*
-                         * If this directory has too many subdirectories,
-                         * process the current subdirectory here instead
-                         * of enqueuing it. This only allows for one
-                         * subdirectory work item to be allocated at a
-                         * time instead of all of them, reducing overall
-                         * memory usage. This branch is only applied at
-                         * this level, so small subdirectories will still
-                         * enqueue work, and large subdirectories will
-                         * still enqueue some work and process the
-                         * remaining in-situ.
-                         *
-                         * Return value should probably be used.
-                         */
-                        child->recursion_level = recursion_level;
-                        processdir(ctx, child);
-                        ctrs.dirs_insitu++;
+                        free(child);
                     }
 
+                    /* count directories whether or not there was a function to process it */
                     ctrs.dirs++;
                 }
                 else {
                     /* skip enqueuing and just free */
                     free(child);
                 }
+
                 continue;
             }
             /* non directories */
             else if (S_ISLNK(child->statuso.st_mode)) {
                 child_ed.type = 'l';
-                const ssize_t link_len = readlink(child->name, child_ed.linkname, MAXPATH);
+                const ssize_t link_len = readlink(child->name, child_ed.linkname, sizeof(child_ed.linkname));
                 /* check for error? */
                 child_ed.linkname[link_len] = '\0';
             }
@@ -243,10 +273,10 @@ int descend(QPTPool_ctx_t *ctx,
                 continue;
             }
 
-            ctrs.nondirs++;
-
             /* if this directory was processed, process the files/links */
             if (in->min_level <= work->level) {
+                ctrs.nondirs++;
+
                 if (processnondir) {
                     if (in->process_xattrs) {
                         xattrs_setup(&child_ed.xattrs);

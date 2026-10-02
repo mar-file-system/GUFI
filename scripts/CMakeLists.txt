@@ -169,7 +169,9 @@ if (COMPOPT EQUAL 0)
   configure_file(bash_completion bash_completion @ONLY)
   option(BASH_COMPLETION "Whether or not to install bash completion script" On)
   if (BASH_COMPLETION)
-    install(FILES bash_completion DESTINATION "/etc/bash_completion.d" COMPONENT Server RENAME gufi)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/bash_completion"
+      DESTINATION "/etc/bash_completion.d"
+      COMPONENT Server RENAME gufi)
   endif()
 endif()
 

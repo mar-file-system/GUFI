@@ -75,15 +75,14 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "debug.h"
 #include "external_attach.h"
+#include "rollup.h"
 #include "template_db.h"
 #include "utils.h"
-
-#define SUBDIR_ATTACH_NAME "subdir"
 
 /* statistics stored when processing each directory */
 /* this is the type stored in the RollUpStats sll_t variables */
 struct DirStats {
-    char path[MAXPATH];
+    char *path;
 
     uint64_t level;           /* level this directory is at */
 
@@ -95,6 +94,12 @@ struct DirStats {
     int score;                /* roll up score regardless of success or failure */
     int success;              /* whether or not the roll up succeeded */
 };
+
+static void DirStats_free(void *ptr) {
+    struct DirStats *ds = (struct DirStats *) ptr;
+    free(ds->path);
+    free(ds);
+}
 
 /* per thread stats */
 struct RollUpStats {
@@ -112,7 +117,7 @@ struct PoolArgs {
 };
 
 /* compare function for qsort */
-int compare_size_t(const void *lhs, const void *rhs) {
+static int compare_size_t(const void *lhs, const void *rhs) {
     return (*(size_t *) lhs - *(size_t *) rhs);
 }
 
@@ -157,7 +162,7 @@ do {                                                                            
     fprintf(stdout, "        max:        %" #width "zu\n",  max);                \
     fprintf(stdout, "        median:     %" #width ".2f\n", median);             \
     fprintf(stdout, "        sum:        %" #width "zu\n",  sum);                \
-    fprintf(stdout, "        average:    %" #width ".2f\n",  avg);               \
+    fprintf(stdout, "        average:    %" #width ".2f\n", avg);                \
                                                                                  \
     free(array);                                                                 \
 } while (0)
@@ -311,9 +316,9 @@ static void print_stats(char **paths, const int path_count,
     fprintf(stdout, "Directories:    %zu (%zu empty)\n", total_dirs, empty);
     fprintf(stdout, "Total:          %zu\n", total_nondirs + total_dirs);
     fprintf(stdout, "Remaining Dirs: %zu (%.2Lf%%)\n", remaining, (100 * (long double) remaining) / total_dirs);
-    sll_destroy(&rolled_up, free);
-    sll_destroy(&not_rolled_up, free);
-    sll_destroy(&not_processed, free);
+    sll_destroy(&rolled_up, DirStats_free);
+    sll_destroy(&not_rolled_up, DirStats_free);
+    sll_destroy(&not_processed, DirStats_free);
 }
 
 /* main data being passed around during walk */
@@ -322,40 +327,27 @@ struct RollUp {
     int rolledup;
 };
 
-static int rollup_found(void *args, int count, char **data, char **columns) {
-    (void) count;
-    (void) data;
-    (void) columns;
-
-    int *rolledup = (int *) args;
-    *rolledup = data[0][0] - '0';
-    return 0;
-}
-
 static int rollup_descend(void *args, int *keep_going) {
     struct RollUp *dir = (struct RollUp *) args;
 
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, sizeof(dbname), 2,
-               dir->data.name, dir->data.name_len,
-               "/" DBNAME, DBNAME_LEN + 1);
+    char *dbname = NULL;
+    SNFORMAT_S_ALLOC(&dbname, 2,
+                     dir->data.name, dir->data.name_len,
+                     "/" DBNAME, DBNAME_LEN + 1);
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
 
+    free(dbname);
+
     int rc = !db;
     if (db) {
-        char *err = NULL;
         /* check if the current directory is rolled up - if it is, don't descend */
-        if (sqlite3_exec(db, "SELECT rollupscore FROM " SUMMARY " WHERE isroot == 1;",
-                         rollup_found, &dir->rolledup, &err) == SQLITE_OK) {
+        if (get_isrolledup(db, &dir->rolledup) == 0) {
             if (dir->rolledup) {
                 *keep_going = 0;
             }
         }
         else {
-            fprintf(stderr, "Error: Could not check for existence of rollup status at \"%s\": %s\n",
-                    dir->data.name, err);
-            sqlite3_free(err);
             rc = 1;
         }
     }
@@ -377,9 +369,11 @@ struct ChildData {
 
 static int get_permissions_and_count(void *args, int count, char **data, char **columns) {
     struct ChildData *child = (struct ChildData *) args;
-    get_permissions_callback(child->perms, count, data, columns);
-    child->count = atoi(data[3]);
-    return 0;
+    const int rc = get_permissions_callback(child->perms, count, data, columns);
+    if (rc != 0) {
+        return rc;
+    }
+    return !(sscanf(data[3], "%zu", &child->count) == 1);
 }
 
 static int add_entries_count(void *args, int count, char **data, char **columns) {
@@ -415,31 +409,68 @@ static int get_nondirs(const char *name, sqlite3 *dst, size_t *subnondir_count) 
 }
 
 /*
-@return -1 - failed to open a database
-         0 - do not roll up
-         1 - all permissions pass
-*/
-static int check_children(struct RollUp *rollup, struct Permissions *curr,
-                          const size_t child_count, size_t *total_child_entries) {
+ * Check if a directory can roll up all of its children without violating permissions
+ *
+ *  0 children -> automatically can roll up since there are no possible conflicts
+ * >0 children -> compare each child's permissions with this directory's permissions
+ *
+ * Previously returned 1 - 5 to indicate which rollup rule was
+ * followed because all children had to follow the same rule (other
+ * than leaves). Now only returns 1 because rollup can occur so long
+ * as every child meets any of the rules.
+ *
+ * @return -1 - failed to open a database
+ *          0 - do not roll up
+ *          1 - all permissions pass
+ */
+static int can_rollup(sqlite3 *dst, struct RollUp *rollup,
+               size_t *total_child_entries) { /* extra data to grab while getting permissions */
+    const size_t child_count = sll_get_size(&rollup->data.subdirs);
+
+    /* no children -> can roll up */
     if (child_count == 0) {
         return 1;
+    }
+
+    {
+        /*
+         * get how many children were rolled up using in-memory
+         * values memory instead of reading from databases
+         */
+        size_t rolledup = 0;
+        sll_loop(&rollup->data.subdirs, node) {
+            struct RollUp *child = (struct RollUp *) sll_node_data(node);
+            rolledup += child->rolledup;
+        }
+
+        if (child_count != rolledup) {
+            return 0;
+        }
+    }
+
+    /* get permissions of the current directory */
+    struct Permissions perms = {0};
+    if (get_permissions(dst, rollup->data.name, &perms) != 0) {
+        return -1;
     }
 
     struct Permissions *child_perms =
         malloc(sizeof(struct Permissions) * sll_get_size(&rollup->data.subdirs));
 
-    /* get permissions of each child */
+    /* get permissions of each child (not using values from bu->st) */
     size_t idx = 0;
     sll_loop(&rollup->data.subdirs, node) {
-        struct RollUp *child = (struct RollUp *) sll_node_data(node);
+        struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
-        char dbname[MAXPATH] = {0};
-        SNFORMAT_S(dbname, MAXPATH, 3,
-                   child->data.name, child->data.name_len,
-                   "/", (size_t) 1,
-                   DBNAME, DBNAME_LEN);
+        char *dbname = NULL;
+        SNFORMAT_S_ALLOC(&dbname, 3,
+                         child->name, child->name_len,
+                         "/", (size_t) 1,
+                         DBNAME, DBNAME_LEN);
 
         sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
+
+        free(dbname);
 
         if (!db) {
             break;
@@ -455,7 +486,8 @@ static int check_children(struct RollUp *rollup, struct Permissions *curr,
         closedb(db);
 
         if (rc != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Error: Could not get permissions of child directory \"%s\": %s\n", child->data.name, err);
+            sqlite_print_err_and_free(err, stderr, "Error: Could not get permissions of child directory \"%s\": %s\n",
+                                      child->name, err);
             break;
         }
 
@@ -473,28 +505,7 @@ static int check_children(struct RollUp *rollup, struct Permissions *curr,
 
     size_t legal = 0;
     for(size_t i = 0; i < child_count; i++) {
-        /* so long as one condition is true, child[i] can be rolled up into the current directory */
-        legal += (
-            /* self and child are o+rx */
-            (((curr->mode          & 0005) == 0005) &&
-             ((child_perms[i].mode & 0005) == 0005) &&
-              (curr->uid == child_perms[i].uid) &&
-              (curr->gid == child_perms[i].gid)) ||
-
-            /* self and child have same user, group, and others permissions, uid, and gid */
-            (((curr->mode & 0555) == (child_perms[i].mode & 0555)) &&
-              (curr->uid == child_perms[i].uid) &&
-              (curr->gid == child_perms[i].gid)) ||
-
-            /* self and child have same user and group permissions, uid, and gid, and top is o-rx */
-            (((curr->mode & 0550) == (child_perms[i].mode & 0550)) &&
-              (curr->uid == child_perms[i].uid) &&
-              (curr->gid == child_perms[i].gid)) ||
-
-            /* self and child have same user permissions, go-rx, uid */
-            (((curr->mode & 0500) == (child_perms[i].mode & 0500)) &&
-              (curr->uid == child_perms[i].uid))
-        );
+        legal += check_pair_permissions(&perms, &child_perms[i]);
     }
 
     free(child_perms);
@@ -505,20 +516,15 @@ static int check_children(struct RollUp *rollup, struct Permissions *curr,
 /* ************************************** */
 
 /*
- * Check if the current directory can be rolled up.
+ * Just because a directory can roll up without violating permissions
+ * does not mean it should
  *
- * Previously returned 1 - 5 to indicate which rollup rule was
- * followed because all children had to follow the same rule (other
- * than leaves). Now only returns 1 because rollup can occur so long
- * as every child meets any of the rules.
- *
- * @return   0 - cannot rollup
- *           1 - can rollup
+ * @return   0 - should NOT rollup
+ *           1 - should rollup
  */
-static int can_rollup(struct input *in,
-                      struct RollUp *rollup,
-                      struct DirStats *ds,
-                      sqlite3 *dst) {
+static int should_rollup(struct input *in,
+                         struct RollUp *rollup, struct DirStats *ds,
+                         sqlite3 *dst) {
     /* Not checking arguments */
 
     /* not deep enough */
@@ -526,208 +532,60 @@ static int can_rollup(struct input *in,
         return 0;
     }
 
-    char *err = NULL;
-
-    /* default to cannot roll up */
-    int legal = 0;
-
     /* get count of number of non-directories in the current directory */
     get_nondirs(rollup->data.name, dst, &ds->subnondir_count);
 
     /* the current directory has too many immediate files/links, don't roll up */
     if (in->rollup.entries_limit && (ds->subnondir_count > in->rollup.entries_limit)) {
         ds->too_many_before = ds->subnondir_count;
-        goto end_can_rollup;
-    }
-
-    /* all children are expected to pass */
-    size_t total_subdirs = 0;
-
-    /* check if ALL children have been rolled up */
-    size_t rolledup = 0;
-    sll_loop(&rollup->data.subdirs, node) {
-        struct RollUp *child = (struct RollUp *) sll_node_data(node);
-        rolledup += child->rolledup;
-        total_subdirs++;
-    }
-
-    /* quick check to see if all chilren were rolled up */
-    if (total_subdirs != rolledup) {
-        goto end_can_rollup;
-    }
-
-    /* get permissions of the current directory */
-    struct Permissions perms = {0};
-    if (sqlite3_exec(dst, PERM_SQL, get_permissions_callback, &perms, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Error: Could not get permissions of current directory \"%s\": %s\n", rollup->data.name, err);
-        legal = 0;
-        goto end_can_rollup;
+        return 0;
     }
 
     /* check if the permissions of this directory and its children match */
     size_t total_child_entries = 0;
-    legal = check_children(rollup, &perms, total_subdirs, &total_child_entries);
+    const int legal = can_rollup(dst, rollup, &total_child_entries);
 
     /*
-     * even if this directory can be rolled up, don't
-     * let it if doing so would result in too many
-     * rows in pentries
+     * even if this directory can be rolled up, don't if
+     * doing so would result in too many rows in pentries
      */
-    if (legal) {
+    if (legal == 1) {
         const size_t total_pentries = ds->subnondir_count + total_child_entries;
         if (in->rollup.entries_limit && (total_pentries > in->rollup.entries_limit)) {
             ds->too_many_after = total_pentries;
-            legal = 0;
+            return 0;
         }
     }
 
-end_can_rollup:
     return legal;
-}
-
-/* copy one subdir/db.db table into the current directory */
-static const char ROLLUP_ONE_SUBDIR[] =
-    "INSERT INTO " PENTRIES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." PENTRIES ";"
-    "INSERT INTO " SUMMARY " "
-    "SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattr_names, sub.crtime, "
-    "sub.totfiles, sub.totlinks, "
-    "sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, "
-    "sub.minsize, sub.maxsize, sub.totzero, "
-    "sub.totltk, sub.totmtk, "
-    "sub.totltm, sub.totmtm, "
-    "sub.totmtg, sub.totmtt, "
-    "sub.totsize, "
-    "sub.minctime,   sub.maxctime,  sub.totctime,  "
-    "sub.minmtime,   sub.maxmtime,  sub.totmtime,  "
-    "sub.minatime,   sub.maxatime,  sub.totatime,  "
-    "sub.minblocks,  sub.maxblocks, sub.totblocks, "
-    "sub.totxattr,   sub.depth + 1, "
-    "sub.mincrtime,  sub.maxcrtime,  sub.totcrtime,  "
-    "sub.minossint1, sub.maxossint1, sub.totossint1, "
-    "sub.minossint2, sub.maxossint2, sub.totossint2, "
-    "sub.minossint3, sub.maxossint3, sub.totossint3, "
-    "sub.minossint4, sub.maxossint4, sub.totossint4, "
-    "sub.rectype, sub.pinode, 0, sub.rollupscore "
-    "FROM " SUMMARY " AS s, " SUBDIR_ATTACH_NAME "." SUMMARY " AS sub WHERE s.isroot == 1;"
-    "INSERT INTO " TREESUMMARY " SELECT * FROM " SUBDIR_ATTACH_NAME "." TREESUMMARY ";"
-    "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
-    "INSERT OR IGNORE INTO " EXTERNAL_DBS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS ";"
-
-    /* select subdir external xattrs_avail for copying to current external xattrs_rollup via callback */
-    "SELECT filename, uid, gid FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
-    ;
-
-/* if subdirectory is not keeping rollup data, delete it */
-struct CallbackArgs {
-    struct template_db *xattr;
-    char *parent;
-    size_t parent_len;
-    char *child;
-    size_t child_len;
-    size_t *count;
-};
-
-/* use this callback to create xattr db files and insert filenames */
-/* db.db doesn't need to be modified since the SQL statement already did it */
-static int rollup_external_xattrs(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    struct CallbackArgs *ca     = (struct CallbackArgs *) args;
-    const char  *filename       = data[0];
-    const size_t filename_len   = strlen(filename);
-    const char  *uid_str        = data[1];
-    const char  *gid_str        = data[2];
-    uid_t uid;
-    gid_t gid;
-
-    sscanf(uid_str, "%" STAT_uid, &uid); /* skip checking for failure */
-    sscanf(gid_str, "%" STAT_gid, &gid); /* skip checking for failure */
-
-    /* parent xattr db filename */
-    char xattr_db_name[MAXPATH];
-    SNFORMAT_S(xattr_db_name, MAXPATH, 3,
-               ca->parent, ca->parent_len,
-               "/", (size_t) 1,
-               filename, filename_len);
-
-    /* check if the parent per-user/per-group xattr db file exists */
-    struct stat st;
-    if (stat(xattr_db_name, &st) != 0) {
-        const int err = errno;
-        if (err != ENOENT) {
-            fprintf(stderr, "Error: Cannot access xattr db file %s: %s (%d)\n",
-                    xattr_db_name, strerror(err), err);
-            return 1;
-        }
-
-        /* copy the template file */
-        if (copy_template(ca->xattr, xattr_db_name, uid, gid, NULL)) {
-            return 1;
-        }
-    }
-
-    /* open parent per-user/per-group xattr db file */
-    sqlite3 *xattr_db = opendb(xattr_db_name, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
-    if (!xattr_db) {
-        return 1;
-    }
-
-    char child_xattr_db_name[MAXPATH];
-    SNFORMAT_S(child_xattr_db_name, MAXPATH, 3,
-               ca->child, ca->child_len,
-               "/", (size_t) 1,
-               filename, filename_len);
-
-    char attachname[MAXPATH];
-    SNPRINTF(attachname, sizeof(attachname),
-             EXTERNAL_ATTACH_PREFIX "%zu", (*ca->count)++);
-
-    if (!attachdb(child_xattr_db_name, xattr_db, attachname, SQLITE_OPEN_READONLY, 1, 1)) {
-        closedb(xattr_db);
-        return 1;
-    }
-
-    /* copy child external xattrs_avail to external xattrs_rollup */
-    char insert[MAXSQL];
-    SNPRINTF(insert, sizeof(insert),
-             "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM %s." XATTRS_AVAIL ";",
-             attachname);
-    char *err = NULL;
-    if (sqlite3_exec(xattr_db, insert, NULL, NULL, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Error: Failed to copy \"%s\" xattrs into " XATTRS_ROLLUP " of %s: %s\n",
-                                  child_xattr_db_name, xattr_db_name, err);
-    }
-
-    closedb(xattr_db);
-    return 0;
 }
 
 /* if subdirectory is not keeping rollup data, delete it */
 static const char DELETE_SUBDIR_ROLLUP[] =
     /* remove rolled up directories */
-    "DELETE FROM " SUBDIR_ATTACH_NAME "." SUMMARY " WHERE isroot != 1;"
+    "DELETE FROM " ROLLUP_SUBDIR_ATTACH_NAME "." SUMMARY " WHERE isroot != 1;"
 
-    /* unset rollup score */
-    "UPDATE "      SUBDIR_ATTACH_NAME "." SUMMARY " SET rollupscore = 0;"
+    /* unset isrolledup */
+    "UPDATE "      ROLLUP_SUBDIR_ATTACH_NAME "." SUMMARY " SET isrolledup = 0;" /* leave canrollup unchanged */
 
     /* remove rolled up entries */
-    "DELETE FROM " SUBDIR_ATTACH_NAME "." PENTRIES_ROLLUP ";"
+    "DELETE FROM " ROLLUP_SUBDIR_ATTACH_NAME "." PENTRIES_ROLLUP ";"
 
     /* delete rolled in+up xattrs */
-    "DELETE FROM " SUBDIR_ATTACH_NAME "." XATTRS_ROLLUP ";"
+    "DELETE FROM " ROLLUP_SUBDIR_ATTACH_NAME "." XATTRS_ROLLUP ";"
 
     /*
      * get filenames of external xattr dbs created by the subdirectory
      * so that subsubdir xattrs that were rolled up into an existing db
      * can be removed
      */
-    "SELECT filename, 1 FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS_PWD " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
+    "SELECT filename, 1 FROM " ROLLUP_SUBDIR_ATTACH_NAME "." EXTERNAL_DBS_PWD " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
 
     /* get filenames of rolled up external xattr dbs and remove(3) them (user dbs should not be touched) */
-    "SELECT filename, 0 FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
+    "SELECT filename, 0 FROM " ROLLUP_SUBDIR_ATTACH_NAME "." EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
 
     /* remove rolled up external xattr db and user db records */
-    "DELETE FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS_ROLLUP ";"
+    "DELETE FROM " ROLLUP_SUBDIR_ATTACH_NAME "." EXTERNAL_DBS_ROLLUP ";"
     ;
 
 /*
@@ -737,23 +595,24 @@ static const char DELETE_SUBDIR_ROLLUP[] =
 static int rollup_external_xattrs_delete(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
-    struct CallbackArgs *ca     = (struct CallbackArgs *) args;
-    const char  *filename       = data[0];
-    const size_t filename_len   = strlen(filename);
-    const char   existed        = data[1][0] - '0';
+    rexa_t        *rexa         = (rexa_t *) args;
+    const char    *filename     = data[0];
+    const size_t   filename_len = strlen(filename);
+    const char     existed      = data[1][0] - '0';
 
     /* parent xattr db filename */
-    char xattr_db_name[MAXPATH];
-    SNFORMAT_S(xattr_db_name, MAXPATH, 3,
-               ca->child, ca->child_len,
-               "/", (size_t) 1,
-               filename, filename_len);
+    char *xattr_db_name = NULL;
+    SNFORMAT_S_ALLOC(&xattr_db_name, 3,
+                     rexa->child, rexa->child_len,
+                     "/", (size_t) 1,
+                     filename, filename_len);
 
     /* this is a external xattr db that was created by the subdirectory before rollups */
     if (existed == 1) {
         /* open parent per-user/per-group xattr db file */
         sqlite3 *xattr_db = opendb(xattr_db_name, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
         if (!xattr_db) {
+            free(xattr_db_name);
             return 1;
         }
 
@@ -774,94 +633,84 @@ static int rollup_external_xattrs_delete(void *args, int count, char **data, cha
         }
     }
 
+    free(xattr_db_name);
+
     return 0;
 }
 
+/* copy one subdir/db.db table into the current directory */
+static const char ROLLUP_ONE_SUBDIR[] =
+    ROLLUP_ONE_SUBDIR_FRONT
+    "(SELECT name FROM " SUMMARY " WHERE isroot == 1) || '/' || sub.name"
+    ROLLUP_ONE_SUBDIR_BACK;
+
 /*
-@return -1 - could not move entries into pentries
+@return -1 - error
          0 - success
-         1 - at least one child failed to be moved
 */
 static int do_rollup(struct RollUp *rollup,
-                     struct DirStats *ds,
                      sqlite3 *dst,
                      struct template_db *xattr_template) {
     /* assume that this directory can be rolled up */
-    /* can_rollup should have been called earlier  */
+    /* should_rollup should have been called earlier  */
 
     /* Not checking arguments */
 
     struct PoolArgs *pa = (struct PoolArgs *) rollup->data.extra_args;
 
-    int rc = 0;
-    char *err = NULL;
-
-    /*
-     * clear out old rollup data
-     *
-     * treesummary table is not cleared here - it was cleared when the
-     * db was opened
-     */
-    char setup[ROLLUP_CLEANUP_SIZE];
-    memcpy(setup, ROLLUP_CLEANUP, ROLLUP_CLEANUP_SIZE);
-
-    /*
-     * set rollup score here instead of running 2 SQL statements
-     * setting it to 0 here and then to 1 during copying
-     */
-    setup[sizeof(setup) - sizeof("0;")] += ds->score;
-
-    str_t name = REFSTR(rollup->data.name,
-                        rollup->data.name_len);
-
-    if (sqlite3_exec(dst, setup, xattrs_rollup_cleanup, &name, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Error: Failed to set up database for rollup: \"%s\": %s\n",
-                                  rollup->data.name, err);
-        rc = -1;
-        goto end_rollup;
+    /* clear out old rollup data */
+    {
+        str_t name = REFSTR(rollup->data.name,
+                            rollup->data.name_len);
+        if (rollup_init(dst, &name) != 0) {
+            return -1;
+        }
     }
 
     /* process each child */
-    size_t xattr_count = 0;
+    int rc = 0;
     sll_loop(&rollup->data.subdirs, node) {
         struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
-        char child_dbname[MAXPATH];
-        SNFORMAT_S(child_dbname, sizeof(child_dbname), 3,
-                   child->alt_name, child->alt_name_len,
-                   "/", (size_t) 1,
-                   DBNAME, DBNAME_LEN);
+        str_t child_name = REFSTR(child->alt_name, child->alt_name_len);
+        char *child_dbname = rollup_child_attach(dst, &child_name, pa->in.rollup.attach_flag);
+        if (!child_dbname) {
+            rc = -1;
+            break;
+        }
 
-        struct CallbackArgs ca = {
-            .xattr       = xattr_template,
+        rexa_t rexa = {
+            .xattr       = {
+                .temp    = xattr_template,
+                .mutex   = NULL,
+            },
             .parent      = rollup->data.name,
             .parent_len  = rollup->data.name_len,
             .child       = child->name,
             .child_len   = child->name_len,
-            .count       = &xattr_count,
         };
 
-        /* attach subdir database file as 'SUBDIR_ATTACH_NAME' */
-        if (attachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, pa->in.rollup.attach_flag, 1, 1)) {
-            /* roll up the subdir into this dir */
-            if (sqlite3_exec(dst, ROLLUP_ONE_SUBDIR, rollup_external_xattrs, &ca, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr, "Error: Failed to copy subdir \"%s\" into current database: %s\n",
-                                          child->name, err);
-            }
-            /* else? */
+        /* roll up the subdir into this dir */
+        if (rollup_child_process(dst, ROLLUP_ONE_SUBDIR, &rexa) != 0) {
+            rc = -1;
+        }
 
+        if (rc == 0){
             /* if the current level is at or below the delete_below value, drop the subdir data */
             if ((pa->in.rollup.attach_flag == SQLITE_OPEN_READWRITE) &&
                 (rollup->data.level >= pa->in.rollup.delete_below)) {
-                if (sqlite3_exec(dst, DELETE_SUBDIR_ROLLUP, rollup_external_xattrs_delete, &ca, &err) != SQLITE_OK) {
-                    sqlite_print_err_and_free(err, stderr, "Error: Failed to delete data from subdir \"%s\": %s\n",
+                char *err = NULL;
+                if (sqlite3_exec(dst, DELETE_SUBDIR_ROLLUP, rollup_external_xattrs_delete, &rexa, &err) != SQLITE_OK) {
+                    sqlite_print_err_and_free(err, stderr,
+                                              "Error: Failed to delete data from subdir \"%s\": %s\n",
                                               child->name, err);
+                    /* not setting rc because failing to delete is ok */
                 }
             }
         }
 
         /* always detach subdir */
-        detachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, 1, 1);
+        rollup_child_detach(dst, child_dbname);
 
         if (rc) {
             break;
@@ -875,32 +724,36 @@ static int do_rollup(struct RollUp *rollup,
      * were integrated into above loop, but that would add a lot
      * of complexity
      */
-    if (!rc && !pa->in.dry_run) {
-        bottomup_collect_treesummary(dst, rollup->data.name, &rollup->data.subdirs, ROLLUPSCORE_KNOWN_YES);
+    if (rc == 0) {
+        if (rollup->data.stat_called == STAT_NOT_CALLED) {
+            time_t crtime = 0; /* unused */
+            if (lstat_wrapper(rollup->data.name, &rollup->data.st, &crtime,
+                              &rollup->data.stat_called, 1, NULL) != 0) {
+                return 1;
+            }
+        }
+
+        bottomup_collect_treesummary(dst, rollup->data.name, &rollup->data.subdirs, ISROLLEDUP_KNOWN_YES,
+                                     rollup->data.st.st_uid, rollup->data.st.st_uid, NULL);
     }
 
-end_rollup:
     return rc;
 }
 
 static int rollup_ascend(void *args) {
     struct RollUp *dir = (struct RollUp *) args;
-
     const size_t id = dir->data.tid.up;
-
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 3,
-               dir->data.name, dir->data.name_len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
-
     struct PoolArgs *pa = (struct PoolArgs *) dir->data.extra_args;
     struct input *in = &pa->in;
     struct RollUpStats *stats = pa->stats;
 
     /* get statistics out of BottomUp */
     struct DirStats *ds = malloc(sizeof(struct DirStats));
-    SNFORMAT_S(ds->path, MAXPATH, 1, dir->data.name, dir->data.name_len);
+    ds->path = NULL; /* write "/db.db" and remove when not needed any more */
+    const size_t dbname_len = SNFORMAT_S_ALLOC(&ds->path, 3,
+                                               dir->data.name, dir->data.name_len,
+                                               "/", (size_t) 1,
+                                               DBNAME, DBNAME_LEN);
     ds->level = dir->data.level;
     ds->subdir_count = sll_get_size(&dir->data.subdirs);
     ds->subnondir_count = 0;
@@ -921,7 +774,10 @@ static int rollup_ascend(void *args) {
      *
      * always create the treesummary table
      */
-    sqlite3 *dst = opendb(dbname, openflag, 1, 0, modifydb, NULL);
+    sqlite3 *dst = opendb(ds->path, openflag, 1, 0, modifydb, NULL);
+
+    ds->path[dbname_len - 1 - DBNAME_LEN] = '\0'; /* remove "/db.db" */
+
     if (!dst) {
         sll_push_back(&stats[id].not_processed, ds); /* did not check if can roll up */
         stats[id].remaining++;
@@ -933,7 +789,7 @@ static int rollup_ascend(void *args) {
     /* if completing partial rollup and this directory is already rolled up, skip */
     if (!in->dont_reprocess || !dir->rolledup) {
         /* check if rollup is allowed */
-        ds->score = can_rollup(in, dir, ds, dst);
+        ds->score = should_rollup(in, dir, ds, dst);
 
         /* if can roll up */
         if (ds->score > 0) {
@@ -942,7 +798,7 @@ static int rollup_ascend(void *args) {
                 ds->success = 1;
             }
             else {
-                ds->success = (do_rollup(dir, ds, dst, &pa->xattr_template) == 0);
+                ds->success = (do_rollup(dir, dst, &pa->xattr_template) == 0);
 
                 /* index summary.inode to make rollup views faster to query */
                 if (ds->success) {
@@ -980,7 +836,16 @@ static int rollup_ascend(void *args) {
             }
 
             if (!pa->in.dry_run) {
-                bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ROLLUPSCORE_KNOWN_NO);
+                if (dir->data.stat_called == STAT_NOT_CALLED) {
+                    time_t crtime = 0; /* unused */
+                    if (lstat_wrapper(dir->data.name, &dir->data.st, &crtime,
+                                      &dir->data.stat_called, 1, NULL) != 0) {
+                        return 1;
+                    }
+                }
+
+                bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ISROLLEDUP_KNOWN_NO,
+                                             dir->data.st.st_uid, dir->data.st.st_gid, NULL);
             }
         }
     }
@@ -1046,18 +911,16 @@ int main(int argc, char *argv[]) {
                                      &pa.in.path_list,
                                      pa.in.maxthreads,
                                      sizeof(struct RollUp),
+                                     0, /* descending an index, so allow for symlinks to subtrees */
                                      desc, rollup_ascend,
                                      0,
                                      1,
-                                     &pa);
+                                     &pa,
+                                     0);
 
+    /* also frees stats */
     print_stats(pa.in.pos.argv, pa.in.pos.argc, &pa.in, pa.stats);
 
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
-        sll_destroy(&pa.stats[i].rolled_up, 0);
-        sll_destroy(&pa.stats[i].not_rolled_up, 0);
-        sll_destroy(&pa.stats[i].not_processed, 0);
-    }
     free(pa.stats);
     close_template_db(&pa.xattr_template);
 

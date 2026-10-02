@@ -765,6 +765,8 @@ int QPTPool_get_stop_on_error(QPTPool_ctx_t *ctx, int *stop_on_error) {
     return 0;
 }
 
+static void QPTPool_stop_threads(QPTPool_ctx_t *ctx, const size_t started);
+
 int QPTPool_start(QPTPool_ctx_t *ctx) {
     if (!ctx) {
         return 1;
@@ -778,18 +780,34 @@ int QPTPool_start(QPTPool_ctx_t *ctx) {
         return 1;
     }
 
+    pthread_attr_t *attr = NULL;
+    #if QPTPOOL_STACK_SIZE
+    pthread_attr_t attr_stack;
+    attr = &attr_stack;
+    pthread_attr_init(attr);
+    pthread_attr_setstacksize(attr, QPTPOOL_STACK_SIZE);
+    #endif
+
     pool->state = RUNNING;
 
     size_t started = 0;
     for(size_t i = 0; i < pool->nthreads; i++) {
         QPTPoolThreadData_t *data = &pool->data[i];
 
-        started += !pthread_create(&data->thread, NULL, worker_function, &ctx[i]);
+        if (pthread_create(&data->thread, attr, worker_function, &ctx[i]) != 0) {
+            break;
+        }
+
+        started++;
     }
     pthread_mutex_unlock(&pool->mutex);
 
+    #if QPTPOOL_STACK_SIZE
+    pthread_attr_destroy(attr);
+    #endif
+
     if (started != pool->nthreads) {
-        QPTPool_stop(ctx);
+        QPTPool_stop_threads(ctx, started);
         return 1;
     }
 
@@ -1180,11 +1198,7 @@ void QPTPool_wait(QPTPool_ctx_t *ctx) {
     #endif
 }
 
-void QPTPool_stop(QPTPool_ctx_t *ctx) {
-    if (!ctx) {
-        return;
-    }
-
+static void QPTPool_stop_threads(QPTPool_ctx_t *ctx, const size_t started) {
     QPTPool_t *pool = ctx->pool;
 
     pthread_mutex_lock(&pool->mutex);
@@ -1210,9 +1224,17 @@ void QPTPool_stop(QPTPool_ctx_t *ctx) {
         pthread_mutex_unlock(&data->mutex);
     }
 
-    for(size_t i = 0; i < pool->nthreads; i++) {
+    for(size_t i = 0; i < started; i++) {
         pthread_join(pool->data[i].thread, NULL);
     }
+}
+
+void QPTPool_stop(QPTPool_ctx_t *ctx) {
+    if (!ctx) {
+        return;
+    }
+
+    QPTPool_stop_threads(ctx, ctx->pool->nthreads);
 }
 
 uint64_t QPTPool_threads_started(QPTPool_ctx_t *ctx) {

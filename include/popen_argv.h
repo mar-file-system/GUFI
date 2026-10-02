@@ -86,8 +86,10 @@ extern "C" {
 
 typedef struct popen_argv_ret popen_argv_t;
 
-popen_argv_t *popen_argv(const char **argv); /* popen(3) */
-int popen_argv_fd(popen_argv_t *ret);        /* get file descriptor to read from */
+popen_argv_t *popen_argv(const char **argv,  /* popen(3) */
+                         const int redirect_stdin);
+int popen_argv_in(popen_argv_t *ret);        /* get file descriptor to write to */
+int popen_argv_out(popen_argv_t *ret);       /* get file descriptor to read from */
 int popen_argv_close(popen_argv_t *ret);     /* pclose(3) */
 
 #ifdef __cplusplus

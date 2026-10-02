@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
 
         const str_t user_cols[] = {
             REFSTR(user_col, user_col_len),
-            REFSTR(NULL,     0),
+            NULL_STR,
         };
 
         /* check if processing multiple columns */

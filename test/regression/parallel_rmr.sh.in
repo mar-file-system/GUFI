@@ -72,8 +72,29 @@ run_sort    "ls -1 ${INDEXROOT}"
 run_no_sort "${PARALLEL_RMR} -n ${THREADS} \"${INDEXROOT}/directory\" \"${INDEXROOT}/empty_directory\" \"${INDEXROOT}/leaf_directory\""
 run_sort    "ls -1 ${INDEXROOT}"
 
+echo "# delete paths again"
+echo "\$ ${PARALLEL_RMR} -n ${THREADS} \"${INDEXROOT}/directory\" \"${INDEXROOT}/empty_directory\" \"${INDEXROOT}/leaf_directory\""
+set +e
+"${PARALLEL_RMR}" -n "${THREADS}" "${INDEXROOT}/directory" "${INDEXROOT}/empty_directory" "${INDEXROOT}/leaf_directory"
+rc="$?"
+set -e
+echo
+echo "\$ echo \$?"
+echo "${rc}"
+echo
+
+echo "# delete paths again with --force"
+echo "\$ ${PARALLEL_RMR} -n ${THREADS} --force \"${INDEXROOT}/directory\" \"${INDEXROOT}/empty_directory\" \"${INDEXROOT}/leaf_directory\""
+"${PARALLEL_RMR}" -n "${THREADS}" --force "${INDEXROOT}/directory" "${INDEXROOT}/empty_directory" "${INDEXROOT}/leaf_directory"
+rc="$?"
+echo
+echo "\$ echo \$?"
+echo "${rc}"
+echo
+
 run_no_sort "${PARALLEL_RMR} -n 18446744073709551615 \"${INDEXROOT}\""
-) | tee "${OUTPUT}"
+run_no_sort "${PARALLEL_RMR} -n 18446744073709551615 --force \"${INDEXROOT}\""
+) | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/parallel_rmr.expected "${OUTPUT}"
 rm "${OUTPUT}"

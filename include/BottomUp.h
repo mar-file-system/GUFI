@@ -135,6 +135,7 @@ typedef int (*BU_ascend_f) (void *user_struct);
 QPTPool_ctx_t *parallel_bottomup_init(const size_t thread_count,
                                       const size_t user_struct_size,
                                       const size_t min_level, const size_t max_level,
+                                      const int nofollow_symlink, /* 0 or AT_SYMLINK_NOFOLLOW */
                                       BU_descend_f descend, BU_ascend_f ascend,
                                       const int track_non_dirs,
                                       const int generate_alt_name);
@@ -143,7 +144,7 @@ int parallel_bottomup_enqueue(QPTPool_ctx_t *ctx,
                               const char *path, const size_t len,
                               void *extra_args);
 
-int parallel_bottomup_fini(QPTPool_ctx_t *ctx);
+int parallel_bottomup_fini(QPTPool_ctx_t *ctx, const int check_threads);
 /* ****************************************************************** */
 
 /*
@@ -159,10 +160,12 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                       const str_t *path_list,
                       const size_t thread_count,
                       const size_t user_struct_size,
+                      const int nofollow_symlink, /* 0 or AT_SYMLINK_NOFOLLOW */
                       BU_descend_f descend, BU_ascend_f ascend,
                       const int track_non_dirs,
                       const int generate_alt_name,
-                      void *extra_args);
+                      void *extra_args,
+                      const int check_threads);
 
 /* free a struct BottomUp */
 void bottomup_destroy(void *p);

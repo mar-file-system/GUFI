@@ -72,6 +72,13 @@ OF SUCH DAMAGE.
 #include <sqlite3ext.h>
 SQLITE_EXTENSION_INIT1
 
+#include "pcre.h"
+
+#if HAVE_AI
+#include "sqlite-lembed.h"
+#include "sqlite-vec.h"
+#endif
+
 #include "SinglyLinkedList.h"
 #include "addqueryfuncs.h"
 #include "bf.h"
@@ -81,6 +88,11 @@ SQLITE_EXTENSION_INIT1
 #include "popen_argv.h"
 #include "print.h"
 #include "utils.h"
+
+#include "gufi_query/PoolArgs.h"
+
+/* local reference of SQLite 3 API struct for passing to extensions */
+const sqlite3_api_routines *SQLITE_API_ROUTINES = NULL;
 
 /*
  * GUFI Virtual Tables Module
@@ -120,6 +132,8 @@ typedef struct gufi_query_cmd {
     str_t dir_match_gid;
     int dir_match_gid_set;
 
+    str_t global_db;
+
     /* sql */
 
     /*
@@ -140,6 +154,7 @@ typedef struct gufi_query_cmd {
     str_t path_list;          /* list of paths to process; if min-level is 0, these should be full paths/relative to pwd */
     str_t p;                  /* source path */
     sll_t plugins;            /* gufi_query plugin library paths */
+    sll_t no_print_errno;     /* errno numbers stored as strings */
 
     sll_t external_attach;    /* list of external attach database args */
     sll_t external_copy;      /* list of external copy database args */
@@ -151,6 +166,7 @@ static void gq_cmd_init(gq_cmd_t *cmd) {
     memset(cmd, 0, sizeof(*cmd));
     sll_init(&cmd->remote_args);
     sll_init(&cmd->plugins);
+    sll_init(&cmd->no_print_errno);
     sll_init(&cmd->indexroots);
     sll_init(&cmd->external_attach);
     sll_init(&cmd->external_copy);
@@ -160,6 +176,7 @@ static void gq_cmd_destroy(gq_cmd_t *cmd) {
     sll_destroy(&cmd->external_copy, ecs_free);    /* list of allocated ecs_t */
     sll_destroy(&cmd->external_attach, free);      /* list of allocated eas_t */
     sll_destroy(&cmd->indexroots, NULL);           /* list of references to argv[i] */
+    sll_destroy(&cmd->no_print_errno, NULL);       /* list of references to argv[i] */
     sll_destroy(&cmd->plugins, NULL);              /* list of references to argv[i] */
     sll_destroy(&cmd->remote_args, free);          /* list of allocated str_t */
     /* not freeing cmd here */
@@ -193,7 +210,7 @@ typedef struct gufi_vtab_cursor {
 static void gufi_vtab_cursor_fini(gufi_vtab_cursor *pCur) {
     free(pCur->cols);
     pCur->cols = NULL;
-    pCur->col_count =0;
+    pCur->col_count = 0;
     pCur->len = 0;
     free(pCur->row);
     pCur->row = NULL;
@@ -215,7 +232,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     char *dir_match_uid = NULL;
     char *dir_match_gid = NULL;
 
-    if (cmd->remote_cmd.len) {
+    if (str_exists(&cmd->remote_cmd)) {
         /* need to combine entire gufi_query command into one argument */
         max_argc = 1 + sll_get_size(&cmd->remote_args) + 1;
 
@@ -238,14 +255,14 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                           "-x ");
 
         /* no quotes around thread count */
-        if (cmd->threads.data && cmd->threads.len) {
+        if (str_exists(&cmd->threads)) {
             write_with_resize(&flat, &size, &len,
                               "--threads %s ", cmd->threads.data);
         }
 
         /* flatten the entire gufi_query command into a single string */
         #define flatten_argv(argc, argv, flag, refstr)               \
-            if (refstr.len) {                                        \
+            if (str_exists(&refstr)) {                               \
                 write_with_resize(&flat, &size, &len,                \
                                   "%s \"%s\" ", flag, refstr.data);  \
             }
@@ -257,7 +274,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         flatten_argv(argc, argv, "--max-level",           cmd->max_level);
         flatten_argv(argc, argv, "--path-list",           cmd->path_list);
 
-        if (cmd->dir_match_uid.len) {
+        if (str_exists(&cmd->dir_match_uid)) {
             write_with_resize(&flat, &size, &len,
                               "--dir-match-uid=%s ",      cmd->dir_match_uid.data);
         }
@@ -266,7 +283,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--dir-match-uid ");
         }
 
-        if (cmd->dir_match_gid.len) {
+        if (str_exists(&cmd->dir_match_gid)) {
             write_with_resize(&flat, &size, &len,
                               "--dir-match-gid=%s ",      cmd->dir_match_gid.data);
         }
@@ -275,6 +292,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--dir-match-gid ");
         }
 
+        flatten_argv(argc, argv, "--global-db",           cmd->global_db);
         flatten_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
         flatten_argv(argc, argv, "-I",                    cmd->I);
         flatten_argv(argc, argv, "-T",                    cmd->T);
@@ -290,6 +308,12 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             const char *plugin = (char *) sll_node_data(node);
             write_with_resize(&flat, &size, &len,
                               "--plugin '%s' ", plugin);
+        }
+
+        sll_loop(&cmd->no_print_errno, node) {
+            const char *err = (char *) sll_node_data(node);
+            write_with_resize(&flat, &size, &len,
+                              "--no-print-errno '%s' ", err);
         }
 
         sll_loop(&cmd->external_attach, node) {
@@ -321,7 +345,8 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     else {
         /* can keep arguments separate */
 
-        max_argc = 35; /* 3 fixed args, 15 pairs of flags, 2 single argv flags */
+        max_argc = 37; /* 3 fixed args, 16 pairs of flags, 2 single argv flags */
+        max_argc += sll_get_size(&cmd->no_print_errno) * 2;
         max_argc += sll_get_size(&cmd->plugins) * 2;
         max_argc += sll_get_size(&cmd->external_attach) * 5;
         max_argc += sll_get_size(&cmd->external_copy) * 3;
@@ -334,7 +359,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         argv[argc++] = "-x";
 
         #define set_argv(argc, argv, flag, refstr)  \
-            if (refstr.len) {                       \
+            if (str_exists(&refstr)) {              \
                 argv[argc++] = flag;                \
                 argv[argc++] = refstr.data;         \
             }
@@ -347,7 +372,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         set_argv(argc, argv, "--max-level", cmd->max_level);
         set_argv(argc, argv, "--path-list", cmd->path_list);
 
-        if (cmd->dir_match_uid.len) {
+        if (str_exists(&cmd->dir_match_uid)) {
             size_t size = 0;
             size_t len = 0;
             write_with_resize(&dir_match_uid, &size, &len,
@@ -362,7 +387,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = dir_match_uid;
         }
 
-        if (cmd->dir_match_gid.len) {
+        if (str_exists(&cmd->dir_match_gid)) {
             size_t size = 0;
             size_t len = 0;
             write_with_resize(&dir_match_gid, &size, &len,
@@ -377,6 +402,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = dir_match_gid;
         }
 
+        set_argv(argc, argv, "--global-db",           cmd->global_db);
         set_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
         set_argv(argc, argv, "-I",                    cmd->I);
         set_argv(argc, argv, "-T",                    cmd->T);
@@ -392,6 +418,12 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             const char *plugin = (char *) sll_node_data(node);
             argv[argc++] = "--plugin";
             argv[argc++] = plugin;
+        }
+
+        sll_loop(&cmd->no_print_errno, node) {
+            const char *err = (char *) sll_node_data(node);
+            argv[argc++] = "--no-print-errno";
+            argv[argc++] = err;
         }
 
         sll_loop(&cmd->external_attach, node) {
@@ -429,7 +461,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     }
 
     /* pass command to popen */
-    popen_argv_t *out = popen_argv(argv);
+    popen_argv_t *out = popen_argv(argv, 0);
 
     free(dir_match_gid);
     free(dir_match_uid);
@@ -461,7 +493,7 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
     char *curr = buf;
     struct column *cols = NULL;
 
-    const int fd = popen_argv_fd(pCur->output);
+    const int fd = popen_argv_out(pCur->output);
 
     char row_prefix[ROW_PREFIX_LEN + 1] = {0};
 
@@ -750,7 +782,8 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
     "minossint2 INT64, maxossint2 INT64, totossint2 INT64, "                      \
     "minossint3 INT64, maxossint3 INT64, totossint3 INT64, "                      \
     "minossint4 INT64, maxossint4 INT64, totossint4 INT64, "                      \
-    "rectype INT64, pinode TEXT, isroot INT64, rollupscore INT64"                 \
+    "rectype INT64, pinode TEXT, isroot INT64, "                                  \
+    "canrollup INT64, isrolledup INT64"                                           \
     ");"
 
 #define VRPENTRIES_SCHEMA(name, extra_cols)                                       \
@@ -851,6 +884,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     max_level               =  <non-negative integer>
  *     dir_match_uid           =  <uid> (if just want euid, pass in no value i.e. dir_match_uid=)
  *     dir_match_gid           =  <gid> (if just want egid, pass in no value i.e. dir_match_gid=)
+ *     global_db               = '<SQL>'
  *     setup_res_col_type      = '<SQL>' (set up single temporary table to make columns available for getting result column types)
  *     I                       = '<SQL>'
  *     T                       = '<SQL>'
@@ -865,6 +899,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     Q or external_attach    = '<basename> <table> <template>.<table> <view>'
  *     external_copy           = '<basename pattern> <SQL>'
  *     plugin                  = '<entrypoint>:<gufi_query plugin library path>'
+ *     no_print_errno          = errno number (range: [1, 255])
  *     index                   = '<path>' (can also pass in without the key)
  *     verbose/VERBOSE         =  <0|1>
  *
@@ -1008,7 +1043,7 @@ static int parse_external_copy_args(sll_t *external_copy, char *arg) {
     set_refstr(&ecs->basename_pattern, basename_pattern);
     set_refstr(&ecs->sql,              sql);
 
-    if (!ecs->basename_pattern.len || !ecs->sql.len) {
+    if (!str_exists(&ecs->basename_pattern) || !str_exists(&ecs->sql)) {
         free(ecs);
         return -1;
     }
@@ -1016,11 +1051,6 @@ static int parse_external_copy_args(sll_t *external_copy, char *arg) {
     sll_push_back(external_copy, ecs);
 
     return 0;
-}
-
-/* placeholder pcre2 extension REGEXP function */
-static void fake_regexp(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
-    (void) ctx; (void) argc; (void) argv;
 }
 
 static int gufi_vtpu_xConnect(sqlite3 *db,
@@ -1122,6 +1152,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                 return SQLITE_MISUSE;
             }
         }
+        else if (strncmp(key, "global_db", 10) == 0) {
+            set_refstr(&cmd.global_db, value);
+        }
         else if (strncmp(key, "min_level", 10) == 0) {
             /* let gufi_query check value */
             set_refstr(&cmd.min_level, value);
@@ -1158,6 +1191,11 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                 return SQLITE_MISUSE;
             }
         }
+        else if (strncmp(key, "no_print_errno", 15) == 0) {
+            str_t err;
+            set_refstr(&err, value);
+            sll_push_back(&cmd.no_print_errno, (char *) err.data);
+        }
         else if (strncmp(key, "external_attach", 16) == 0) {
             if (parse_external_attach_args(&cmd.external_attach, value) != 0) {
                 *pzErr = sqlite3_mprintf("Bad external attach database args");
@@ -1175,7 +1213,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         }
     }
 
-    if (!sll_get_size(&cmd.indexroots) && !cmd.path_list.len) {
+    if (!sll_get_size(&cmd.indexroots) && !str_exists(&cmd.path_list)) {
         *pzErr = sqlite3_mprintf("Missing indexroot or path_list");
         gq_cmd_destroy(&cmd);
         return SQLITE_CONSTRAINT;
@@ -1211,8 +1249,49 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     sqlite3 *tempdb = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
                              0, 0, create_dbdb_tables, NULL); /* not initializing extensions here */
 
-    /* fake REGEXP here - calling the real one will segfault */
-    sqlite3_create_function_v2(tempdb, "REGEXP", 2, SQLITE_UTF8, NULL, fake_regexp, NULL, NULL, NULL);
+    sqlite3_pcre2_init(tempdb, NULL, SQLITE_API_ROUTINES);
+
+    #if HAVE_AI
+    sqlite3_vec_init(tempdb, NULL, SQLITE_API_ROUTINES);
+    sqlite3_lembed_init(tempdb, NULL, SQLITE_API_ROUTINES);
+    #endif
+
+    /* create a common read-only database to all threads */
+    sqlite3 *global_db = NULL;
+    if (str_exists(&cmd.global_db)) {
+        global_db = opendb(GUFI_QUERY_GLOBAL_DB_FILENAME, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                           0, 0, NULL, NULL); /* not initializing extensions here */
+        if (!global_db) {
+            closedb(tempdb);
+            plugins_destroy(&in.plugins);
+            gq_cmd_destroy(&cmd);
+            input_fini(&in);
+            return SQLITE_CONSTRAINT;
+        }
+
+        char *err = NULL;
+        if (sqlite3_exec(global_db, cmd.global_db.data, NULL, NULL, &err) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr, "Error: Could not initiailize global db with \"%s\": %s\n",
+                                      cmd.global_db.data, err);
+            closedb(global_db);
+            closedb(tempdb);
+            plugins_destroy(&in.plugins);
+            gq_cmd_destroy(&cmd);
+            input_fini(&in);
+            return SQLITE_CONSTRAINT;
+        }
+
+        /* attach to the db after initializing the global db */
+        if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, tempdb,
+                          GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
+            closedb(global_db);
+            closedb(tempdb);
+            plugins_destroy(&in.plugins);
+            gq_cmd_destroy(&cmd);
+            input_fini(&in);
+            return SQLITE_CONSTRAINT;
+        }
+    }
 
     create_xattr_tables(SQLITE_MEMORY, tempdb, NULL);
 
@@ -1235,7 +1314,26 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     addqueryfuncs(tempdb);
     addqueryfuncs_with_context(tempdb, &ctx);
 
-    if (cmd.T.len) {
+    if (plugins_thread_init(&in.plugins, tempdb) != in.plugins.count) {
+        closedb(tempdb);
+        plugins_global_exit(&in.plugins, &in);
+        plugins_destroy(&in.plugins);
+        gq_cmd_destroy(&cmd);
+        input_fini(&in);
+        return SQLITE_CONSTRAINT;
+    }
+
+    if (str_exists(&cmd.I)) {
+        char *err = NULL;
+        if (sqlite3_exec(tempdb, cmd.I.data, NULL, NULL, &err) != SQLITE_OK) {
+            *pzErr = sqlite3_mprintf("Running -I \"%s\" failed: %s",
+                                     cmd.I.data, err);
+            sqlite3_free(err);
+            goto done;
+        }
+    }
+
+    if (str_exists(&cmd.T)) {
         /* this should never fail */
         create_table_wrapper(SQLITE_MEMORY, tempdb, TREESUMMARY, TREESUMMARY_CREATE);
     }
@@ -1243,36 +1341,36 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     plugins_ctx_init(&in.plugins, tempdb, 0);
 
     /* before getting the column types, set up tables that don't exist yet in this temporary space */
-    if (cmd.setup_res_col_type.len) {
+    if (str_exists(&cmd.setup_res_col_type)) {
         char *err = NULL;
         if (sqlite3_exec(tempdb, cmd.setup_res_col_type.data, NULL, NULL, &err) != SQLITE_OK) {
             *pzErr = sqlite3_mprintf("Setting up results table with '%s' failed: %s",
                                      cmd.setup_res_col_type.data, err);
             sqlite3_free(err);
-            goto error;
+            goto done;
         }
     }
 
     /* if not aggregating, get types for T, S, or E */
-    if (!cmd.K.len) {
+    if (!str_exists(&cmd.K)) {
         int rc = -1; /* get_cols returns 0 or 1, so -1 means SQL was not provided */
-        if (cmd.T.len && !cmd.S.len && !cmd.E.len) {
+        if (str_exists(&cmd.T) && !str_exists(&cmd.S) && !str_exists(&cmd.E)) {
             rc = get_cols(tempdb, &cmd.T, &types, &names, &lens, &cols);
         }
-        else if (cmd.S.len && !cmd.E.len) {
+        else if (str_exists(&cmd.S) && !str_exists(&cmd.E)) {
             rc = get_cols(tempdb, &cmd.S, &types, &names, &lens, &cols);
         }
-        else if (cmd.E.len) {
+        else if (str_exists(&cmd.E)) {
             rc = get_cols(tempdb, &cmd.E, &types, &names, &lens, &cols);
         }
 
         if (rc == -1) {
             *pzErr = sqlite3_mprintf("Need at least one of T/S/E when not aggregating");
-            goto error;
+            goto done;
         }
         else if (rc == 1) {
             *pzErr = sqlite3_mprintf("Could not get column types");
-            goto error;
+            goto done;
         }
     }
     /* types for G */
@@ -1282,56 +1380,58 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         if (sqlite3_exec(tempdb, cmd.K.data, NULL, NULL, &err) != SQLITE_OK) {
             *pzErr = sqlite3_mprintf("-K SQL failed while getting columns types: %s", err);
             sqlite3_free(err);
-            goto error;
+            goto done;
         }
         if (get_cols(tempdb, &cmd.G, &types, &names, &lens, &cols) != 0) {
             *pzErr = sqlite3_mprintf("Failed to get column types of -G");
-            goto error;
+            goto done;
         }
     }
 
-    static const char *SQL_TYPES[] = {
-        NULL,
-        "INTEGER",
-        "FLOAT",
-        "TEXT",
-        "BLOB",
-        "NULL"
-    };
-
-    /* construct the schema for the virtual table */
+  done:
+    ;
     char schema[MAXSQL];
-    char *ptr = schema + SNPRINTF(schema, sizeof(schema), "CREATE TABLE x(");
-    for(int c = 0; c < cols; c++) {
-        ptr += SNPRINTF(ptr, sizeof(schema) - (ptr - schema), "\"%s\" %s, ",
-                        names[c], SQL_TYPES[types[c]]);
-        free(names[c]);
+
+    if (!*pzErr) {
+        static const char *SQL_TYPES[] = {
+            NULL,
+            "INTEGER",
+            "FLOAT",
+            "TEXT",
+            "BLOB",
+            "NULL"
+        };
+
+        /* construct the schema for the virtual table */
+        char *ptr = schema + SNPRINTF(schema, sizeof(schema), "CREATE TABLE x(");
+        for(int c = 0; c < cols; c++) {
+            ptr += SNPRINTF(ptr, sizeof(schema) - (ptr - schema), "\"%s\" %s, ",
+                            names[c], SQL_TYPES[types[c]]);
+            free(names[c]);
+        }
+        ptr -= 2; /* remove trailing ", " */
+        SNPRINTF(ptr, sizeof(schema) - (ptr - schema), ");");
+
+        free(lens);
+        free(names);
+        free(types);
     }
-    ptr -= 2; /* remove trailing ", " */
-    SNPRINTF(ptr, sizeof(schema) - (ptr - schema), ");");
-
-    free(lens);
-    free(names);
-    free(types);
 
     plugins_ctx_exit(&in.plugins, tempdb, 0);
+    plugins_thread_exit(&in.plugins, tempdb);
     plugins_global_exit(&in.plugins, &in);
     plugins_destroy(&in.plugins);
+
+    closedb(global_db);
 
     closedb(tempdb);
     input_fini(&in);
 
-    return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
-                          schema, &cmd, 0);
-  error:
-    /* if here, types, names, and lens are NULL, so not freeing */
+    if (!*pzErr) {
+        return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
+                              schema, &cmd, 0);
+    }
 
-    plugins_ctx_exit(&in.plugins, tempdb, 0);
-    plugins_global_exit(&in.plugins, &in);
-    plugins_destroy(&in.plugins);
-
-    closedb(tempdb);
-    input_fini(&in);
     gq_cmd_destroy(&cmd);
     return SQLITE_ERROR;
 }
@@ -1371,7 +1471,7 @@ static int gufi_vtBestIndex(sqlite3_vtab *tab,
         }
 
         /* both index root and path list are not found */
-        if ((argc == 0) && !vtab->cmd.path_list.len) {
+        if ((argc == 0) && !str_exists(&vtab->cmd.path_list)) {
             return SQLITE_CONSTRAINT;
         }
     }
@@ -1398,6 +1498,8 @@ static int gufi_vtOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor) {
 static int gufi_vtClose(sqlite3_vtab_cursor *cur) {
     gufi_vtab_cursor *pCur = (gufi_vtab_cursor *) cur;
     gufi_vtab_cursor_fini(pCur);
+    popen_argv_close(pCur->output);
+    pCur->output = NULL;
     sqlite3_free(cur);
     return SQLITE_OK;
 }
@@ -1565,12 +1667,11 @@ static int gufi_vtColumn(sqlite3_vtab_cursor *cur,
      * of the selected column is past what is available in this row,
      * return NULL
      */
-    if (N >= pCur->col_count) {
+    const int idx = N - (pVtab->fixed_schema?GUFI_VT_ARGS_COUNT:0);
+    if (idx >= pCur->col_count) {
         sqlite3_result_null(ctx);
         return SQLITE_OK;
     }
-
-    const size_t idx = N - (pVtab->fixed_schema?GUFI_VT_ARGS_COUNT:0);
 
     struct column *col = &pCur->cols[idx];
     const char *buf = pCur->row + col->start;
@@ -1679,6 +1780,8 @@ int sqlite3_gufivt_init(
     (void) pzErrMsg;
 
     SQLITE_EXTENSION_INIT2(pApi);
+
+    SQLITE_API_ROUTINES = pApi;
 
     addqueryfuncs(db);
 

@@ -72,16 +72,27 @@ OF SUCH DAMAGE.
 
 #include "plugin.h"
 
-static int global_init(void *global) {
-    (void) global;
+static int global_init(struct input *in) {
+    (void) in;
     sqlite3_initialize();
     return 0;
 }
 
-static int global_bad_init(void *global) {
-    (void) global;
+static int global_bad_init(struct input *in) {
+    (void) in;
     fprintf(stderr, "Error: test_querying_plugin: Bad global initialization\n");
     /* no sqlite3_initialize() because sqlite3_shutdown() will not be called */
+    return 1;
+}
+
+static int thread_init(sqlite3 *db) {
+    (void) db;
+    return 0;
+}
+
+static int thread_bad_init(sqlite3 *db) {
+    (void) db;
+    fprintf(stderr, "Error: test_querying_plugin: Bad thread initialization\n");
     return 1;
 }
 
@@ -112,27 +123,67 @@ static void db_exit(void *ptr, void *user_data) {
     }
 }
 
-static void global_exit(void *global) {
-    (void) global;
+static void thread_exit(sqlite3 *db) {
+    (void) db;
+}
+
+static void global_exit(struct input *in) {
+    (void) in;
     sqlite3_shutdown();
 }
 
 struct plugin_operations test_querying_plugin_ops = {
     .type = PLUGIN_QUERY,
     .global_init = global_init,
+    .thread_init = thread_init,
     .ctx_init = db_init,
-    .process_dir = NULL,
-    .process_file = NULL,
+    .pre_process_dir = NULL,
+    .pre_process_file = NULL,
+    .post_process_dir = NULL,
+    .post_process_file = NULL,
     .ctx_exit = db_exit,
+    .thread_exit = thread_exit,
     .global_exit = global_exit,
 };
 
-struct plugin_operations test_querying_plugin_bad_ops = {
+struct plugin_operations test_querying_plugin_none_type = {
+    .type = PLUGIN_NONE,
+    .global_init = NULL,
+    .thread_init = NULL,
+    .ctx_init = NULL,
+    .pre_process_dir = NULL,
+    .pre_process_file = NULL,
+    .post_process_dir = NULL,
+    .post_process_file = NULL,
+    .ctx_exit = NULL,
+    .thread_exit = NULL,
+    .global_exit = NULL,
+};
+
+struct plugin_operations test_querying_plugin_bad_global = {
     .type = PLUGIN_QUERY,
     .global_init = global_bad_init,
+    .thread_init = NULL,
     .ctx_init = NULL,
-    .process_dir = NULL,
-    .process_file = NULL,
+    .pre_process_dir = NULL,
+    .pre_process_file = NULL,
+    .post_process_dir = NULL,
+    .post_process_file = NULL,
     .ctx_exit = NULL,
+    .thread_exit = NULL,
+    .global_exit = global_exit,
+};
+
+struct plugin_operations test_querying_plugin_bad_thread = {
+    .type = PLUGIN_QUERY,
+    .global_init = global_init,
+    .thread_init = thread_bad_init,
+    .ctx_init = NULL,
+    .pre_process_dir = NULL,
+    .pre_process_file = NULL,
+    .post_process_dir = NULL,
+    .post_process_file = NULL,
+    .ctx_exit = NULL,
+    .thread_exit = NULL,
     .global_exit = global_exit,
 };

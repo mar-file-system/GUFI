@@ -61,6 +61,7 @@
 
 
 set(CONTRIB_SOURCES
+  gen_fs_changes.c
   gendir.c                # simple source tree generator
 )
 
@@ -126,6 +127,7 @@ set(USEFUL
   canned_queries.sh
   gentrace.py
   hashes.py
+  replay_fs_changes.sh
   trace_anonymizer.py
 )
 

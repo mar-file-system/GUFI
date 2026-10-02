@@ -102,6 +102,8 @@ to unused arguments that come before used arguments.
     \hline
     min\_level & Non-negative integer & \\
     \hline
+    max\_level & Non-negative integer & \\
+    \hline
     path\_list & String & File path \\
     \hline
     verbose & 0 or 1 & Print command before running it \\
@@ -200,11 +202,49 @@ Example Usage:
 (
     echo ".load /path/to/gufi_vt" # do not provide extension
     echo "CREATE VIRTUAL TABLE temp.output" \
-         "USING gufi_vt(index=/path/to/index, threads=2," \
-         "E=`SELECT name, size FROM pentries');"
+         "USING gufi_vt(index=`/path/to/index', threads=2," \
+         "E=`SELECT rpath(sname, sroll, name), size FROM vrpentries;');"
     echo "SELECT * FROM output;"
 ) | sqlite3
 \end{verbatim}
+
+\subsubsection{Remote Querying}
+GUFI trees might be located on remote servers instead of
+locally. Queries will need to be wrapped by other processes to perform
+remote accesses.
+
+Services such as webservers may be developed to query GUFI trees on
+behalf of users. However, services generally do not run as the calling
+user. Querying as the service's user may return results that the
+actual user should not see (root) or no results (nobody). In order to
+get the correct user results, the recommended course of action is to
+call \gufivt with the \texttt{remote\_cmd} and
+\texttt{remote\_arg}\footnote{\gufivtstar has the positional argument
+\texttt{remote\_args} (note the \texttt{s}) that takes in one string
+instead of splitting up the arguments into individual \texttt{argv}.}
+arguments to specify \texttt{ssh}, \texttt{pdsh}, or another remote
+command executor and its arguments. Doing this directly with
+\gufiquery can be done, but is not recommended because the caller will
+then need to parse the flattened output whereas \gufivt returns
+results in a \sqlite virtual table that can be further manipulated via
+SQL.
+\newpage
+Example~Usage:
+\begin{verbatim}
+(
+    echo ".load /path/to/gufi_vt" # do not provide extension
+    echo "CREATE VIRTUAL TABLE temp.output" \
+         "USING gufi_vt(remote_cmd=`ssh', remote_arg=`<server>', \
+         remote_arg=`-l', remote_arg=`<login_name>', \
+         remote_arg=`-p', remote_arg=`<port>', \
+         index=`/path/to/index', threads=2," \
+         "E=`SELECT rpath(sname, sroll, name), size FROM vrpentries;');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+\end{verbatim}
+
+Also see \texttt{gufi\_query\_multiple\_remotes} for an example
+implementation in Python.
 
 \subsubsection{\runvt}
 \runvt is the generic virtual table that runs input commands with

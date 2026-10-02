@@ -131,6 +131,23 @@ $ (
 ) | sqlite3
 prefix|prefix|prefix|prefix
 
+# SELECT rightmost columns to make sure column index checking is correct
+$ (
+    echo ".load gufi_vt"
+    echo "SELECT ossint1, ossint2, ossint3, ossint4, osstext1, osstext2, pinode, ppinode FROM gufi_vt_pentries('prefix', 2) WHERE ((name != 'directory_symlink') AND (name != 'repeat_name')) ORDER BY mtime ASC;"
+) | sqlite3
+0|0|0|0|||17|18
+1|2|3|4|||7|17
+2|4|6|8|||7|17
+3|6|9|12|||7|17
+9|18|27|36|||17|18
+10|20|30|40|||17|18
+11|22|33|44|||13|17
+12|24|36|48|||13|17
+15|30|45|60|||16|17
+1024|2048|3072|4096|||17|18
+1048576|2097152|3145728|4194304|||17|18
+
 # Make sure all types work
 $ (
     echo ".load gufi_vt"
@@ -900,7 +917,7 @@ prefix/old_file
 # No results with LIKE (not an error)
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%no_match%';");SELECT * FROM gufi ORDER BY fullpath ASC"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries WHERE fullpath LIKE '%no_match%';");SELECT * FROM gufi ORDER BY fullpath ASC;"
 ) | sqlite3
 
 # REGEXP
@@ -916,8 +933,71 @@ $ (
 # No results with REGEXP (not an error)
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*no_match.*';");SELECT * FROM gufi ORDER BY fullpath ASC"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries WHERE fullpath REGEXP '.*no_match.*';");SELECT * FROM gufi ORDER BY fullpath ASC;"
 ) | sqlite3
+
+# no_print_errno
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;", no_print_errno=13, verbose=1);SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+Each line is one argv[i]:
+    gufi_query \
+        --print-tlv \
+        -x \
+        --threads \
+        1 \
+        -E \
+        SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries; \
+        --no-print-errno \
+        13 \
+        prefix
+
+# no_print_errno with remote
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;", no_print_errno=13, verbose=1, remote_cmd="ssh", remote_arg="remote");SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+Each line is one argv[i]:
+    ssh \
+        remote \
+        gufi_query --print-tlv -x --threads 1 -E "SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;" --no-print-errno '13' prefix
+
+# query global database during -S and -E
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db="CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');", S="SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;", E="SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;");SELECT * FROM gufi;"
+) | sqlite3
+prefix/old_file|0|0|global data 0
+prefix/old_file|0|1|global data 1
+prefix/old_file|0|2|global data 2
+prefix/directory/executable|1|1|global data 1
+prefix/directory/executable|1|2|global data 2
+prefix/directory/readonly|2|2|global data 2
+
+# query global database during -J
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db="CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');", I="CREATE TABLE out(path TEXT, inode TEXT);", S="INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;", K="CREATE TABLE aggregate(path TEXT, inode TEXT, i INTEGER, t TEXT);", J="INSERT INTO aggregate SELECT path, inode, i, t FROM out JOIN data ON out.inode <= data.i;", G="SELECT * FROM aggregate;");SELECT * FROM gufi;"
+) | sqlite3
+prefix/old_file|0|0|global data 0
+prefix/old_file|0|1|global data 1
+prefix/old_file|0|2|global data 2
+prefix/directory/executable|1|1|global data 1
+prefix/directory/executable|1|2|global data 2
+prefix/directory/readonly|2|2|global data 2
+
+# query global database during -G
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db="CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');", I="CREATE TABLE out(path TEXT, inode TEXT);", S="INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;", K="CREATE TABLE aggregate(path TEXT, inode TEXT);", J="INSERT INTO aggregate SELECT path, inode FROM out;", G="SELECT path, inode, i, t FROM aggregate JOIN data ON aggregate.inode <= data.i;");SELECT * FROM gufi;"
+) | sqlite3
+prefix/old_file|0|0|global data 0
+prefix/old_file|0|1|global data 1
+prefix/old_file|0|2|global data 2
+prefix/directory/executable|1|1|global data 1
+prefix/directory/executable|1|2|global data 2
+prefix/directory/readonly|2|2|global data 2
 
 # ######################################
 # errors
@@ -1160,7 +1240,7 @@ Runtime error near line 2: vtable constructor failed: gufi (19)
 # Bad plugin (global_init fails)
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_querying_plugin_bad_ops:querying_plugin");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_querying_plugin_bad_global:querying_plugin");SELECT * FROM gufi;"
 ) | sqlite3
 Error: test_querying_plugin: Bad global initialization
 Runtime error near line 2: vtable constructor failed: gufi (19)
@@ -1265,4 +1345,37 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;");SELECT * FROM gufi;"
 ) | sqlite3
 Runtime error near line 2: Setting up results table with 'CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));' failed: near "plugin_query_view": syntax error
+
+# Bad no_print_errno
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries;", no_print_errno=-1, no_print_errno=0, no_print_errno=256, verbose=1);SELECT * FROM gufi ORDER BY fullpath ASC;"
+) | sqlite3
+Each line is one argv[i]:
+    gufi_query \
+        --print-tlv \
+        -x \
+        --threads \
+        1 \
+        -E \
+        SELECT rpath(sname, sroll, name) AS fullpath, size FROM vrpentries; \
+        --no-print-errno \
+        -1 \
+        --no-print-errno \
+        0 \
+        --no-print-errno \
+        256 \
+        prefix
+argument '--no-print-errno' not in range [1, 255]
+argument '--no-print-errno' not in range [1, 255]
+argument '--no-print-errno' not in range [1, 255]
+Runtime error near line 2: SQL logic error
+
+# bad global db set up
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", global_db="CREATE TABLE;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;");SELECT * FROM gufi;"
+) | sqlite3
+Error: Could not initiailize global db with "CREATE TABLE;": near ";": syntax error
+Runtime error near line 2: vtable constructor failed: gufi (19)
 

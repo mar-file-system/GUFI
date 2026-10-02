@@ -86,16 +86,16 @@ set(gufi_developer_inputs
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
     sections/postindexing.tex
-    sections/rollup.tex
     sections/treesummary.tex
+    sections/rollup.tex
     sections/xattrs.tex
     sections/external_attach.tex
     sections/querying.tex
     sections/gufi_query.tex
+    sections/virtual_tables.tex
     sections/gufi_sqlite3.tex
     sections/querydbs.tex
     sections/addqueryfuncs.tex
-    sections/virtual_tables.tex
     sections/gufi_stat_bin.tex
     sections/utility.tex
     sections/distributed.tex
@@ -122,16 +122,16 @@ set(gufi_administrator_inputs
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
     sections/postindexing.tex
-    sections/rollup.tex
     sections/treesummary.tex
+    sections/rollup.tex
     sections/xattrs.tex
     sections/external_attach.tex
     sections/querying.tex
     sections/gufi_query.tex
+    sections/virtual_tables.tex
     sections/gufi_sqlite3.tex
     sections/querydbs.tex
     sections/addqueryfuncs.tex
-    sections/virtual_tables.tex
     sections/gufi_stat_bin.tex
     sections/utility.tex
     sections/distributed.tex

@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #ifndef DBUTILS_H
 #define DBUTILS_H
 
+#include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -132,7 +133,8 @@ extern const char ENTRIES_INSERT[];
     "minossint2 INT64, maxossint2 INT64, totossint2 INT64, "            \
     "minossint3 INT64, maxossint3 INT64, totossint3 INT64, "            \
     "minossint4 INT64, maxossint4 INT64, totossint4 INT64, "            \
-    "rectype INT64, pinode TEXT, isroot INT64, rollupscore INT64"       \
+    "rectype INT64, pinode TEXT, isroot INT64, "                        \
+    "canrollup INT64, isrolledup INT64"                                 \
     ");"
 extern const char SUMMARY_CREATE[];
 
@@ -168,7 +170,7 @@ extern const char VRPENTRIES_CREATE[];
 /* aggregate data of tree starting at current directory */
 #define TREESUMMARY       "treesummary"
 #define TREESUMMARY_SCHEMA(name, extra_cols)                                              \
-    "CREATE TABLE " name "(" extra_cols                                                   \
+    "CREATE TABLE IF NOT EXISTS " name "(" extra_cols                                     \
     "inode TEXT, pinode TEXT, "                                                           \
     "totsubdirs INT64, "                                                                  \
     "maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, "                   \
@@ -226,13 +228,13 @@ extern const char VRSUMMARYLONG_CREATE[];
 /* name doesn't matter, so long as it is not used by callers */
 #define ATTACH_NAME "tree"
 sqlite3 *attachdb_raw   (const char *name, sqlite3 *db, const char *dbn,
-                         const int print_err, const int print_eacces);
+                         const int print_err, const uint64_t *no_print_errno);
 sqlite3 *attachdb       (const char *name, sqlite3 *db, const char *dbn, const int flags,
-                         const int print_err, const int print_eacces);
+                         const int print_err, const uint64_t *no_print_errno);
 sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql,
-                         const int print_err, const int print_eacces);
+                         const int print_err, const uint64_t *no_print_errno);
 sqlite3 *detachdb       (const char *name, sqlite3 *db, const char *dbn,
-                         const int print_err, const int print_eacces);
+                         const int print_err, const uint64_t *no_print_errno);
 
 int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql);
 int create_treesummary_tables(const char *name, sqlite3 *db, void *args);
@@ -298,8 +300,6 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  sqlite3_stmt *file_list);
 void destroy_xattr_db(void *ptr);
 
-int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns);
-
 void setup_xattrs_views(struct input *in, sqlite3 *db,
                         struct work *work, size_t *extdb_count);
 
@@ -309,36 +309,12 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
 
 void sqlite_print_err_and_free(char *err, FILE *stream, const char *format, ...);
 
-int get_rollupscore(sqlite3 *db, int *rollupscore);
-
-extern const char   ROLLUP_CLEANUP[];
-extern const size_t ROLLUP_CLEANUP_SIZE;
-
 int treesummary_exists_callback(void *args, int count, char **data, char **columns);
-
-enum CheckRollupScore {
-    ROLLUPSCORE_CHECK,
-    ROLLUPSCORE_DONT_CHECK,
-    ROLLUPSCORE_KNOWN_YES,
-    ROLLUPSCORE_KNOWN_NO,
-};
-
-int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
-                                 const enum CheckRollupScore check_rollupscore);
 
 /* caller frees types */
 int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols);
 /* caller frees names, names[i], and lens */
 int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, int *cols);
-
-struct Permissions {
-    mode_t mode;
-    uid_t uid;
-    gid_t gid;
-};
-
-/* SELECT mode, uid, gid FROM <table>; */
-int get_permissions_callback(void *args, int count, char **data, char **columns);
 
 /* ******************************************************************* */
 /* virtual table signatures (since they don't have associated headers) */

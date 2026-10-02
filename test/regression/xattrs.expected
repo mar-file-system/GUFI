@@ -1,9 +1,10 @@
-$ gufi_dir2index -x "prefix" "search"
-Creating GUFI tree search with 1 threads
+# query index created directly from source tree
+$ gufi_dir2index -n 2 -x "prefix" "search"
+Creating GUFI tree search with 2 threads
 Total Dirs:          6
 Total Non-Dirs:      25
 
-$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+$ gufi_query -n 2 -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066
@@ -36,13 +37,14 @@ prefix/ugo+rw/u f user.u 600
 prefix/ugo+rw/ug f user.ug 660
 prefix/ugo+rw/ugo f user.ugo 666
 
-$ gufi_dir2trace -x "prefix" "trace"
-Creating GUFI Traces trace with 1 threads
+# query index created from traces
+$ gufi_dir2trace -n 2 -x "prefix" "trace"
+Creating GUFI Traces trace with 2 threads
 Total Dirs:          6
 Total Files:         25
 
-$ gufi_trace2index "trace.0" "search"
-Creating GUFI tree search with 1 threads
+$ gufi_trace2index -n 2 "trace" "search"
+Creating GUFI tree search with 2 threads
 Dirs:                6 (1 empty)
 Files:               25
 Total:               31
@@ -50,7 +52,7 @@ Total:               31
 Total Dirs:          6
 Total Files:         25
 
-$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+$ gufi_query -n 2 -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066
@@ -83,11 +85,12 @@ prefix/ugo+rw/u f user.u 600
 prefix/ugo+rw/ug f user.ug 660
 prefix/ugo+rw/ugo f user.ugo 666
 
-$ gufi_rollup "prefix"
+# query rolled up index
+$ gufi_rollup -n 2 "prefix"
 Roots:
     prefix
 
-Thread Pool Size:            1
+Thread Pool Size:            2
 Files/Links Limit:           0
 
 Not Processed:               0
@@ -118,7 +121,7 @@ Directories:    6 (1 empty)
 Total:          31
 Remaining Dirs: 1 (16.67%)
 
-$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+$ gufi_query -n 2 -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066
@@ -151,9 +154,102 @@ prefix/ugo+rw/u f user.u 600
 prefix/ugo+rw/ug f user.ug 660
 prefix/ugo+rw/ugo f user.ugo 666
 
-$ gufi_unrollup "prefix"
+# query unrolled index
+$ gufi_unrollup -n 2 "prefix"
 
-$ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+$ gufi_query -n 2 -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+prefix d
+prefix/u+r d user.u+r 500
+prefix/u+r/go f user.go 066
+prefix/u+r/o f user.o 006
+prefix/u+r/u f user.u 600
+prefix/u+r/ug f user.ug 660
+prefix/u+r/ugo f user.ugo 666
+prefix/u+rw d user.u+rw 700
+prefix/u+rw/go f user.go 066
+prefix/u+rw/o f user.o 006
+prefix/u+rw/u f user.u 600
+prefix/u+rw/ug f user.ug 660
+prefix/u+rw/ugo f user.ugo 666
+prefix/ug+r d user.ug+r 550
+prefix/ug+r/go f user.go 066
+prefix/ug+r/o f user.o 006
+prefix/ug+r/u f user.u 600
+prefix/ug+r/ug f user.ug 660
+prefix/ug+r/ugo f user.ugo 666
+prefix/ug+rw d user.ug+rw 770
+prefix/ug+rw/go f user.go 066
+prefix/ug+rw/o f user.o 006
+prefix/ug+rw/u f user.u 600
+prefix/ug+rw/ug f user.ug 660
+prefix/ug+rw/ugo f user.ugo 666
+prefix/ugo+rw d user.ugo+rw 777
+prefix/ugo+rw/go f user.go 066
+prefix/ugo+rw/o f user.o 006
+prefix/ugo+rw/u f user.u 600
+prefix/ugo+rw/ug f user.ug 660
+prefix/ugo+rw/ugo f user.ugo 666
+
+# query topdown rolled up tree
+$ gufi_dir2index -n 2 -x "prefix" "search"
+Creating GUFI tree search with 2 threads
+Total Dirs:          6
+Total Non-Dirs:      25
+
+$ gufi_treesummary_all -n 2 "prefix"
+
+$ gufi_rollup_topdown -n 2 "prefix"
+0 directories could not rollup
+    0 directories are not allowed to rollup
+    0 directories started with too many entries
+    0 directories would have ended up with too many entries
+Rolled up into 1 top-level directories
+    Subdir stats:
+        Rolled up: 5
+        Min:   5
+        Max:   5
+        Mean:  5.00
+        Stdev: 0.00
+    0 failed rollup copies
+Total remaining directories to traverse: 1
+
+$ gufi_query -n 2 -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
+prefix d
+prefix/u+r d user.u+r 500
+prefix/u+r/go f user.go 066
+prefix/u+r/o f user.o 006
+prefix/u+r/u f user.u 600
+prefix/u+r/ug f user.ug 660
+prefix/u+r/ugo f user.ugo 666
+prefix/u+rw d user.u+rw 700
+prefix/u+rw/go f user.go 066
+prefix/u+rw/o f user.o 006
+prefix/u+rw/u f user.u 600
+prefix/u+rw/ug f user.ug 660
+prefix/u+rw/ugo f user.ugo 666
+prefix/ug+r d user.ug+r 550
+prefix/ug+r/go f user.go 066
+prefix/ug+r/o f user.o 006
+prefix/ug+r/u f user.u 600
+prefix/ug+r/ug f user.ug 660
+prefix/ug+r/ugo f user.ugo 666
+prefix/ug+rw d user.ug+rw 770
+prefix/ug+rw/go f user.go 066
+prefix/ug+rw/o f user.o 006
+prefix/ug+rw/u f user.u 600
+prefix/ug+rw/ug f user.ug 660
+prefix/ug+rw/ugo f user.ugo 666
+prefix/ugo+rw d user.ugo+rw 777
+prefix/ugo+rw/go f user.go 066
+prefix/ugo+rw/o f user.o 006
+prefix/ugo+rw/u f user.u 600
+prefix/ugo+rw/ug f user.ug 660
+prefix/ugo+rw/ugo f user.ugo 666
+
+# query unrolled index
+$ gufi_unrollup -n 2 "prefix"
+
+$ gufi_query -n 2 -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066

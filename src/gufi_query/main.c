@@ -128,7 +128,7 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_ctx_t *ctx) {
         if (in->dir_match.on != DIR_MATCH_NONE) {
             /* use lstat(2)/statx(2) here because these might not be index roots */
             if (lstat_wrapper(subtree_root->work.name, &subtree_root->work.statuso, &subtree_root->work.crtime,
-                              &subtree_root->work.stat_called, 1, in->print_eacces) != 0) {
+                              &subtree_root->work.stat_called, 1, in->no_print_errno) != 0) {
                 free(subtree_root);
                 continue;
             }
@@ -210,19 +210,22 @@ static int validate_source(struct input *in, const char *path, gqw_t **gqw) {
      * directly into new_work because new_work doesn't exist yet)
      */
     size_t rp_len = len; /* discarded */
-    char sqlite3_name[MAXPATH];
-    const size_t sqlite3_name_len = sqlite_uri_path(sqlite3_name, sizeof(sqlite3_name),
+    const size_t sqlite3_name_size = 3 * len + 1;
+    char *sqlite3_name = malloc(sqlite3_name_size);
+    const size_t sqlite3_name_len = sqlite_uri_path(sqlite3_name, sqlite3_name_size,
                                                     path, &rp_len);
 
     gqw_t *new_work = calloc(1, sizeof(*new_work) + len + 1 + sqlite3_name_len + 1);
     new_work->work.name = (char *) &new_work[1];
     new_work->work.name_len = SNFORMAT_S(new_work->work.name, len + 1, 1,
-                                     path, len);
+                                         path, len);
 
     /* set modified path name for SQLite3 */
     new_work->sqlite3_name = ((char *) new_work->work.name) + new_work->work.name_len + 1;
     new_work->sqlite3_name_len = SNFORMAT_S(new_work->sqlite3_name, sqlite3_name_len + 1, 1,
-                                        sqlite3_name, sqlite3_name_len);
+                                            sqlite3_name, sqlite3_name_len);
+
+    free(sqlite3_name);
 
     /* keep original user input */
     new_work->work.orig_root.data = (char *) path;
@@ -259,6 +262,8 @@ int main(int argc, char *argv[])
     const struct option options[] = {
         FLAG_HELP, FLAG_DEBUG, FLAG_VERSION, FLAG_THREADS,
 
+        FLAG_GLOBAL_DB,
+
         /* SQL flags */
         FLAG_SQL_INIT,
         FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT,
@@ -282,7 +287,7 @@ int main(int argc, char *argv[])
         /* output flags */
         FLAG_DELIM, FLAG_NEWLINE, FLAG_SUPPRESS_NEWLINE,
         FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV,
-        FLAG_SETUP_RES_COL_TYPES, FLAG_TERSE, FLAG_PRINT_EACCES,
+        FLAG_SETUP_RES_COL_TYPES, FLAG_TERSE, FLAG_NO_PRINT_ERRNO,
         FLAG_NO_PRINT_SQL_ON_ERR,
 
         /* memory usage flags  */
@@ -331,7 +336,7 @@ int main(int argc, char *argv[])
 
     Aggregate_t aggregate;
     memset(&aggregate, 0, sizeof(aggregate));
-    if (in.sql.init_agg.len) {
+    if (str_exists(&in.sql.init_agg)) {
         if (!aggregate_init(&aggregate, &in)) {
             PoolArgs_fin(&pa, in.maxthreads);
             return EXIT_FAILURE;
@@ -347,6 +352,9 @@ int main(int argc, char *argv[])
         PoolArgs_fin(&pa, in.maxthreads);
         return EXIT_FAILURE;
     }
+
+    /* do not print errors on missing database files */
+    set_no_print_errno(in.no_print_errno, ENOENT);
 
     /* initial set up done, can start processing and printing results */
 
@@ -383,7 +391,7 @@ int main(int argc, char *argv[])
     QPTPool_stop(ctx);
     QPTPool_destroy(ctx);
 
-    if (in.sql.init_agg.len) {
+    if (str_exists(&in.sql.init_agg)) {
         /* aggregate the intermediate results */
         aggregate_intermediate(&aggregate, &pa, &in);
         aggregate_process(&aggregate, &in);

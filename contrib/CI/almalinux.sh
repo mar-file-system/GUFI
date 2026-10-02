@@ -105,3 +105,8 @@ dnf -y install \
     openmpi-devel \
     readline-devel \
     which
+
+# packages for presidio
+dnf -y install \
+    cjson-devel \
+    libcurl-devel

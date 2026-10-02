@@ -62,30 +62,35 @@ OF SUCH DAMAGE.
 
 
 
+#include <cstdint>
 #include <cstdlib>
 
 #include <gtest/gtest.h>
 
 #include "dbutils.h"
+#include "rollup.h"
+
+static const uint64_t    PRINT_ERRNO[4] = {0x00000000ULL, 0x00000000ULL, 0x00000000ULL, 0x00000000ULL};
+static const uint64_t NO_PRINT_ERRNO[4] = {0xffffffffULL, 0xffffffffULL, 0xffffffffULL, 0xffffffffULL};
 
 TEST(attachdb, nullptr) {
     // error not printed
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0, 0), nullptr);
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0, 1), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0,    PRINT_ERRNO), nullptr);
 
     // error printed because error is not SQLITE_CANTOPEN
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1, 0), nullptr);
-    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1, 1), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1,    PRINT_ERRNO), nullptr);
 }
 
 TEST(detachdb, nullptr) {
     // error not printed
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0, 0), nullptr);
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0, 1), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0,    PRINT_ERRNO), nullptr);
 
     // error printed because error is not SQLITE_CANTOPEN
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1, 0), nullptr);
-    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1, 1), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1,    PRINT_ERRNO), nullptr);
 }
 
 TEST(attachdb, CANTOPEN) {
@@ -101,12 +106,12 @@ TEST(attachdb, CANTOPEN) {
                               nullptr), SQLITE_OK);
 
     // error not printed
-    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0, 0), nullptr);
-    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0, 1), nullptr);
-    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1, 0), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0, NO_PRINT_ERRNO), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 0,    PRINT_ERRNO), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1, NO_PRINT_ERRNO), nullptr);
 
     // error printed
-    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1, 1), nullptr);
+    EXPECT_EQ(attachdb(filename, db, ATTACH_NAME, SQLITE_OPEN_READONLY, 1,    PRINT_ERRNO), nullptr);
 
     EXPECT_EQ(sqlite3_close(db), SQLITE_OK);
 
@@ -205,7 +210,7 @@ TEST(inserttreesumdb, nullptr) {
 TEST(sqlite_uri_path, none) {
     const char src[] = "prefix/basename";
     std::size_t src_len = strlen(src);
-    char dst[32] = {0};
+    char dst[32] = {};
     const char *expected = src;
 
     const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -218,7 +223,7 @@ TEST(sqlite_uri_path, none) {
 TEST(sqlite_uri_path, 23) {
     const char src[] = "prefix/#/basename";
     std::size_t src_len = strlen(src);
-    char dst[32] = {0};
+    char dst[32] = {};
     const char expected[] = "prefix/%23/basename";
 
     const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -231,7 +236,7 @@ TEST(sqlite_uri_path, 23) {
 TEST(sqlite_uri_path, 3f) {
     const char src[] = "prefix/?/basename";
     std::size_t src_len = strlen(src);
-    char dst[32] = {0};
+    char dst[32] = {};
     const char expected[] = "prefix/%3f/basename";
 
     const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -244,7 +249,7 @@ TEST(sqlite_uri_path, 3f) {
 TEST(sqlite_uri_path, 25) {
     const char src[] = "prefix/%/basename";
     std::size_t src_len = strlen(src);
-    char dst[32] = {0};
+    char dst[32] = {};
     const char expected[] = "prefix/%25/basename";
 
     const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -260,7 +265,7 @@ TEST(sqlite_uri_path, not_enough_space) {
     // does not hit conversion
     {
         std::size_t src_len = strlen(src);
-        char dst[7] = {0};
+        char dst[7] = {};
         const char expected[] = "prefix/";
 
         const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -273,7 +278,7 @@ TEST(sqlite_uri_path, not_enough_space) {
     // # -> %
     {
         std::size_t src_len = strlen(src);
-        char dst[8] = {0};
+        char dst[8] = {};
         const char expected[] = "prefix/%";
 
         const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -286,7 +291,7 @@ TEST(sqlite_uri_path, not_enough_space) {
     // # -> %2
     {
         std::size_t src_len = strlen(src);
-        char dst[9] = {0};
+        char dst[9] = {};
         const char expected[] = "prefix/%2";
 
         const std::size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -295,47 +300,6 @@ TEST(sqlite_uri_path, not_enough_space) {
         EXPECT_EQ(dst_len, strlen(expected));
         EXPECT_EQ(memcmp(expected, dst, dst_len), 0);
     }
-}
-
-TEST(get_rollupscore, nullptr) {
-    EXPECT_EQ(get_rollupscore(nullptr, nullptr), 1);
-}
-
-TEST(bottomup_collect_treesummary, nullptr) {
-    // fail at top
-    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", nullptr, ROLLUPSCORE_KNOWN_YES), 1);
-
-    char dirname[] = "XXXXXX";
-    ASSERT_EQ(mkdtemp(dirname), dirname);
-
-    sll_t sll;
-    sll_init(&sll);
-    sll_push_back(&sll, dirname);    // fail to open
-    sll_push_back(&sll, (char *) ":memory:");
-
-    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", &sll, ROLLUPSCORE_KNOWN_YES), 1);
-
-    sll_destroy(&sll, nullptr);
-    EXPECT_EQ(rmdir(dirname), 0);
-
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI, nullptr), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
-
-    // break at deleting old treesummary rows becase the table does not exist
-    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ROLLUPSCORE_KNOWN_YES), 1);
-
-    // create tables with a bad schemas that will run the delete
-    EXPECT_EQ(sqlite3_exec(db, "CREATE TABLE summary (inode, isroot);", nullptr, nullptr, nullptr), SQLITE_OK);
-    EXPECT_EQ(sqlite3_exec(db, "CREATE TABLE treesummary (inode);",     nullptr, nullptr, nullptr), SQLITE_OK);
-
-    // rollupscore=1 fail to insert
-    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ROLLUPSCORE_KNOWN_YES), 1);
-
-    // rollupscore=0 fail querytsdb
-    EXPECT_EQ(bottomup_collect_treesummary(db, "", &sll, ROLLUPSCORE_KNOWN_NO), 1);
-
-    sqlite3_close(db);
 }
 
 static const char CREATE_TABLE_TEST[] = "CREATE TABLE test(i INT, f FLOAT, t TEXT, b BLOB, n NULL, d DATE);";
@@ -358,7 +322,7 @@ TEST(get_col_types, have_cols) {
     EXPECT_EQ(get_col_types(db, &str, &types, &cols), 0);
     ASSERT_NE(types, nullptr);
 
-    const int expected[] = { SQLITE_INTEGER, SQLITE_FLOAT, SQLITE_TEXT, SQLITE_BLOB, SQLITE_NULL, 0};
+    const int expected[] = { SQLITE_INTEGER, SQLITE_FLOAT, SQLITE_TEXT, SQLITE_BLOB, SQLITE_NULL, SQLITE_BLOB};
     EXPECT_EQ((std::size_t) cols, sizeof(expected) / sizeof(expected[0]));
 
     for(std::size_t i = 0; i < (sizeof(expected) / sizeof(expected[0])); i++) {
@@ -440,7 +404,7 @@ TEST(get, col_names) {
               SQLITE_OK);
 
     // good db, bad sql
-    sql = REFSTR("", 0);
+    sql = NULL_STR;
     EXPECT_EQ(get_col_names(db,  &sql, &names, &lens, &cols), -1);
 
     // good sql

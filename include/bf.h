@@ -66,7 +66,7 @@ OF SUCH DAMAGE.
 #define BF_H
 
 #include <getopt.h>
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdlib.h> /* EXIT_SUCCESS and EXIT_FAILURE */
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -83,13 +83,13 @@ extern "C" {
 #endif
 
 #define MAXPATH 4096
+#define MAXSTRFTIME 1024  /* maximum buffer size for strftime(3) */
 #define MAXSQL 8192
 #define MAXRECS 100000
 #define DBNAME "db.db"
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
 #define GETLINE_DEFAULT_SIZE 750 /* magic number */
-
-/* DO NOT use -Q and -q */
+#define UINT64_DIGITS 20         /* ceil(log10((uint64_t) -1)) */
 
 #define FLAG_HELP_SHORT 'h'
 #define FLAG_HELP_LONG "help"
@@ -160,6 +160,11 @@ extern "C" {
 #define FLAG_FILTER_TYPE_SHORT 't'
 #define FLAG_FILTER_TYPE_LONG "filter-type"
 #define FLAG_FILTER_TYPE {FLAG_FILTER_TYPE_LONG, required_argument, NULL, FLAG_FILTER_TYPE_SHORT}
+
+/* only used by parallel_rmr */
+#define FLAG_FORCE_SHORT 'f'
+#define FLAG_FORCE_LONG "force"
+#define FLAG_FORCE {FLAG_FORCE_LONG, no_argument, NULL, FLAG_FORCE_SHORT}
 
 /* no typable short flags */
 
@@ -236,9 +241,9 @@ extern "C" {
 #define FLAG_DIR_MATCH_GID_LONG "dir-match-gid"
 #define FLAG_DIR_MATCH_GID {FLAG_DIR_MATCH_GID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_GID_SHORT}
 
-#define FLAG_PRINT_EACCES_SHORT (FLAG_GROUP_MISC + 16)
-#define FLAG_PRINT_EACCES_LONG "print-eacces"
-#define FLAG_PRINT_EACCES {FLAG_PRINT_EACCES_LONG, no_argument, NULL, FLAG_PRINT_EACCES_SHORT}
+#define FLAG_NO_PRINT_ERRNO_SHORT (FLAG_GROUP_MISC + 16)
+#define FLAG_NO_PRINT_ERRNO_LONG "no-print-errno"
+#define FLAG_NO_PRINT_ERRNO {FLAG_NO_PRINT_ERRNO_LONG, required_argument, NULL, FLAG_NO_PRINT_ERRNO_SHORT}
 
 #define FLAG_NO_PRINT_SQL_ON_ERR_SHORT (FLAG_GROUP_MISC + 17)
 #define FLAG_NO_PRINT_SQL_ON_ERR_LONG "no-print-sql-on-err"
@@ -247,6 +252,14 @@ extern "C" {
 #define FLAG_OLD_TRACE_FORMAT_SHORT (FLAG_GROUP_MISC + 18)
 #define FLAG_OLD_TRACE_FORMAT_LONG "old-trace-format"
 #define FLAG_OLD_TRACE_FORMAT {FLAG_OLD_TRACE_FORMAT_LONG, no_argument, NULL, FLAG_OLD_TRACE_FORMAT_SHORT}
+
+#define FLAG_USE_EXACT_PATH_SHORT (FLAG_GROUP_MISC + 19)
+#define FLAG_USE_EXACT_PATH_LONG "use-exact-path"
+#define FLAG_USE_EXACT_PATH {FLAG_USE_EXACT_PATH_LONG, no_argument, NULL, FLAG_USE_EXACT_PATH_SHORT}
+
+#define FLAG_GLOBAL_DB_SHORT (FLAG_GROUP_MISC + 20)
+#define FLAG_GLOBAL_DB_LONG "global-db"
+#define FLAG_GLOBAL_DB {FLAG_GLOBAL_DB_LONG, required_argument, NULL, FLAG_GLOBAL_DB_SHORT}
 
 /* memory utilization flags */
 
@@ -305,6 +318,18 @@ extern "C" {
 #define FLAG_SUSPECT_STAT_SHORT (FLAG_GROUP_INC + 3)
 #define FLAG_SUSPECT_STAT_LONG "suspect-stat"
 #define FLAG_SUSPECT_STAT {FLAG_SUSPECT_STAT_LONG, no_argument, NULL, FLAG_SUSPECT_STAT_SHORT}
+
+#define FLAG_MAX_SUBTREES_SHORT (FLAG_GROUP_INC + 4)
+#define FLAG_MAX_SUBTREES_LONG "max-subtrees"
+#define FLAG_MAX_SUBTREES {FLAG_MAX_SUBTREES_LONG, required_argument, NULL, FLAG_MAX_SUBTREES_SHORT}
+
+#define FLAG_KEEP_ARTIFACTS_SHORT (FLAG_GROUP_INC + 5)
+#define FLAG_KEEP_ARTIFACTS_LONG "keep-artifacts"
+#define FLAG_KEEP_ARTIFACTS {FLAG_KEEP_ARTIFACTS_LONG, required_argument, NULL, FLAG_KEEP_ARTIFACTS_SHORT}
+
+#define FLAG_PROCESS_SUBTREES_SHORT (FLAG_GROUP_INC + 6)
+#define FLAG_PROCESS_SUBTREES_LONG "process-subtrees"
+#define FLAG_PROCESS_SUBTREES {FLAG_PROCESS_SUBTREES_LONG, no_argument, NULL, FLAG_PROCESS_SUBTREES_SHORT}
 
 /* gufi_rollup flags */
 
@@ -500,9 +525,11 @@ struct input {
     char delim;
     char newline;
     int  suppress_newline;
-    int  print_eacces;             /* if cannot open a path due to EACCES, print error message (default: off) */
+    uint64_t no_print_errno[4];    /* errno bitfield to not print errors for when they occur */
     int  no_print_sql_on_err;      /* if there is an SQL error, do not print the SQL in the error message */
     int  old_trace_format;         /* used to read old traces only - do not generate new traces with the old format */
+    int use_exact_path;            /* create index at <search>/<path>, not <search>/$(basename <path>)*/
+    str_t global_db;               /* db file path for read-only data that all threads should have access to */
     int  buildindex;
     size_t maxthreads;
     struct {
@@ -511,12 +538,39 @@ struct input {
         gid_t gid;                 /* only set if --match-gid is set; defaults to EGID */
     } dir_match;
     AFlag_t process_sql;           /* what to do if an SQL statement returns/doesn't return 1 row */
-    int  suspectstat;              /* if an entry is suspect, stat it to get timestamps to compare against suspecttime */
-    str_t insuspect;               /* added for bfwreaddirplus2db input path for suspects file */
-    int  suspectfile;              /* added for bfwreaddirplus2db flag for if we are processing suspects file */
-    int  suspectmethod;            /* added for bfwreaddirplus2db flag for if we are processing suspects what method do we use */
-    int  suspecttime;              /* added for bfwreaddirplus2db time for suspect comparison in seconds since epoch */
-    int  suspecttime_set;          /* bool for suspecttime */
+
+    /*
+     * incremental update values for determining if an entry is
+     * suspected of having changed using different methods
+     */
+    struct {
+        int stat;                  /* if an entry is suspect, stat it to get timestamps to compare against suspect.time */
+        str_t filename;            /* suspects file containing inodes and types (d, f, or l) */
+        int method;                /* what method (0, 1, or 3) do we use
+                                    *     0 - nothing is suspect (not sure why this exists)
+                                    *     1 - check suspects file for appearance of inodes (all types)
+                                    *         if found in suspect file and suspect.stat is set,
+                                    *         use whether or not either mtime/ctime changed
+                                    *     2 - **REMOVED** only check file/link inode existence in suspect file
+                                    *     3 - use whether or not either mtime/ctime changed
+                                    */
+        int time;                  /* time for suspect comparison in seconds since epoch */
+    } suspect;
+    size_t max_subtrees;           /* maximum number of subtrees to process in parallel
+                                    *
+                                    * this is limited by the number of file descriptors available for the process
+                                    *
+                                    * running with n threads will result in (2 sets (index and tree) *
+                                    * n aggregation dbs * 3 file descriptors per db) + n opendir file
+                                    * descriptors + (5 dbs (index, tree, created, urd, and diff) * 3 file
+                                    * descriptors per db) total file descriptors per subtree
+                                    */
+    struct {
+        str_t dir;
+        int keep;
+    } artifacts;
+    int process_subtrees;          /* try to find subtrees to process instead of operating the entire tree at once */
+
     size_t min_level;              /* minimum level of recursion to reach before running queries */
     size_t max_level;              /* maximum level of recursion to run queries on */
     int dry_run;
@@ -591,6 +645,12 @@ struct input {
      * used by BottomUp programs
      */
     int dont_reprocess;
+
+    /*
+     * only used by parallel_rmr
+     * ignore threads_started != threads_completed
+     */
+    int force;
 
     struct plugins plugins;
 
@@ -679,23 +739,23 @@ typedef enum {
  * storage for name.
  */
 struct work {
-    compressed_t  compressed;
-    str_t         orig_root;              /* argv[i] */
-    str_t         root_parent;            /* dirname(realpath(argv[i])) */
-    size_t        root_basename_len;      /* strlen(basename(argv[i])) */
-    size_t        level;
-    char          *name;                  /* points to memory located after struct work */
-    size_t        name_len;               /* == strlen(name) - meaning excludes NUL! */
-    size_t        basename_len;           /* can usually get through readdir */
-    struct stat   statuso;
-    time_t        crtime;
-    StatCalled    stat_called;
-    long long int pinode;
-    size_t        recursion_level;
+    compressed_t     compressed;
+    str_t            orig_root;              /* argv[i] */
+    str_t            root_parent;            /* dirname(realpath(argv[i])) */
+    size_t           root_basename_len;      /* strlen(basename(argv[i])) */
+    size_t           level;
+    char            *name;                   /* points to memory located after struct work */
+    size_t           name_len;               /* == strlen(name) - meaning excludes NUL! */
+    size_t           basename_len;           /* can usually get through readdir */
+    struct stat      statuso;
+    time_t           crtime;
+    StatCalled       stat_called;
+    ino_t            pinode;
+    size_t           recursion_level;
 
     /* probably shouldn't be here */
-    char *        fullpath;
-    size_t        fullpath_len;
+    char            *fullpath;
+    size_t           fullpath_len;
 
     /* name is actually here, but not using flexible arrays */
 };

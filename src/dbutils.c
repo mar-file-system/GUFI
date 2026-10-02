@@ -72,10 +72,10 @@ OF SUCH DAMAGE.
 
 #include "pcre.h"
 
-#include "BottomUp.h"
 #include "dbutils.h"
 #include "external_attach.h"
 #include "histogram.h"
+#include "rollup.h"
 #include "trie.h"
 
 const char ENTRIES_CREATE[] =
@@ -120,7 +120,8 @@ static const char SUMMARY_INSERT[] =
     "@minossint4, @maxossint4, @totossint4, "
 
     /* extra info */
-    "@rectype,    @pinode,     @isroot,     @rollupscore"
+    "@rectype,    @pinode,     @isroot, "
+    "@canrollup,  @isrolledup"
     ");";
 
 const char VRSUMMARY_CREATE[] =
@@ -128,7 +129,7 @@ const char VRSUMMARY_CREATE[] =
     "CREATE VIEW " VRSUMMARY " AS SELECT "
     "REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, '/', '')), '') AS dname, "
     SUMMARY ".name AS sname, "
-    SUMMARY ".rollupscore AS sroll, "
+    SUMMARY ".isrolledup AS sroll, "
     "(SELECT COUNT(*) FROM " SUMMARY " AS c WHERE c.pinode == " SUMMARY ".inode) AS srollsubdirs, "
     SUMMARY ".* "
     "FROM " SUMMARY
@@ -192,7 +193,7 @@ const char VRPENTRIES_CREATE[] =
     VRSUMMARY ".totxattr     AS dtotxattr, "  VRSUMMARY ".depth       AS ddepth, "
     VRSUMMARY ".mincrtime    AS dmincrtime, " VRSUMMARY ".maxcrtime   AS dmaxcrtime, "
     VRSUMMARY ".totcrtime    AS dtotcrtime, "
-    VRSUMMARY ".rollupscore  AS sroll, "      VRSUMMARY ".isroot      AS atroot, "
+    VRSUMMARY ".isrolledup   AS sroll, "      VRSUMMARY ".isroot      AS atroot, "
     VRSUMMARY ".srollsubdirs AS srollsubdirs, "
     PENTRIES ".* "
     "FROM " VRSUMMARY ", " PENTRIES " "
@@ -231,13 +232,13 @@ LONG_CREATE(SUMMARY);
 LONG_CREATE(VRSUMMARY);
 
 static sqlite3 *attachdb_internal(const char *name, const char *attach, sqlite3 *db, const char *dbn,
-                                  const int print_err, const int print_eacces) {
+                                  const int print_err, const uint64_t *no_print_errno) {
     char *err = NULL;
     const int rc = sqlite3_exec(db, attach, NULL, NULL, print_err?(&err):NULL);
     if (rc != SQLITE_OK) {
         if (print_err) {
             if ((rc != SQLITE_CANTOPEN) ||
-                ((rc == SQLITE_CANTOPEN) && print_eacces)) {
+                ((rc == SQLITE_CANTOPEN) && !(no_print_errno_set(no_print_errno, ENOENT)))) {
                 sqlite_print_err_and_free(err, stderr, "Cannot attach database \"%s\" as \"%s\": %s\n",
                                           name, dbn, err);
             }
@@ -252,7 +253,7 @@ static sqlite3 *attachdb_internal(const char *name, const char *attach, sqlite3 
 }
 
 sqlite3 *attachdb_raw(const char *name, sqlite3 *db, const char *dbn,
-                      const int print_err, const int print_eacces) {
+                      const int print_err, const uint64_t *no_print_errno) {
     /*
      * create ATTACH statement here to prevent double copy that
      * would be done by generating name first and passing it to
@@ -261,11 +262,11 @@ sqlite3 *attachdb_raw(const char *name, sqlite3 *db, const char *dbn,
     char attach[MAXSQL];
     sqlite3_snprintf(sizeof(attach), attach, "ATTACH %Q AS %Q;", name, dbn);
 
-    return attachdb_internal(name, attach, db, dbn, print_err, print_eacces);
+    return attachdb_internal(name, attach, db, dbn, print_err, no_print_errno);
 }
 
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags,
-                  const int print_err, const int print_eacces) {
+                  const int print_err, const uint64_t *no_print_errno) {
     char ow = '?';
     if (flags & SQLITE_OPEN_READONLY) {
         ow = 'o';
@@ -283,17 +284,17 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
     sqlite3_snprintf(sizeof(attach), attach, "ATTACH 'file:%q?mode=r%c" GUFI_SQLITE_VFS_URI "' AS %Q;",
                      name, ow, dbn);
 
-    return attachdb_internal(name, attach, db, dbn, print_err, print_eacces);
+    return attachdb_internal(name, attach, db, dbn, print_err, no_print_errno);
 }
 
 sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql,
-                         const int print_err, const int print_eacces) {
+                         const int print_err, const uint64_t *no_print_errno) {
     char *err = NULL;
     const int rc = sqlite3_exec(db, sql, NULL, NULL, print_err?(&err):NULL);
     if (rc != SQLITE_OK) {
         if (print_err) {
             if ((rc != SQLITE_CANTOPEN) ||
-                ((rc == SQLITE_CANTOPEN) && print_eacces)) {
+                ((rc == SQLITE_CANTOPEN) && !no_print_errno_set(no_print_errno, EACCES))) {
                 sqlite_print_err_and_free(err, stderr, "Cannot detach database \"%s\": %s\n", name, err);
             }
             else {
@@ -307,12 +308,12 @@ sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql,
 }
 
 sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn,
-                  const int print_err, const int print_eacces) {
+                  const int print_err, const uint64_t *no_print_errno) {
     /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
     char detach[MAXSQL];
     sqlite3_snprintf(MAXSQL, detach, "DETACH %Q;", dbn);
 
-    return detachdb_cached(name, db, detach, print_err, print_eacces);
+    return detachdb_cached(name, db, detach, print_err, no_print_errno);
 }
 
 int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql) {
@@ -853,7 +854,8 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_bind_int64(res,  62, 0); /* rectype */
     sqlite3_bind_text(res,   63, zpino, -1, SQLITE_STATIC);
     sqlite3_bind_int64(res,  64, 1); /* isroot */
-    sqlite3_bind_int64(res,  65, 0); /* rollupscore */
+    sqlite3_bind_int64(res,  65, 0); /* canrollup */
+    sqlite3_bind_int64(res,  66, 0); /* isrolledup */
 
     sqlite3_step(res);
     sqlite3_reset(res);
@@ -970,20 +972,20 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
 
     /* set the relative path in xdb */
     if (uid != in->nobody.uid) {
-        xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
+        xdb->filename_len = SNPRINTF(xdb->filename, sizeof(xdb->filename),
                                      XATTR_UID_FILENAME_FORMAT, uid);
         xattr_db_mode = 0600;
     }
     else if (gid != in->nobody.gid) {
         /* g+r */
         if ((mode & 0040) == 0040) {
-            xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
+            xdb->filename_len = SNPRINTF(xdb->filename, sizeof(xdb->filename),
                                          XATTR_GID_W_READ_FILENAME_FORMAT, gid);
             xattr_db_mode = 0040;
         }
         /* g-r */
         else {
-            xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
+            xdb->filename_len = SNPRINTF(xdb->filename, sizeof(xdb->filename),
                                          XATTR_GID_WO_READ_FILENAME_FORMAT, gid);
             xattr_db_mode = 0000;
         }
@@ -993,7 +995,7 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
 
     /* store full path here */
     char filename[MAXPATH];
-    SNFORMAT_S(filename, MAXPATH, 3,
+    SNFORMAT_S(filename, sizeof(filename), 3,
                path, path_len,
                "/", (size_t) 1,
                xdb->filename, xdb->filename_len);
@@ -1046,77 +1048,6 @@ void destroy_xattr_db(void *ptr) {
     sqlite3_clear_bindings(xdb->file_list);
 
     free(xdb);
-}
-
-static int count_pwd(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    size_t *xattr_count = (size_t *) args;
-    sscanf(data[0], "%zu", xattr_count); /* skip check */
-    return 0;
-}
-
-const char ROLLUP_CLEANUP[] =
-    "DROP INDEX IF EXISTS " SUMMARY "_idx;"
-    "DELETE FROM " PENTRIES_ROLLUP ";"
-    "DELETE FROM " SUMMARY " WHERE isroot != 1;"
-    "DELETE FROM " XATTRS_ROLLUP ";"
-    "SELECT filename FROM " EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
-    "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
-    "VACUUM;"
-    "UPDATE " SUMMARY " SET rollupscore = 0;"; /* keep this last to allow it to be modified easily */
-
-const size_t ROLLUP_CLEANUP_SIZE = sizeof(ROLLUP_CLEANUP);
-
-/* Delete all entries in the XATTR_ROLLUP table */
-int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    str_t *name = (str_t *) args;
-
-    char *relpath = data[0];
-    char fullpath[MAXPATH];
-    SNFORMAT_S(fullpath, sizeof(fullpath), 3,
-               name->data, name->len,
-               "/", (size_t) 1,
-               relpath, strlen(relpath));
-
-    /* if the file is missing, return ok */
-    struct stat st;
-    if (stat(fullpath, &st) != 0) {
-        return (errno != ENOENT);
-    }
-
-    int rc = 0;
-
-    sqlite3 *db = opendb(fullpath, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
-
-    if (db) {
-        char *err_msg = NULL;
-        size_t xattr_count = 0;
-        if (sqlite3_exec(db,
-                         "DELETE FROM " XATTRS_ROLLUP ";"
-                         "SELECT COUNT(*) FROM " XATTRS_PWD ";",
-                         count_pwd, &xattr_count, &err_msg) == SQLITE_OK) {
-             /* remove empty per-user/per-group xattr db files */
-             if (xattr_count == 0) {
-                 if (remove(fullpath) != 0) {
-                     const int err = errno;
-                     fprintf(stderr, "Warning: Failed to remove empty xattr db file %s: %s (%d)\n",
-                             fullpath, strerror(err), err);
-                     rc = 1;
-                 }
-             }
-        }
-        else {
-            sqlite_print_err_and_free(err_msg, stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n", fullpath, err_msg);
-            rc = 1;
-        }
-    }
-
-    closedb(db);
-
-    return rc;
 }
 
 static size_t xattr_modify_filename(char **dst, const size_t dst_size,
@@ -1255,165 +1186,11 @@ void sqlite_print_err_and_free(char *err, FILE *stream, const char *format, ...)
     sqlite3_free(err);
 }
 
-static int get_rollupscore_callback(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-    return !(sscanf(data[0], "%d", (int *) args) == 1);
-}
-
-int get_rollupscore(sqlite3 *db, int *rollupscore) {
-    char *err = NULL;
-    if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1;",
-                     get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Could not get rollupscore: %s\n", err);
-        return 1;
-    }
-
-    return 0;
-}
-
 int treesummary_exists_callback(void *args, int count, char **data, char **columns) {
     (void) count; (void) data; (void) columns;
     int *trecs = (int *) args;
     (*trecs)++;
     return 0;
-}
-
-int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
-                                 const enum CheckRollupScore check_rollupscore) {
-    if (!db) {
-        return 1;
-    }
-
-    int rollupscore = 0;
-    switch(check_rollupscore) {
-        case ROLLUPSCORE_CHECK:
-            get_rollupscore(db, &rollupscore);
-            break;
-        case ROLLUPSCORE_KNOWN_YES:
-            rollupscore = 1;
-            break;
-        case ROLLUPSCORE_DONT_CHECK:
-        case ROLLUPSCORE_KNOWN_NO:
-        default:
-            break;
-    }
-
-    char *err = NULL;
-
-    /* delete any old treesummary rows that exist for this directory */
-    if (sqlite3_exec(db, "DELETE FROM " TREESUMMARY " WHERE inode == (SELECT inode FROM " SUMMARY " WHERE isroot == 1);",
-                     NULL, NULL, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Error: Failed to delete old treesummary for \"%s\": %s\n",
-                                  dirname, err);
-        return 1;
-    }
-
-    if (rollupscore != 0) {
-        /*
-         * this directory has been rolled up, so all information is
-         * available here: compute the treesummary, no need to go
-         * further down
-         *
-         * don't bother copying it out of sqlite only to put it back in
-         */
-        static const char TREESUMMARY_ROLLUP_COMPUTE_INSERT[] =
-            /*
-             * ignore all treesummary tables and recompute from
-             * summary tables since all summary tables are immediately
-             * available
-             */
-            "INSERT INTO " TREESUMMARY " SELECT (SELECT "
-            "inode FROM " SUMMARY " WHERE isroot == 1), "
-            "(SELECT pinode FROM " SUMMARY " WHERE isroot == 1), "
-            "COUNT(*) - 1, " /* a directory is not a subdirectory of itself */
-            "MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), "
-            "MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), "
-            "MIN(minsize), MAX(maxsize), TOTAL(totzero), "
-            "TOTAL(totltk), TOTAL(totmtk), "
-            "TOTAL(totltm), TOTAL(totmtm), "
-            "TOTAL(totmtg), TOTAL(totmtt), "
-            "TOTAL(totsize), "
-            "MIN(minctime),   MAX(maxctime),   TOTAL(totctime),  "
-            "MIN(minmtime),   MAX(maxmtime),   TOTAL(totmtime),  "
-            "MIN(minatime),   MAX(maxatime),   TOTAL(totatime),  "
-            "MIN(minblocks),  MAX(maxblocks),  TOTAL(totblocks), "
-            "TOTAL(totxattr), TOTAL(depth), "
-            "MIN(mincrtime),  MAX(maxcrtime),  TOTAL(totcrtime),  "
-            "MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), "
-            "MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), "
-            "MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), "
-            "MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), "
-            "(SELECT COUNT(*) FROM " EXTERNAL_DBS "), rectype, "
-            "(SELECT uid FROM " SUMMARY " WHERE isroot == 1), "
-            "(SELECT gid FROM " SUMMARY " WHERE isroot == 1) "
-            "FROM " SUMMARY
-            ";";
-
-        if (sqlite3_exec(db, TREESUMMARY_ROLLUP_COMPUTE_INSERT, NULL, NULL, &err) != SQLITE_OK) {
-            sqlite_print_err_and_free(err, stderr, "Error: Failed to compute treesummary for \"%s\": %s\n",
-                                      dirname, err);
-            return 1;
-        }
-
-        return 0;
-    }
-
-    /*
-     * this directory has not rolled up, so have to use child
-     * directories to get information
-     *
-     * every child is either
-     *     - a leaf, and thus all the data is available in the summary
-     *       table to use to create the treesummary table, or
-     *
-     *     - has a treesummary table because BottomUp is comming back up
-     *
-     * reopen child dbs to collect data
-     *     - not super efficient
-     *     - doing in-place update results in a massive query
-     */
-    struct sum tsum;
-    zeroit(&tsum);
-
-    struct sum sum;
-    sll_loop(subdirs, node) {
-        struct BottomUp *subdir = (struct BottomUp *) sll_node_data(node);
-
-        char child_dbname[MAXPATH];
-        SNFORMAT_S(child_dbname, sizeof(child_dbname), 2,
-                   subdir->name, subdir->name_len,
-                   "/" DBNAME, DBNAME_LEN + 1);
-
-        sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
-        if (!child_db) {
-            continue;
-        }
-
-        int trecs = 0;
-        if (sqlite3_exec(child_db, TREESUMMARY_EXISTS,
-            treesummary_exists_callback, &trecs, &err) == SQLITE_OK) {
-            zeroit(&sum);
-
-            querytsdb(dirname, &sum, child_db, !(trecs < 1));
-
-            /* aggregate subdirectory summaries */
-            tsumit(&sum, &tsum);
-        }
-        else {
-            sqlite_print_err_and_free(err, stderr, "Warning: Failed to check for existance of treesummary table in child \"%s\": %s\n", subdir->name, err);
-            err = NULL;
-        }
-
-        closedb(child_db);
-    }
-
-    /* add summary data from this directory */
-    zeroit(&sum);
-    querytsdb(dirname, &tsum, db, 0);
-    tsumit(&sum, &tsum);
-    tsum.totsubdirs--;
-
-    return inserttreesumdb(dirname, db, &tsum, 0, 0, 0);
 }
 
 /*
@@ -1493,8 +1270,7 @@ int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols) {
             (*types)[i] = (uintptr_t) sql_type;
         }
         else {
-            fprintf(stderr, "Error: Got unknown type '%s'\n", type);
-            (*types)[i] = 0; /* unknown type */
+            (*types)[i] = SQLITE_BLOB; /* unknown type; let it through */
         }
     }
 
@@ -1540,16 +1316,4 @@ int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, i
 
     sqlite3_finalize(stmt);
     return 0;
-}
-
-/* SELECT mode, uid, gid FROM <table>; */
-int get_permissions_callback(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    struct Permissions *perms = (struct Permissions *) args;
-    return !(
-        (sscanf(data[0], "%" STAT_mode, &perms->mode) == 1) &&
-        (sscanf(data[1], "%" STAT_uid,  &perms->uid)  == 1) &&
-        (sscanf(data[2], "%" STAT_gid,  &perms->gid)  == 1)
-    );
 }

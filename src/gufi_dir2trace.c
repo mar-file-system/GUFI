@@ -120,7 +120,7 @@ static int process_external(struct input *in, void *args,
 static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NondirArgs *nda = (struct NondirArgs *) args;
 
-    if (fstatat_wrapper(entry, ed, 1, 1) != 0) {
+    if (fstatat_wrapper(entry, ed, AT_SYMLINK_NOFOLLOW, 1, NULL) != 0) {
         return 1;
     }
 
@@ -164,7 +164,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     decompress_work(&work, data);
 
-    DIR *dir = opendir_wrapper(work->name, 1);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         rc = 0;
         goto cleanup;
@@ -172,7 +172,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     memset(&ed, 0, sizeof(ed));
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
-                      &work->stat_called, 1, 1) != 0) {
+                      &work->stat_called, 1, NULL) != 0) {
         rc = 0;
         goto close_dir;
     }
@@ -207,7 +207,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
   descend_tree:
     descend(ctx, in, work, dir, 1,
-            processdir, process_dir?process_nondir:NULL, &nda, &ctrs);
+            try_skip_lstat, NULL, NULL,
+            processdir, process_dir?process_nondir:NULL, &nda,
+            &ctrs);
 
     if (process_dir) {
         if (nda.fp == stdout) {
@@ -230,7 +232,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     return rc;
 }
 
-static int validate_source(const char *path, struct work **work) {
+static int validate_source(const char *path, struct work **work, const int use_exact_path) {
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) != 0) {
@@ -248,7 +250,7 @@ static int validate_source(const char *path, struct work **work) {
     struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
     new_work->root_parent.data = (char *) path;
-    new_work->root_parent.len = dirname_len(path, new_work->name_len);
+    new_work->root_parent.len = use_exact_path?0:dirname_len(path, new_work->name_len);
     new_work->level = 0;
     new_work->basename_len = new_work->name_len - new_work->root_parent.len;
     new_work->root_basename_len = new_work->basename_len;
@@ -273,7 +275,7 @@ int main(int argc, char *argv[]) {
         FLAG_INDEX_XATTRS, FLAG_SKIP_FILE,
 
         /* miscellaneous flags */
-        FLAG_EXTERNAL_ATTACH_VALIDATE,
+        FLAG_EXTERNAL_ATTACH_VALIDATE, FLAG_USE_EXACT_PATH,
 
         /* output flags */
         FLAG_DELIM,
@@ -337,7 +339,7 @@ int main(int argc, char *argv[]) {
         }
         else if (root_count == 1) {
             struct work *root = NULL;
-            if (validate_source(pa.in.pos.argv[0], &root) == 0) {
+            if (validate_source(pa.in.pos.argv[0], &root, pa.in.use_exact_path) == 0) {
                 process_path_list(&pa.in, root, ctx, processdir);
             }
             else {
@@ -349,7 +351,7 @@ int main(int argc, char *argv[]) {
         for(int i = 0; i < pa.in.pos.argc; i++) {
             /* get first work item by validating source path */
             struct work *root = NULL;
-            if (validate_source(pa.in.pos.argv[i], &root) != 0) {
+            if (validate_source(pa.in.pos.argv[i], &root, pa.in.use_exact_path) != 0) {
                 continue;
             }
 

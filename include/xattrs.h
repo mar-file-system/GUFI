@@ -100,7 +100,7 @@ extern "C" {
 
 #endif
 
-#define MAXXATTR            1024
+#define MAXXATTR            65536 /* xattr(7) */
 extern const char XATTRDELIM;
 
 /* each db.db, per-user db, and per-group db will have a table with this name */
@@ -161,6 +161,9 @@ struct xattrs {
 int xattrs_setup(struct xattrs *xattrs);
 int xattrs_alloc(struct xattrs *xattrs);
 void xattrs_cleanup(struct xattrs *xattrs);
+
+/* in-memory xattr manipulation */
+size_t xattr_remove(struct xattrs *xattrs, const char* name, const size_t name_len);
 
 /* filesystem xattr interactions */
 int xattrs_get(const char *path, struct xattrs *xattrs);
