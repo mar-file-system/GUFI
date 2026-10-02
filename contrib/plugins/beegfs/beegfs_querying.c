@@ -7,8 +7,8 @@
 #include "bf.h"
 #include "beegfs_shared.h"
 
-static int global_init(void *global) {
-    (void) global;
+static int global_init(struct input *in) {
+    (void) in;
 
     if (sqlite3_initialize() != SQLITE_OK) {
         return 1;
@@ -28,8 +28,8 @@ static void *ctx_init(void *ptr) {
     return NULL;
 }
 
-static void global_exit(void *global) {
-    (void) global;
+static void global_exit(struct input *in) {
+    (void) in;
     sqlite3_shutdown();
 }
 
@@ -37,8 +37,6 @@ struct plugin_operations beegfs_query_ops = {
     .type = PLUGIN_QUERY,
     .global_init = global_init,
     .ctx_init = ctx_init,
-    .process_dir = NULL,
-    .process_file = NULL,
     .ctx_exit = NULL,
     .global_exit = global_exit,
 };
