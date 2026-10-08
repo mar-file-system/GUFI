@@ -35,60 +35,137 @@ Total Files:         14
 
 # every database should have the same schema
 search/db.db
-entries              summary              vsummarygroup      
-external_dbs         summarylong          vsummaryuser       
-external_dbs_pwd     vrpentries           xattrs_avail       
-external_dbs_rollup  vrsummary            xattrs_pwd         
-pentries             vrsummarylong        xattrs_rollup      
-pentries_rollup      vsummarydir        
+entries
+external_dbs
+external_dbs_pwd
+external_dbs_rollup
+pentries
+pentries_rollup
+summary
+summarylong
+vrpentries
+vrsummary
+vrsummarylong
+vsummarydir
+vsummarygroup
+vsummaryuser
+xattrs_avail
+xattrs_pwd
+xattrs_rollup
 
 search/prefix/db.db
-entries              summary              vsummarygroup      
-external_dbs         summarylong          vsummaryuser       
-external_dbs_pwd     vrpentries           xattrs_avail       
-external_dbs_rollup  vrsummary            xattrs_pwd         
-pentries             vrsummarylong        xattrs_rollup      
-pentries_rollup      vsummarydir        
+entries
+external_dbs
+external_dbs_pwd
+external_dbs_rollup
+pentries
+pentries_rollup
+summary
+summarylong
+vrpentries
+vrsummary
+vrsummarylong
+vsummarydir
+vsummarygroup
+vsummaryuser
+xattrs_avail
+xattrs_pwd
+xattrs_rollup
 
 search/prefix/directory/db.db
-entries              summary              vsummarygroup      
-external_dbs         summarylong          vsummaryuser       
-external_dbs_pwd     vrpentries           xattrs_avail       
-external_dbs_rollup  vrsummary            xattrs_pwd         
-pentries             vrsummarylong        xattrs_rollup      
-pentries_rollup      vsummarydir        
+entries
+external_dbs
+external_dbs_pwd
+external_dbs_rollup
+pentries
+pentries_rollup
+summary
+summarylong
+vrpentries
+vrsummary
+vrsummarylong
+vsummarydir
+vsummarygroup
+vsummaryuser
+xattrs_avail
+xattrs_pwd
+xattrs_rollup
 
 search/prefix/directory/subdirectory/db.db
-entries              summary              vsummarygroup      
-external_dbs         summarylong          vsummaryuser       
-external_dbs_pwd     vrpentries           xattrs_avail       
-external_dbs_rollup  vrsummary            xattrs_pwd         
-pentries             vrsummarylong        xattrs_rollup      
-pentries_rollup      vsummarydir        
+entries
+external_dbs
+external_dbs_pwd
+external_dbs_rollup
+pentries
+pentries_rollup
+summary
+summarylong
+vrpentries
+vrsummary
+vrsummarylong
+vsummarydir
+vsummarygroup
+vsummaryuser
+xattrs_avail
+xattrs_pwd
+xattrs_rollup
 
 search/prefix/empty_directory/db.db
-entries              summary              vsummarygroup      
-external_dbs         summarylong          vsummaryuser       
-external_dbs_pwd     vrpentries           xattrs_avail       
-external_dbs_rollup  vrsummary            xattrs_pwd         
-pentries             vrsummarylong        xattrs_rollup      
-pentries_rollup      vsummarydir        
+entries
+external_dbs
+external_dbs_pwd
+external_dbs_rollup
+pentries
+pentries_rollup
+summary
+summarylong
+vrpentries
+vrsummary
+vrsummarylong
+vsummarydir
+vsummarygroup
+vsummaryuser
+xattrs_avail
+xattrs_pwd
+xattrs_rollup
 
 search/prefix/leaf_directory/db.db
-entries              summary              vsummarygroup      
-external_dbs         summarylong          vsummaryuser       
-external_dbs_pwd     vrpentries           xattrs_avail       
-external_dbs_rollup  vrsummary            xattrs_pwd         
-pentries             vrsummarylong        xattrs_rollup      
-pentries_rollup      vsummarydir        
+entries
+external_dbs
+external_dbs_pwd
+external_dbs_rollup
+pentries
+pentries_rollup
+summary
+summarylong
+vrpentries
+vrsummary
+vrsummarylong
+vsummarydir
+vsummarygroup
+vsummaryuser
+xattrs_avail
+xattrs_pwd
+xattrs_rollup
 
 search/prefix/unusual#? directory ,/db.db
-entries              summary              vsummarygroup      
-external_dbs         summarylong          vsummaryuser       
-external_dbs_pwd     vrpentries           xattrs_avail       
-external_dbs_rollup  vrsummary            xattrs_pwd         
-pentries             vrsummarylong        xattrs_rollup      
-pentries_rollup      vsummarydir        
+entries
+external_dbs
+external_dbs_pwd
+external_dbs_rollup
+pentries
+pentries_rollup
+summary
+summarylong
+vrpentries
+vrsummary
+vrsummarylong
+vsummarydir
+vsummarygroup
+vsummaryuser
+xattrs_avail
+xattrs_pwd
+xattrs_rollup
 
 # compare contents
 Source Directory:

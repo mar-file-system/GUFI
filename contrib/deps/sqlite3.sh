@@ -72,11 +72,11 @@ PATCH_SQLITE3_OPEN="$1"
 sqlite3_name="sqlite3"
 sqlite3_prefix="${INSTALL_DIR}/${sqlite3_name}"
 if [[ ! -d "${sqlite3_prefix}" ]]; then
-    sqlite3_build="${BUILD_DIR}/sqlite-autoconf-3430100"
+    sqlite3_build="${BUILD_DIR}/sqlite-autoconf-3530400"
     if [[ ! -d "${sqlite3_build}" ]]; then
-        sqlite3_tarball="${DOWNLOAD_DIR}/sqlite-autoconf-3430100.tar.gz"
+        sqlite3_tarball="${DOWNLOAD_DIR}/sqlite-autoconf-3530400.tar.gz"
         if [[ ! -f "${sqlite3_tarball}" ]]; then
-            wget https://www.sqlite.org/2023/sqlite-autoconf-3430100.tar.gz -O "${sqlite3_tarball}"
+            wget https://www.sqlite.org/2026/sqlite-autoconf-3530400.tar.gz -O "${sqlite3_tarball}"
         fi
 
         tar -xf "${sqlite3_tarball}" -C "${BUILD_DIR}"
@@ -98,7 +98,7 @@ if [[ ! -d "${sqlite3_prefix}" ]]; then
     mkdir -p build
     cd build
     if [[ ! -f Makefile ]]; then
-        CFLAGS="-DSQLITE_DEFAULT_AUTOMATIC_INDEX=0 -DSQLITE_DEFAULT_AUTOVACUUM=0 -DSQLITE_DEFAULT_LOCKING_MODE=1 -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DEFAULT_SYNCHRONOUS=0 -DSQLITE_DEFAULT_WAL_SYNCHRONOUS=0 -DSQLITE_DQS=0 -DSQLITE_MAX_ATTACHED=254 -DSQLITE_MAX_EXPR_DEPTH=0 -USQLITE_THREADSAFE -DSQLITE_THREADSAFE=0 -DSQLITE_TEMP_STORE=3 -DSQLITE_USE_URI -USQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS5 -USQLITE_ENABLE_GEOPOLY -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_MATH_FUNCTIONS -USQLITE_ENABLE_RTREE -DSQLITE_OMIT_AUTOINIT -DSQLITE_OMIT_DEPRECATED -DSQLITE_OMIT_PROGRESS_CALLBACK -O3" ../configure --prefix="${sqlite3_prefix}"
+        CFLAGS="-DSQLITE_DEFAULT_AUTOMATIC_INDEX=0 -DSQLITE_DEFAULT_AUTOVACUUM=0 -DSQLITE_DEFAULT_LOCKING_MODE=1 -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DEFAULT_SYNCHRONOUS=0 -DSQLITE_DEFAULT_WAL_SYNCHRONOUS=0 -DSQLITE_DQS=0 -DSQLITE_MAX_ATTACHED=254 -DSQLITE_MAX_EXPR_DEPTH=0 -DSQLITE_USE_URI -USQLITE_ENABLE_GEOPOLY -DSQLITE_ENABLE_HIDDEN_COLUMNS -USQLITE_ENABLE_RTREE -DSQLITE_OMIT_AUTOINIT -DSQLITE_OMIT_DEPRECATED -DSQLITE_OMIT_PROGRESS_CALLBACK -O3" ../configure --prefix="${sqlite3_prefix}" --disable-threadsafe --with-tempstore=always --fts5
     fi
     make -j "${THREADS}"
     make install

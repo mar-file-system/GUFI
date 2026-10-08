@@ -1734,7 +1734,7 @@ static const sqlite3_module gufi_vtModule = {
     0,                         /* xRelease */
     0,                         /* xRollbackTo */
     0,                         /* xShadowName */
-    /* 0                          /\* xIntegrity *\/ */
+    0                          /* xIntegrity */
 };
 
 #define create_module(module_name, create, connect)                          \

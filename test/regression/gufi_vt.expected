@@ -1025,21 +1025,21 @@ $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt();"
 ) | sqlite3
-Runtime error near line 2: Missing indexroot or path_list (19)
+Error near line 2: Missing indexroot or path_list
 
 # NULL indexroot
 $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries(NULL);"
 ) | sqlite3
-Runtime error near line 2: Missing index (19)
+Error near line 2: Missing index
 
 # NULL indexroot
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt(E='SELECT 0;');"
 ) | sqlite3
-Runtime error near line 2: Missing indexroot or path_list (19)
+Error near line 2: Missing indexroot or path_list
 
 # Empty string thread count
 $ (
@@ -1067,7 +1067,7 @@ $ (
     echo "SELECT name FROM gufi_vt_pentries('prefix', 0) ORDER BY name ASC, size ASC;"
 ) | sqlite3
 argument '-n/--threads' not in range [1, 18446744073709551615]
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Bad min_level
 $ (
@@ -1075,7 +1075,7 @@ $ (
     echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 'a') ORDER BY name ASC, size ASC;"
 ) | sqlite3
 could not parse a with format %zu
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Bad n
 $ (
@@ -1083,7 +1083,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=a, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 could not parse a with format %zu
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Zero n
 $ (
@@ -1091,7 +1091,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=0, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 argument '-n/--threads' not in range [1, 18446744073709551615]
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # NULL n
 $ (
@@ -1099,7 +1099,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 could not parse NULL with format %zu
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Bad thread count
 $ (
@@ -1107,7 +1107,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=a, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 could not parse a with format %zu
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Zero thread count
 $ (
@@ -1115,7 +1115,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=0, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 argument '-n/--threads' not in range [1, 18446744073709551615]
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # NULL thread count
 $ (
@@ -1123,7 +1123,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 could not parse NULL with format %zu
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Bad a
 $ (
@@ -1132,7 +1132,7 @@ $ (
 ) | sqlite3
 could not parse a with format %d
 argument '-a' not in range [0, 2]
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Bad a
 $ (
@@ -1140,14 +1140,14 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', a=3, E='SELECT * FROM pentries'); SELECT * FROM gufi;"
 ) | sqlite3
 argument '-a' not in range [0, 2]
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Bad E
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', E='');"
 ) | sqlite3
-Runtime error near line 2: Need at least one of T/S/E when not aggregating
+Error near line 2: Need at least one of T/S/E when not aggregating
 
 # Bad E
 $ (
@@ -1155,14 +1155,14 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', E='DELETE FROM entries;');"
 ) | sqlite3
 Error: 'DELETE FROM entries;' returns no data
-Runtime error near line 2: Could not get column types
+Error near line 2: Could not get column types
 
 # Bad K
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', K='0', G='');"
 ) | sqlite3
-Runtime error near line 2: -K SQL failed while getting columns types: near "0": syntax error
+Error near line 2: -K SQL failed while getting columns types: near "0": syntax error
 
 # Bad K
 $ (
@@ -1170,7 +1170,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', K=' ', G='');"
 ) | sqlite3
 Error: Could not prepare '(null)' for getting column types: bad parameter or other API misuse (21)
-Runtime error near line 2: Failed to get column types of -G
+Error near line 2: Failed to get column types of -G
 
 # Bad G
 $ (
@@ -1178,7 +1178,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', K='CREATE TABLE aggregate(i INT);', G='SELECT * FROM intermediate');"
 ) | sqlite3
 Error: Could not prepare 'SELECT * FROM intermediate' for getting column types: SQL logic error (1)
-Runtime error near line 2: Failed to get column types of -G
+Error near line 2: Failed to get column types of -G
 
 # Missing p
 $ (
@@ -1196,42 +1196,42 @@ $ (
     echo ".load gufi_vt"
     echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 0, NULL, NULL, 'a') ORDER BY name ASC, size ASC;"
 ) | sqlite3
-Runtime error near line 2: Bad verbose value: 'a' (19)
+Error near line 2: Bad verbose value: 'a'
 
 # Bad verbose
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', verbose='a');"
 ) | sqlite3
-Runtime error near line 2: Bad verbose value: 'a' (21)
+Error near line 2: Bad verbose value: 'a'
 
 # Bad 1 character key
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', ?='');"
 ) | sqlite3
-Runtime error near line 2: Unknown argument: ? (21)
+Error near line 2: Unknown argument: ?
 
 # Bad 5 character key (only 'index' is recognized)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', abcde='');"
 ) | sqlite3
-Runtime error near line 2: Unknown key: abcde (19)
+Error near line 2: Unknown key: abcde
 
 # Bad 7 character key (only 'threads' is recognized)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', abcdefg='');"
 ) | sqlite3
-Runtime error near line 2: Unknown key: abcdefg (19)
+Error near line 2: Unknown key: abcdefg
 
 # Bad key length
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', ab='');"
 ) | sqlite3
-Runtime error near line 2: Unknown key: ab (19)
+Error near line 2: Unknown key: ab
 
 # Bad plugin (using indexing plugin for querying)
 $ (
@@ -1239,7 +1239,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_indexing_plugin_ops:indexing_plugin");SELECT * FROM gufi;"
 ) | sqlite3
 Error: "indexing_plugin" has bad plugin type. Expected 2. Got: 1
-Runtime error near line 2: vtable constructor failed: gufi (19)
+Parse error near line 2: no such table: gufi
 
 # Bad plugin (plugin path is directory)
 $ (
@@ -1247,7 +1247,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_querying_plugin_ops:prefix");SELECT * FROM gufi;"
 ) | sqlite3
 Error: Could not open plugin library
-Runtime error near line 2: vtable constructor failed: gufi (19)
+Parse error near line 2: no such table: gufi
 
 # Bad plugin (global_init fails)
 $ (
@@ -1255,7 +1255,7 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE TABLE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;", plugin="test_querying_plugin_bad_global:querying_plugin");SELECT * FROM gufi;"
 ) | sqlite3
 Error: test_querying_plugin: Bad global initialization
-Runtime error near line 2: vtable constructor failed: gufi (19)
+Parse error near line 2: no such table: gufi
 
 # Bad Q (Missing I)
 $ (
@@ -1263,35 +1263,35 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT * FROM vrxpentries;", Q="basename table template.table view");SELECT * FROM gufi;"
 ) | sqlite3
 Attaching external databases require template files attached with -I
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Bad Q (no arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", Q="");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external attach database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad Q (not enough arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", Q="basename");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external attach database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad Q (not enough arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", Q="basename tab");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external attach database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad Q (not enough arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", Q="basename tab temp");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external attach database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad external_attach (Missing I)
 $ (
@@ -1299,35 +1299,35 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT * FROM vrxpentries;", external_attach="basename table template.table view");SELECT * FROM gufi;"
 ) | sqlite3
 Attaching external databases require template files attached with -I
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Bad external_attach (no arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", external_attach="");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external attach database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad external_attach (not enough arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", external_attach="basename");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external attach database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad external_attach (not enough arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", external_attach="basename tab");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external attach database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad external_attach (not enough arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="ATTACH ':memory:' AS template; CREATE TABLE template.tablename(i INTEGER);", E="SELECT * FROM vrpentries;", external_attach="basename tab temp");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external attach database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad external_copy (Missing I)
 $ (
@@ -1335,28 +1335,28 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT * FROM vrxpentries;", external_copy="basename 'INSERT INTO ext SELECT 0;'");SELECT * FROM gufi;"
 ) | sqlite3
 Copying external databases require tables created with -I
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # Bad external_copy (no arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE ext(i INTEGER);", E="SELECT * FROM vrpentries;", external_copy="");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external copy database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad external_copy (not enough arguments)
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", I="CREATE TABLE ext(i INTEGER);", E="SELECT * FROM vrpentries;", external_copy="basename");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Bad external copy database args (21)
+Parse error near line 2: no such table: gufi
 
 # Bad Column Type Setup
 $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;");SELECT * FROM gufi;"
 ) | sqlite3
-Runtime error near line 2: Setting up results table with 'CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));' failed: near "plugin_query_view": syntax error
+Parse error near line 2: no such table: gufi
 
 # Bad no_print_errno
 $ (
@@ -1381,7 +1381,7 @@ Each line is one argv[i]:
 argument '--no-print-errno' not in range [1, 255]
 argument '--no-print-errno' not in range [1, 255]
 argument '--no-print-errno' not in range [1, 255]
-Runtime error near line 2: SQL logic error
+Error near line 2: SQL logic error
 
 # bad global db set up
 $ (
@@ -1389,5 +1389,5 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", global_db="CREATE TABLE;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;");SELECT * FROM gufi;"
 ) | sqlite3
 Error: Could not set up global db with "CREATE TABLE;": near ";": syntax error
-Runtime error near line 2: vtable constructor failed: gufi (19)
+Parse error near line 2: no such table: gufi
 

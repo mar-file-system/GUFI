@@ -105,7 +105,8 @@ show_schema() {
         run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --replace-outdb"
     ) | @SED@ 's%time, [0-9]*)%time, now)%g;'
 
-    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
+    # https://sqlite.org/cli.html#querying_the_database_schema
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT name FROM sqlite_schema WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY 1\""
 
     for table in "${tables[@]}"
     do
@@ -160,7 +161,8 @@ do_test() {
 
     echo "# ${FLATDB}:"
     echo
-    run_no_sort "${SQLITE3} \"${FLATDB}\" \".tables\""
+    # https://sqlite.org/cli.html#querying_the_database_schema
+    run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT name FROM sqlite_schema WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY 1\""
     run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM entries;\""
     run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM entries WHERE type == 'f';\""
     run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM summary;\""

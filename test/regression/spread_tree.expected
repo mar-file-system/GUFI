@@ -173,7 +173,7 @@ Error: Did not get result from gufi_spread_copy_to_shard.sh: prefix/db.db
 
 # try to copy non-existent shard
 $ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, pinode, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
-Runtime error near line 1: unable to open database: file:spread_tree/prefix-file/fsid/10/00/00.db?mode=ro (14)
+Error near line 1: unable to open database: file:spread_tree/prefix-file/fsid/10/00/00.db?mode=ro
 Parse error near line 65: no such table: shard.extracted
 Error: sqlite3 errored: prefix/db.db
 

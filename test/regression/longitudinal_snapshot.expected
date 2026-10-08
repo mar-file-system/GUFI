@@ -69,8 +69,12 @@ Error: SQL error: view snapshot already exists
 # running with snapshot db replacement will overwrite the previous data
 $ longitudinal_snapshot.py level "prefix" "flattened_index.db" "longitudinal_snapshot.db" --gufi_query="gufi_query" --notes 'test notes' --replace-outdb
 
-$ sqlite3 "longitudinal_snapshot.db" ".tables"
-entries      metadata     snapshot     summary      treesummary
+$ sqlite3 "longitudinal_snapshot.db" "SELECT name FROM sqlite_schema WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY 1"
+entries
+metadata
+snapshot
+summary
+treesummary
 
 $ sqlite3 "longitudinal_snapshot.db" "PRAGMA TABLE_INFO(metadata);"
 0|timestamp|INT|0||0
@@ -695,8 +699,10 @@ $ sqlite3 "longitudinal_snapshot.db" "SELECT CAST(inode AS INT), totsize, tsum_t
 
 # flattened_index.db:
 
-$ sqlite3 "flattened_index.db" ".tables"
-entries      summary      treesummary
+$ sqlite3 "flattened_index.db" "SELECT name FROM sqlite_schema WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY 1"
+entries
+summary
+treesummary
 
 $ sqlite3 "flattened_index.db" "SELECT COUNT(*) FROM entries;"
 14

@@ -453,7 +453,7 @@ static const sqlite3_module run_vtModule = {
     0,                         /* xRelease */
     0,                         /* xRollbackTo */
     0,                         /* xShadowName */
-    /* 0                          /\* xIntegrity *\/ */
+    0                          /* xIntegrity */
 };
 
 /* no underscore between run and vt for entry point */

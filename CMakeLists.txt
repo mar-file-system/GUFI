@@ -661,8 +661,13 @@ function(add_ai target vec_basename lembed_basename)
       "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/${vec_basename}"
       "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/${lembed_basename}"
       -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml ${OpenMP_C_FLAGS}
-      -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
     )
+
+    if (APPLE OR DARWIN OR CYGWIN)
+      target_link_libraries("${target}"
+        -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
+      )
+    endif()
 
     set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
     set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")

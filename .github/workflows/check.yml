@@ -344,7 +344,7 @@ jobs:
         key:  ${{ runner.os }}-memcheck
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DMARFS_PREFIX="" -DPRESIDIO_PLUGIN=Off
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -UMARFS_PREFIX -DPRESIDIO_PLUGIN=Off -DDEP_AI=Off
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
