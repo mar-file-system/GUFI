@@ -82,12 +82,15 @@ mkdir -p build
 # shellcheck disable=SC2164
 cd build
 
+export SWHOME="${HOME}/.local"
+
 CC="$(brew --prefix llvm)/bin/clang" \
 CXX="$(brew --prefix llvm)/bin/clang++" \
 cmake .. \
-    -DDEP_AI=On \
-    -DDEP_INSTALL_PREFIX="${HOME}/.local" \
+    -DCMAKE_INSTALL_PREFIX="${SWHOME}/GUFI" \
+    -DDEP_INSTALL_PREFIX="${SWHOME}" \
     -DDEP_BUILD_THREADS="$(nproc --ignore 1)" \
+    -DSERVER_CONFIG="${SWHOME}/GUFI/etc/config" \
     -DCMAKE_OSX_SYSROOT=macosx
 
 make -j

@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 3.19.0)
+cmake_minimum_required(VERSION 3.20.0)
 
 # Don't allow in-source build
 get_filename_component(CMAKE_SOURCE_DIR "${CMAKE_SOURCE_DIR}" REALPATH)
@@ -246,6 +246,7 @@ set(SERVER_MAN "share/man" CACHE STRING "Directory to install man pages at")
 if (CLIENT)
   set(CLIENT_BIN "${SERVER_BIN}" CACHE STRING "Directory to install client executables at")
   set(CLIENT_LIB "${SERVER_LIB}" CACHE STRING "Directory to install client libraries at")
+  set(CLIENT_ETC "${SERVER_ETC}" CACHE STRING "Directory to install configuration files at")
   set(CLIENT_MAN "${SERVER_MAN}" CACHE STRING "Directory to install client man pages at")
 endif()
 

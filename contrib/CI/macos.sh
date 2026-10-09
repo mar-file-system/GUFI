@@ -83,6 +83,10 @@ paths="$(brew --prefix diffutils)/bin:${paths}"
 brew install -y flock
 paths="$(brew --prefix flock)/bin:${paths}"
 
+# built-in sqlite cannot load extensions
+brew install -y sqlite
+paths="$(brew --prefix sqlite)/bin:${paths}"
+
 # install required packages
 brew install -y autoconf automake cjson cmake gettext llvm libomp pcre2 pkgconf python3
 

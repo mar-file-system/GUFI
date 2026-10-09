@@ -63,46 +63,33 @@
 include(ProcessorCount)
 ProcessorCount(CORES)
 
-if (DARWIN)
-  set(CONFIG_DEFAULT "${CPACK_PACKAGING_INSTALL_PREFIX}/etc/GUFI/config")
-else()
-  set(CONFIG_DEFAULT "/etc/GUFI/config")
-endif()
+set(CONFIG_DEFAULT "/etc/GUFI/config")
 
-function(config_file var_name type comp)
-  set("${var_name}" "${CONFIG_DEFAULT}" CACHE FILEPATH "Where high level GUFI tools will look for the ${type} configuration")
+function(config_file config etc type comp)
+  set("${config}" "${CONFIG_DEFAULT}" CACHE FILEPATH "Where high level GUFI tools will look for the ${type} configuration")
 
   # path must be absolute
-  if (NOT IS_ABSOLUTE "${${var_name}}")
-    message(FATAL_ERROR "${var_name} must be set to absolute path")
+  if (NOT IS_ABSOLUTE "${${config}}")
+    message(FATAL_ERROR "${config} must be set to absolute path")
   endif()
 
   # if the path already exists, make sure it is a regular file
-  if (EXISTS "${${var_name}}")
-    execute_process(COMMAND stat --dereference --format "%F" "${${var_name}}"
+  if (EXISTS "${${config}}")
+    execute_process(COMMAND stat --dereference --format "%F" "${${config}}"
       OUTPUT_VARIABLE CONFIG_FILE_TYPE
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
-      message(FATAL_ERROR "${var_name} must point to a file. Got ${CONFIG_FILE_TYPE}")
+      message(FATAL_ERROR "${config} must point to a file. Got ${CONFIG_FILE_TYPE}")
     endif()
   endif()
 
-  get_filename_component(CONFIG_PARENT "${${var_name}}" DIRECTORY)
-
-  if (DARWIN)
-    if (IS_ABSOLUTE "${CONFIG_PARENT}")
-      if (NOT "${CONFIG_PARENT}" MATCHES "^${CPACK_PACKAGING_INSTALL_PREFIX}")
-        message(FATAL_ERROR "${type} config must go under ${CPACK_PACKAGING_INSTALL_PREFIX}. Reconfigure with -D${var_name}=...")
-      endif()
-
-      file(RELATIVE_PATH CONFIG_PARENT "${CPACK_PACKAGING_INSTALL_PREFIX}" "${CONFIG_PARENT}")
-    endif()
-  endif()
+  # get the parent path of the config for placing example configuration
+  cmake_path(GET ${config} PARENT_PATH CONFIG_PARENT)
 
   # copy the example config
-  set(INSTALL_PREFIX "${CPACK_PACKAGING_INSTALL_PREFIX}")
-  configure_file(server.example.in "${CMAKE_BINARY_DIR}/${type}.example" @ONLY)
+  set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+  configure_file("${type}.example.in" "${CMAKE_BINARY_DIR}/${type}.example" @ONLY)
   unset(INSTALL_PREFIX)
 
   # make install the config
@@ -110,10 +97,19 @@ function(config_file var_name type comp)
     DESTINATION "${CONFIG_PARENT}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
     COMPONENT "${comp}")
+
+  if (DARWIN)
+    # make package on macOS is weird
+    install(FILES "${CMAKE_BINARY_DIR}/${type}.example"
+      DESTINATION "${etc}/GUFI"
+      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
+      COMPONENT "${comp}"
+      EXCLUDE_FROM_ALL)
+  endif()
 endfunction()
 
 if (CLIENT)
-  config_file(CLIENT_CONFIG "client" Client)
+  config_file(CLIENT_CONFIG "${CLIENT_ETC}" "client" Client)
 endif()
 
-config_file(SERVER_CONFIG "server" Server)
+config_file(SERVER_CONFIG "${SERVER_ETC}" "server" Server)
