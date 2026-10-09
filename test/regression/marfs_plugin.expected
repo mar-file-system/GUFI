@@ -71,7 +71,7 @@ search/marfs/namespace1/userfile1.txt|user.myattr
 
 
 # verify nlink decrement
-# All file nlink counts should be decremented by 1 (MarFS metadata link removed)
+# Files with MarFS metadata links should have nlink decremented by 1
 $ gufi_query -d "|" -S "SELECT rpath(sname, sroll), nlink FROM vrsummary;" -E "SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;" "search"
 search/marfs/namespace1/namespace2/nestedfile1.txt|0
 search/marfs/namespace1/namespace2/nestedfile2.txt|1
@@ -89,9 +89,9 @@ $ sqlite3 "search/marfs/db.db" "SELECT name FROM summary;"
 marfs
 
 
-# test: re-index over existing index
-# Plugin should handle existing index structure correctly
-$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "prefix/var/marfs/mdal-root/sec-root" "search"
+# test: re-index over existing index with trailing slashes
+# Plugin should handle existing index structure and trailing slashes correctly
+$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "prefix/var/marfs/mdal-root/sec-root/" "search/"
 "search" Already exists!
 Creating GUFI tree search with 1 threads
 Total Dirs:          4
@@ -107,16 +107,68 @@ search/marfs/namespace1/namespace2
 search/marfs/namespace1/userdir
 
 
+# test: index starting from a configured namespace
+$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1" "search_namespace"
+Creating GUFI tree search_namespace with 1 threads
+Total Dirs:          3
+Total Non-Dirs:      7
+
+
+# verify configured namespace index structure
+$ find "search_namespace" -type d
+search_namespace
+search_namespace/namespace1
+search_namespace/namespace1/namespace2
+search_namespace/namespace1/userdir
+
+
+# verify configured namespace index contents
+$ gufi_query -d "|"         -S "SELECT rpath(sname, sroll) FROM vrsummary;"         -E "SELECT rpath(sname, sroll, name) FROM vrpentries;"         "search_namespace"
+search_namespace/namespace1
+search_namespace/namespace1/namespace2
+search_namespace/namespace1/namespace2/nestedfile1.txt
+search_namespace/namespace1/namespace2/nestedfile2.txt
+search_namespace/namespace1/userdir
+search_namespace/namespace1/userdir/userfile3.txt
+search_namespace/namespace1/userfile1.txt
+search_namespace/namespace1/userfile2.txt
+
+
+# test: index starting from a directory below a namespace
+$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "prefix/var/marfs/mdal-root/sec-root/MDAL_subspaces/namespace1/userdir" "search_subdir"
+Creating GUFI tree search_subdir with 1 threads
+Total Dirs:          1
+Total Non-Dirs:      1
+
+
+# verify subdirectory index structure
+$ find "search_subdir" -type d
+search_subdir
+search_subdir/userdir
+
+
+# verify subdirectory index contents
+$ gufi_query -d "|"         -S "SELECT rpath(sname, sroll) FROM vrsummary;"         -E "SELECT rpath(sname, sroll, name) FROM vrpentries;"         "search_subdir"
+search_subdir/userdir
+search_subdir/userdir/userfile3.txt
+
+
 # test: error handling - missing config
 # Should fail with appropriate error message
 $ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "prefix/var/marfs/mdal-root/sec-root" "search_fail" 2>&1 | head -n 1
 Error: MARFS_CONFIG_PATH is not set
 
 
+# test: error handling - missing sec-root
+# Should fail with appropriate error message
+$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "prefix/var/marfs/mdal-root/sec-root" "search_fail2" 2>&1 | head -n 1
+Error: MARFS_SEC_ROOT is not set
+
+
 # test: error handling - invalid path
-# Should fail when path is not a MarFS sec-root
-$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "/tmp" "search_fail2" 2>&1 | grep -i 'error' | head -n 1
-Error: provided dir (/tmp) is not the root of the parent marfs namespace or marfs_config is incorrect
+# Should fail when path is outside the configured MarFS sec-root
+$ gufi_dir2index -x --plugin "GUFI_MARFS_PLUGIN:marfs_indexing_plugin" "/tmp" "search_fail3" 2>&1 | grep -i 'error' | head -n 1
+Error: source (/tmp) is not within MARFS_SEC_ROOT (prefix/var/marfs/mdal-root/sec-root)
 
 
 # test: verify inode/pinode relationships

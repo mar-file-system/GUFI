@@ -73,8 +73,14 @@ MARFS_DAL_ROOT="${MARFS_BASE}/dal-root"
 MARFS_MDAL_ROOT="${MARFS_BASE}/mdal-root"
 MARFS_SEC_ROOT="${MARFS_MDAL_ROOT}/sec-root"
 
+SEARCH_NAMESPACE="${SEARCH}_namespace"
+SEARCH_SUBDIR="${SEARCH}_subdir"
+
 cleanup() {
-    rm -rf "${MARFS_BASE}" "${MARFS_CONFIG}"
+    rm -rf "${MARFS_BASE}" \
+           "${MARFS_CONFIG}" \
+           "${SEARCH_NAMESPACE}" \
+           "${SEARCH_SUBDIR}"
 }
 
 cleanup_exit() {
@@ -118,13 +124,20 @@ cleanup
 
     run_sort "find \"${MARFS_SEC_ROOT}\" -type f -o -type d"
 
+    # The plugin requires absolute source and sec-root paths. Keep the relative
+    # paths above so the existing regression output does not unnecessarily change.
+    MARFS_DAL_ROOT_ABS="$(cd "${MARFS_DAL_ROOT}" && pwd)"
+    MARFS_SEC_ROOT_ABS="$(cd "${MARFS_SEC_ROOT}" && pwd)"
+    MARFS_NAMESPACE1_ABS="${MARFS_SEC_ROOT_ABS}/MDAL_subspaces/namespace1"
+    MARFS_USERDIR_ABS="${MARFS_NAMESPACE1_ABS}/userdir"
+
     echo
     echo "# create MarFS config XML"
     cp "@CMAKE_CURRENT_BINARY_DIR@/marfs_plugin_config.xml" "${MARFS_CONFIG}"
 
     # Replace placeholders with actual paths
-    @SED@ -i "s|DAL_ROOT_PLACEHOLDER|${MARFS_DAL_ROOT}|g" "${MARFS_CONFIG}"
-    @SED@ -i "s|NS_ROOT_PLACEHOLDER|${MARFS_SEC_ROOT}|g" "${MARFS_CONFIG}"
+    @SED@ -i "s|DAL_ROOT_PLACEHOLDER|${MARFS_DAL_ROOT_ABS}|g" "${MARFS_CONFIG}"
+    @SED@ -i "s|NS_ROOT_PLACEHOLDER|${MARFS_SEC_ROOT_ABS}|g" "${MARFS_CONFIG}"
 
     echo "Created MarFS config at ${MARFS_CONFIG}"
 
@@ -135,7 +148,9 @@ cleanup
     echo "#   - Filter out MDAL_MARFS-FILE xattrs"
     echo "#   - Preserve MDAL_subspaces structure during indexing"
     echo "#   - Rename root namespace to mountpoint in final index"
-    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}\"" 2>&1 | remove_time
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" \
+    MARFS_SEC_ROOT="${MARFS_SEC_ROOT_ABS}" \
+        run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT_ABS}\" \"${SEARCH}\"" 2>&1 | remove_time
 
     echo
     echo "# verify index structure"
@@ -160,7 +175,7 @@ cleanup
 
     echo
     echo "# verify nlink decrement"
-    echo "# All file nlink counts should be decremented by 1 (MarFS metadata link removed)"
+    echo "# Files with MarFS metadata links should have nlink decremented by 1"
     run_sort "${GUFI_QUERY} -d \"${DELIM}\" -S \"SELECT rpath(sname, sroll), nlink FROM vrsummary;\" -E \"SELECT rpath(sname, sroll, name), nlink FROM vrpentries WHERE type == 'f' ORDER BY name;\" \"${SEARCH}\""
 
     echo
@@ -168,24 +183,68 @@ cleanup
     run_sort "${SQLITE3} \"${SEARCH}/marfs/db.db\" \"SELECT name FROM summary;\""
 
     echo
-    echo "# test: re-index over existing index"
-    echo "# Plugin should handle existing index structure correctly"
-    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}\"" 2>&1 | remove_time
+    echo "# test: re-index over existing index with trailing slashes"
+    echo "# Plugin should handle existing index structure and trailing slashes correctly"
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" \
+    MARFS_SEC_ROOT="${MARFS_SEC_ROOT_ABS}" \
+        run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT_ABS}/\" \"${SEARCH}/\"" 2>&1 | remove_time
 
     echo
     echo "# verify structure after re-indexing"
     run_sort "find \"${SEARCH}\" -type d"
 
     echo
+    echo "# test: index starting from a configured namespace"
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" \
+    MARFS_SEC_ROOT="${MARFS_SEC_ROOT_ABS}" \
+        run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_NAMESPACE1_ABS}\" \"${SEARCH_NAMESPACE}\"" 2>&1 | remove_time
+
+    echo
+    echo "# verify configured namespace index structure"
+    run_sort "find \"${SEARCH_NAMESPACE}\" -type d"
+
+    echo
+    echo "# verify configured namespace index contents"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" \
+        -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \
+        -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \
+        \"${SEARCH_NAMESPACE}\""
+
+    echo
+    echo "# test: index starting from a directory below a namespace"
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" \
+    MARFS_SEC_ROOT="${MARFS_SEC_ROOT_ABS}" \
+        run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_USERDIR_ABS}\" \"${SEARCH_SUBDIR}\"" 2>&1 | remove_time
+
+    echo
+    echo "# verify subdirectory index structure"
+    run_sort "find \"${SEARCH_SUBDIR}\" -type d"
+
+    echo
+    echo "# verify subdirectory index contents"
+    run_sort "${GUFI_QUERY} -d \"${DELIM}\" \
+        -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \
+        -E \"SELECT rpath(sname, sroll, name) FROM vrpentries;\" \
+        \"${SEARCH_SUBDIR}\""
+
+    echo
     echo "# test: error handling - missing config"
     echo "# Should fail with appropriate error message"
-    unset MARFS_CONFIG_PATH
-    run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT}\" \"${SEARCH}_fail\" 2>&1 | head -n 1" || true
+    MARFS_SEC_ROOT="${MARFS_SEC_ROOT_ABS}" \
+        run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT_ABS}\" \"${SEARCH}_fail\" 2>&1 | head -n 1" || true
+
+    echo
+    echo "# test: error handling - missing sec-root"
+    echo "# Should fail with appropriate error message"
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" \
+        run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"${MARFS_SEC_ROOT_ABS}\" \"${SEARCH}_fail2\" 2>&1 | head -n 1" || true
 
     echo
     echo "# test: error handling - invalid path"
-    echo "# Should fail when path is not a MarFS sec-root"
-    MARFS_CONFIG_PATH="${MARFS_CONFIG}" run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"/tmp\" \"${SEARCH}_fail2\" 2>&1 | @GREP@ -i 'error' | head -n 1" || true
+    echo "# Should fail when path is outside the configured MarFS sec-root"
+    MARFS_CONFIG_PATH="${MARFS_CONFIG}" \
+    MARFS_SEC_ROOT="${MARFS_SEC_ROOT_ABS}" \
+        run_no_sort "${GUFI_DIR2INDEX} -x --plugin \"GUFI_MARFS_PLUGIN:${MARFS_INDEXING_PLUGIN}\" \"/tmp\" \"${SEARCH}_fail3\" 2>&1 | @GREP@ -i 'error' | head -n 1" || true
 
     echo
     echo "# test: verify inode/pinode relationships"
