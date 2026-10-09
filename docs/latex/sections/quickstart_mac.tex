@@ -1,0 +1,223 @@
+% This file is part of GUFI, which is part of MarFS, which is released
+% under the BSD license.
+%
+%
+% Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+% All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without modification,
+% are permitted provided that the following conditions are met:
+%
+% 1. Redistributions of source code must retain the above copyright notice, this
+% list of conditions and the following disclaimer.
+%
+% 2. Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation and/or
+% other materials provided with the distribution.
+%
+% 3. Neither the name of the copyright holder nor the names of its contributors
+% may be used to endorse or promote products derived from this software without
+% specific prior written permission.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+% ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+% IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+% INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+% BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+% DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+% OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+% ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+%
+%
+% From Los Alamos National Security, LLC:
+% LA-CC-15-039
+%
+% Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+% Copyright 2017. Los Alamos National Security, LLC. This software was produced
+% under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+% Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+% the U.S. Department of Energy. The U.S. Government has rights to use,
+% reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+% ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+% ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+% modified to produce derivative works, such modified software should be
+% clearly marked, so as not to confuse it with the version available from
+% LANL.
+%
+% THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+% "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+% ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+% OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+% CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+% OF SUCH DAMAGE.
+
+
+
+\section{Quickstart for macOS}
+This guide is a companion to the primary quickstart guide with
+information specific to building and using GUFI on macOS. Please refer
+to the primary quickstart guide and non-quickstart guides for more
+details.
+
+\section{Build From Source}
+\subsection{Dependencies}
+While macOS comes with some software for building code, much of it is
+set up in ways that make building GUFI difficult, if not
+impossible. Instead, \texttt{brew} packages should be used. The script
+\texttt{contrib/CI/macos.h} should be used to install the
+dependencies. The very last line of output from the script contains
+extra paths to add to your \texttt{PATH} variable.
+
+\subsection{Configuration}
+First create a build directory under the repository root
+directory. This guide will create \texttt{build}. \texttt{cd} into it.
+\\\\
+\texttt{cmake}, which was installed by \texttt{contrib/CI/macos.h},
+should be run first to configure the build. \texttt{cmake} tends to
+pick up \texttt{AppleClang} for the C and C++ compilers, so explicitly
+override them with the environment variables \texttt{CC} and
+\texttt{CXX}.
+
+\subsubsection{Additional \texttt{cmake} Flags}
+Configuring GUFI on macOS requires one extra flag that is not required
+in other environments: \texttt{-DCMAKE\_OSX\_SYSROOT=macosx}. If
+\texttt{cmake} is unable to find OpenMP, try also passing in
+\texttt{-DOpenMP\_Root="\$(brew --prefix libomp)"}.
+\\\\
+There are some additional flags that may be used when building on
+macOS:
+\begin{longtable}{|l|p{0.5\linewidth}|}
+  \hline
+  \texttt{cmake} Flag & Description \\
+  \hline
+  \texttt{-DDEP\_AI=<On|Off>} & Enables AI capabilities. Default is
+  \texttt{On}, but recommend explicitly turning it on as a reminder
+  that it is enabled. \\
+  \hline
+  \texttt{-DDEP\_INSTALL\_PREFIX=<directory>} & Location to place
+  installs of bundled dependencies. Default is \texttt{deps} under
+  the \texttt{build} directory, but everything will need to be
+  rebuilt if the \texttt{build} directory is wiped. Recommend
+  \texttt{\$\{HOME\}/.local}. \\
+  \hline
+  \texttt{-DDEP\_BUILD\_THREADS=<\#>} & Number of threads to use to
+  build dependencies. Default is 1. Recommend setting to higher value.\\
+  \hline
+\end{longtable}
+
+There are other flags that can be used to change target
+directories. Do not change them on macOS.
+
+\subsubsection{Example Configuration}
+The basic configuration recommended for macOS is:
+\begin{verbatim}
+CC="$(brew --prefix llvm)/bin/clang" \
+CXX="$(brew --prefix llvm)/bin/clang++" \
+cmake .. \
+    -DDEP_AI=On \
+    -DDEP_INSTALL_PREFIX="${HOME}/.local" \
+    -DDEP_BUILD_THREADS="$(nproc --ignore 1)" \
+    -DCMAKE_OSX_SYSROOT=macosx
+\end{verbatim}
+
+\subsection{Build}
+After \texttt{cmake} has succesfully run, simply run \texttt{make}.
+
+\subsection{Convenience Script}
+The steps above are also encapsulated in the script
+\texttt{contrib/build\_on\_mac.sh}. Run this script from the
+repository root. The script was not set up to be sourced, so do not
+source it as a shortcut to getting the environment variables.
+
+\subsection{Install}
+\subsubsection{Run from \texttt{build}}
+GUFI tools may be run from the \texttt{build} directory. Some values
+should be added to environment variables:
+
+\begin{itemize}
+  \item Add \texttt{\$(realpath
+    <DEP\_INSTALL\_PREFIX>/sqlite-vec/lib)} to
+    \texttt{DYLD\_LIBRARY\_PATH}
+  \item Add \texttt{\$(realpath
+    <DEP\_INSTALL\_PREFIX>/sqlite-lembed/lib)} to
+    \texttt{DYLD\_LIBRARY\_PATH}
+  \item Add \texttt{\$(realpath
+    <DEP\_INSTALL\_PREFIX>/llama.cpp/lib)} to
+    \texttt{DYLD\_LIBRARY\_PATH}
+\end{itemize}
+
+\noindent Optionally,
+
+\begin{itemize}
+  \item Add \texttt{\$(realpath build/src)} to \texttt{PATH}
+  \item Add \texttt{\$(realpath build/scripts)} to \texttt{PATH}
+  \item Add \texttt{\$(realpath build/scripts)} to \texttt{PYTHONPATH}
+\end{itemize}
+
+\subsubsection{\texttt{sudo make install}}
+\texttt{sudo make install} will install the required files into
+\texttt{/usr/local}.
+\begin{itemize}
+  \item Executables will be placed in
+    \texttt{/usr/local/bin}.
+  \item Libraries (\texttt{*.dylib}) will be placed
+    into \texttt{/usr/local/lib}, including the libraries of the bundled
+    dependencies.
+  \item If the user facing scripts will be used, the
+    configuration file will need to be placed at
+    \texttt{/usr/local/etc/GUFI/config}. The example configuration file
+    will be placed in \texttt{/usr/local/etc/GUFI/server.example}.
+\end{itemize}
+
+\section{Pre-Built Packages}
+\subsection{PKGs}
+Two pre-built PKGs are attached to the assets of
+\href{https://github.com/mar-file-system/GUFI/releases}{each release
+ on GitHub}. If proceeding with the PKGs, only download and install
+the gufi-server PKG.
+\\\\
+If installing the PKG via the GUI, double clicking it might result in
+a pop-up saying that the action was blocked. If this happens, run
+\begin{verbatim}
+sudo xattr -r -d com.apple.quarantine <pkg path>
+\end{verbatim}
+Then double click on it again. Click through the menus. At
+``Destination Select", make sure the ``Install for all users of this
+computer" option is selected.
+\\\\
+To install via terminal, run
+\begin{verbatim}
+sudo installer -pkg <pkg path> -target /
+\end{verbatim}
+Once the PKG is installed, add \texttt{/usr/local/lib} to
+\texttt{DYLD\_LIBRARY\_PATH}.
+\\\\
+If \texttt{sqlite} is not installed, install it via
+\texttt{brew}. Then add \texttt{\$(brew --prefix sqlite)/lib} to
+\texttt{DYLD\_LIBRARY\_PATH}. This is necessary because the PKG does
+not provide SQLite 3 in order to not potentially overwrite existing
+installations and PKGs do not download dependencies themselves.
+\\\\
+If using the user facing scripts, also add \texttt{/usr/local/lib} to
+\texttt{PYTHONPATH}.
+\\\\
+Note that the PKGs (and other artifacts) on GitHub are specific to
+those releases/commits and do not get updated. To get the latest
+changes into PKG(s), configure and build GUFI from source. However,
+instead of running \texttt{sudo make install}, run
+\begin{verbatim}
+sudo cpack -G productbuild -DCPACK\_COMPONENTS\_ALL=Server -B <build>
+\end{verbatim}
+The PKG will be placed in the \texttt{build} directory under the name
+\\\texttt{GUFI-<VERSION>-Darwin.pkg}. If \texttt{productbuild} is not
+found, run
+\begin{verbatim}
+xcode-select --install
+\end{verbatim}
