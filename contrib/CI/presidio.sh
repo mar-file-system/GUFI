@@ -65,14 +65,14 @@ set -e
 
 # https://microsoft.github.io/presidio/installation/#using-docker
 
-docker pull mcr.microsoft.com/presidio-analyzer
-docker run -d -p 5002:3000 mcr.microsoft.com/presidio-analyzer:latest
+docker pull ghcr.io/data-privacy-stack/presidio-analyzer
+docker run -d -p 5002:3000 ghcr.io/data-privacy-stack/presidio-analyzer:latest
 
-docker pull mcr.microsoft.com/presidio-anonymizer
-docker run -d -p 5001:3000 mcr.microsoft.com/presidio-anonymizer:latest
+docker pull ghcr.io/data-privacy-stack/presidio-anonymizer
+docker run -d -p 5001:3000 ghcr.io/data-privacy-stack/presidio-anonymizer:latest
 
-docker pull mcr.microsoft.com/presidio-image-redactor
-docker run -d -p 5003:3000 mcr.microsoft.com/presidio-image-redactor:latest
+docker pull ghcr.io/data-privacy-stack/presidio-image-redactor
+docker run -d -p 5003:3000 ghcr.io/data-privacy-stack/presidio-image-redactor:latest
 
 # also need libcurl and libcjson dev packages, but this
 # script is not os specific, so not adding here
