@@ -78,6 +78,6 @@ site=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
 # errors about missing files
 if [ -f "${site}/gufi_common.py" ]
 then
-    mv "${site}/gufi_common.py" "/usr/@SERVER_LIB@/gufi_common.py"
-    mv "${site}/gufi_config.py" "/usr/@SERVER_LIB@/gufi_config.py"
+    mv "${site}/gufi_common.py" "/usr/@LIB@/gufi_common.py"
+    mv "${site}/gufi_config.py" "/usr/@LIB@/gufi_config.py"
 fi

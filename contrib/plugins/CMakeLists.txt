@@ -74,7 +74,7 @@ add_library(dsi_indexing SHARED
   dsi_indexing.c
 )
 add_dependencies(dsi_indexing install_dependencies)
-install(TARGETS dsi_indexing DESTINATION "${SERVER_LIB}" COMPONENT Server)
+install(TARGETS dsi_indexing DESTINATION "${LIB}" COMPONENT Local)
 
 # DSI querying plugin
 add_library(dsi_querying SHARED
@@ -84,10 +84,8 @@ target_link_libraries(dsi_querying
   "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
 )
 add_dependencies(dsi_querying install_dependencies)
-install(TARGETS dsi_querying DESTINATION "${SERVER_LIB}" COMPONENT Server)
-if (CLIENT)
-  install(TARGETS dsi_querying DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
-endif()
+install(TARGETS dsi_querying DESTINATION "${LIB}" COMPONENT Local)
+install(TARGETS dsi_querying DESTINATION "${REMOTE_LIB}" COMPONENT Remote EXCLUDE_FROM_ALL)
 
 # marfs plugin
 set(MARFS_PREFIX "" CACHE PATH "MarFS install prefix")
@@ -103,7 +101,7 @@ if (MARFS_PREFIX)
   target_link_libraries(marfs_plugin PUBLIC marfs)
   target_link_directories(marfs_plugin PUBLIC "${MARFS_PREFIX}/lib")
   add_dependencies(marfs_plugin install_dependencies)
-  install(TARGETS marfs_plugin DESTINATION "${SERVER_LIB}" COMPONENT Server)
+  install(TARGETS marfs_plugin DESTINATION "${LIB}" COMPONENT Local)
 else()
   message(STATUS "MARFS_PREFIX not set. Not building marfs plugin.")
 endif()
@@ -123,8 +121,6 @@ if (PRESIDIO_PLUGIN)
   target_include_directories(presidio_plugin SYSTEM PUBLIC "${CURL_INCLUDE_DIRS}" "${CJSON_INCLUDE_DIRS}" "${PCRE2_INCLUDEDIR}")
   target_link_libraries(presidio_plugin PUBLIC CURL::libcurl "${CJSON_LDFLAGS}" -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3)
   add_dependencies(presidio_plugin install_dependencies)
-  install(TARGETS presidio_plugin DESTINATION "${SERVER_LIB}" COMPONENT Server)
-  if (CLIENT)
-    install(TARGETS presidio_plugin DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
-  endif()
+  install(TARGETS presidio_plugin DESTINATION "${LIB}" COMPONENT Local)
+  install(TARGETS presidio_plugin DESTINATION "${REMOTE_LIB}" COMPONENT Remote EXCLUDE_FROM_ALL)
 endif()

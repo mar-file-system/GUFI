@@ -68,9 +68,9 @@ The GUFI configuration file is a simple text file with the format
 
 By default, it is located at `/etc/GUFI/config`, and can be changed with CMake.
 
-The server and client sides have different keys and values:
+The local and remote sides have different keys and values:
 
-Server:
+Local:
 | Key            | ValueType            | Description                                          |
 | -------------- | -------------------- | ---------------------------------------------------- |
 | `Threads`      | Positive Integer     | Number of threads to use when running gufi_query     |
@@ -79,7 +79,7 @@ Server:
 | `IndexRoot`    | Single Path String   | Absolute path of root directory for GUFI to traverse |
 | `OutputBuffer` | Non-negative Integer | Amount of data to buffer before printing             |
 
-Client:
+Remote:
 | Key            | ValueType            | Description                                          |
 | -------------- | -------------------- | ---------------------------------------------------- |
 | `Server`       | String               | Hostname                                             |
@@ -88,4 +88,4 @@ Client:
 Comments are lines that begin with `#`.
 
 When running `make install` or `rpm --install`, an example configurations will be written
-to `/etc/GUFI/server.example` or `/etc/GIFU/client.example`.
+to `/etc/GUFI/config.example` or `/etc/GIFU/remote.example`.

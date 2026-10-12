@@ -1,4 +1,3 @@
-#!@Python3_SHEBANG@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,35 +60,26 @@
 
 
 
-import subprocess
-import sys
+# Server Config
 
-from shlex import quote as sanitize
+# positive integer
+Threads=@CORES@
 
-import gufi_config # pylint: disable=wrong-import-position
+# absolute path to gufi_query
+# single path string
+Query=@INSTALL_PREFIX@/@BIN@/gufi_query
 
-def run(args):
-    '''
-    Send all arguments to gufi_@TOOL@ on the server side
-    '''
+# absolute path to gufi_sqlite3
+# single path string
+Sqlite3=@INSTALL_PREFIX@/@BIN@/gufi_sqlite3
 
-    config = gufi_config.Client(gufi_config.PATH)
+# absolute path to gufi_stat_bin
+# single path string
+Stat=@INSTALL_PREFIX@/@BIN@/gufi_stat_bin
 
-    # build the ssh command
-    cmd = [
-        'ssh',
-        config.server,
-        '-p', str(config.port),
-        '--',
-        # sanitize the command segments and send everything over as one argument to ssh
-        ' '.join(sanitize(arg) for arg in ['gufi_@TOOL@'] + args)
-     ]
+# directory where all GUFI trees are placed under
+# single path string
+IndexRoot=/search
 
-    # run the command
-    query = subprocess.Popen(cmd) # pylint: disable=consider-using-with
-    query.communicate()           # block until query finishes
-
-    return query.returncode
-
-if __name__  == '__main__':
-    sys.exit(run(sys.argv[1:]))
+# size of per-thread print buffers
+OutputBuffer=4096

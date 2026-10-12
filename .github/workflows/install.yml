@@ -101,7 +101,7 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B build ${{ env.COMMON_CONFIG }} -DCLIENT=On
+      run:  cmake -B build ${{ env.COMMON_CONFIG }}
 
     - name: Build and Test RPMs
       run:  |
@@ -161,10 +161,10 @@ jobs:
 
     - name: Find Executables
       run:  |
-        while IFS= read -r -d $'\0' name
+        while IFS= read -r -d $'' name
         do
             which "${name}"
-        done < <(find src scripts -maxdepth 1 \( -name "gufi_*" -a -not -name "*.*" \) -type f -executable -printf "%P\0" | sort -z)
+        done < <(find src scripts -maxdepth 1 \( -name "gufi_*" -a -not -name "*.*" -a -not -name "*remote*" \) -type f -executable -printf "%P\0" | sort -z)
       working-directory: ${{ github.workspace }}/build
 
   PKG:
@@ -195,7 +195,7 @@ jobs:
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
     - name: Configure CMake
-      run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCLIENT=On -UMARFS_PREFIX -DCMAKE_OSX_SYSROOT=macosx
+      run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -UMARFS_PREFIX -DCMAKE_OSX_SYSROOT=macosx
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j

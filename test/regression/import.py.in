@@ -71,7 +71,7 @@ import gufi_tool
 # not really a unit test
 class TestImportingUserFacingScripts(unittest.TestCase):
     def setUp(self):
-        self.config = gufi_config.Server(gufi_tool.CONFIG_PATH)
+        self.config = gufi_config.Local(gufi_tool.CONFIG_PATH)
         self.path = 'prefix'
         self.nondir = os.path.join(self.path, 'old_file')
 

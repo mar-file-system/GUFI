@@ -99,7 +99,7 @@ def parse_args(argv):
 
 def run(argv, config_path):
     # find and parse the configuration file first
-    config = gufi_config.Server(config_path)
+    config = gufi_config.Local(config_path)
 
     args = parse_args(argv)
 

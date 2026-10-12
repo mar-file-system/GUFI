@@ -90,7 +90,7 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX="${SWHOME}/GUFI" \
     -DDEP_INSTALL_PREFIX="${SWHOME}" \
     -DDEP_BUILD_THREADS="$(nproc --ignore 1)" \
-    -DSERVER_CONFIG="${SWHOME}/GUFI/etc/config" \
+    -DCONFIG="${SWHOME}/GUFI/etc/config" \
     -DCMAKE_OSX_SYSROOT=macosx
 
 make -j

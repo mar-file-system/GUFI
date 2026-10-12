@@ -62,7 +62,7 @@
 
 \section{Build}
 
-GUFI uses CMake to generate Makefiles. CMake 3.19 or higher is
+GUFI uses CMake to generate Makefiles. CMake 3.20 or higher is
 required. From the root directory of the GUFI source, run:
 \begin{verbatim}
 mkdir build
@@ -72,7 +72,7 @@ make
 \end{verbatim}
 
 The recommended options for deployment are
-\texttt{-DCMAKE\_BUILD\_TYPE=Release -DCLIENT=On}.
+\texttt{-DCMAKE\_BUILD\_TYPE=Release}.
 \\\\
 The list below shows the environments where GUFI is known to have
 built, run, and passed tests at some point. The environments labeled
@@ -148,13 +148,12 @@ Actions and might no longer work.
 \end{table}
 
 \subsubsection{Install Paths}
-Files are categorized as server or client components. Instead of
-installing to \texttt{BIN} and \texttt{LIB}, they can now be installed
-to server and client specific paths. If the paths provided are
-relative, they will be installed under
+Files are categorized as local or remote components. Local component
+path variables names do not have prefixes. Remote component path
+variable names have the prefix \texttt{REMOTE\_}.  If the paths
+provided are relative, they will be installed under
 \texttt{CMAKE\_INSTALL\_PREFIX}. If they are absolute, they will be
-installed there. if \texttt{CLIENT=Off}, only the server values will
-be used.
+installed there.
 
 \begin{table}[H]
 \centering
@@ -162,28 +161,33 @@ be used.
   \hline
   \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
-  \texttt{SERVER\_BIN=<DIR>} & Directory to install executables at \\
+  \texttt{BIN=<DIR>}         & Directory to install executables at \\
                              & (default: bin) \\
-  \texttt{CLIENT\_BIN=<DIR>} & Directory to install client executables at \\
-                             & (default: \texttt{\$\{SERVER\_BIN\}}) \\
+  \texttt{REMOTE\_BIN=<DIR>} & Directory to install remote executables at \\
+                             & (default: \texttt{\$\{BIN\}}) \\
   \hline
-  \texttt{SERVER\_LIB=<DIR>} & Directory to install libraries at \\
+  \texttt{LIB=<DIR>}         & Directory to install libraries at \\
                              & (default: lib) \\
-  \texttt{CLIENT\_LIB=<DIR>} & Directory to install client libraries at \\
-                             & (default: \texttt{\$\{SERVER\_LIB\}}) \\
+  \texttt{REMOTE\_LIB=<DIR>} & Directory to install remote libraries at \\
+                             & (default: \texttt{\$\{LIB\}}) \\
   \hline
-  \texttt{SERVER\_CONFIG=<FILEPATH>} & Path of configuration file used by scripts. \\
-  \texttt{CLIENT\_CONFIG=<FILEPATH>} & \\
-                                     & Two different paths are available in case the server \\
-                                     & and client deployments place their configuration files \\
+  \texttt{CONFIG=<FILEPATH>}         & Path of configuration file used by the user facing scripts. \\
+  \texttt{REMOTE\_CONFIG=<FILEPATH>} & \\
+                                     & Two different paths are available in case the local \\
+                                     & and remote deployments place their configuration files \\
                                      & at different locations. \\
                                      & \\
                                      & Both default to \guficonfigfile. \\
   \hline
-  \texttt{SERVER\_MAN=<DIR>} & Directory to install man pages at \\
+  \texttt{ETC=<DIR>}         & Directory to install other files at. Separate from \texttt{CONFIG}. \\
+                             & (default: etc) \\
+  \texttt{REMOTE\_ETC=<DIR>} & Directory to install other remote files at. Separate from \texttt{REMOTE\_CONFIG} \\
+                             & (default: \texttt{\$\{ETC\}}) \\
+  \hline
+  \texttt{MAN=<DIR>}         & Directory to install man pages at \\
                              & (default: share/man) \\
-  \texttt{CLIENT\_MAN=<DIR>} & Directory to install client man pages at \\
-                             & (default: \texttt{\$\{SERVER\_MAN\}}) \\
+  \texttt{REMOTE\_MAN=<DIR>} & Directory to install remote man pages at \\
+                             & (default: \texttt{\$\{MAN\}}) \\
   \hline
 \end{tabularx}
 \end{table}
@@ -248,11 +252,6 @@ have effect.
 \begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
   \texttt{-D<VAR>=<VALUE>} & Description \\
-  \hline
-  \texttt{CLIENT=<On|Off>}
-  & Whether or not to install \guficlient wrapper scripts when running
-  \texttt{make install} and build separate server and client RPMs
-  (default: Off) \\
   \hline
   \texttt{QPTPOOL\_SWAP=<On|Off>}
   & Whether or not to build QueuePerThreadPool with work swapping

@@ -55,7 +55,7 @@ configuration `-DLATEX_BUILD=On`.
 - [userfilespacehogusesummary](/examples/userfilespacehogusesummary)
 
 ## [Deploying GUFI](/examples/deploy)
-- [Simple GUFI Server/Client](/examples/deploy/simple)
+- [Simple GUFI Deployment + Remote Client](/examples/deploy/simple)
 
 ## Extra Information
 - [Configuration Files](config)

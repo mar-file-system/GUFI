@@ -84,45 +84,45 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(TypeError):
             gufi_config.Config([], None)
 
-class TestServerConfig(unittest.TestCase):
+class TestLocalConfig(unittest.TestCase):
     default = {
-        gufi_config.Server.THREADS      : 5,
-        gufi_config.Server.QUERY        : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_query'),
-        gufi_config.Server.SQLITE3      : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_sqlite3'),
-        gufi_config.Server.STAT         : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_stat'),
-        gufi_config.Server.INDEXROOT    : '@CMAKE_BINARY_DIR@',
-        gufi_config.Server.OUTPUTBUFFER : 1024,
+        gufi_config.Local.THREADS      : 5,
+        gufi_config.Local.QUERY        : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_query'),
+        gufi_config.Local.SQLITE3      : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_sqlite3'),
+        gufi_config.Local.STAT         : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_stat'),
+        gufi_config.Local.INDEXROOT    : '@CMAKE_BINARY_DIR@',
+        gufi_config.Local.OUTPUTBUFFER : 1024,
     }
 
     def setUp(self): # pylint: disable=invalid-name
-        self.pairs = copy.deepcopy(TestServerConfig.default)
+        self.pairs = copy.deepcopy(TestLocalConfig.default)
 
     def check_values(self, config):
-        self.assertEqual(TestServerConfig.default[gufi_config.Server.THREADS],
+        self.assertEqual(TestLocalConfig.default[gufi_config.Local.THREADS],
                          config.threads)
-        self.assertEqual(TestServerConfig.default[gufi_config.Server.QUERY],
+        self.assertEqual(TestLocalConfig.default[gufi_config.Local.QUERY],
                          config.query)
-        self.assertEqual(TestServerConfig.default[gufi_config.Server.SQLITE3],
+        self.assertEqual(TestLocalConfig.default[gufi_config.Local.SQLITE3],
                          config.sqlite3)
-        self.assertEqual(TestServerConfig.default[gufi_config.Server.STAT],
+        self.assertEqual(TestLocalConfig.default[gufi_config.Local.STAT],
                          config.stat)
-        self.assertEqual(TestServerConfig.default[gufi_config.Server.INDEXROOT],
+        self.assertEqual(TestLocalConfig.default[gufi_config.Local.INDEXROOT],
                          config.indexroot)
-        self.assertEqual(TestServerConfig.default[gufi_config.Server.OUTPUTBUFFER],
+        self.assertEqual(TestLocalConfig.default[gufi_config.Local.OUTPUTBUFFER],
                          config.outputbuffer)
 
     def test_iterable(self):
         try:
-            config = gufi_config.Server(build_config(self.pairs) + ['', '#'])
+            config = gufi_config.Local(build_config(self.pairs) + ['', '#'])
         except Exception as err: # pylint: disable=broad-except
-            self.fail('Reading good server configuration raised: {0}'.format(err))
+            self.fail('Reading good local configuration raised: {0}'.format(err))
 
         self.check_values(config)
 
     def test_missing(self):
-        for key in TestServerConfig.default:
+        for key in TestLocalConfig.default:
             with self.assertRaises(KeyError):
-                gufi_config.Server(build_config(self.pairs, key))
+                gufi_config.Local(build_config(self.pairs, key))
 
     def bad_int(self, key, badvalues):
         bad = copy.deepcopy(self.pairs)
@@ -131,41 +131,41 @@ class TestServerConfig(unittest.TestCase):
             bad[key] = badvalue
 
             with self.assertRaises(Exception):
-                gufi_config.Server(build_config(bad))
+                gufi_config.Local(build_config(bad))
 
     def test_bad_threads(self):
-        self.bad_int(gufi_config.Server.THREADS, ['-1', '0', '', 'abc'])
+        self.bad_int(gufi_config.Local.THREADS, ['-1', '0', '', 'abc'])
 
     def test_bad_outputbuffer(self):
-        self.bad_int(gufi_config.Server.OUTPUTBUFFER, ['-1', '', 'abc'])
+        self.bad_int(gufi_config.Local.OUTPUTBUFFER, ['-1', '', 'abc'])
 
-class TestClientConfig(unittest.TestCase):
+class TestRemoteConfig(unittest.TestCase):
     default = {
-        gufi_config.Client.SERVER   : 'hostname',
-        gufi_config.Client.PORT     : 22,
+        gufi_config.Remote.SERVER   : 'hostname',
+        gufi_config.Remote.PORT     : 22,
     }
 
     def setUp(self):
-        self.pairs = copy.deepcopy(TestClientConfig.default)
+        self.pairs = copy.deepcopy(TestRemoteConfig.default)
 
     def check_values(self, config):
-        self.assertEqual(TestClientConfig.default[gufi_config.Client.SERVER],
+        self.assertEqual(TestRemoteConfig.default[gufi_config.Remote.SERVER],
                          config.server)
-        self.assertEqual(TestClientConfig.default[gufi_config.Client.PORT],
+        self.assertEqual(TestRemoteConfig.default[gufi_config.Remote.PORT],
                          config.port)
 
     def test_iterable(self):
         try:
-            config = gufi_config.Client(build_config(self.pairs) + ['', '#'])
+            config = gufi_config.Remote(build_config(self.pairs) + ['', '#'])
         except Exception as err: # pylint: disable=broad-except
-            self.fail('Reading good client configuration raised: {0}'.format(err))
+            self.fail('Reading good remote configuration raised: {0}'.format(err))
 
         self.check_values(config)
 
     def test_missing(self):
-        for key in TestClientConfig.default:
+        for key in TestRemoteConfig.default:
             with self.assertRaises(KeyError):
-                gufi_config.Client(build_config(self.pairs, key))
+                gufi_config.Remote(build_config(self.pairs, key))
 
     def bad_int(self, key, badvalues):
         bad = copy.deepcopy(self.pairs)
@@ -174,40 +174,43 @@ class TestClientConfig(unittest.TestCase):
             bad[key] = badvalue
 
             with self.assertRaises(Exception):
-                gufi_config.Client(build_config(bad))
+                gufi_config.Remote(build_config(bad))
 
     def test_bad_port(self):
-        self.bad_int(gufi_config.Client.PORT, ['-1', '65536', '', 'abc'])
+        self.bad_int(gufi_config.Remote.PORT, ['-1', '65536', '', 'abc'])
 
-class TestServerConfigCombined(TestServerConfig):
+class TestLocalConfigCombined(TestLocalConfig):
     def setUp(self):
         # pylint: disable=super-with-arguments
-        super(TestServerConfigCombined, self).setUp()
+        super(TestLocalConfigCombined, self).setUp()
 
-        # add client configuration
-        self.pairs.update(TestClientConfig.default)
+        # add remote configuration
+        self.pairs.update(TestRemoteConfig.default)
 
-class TestClientConfigCombined(TestClientConfig):
+class TestRemoteConfigCombined(TestRemoteConfig):
     def setUp(self):
         # pylint: disable=super-with-arguments
-        super(TestClientConfigCombined, self).setUp()
+        super(TestRemoteConfigCombined, self).setUp()
 
-        # add server configuration
-        self.pairs.update(TestServerConfig.default)
+        # add local configuration
+        self.pairs.update(TestLocalConfig.default)
 
 # make sure example configuration files are valid
 #
 # if example configuration files are not present
 # in build root directory, reconfigure cmake
 class TestConfigFile(unittest.TestCase):
-    def test_server(self):
+    def test_local(self):
         try:
-            gufi_config.run(['server', os.path.join('@CMAKE_BINARY_DIR@', 'server.example')])
+            gufi_config.run(['local', os.path.join('@CMAKE_BINARY_DIR@', 'config.example')])
         except Exception as err: # pylint: disable=broad-except
-            self.fail('Reading good server configuration file raised: {0}'.format(err))
+            self.fail('Reading good local configuration file raised: {0}'.format(err))
 
-    # not testing client.example
-    # CMake @CLIENT@ variable can be anything CMake accepts as a boolean
+    def test_remote(self):
+        try:
+            gufi_config.run(['remote', os.path.join('@CMAKE_BINARY_DIR@', 'remote.example')])
+        except Exception as err: # pylint: disable=broad-except
+            self.fail('Reading good remote configuration file raised: {0}'.format(err))
 
 if __name__ == '__main__':
     unittest.main()

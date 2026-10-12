@@ -77,14 +77,14 @@
 set -e
 
 INSTALL_PREFIX="$1"
-SERVER_CONFIG="${2:-/etc/GUFI/config}"
+CONFIG="${2:-/etc/GUFI/config}"
 
-SERVER_CONFIG_DIR=$(dirname "${SERVER_CONFIG}")
-SERVER_CONFIG_EXAMPLE="${SERVER_CONFIG_DIR}/server.example"
+CONFIG_DIR=$(dirname "${CONFIG}")
+CONFIG_EXAMPLE="${CONFIG_DIR}/config.example"
 
 set -x
 
-tail -n 23 "${SERVER_CONFIG_EXAMPLE}"
+tail -n 23 "${CONFIG_EXAMPLE}"
 
 # the C binaries run
 gufi_query --help
@@ -98,8 +98,8 @@ echo ".load ${INSTALL_PREFIX}/lib/run_vt"  | sqlite3
 python3 -c "import gufi_common, gufi_config"
 
 # the user facing scripts work
-if [[ ! -f "${SERVER_CONFIG}" ]]
+if [[ ! -f "${CONFIG}" ]]
 then
-    cp "${SERVER_CONFIG_EXAMPLE}" "${SERVER_CONFIG}"
+    cp "${CONFIG_EXAMPLE}" "${CONFIG}"
 fi
 gufi_find --help

@@ -76,92 +76,84 @@ foreach(TOOL ${TOOLS})
 
   # always install the actual tools
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}"
-    DESTINATION "${SERVER_BIN}"
-    COMPONENT Server)
+    DESTINATION "${BIN}"
+    COMPONENT Local)
 
-  if (CLIENT)
-    # client files WILL NOT overwrite server files in build directory
-    set(CLIENT_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_${TOOL}")
-    configure_file("gufi_client" "${CLIENT_TOOL}" @ONLY)
+  # remote files WILL NOT overwrite local files in build directory
+  set(REMOTE_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_remote_${TOOL}")
+  configure_file("gufi_remote" "${REMOTE_TOOL}" @ONLY)
 
-    install(PROGRAMS "${CLIENT_TOOL}"
-      DESTINATION "${CLIENT_BIN}"
-      COMPONENT Client  # this is always needed for make package
-      RENAME "${USER_TOOL}"
-      EXCLUDE_FROM_ALL) # do not overwrite the tool with the client script when running 'make install'
-  endif()
+  install(PROGRAMS "${REMOTE_TOOL}"
+    DESTINATION "${REMOTE_BIN}"
+    COMPONENT Remote  # this is always needed for make package
+    RENAME "${USER_TOOL}"
+    EXCLUDE_FROM_ALL) # do not overwrite the tool with the remote script when running 'make install'
 endforeach()
 
-# allow for clients to call gufi_query via a script
+# allow for remotes to call gufi_query via a script
 set(TOOL "query.py")
 set(USER_TOOL "gufi_${TOOL}")
 configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
 
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}"
-  DESTINATION "${SERVER_BIN}"
-  COMPONENT Server)
+  DESTINATION "${BIN}"
+  COMPONENT Local)
 
-if (CLIENT)
-  set(CLIENT_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_query")
-  configure_file("gufi_client" "${CLIENT_TOOL}" @ONLY)
+set(REMOTE_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_remote_query")
+configure_file("gufi_remote" "${REMOTE_TOOL}" @ONLY)
 
-  install(PROGRAMS "${CLIENT_TOOL}"
-    DESTINATION "${CLIENT_BIN}"
-    COMPONENT Client    # this is always needed for make package
-    RENAME "gufi_query" # this is different from above
-    EXCLUDE_FROM_ALL)   # do not overwrite the gufi_query binary if running 'make install'
-endif()
+install(PROGRAMS "${REMOTE_TOOL}"
+  DESTINATION "${REMOTE_BIN}"
+  COMPONENT Remote    # this is always needed for make package
+  RENAME "gufi_query" # this is different from above
+  EXCLUDE_FROM_ALL)   # do not overwrite the gufi_query binary if running 'make install'
 
-# install gufi_query_multiple_remotes script to server
+# install gufi_query_multiple_remotes script to local
 configure_file(gufi_query_multiple_remotes gufi_query_multiple_remotes @ONLY)
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_query_multiple_remotes"
-  DESTINATION "${SERVER_BIN}"
-  COMPONENT Server)
+  DESTINATION "${BIN}"
+  COMPONENT Local)
 
-if (CLIENT)
-  # install the script into the client RPM because it uses gufi_vt
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_query_multiple_remotes"
-    DESTINATION "${CLIENT_BIN}"
-    COMPONENT Client
-    EXCLUDE_FROM_ALL)
-endif()
+# install the script into the remote RPM because it uses gufi_vt
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_query_multiple_remotes"
+  DESTINATION "${REMOTE_BIN}"
+  COMPONENT Remote
+  EXCLUDE_FROM_ALL)
 
 # gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
 configure_file(gufi_jail gufi_jail @ONLY)
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail"
-  DESTINATION "${SERVER_BIN}"
-  COMPONENT Server)
+  DESTINATION "${BIN}"
+  COMPONENT Local)
 
-# not prefixed with gufi_ and no client tool
+# not prefixed with gufi_ and no remote tool
 configure_file(querydbs querydbs @ONLY)
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/querydbs"
-  DESTINATION "${SERVER_BIN}"
-  COMPONENT Server)
+  DESTINATION "${BIN}"
+  COMPONENT Local)
 
-# python libraries installed into lib (server and client)
+# python libraries installed into lib (local and remote)
 set(LIBRARIES
   gufi_common.py # library only
   gufi_config.py # also executable
 )
 
 foreach(LIBRARY ${LIBRARIES})
-  set(CONFIG_FILE "${SERVER_CONFIG}")
+  set(CONFIG_FILE "${CONFIG}")
   configure_file("${LIBRARY}" "${LIBRARY}" @ONLY)
 
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}"
-    DESTINATION "${SERVER_LIB}"
-    COMPONENT Server)
+    DESTINATION "${LIB}"
+    COMPONENT Local)
 
-  if (CLIENT)
-    # if SERVER_CONFIG and CLIENT_CONFIG are not the same, need to copy correct version into the RPM
-    set(CONFIG_FILE "${CLIENT_CONFIG}")
-    configure_file("${LIBRARY}" "client_${LIBRARY}" @ONLY)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/client_${LIBRARY}"
-      DESTINATION "${CLIENT_LIB}"
-      COMPONENT Client
-      RENAME "${LIBRARY}"
-      EXCLUDE_FROM_ALL)  # do not install libraries a second time if running 'make install'
-  endif()
+  # if CONFIG and REMOTE_CONFIG are not the same, need to copy correct version into the RPM
+  set(CONFIG_FILE "${REMOTE_CONFIG}")
+  configure_file("${LIBRARY}" "remote_${LIBRARY}" @ONLY)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/remote_${LIBRARY}"
+    DESTINATION "${REMOTE_LIB}"
+    COMPONENT Remote
+    RENAME "${LIBRARY}"
+    EXCLUDE_FROM_ALL)  # do not install libraries a second time if running 'make install'
 endforeach()
 
 # bash completions for the tools so paths can be tab completed
@@ -171,7 +163,7 @@ if (COMPOPT EQUAL 0)
   if (BASH_COMPLETION)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/bash_completion"
       DESTINATION "/etc/bash_completion.d"
-      COMPONENT Server RENAME gufi)
+      COMPONENT Local RENAME gufi)
   endif()
 endif()
 

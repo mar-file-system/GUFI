@@ -137,7 +137,7 @@ def gen_cmds(config, args):
 
 # argv[0] should be the command name
 def run(argv, config_path, stdout=None, stderr=None):
-    config = gufi_config.Server(config_path)
+    config = gufi_config.Local(config_path)
     args = parse_args(argv)
     cmds = gen_cmds(config, args)
     return gufi_common.run_cmds(args, cmds,

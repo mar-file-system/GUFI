@@ -96,7 +96,7 @@ def parse_args(argv):
     return parser.parse_args(argv[1:])
 
 def run(argv, config_path):
-    config = gufi_config.Server(config_path)
+    config = gufi_config.Local(config_path)
     args = parse_args(argv)
 
     # add gufi_query directory to PATH

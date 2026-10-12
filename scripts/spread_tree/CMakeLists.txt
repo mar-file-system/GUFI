@@ -68,8 +68,8 @@ set(SPREAD_TREE_CONFIG
 foreach(SRC ${SPREAD_TREE_CONFIG})
   configure_file("${SRC}" "${SRC}" COPYONLY)
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
-    DESTINATION "${SERVER_ETC}"
-    COMPONENT Server)
+    DESTINATION "${ETC}"
+    COMPONENT Local)
 endforeach()
 
 set(SPREAD_TREE_SOURCES
@@ -84,6 +84,6 @@ set(SPREAD_TREE_SOURCES
 foreach(SRC ${SPREAD_TREE_SOURCES})
   configure_file("${SRC}" "${SRC}" COPYONLY)
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
-    DESTINATION "${SERVER_BIN}"
-    COMPONENT Server)
+    DESTINATION "${BIN}"
+    COMPONENT Local)
 endforeach()

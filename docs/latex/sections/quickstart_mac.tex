@@ -112,7 +112,7 @@ macOS:
   build bundled dependencies. Default is 1. Recommend setting to
   higher value to build the bundled dependencies faster. \\
   \hline
-  \texttt{-DSERVER\_CONFIG=<file>} & Path to file that user facing
+  \texttt{-DCONFIG=<file>} & Path to file that user facing
   scripts (\gufifind, \gufils, etc.) need. Defaults to
   \texttt{/usr/local/etc/GUFI/config}. Change if installing as
   non-root-user. \\
@@ -133,7 +133,7 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX="${SWHOME}/GUFI" \
     -DDEP_INSTALL_PREFIX="${SWHOME}" \
     -DDEP_BUILD_THREADS="$(nproc --ignore 1)" \
-    -DSERVER_CONFIG="${SWHOME}/GUFI/etc/config" \
+    -DCONFIG="${SWHOME}/GUFI/etc/config" \
     -DCMAKE_OSX_SYSROOT=macosx
 \end{verbatim}
 
@@ -171,9 +171,9 @@ should be added to environment variables:
   \item Add \texttt{\$(realpath build/scripts)} to \texttt{PYTHONPATH}
   \item Make sure the configuration file path exists. Since
     \texttt{make install} was not run,
-    \texttt{\$(dirname~<SERVER\_CONFIG>)/server.example} won't exist
-    yet for copying to \texttt{SERVER\_CONFIG}. Either reconfigure
-    with an existing \texttt{SERVER\_CONFIG} or set the \texttt{PATH}
+    \texttt{\$(dirname~<CONFIG>)/config.example} won't exist
+    yet for copying to \texttt{CONFIG}. Either reconfigure
+    with an existing \texttt{CONFIG} or set the \texttt{PATH}
     variable in \texttt{build/scripts/gufi\_config.py} to the desired
     path.
 \end{itemize}
@@ -193,18 +193,18 @@ should be added to environment variables:
     \texttt{<CMAKE\_INSTALL\_PREFIX>/lib} should be added to
     \texttt{PYTHONPATH}.
   \item If using the user facing scripts, the configuration file will
-    need to be placed at \texttt{<SERVER\_CONFIG>}. The example
+    need to be placed at \texttt{<CONFIG>}. The example
     configuration file will be placed in the same directory with the
-    name \texttt{server.example}.
+    name \texttt{config.example}.
 \end{itemize}
-If \texttt{CMAKE\_INSTALL\_PREFIX} and \texttt{SERVER\_CONFIG} were
+If \texttt{CMAKE\_INSTALL\_PREFIX} and \texttt{CONFIG} were
 not set during configuration, \texttt{sudo} will be required.
 
 \subsubsection{PKGs}
 \label{sec:pkgs}
-Generate the Server component PKG with
+Generate the primary PKG with
 \begin{verbatim}
-cpack -G productbuild -DCPACK_COMPONENTS_ALL=Server -B build
+cpack -G productbuild -DCPACK_COMPONENTS_ALL=Local -B build
 \end{verbatim}
 The PKG will be placed in the \texttt{build} directory under the name
 \\\texttt{GUFI-<VERSION>-Darwin.pkg}. If \texttt{productbuild} is not
@@ -215,7 +215,7 @@ xcode-select --install && cmake ..
 and try again.
 \\\\
 If administrative privileges are needed to build the PKG, either run
-as root or set \texttt{SERVER\_CONFIG} to an accessible path
+as root or set \texttt{CONFIG} to an accessible path
 (\texttt{CMAKE\_INSTALL\_PREFIX} does not need to be set due to a
 \texttt{cmake}/macOS interaction).
 \bigskip
@@ -248,7 +248,7 @@ For either installation destination, do the following:
 Two pre-built PKGs are attached to the assets of
 \href{https://github.com/mar-file-system/GUFI/releases}{each release
  on GitHub}. If proceeding with the PKGs, only download and install
-the gufi-server PKG.
+the gufi PKG.
 \\\\
 If installing the PKG via the GUI, double clicking it might result in
 a pop-up saying that the action was blocked. If this happens, run

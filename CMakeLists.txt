@@ -238,17 +238,14 @@ else()
   message(STATUS "Not compiling C++ sources")
 endif()
 
-set(SERVER_BIN "bin"       CACHE STRING "Directory to install executables at")
-set(SERVER_LIB "lib"       CACHE STRING "Directory to install libraries at")
-set(SERVER_ETC "etc"       CACHE STRING "Directory to install configuration files at")
-set(SERVER_MAN "share/man" CACHE STRING "Directory to install man pages at")
+set(BIN "bin"       CACHE STRING "Directory to install executables at")
+set(LIB "lib"       CACHE STRING "Directory to install libraries at")
+set(ETC "etc"       CACHE STRING "Directory to install other configuration files at")
+set(MAN "share/man" CACHE STRING "Directory to install man pages at")
 
-if (CLIENT)
-  set(CLIENT_BIN "${SERVER_BIN}" CACHE STRING "Directory to install client executables at")
-  set(CLIENT_LIB "${SERVER_LIB}" CACHE STRING "Directory to install client libraries at")
-  set(CLIENT_ETC "${SERVER_ETC}" CACHE STRING "Directory to install configuration files at")
-  set(CLIENT_MAN "${SERVER_MAN}" CACHE STRING "Directory to install client man pages at")
-endif()
+set(REMOTE_BIN "${BIN}" CACHE STRING "Directory to install remote executables at")
+set(REMOTE_LIB "${LIB}" CACHE STRING "Directory to install remote libraries at")
+set(REMOTE_MAN "${MAN}" CACHE STRING "Directory to install remote man pages at")
 
 # dynamically loaded module extension
 if (DARWIN)
@@ -360,7 +357,6 @@ set(DEP_DOWNLOAD_PREFIX    "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE PATH   "Loca
 set(DEP_BUILD_PREFIX       "${CMAKE_BINARY_DIR}/builds"       CACHE PATH   "Location of dependency builds")
 set(DEP_BUILD_THREADS      "1"                                CACHE STRING "Number of build threads")
 set(DEP_INSTALL_PREFIX     "${CMAKE_BINARY_DIR}/deps"         CACHE PATH   "Location of dependency binaries")
-set(CLIENT                 OFF                                CACHE BOOL   "Whether or not to build and install client")
 set(DEP_PATCH_SQLITE3_OPEN OFF                                CACHE BOOL   "Whether or not to patch SQLite3 open")
 set(DEP_USE_JEMALLOC       ON                                 CACHE BOOL   "Whether or not to build and link with jemalloc")
 set(DEP_OPTIONS --threads "${DEP_BUILD_THREADS}")
@@ -419,47 +415,42 @@ add_custom_target(install_dependencies ALL COMMAND "${CMAKE_SOURCE_DIR}/contrib/
 if (DARWIN)
   install(DIRECTORY
     "${DEP_INSTALL_PREFIX}/sqlite3/lib/" # keep trailing slash
-    DESTINATION "${SERVER_LIB}"
-    COMPONENT Server
+    DESTINATION "${LIB}"
+    COMPONENT Local
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
     PATTERN "libsqlite3.*"
     PATTERN "libsqlite3.*a" EXCLUDE
   )
-
-  if (CLIENT)
-    install(DIRECTORY
-      "${DEP_INSTALL_PREFIX}/sqlite3/lib/" # keep trailing slash
-      DESTINATION "${CLIENT_LIB}"
-      COMPONENT Client
-      EXCLUDE_FROM_ALL # do not copy if running 'make install'
-      PATTERN "libsqlite3.*"
-      PATTERN "libsqlite3.*a" EXCLUDE
-    )
-  endif()
+  install(DIRECTORY
+    "${DEP_INSTALL_PREFIX}/sqlite3/lib/" # keep trailing slash
+    DESTINATION "${REMOTE_LIB}"
+    COMPONENT Remote
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    PATTERN "libsqlite3.*"
+    PATTERN "libsqlite3.*a" EXCLUDE
+  )
 endif()
 
 install(FILES
   "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
-  DESTINATION "${SERVER_LIB}"
-  COMPONENT Server
+  DESTINATION "${LIB}"
+  COMPONENT Local
   EXCLUDE_FROM_ALL # do not copy if running 'make install'
 )
-if (CLIENT)
-  install(FILES
-    "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
-    DESTINATION "${CLIENT_LIB}"
-    COMPONENT Client
-    EXCLUDE_FROM_ALL # do not copy if running 'make install'
-  )
-endif()
+install(FILES
+  "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
+  DESTINATION "${REMOTE_LIB}"
+  COMPONENT Remote
+  EXCLUDE_FROM_ALL # do not copy if running 'make install'
+)
 
 if (DEP_AI)
   # copy dependencies into packages
   install(FILES
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
-    DESTINATION "${SERVER_LIB}"
-    COMPONENT Server
+    DESTINATION "${LIB}"
+    COMPONENT Local
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
   )
   install(CODE
@@ -467,42 +458,40 @@ if (DEP_AI)
     file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}\")
     file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}\")
     "
-    COMPONENT Server
+    COMPONENT Local
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
   )
   install(DIRECTORY
     "${DEP_INSTALL_PREFIX}/llama.cpp/lib/" # keep trailing slash
-    DESTINATION "${SERVER_LIB}"
-    COMPONENT Server
+    DESTINATION "${LIB}"
+    COMPONENT Local
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
     PATTERN "cmake" EXCLUDE
     PATTERN "pkgconfig" EXCLUDE
   )
-  if (CLIENT)
-    install(FILES
-      "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
-      "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
-      DESTINATION "${CLIENT_LIB}"
-      COMPONENT Client
-      EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  install(FILES
+    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
+    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
+    DESTINATION "${REMOTE_LIB}"
+    COMPONENT Remote
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
     )
-    install(CODE
-      "
-      file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}\")
-      file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}\")
-      "
-      COMPONENT Client
-      EXCLUDE_FROM_ALL # do not copy if running 'make install'
-    )
-    install(DIRECTORY
-      "${DEP_INSTALL_PREFIX}/llama.cpp/lib/" # keep trailing slash
-      DESTINATION "${CLIENT_LIB}"
-      COMPONENT Client
-      EXCLUDE_FROM_ALL # do not copy if running 'make install'
-      PATTERN "cmake" EXCLUDE
-      PATTERN "pkgconfig" EXCLUDE
-    )
-  endif()
+  install(CODE
+    "
+    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}\")
+    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}\")
+    "
+    COMPONENT Remote
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+  install(DIRECTORY
+    "${DEP_INSTALL_PREFIX}/llama.cpp/lib/" # keep trailing slash
+    DESTINATION "${REMOTE_LIB}"
+    COMPONENT Remote
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    PATTERN "cmake" EXCLUDE
+    PATTERN "pkgconfig" EXCLUDE
+  )
 endif()
 
 # Find zlib
@@ -617,22 +606,20 @@ if (DEP_USE_JEMALLOC)
 
   install(DIRECTORY
     "${DEP_INSTALL_PREFIX}/jemalloc/lib/" # keep trailing slash
-    DESTINATION "${SERVER_LIB}"
-    COMPONENT Server
+    DESTINATION "${LIB}"
+    COMPONENT Local
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
     FILES_MATCHING PATTERN "libjemalloc.${EXT}*"
     PATTERN "pkgconfig" EXCLUDE
   )
-  if (CLIENT)
-    install(DIRECTORY
-      "${DEP_INSTALL_PREFIX}/jemalloc/lib/" # keep trailing slash
-      DESTINATION "${CLIENT_LIB}"
-      COMPONENT Client
-      EXCLUDE_FROM_ALL # do not copy if running 'make install'
-      FILES_MATCHING PATTERN "libjemalloc.${EXT}*"
-      PATTERN "pkgconfig" EXCLUDE
-    )
-  endif()
+  install(DIRECTORY
+    "${DEP_INSTALL_PREFIX}/jemalloc/lib/" # keep trailing slash
+    DESTINATION "${REMOTE_LIB}"
+    COMPONENT Remote
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+    FILES_MATCHING PATTERN "libjemalloc.${EXT}*"
+    PATTERN "pkgconfig" EXCLUDE
+  )
 endif()
 
 list(APPEND COMMON_LIBRARIES
@@ -718,6 +705,12 @@ function(add_ai target vec_basename lembed_basename)
   endif()
 endfunction()
 
+# get the architecture of this machine
+# assumes that we are not cross compiling
+execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  COMMAND_ERROR_IS_FATAL ANY)
+
 # enable "make test"
 enable_testing()
 
@@ -755,17 +748,8 @@ set(CPACK_PACKAGE_VERSION_PATCH ${GUFI_VERSION_PATCH})
 set(CPACK_PACKAGE_DESCRIPTION "Grand Unified File Index")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/mar-file-system/GUFI")
 
-# get the architecture of this machine
-# assumes that we are not cross compiling
-execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  COMMAND_ERROR_IS_FATAL ANY)
-
 set(CPACK_MONOLITHIC_INSTALL Off)
-set(CPACK_COMPONENTS_ALL Server)
-if (CLIENT)
-  list(APPEND CPACK_COMPONENTS_ALL Client)
-endif()
+set(CPACK_COMPONENTS_ALL Local Remote)
 
 if (DARWIN)
   # Generate PKG
@@ -807,15 +791,17 @@ elseif (UNIX)
     set(CPACK_RPM_PACKAGE_RELOCATABLE On)
     set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
 
-    set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
-    set(CPACK_RPM_Server_PACKAGE_AUTOREQ Off)
-    set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
+    # this is the primary RPM
+    set(CPACK_RPM_Local_FILE_NAME "gufi-${GUFI_VERSION}.${ARCH}.rpm")
+    set(CPACK_RPM_Local_PACKAGE_AUTOREQ Off)
+    set(CPACK_RPM_Local_PACKAGE_NAME "GUFI")
+    set(CPACK_RPM_Local_PACKAGE_SUMMARY "GUFI RPM")
 
-    if (CLIENT)
-      set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
-      set(CPACK_RPM_Client_PACKAGE_REQUIRES "python(abi) >= 3.9, openssh")
-      set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
-    endif()
+    # this RPM contains files for accessing actual implementation on remote machine
+    set(CPACK_RPM_Remote_FILE_NAME "gufi-remote-${GUFI_VERSION}.${ARCH}.rpm")
+    set(CPACK_RPM_Remote_PACKAGE_NAME "GUFI-Remote")
+    set(CPACK_RPM_Remote_PACKAGE_REQUIRES "python(abi) >= 3.9, openssh")
+    set(CPACK_RPM_Remote_PACKAGE_SUMMARY "GUFI Remote RPM")
 
     # Turn off build-id link creation by RPM to manually control
     # Also need to keep shebang templating

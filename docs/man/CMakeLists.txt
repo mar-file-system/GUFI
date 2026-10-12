@@ -60,7 +60,7 @@
 
 
 
-set(SERVER_CLIENT_MAN_PAGES
+set(LOCAL_REMOTE_MAN_PAGES
   gufi_du.1
   gufi_getfattr.1
   gufi_find.1
@@ -70,7 +70,7 @@ set(SERVER_CLIENT_MAN_PAGES
   gufi_stats.1
 )
 
-set(SERVER_MAN_PAGES
+set(LOCAL_MAN_PAGES
   gufi_dir2index.1
   gufi_dir2trace.1
   gufi_incremental_update.1
@@ -81,33 +81,31 @@ set(SERVER_MAN_PAGES
   querydbs.1
 )
 
-# man pages for executables found in the server/local install
-foreach(MAN_PAGE ${SERVER_MAN_PAGES} ${SERVER_CLIENT_MAN_PAGES})
+# man pages for executables found in the local/local install
+foreach(MAN_PAGE ${LOCAL_MAN_PAGES} ${LOCAL_REMOTE_MAN_PAGES})
   set(MAN_PAGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${MAN_PAGE}.in")
   set(MAN_PAGE_DST "${CMAKE_CURRENT_BINARY_DIR}/${MAN_PAGE}")
   configure_file("${MAN_PAGE_SRC}" "${MAN_PAGE_DST}" @ONLY)
   string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
-  set(INSTALL_CONFIG "${SERVER_CONFIG}")
+  set(INSTALL_CONFIG "${CONFIG}")
   install(FILES "${MAN_PAGE_DST}"
-    DESTINATION "${SERVER_MAN}/man${SECTION}"
-    COMPONENT Server)
+    DESTINATION "${MAN}/man${SECTION}"
+    COMPONENT Local)
 endforeach()
 
-# man pages for executables found in the client
-if (CLIENT)
-  foreach(MAN_PAGE ${SERVER_CLIENT_MAN_PAGES})
-    set(MAN_PAGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${MAN_PAGE}.in")
-    set(MAN_PAGE_DST "${CMAKE_CURRENT_BINARY_DIR}/client_${MAN_PAGE}")
-    configure_file("${MAN_PAGE_SRC}" "${MAN_PAGE_DST}" @ONLY)
-    string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
-    set(INSTALL_CONFIG "${CLIENT_CONFIG}")
-    install(FILES "${MAN_PAGE_DST}"
-      DESTINATION "${CLIENT_MAN}/man${SECTION}"
-      COMPONENT Client
-      RENAME "${MAN_PAGE}"
-      EXCLUDE_FROM_ALL)  # do not install man pages a second time if running 'make install'
-  endforeach()
-endif()
+# man pages for executables found in the remote
+foreach(MAN_PAGE ${LOCAL_REMOTE_MAN_PAGES})
+  set(MAN_PAGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${MAN_PAGE}.in")
+  set(MAN_PAGE_DST "${CMAKE_CURRENT_BINARY_DIR}/remote_${MAN_PAGE}")
+  configure_file("${MAN_PAGE_SRC}" "${MAN_PAGE_DST}" @ONLY)
+  string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
+  set(INSTALL_CONFIG "${REMOTE_CONFIG}")
+  install(FILES "${MAN_PAGE_DST}"
+    DESTINATION "${REMOTE_MAN}/man${SECTION}"
+    COMPONENT Remote
+    RENAME "${MAN_PAGE}"
+    EXCLUDE_FROM_ALL)  # do not install man pages a second time if running 'make install'
+endforeach()
 
 # CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
 # in order to not add /usr/share/man and /usr/share/man/man1 into the RPMs

@@ -142,6 +142,7 @@ set(PYTHON
   gufi_find
   gufi_getfattr
   gufi_ls
+  gufi_query.py
   gufi_query_multiple_remotes
   gufi_stat
   gufi_stats
@@ -149,12 +150,6 @@ set(PYTHON
 
 # replacement main for python scripts
 configure_file(gufi_tool.py.in gufi_tool.py @ONLY)
-
-if (CLIENT)
-  list(APPEND PYTHON
-    gufi_query.py
-  )
-endif()
 
 set(EXAMPLES
   deluidgidsummaryrecs

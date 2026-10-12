@@ -74,7 +74,7 @@ def run(args, config_path, stdout=None, stderr=None):
     Send all arguments to gufi_query
     '''
 
-    config = gufi_config.Server(config_path)
+    config = gufi_config.Local(config_path)
 
     # not automatically adding config.indexroot
     cmd = [config.query] + args[1:]

@@ -80,9 +80,10 @@ Obtain a copy of the source code from GitHub: \\
 Alternatively, two pre-built RPMs are attached to the assets of
 \href{https://github.com/mar-file-system/GUFI/releases}{each release
  on GitHub}. If proceeding with the RPMs, only download and install
-the gufi-server RPM. The Python3 library files required by the user
-facing tools (Section~\ref{sec:user_facing_tools}) will be installed
-into the site-packages directory.
+the gufi RPM, not the gufi-remote RPM. The Python3 library files
+required by the user facing tools
+(Section~\ref{sec:user_facing_tools}) will be installed into the
+site-packages directory.
 
 Then, skip to Section~\ref{sec:usage}.
 
@@ -147,11 +148,10 @@ Some particularly useful ones are listed here: \\
     located. If \texttt{DEP\_AI=On} and CMake cannot find OpenMP, try
     using this flag. On macOS, use \texttt{"\$(brew --prefix libomp)"}. \\
     \hline
-    \texttt{SERVER\_CONFIG=<file path>} & Name of file used to
-    configure user facing tools on the server side (explained
-    later). A copy of \texttt{server.example} will be placed into the
-    parent directory of the provided path. Copy/rename this file to
-    the provided configuration file name. This is the GUFI
+    \texttt{CONFIG=<file path>} & Name of file used to configure user
+    facing tools. A copy of \texttt{config.example} will be placed
+    into the parent directory of the provided path. Copy/rename this
+    file to the provided configuration file name. This is the GUFI
     configuration file that is used in this guide. There is an
     additional configuration file that is not necessary and not
     described here. \\
@@ -169,11 +169,11 @@ but are used in later text, and so are defined here:
     CMake Variable & Explanation \\
     (prepend with \texttt{-D} to set) & \\
     \hline
-    \texttt{SERVER\_BIN=<dir>} & Directory under
+    \texttt{BIN=<dir>} & Directory under
     \texttt{CMAKE\_INSTALL\_PREFIX} to place executables. (Default:
     \texttt{bin}) \\
     \hline
-    \texttt{SERVER\_LIB=<dir>} & Directory under
+    \texttt{LIB=<dir>} & Directory under
     \texttt{CMAKE\_INSTALL\_PREFIX} to place library files. (Default:
     \texttt{lib}) \\
     \hline
@@ -203,21 +203,21 @@ latest cygwin CMake configuration in
 \subsection{Install}
 \indent \indent \texttt{(sudo) make install} \\
 
-Due to how GUFI was planned to be deployed, this installs what is
-known as the server side code. The server contains all of the actual
-implementations of GUFI functionality. The implied client side
-code does exist, but is not explained here.
+This installs the actual implementation of GUFI. Due to how GUFI was
+planned to be deployed, this may be thought of as the server side
+code. The implied client side/remote access code does exist, but is
+not explained here.
 
-At this point, the parent directory of \texttt{SERVER\_CONFIG} should
-have a file called \texttt{server.example} that should be copied or
-renamed to \texttt{SERVER\_CONFIG} and updated before using the user
+At this point, the parent directory of \texttt{CONFIG} should
+have a file called \texttt{config.example} that should be copied or
+renamed to \texttt{CONFIG} and updated before using the user
 facing tools (Sec~\ref{sec:user_facing_tools}).
 
 \subsection{Environment Variables}
 If GUFI was installed, add
-\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{SERVER\_BIN\}} to \texttt{PATH}
+\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{BIN\}} to \texttt{PATH}
 and
-\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{SERVER\_LIB\}} to both
+\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{LIB\}} to both
 \texttt{LD\_LIBRARY\_PATH} and \texttt{PYTHONPATH} if they are not
 already in there.
 
@@ -225,8 +225,8 @@ Alternatively, if the files in the build directory are being used, the
 absolute path of \texttt{build/src} should be added to \texttt{PATH}
 and \texttt{LD\_LIBRARY\_PATH}. Similarly, the absolute path of
 \texttt{build/scripts} should be added to \texttt{PATH} and
-\texttt{PYTHONPATH}. Note that the server configuration file still
-needs to be found at \texttt{SERVER\_CONFIG}.
+\texttt{PYTHONPATH}. Note that the configuration file still
+needs to be found at \texttt{CONFIG}.
 
 Either way, \textbf{DO NOT} use the original files from the
 repository. Many are modified when they are placed in the build
@@ -286,7 +286,7 @@ total number of files and the total size of all files. The \entries
 table contains \texttt{stat(2)} information on the individual files
 and links.
 
-\gufiquery does \textbf{NOT} use \texttt{SERVER\_CONFIG}.
+\gufiquery does \textbf{NOT} use \texttt{CONFIG}.
 
 There are several things to note that affect how \gufiquery should be
 called (explanations can be found in the other \LaTeX documentation).
@@ -330,10 +330,10 @@ can be replicated in GUFI like so: \\
 \paragraph{\gufivt}
 
 \gufivt is a \href{https://sqlite.org/loadext.html}{SQLite3 Run-Time
-  Loadable Extension} that wraps \gufiquery and makes it accessible via
-the SQlite3 command line as well as via any language's SQLite3
+ Loadable Extension} that wraps \gufiquery and makes it accessible
+via the SQlite3 command line as well as via any language's SQLite3
 library. It can be found in \texttt{build/src} and, if GUFI was
-installed, \texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{SERVER\_LIB\}}
+installed, \texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/\$\{LIB\}}
 (\texttt{make install}) or \texttt{/usr/lib} (RPM).
 
 \subsubsection{User Facing Tools}
@@ -347,11 +347,11 @@ common filesystem search functionality with GUFI. The tools are:
 also another tool called \gufistats that does not replicate the
 functionality of any standard tool.
 
-Before running these tools, the server configuration must be set
-up. Look in the \texttt{SERVER\_CONFIG} parent directory. There should
-be a file called \texttt{server.example}. Copy this file to
-\texttt{SERVER\_CONFIG} and modify any values that need changing. At
-minimum, \texttt{IndexRoot} will likely need to be changed to point to
+Before running these tools, the configuration file must be set
+up. Look in the \texttt{CONFIG} parent directory. There should be a
+file called \texttt{config.example}. Copy this file to \texttt{CONFIG}
+and modify any values that need changing. At minimum,
+\texttt{IndexRoot} will likely need to be changed to point to
 \texttt{GUFI\_tree\_parent}\footnote{These need to be renamed to the
 same variable name at some point.} or a subdirectory. An absolute path
 is recommended. \\

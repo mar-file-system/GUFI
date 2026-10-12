@@ -62,8 +62,8 @@
 
 configure_file(gufi_distributed.py gufi_distributed.py @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/gufi_distributed.py"
-  DESTINATION "${SERVER_LIB}"
-  COMPONENT Server)
+  DESTINATION "${LIB}"
+  COMPONENT Local)
 
 # GNU find with -printf "%P" is required
 # for the serial find script
@@ -80,15 +80,15 @@ execute_process(
 
 if (FIND_P_ERROR EQUAL 0)
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/find.sh"
-    DESTINATION "${SERVER_BIN}"
-    COMPONENT Server)
+    DESTINATION "${BIN}"
+    COMPONENT Local)
 endif()
 
 # find using parallel_find in src
 configure_file(parallel_find.sh.in parallel_find.sh @ONLY)
 install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/parallel_find.sh"
-  DESTINATION "${SERVER_BIN}"
-  COMPONENT Server)
+  DESTINATION "${BIN}"
+  COMPONENT Local)
 
 # executables
 set(DISTRIBUTED
@@ -107,12 +107,12 @@ foreach(TOOL ${DISTRIBUTED})
   configure_file("template.sbatch.in" "${SBATCH}" @ONLY)
 
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${TOOL}"
-    DESTINATION "${SERVER_BIN}"
-    COMPONENT Server
+    DESTINATION "${BIN}"
+    COMPONENT Local
     RENAME "${TOOL}_distributed")
 
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${SBATCH}"
-    DESTINATION "${SERVER_BIN}"
-    COMPONENT Server
+    DESTINATION "${BIN}"
+    COMPONENT Local
     RENAME "${TOOL}.sbatch")
 endforeach()

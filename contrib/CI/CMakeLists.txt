@@ -69,15 +69,13 @@ if (DARWIN)
   install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/pkg_uninstall.sh"
     RENAME "gufi_uninstall.sh"
     DESTINATION share
-    COMPONENT Server
+    COMPONENT Local
   )
-  if (CLIENT)
-    install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/pkg_uninstall.sh"
-      RENAME "gufi_uninstall.sh"
-      DESTINATION share
-      COMPONENT Client
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/pkg_uninstall.sh"
+    RENAME "gufi_uninstall.sh"
+    DESTINATION share
+    COMPONENT Remote
   )
-  endif()
 elseif (CYGWIN)
 elseif (UNIX)
   configure_file(rpm_post_install.sh.in rpm_post_install.sh @ONLY)

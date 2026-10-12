@@ -68,8 +68,8 @@ the expected way to deploy GUFI. Users should not log into the machine
 containing both the filesystems and indexes with an interactive
 shell. Instead, indexes are to be placed on a dedicated GUFI server
 (which may or may not be able to see the source filesystems) and users
-will call client scripts from client nodes to forward commands to the
-server via ssh.
+will call the remote scripts from the client nodes to forward commands
+to the server via ssh.
 
 There are multiple reasons why GUFI is being deployed this way. First,
 indexes should not be colocated with the source filesystems in order
@@ -108,12 +108,10 @@ search both indexes at once, or \texttt{search/projects} or
 \texttt{db.db} (the tables exist but are all empty) file in it.
 
 \subsection{RPMs}
-The build should be (re)configured with \texttt{cmake -DCLIENT=On} if
-it is not already enabled. \texttt{make~package} will produce two RPMs
-instead of one. The server RPM will contain the actual GUFI
-implementation. The client RPM will contain renamed and modified
-\guficlient wrapper scripts. These RPMs should be installed on their
-respective nodes.
+\texttt{make~package} will produce two RPMs instead of one. The
+primary RPM will contain the actual GUFI implementation. The remote
+RPM will contain renamed and modified \gufiremote wrapper
+scripts. These RPMs should be installed on their respective nodes.
 
 \subsubsection{Wrapper Scripts}
 \gufiquery provides the core GUFI functionality. However, it is not
@@ -123,14 +121,14 @@ works. Wrapper scripts such as \gufifind and \gufils were created in
 order to provide users (and administrators) with predetermined queries
 that are used often and extract useful information (see the user guide
 for more details). The server has the actual implementation of the
-wrapper scripts while the client has multiple copies of \guficlient
+wrapper scripts while the client has multiple copies of \gufiremote
 renamed to the corresponding script's name.
 
 \subsection{Runtime Configuration}
 The wrapper scripts on both the server and client require a valid GUFI
 configuration file to function correctly. The path to the
 configuration file can be set at configure time with the
-\texttt{SERVER\_CONFIG\_FILE} and \texttt{CLIENT\_CONFIG\_FILE} CMake
+\texttt{CONFIG} and \texttt{REMOTE\_CONFIG} CMake
 variable (both default to \guficonfigfile). The configuration file
 will be readable by all users but should only be writable by the
 administrators (664 permissions) in order to prevent non-admin users
@@ -145,7 +143,7 @@ values. Example configuration files can be found in the
 directory. The corresponding examples will also be installed with
 GUFI.
 
-\subsubsection{Server}
+\subsubsection{Server Configuration}
 \begin{tabular}{| l | l | l |}
   \hline
   Key & Value Type & Purpose \\
@@ -171,7 +169,7 @@ GUFI.
   \hline
 \end{tabular}
 
-\subsubsection{Client}
+\subsubsection{Client Configuration}
 \begin{tabular}{| l | l | l |}
   \hline
   Key & Type & Purpose \\
@@ -185,21 +183,21 @@ GUFI.
 \subsubsection{Colocating the Server and Client}
 Installing both the server and client on the same node with either the
 RPMs or \texttt{make~install} results in a bad setup where either the
-server wrapper scripts overwrite the client scripts or vice versa and
-should not be done.
+wrapper scripts overwrite the remote scripts or vice versa and should
+not be done.
 
-The only time when it makes sense for both the server and client to be
-on the same node at the same time is during testing. When testing, the
-client wrapper scripts should be run out of the GUFI build
-directory. There, the client wrapper scripts will be called
-\texttt{gufi\_client\_<name>}, e.g.,
-\texttt{gufi\_client\_ls}. Additionally, the server and client
-configurations can be merged into the same file if both the server and
-client read from the same configuration file path.
+The only time when it makes sense for both the local and remote code
+to be the same node is during testing. When testing, the remote
+wrapper scripts should be run out of the GUFI build directory. There,
+the remote wrapper scripts will be called
+\texttt{gufi\_remote\_<name>}, e.g.,
+\texttt{gufi\_remote\_ls}. Additionally, the local and remote
+configurations can be merged into the same file if both the sides read
+from the same configuration file path.
 
 \subsection{SSH}
 Once the server and client are set up, users may be allowed in via the
-client scripts forwarding commands through ssh.
+remote scripts forwarding commands through ssh.
 
 \subsubsection{Authentication}
 \label{sec:hostbasedauth}

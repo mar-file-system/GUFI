@@ -147,7 +147,7 @@ function(build_and_install_one PATH LINK_GUFI TARGET)
   endif()
 
   # install the executable
-  install(TARGETS ${TARGET} DESTINATION "${PATH}" COMPONENT Server)
+  install(TARGETS ${TARGET} DESTINATION "${PATH}" COMPONENT Local)
 endfunction()
 
 function(build_and_install PATH LINK_GUFI)
@@ -179,12 +179,12 @@ set(C_SOURCES
 )
 
 # build the C executables
-build_and_install("${SERVER_BIN}" TRUE ${C_SOURCES})
+build_and_install("${BIN}" TRUE ${C_SOURCES})
 
 set_property(TARGET gufi_dir2index PROPERTY ENABLE_EXPORTS TRUE)
 
 # this is the gufi_stat binary that operates on indexes directly
-build_and_install_one("${SERVER_BIN}" TRUE gufi_stat_bin gufi_stat.c)
+build_and_install_one("${BIN}" TRUE gufi_stat_bin gufi_stat.c)
 
 # gufi_sqlite3 loads AI extensions
 target_sources(gufi_sqlite3 PRIVATE extensions.c)
@@ -204,13 +204,14 @@ add_library(gufi_query_lib OBJECT
   gufi_query/query_replacement.c
   gufi_query/query_user_strs.c
   gufi_query/spread_tree.c
+  run_vt.c
 )
 
 add_dependencies(gufi_query_lib GUFI)
 target_compile_definitions(gufi_query_lib PUBLIC SQLITE_CORE)
 add_ai(gufi_query_lib "libsqlite_vec0.a" "libsqlite_lembed0.a")
 
-build_and_install_one("${SERVER_BIN}" TRUE gufi_query
+build_and_install_one("${BIN}" TRUE gufi_query
   gufi_query/main.c
   $<TARGET_OBJECTS:gufi_query_lib>
 )
@@ -272,10 +273,8 @@ set_property(TARGET gufi_vt APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}
 set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3/lib")  # make install
 set_property(TARGET gufi_vt APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3-pcre")
 set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre") # make install
-set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${SERVER_LIB}")  # package install
-if (CLIENT)
-  set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${CLIENT_LIB}")  # package install
-endif()
+set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${LIB}")  # package install
+set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${REMOTE_LIB}")  # package install
 
 if (DEP_AI)
   if (DARWIN)
@@ -289,10 +288,8 @@ endif()
 
 add_ai(gufi_vt "libvec0.${AI_EXT}" "liblembed0.${AI_EXT}")
 
-install(TARGETS gufi_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
-if (CLIENT)
-  install(TARGETS gufi_vt DESTINATION "${CLIENT_LIB}" COMPONENT Client EXCLUDE_FROM_ALL)
-endif()
+install(TARGETS gufi_vt DESTINATION "${LIB}" COMPONENT Local)
+install(TARGETS gufi_vt DESTINATION "${REMOTE_LIB}" COMPONENT Remote EXCLUDE_FROM_ALL)
 
 add_library(run_vt MODULE
   run_vt.c
@@ -303,10 +300,10 @@ if (DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189
   set_property(TARGET run_vt PROPERTY SUFFIX ".${EXT}")
 endif()
-install(TARGETS run_vt DESTINATION "${SERVER_LIB}" COMPONENT Server)
+install(TARGETS run_vt DESTINATION "${LIB}" COMPONENT Local)
 
 # build find_outliers
-build_and_install_one("${SERVER_BIN}" TRUE gufi_find_outliers
+build_and_install_one("${BIN}" TRUE gufi_find_outliers
   gufi_find_outliers/main.c
 
   gufi_find_outliers/DirData.c
@@ -318,7 +315,7 @@ build_and_install_one("${SERVER_BIN}" TRUE gufi_find_outliers
 )
 
 # build incremental update
-build_and_install_one("${SERVER_BIN}" TRUE gufi_incremental_update
+build_and_install_one("${BIN}" TRUE gufi_incremental_update
   gufi_incremental_update/main.c
 
   gufi_incremental_update/PoolArgs.c
@@ -347,8 +344,8 @@ if (MY_FUSE_FOUND AND FUSE_BUILD)
   set_property(TARGET bfresultfuse PROPERTY COMPILE_FLAGS "${MY_FUSE_CFLAGS}")
   target_link_libraries(bfresultfuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
 
-  # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/${SERVER_BIN}
-  install(TARGETS bffuse bfresultfuse DESTINATION "${SERVER_BIN}" COMPONENT Server)
+  # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/${BIN}
+  install(TARGETS bffuse bfresultfuse DESTINATION "${BIN}" COMPONENT Local)
 endif()
 
 # only build db2 sources if db2 is found

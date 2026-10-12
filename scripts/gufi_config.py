@@ -118,7 +118,7 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
 
         return out
 
-class Server(Config):
+class Local(Config):
     THREADS      = 'Threads'      # number of threads to use
     QUERY        = 'Query'        # absolute path of gufi_query
     SQLITE3      = 'Sqlite3'      # absolute path of gufi_sqlite3
@@ -138,39 +138,39 @@ class Server(Config):
 
     def __init__(self, config_reference):
         # pylint: disable=super-with-arguments
-        super(Server, self).__init__(Server.SETTINGS, config_reference)
+        super(Local, self).__init__(Local.SETTINGS, config_reference)
 
     @property
     def threads(self):
         '''return number of threads to use'''
-        return self.config[Server.THREADS]
+        return self.config[Local.THREADS]
 
     @property
     def query(self):
         '''return absolute path of gufi_query'''
-        return self.config[Server.QUERY]
+        return self.config[Local.QUERY]
 
     @property
     def sqlite3(self):
         '''return absolute path of gufi_sqlite3'''
-        return self.config[Server.SQLITE3]
+        return self.config[Local.SQLITE3]
 
     @property
     def stat(self):
         '''return absolute path of gufi_stat_bin'''
-        return self.config[Server.STAT]
+        return self.config[Local.STAT]
 
     @property
     def indexroot(self):
         '''return absolute path of root directory for GUFI to traverse'''
-        return self.config[Server.INDEXROOT]
+        return self.config[Local.INDEXROOT]
 
     @property
     def outputbuffer(self):
         '''return size of per-thread buffers used to buffer prints'''
-        return self.config[Server.OUTPUTBUFFER]
+        return self.config[Local.OUTPUTBUFFER]
 
-class Client(Config):
+class Remote(Config):
     SERVER       = 'Server'       # hostname
     PORT         = 'Port'         # ssh port
 
@@ -182,30 +182,30 @@ class Client(Config):
 
     def __init__(self, config_reference):
         # pylint: disable=super-with-arguments
-        super(Client, self).__init__(Client.SETTINGS, config_reference)
+        super(Remote, self).__init__(Remote.SETTINGS, config_reference)
 
     @property
     def server(self):
         '''return hostname of server'''
-        return self.config[Client.SERVER]
+        return self.config[Remote.SERVER]
 
     @property
     def port(self):
         '''return ssh port'''
-        return self.config[Client.PORT]
+        return self.config[Remote.PORT]
 
 def run(args):
     # simple config validator
     parser = argparse.ArgumentParser(description='GUFI Configuration Tester')
-    parser.add_argument('type', choices=['server', 'client'])
+    parser.add_argument('type', choices=['local', 'remote'])
     parser.add_argument('path')
     args = parser.parse_args(args)
 
     with open(args.path, 'r') as config: # pylint: disable=unspecified-encoding
-        if args.type == 'server':
-            Server(config)
-        elif args.type == 'client':
-            Client(config)
+        if args.type == 'local':
+            Local(config)
+        elif args.type == 'remote':
+            Remote(config)
 
         # won't print on error
         print('Valid Config') # pylint: disable=superfluous-parens

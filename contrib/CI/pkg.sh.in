@@ -76,30 +76,30 @@ arch="$(uname --machine)"
 # doing in 2 steps because productbuild likes to
 # merge all components into a monolithic PKG
 
-# make the server PKG
-# requires root to stage @SERVER_CONFIG@ for copying into PKG
-sudo cpack -G productbuild -DCPACK_COMPONENTS_ALL=Server -B "@CMAKE_BINARY_DIR@"
+# make the primary PKG
+# requires root to stage @CONFIG@ for copying into PKG
+sudo cpack -G productbuild -DCPACK_COMPONENTS_ALL=Local -B "@CMAKE_BINARY_DIR@"
 pkg="GUFI-@CMAKE_PROJECT_VERSION@-Darwin.pkg"
-server="gufi-server-@CMAKE_PROJECT_VERSION@.macOS.${arch}.pkg"
+local="gufi-@CMAKE_PROJECT_VERSION@.macOS.${arch}.pkg"
 sudo rm -rf @CPACK_PACKAGING_INSTALL_PREFIX@/etc/GUFI # this assumes GUFI wasn't previously installed
 sudo chown "${USER}" "${pkg}"
-mv "${pkg}" "${server}"
+mv "${pkg}" "${local}"
 
-# make the client PKG
-# requires root to stage @CLIENT_CONFIG@ for copying into PKG
-sudo cpack -G productbuild -DCPACK_COMPONENTS_ALL=Client -B "@CMAKE_BINARY_DIR@"
+# make the remote PKG
+# requires root to stage @REMOTE_CONFIG@ for copying into PKG
+sudo cpack -G productbuild -DCPACK_COMPONENTS_ALL=Remote -B "@CMAKE_BINARY_DIR@"
 pkg="GUFI-@CMAKE_PROJECT_VERSION@-Darwin.pkg"
-client="gufi-client-@CMAKE_PROJECT_VERSION@.macOS.${arch}.pkg"
+remote="gufi-remote-@CMAKE_PROJECT_VERSION@.macOS.${arch}.pkg"
 sudo rm -rf @CPACK_PACKAGING_INSTALL_PREFIX@/etc/GUFI
 sudo chown "${USER}" "${pkg}"
-mv "${pkg}" "${client}"
+mv "${pkg}" "${remote}"
 
 # list the files
-pkgutil --payload-files "${server}" | sort
-pkgutil --payload-files "${client}" | sort
+pkgutil --payload-files "${local}" | sort
+pkgutil --payload-files "${remote}" | sort
 
-# install the server
-sudo installer -verbose -pkg "${server}" -target /
+# install the primary PKG
+sudo installer -verbose -pkg "${local}" -target /
 
 # set up environment
 INSTALL_PREFIX="@CPACK_PACKAGING_INSTALL_PREFIX@"
@@ -108,6 +108,6 @@ export DYLD_LIBRARY_PATH="${INSTALL_PREFIX}/lib:${DYLD_LIBRARY_PATH}"
 export PYTHONPATH="${INSTALL_PREFIX}/lib:${PYTHONPATH}"
 
 # GitHub macOS runner does not run as root, so test_install.sh would fail on copy
-sudo cp "$(dirname @SERVER_CONFIG@)/server.example" "@SERVER_CONFIG@"
+sudo cp "$(dirname @CONFIG@)/config.example" "@CONFIG@"
 
-"@CMAKE_BINARY_DIR@/contrib/test_install.sh" "${INSTALL_PREFIX}" "@SERVER_CONFIG@" 2>&1
+"@CMAKE_BINARY_DIR@/contrib/test_install.sh" "${INSTALL_PREFIX}" "@CONFIG@" 2>&1

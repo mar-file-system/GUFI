@@ -65,7 +65,7 @@ ProcessorCount(CORES)
 
 set(CONFIG_DEFAULT "/etc/GUFI/config")
 
-function(config_file config etc type comp)
+function(config_file config type comp)
   set("${config}" "${CONFIG_DEFAULT}" CACHE FILEPATH "Where high level GUFI tools will look for the ${type} configuration")
 
   # path must be absolute
@@ -85,7 +85,7 @@ function(config_file config etc type comp)
   endif()
 
   # get the parent path of the config for placing example configuration
-  cmake_path(GET ${config} PARENT_PATH CONFIG_PARENT)
+  cmake_path(GET "${config}" PARENT_PATH CONFIG_PARENT)
 
   # copy the example config
   set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
@@ -93,23 +93,19 @@ function(config_file config etc type comp)
   unset(INSTALL_PREFIX)
 
   # make install the config
-  install(FILES "${CMAKE_BINARY_DIR}/${type}.example"
-    DESTINATION "${CONFIG_PARENT}"
-    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-    COMPONENT "${comp}")
-
-  if (DARWIN)
-    # make package on macOS is weird
+  if (comp STREQUAL "Local")
     install(FILES "${CMAKE_BINARY_DIR}/${type}.example"
-      DESTINATION "${etc}/GUFI"
+      DESTINATION "${CONFIG_PARENT}"
+      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
+      COMPONENT Local)
+  else()
+    install(FILES "${CMAKE_BINARY_DIR}/${type}.example"
+      DESTINATION "${CONFIG_PARENT}"
       PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
       COMPONENT "${comp}"
       EXCLUDE_FROM_ALL)
   endif()
 endfunction()
 
-if (CLIENT)
-  config_file(CLIENT_CONFIG "${CLIENT_ETC}" "client" Client)
-endif()
-
-config_file(SERVER_CONFIG "${SERVER_ETC}" "server" Server)
+config_file(CONFIG        "config" Local)
+config_file(REMOTE_CONFIG "remote" Remote)

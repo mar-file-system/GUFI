@@ -72,34 +72,34 @@ cmake "@CMAKE_SOURCE_DIR@"
 # make the RPM
 make package
 
-# list the files in the server RPM
-rpm -ql gufi-server*.rpm | sed '/.*\.build-id/d' | sort
+# list the files in the primary RPM
+rpm -ql gufi-@GUFI_VERSION@.@ARCH@.rpm | sed '/.*\.build-id/d' | sort
 
 # install the RPM
-dnf install -y gufi-server-*.rpm
+dnf install -y gufi-@GUFI_VERSION@.@ARCH@.rpm
 
 "@CMAKE_BINARY_DIR@/contrib/test_install.sh" "/usr" 2>&1
 
-# uninstall GUFI-Server
-dnf autoremove -y GUFI-Server
+# uninstall GUFI
+dnf autoremove -y GUFI
 
 # ####################################
 
-# list the files in the client RPM
-rpm -ql gufi-client*.rpm | sort
+# list the files in the remote RPM
+rpm -ql gufi-remote-@GUFI_VERSION@.@ARCH@.rpm | sort
 
-# install the client RPM
-dnf install -y gufi-client-*.rpm
+# install the remote RPM
+dnf install -y gufi-remote-@GUFI_VERSION@.@ARCH@.rpm
 
 (
     set -x
 
     # compare the configuration files
-    @DIFF@ client.example "$(dirname @CLIENT_CONFIG@)/client.example"
+    @DIFF@ remote.example "$(dirname @REMOTE_CONFIG@)/remote.example"
 
     # make sure the Python3 library files can be imported
     python3 -c "import gufi_common, gufi_config"
 ) 2>&1
 
-# uninstall GUFI-Server
-dnf autoremove -y GUFI-Client
+# uninstall GUFI-Remote
+dnf autoremove -y GUFI-Remote

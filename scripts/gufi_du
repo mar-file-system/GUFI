@@ -385,7 +385,7 @@ def post_process(args, path, popen,
 def run(argv, config_path, stdout=None, stderr=None):
     # pylint: disable=too-many-locals
 
-    config = gufi_config.Server(config_path)
+    config = gufi_config.Local(config_path)
 
     args = parse_args(argv)
 
