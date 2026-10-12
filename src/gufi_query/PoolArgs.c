@@ -118,7 +118,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         pa->stdout_mutex = global_mutex;
     }
 
-    if (set_up_global_db(&in->global_db, &pa->global_db,
+    if (set_up_global_db(&in->global_db.create, &in->global_db.insert, &pa->global_db,
                          NULL, in->no_print_sql_on_err) != 0) {
         input_fini(pa->in);
         return 1;
@@ -157,7 +157,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         }
 
         /* make global db available to per-thread db */
-        if (str_exists(&in->global_db)) {
+        if (str_exists(&in->global_db.create)) {
             if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, ta->outdb, GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
                 break;
             }

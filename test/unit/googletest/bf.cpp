@@ -114,7 +114,9 @@ static const std::string no_print_errno              = "--no-print-errno"; stati
 static const std::string no_print_sql_on_err         = "--no-print-sql-on-err";
 static const std::string old_trace_format            = "--old-trace-format";
 static const std::string use_exact_path              = "--use-exact-path";
-static const std::string global_db                   = "--global-db"; static const std::string global_db_arg = "data.db";
+static const std::string global_db                   = "--global-db";
+static const std::string global_db_arg0 = "CREATE TABLE global(i INTEGER);";
+static const std::string global_db_arg1 = "INSERT INTO  global VALUES (1);";
 
 static const std::string output_buffer_size          = "--output-buffer-size"; static const std::string output_buffer_size_arg = "1";
 static const std::string target_memory               = "--target-memory"; static const std::string target_memory_arg = "1";
@@ -238,7 +240,8 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->filter_types,                           FILTER_TYPE_DIR | FILTER_TYPE_FILE | FILTER_TYPE_LINK);
         EXPECT_EQ(in->min_level,                              (std::size_t) 1);
         EXPECT_EQ(in->max_level,                              (std::size_t) 1);
-        EXPECT_EQ(in->global_db.data,                         global_db_arg);
+        EXPECT_EQ(in->global_db.create.data,                  global_db_arg0);
+        EXPECT_EQ(in->global_db.insert.data,                  global_db_arg1);
         EXPECT_EQ(in->output_buffer_size,                     (std::size_t) 1);
         EXPECT_EQ(in->format,                                 format_arg);
         EXPECT_EQ(in->rollup.entries_limit,                   (std::size_t) 1);
@@ -301,7 +304,8 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->filter_types,                           0);
         EXPECT_EQ(in->min_level,                              (std::size_t) 0);
         EXPECT_EQ(in->max_level,                              (std::size_t) -1);
-        EXPECT_EQ(in->global_db.data,                         nullptr);
+        EXPECT_EQ(in->global_db.create.data,                  nullptr);
+        EXPECT_EQ(in->global_db.insert.data,                  nullptr);
         EXPECT_EQ(in->output_buffer_size,                     (std::size_t) 4096);
         EXPECT_EQ(in->format,                                 empty);
         EXPECT_EQ(in->rollup.entries_limit,                   (std::size_t) 0);
@@ -438,7 +442,7 @@ TEST(parse_cmd_line, debug) {
         no_print_sql_on_err.c_str(),
         old_trace_format.c_str(),
         use_exact_path.c_str(),
-        global_db.c_str(), global_db_arg.c_str(),
+        global_db.c_str(), global_db_arg0.c_str(), global_db_arg1.c_str(),
         target_memory.c_str(), target_memory_arg.c_str(),
         subdir_limit.c_str(), subdir_limit_arg.c_str(),
         #ifdef HAVE_ZLIB
@@ -554,7 +558,7 @@ TEST(parse_cmd_line, options) {
         J.c_str(), J_arg.c_str(),
         K.c_str(), K_arg.c_str(),
         G.c_str(), G_arg.c_str(),
-        global_db.c_str(), global_db_arg.c_str(),
+        global_db.c_str(), global_db_arg0.c_str(), global_db_arg1.c_str(),
         output_buffer_size.c_str(), output_buffer_size_arg.c_str(),
         format.c_str(), format_arg.c_str(),
         rollup_limit.c_str(), rollup_limit_arg.c_str(),

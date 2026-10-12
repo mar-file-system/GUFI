@@ -79,7 +79,7 @@ extern "C" {
  */
 
 int augment_db(sqlite3 *db, const sqlite3_api_routines *pApi);
-int set_up_global_db(str_t *sql, sqlite3 **db,
+int set_up_global_db(str_t *create, str_t *insert, sqlite3 **db,
                      const sqlite3_api_routines *pApi,
                      const int no_print_sql_on_err);
 

@@ -105,12 +105,12 @@ int augment_db(sqlite3 *db, const sqlite3_api_routines *pApi) {
     return 0;
 }
 
-int set_up_global_db(str_t *sql, sqlite3 **db,
+int set_up_global_db(str_t *create, str_t *insert, sqlite3 **db,
                      const sqlite3_api_routines *pApi,
                      const int no_print_sql_on_err) {
     *db = NULL;
 
-    if (!str_exists(sql)) {
+    if (!str_exists(create)) {
         return 0;
     }
 
@@ -128,17 +128,32 @@ int set_up_global_db(str_t *sql, sqlite3 **db,
 
     /* fill in the globally available in-memory db */
     char *err = NULL;
-    if (sqlite3_exec(rw_global_db, sql->data, NULL, NULL, &err) != SQLITE_OK) {
+    if (sqlite3_exec(rw_global_db, create->data, NULL, NULL, &err) != SQLITE_OK) {
         if (!no_print_sql_on_err) {
-            sqlite_print_err_and_free(err, stderr, "Error: Could not set up global db with \"%s\": %s\n",
-                                      sql->data, err);
+            sqlite_print_err_and_free(err, stderr, "Error: Could not create global db tables with \"%s\": %s\n",
+                                      create->data, err);
         }
         else {
-            sqlite_print_err_and_free(err, stderr, "Error: Could not set up global db: %s\n",
+            sqlite_print_err_and_free(err, stderr, "Error: Could not create global db tables: %s\n",
                                       err);
         }
         closedb(rw_global_db);
         return 1;
+    }
+
+    if (insert) {
+        if (sqlite3_exec(rw_global_db, insert->data, NULL, NULL, &err) != SQLITE_OK) {
+            if (!no_print_sql_on_err) {
+                sqlite_print_err_and_free(err, stderr, "Error: Could not insert into global db tables with \"%s\": %s\n",
+                                          insert->data, err);
+            }
+            else {
+                sqlite_print_err_and_free(err, stderr, "Error: Could not insert into global db tables: %s\n",
+                                          err);
+            }
+            closedb(rw_global_db);
+            return 1;
+        }
     }
 
     /* reopen the globally available db in readonly mode */

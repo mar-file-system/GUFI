@@ -529,7 +529,10 @@ struct input {
     int  no_print_sql_on_err;      /* if there is an SQL error, do not print the SQL in the error message */
     int  old_trace_format;         /* used to read old traces only - do not generate new traces with the old format */
     int use_exact_path;            /* create index at <search>/<path>, not <search>/$(basename <path>)*/
-    str_t global_db;               /* db file path for read-only data that all threads should have access to */
+    struct {                       /* globally accessible in-memory database */
+        str_t create;              /* need to split so that inserts do not get called during */
+        str_t insert;              /* column discovery in gufi_query/handle_sql and gufi_vt */
+    } global_db;
     int  buildindex;
     size_t maxthreads;
     struct {

@@ -966,7 +966,7 @@ Each line is one argv[i]:
 # query global database during -S and -E
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db="CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');", S="SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;", E="SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db_create="CREATE TABLE data(i INTEGER, t TEXT);", global_db_insert="INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');", S="SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;", E="SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;");SELECT * FROM gufi;"
 ) | sqlite3
 prefix/old_file|0|0|global data 0
 prefix/old_file|0|1|global data 1
@@ -978,7 +978,7 @@ prefix/directory/readonly|2|2|global data 2
 # query global database during -J
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db="CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');", I="CREATE TABLE out(path TEXT, inode TEXT);", S="INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;", K="CREATE TABLE aggregate(path TEXT, inode TEXT, i INTEGER, t TEXT);", J="INSERT INTO aggregate SELECT path, inode, i, t FROM out JOIN data ON out.inode <= data.i;", G="SELECT * FROM aggregate;");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db_create="CREATE TABLE data(i INTEGER, t TEXT);", global_db_insert="INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');", I="CREATE TABLE out(path TEXT, inode TEXT);", S="INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;", K="CREATE TABLE aggregate(path TEXT, inode TEXT, i INTEGER, t TEXT);", J="INSERT INTO aggregate SELECT path, inode, i, t FROM out JOIN data ON out.inode <= data.i;", G="SELECT * FROM aggregate;");SELECT * FROM gufi;"
 ) | sqlite3
 prefix/old_file|0|0|global data 0
 prefix/old_file|0|1|global data 1
@@ -990,7 +990,7 @@ prefix/directory/readonly|2|2|global data 2
 # query global database during -G
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db="CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');", I="CREATE TABLE out(path TEXT, inode TEXT);", S="INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;", K="CREATE TABLE aggregate(path TEXT, inode TEXT);", J="INSERT INTO aggregate SELECT path, inode FROM out;", G="SELECT path, inode, i, t FROM aggregate JOIN data ON aggregate.inode <= data.i;");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db_create="CREATE TABLE data(i INTEGER, t TEXT);", global_db_insert="INSERT INTO data VALUES (0, 'global data 0'), (1, 'global data 1'), (2, 'global data 2');", I="CREATE TABLE out(path TEXT, inode TEXT);", S="INSERT INTO out SELECT rpath(sname, sroll), inode FROM vrsummary;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;", K="CREATE TABLE aggregate(path TEXT, inode TEXT);", J="INSERT INTO aggregate SELECT path, inode FROM out;", G="SELECT path, inode, i, t FROM aggregate JOIN data ON aggregate.inode <= data.i;");SELECT * FROM gufi;"
 ) | sqlite3
 prefix/old_file|0|0|global data 0
 prefix/old_file|0|1|global data 1
@@ -1002,7 +1002,7 @@ prefix/directory/readonly|2|2|global data 2
 # Use contextless functions during --global_db
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db="CREATE TABLE data(i INTEGER, t TEXT); INSERT INTO data VALUES (0, modetotxt(0)), (1, modetotxt(1)), (2, modetotxt(2));", S="SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;", E="SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, global_db_create="CREATE TABLE data(i INTEGER, t TEXT);", global_db_insert="INSERT INTO data VALUES (0, modetotxt(0)), (1, modetotxt(1)), (2, modetotxt(2));", S="SELECT rpath(sname, sroll), inode, i, t FROM vrsummary JOIN data ON vrsummary.inode <= data.i;", E="SELECT rpath(sname, sroll, name), inode, i, t FROM vrpentries JOIN data ON vrpentries.inode <= data.i;");SELECT * FROM gufi;"
 ) | sqlite3
 prefix/old_file|0|0|----------
 prefix/old_file|0|1|---------x
@@ -1386,8 +1386,8 @@ Error near line 2: SQL logic error
 # bad global db set up
 $ (
     echo ".load gufi_vt"
-    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", global_db="CREATE TABLE;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;");SELECT * FROM gufi;"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", global_db_create="CREATE TABLE;", E="INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;");SELECT * FROM gufi;"
 ) | sqlite3
-Error: Could not set up global db with "CREATE TABLE;": near ";": syntax error
+Error: Could not create global db tables with "CREATE TABLE;": near ";": syntax error
 Parse error near line 2: no such table: gufi
 

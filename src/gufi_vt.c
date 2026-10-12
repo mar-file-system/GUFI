@@ -127,8 +127,10 @@ typedef struct gufi_query_cmd {
     int dir_match_uid_set;
     str_t dir_match_gid;
     int dir_match_gid_set;
-
-    str_t global_db;
+    struct {
+        str_t create;
+        str_t insert;
+    } global_db;
 
     /* sql */
 
@@ -288,8 +290,11 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
                               "--dir-match-gid ");
         }
 
-        if (str_exists(&cmd->global_db)) {
-            flatten_argv(argc, argv, "--global-db",           cmd->global_db);
+        if (str_exists(&cmd->global_db.create)) {
+            write_with_resize(&flat, &size, &len,
+                              "--global-db '%s' '%s' ",
+                              cmd->global_db.create.data,
+                              cmd->global_db.insert.data);
         }
         flatten_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
         flatten_argv(argc, argv, "-I",                    cmd->I);
@@ -400,8 +405,10 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
             argv[argc++] = dir_match_gid;
         }
 
-        if (str_exists(&cmd->global_db)) {
-            set_argv(argc, argv, "--global-db",           cmd->global_db);
+        if (str_exists(&cmd->global_db.create)) {
+            argv[argc++] = "--global-db";
+            argv[argc++] = cmd->global_db.create.data;
+            argv[argc++] = cmd->global_db.insert.data;
         }
         set_argv(argc, argv, "--setup-res-col-type",  cmd->setup_res_col_type);
         set_argv(argc, argv, "-I",                    cmd->I);
@@ -884,7 +891,8 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     max_level               =  <non-negative integer>
  *     dir_match_uid           =  <uid> (if just want euid, pass in no value i.e. dir_match_uid=)
  *     dir_match_gid           =  <gid> (if just want egid, pass in no value i.e. dir_match_gid=)
- *     global_db               = '<SQL>'
+ *     global_db_create        = '<Create SQL>'
+ *     global_db_insert        = '<Insert SQL>'
  *     setup_res_col_type      = '<SQL>' (set up single temporary table to make columns available for getting result column types)
  *     I                       = '<SQL>'
  *     T                       = '<SQL>'
@@ -1152,9 +1160,6 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                 return SQLITE_MISUSE;
             }
         }
-        else if (strncmp(key, "global_db", 10) == 0) {
-            set_refstr(&cmd.global_db, value);
-        }
         else if (strncmp(key, "min_level", 10) == 0) {
             /* let gufi_query check value */
             set_refstr(&cmd.min_level, value);
@@ -1202,6 +1207,12 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                 gq_cmd_destroy(&cmd);
                 return SQLITE_MISUSE;
             }
+        }
+        else if (strncmp(key, "global_db_create", 17) == 0) {
+            set_refstr(&cmd.global_db.create, value);
+        }
+        else if (strncmp(key, "global_db_insert", 17) == 0) {
+            set_refstr(&cmd.global_db.insert, value);
         }
         else if (strncmp(key, "setup_res_col_type", 19) == 0) {
             set_refstr(&cmd.setup_res_col_type, value);
@@ -1254,7 +1265,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
     /* create a common read-only database to all threads */
     sqlite3 *global_db = NULL;
-    if (set_up_global_db(&cmd.global_db, &global_db, SQLITE_API_ROUTINES, 0) != 0) {
+    if (set_up_global_db(&cmd.global_db.create, NULL, &global_db, SQLITE_API_ROUTINES, 0) != 0) {
         closedb(tempdb);
         plugins_destroy(&in.plugins);
         gq_cmd_destroy(&cmd);

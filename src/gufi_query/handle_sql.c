@@ -171,7 +171,7 @@ static int gen_types(struct input *in) {
             return -1;
         }
 
-        if (set_up_global_db(&in->global_db, &global_db,
+        if (set_up_global_db(&in->global_db.create, NULL, &global_db,
                              NULL, in->no_print_sql_on_err) != 0) {
             closedb(db);
             return -1;
