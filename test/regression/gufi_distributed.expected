@@ -7,13 +7,13 @@ $ find.sh "prefix" 1 2
 directory
 empty_directory
 leaf_directory
-unusual#? directory ,
+unusual#? "directory ',
 
 $ parallel_find.sh "prefix" 1 2
 directory
 empty_directory
 leaf_directory
-unusual#? directory ,
+unusual#? "directory ',
 
 #####################################
 
@@ -27,7 +27,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 2: 1 path on localhost
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
-        unusual#? directory , unusual#? directory ,
+        unusual#? "directory ', unusual#? "directory ',
     Process upper directories on 127.0.0.1
 Waiting for slurm jobs to complete
 
@@ -41,7 +41,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 2: 1 path on localhost
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
-        unusual#? directory , unusual#? directory ,
+        unusual#? "directory ', unusual#? "directory ',
     Process upper directories on 127.0.0.1
 Waiting for slurm jobs to complete
 cat the following slurm job output files to get complete results:
@@ -70,8 +70,8 @@ prefix2/leaf_directory/leaf_file2|12
 prefix2/leaf_directory|13
 prefix2/old_file|0
 prefix2/repeat_name|14
-prefix2/unusual#? directory ,/unusual, name?#|15
-prefix2/unusual#? directory ,|16
+prefix2/unusual#? "directory ',/unusual, 'name?#"|15
+prefix2/unusual#? "directory ',|16
 prefix2|17
 
 # Diff original index results against the combined results
@@ -90,7 +90,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 2: 1 path on localhost
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
-        unusual#? directory , unusual#? directory ,
+        unusual#? "directory ', unusual#? "directory ',
     Process upper directories on 127.0.0.1
 Waiting for slurm jobs to complete
 Index can now be created from "traces.*"
@@ -115,8 +115,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # Diff original index results against the trace files
 $ diff <(gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix" | sort | sed 's%search/%%g;') <(cat traces.0.0 traces.1.0 traces.2.0 traces.3.0 traces.0 | awk -F'|' '{ print substr($1, 5) }' | sort)
@@ -149,7 +149,7 @@ search2/prefix/directory/subdirectory|0|1
 search2/prefix/directory|1|4
 search2/prefix/empty_directory|0|0
 search2/prefix/leaf_directory|0|2
-search2/prefix/unusual#? directory ,|0|1
+search2/prefix/unusual#? "directory ',|0|1
 search2/prefix|5|12
 
 # Roll up the index
@@ -169,7 +169,7 @@ prefix/directory/subdirectory|0|1|1
 prefix/directory|0|1|1
 prefix/empty_directory|0|1|1
 prefix/leaf_directory|0|1|1
-prefix/unusual#? directory ,|0|1|1
+prefix/unusual#? "directory ',|0|1|1
 prefix|1|1|1
 
 # Unroll up the index
@@ -190,7 +190,7 @@ empty_directory|1|1|0
 leaf_directory|1|1|0
 prefix|1|1|0
 subdirectory|1|1|0
-unusual#? directory ,|1|1|0
+unusual#? "directory ',|1|1|0
 
 #####################################
 
@@ -207,7 +207,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 2: 1 path on localhost
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
-        unusual#? directory , unusual#? directory ,
+        unusual#? "directory ', unusual#? "directory ',
     Process upper directories on 127.0.0.1
 Waiting for ssh jobs to complete
 
@@ -221,7 +221,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 2: 1 path on localhost
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
-        unusual#? directory , unusual#? directory ,
+        unusual#? "directory ', unusual#? "directory ',
     Process upper directories on 127.0.0.1
 Waiting for ssh jobs to complete
 cat "output.*" to get complete results
@@ -245,8 +245,8 @@ prefix2/leaf_directory/leaf_file2|12
 prefix2/leaf_directory|13
 prefix2/old_file|0
 prefix2/repeat_name|14
-prefix2/unusual#? directory ,/unusual, name?#|15
-prefix2/unusual#? directory ,|16
+prefix2/unusual#? "directory ',/unusual, 'name?#"|15
+prefix2/unusual#? "directory ',|16
 prefix2|17
 
 # Diff original index results against the combined results
@@ -265,7 +265,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 2: 1 path on localhost
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
-        unusual#? directory , unusual#? directory ,
+        unusual#? "directory ', unusual#? "directory ',
     Process upper directories on 127.0.0.1
 Waiting for ssh jobs to complete
 Index can now be created from "traces.*"
@@ -290,8 +290,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # Diff original index results against the trace files
 $ diff <(gufi_query -d "|" -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix" | sort | sed 's%search/%%g;') <(cat traces.0.0 traces.1.0 traces.2.0 traces.3.0 traces.0 | awk -F'|' '{ print substr($1, 5) }' | sort)
@@ -324,7 +324,7 @@ search2/prefix/directory/subdirectory|0|1
 search2/prefix/directory|1|4
 search2/prefix/empty_directory|0|0
 search2/prefix/leaf_directory|0|2
-search2/prefix/unusual#? directory ,|0|1
+search2/prefix/unusual#? "directory ',|0|1
 search2/prefix|5|12
 
 # Roll up the index
@@ -344,7 +344,7 @@ prefix/directory/subdirectory|0|1|1
 prefix/directory|0|1|1
 prefix/empty_directory|0|1|1
 prefix/leaf_directory|0|1|1
-prefix/unusual#? directory ,|0|1|1
+prefix/unusual#? "directory ',|0|1|1
 prefix|1|1|1
 
 # Unroll up the index
@@ -365,7 +365,7 @@ empty_directory|1|1|0
 leaf_directory|1|1|0
 prefix|1|1|0
 subdirectory|1|1|0
-unusual#? directory ,|1|1|0
+unusual#? "directory ',|1|1|0
 
 #####################################
 
@@ -384,7 +384,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 2: 1 path on localhost
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
-        unusual#? directory , unusual#? directory ,
+        unusual#? "directory ', unusual#? "directory ',
     Process upper directories on 127.0.0.1
 Waiting for ssh jobs to complete
 
@@ -398,7 +398,7 @@ Splitting 4 paths into 5 groups of max size 1
     Range 2: 1 path on localhost
         leaf_directory leaf_directory
     Range 3: 1 path on 127.0.0.1
-        unusual#? directory , unusual#? directory ,
+        unusual#? "directory ', unusual#? "directory ',
     Process upper directories on 127.0.0.1
 Waiting for ssh jobs to complete
 cat "output.*" to get complete results
@@ -422,8 +422,8 @@ prefix2/leaf_directory/leaf_file2|12
 prefix2/leaf_directory|13
 prefix2/old_file|0
 prefix2/repeat_name|14
-prefix2/unusual#? directory ,/unusual, name?#|15
-prefix2/unusual#? directory ,|16
+prefix2/unusual#? "directory ',/unusual, 'name?#"|15
+prefix2/unusual#? "directory ',|16
 prefix2|17
 
 # Diff original index results against the combined results

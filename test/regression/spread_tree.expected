@@ -27,7 +27,7 @@ $ sqlite3 "extracted.db" "SELECT inode, mtime, type, data FROM extracted ORDER B
 11|11|f|extracted from leaf_file1
 12|12|f|extracted from leaf_file2
 14|14|f|extracted from repeat_name
-15|15|f|extracted from unusual, name?#
+15|15|f|extracted from unusual, 'name?#"
 1024|1024|f|extracted from 1KB
 1048576|1048576|f|extracted from 1MB
 
@@ -48,7 +48,7 @@ spread_tree/prefix-file/fsid/10/00/00.db|10|10|extracted from .hidden
 spread_tree/prefix-file/fsid/11/00/00.db|11|11|extracted from leaf_file1
 spread_tree/prefix-file/fsid/12/00/00.db|12|12|extracted from leaf_file2
 spread_tree/prefix-file/fsid/14/00/00.db|14|14|extracted from repeat_name
-spread_tree/prefix-file/fsid/15/00/00.db|15|15|extracted from unusual, name?#
+spread_tree/prefix-file/fsid/15/00/00.db|15|15|extracted from unusual, 'name?#"
 spread_tree/prefix-file/fsid/24/10/00.db|1024|1024|extracted from 1KB
 spread_tree/prefix-file/fsid/76/85/04.db|1048576|1048576|extracted from 1MB
 spread_tree/prefix-link/fsid/04/00/00.db|4|4|extracted from directory_symlink
@@ -67,7 +67,7 @@ $ find "prefix" -type f -name "prefix-*.db" -printf "%M %p\n"
 -rw------- prefix/leaf_directory/prefix-file_ur.db
 -rw------- prefix/prefix-file_ur.db
 -rw------- prefix/prefix-link_ur.db
--rw------- prefix/unusual#? directory ,/prefix-file_ur.db
+-rw------- prefix/unusual#? "directory ',/prefix-file_ur.db
 
 # Query only the prefix-file external databases in the index
 $ gufi_query -d "|" -n 2 -I "CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);" --external-copy "prefix-file" "INSERT INTO ext SELECT inode, data FROM extracted;" -E "INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" -K "CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);" -J "INSERT INTO aggregate SELECT * FROM intermediate;" -G "SELECT * FROM aggregate;" "prefix"
@@ -84,7 +84,7 @@ prefix/leaf_directory/leaf_file1|11|extracted from leaf_file1
 prefix/leaf_directory/leaf_file2|12|extracted from leaf_file2
 prefix/old_file|0|extracted from old_file
 prefix/repeat_name|14|extracted from repeat_name
-prefix/unusual#? directory ,/unusual, name?#|15|extracted from unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"|15|extracted from unusual, 'name?#"
 
 # Query only the prefix-link external databases in the index
 $ gufi_query -d "|" -n 2 -I "CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);" --external-copy "prefix-link" "INSERT INTO ext SELECT inode, data FROM extracted;" -E "INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" -K "CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);" -J "INSERT INTO aggregate SELECT * FROM intermediate;" -G "SELECT * FROM aggregate;" "prefix"
@@ -101,7 +101,7 @@ prefix/leaf_directory/leaf_file1|11|
 prefix/leaf_directory/leaf_file2|12|
 prefix/old_file|0|
 prefix/repeat_name|14|
-prefix/unusual#? directory ,/unusual, name?#|15|
+prefix/unusual#? "directory ',/unusual, 'name?#"|15|
 
 # Query the external databases in the index, capturing both prefixes with the same pattern
 $ gufi_query -d "|" -n 2 -I "CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);" --external-copy "prefix-.*" "INSERT INTO ext SELECT inode, data FROM extracted;" -E "INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" -K "CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);" -J "INSERT INTO aggregate SELECT * FROM intermediate;" -G "SELECT * FROM aggregate;" "prefix"
@@ -118,7 +118,7 @@ prefix/leaf_directory/leaf_file1|11|extracted from leaf_file1
 prefix/leaf_directory/leaf_file2|12|extracted from leaf_file2
 prefix/old_file|0|extracted from old_file
 prefix/repeat_name|14|extracted from repeat_name
-prefix/unusual#? directory ,/unusual, name?#|15|extracted from unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"|15|extracted from unusual, 'name?#"
 
 # Query the external databases in the index, capturing both prefixes with different patterns
 $ gufi_query -d "|" -n 2 -I "CREATE TABLE intermediate(fullpath TEXT, size INT64, ext_data TEXT); CREATE TABLE ext(inode TEXT, data TEXT);" --external-copy "prefix-file" "INSERT INTO ext SELECT inode, data FROM extracted;" --external-copy "prefix-link" "INSERT INTO ext SELECT inode, data FROM extracted;" -E "INSERT INTO intermediate SELECT rpath(sname, sroll, name), size, data FROM vrpentries LEFT JOIN ext ON vrpentries.inode == ext.inode; DELETE FROM ext;" -K "CREATE TABLE aggregate(fullpath TEXT, size INT64, ext_data TEXT);" -J "INSERT INTO aggregate SELECT * FROM intermediate;" -G "SELECT * FROM aggregate;" "prefix"
@@ -135,7 +135,7 @@ prefix/leaf_directory/leaf_file1|11|extracted from leaf_file1
 prefix/leaf_directory/leaf_file2|12|extracted from leaf_file2
 prefix/old_file|0|extracted from old_file
 prefix/repeat_name|14|extracted from repeat_name
-prefix/unusual#? directory ,/unusual, name?#|15|extracted from unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"|15|extracted from unusual, 'name?#"
 
 # Copy the shards into existing external databases
 $ gufi_spread_to_extdb.sh -n 2 --where "type == 'l'" "fsid.db" "extdbprefix.db" "fsid" "prefix-link" > /dev/null
@@ -157,7 +157,7 @@ prefix/leaf_directory/leaf_file1|11|
 prefix/leaf_directory/leaf_file2|12|
 prefix/old_file|0|
 prefix/repeat_name|14|
-prefix/unusual#? directory ,/unusual, name?#|15|
+prefix/unusual#? "directory ',/unusual, 'name?#"|15|
 
 #####################################
 # Bad Inputs                        #

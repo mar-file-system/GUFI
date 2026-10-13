@@ -123,7 +123,7 @@ prefix/empty_directory
 # partial indexing (second half)
 $ cat "distributed.1"
 leaf_directory
-unusual#? directory ,
+unusual#? "directory ',
 
 $ gufi_dir2trace -d "|" -n 2 --path-list "distributed.1" --min-level 1 "prefix" "trace"
 "trace.0" Already exists!
@@ -136,8 +136,8 @@ $ cat trace.0 trace.1 | awk -F '|' '{ print substr($1, 5) }'
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # ######################################
 
@@ -181,8 +181,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # ######################################
 
@@ -219,8 +219,8 @@ prefix/leaf_directory/leaf_file1 f
 prefix/leaf_directory/leaf_file2 f
 prefix/old_file f
 prefix/repeat_name f
-prefix/unusual#? directory , d
-prefix/unusual#? directory ,/unusual, name?# f
+prefix/unusual#? "directory ', d
+prefix/unusual#? "directory ',/unusual, 'name?#" f
 
 # source path is file
 $ gufi_dir2trace -d "|" -n 2 "prefix/1KB" "trace"
@@ -263,8 +263,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # bad skip file
 $ gufi_dir2trace -d "|" -n 2 --skip-file "skip.bad" "prefix" "trace"

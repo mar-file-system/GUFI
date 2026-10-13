@@ -500,7 +500,7 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 1|prefix/empty_directory|1|0||
 1|prefix/leaf_directory|1|0|user.name|leaf
 1|prefix/leaf_directory|1|0|user.type|dir
-1|prefix/unusual#? directory ,|1|0||
+1|prefix/unusual#? "directory ',|1|0||
 2|prefix/directory/subdirectory|1|0|user.name|sub
 2|prefix/directory/subdirectory|1|0|user.type|dir
 
@@ -521,7 +521,7 @@ $ gufi_query -x -d "|" -n 2 -E "SELECT level(), rpath(sname, sroll, name), xattr
 1|prefix/leaf_directory/leaf_file2|user.name4|value4
 1|prefix/leaf_directory/leaf_file2|user.name5|value5
 1|prefix/leaf_directory/leaf_file2|user.name6|value6
-1|prefix/unusual#? directory ,/unusual, name?#||
+1|prefix/unusual#? "directory ',/unusual, 'name?#"||
 2|prefix/directory/subdirectory/directory_symlink||
 2|prefix/directory/subdirectory/repeat_name||
 
@@ -547,7 +547,7 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 1|prefix/directory|1|0
 1|prefix/empty_directory|1|0
 1|prefix/leaf_directory|1|0
-1|prefix/unusual#? directory ,|1|0
+1|prefix/unusual#? "directory ',|1|0
 2|prefix/directory/subdirectory|1|0
 
 # roll up index
@@ -574,7 +574,7 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 0|prefix/empty_directory|1|1||
 0|prefix/leaf_directory|1|1|user.name|leaf
 0|prefix/leaf_directory|1|1|user.type|dir
-0|prefix/unusual#? directory ,|1|1||
+0|prefix/unusual#? "directory ',|1|1||
 0|prefix|1|1||
 
 # check rolled up entries tables
@@ -596,7 +596,7 @@ $ gufi_query -x -d "|" -n 2 -E "SELECT level(), rpath(sname, sroll, name), xattr
 0|prefix/leaf_directory/leaf_file2|user.name6|value6
 0|prefix/old_file||
 0|prefix/repeat_name||
-0|prefix/unusual#? directory ,/unusual, name?#||
+0|prefix/unusual#? "directory ',/unusual, 'name?#"||
 
 # remove rollup data
 $ gufi_unrollup -n 2 "search"
@@ -607,7 +607,7 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 1|prefix/directory|1|0
 1|prefix/empty_directory|1|0
 1|prefix/leaf_directory|1|0
-1|prefix/unusual#? directory ,|1|0
+1|prefix/unusual#? "directory ',|1|0
 2|prefix/directory/subdirectory|1|0
 
 # roll up starting at level 1
@@ -633,7 +633,7 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 1|prefix/directory|1|1
 1|prefix/empty_directory|1|1
 1|prefix/leaf_directory|1|1
-1|prefix/unusual#? directory ,|1|1
+1|prefix/unusual#? "directory ',|1|1
 
 # remove rollup data
 $ gufi_unrollup -n 2 "search"
@@ -661,7 +661,7 @@ $ gufi_query -x -d "|" -n 2 -S "SELECT level(), rpath(sname, sroll), canrollup, 
 1|prefix/directory|1|1
 1|prefix/empty_directory|1|1
 1|prefix/leaf_directory|1|1
-1|prefix/unusual#? directory ,|1|1
+1|prefix/unusual#? "directory ',|1|1
 
 # bad thread count
 $ gufi_rollup_topdown -n 18446744073709551615 "search"

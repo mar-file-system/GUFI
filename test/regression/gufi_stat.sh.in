@@ -83,7 +83,7 @@ fixed_size=(
     "leaf_directory/leaf_file2"
     "old_file"
     "repeat_name"
-    "unusual#? directory ,/unusual, name?#"
+    "unusual#? \"directory ',/unusual, 'name?#\""
 )
 
 echo "# first line of default print"

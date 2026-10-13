@@ -604,16 +604,11 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
 
     int rc = 0;
 
-    char *zname     = sqlite3_mprintf("%q", pwork->name + pwork->name_len - pwork->basename_len);
-    char *ztype     = sqlite3_mprintf("%c", ed->type);
-    char *zino      = sqlite3_mprintf("%" PRIu64, pwork->statuso.st_ino);
-
-    char *zlinkname = sqlite3_mprintf("%q", ed->linkname);
-    char *zosstext1 = sqlite3_mprintf("%q", ed->osstext1);
-    char *zosstext2 = sqlite3_mprintf("%q", ed->osstext2);
-    char *zpino     = sqlite3_mprintf("%" PRIu64, pwork->pinode);
-    sqlite3_bind_text(res,  1,  zname, -1, SQLITE_STATIC);
-    sqlite3_bind_text(res,  2,  ztype, -1, SQLITE_STATIC);
+    char *name  = pwork->name + pwork->name_len - pwork->basename_len;
+    char *zino  = sqlite3_mprintf("%" PRIu64, pwork->statuso.st_ino);
+    char *zpino = sqlite3_mprintf("%" PRIu64, pwork->pinode);
+    sqlite3_bind_text(res,  1,  name, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,  2,  &ed->type, 1, SQLITE_STATIC);
     sqlite3_bind_text(res,  3,  zino,  -1, SQLITE_STATIC);
     sqlite3_bind_int64(res, 4,  pwork->statuso.st_mode);
     sqlite3_bind_int64(res, 5,  pwork->statuso.st_nlink);
@@ -625,7 +620,7 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     sqlite3_bind_int64(res, 11, pwork->statuso.st_atime);
     sqlite3_bind_int64(res, 12, pwork->statuso.st_mtime);
     sqlite3_bind_int64(res, 13, pwork->statuso.st_ctime);
-    sqlite3_bind_text(res,  14, zlinkname, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,  14, ed->linkname, -1, SQLITE_STATIC);
 
     /* only insert xattr names */
     char xattr_names[MAXXATTR];
@@ -640,9 +635,9 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     sqlite3_bind_int64(res, 18, ed->ossint2);
     sqlite3_bind_int64(res, 19, ed->ossint3);
     sqlite3_bind_int64(res, 20, ed->ossint4);
-    sqlite3_bind_text(res,  21, zosstext1, -1, SQLITE_STATIC);
-    sqlite3_bind_text(res,  22, zosstext2, -1, SQLITE_STATIC);
-    sqlite3_bind_text(res,  23, zpino,     -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,  21, ed->osstext1, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,  22, ed->osstext2, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,  23, zpino,        -1, SQLITE_STATIC);
 
     const int error = sqlite3_step(res);
     if (error != SQLITE_DONE) {
@@ -652,12 +647,7 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     }
 
     sqlite3_free(zpino);
-    sqlite3_free(zosstext2);
-    sqlite3_free(zosstext1);
-    sqlite3_free(zlinkname);
     sqlite3_free(zino);
-    sqlite3_free(ztype);
-    sqlite3_free(zname);
     sqlite3_reset(res);
     if (error == SQLITE_DONE) {
         sqlite3_clear_bindings(res); /* NULL will cause invalid read here */
@@ -779,19 +769,14 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
         return 1;
     }
 
-    char *zname     = sqlite3_mprintf("%q", path);
-    char *ztype     = sqlite3_mprintf("%c", ed->type);
     char *zino      = sqlite3_mprintf("%" PRIu64, pwork->statuso.st_ino);
-    char *zlinkname = sqlite3_mprintf("%q", ed->linkname);
     char *zpino     = sqlite3_mprintf("%" PRIu64, pwork->pinode);
 
     char xattrnames[MAXXATTR] = "\x00";
-    xattr_get_names(&ed->xattrs, xattrnames, sizeof(xattrnames), XATTRDELIM);
+    const ssize_t xattrnames_len = xattr_get_names(&ed->xattrs, xattrnames, sizeof(xattrnames), XATTRDELIM);
 
-    char *zxattrnames = sqlite3_mprintf("%q", xattrnames);
-
-    sqlite3_bind_text(res,   1,  zname, -1, SQLITE_STATIC);
-    sqlite3_bind_text(res,   2,  ztype, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,   1,  path,  -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,   2,  &ed->type, 1, SQLITE_STATIC);
     sqlite3_bind_text(res,   3,  zino,  -1, SQLITE_STATIC);
     sqlite3_bind_int64(res,  4,  pwork->statuso.st_mode);
     sqlite3_bind_int64(res,  5,  pwork->statuso.st_nlink);
@@ -803,8 +788,8 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_bind_int64(res,  11, pwork->statuso.st_atime);
     sqlite3_bind_int64(res,  12, pwork->statuso.st_mtime);
     sqlite3_bind_int64(res,  13, pwork->statuso.st_ctime);
-    sqlite3_bind_text(res,   14, zlinkname, -1, SQLITE_STATIC);
-    sqlite3_bind_blob64(res, 15, zxattrnames, strlen(zxattrnames), SQLITE_STATIC);
+    sqlite3_bind_text(res,   14, ed->linkname, -1, SQLITE_STATIC);
+    sqlite3_bind_blob64(res, 15, xattrnames, xattrnames_len, SQLITE_STATIC);
     sqlite3_bind_int64(res,  16, pwork->crtime);
     sqlite3_bind_int64(res,  17, su->totfiles);
     sqlite3_bind_int64(res,  18, su->totlinks);
@@ -861,12 +846,8 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_reset(res);
     sqlite3_clear_bindings(res);
 
-    sqlite3_free(zxattrnames);
     sqlite3_free(zpino);
-    sqlite3_free(zlinkname);
     sqlite3_free(zino);
-    sqlite3_free(ztype);
-    sqlite3_free(zname);
 
     insertdbfin(res);
     return 0;

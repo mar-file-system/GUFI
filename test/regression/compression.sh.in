@@ -66,11 +66,14 @@ set -e
 
 OUTPUT="compression.out"
 
+OUT_ORIG="$(mktemp XXXXXX)"
+OUT_COMP="$(mktemp XXXXXX)"
+
 D2I="${SEARCH}.d2i"
 T2I="${SEARCH}.t2i"
 
 cleanup() {
-    rm -rf "${D2I}" "${T2I}"
+    rm -rf "${OUT_ORIG}" "${OUT_COMP}" "${D2I}" "${T2I}"
 }
 
 cleanup_exit() {
@@ -89,9 +92,9 @@ remove_e() {
 # calling gufi_query with and without --compress should result in the same output
 compare_output() {
     INDEX="$1"
-    ORIG=$(run_sort "\"${GUFI_QUERY}\" -d \" \"            -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
-    COMP=$(run_sort "\"${GUFI_QUERY}\" -d \" \" --compress -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
-    run_no_sort "@DIFF@ <(echo '${ORIG}') <(echo '${COMP}' | remove_e)"
+    run_sort "\"${GUFI_QUERY}\" -d \" \"            -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"" > "${OUT_ORIG}"
+    run_sort "\"${GUFI_QUERY}\" -d \" \" --compress -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"" | remove_e > "${OUT_COMP}"
+    run_no_sort "@DIFF@ \"${OUT_ORIG}\" \"${OUT_COMP}\"" | @SED@ "s%${OUT_ORIG}%${INDEX}.orig%g; s%${OUT_COMP}%${INDEX}.comp%g;"
 }
 
 (

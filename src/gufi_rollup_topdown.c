@@ -500,16 +500,10 @@ static int copy_to_top(QPTPool_ctx_t *ctx, void *data) {
 
     /* get the correct rolled up path */
     const char *rolledup_path = rexa.child + rexa.parent_len - subtree->root->basename_len;
-    const size_t rolledup_path_len = rexa.child_len - rexa.parent_len + subtree->root->basename_len;
 
     /* SQL for doing rollup */
-    char *rollup_one_subdir = NULL;
-    SNFORMAT_S_ALLOC(&rollup_one_subdir, 5,
-                     ROLLUP_ONE_SUBDIR_FRONT, sizeof(ROLLUP_ONE_SUBDIR_FRONT) - 1,
-                     "'", (size_t) 1,
-                     rolledup_path, rolledup_path_len,
-                     "'", (size_t) 1,
-                     ROLLUP_ONE_SUBDIR_BACK, sizeof(ROLLUP_ONE_SUBDIR_BACK) - 1);
+    char *rollup_one_subdir = sqlite3_mprintf(ROLLUP_ONE_SUBDIR_FRONT "%Q" ROLLUP_ONE_SUBDIR_BACK,
+                                              rolledup_path);
 
     /*
      * roll up the subdirectory into this directory
@@ -521,7 +515,7 @@ static int copy_to_top(QPTPool_ctx_t *ctx, void *data) {
         rc = 1;
     }
 
-    free(rollup_one_subdir);
+    sqlite3_free(rollup_one_subdir);
 
     /* always detach */
     rollup_child_detach(subtree->tdb->db, child_dbname);

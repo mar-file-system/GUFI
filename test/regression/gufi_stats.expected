@@ -7,7 +7,7 @@ prefix/directory 2
 prefix/directory/subdirectory 3
 prefix/empty_directory 2
 prefix/leaf_directory 2
-prefix/unusual#? directory , 2
+prefix/unusual#? "directory ', 2
 
 $ gufi_stats --verbose depth "prefix"
 GUFI query is
@@ -35,7 +35,7 @@ prefix/directory 6
 prefix/directory/subdirectory 5
 prefix/empty_directory 0
 prefix/leaf_directory 23
-prefix/unusual#? directory , 15
+prefix/unusual#? "directory ', 15
 
 $ gufi_stats    filecount "prefix"
 5
@@ -46,7 +46,7 @@ prefix/directory 3
 prefix/directory/subdirectory 1
 prefix/empty_directory 0
 prefix/leaf_directory 2
-prefix/unusual#? directory , 1
+prefix/unusual#? "directory ', 1
 
 $ gufi_stats    linkcount "prefix"
 1
@@ -57,7 +57,7 @@ prefix/directory 0
 prefix/directory/subdirectory 1
 prefix/empty_directory 0
 prefix/leaf_directory 0
-prefix/unusual#? directory , 0
+prefix/unusual#? "directory ', 0
 
 $ gufi_stats    total-filesize "prefix"
 1001 1049673
@@ -86,7 +86,7 @@ prefix/directory 1
 prefix/directory/subdirectory 0
 prefix/empty_directory 0
 prefix/leaf_directory 0
-prefix/unusual#? directory , 0
+prefix/unusual#? "directory ', 0
 
 $ gufi_stats    total-dircount "prefix"
 1001 5
@@ -134,7 +134,7 @@ $ gufi_stats --order ASC uid-size "prefix"
 1001 11 prefix/leaf_directory/leaf_file1
 1001 12 prefix/leaf_directory/leaf_file2
 1001 14 prefix/repeat_name
-1001 15 prefix/unusual#? directory ,/unusual, name?#
+1001 15 prefix/unusual#? "directory ',/unusual, 'name?#"
 1001 1024 prefix/1KB
 1001 1048576 prefix/1MB
 
@@ -149,7 +149,7 @@ $ gufi_stats --num-results 6 --order ASC uid-size "prefix"
 $ gufi_stats --order DESC uid-size "prefix"
 1001 1048576 prefix/1MB
 1001 1024 prefix/1KB
-1001 15 prefix/unusual#? directory ,/unusual, name?#
+1001 15 prefix/unusual#? "directory ',/unusual, 'name?#"
 1001 14 prefix/repeat_name
 1001 12 prefix/leaf_directory/leaf_file2
 1001 11 prefix/leaf_directory/leaf_file1
@@ -163,7 +163,7 @@ $ gufi_stats --order DESC uid-size "prefix"
 $ gufi_stats --num-results 6 --order DESC uid-size "prefix"
 1001 1048576 prefix/1MB
 1001 1024 prefix/1KB
-1001 15 prefix/unusual#? directory ,/unusual, name?#
+1001 15 prefix/unusual#? "directory ',/unusual, 'name?#"
 1001 14 prefix/repeat_name
 1001 12 prefix/leaf_directory/leaf_file2
 1001 11 prefix/leaf_directory/leaf_file1
@@ -178,7 +178,7 @@ $ gufi_stats --order ASC gid-size "prefix"
 1001 11 prefix/leaf_directory/leaf_file1
 1001 12 prefix/leaf_directory/leaf_file2
 1001 14 prefix/repeat_name
-1001 15 prefix/unusual#? directory ,/unusual, name?#
+1001 15 prefix/unusual#? "directory ',/unusual, 'name?#"
 1001 1024 prefix/1KB
 1001 1048576 prefix/1MB
 
@@ -193,7 +193,7 @@ $ gufi_stats --num-results 6 --order ASC gid-size "prefix"
 $ gufi_stats --order DESC gid-size "prefix"
 1001 1048576 prefix/1MB
 1001 1024 prefix/1KB
-1001 15 prefix/unusual#? directory ,/unusual, name?#
+1001 15 prefix/unusual#? "directory ',/unusual, 'name?#"
 1001 14 prefix/repeat_name
 1001 12 prefix/leaf_directory/leaf_file2
 1001 11 prefix/leaf_directory/leaf_file1
@@ -207,7 +207,7 @@ $ gufi_stats --order DESC gid-size "prefix"
 $ gufi_stats --num-results 6 --order DESC gid-size "prefix"
 1001 1048576 prefix/1MB
 1001 1024 prefix/1KB
-1001 15 prefix/unusual#? directory ,/unusual, name?#
+1001 15 prefix/unusual#? "directory ',/unusual, 'name?#"
 1001 14 prefix/repeat_name
 1001 12 prefix/leaf_directory/leaf_file2
 1001 11 prefix/leaf_directory/leaf_file1
@@ -222,7 +222,7 @@ prefix hidden 1
 prefix/directory  3
 prefix/directory/subdirectory  2
 prefix/leaf_directory  2
-prefix/unusual#? directory ,  1
+prefix/unusual#? "directory ',  1
 
 $ gufi_stats -c extensions "prefix" --order DESC
  13
@@ -237,7 +237,7 @@ prefix/directory 1;6:no-ext:3;
 prefix/directory/subdirectory 1;6:no-ext:2;
 prefix/empty_directory 0;
 prefix/leaf_directory 1;6:no-ext:2;
-prefix/unusual#? directory , 1;6:no-ext:1;
+prefix/unusual#? "directory ', 1;6:no-ext:1;
 
 $ gufi_stats -c extensions-hist "prefix"
 2;6:hidden:1;6:no-ext:13;
@@ -257,7 +257,7 @@ prefix/directory [1,2) 1
 prefix/directory [2,4) 2
 prefix/directory/subdirectory [4,8) 1
 prefix/leaf_directory [8,16) 2
-prefix/unusual#? directory , [8,16) 1
+prefix/unusual#? "directory ', [8,16) 1
 
 $ gufi_stats -c filesize-log2-bins "prefix"
 [0,1) 1
@@ -282,7 +282,7 @@ prefix [1048576,1073741824) 1
 prefix/directory [1,1024) 3
 prefix/directory/subdirectory [1,1024) 1
 prefix/leaf_directory [1,1024) 2
-prefix/unusual#? directory , [1,1024) 1
+prefix/unusual#? "directory ', [1,1024) 1
 
 $ gufi_stats -c filesize-log1024-bins "prefix"
 [0,1) 1
@@ -299,7 +299,7 @@ prefix/directory 2;60;0;0;0:1;1:2;
 prefix/directory/subdirectory 2;60;0;0;2:1;
 prefix/empty_directory 0;0;0;0;
 prefix/leaf_directory 2;60;0;0;3:2;
-prefix/unusual#? directory , 2;60;0;0;3:1;
+prefix/unusual#? "directory ', 2;60;0;0;3:1;
 
 $ gufi_stats -c filesize-log2-bins-hist "prefix"
 2;60;1;0;0:1;1:2;2:1;3:5;10:1;20:1;
@@ -313,7 +313,7 @@ prefix/directory 1024;6;0;0;0:3;
 prefix/directory/subdirectory 1024;6;0;0;0:1;
 prefix/empty_directory 0;0;0;0;
 prefix/leaf_directory 1024;6;0;0;0:2;
-prefix/unusual#? directory , 1024;6;0;0;0:1;
+prefix/unusual#? "directory ', 1024;6;0;0;0:1;
 
 $ gufi_stats -c filesize-log1024-bins-hist "prefix"
 1024;6;1;0;0:9;1:1;2:1;
@@ -327,7 +327,7 @@ prefix/directory [2,4) 1
 prefix/directory/subdirectory [1,2) 1
 prefix/empty_directory [0,1) 1
 prefix/leaf_directory [2,4) 1
-prefix/unusual#? directory , [1,2) 1
+prefix/unusual#? "directory ', [1,2) 1
 
 $ gufi_stats -c dirfilecount-log2-bins "prefix"
 [0,1) 1
@@ -344,7 +344,7 @@ prefix/directory [1,1024) 1
 prefix/directory/subdirectory [1,1024) 1
 prefix/empty_directory [0,1) 1
 prefix/leaf_directory [1,1024) 1
-prefix/unusual#? directory , [1,1024) 1
+prefix/unusual#? "directory ', [1,1024) 1
 
 $ gufi_stats -c dirfilecount-log1024-bins "prefix"
 [0,1) 1
@@ -359,7 +359,7 @@ prefix/directory 2;60;0;0;1:1;
 prefix/directory/subdirectory 2;60;0;0;0:1;
 prefix/empty_directory 2;60;1;0;
 prefix/leaf_directory 2;60;0;0;1:1;
-prefix/unusual#? directory , 2;60;0;0;0:1;
+prefix/unusual#? "directory ', 2;60;0;0;0:1;
 
 $ gufi_stats -c dirfilecount-log2-bins-hist "prefix"
 2;60;1;0;0:2;1:2;2:1;
@@ -373,7 +373,7 @@ prefix/directory 1024;6;0;0;0:1;
 prefix/directory/subdirectory 1024;6;0;0;0:1;
 prefix/empty_directory 1024;6;1;0;
 prefix/leaf_directory 1024;6;0;0;0:1;
-prefix/unusual#? directory , 1024;6;0;0;0:1;
+prefix/unusual#? "directory ', 1024;6;0;0;0:1;
 
 $ gufi_stats -c dirfilecount-log1024-bins-hist "prefix"
 1024;6;1;0;0:5;
@@ -388,7 +388,7 @@ prefix [1 year ago, 2 years ago) 1
 prefix/directory [4 weeks ago, 1 year ago) 3
 prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
 prefix/leaf_directory [4 weeks ago, 1 year ago) 2
-prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
+prefix/unusual#? "directory ', [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 file-age-atime "prefix"
 [4 weeks ago, 1 year ago) 11
@@ -404,7 +404,7 @@ prefix [1 year ago, 2 years ago) 1
 prefix/directory [4 weeks ago, 1 year ago) 3
 prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
 prefix/leaf_directory [4 weeks ago, 1 year ago) 2
-prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
+prefix/unusual#? "directory ', [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 file-age-mtime "prefix"
 [4 weeks ago, 1 year ago) 11
@@ -420,7 +420,7 @@ prefix [1 year ago, 2 years ago) 1
 prefix/directory [4 weeks ago, 1 year ago) 3
 prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
 prefix/leaf_directory [4 weeks ago, 1 year ago) 2
-prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
+prefix/unusual#? "directory ', [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 file-age-ctime "prefix"
 [4 weeks ago, 1 year ago) 11
@@ -435,7 +435,7 @@ prefix/directory [4 weeks ago, 1 year ago) 1
 prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
 prefix/empty_directory [4 weeks ago, 1 year ago) 1
 prefix/leaf_directory [4 weeks ago, 1 year ago) 1
-prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
+prefix/unusual#? "directory ', [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 dir-age-atime "prefix"
 [4 weeks ago, 1 year ago) 6
@@ -449,7 +449,7 @@ prefix/directory [4 weeks ago, 1 year ago) 1
 prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
 prefix/empty_directory [4 weeks ago, 1 year ago) 1
 prefix/leaf_directory [4 weeks ago, 1 year ago) 1
-prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
+prefix/unusual#? "directory ', [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 dir-age-mtime "prefix"
 [4 weeks ago, 1 year ago) 6
@@ -463,7 +463,7 @@ prefix/directory [4 weeks ago, 1 year ago) 1
 prefix/directory/subdirectory [4 weeks ago, 1 year ago) 1
 prefix/empty_directory [4 weeks ago, 1 year ago) 1
 prefix/leaf_directory [4 weeks ago, 1 year ago) 1
-prefix/unusual#? directory , [4 weeks ago, 1 year ago) 1
+prefix/unusual#? "directory ', [4 weeks ago, 1 year ago) 1
 
 $ gufi_stats -c --reftime 31536000 dir-age-ctime "prefix"
 [4 weeks ago, 1 year ago) 6
@@ -477,7 +477,7 @@ prefix/directory 31536000;31536000:3;
 prefix/directory/subdirectory 31536000;31536000:1;
 prefix/empty_directory 0;
 prefix/leaf_directory 31536000;31536000:2;
-prefix/unusual#? directory , 31536000;31536000:1;
+prefix/unusual#? "directory ', 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 file-age-atime-hist "prefix"
 31536000;31536000:10;63072000:1;
@@ -491,7 +491,7 @@ prefix/directory 31536000;31536000:3;
 prefix/directory/subdirectory 31536000;31536000:1;
 prefix/empty_directory 0;
 prefix/leaf_directory 31536000;31536000:2;
-prefix/unusual#? directory , 31536000;31536000:1;
+prefix/unusual#? "directory ', 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 file-age-mtime-hist "prefix"
 31536000;31536000:10;63072000:1;
@@ -505,7 +505,7 @@ prefix/directory 31536000;31536000:3;
 prefix/directory/subdirectory 31536000;31536000:1;
 prefix/empty_directory 0;
 prefix/leaf_directory 31536000;31536000:2;
-prefix/unusual#? directory , 31536000;31536000:1;
+prefix/unusual#? "directory ', 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 file-age-ctime-hist "prefix"
 31536000;31536000:10;63072000:1;
@@ -519,7 +519,7 @@ prefix/directory 31536000;31536000:1;
 prefix/directory/subdirectory 31536000;31536000:1;
 prefix/empty_directory 31536000;31536000:1;
 prefix/leaf_directory 31536000;31536000:1;
-prefix/unusual#? directory , 31536000;31536000:1;
+prefix/unusual#? "directory ', 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 dir-age-atime-hist "prefix"
 31536000;31536000:1;
@@ -533,7 +533,7 @@ prefix/directory 31536000;31536000:1;
 prefix/directory/subdirectory 31536000;31536000:1;
 prefix/empty_directory 31536000;31536000:1;
 prefix/leaf_directory 31536000;31536000:1;
-prefix/unusual#? directory , 31536000;31536000:1;
+prefix/unusual#? "directory ', 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 dir-age-mtime-hist "prefix"
 31536000;31536000:1;
@@ -547,7 +547,7 @@ prefix/directory 31536000;31536000:1;
 prefix/directory/subdirectory 31536000;31536000:1;
 prefix/empty_directory 31536000;31536000:1;
 prefix/leaf_directory 31536000;31536000:1;
-prefix/unusual#? directory , 31536000;31536000:1;
+prefix/unusual#? "directory ', 31536000;31536000:1;
 
 $ gufi_stats -c --reftime 31536000 dir-age-ctime-hist "prefix"
 31536000;31536000:1;
@@ -560,7 +560,7 @@ prefix 1
 prefix/directory 1
 prefix/directory/subdirectory 1
 prefix/leaf_directory 1
-prefix/unusual#? directory , 1
+prefix/unusual#? "directory ', 1
 
 $ gufi_stats -c unique-file-uid-count "prefix"
 1
@@ -573,7 +573,7 @@ prefix 1
 prefix/directory 1
 prefix/directory/subdirectory 1
 prefix/leaf_directory 1
-prefix/unusual#? directory , 1
+prefix/unusual#? "directory ', 1
 
 $ gufi_stats -c unique-file-gid-count "prefix"
 1
@@ -607,7 +607,7 @@ prefix/directory 1
 prefix/directory/subdirectory 1
 prefix/empty_directory 1
 prefix/leaf_directory 1
-prefix/unusual#? directory , 1
+prefix/unusual#? "directory ', 1
 
 $ gufi_stats -c unique-dir-uid-count "prefix"
 1
@@ -621,7 +621,7 @@ prefix/directory 1
 prefix/directory/subdirectory 1
 prefix/empty_directory 1
 prefix/leaf_directory 1
-prefix/unusual#? directory , 1
+prefix/unusual#? "directory ', 1
 
 $ gufi_stats -c unique-dir-gid-count "prefix"
 1
@@ -647,7 +647,7 @@ $ gufi_stats --skip "skip" -r depth "prefix"
 prefix 1
 prefix/empty_directory 2
 prefix/leaf_directory 2
-prefix/unusual#? directory , 2
+prefix/unusual#? "directory ', 2
 
 $ gufi_stats --skip "skip.bad" -r depth "prefix"
 Error: Cannot open skip file "skip.bad"
@@ -665,37 +665,37 @@ $ gufi_stats    leaf-dirs "prefix"
 prefix/directory/subdirectory
 prefix/empty_directory
 prefix/leaf_directory
-prefix/unusual#? directory ,
+prefix/unusual#? "directory ',
 
 $ gufi_stats -r leaf-dirs "prefix"
 prefix/directory/subdirectory
 prefix/empty_directory
 prefix/leaf_directory
-prefix/unusual#? directory ,
+prefix/unusual#? "directory ',
 
 $ gufi_stats    leaf-depth "prefix"
 prefix/directory/subdirectory 3
 prefix/empty_directory 2
 prefix/leaf_directory 2
-prefix/unusual#? directory , 2
+prefix/unusual#? "directory ', 2
 
 $ gufi_stats -r leaf-depth "prefix"
 prefix/directory/subdirectory 3
 prefix/empty_directory 2
 prefix/leaf_directory 2
-prefix/unusual#? directory , 2
+prefix/unusual#? "directory ', 2
 
 $ gufi_stats    leaf-files "prefix"
 prefix/directory/subdirectory 1
 prefix/empty_directory 0
 prefix/leaf_directory 2
-prefix/unusual#? directory , 1
+prefix/unusual#? "directory ', 1
 
 $ gufi_stats -r leaf-files "prefix"
 prefix/directory/subdirectory 1
 prefix/empty_directory 0
 prefix/leaf_directory 2
-prefix/unusual#? directory , 1
+prefix/unusual#? "directory ', 1
 
 $ gufi_stats    total-leaf-files "prefix"
 1001 4

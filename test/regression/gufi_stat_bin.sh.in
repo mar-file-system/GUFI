@@ -82,7 +82,7 @@ fixed_size=(
     "leaf_directory/leaf_file2"
     "old_file"
     "repeat_name"
-    "unusual#? directory ,/unusual, name?#"
+    "unusual#? \"directory ',/unusual, 'name?#\""
 )
 
 variable_size=(
@@ -104,6 +104,7 @@ done
 echo
 
 echo "# first two columns of terse format"
+# output of "unusual#? \"directory ',/unusual, 'name?#\"" will be incorrect due to spaces
 for entry in "${fixed_size[@]}"
 do
     # shellcheck disable=SC2016

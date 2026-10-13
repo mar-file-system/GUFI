@@ -191,15 +191,15 @@ truncate -s 14 repeat_name
 chmod 664 repeat_name
 touch -amt 197001010000.14 repeat_name
 
-mkdir "unusual#? directory ,"
+mkdir "unusual#? \"directory ',"
 (
-    cd "unusual#? directory ,"
-    truncate -s 15 "unusual, name?#"
-    chmod 664 "unusual, name?#"
-    touch -amt 197001010000.15 "unusual, name?#"
+    cd "unusual#? \"directory ',"
+    truncate -s 15 "unusual, 'name?#\""
+    chmod 664 "unusual, 'name?#\""
+    touch -amt 197001010000.15 "unusual, 'name?#\""
 )
-chmod 775 "unusual#? directory ,"
-touch -amt 197001010000.16 "unusual#? directory ,"
+chmod 775 "unusual#? \"directory ',"
+touch -amt 197001010000.16 "unusual#? \"directory ',"
 
 # shellcheck disable=SC2103
 cd ..

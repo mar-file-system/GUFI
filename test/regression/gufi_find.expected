@@ -31,8 +31,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -amin +0
 prefix
@@ -53,8 +53,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -anewer not_as_old_file
 prefix/1KB
@@ -79,8 +79,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -cmin +0
 prefix
@@ -101,8 +101,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -cnewer not_as_old_file
 
@@ -125,8 +125,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -empty
 prefix/empty_directory
@@ -141,7 +141,7 @@ prefix/directory/subdirectory/directory_symlink
 prefix/empty_directory
 prefix/file_symlink
 prefix/leaf_directory
-prefix/unusual#? directory ,
+prefix/unusual#? "directory ',
 
 $ gufi_find -false
 
@@ -176,7 +176,7 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -lname 'directory*'
 prefix/directory/subdirectory/directory_symlink
@@ -200,8 +200,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -mindepth 3
 prefix/directory/subdirectory
@@ -227,8 +227,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -mtime +0
 prefix
@@ -249,8 +249,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -name  'directory*'
 prefix/directory
@@ -275,8 +275,8 @@ prefix/empty_directory
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -perm 444
 prefix/directory/readonly
@@ -312,8 +312,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -regex '.*/directory.*'
 prefix/directory
@@ -349,7 +349,7 @@ prefix/directory/writable
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/repeat_name
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -size 1c          -type f
 prefix/directory/executable
@@ -379,8 +379,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -type d
 prefix
@@ -388,7 +388,7 @@ prefix/directory
 prefix/directory/subdirectory
 prefix/empty_directory
 prefix/leaf_directory
-prefix/unusual#? directory ,
+prefix/unusual#? "directory ',
 
 $ gufi_find -type f
 prefix/.hidden
@@ -402,7 +402,7 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -type l
 prefix/directory/subdirectory/directory_symlink
@@ -426,8 +426,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -print
 prefix
@@ -448,8 +448,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -print0 | hexlify.py | grep -o -e " 00[0-9a-f][0-9a-f] " -e " [0-9a-f][0-9a-f]00 " -e " 00" | wc -l
 20
@@ -468,8 +468,8 @@ prefix/empty_directory
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -printf '\141 \142 \143\n' | head -n 1
 a b c
@@ -504,8 +504,8 @@ readonly                             readonly
 repeat_name                       repeat_name
 repeat_name                       repeat_name
 subdirectory                     subdirectory
-unusual#? directory ,   unusual#? directory ,
-unusual, name?#               unusual, name?#
+unusual#? "directory ', unusual#? "directory ',
+unusual, 'name?#"           unusual, 'name?#"
 writable                             writable
 
 $ gufi_find -fprint gufi_query.fprint && cat gufi_query.fprint
@@ -527,8 +527,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -printf '%z %z \z\n' -maxdepth 2 -type d
 %z %z \z
@@ -554,14 +554,14 @@ prefix/.hidden
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/repeat_name
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"
 prefix/1KB
 prefix/1MB
 
 $ gufi_find --largest  -type f
 prefix/1MB
 prefix/1KB
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"
 prefix/repeat_name
 prefix/leaf_directory/leaf_file2
 prefix/leaf_directory/leaf_file1
@@ -589,7 +589,7 @@ GUFI query is
     search
 prefix/1MB
 prefix/1KB
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"
 prefix/repeat_name
 prefix/leaf_directory/leaf_file2
 prefix/leaf_directory/leaf_file1
@@ -610,8 +610,8 @@ $ gufi_find -ls
 12 1 -rw-rw-r-- 1 user group 12 Jan 1 1970 prefix/leaf_directory/leaf_file2
 13 1 drwxrwxr-x 1 user group 13 Jan 1 1970 prefix/leaf_directory
 14 1 -rw-rw-r-- 1 user group 14 Jan 1 1970 prefix/repeat_name
-15 1 -rw-rw-r-- 1 user group 15 Jan 1 1970 prefix/unusual#? directory ,/unusual, name?#
-16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? directory ,
+15 1 -rw-rw-r-- 1 user group 15 Jan 1 1970 prefix/unusual#? "directory ',/unusual, 'name?#"
+16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? "directory ',
 17 1 drwxrwxr-x 1 user group 17 Jan 1 1970 prefix
 2 1 -r--r--r-- 1 user group 2 Jan 1 1970 prefix/directory/readonly
 3 1 -rw-rw-rwT 1 user group 3 Jan 1 1970 prefix/directory/writable
@@ -638,8 +638,8 @@ $ gufi_find -ls --smallest
 12 1 -rw-rw-r-- 1 user group 12 Jan 1 1970 prefix/leaf_directory/leaf_file2
 13 1 drwxrwxr-x 1 user group 13 Jan 1 1970 prefix/leaf_directory
 14 1 -rw-rw-r-- 1 user group 14 Jan 1 1970 prefix/repeat_name
-15 1 -rw-rw-r-- 1 user group 15 Jan 1 1970 prefix/unusual#? directory ,/unusual, name?#
-16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? directory ,
+15 1 -rw-rw-r-- 1 user group 15 Jan 1 1970 prefix/unusual#? "directory ',/unusual, 'name?#"
+16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? "directory ',
 17 1 drwxrwxr-x 1 user group 17 Jan 1 1970 prefix
 1024 1 -rw-rw-r-- 1 user group 1024 Jan 1 1970 prefix/1KB
 1048576 1024 -rw-rw-r-- 1 user group 1048576 Jan 13 1970 prefix/1MB
@@ -648,8 +648,8 @@ $ gufi_find -ls --largest
 1048576 1024 -rw-rw-r-- 1 user group 1048576 Jan 13 1970 prefix/1MB
 1024 1 -rw-rw-r-- 1 user group 1024 Jan 1 1970 prefix/1KB
 17 1 drwxrwxr-x 1 user group 17 Jan 1 1970 prefix
-16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? directory ,
-15 1 -rw-rw-r-- 1 user group 15 Jan 1 1970 prefix/unusual#? directory ,/unusual, name?#
+16 1 drwxrwxr-x 1 user group 16 Jan 1 1970 prefix/unusual#? "directory ',
+15 1 -rw-rw-r-- 1 user group 15 Jan 1 1970 prefix/unusual#? "directory ',/unusual, 'name?#"
 14 1 -rw-rw-r-- 1 user group 14 Jan 1 1970 prefix/repeat_name
 13 1 drwxrwxr-x 1 user group 13 Jan 1 1970 prefix/leaf_directory
 12 1 -rw-rw-r-- 1 user group 12 Jan 1 1970 prefix/leaf_directory/leaf_file2
@@ -700,8 +700,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -user  user
 prefix
@@ -722,8 +722,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -gid   1001
 prefix
@@ -744,8 +744,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -group group
 prefix
@@ -766,8 +766,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find -name repeat_name --num-results 2
 prefix/directory/subdirectory/repeat_name
@@ -786,7 +786,7 @@ $ gufi_find -printf "%% %a %b %c %d %k [%g %G %u %U] %D %f %h %H %i %l %m %M %n 
 % 11 0 11 3 0 [group 1001 user 1001] - leaf_file1 prefix/leaf_directory/leaf_file1 search 0 664 -rw-rw-r-- 1 prefix/leaf_directory/leaf_file1 leaf_directory/leaf_file1 11 11 f
 % 12 0 12 3 0 [group 1001 user 1001] - leaf_file2 prefix/leaf_directory/leaf_file2 search 0 664 -rw-rw-r-- 1 prefix/leaf_directory/leaf_file2 leaf_directory/leaf_file2 12 12 f
 % 14 0 14 2 0 [group 1001 user 1001] - repeat_name prefix/repeat_name search 0 664 -rw-rw-r-- 1 prefix/repeat_name repeat_name 14 14 f
-% 15 0 15 3 0 [group 1001 user 1001] - unusual, name?# prefix/unusual#? directory ,/unusual, name?# search 0 664 -rw-rw-r-- 1 prefix/unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 15 15 f
+% 15 0 15 3 0 [group 1001 user 1001] - unusual, 'name?#" prefix/unusual#? "directory ',/unusual, 'name?#" search 0 664 -rw-rw-r-- 1 prefix/unusual#? "directory ',/unusual, 'name?#" unusual#? "directory ',/unusual, 'name?#" 15 15 f
 % 1024 0 1024 2 0 [group 1001 user 1001] - 1KB prefix/1KB search 0 664 -rw-rw-r-- 1 prefix/1KB 1KB 1024 1024 f
 % 1048576 0 1048576 2 0 [group 1001 user 1001] - 1MB prefix/1MB search 0 664 -rw-rw-r-- 1 prefix/1MB 1MB 1048576 1048576 f
 
@@ -811,8 +811,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_find --skip "skip.bad"
 Error: Cannot open skip file "skip.bad"

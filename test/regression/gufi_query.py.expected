@@ -8,7 +8,7 @@ empty_directory
 leaf_directory
 prefix
 subdirectory
-unusual#? directory ,
+unusual#? "directory ',
 
 # Get only non-directories
 $ gufi_query.py -d " " -n 2 -E "SELECT name FROM vrpentries;" "prefix"
@@ -24,7 +24,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Get all directory and non-directory names
@@ -46,7 +46,7 @@ readonly
 repeat_name
 repeat_name
 subdirectory
-unusual#? directory ,
-unusual, name?#
+unusual#? "directory ',
+unusual, 'name?#"
 writable
 

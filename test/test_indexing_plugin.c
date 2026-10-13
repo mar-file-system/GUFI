@@ -146,7 +146,7 @@ static void process_file(void *ptr, void *user_data) {
     sqlite3 *db = pcs->db;
     struct state *p = (struct state *) user_data;
 
-    char *text = sqlite3_mprintf("INSERT INTO plugin_test_files (filename) VALUES ('%s');", pcs->work->name);
+    char *text = sqlite3_mprintf("INSERT INTO plugin_test_files (filename) VALUES (%Q);", pcs->work->name);
     char *error = NULL;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
@@ -166,7 +166,7 @@ static void process_dir(void *ptr, void *user_data) {
     sqlite3 *db = pcs->db;
     struct state *p = (struct state *) user_data;
 
-    char *text = sqlite3_mprintf("INSERT INTO plugin_test_directories (dirname) VALUES ('%s');", pcs->work->name);
+    char *text = sqlite3_mprintf("INSERT INTO plugin_test_directories (dirname) VALUES (%Q);", pcs->work->name);
     char *error = NULL;
 
     int res = sqlite3_exec(db, text, NULL, NULL, &error);

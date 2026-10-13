@@ -4,7 +4,7 @@ empty_directory 0
 leaf_directory 0
 prefix 0
 subdirectory 0
-unusual#? directory , 0
+unusual#? "directory ', 0
 
 $ generateuidsummary "prefix" 2
 create uid summary records in summary tables in prefix
@@ -28,7 +28,7 @@ empty_directory 0
 leaf_directory 0
 prefix 0
 subdirectory 0
-unusual#? directory , 0
+unusual#? "directory ', 0
 
 $ deluidgidsummaryrecs "prefix" 2
 delete all uid and gid summary records from summary tables in prefix
@@ -39,5 +39,5 @@ empty_directory 0
 leaf_directory 0
 prefix 0
 subdirectory 0
-unusual#? directory , 0
+unusual#? "directory ', 0
 

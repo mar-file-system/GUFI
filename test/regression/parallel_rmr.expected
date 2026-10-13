@@ -15,13 +15,13 @@ db.db
 directory
 empty_directory
 leaf_directory
-unusual#? directory ,
+unusual#? "directory ',
 
 $ parallel_rmr -n 2 "prefix/directory" "prefix/empty_directory" "prefix/leaf_directory"
 
 $ ls -1 prefix
 db.db
-unusual#? directory ,
+unusual#? "directory ',
 
 # delete paths again
 $ parallel_rmr -n 2 "prefix/directory" "prefix/empty_directory" "prefix/leaf_directory"

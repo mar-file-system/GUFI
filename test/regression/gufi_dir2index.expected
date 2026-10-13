@@ -28,27 +28,27 @@ Index Everything:
     Total Dirs:          6
     Total Non-Dirs:      14
 
-    Source Directory:                                        GUFI Tree:
-        prefix                                                   prefix
-        prefix/.hidden                                           prefix/.hidden
-        prefix/1KB                                               prefix/1KB
-        prefix/1MB                                               prefix/1MB
-        prefix/directory                                         prefix/directory
-        prefix/directory/executable                              prefix/directory/executable
-        prefix/directory/readonly                                prefix/directory/readonly
-        prefix/directory/subdirectory                            prefix/directory/subdirectory
-        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
-        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
-        prefix/directory/writable                                prefix/directory/writable
-        prefix/empty_directory                                   prefix/empty_directory
-        prefix/file_symlink                                      prefix/file_symlink
-        prefix/leaf_directory                                    prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
-        prefix/old_file                                          prefix/old_file
-        prefix/repeat_name                                       prefix/repeat_name
-        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
+    Source Directory:                                         GUFI Tree:
+        prefix                                                    prefix
+        prefix/.hidden                                            prefix/.hidden
+        prefix/1KB                                                prefix/1KB
+        prefix/1MB                                                prefix/1MB
+        prefix/directory                                          prefix/directory
+        prefix/directory/executable                               prefix/directory/executable
+        prefix/directory/readonly                                 prefix/directory/readonly
+        prefix/directory/subdirectory                             prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink           prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                 prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                 prefix/directory/writable
+        prefix/empty_directory                                    prefix/empty_directory
+        prefix/file_symlink                                       prefix/file_symlink
+        prefix/leaf_directory                                     prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                          prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                          prefix/leaf_directory/leaf_file2
+        prefix/old_file                                           prefix/old_file
+        prefix/repeat_name                                        prefix/repeat_name
+        prefix/unusual#? "directory ',                            prefix/unusual#? "directory ',
+        prefix/unusual#? "directory ',/unusual, 'name?#"          prefix/unusual#? "directory ',/unusual, 'name?#"
 
 Index starting at level 0:
 
@@ -56,27 +56,27 @@ Index starting at level 0:
     Total Dirs:          6
     Total Non-Dirs:      14
 
-    Source Directory:                                        GUFI Tree:
-        prefix                                                   prefix
-        prefix/.hidden                                           prefix/.hidden
-        prefix/1KB                                               prefix/1KB
-        prefix/1MB                                               prefix/1MB
-        prefix/directory                                         prefix/directory
-        prefix/directory/executable                              prefix/directory/executable
-        prefix/directory/readonly                                prefix/directory/readonly
-        prefix/directory/subdirectory                            prefix/directory/subdirectory
-        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
-        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
-        prefix/directory/writable                                prefix/directory/writable
-        prefix/empty_directory                                   prefix/empty_directory
-        prefix/file_symlink                                      prefix/file_symlink
-        prefix/leaf_directory                                    prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
-        prefix/old_file                                          prefix/old_file
-        prefix/repeat_name                                       prefix/repeat_name
-        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
+    Source Directory:                                         GUFI Tree:
+        prefix                                                    prefix
+        prefix/.hidden                                            prefix/.hidden
+        prefix/1KB                                                prefix/1KB
+        prefix/1MB                                                prefix/1MB
+        prefix/directory                                          prefix/directory
+        prefix/directory/executable                               prefix/directory/executable
+        prefix/directory/readonly                                 prefix/directory/readonly
+        prefix/directory/subdirectory                             prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink           prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                 prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                 prefix/directory/writable
+        prefix/empty_directory                                    prefix/empty_directory
+        prefix/file_symlink                                       prefix/file_symlink
+        prefix/leaf_directory                                     prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                          prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                          prefix/leaf_directory/leaf_file2
+        prefix/old_file                                           prefix/old_file
+        prefix/repeat_name                                        prefix/repeat_name
+        prefix/unusual#? "directory ',                            prefix/unusual#? "directory ',
+        prefix/unusual#? "directory ',/unusual, 'name?#"          prefix/unusual#? "directory ',/unusual, 'name?#"
 
 Index starting at level 1:
 
@@ -84,20 +84,20 @@ Index starting at level 1:
     Total Dirs:          5
     Total Non-Dirs:      8
 
-    Source Directory:                                        GUFI Tree:
-        prefix/directory                                         prefix/directory
-        prefix/directory/executable                              prefix/directory/executable
-        prefix/directory/readonly                                prefix/directory/readonly
-        prefix/directory/subdirectory                            prefix/directory/subdirectory
-        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
-        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
-        prefix/directory/writable                                prefix/directory/writable
-        prefix/empty_directory                                   prefix/empty_directory
-        prefix/leaf_directory                                    prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
-        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
+    Source Directory:                                         GUFI Tree:
+        prefix/directory                                          prefix/directory
+        prefix/directory/executable                               prefix/directory/executable
+        prefix/directory/readonly                                 prefix/directory/readonly
+        prefix/directory/subdirectory                             prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink           prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                 prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                 prefix/directory/writable
+        prefix/empty_directory                                    prefix/empty_directory
+        prefix/leaf_directory                                     prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                          prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                          prefix/leaf_directory/leaf_file2
+        prefix/unusual#? "directory ',                            prefix/unusual#? "directory ',
+        prefix/unusual#? "directory ',/unusual, 'name?#"          prefix/unusual#? "directory ',/unusual, 'name?#"
 
 Index starting at level 2:
 
@@ -139,24 +139,24 @@ Index up to level 1:
     Total Dirs:          5
     Total Non-Dirs:      12
 
-    Source Directory:                                     GUFI Tree:
-        prefix                                                prefix
-        prefix/.hidden                                        prefix/.hidden
-        prefix/1KB                                            prefix/1KB
-        prefix/1MB                                            prefix/1MB
-        prefix/directory                                      prefix/directory
-        prefix/directory/executable                           prefix/directory/executable
-        prefix/directory/readonly                             prefix/directory/readonly
-        prefix/directory/writable                             prefix/directory/writable
-        prefix/empty_directory                                prefix/empty_directory
-        prefix/file_symlink                                   prefix/file_symlink
-        prefix/leaf_directory                                 prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1                      prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2                      prefix/leaf_directory/leaf_file2
-        prefix/old_file                                       prefix/old_file
-        prefix/repeat_name                                    prefix/repeat_name
-        prefix/unusual#? directory ,                          prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#          prefix/unusual#? directory ,/unusual, name?#
+    Source Directory:                                         GUFI Tree:
+        prefix                                                    prefix
+        prefix/.hidden                                            prefix/.hidden
+        prefix/1KB                                                prefix/1KB
+        prefix/1MB                                                prefix/1MB
+        prefix/directory                                          prefix/directory
+        prefix/directory/executable                               prefix/directory/executable
+        prefix/directory/readonly                                 prefix/directory/readonly
+        prefix/directory/writable                                 prefix/directory/writable
+        prefix/empty_directory                                    prefix/empty_directory
+        prefix/file_symlink                                       prefix/file_symlink
+        prefix/leaf_directory                                     prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                          prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                          prefix/leaf_directory/leaf_file2
+        prefix/old_file                                           prefix/old_file
+        prefix/repeat_name                                        prefix/repeat_name
+        prefix/unusual#? "directory ',                            prefix/unusual#? "directory ',
+        prefix/unusual#? "directory ',/unusual, 'name?#"          prefix/unusual#? "directory ',/unusual, 'name?#"
 
 Index up to level 2:
 
@@ -164,27 +164,27 @@ Index up to level 2:
     Total Dirs:          6
     Total Non-Dirs:      14
 
-    Source Directory:                                        GUFI Tree:
-        prefix                                                   prefix
-        prefix/.hidden                                           prefix/.hidden
-        prefix/1KB                                               prefix/1KB
-        prefix/1MB                                               prefix/1MB
-        prefix/directory                                         prefix/directory
-        prefix/directory/executable                              prefix/directory/executable
-        prefix/directory/readonly                                prefix/directory/readonly
-        prefix/directory/subdirectory                            prefix/directory/subdirectory
-        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
-        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
-        prefix/directory/writable                                prefix/directory/writable
-        prefix/empty_directory                                   prefix/empty_directory
-        prefix/file_symlink                                      prefix/file_symlink
-        prefix/leaf_directory                                    prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
-        prefix/old_file                                          prefix/old_file
-        prefix/repeat_name                                       prefix/repeat_name
-        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
+    Source Directory:                                         GUFI Tree:
+        prefix                                                    prefix
+        prefix/.hidden                                            prefix/.hidden
+        prefix/1KB                                                prefix/1KB
+        prefix/1MB                                                prefix/1MB
+        prefix/directory                                          prefix/directory
+        prefix/directory/executable                               prefix/directory/executable
+        prefix/directory/readonly                                 prefix/directory/readonly
+        prefix/directory/subdirectory                             prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink           prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                 prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                 prefix/directory/writable
+        prefix/empty_directory                                    prefix/empty_directory
+        prefix/file_symlink                                       prefix/file_symlink
+        prefix/leaf_directory                                     prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                          prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                          prefix/leaf_directory/leaf_file2
+        prefix/old_file                                           prefix/old_file
+        prefix/repeat_name                                        prefix/repeat_name
+        prefix/unusual#? "directory ',                            prefix/unusual#? "directory ',
+        prefix/unusual#? "directory ',/unusual, 'name?#"          prefix/unusual#? "directory ',/unusual, 'name?#"
 
 Index up to level 3:
 
@@ -192,27 +192,27 @@ Index up to level 3:
     Total Dirs:          6
     Total Non-Dirs:      14
 
-    Source Directory:                                        GUFI Tree:
-        prefix                                                   prefix
-        prefix/.hidden                                           prefix/.hidden
-        prefix/1KB                                               prefix/1KB
-        prefix/1MB                                               prefix/1MB
-        prefix/directory                                         prefix/directory
-        prefix/directory/executable                              prefix/directory/executable
-        prefix/directory/readonly                                prefix/directory/readonly
-        prefix/directory/subdirectory                            prefix/directory/subdirectory
-        prefix/directory/subdirectory/directory_symlink          prefix/directory/subdirectory/directory_symlink
-        prefix/directory/subdirectory/repeat_name                prefix/directory/subdirectory/repeat_name
-        prefix/directory/writable                                prefix/directory/writable
-        prefix/empty_directory                                   prefix/empty_directory
-        prefix/file_symlink                                      prefix/file_symlink
-        prefix/leaf_directory                                    prefix/leaf_directory
-        prefix/leaf_directory/leaf_file1                         prefix/leaf_directory/leaf_file1
-        prefix/leaf_directory/leaf_file2                         prefix/leaf_directory/leaf_file2
-        prefix/old_file                                          prefix/old_file
-        prefix/repeat_name                                       prefix/repeat_name
-        prefix/unusual#? directory ,                             prefix/unusual#? directory ,
-        prefix/unusual#? directory ,/unusual, name?#             prefix/unusual#? directory ,/unusual, name?#
+    Source Directory:                                         GUFI Tree:
+        prefix                                                    prefix
+        prefix/.hidden                                            prefix/.hidden
+        prefix/1KB                                                prefix/1KB
+        prefix/1MB                                                prefix/1MB
+        prefix/directory                                          prefix/directory
+        prefix/directory/executable                               prefix/directory/executable
+        prefix/directory/readonly                                 prefix/directory/readonly
+        prefix/directory/subdirectory                             prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink           prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name                 prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable                                 prefix/directory/writable
+        prefix/empty_directory                                    prefix/empty_directory
+        prefix/file_symlink                                       prefix/file_symlink
+        prefix/leaf_directory                                     prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1                          prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2                          prefix/leaf_directory/leaf_file2
+        prefix/old_file                                           prefix/old_file
+        prefix/repeat_name                                        prefix/repeat_name
+        prefix/unusual#? "directory ',                            prefix/unusual#? "directory ',
+        prefix/unusual#? "directory ',/unusual, 'name?#"          prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # build index in pieces
 $ gufi_dir2index --min-level 2               -x prefix search
@@ -232,27 +232,27 @@ Creating GUFI tree search with 1 threads
 Total Dirs:          5
 Total Non-Dirs:      12
 
-Expected Index:                                      Combined Index:
-    prefix                                               prefix
-    prefix/.hidden                                       prefix/.hidden
-    prefix/1KB                                           prefix/1KB
-    prefix/1MB                                           prefix/1MB
-    prefix/directory                                     prefix/directory
-    prefix/directory/executable                          prefix/directory/executable
-    prefix/directory/readonly                            prefix/directory/readonly
-    prefix/directory/subdirectory                        prefix/directory/subdirectory
-    prefix/directory/subdirectory/directory_symlink      prefix/directory/subdirectory/directory_symlink
-    prefix/directory/subdirectory/repeat_name            prefix/directory/subdirectory/repeat_name
-    prefix/directory/writable                            prefix/directory/writable
-    prefix/empty_directory                               prefix/empty_directory
-    prefix/file_symlink                                  prefix/file_symlink
-    prefix/leaf_directory                                prefix/leaf_directory
-    prefix/leaf_directory/leaf_file1                     prefix/leaf_directory/leaf_file1
-    prefix/leaf_directory/leaf_file2                     prefix/leaf_directory/leaf_file2
-    prefix/old_file                                      prefix/old_file
-    prefix/repeat_name                                   prefix/repeat_name
-    prefix/unusual#? directory ,                         prefix/unusual#? directory ,
-    prefix/unusual#? directory ,/unusual, name?#         prefix/unusual#? directory ,/unusual, name?#
+Expected Index:                                       Combined Index:
+    prefix                                                prefix
+    prefix/.hidden                                        prefix/.hidden
+    prefix/1KB                                            prefix/1KB
+    prefix/1MB                                            prefix/1MB
+    prefix/directory                                      prefix/directory
+    prefix/directory/executable                           prefix/directory/executable
+    prefix/directory/readonly                             prefix/directory/readonly
+    prefix/directory/subdirectory                         prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink       prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name             prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable                             prefix/directory/writable
+    prefix/empty_directory                                prefix/empty_directory
+    prefix/file_symlink                                   prefix/file_symlink
+    prefix/leaf_directory                                 prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1                      prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2                      prefix/leaf_directory/leaf_file2
+    prefix/old_file                                       prefix/old_file
+    prefix/repeat_name                                    prefix/repeat_name
+    prefix/unusual#? "directory ',                        prefix/unusual#? "directory ',
+    prefix/unusual#? "directory ',/unusual, 'name?#"      prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # ######################################
 # partial indexing setup
@@ -295,7 +295,7 @@ $ rm -r "search"
 
 $ cat "distributed.1"
 leaf_directory
-unusual#? directory ,
+unusual#? "directory ',
 
 $ gufi_dir2index -n 2 --path-list "distributed.1" --min-level 1 "prefix" "search"
 Creating GUFI tree search with 2 threads
@@ -306,8 +306,8 @@ $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT r
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # ######################################
 
@@ -351,8 +351,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # ######################################
 
@@ -422,8 +422,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # bad skip file
 $ gufi_dir2index -n 2 --skip-file "skip.bad" "prefix" "search"

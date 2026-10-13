@@ -48,9 +48,9 @@ $ sqlite3 "prefix/directory/subdirectory/faction2.db" "CREATE TABLE user_table(n
 $ sqlite3 "prefix/directory/subdirectory/faction2.db" "INSERT INTO user_table VALUES ('subdirectory', 'd', 'faction2 subdirectory');"
 
 #########################################
-$ sqlite3 "prefix/unusual#? directory ,/faction2.db" "CREATE TABLE user_table(name TEXT, type TEXT, data TEXT);"
+$ sqlite3 "prefix/unusual#? \"directory ',/faction2.db" "CREATE TABLE user_table(name TEXT, type TEXT, data TEXT);"
 
-$ sqlite3 "prefix/unusual#? directory ,/faction2.db" "INSERT INTO user_table VALUES ('unusual, name?#', 'f', 'faction2 unusual, name?#');"
+$ sqlite3 "prefix/unusual#? \"directory ',/faction2.db" "INSERT INTO user_table VALUES ('unusual, ''name?#""', 'f', 'faction2 unusual, ''name?#""');"
 
 #########################################
 
@@ -82,39 +82,39 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/external.gufi
-prefix/unusual#? directory ,/faction2.db
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/external.gufi
+prefix/unusual#? "directory ',/faction2.db
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # Create Index
 
 Clean up index
-$ sqlite3 "prefix/db.db"                        "UPDATE external_dbs_pwd SET pinode = '17';"
+$ sqlite3 "prefix/db.db"                            "UPDATE external_dbs_pwd SET pinode = '17';"
 
-$ sqlite3 "prefix/directory/db.db"              "UPDATE external_dbs_pwd SET pinode = '7';"
+$ sqlite3 "prefix/directory/db.db"                  "UPDATE external_dbs_pwd SET pinode = '7';"
 
-$ sqlite3 "prefix/directory/subdirectory/db.db" "UPDATE external_dbs_pwd SET pinode = '6';"
+$ sqlite3 "prefix/directory/subdirectory/db.db"     "UPDATE external_dbs_pwd SET pinode = '6';"
 
-$ sqlite3 "prefix/leaf_directory/db.db"         "UPDATE external_dbs_pwd SET pinode = '13';"
+$ sqlite3 "prefix/leaf_directory/db.db"             "UPDATE external_dbs_pwd SET pinode = '13';"
 
-$ sqlite3 "prefix/unusual#? directory ,/db.db"  "UPDATE external_dbs_pwd SET pinode = '16';"
+$ sqlite3 "prefix/unusual#? \"directory ',/db.db" "UPDATE external_dbs_pwd SET pinode = '16';"
 
-$ sqlite3 "prefix/db.db"                        "SELECT pinode, filename FROM external_dbs;"
+$ sqlite3 "prefix/db.db"                            "SELECT pinode, filename FROM external_dbs;"
 17|prefix/faction1.db
 17|prefix/faction2.db
 
-$ sqlite3 "prefix/directory/db.db"              "SELECT pinode, filename FROM external_dbs;"
+$ sqlite3 "prefix/directory/db.db"                  "SELECT pinode, filename FROM external_dbs;"
 7|prefix/directory/faction1.db
 
-$ sqlite3 "prefix/directory/subdirectory/db.db" "SELECT pinode, filename FROM external_dbs;"
+$ sqlite3 "prefix/directory/subdirectory/db.db"     "SELECT pinode, filename FROM external_dbs;"
 6|prefix/directory/subdirectory/faction2.db
 
-$ sqlite3 "prefix/leaf_directory/db.db"         "SELECT pinode, filename FROM external_dbs;"
+$ sqlite3 "prefix/leaf_directory/db.db"             "SELECT pinode, filename FROM external_dbs;"
 13|prefix/leaf_directory/faction1.db
 
-$ sqlite3 "prefix/unusual#? directory ,/db.db"  "SELECT pinode, filename FROM external_dbs;"
-16|prefix/unusual#? directory ,/faction2.db
+$ sqlite3 "prefix/unusual#? \"directory ',/db.db" "SELECT pinode, filename FROM external_dbs;"
+16|prefix/unusual#? "directory ',/faction2.db
 
 # insert an external db that should not show up in queries
 $ sqlite3 "prefix/leaf_directory/db.db" "INSERT INTO external_dbs_pwd (type, filename) VALUES ('user_db', 'this should not show up when querying');"
@@ -148,10 +148,10 @@ prefix/leaf_directory/leaf_file2|f|
 prefix/leaf_directory|d|
 prefix/old_file|f|faction1 old file data
 prefix/repeat_name|f|faction1 repeat_name
-prefix/unusual#? directory ,/external.gufi|f|
-prefix/unusual#? directory ,/faction2.db|f|
-prefix/unusual#? directory ,/unusual, name?#|f|
-prefix/unusual#? directory ,|d|
+prefix/unusual#? "directory ',/external.gufi|f|
+prefix/unusual#? "directory ',/faction2.db|f|
+prefix/unusual#? "directory ',/unusual, 'name?#"|f|
+prefix/unusual#? "directory ',|d|
 prefix|d|faction1 root directory
 
 # again, but with xattrs
@@ -189,10 +189,10 @@ prefix/leaf_directory|d|user.name|leaf|
 prefix/leaf_directory|d|user.type|dir|
 prefix/old_file|f|||faction1 old file data
 prefix/repeat_name|f|||faction1 repeat_name
-prefix/unusual#? directory ,/external.gufi|f|||
-prefix/unusual#? directory ,/faction2.db|f|||
-prefix/unusual#? directory ,/unusual, name?#|f|||
-prefix/unusual#? directory ,|d|||
+prefix/unusual#? "directory ',/external.gufi|f|||
+prefix/unusual#? "directory ',/faction2.db|f|||
+prefix/unusual#? "directory ',/unusual, 'name?#"|f|||
+prefix/unusual#? "directory ',|d|||
 prefix|d|||faction1 root directory
 
 # get faction2 user data
@@ -224,10 +224,10 @@ prefix/leaf_directory/leaf_file2|f|
 prefix/leaf_directory|d|
 prefix/old_file|f|
 prefix/repeat_name|f|
-prefix/unusual#? directory ,/external.gufi|f|
-prefix/unusual#? directory ,/faction2.db|f|
-prefix/unusual#? directory ,/unusual, name?#|f|faction2 unusual, name?#
-prefix/unusual#? directory ,|d|
+prefix/unusual#? "directory ',/external.gufi|f|
+prefix/unusual#? "directory ',/faction2.db|f|
+prefix/unusual#? "directory ',/unusual, 'name?#"|f|
+prefix/unusual#? "directory ',|d|
 prefix|d|faction2 root directory
 
 # again, but with xattrs
@@ -265,10 +265,10 @@ prefix/leaf_directory|d|user.name|leaf|
 prefix/leaf_directory|d|user.type|dir|
 prefix/old_file|f|||
 prefix/repeat_name|f|||
-prefix/unusual#? directory ,/external.gufi|f|||
-prefix/unusual#? directory ,/faction2.db|f|||
-prefix/unusual#? directory ,/unusual, name?#|f|||faction2 unusual, name?#
-prefix/unusual#? directory ,|d|||
+prefix/unusual#? "directory ',/external.gufi|f|||
+prefix/unusual#? "directory ',/faction2.db|f|||
+prefix/unusual#? "directory ',/unusual, 'name?#"|f|||
+prefix/unusual#? "directory ',|d|||
 prefix|d|||faction2 root directory
 
 # get faction1 and faction2 user data at the same time
@@ -300,10 +300,10 @@ prefix/leaf_directory/leaf_file2|f||
 prefix/leaf_directory|d||
 prefix/old_file|f|faction1 old file data|
 prefix/repeat_name|f|faction1 repeat_name|
-prefix/unusual#? directory ,/external.gufi|f||
-prefix/unusual#? directory ,/faction2.db|f||
-prefix/unusual#? directory ,/unusual, name?#|f||faction2 unusual, name?#
-prefix/unusual#? directory ,|d||
+prefix/unusual#? "directory ',/external.gufi|f||
+prefix/unusual#? "directory ',/faction2.db|f||
+prefix/unusual#? "directory ',/unusual, 'name?#"|f||
+prefix/unusual#? "directory ',|d||
 prefix|d|faction1 root directory|faction2 root directory
 
 # again, but with xattrs
@@ -341,10 +341,10 @@ prefix/leaf_directory|d|user.name|leaf||
 prefix/leaf_directory|d|user.type|dir||
 prefix/old_file|f|||faction1 old file data|
 prefix/repeat_name|f|||faction1 repeat_name|
-prefix/unusual#? directory ,/external.gufi|f||||
-prefix/unusual#? directory ,/faction2.db|f||||
-prefix/unusual#? directory ,/unusual, name?#|f||||faction2 unusual, name?#
-prefix/unusual#? directory ,|d||||
+prefix/unusual#? "directory ',/external.gufi|f||||
+prefix/unusual#? "directory ',/faction2.db|f||||
+prefix/unusual#? "directory ',/unusual, 'name?#"|f||||
+prefix/unusual#? "directory ',|d||||
 prefix|d|||faction1 root directory|faction2 root directory
 
 $ gufi_rollup "prefix"
@@ -384,7 +384,7 @@ Remaining Dirs: 1 (16.67%)
 
 $ sqlite3 "prefix/db.db" "SELECT * FROM external_dbs;"
 user_db|13|prefix/leaf_directory/faction1.db|||
-user_db|16|prefix/unusual#? directory ,/faction2.db|||
+user_db|16|prefix/unusual#? "directory ',/faction2.db|||
 user_db|17|prefix/faction1.db|||
 user_db|17|prefix/faction2.db|||
 user_db|6|prefix/directory/subdirectory/faction2.db|||
@@ -397,7 +397,7 @@ user_db|17|prefix/faction2.db|||
 
 $ sqlite3 "prefix/db.db" "SELECT * FROM external_dbs_rollup;"
 user_db|13|prefix/leaf_directory/faction1.db|||
-user_db|16|prefix/unusual#? directory ,/faction2.db|||
+user_db|16|prefix/unusual#? "directory ',/faction2.db|||
 user_db|6|prefix/directory/subdirectory/faction2.db|||
 user_db|7|prefix/directory/faction1.db|||
 user_db||this should not show up when querying|||
@@ -431,10 +431,10 @@ prefix/leaf_directory/leaf_file2|f|
 prefix/leaf_directory|d|
 prefix/old_file|f|faction1 old file data
 prefix/repeat_name|f|faction1 repeat_name
-prefix/unusual#? directory ,/external.gufi|f|
-prefix/unusual#? directory ,/faction2.db|f|
-prefix/unusual#? directory ,/unusual, name?#|f|
-prefix/unusual#? directory ,|d|
+prefix/unusual#? "directory ',/external.gufi|f|
+prefix/unusual#? "directory ',/faction2.db|f|
+prefix/unusual#? "directory ',/unusual, 'name?#"|f|
+prefix/unusual#? "directory ',|d|
 prefix|d|faction1 root directory
 
 # again, but with xattrs
@@ -472,10 +472,10 @@ prefix/leaf_directory|d|user.name|leaf|
 prefix/leaf_directory|d|user.type|dir|
 prefix/old_file|f|||faction1 old file data
 prefix/repeat_name|f|||faction1 repeat_name
-prefix/unusual#? directory ,/external.gufi|f|||
-prefix/unusual#? directory ,/faction2.db|f|||
-prefix/unusual#? directory ,/unusual, name?#|f|||
-prefix/unusual#? directory ,|d|||
+prefix/unusual#? "directory ',/external.gufi|f|||
+prefix/unusual#? "directory ',/faction2.db|f|||
+prefix/unusual#? "directory ',/unusual, 'name?#"|f|||
+prefix/unusual#? "directory ',|d|||
 prefix|d|||faction1 root directory
 
 # get faction2 user data
@@ -507,10 +507,10 @@ prefix/leaf_directory/leaf_file2|f|
 prefix/leaf_directory|d|
 prefix/old_file|f|
 prefix/repeat_name|f|
-prefix/unusual#? directory ,/external.gufi|f|
-prefix/unusual#? directory ,/faction2.db|f|
-prefix/unusual#? directory ,/unusual, name?#|f|faction2 unusual, name?#
-prefix/unusual#? directory ,|d|
+prefix/unusual#? "directory ',/external.gufi|f|
+prefix/unusual#? "directory ',/faction2.db|f|
+prefix/unusual#? "directory ',/unusual, 'name?#"|f|
+prefix/unusual#? "directory ',|d|
 prefix|d|faction2 root directory
 
 # again, but with xattrs
@@ -548,10 +548,10 @@ prefix/leaf_directory|d|user.name|leaf|
 prefix/leaf_directory|d|user.type|dir|
 prefix/old_file|f|||
 prefix/repeat_name|f|||
-prefix/unusual#? directory ,/external.gufi|f|||
-prefix/unusual#? directory ,/faction2.db|f|||
-prefix/unusual#? directory ,/unusual, name?#|f|||faction2 unusual, name?#
-prefix/unusual#? directory ,|d|||
+prefix/unusual#? "directory ',/external.gufi|f|||
+prefix/unusual#? "directory ',/faction2.db|f|||
+prefix/unusual#? "directory ',/unusual, 'name?#"|f|||
+prefix/unusual#? "directory ',|d|||
 prefix|d|||faction2 root directory
 
 # get faction1 and faction2 user data at the same time
@@ -583,10 +583,10 @@ prefix/leaf_directory/leaf_file2|f||
 prefix/leaf_directory|d||
 prefix/old_file|f|faction1 old file data|
 prefix/repeat_name|f|faction1 repeat_name|
-prefix/unusual#? directory ,/external.gufi|f||
-prefix/unusual#? directory ,/faction2.db|f||
-prefix/unusual#? directory ,/unusual, name?#|f||faction2 unusual, name?#
-prefix/unusual#? directory ,|d||
+prefix/unusual#? "directory ',/external.gufi|f||
+prefix/unusual#? "directory ',/faction2.db|f||
+prefix/unusual#? "directory ',/unusual, 'name?#"|f||
+prefix/unusual#? "directory ',|d||
 prefix|d|faction1 root directory|faction2 root directory
 
 # again, but with xattrs
@@ -624,9 +624,9 @@ prefix/leaf_directory|d|user.name|leaf||
 prefix/leaf_directory|d|user.type|dir||
 prefix/old_file|f|||faction1 old file data|
 prefix/repeat_name|f|||faction1 repeat_name|
-prefix/unusual#? directory ,/external.gufi|f||||
-prefix/unusual#? directory ,/faction2.db|f||||
-prefix/unusual#? directory ,/unusual, name?#|f||||faction2 unusual, name?#
-prefix/unusual#? directory ,|d||||
+prefix/unusual#? "directory ',/external.gufi|f||||
+prefix/unusual#? "directory ',/faction2.db|f||||
+prefix/unusual#? "directory ',/unusual, 'name?#"|f||||
+prefix/unusual#? "directory ',|d||||
 prefix|d|||faction1 root directory|faction2 root directory
 

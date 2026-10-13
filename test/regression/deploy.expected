@@ -26,8 +26,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_ls -aR
 prefix
@@ -48,8 +48,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # Current set of indexes are placed under common directory "search"
 # Expose "search" to users via a symlink
@@ -92,8 +92,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_ls -aR
 prefix
@@ -114,8 +114,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "user_path"
 user_path/prefix
@@ -123,7 +123,7 @@ user_path/prefix/directory
 user_path/prefix/directory/subdirectory
 user_path/prefix/empty_directory
 user_path/prefix/leaf_directory
-user_path/prefix/unusual#? directory ,
+user_path/prefix/unusual#? "directory ',
 
 # Create a "new" index at "search2"
 $ cp -R "search" "search2"
@@ -143,8 +143,8 @@ prefix/empty_directory
 prefix/file_symlink
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_ls -aR
 prefix
@@ -155,11 +155,11 @@ prefix/empty_directory
 prefix/file_symlink
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "user_path"
 user_path/prefix
 user_path/prefix/empty_directory
-user_path/prefix/unusual#? directory ,
+user_path/prefix/unusual#? "directory ',
 

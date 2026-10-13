@@ -148,7 +148,7 @@ xattrs_avail
 xattrs_pwd
 xattrs_rollup
 
-search/prefix/unusual#? directory ,/db.db
+search/prefix/unusual#? "directory ',/db.db
 entries
 external_dbs
 external_dbs_pwd
@@ -187,8 +187,8 @@ Source Directory:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual#? directory ,
-    prefix/unusual#? directory ,/unusual, name?#
+    prefix/unusual#? "directory ',
+    prefix/unusual#? "directory ',/unusual, 'name?#"
 
 GUFI Tree:
     prefix
@@ -209,8 +209,8 @@ GUFI Tree:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual#? directory ,
-    prefix/unusual#? directory ,/unusual, name?#
+    prefix/unusual#? "directory ',
+    prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # read from stdin
 $ cat "trace" | gufi_trace2index -d "|" -n 4 "-" "search"
@@ -242,8 +242,8 @@ Source Directory:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual#? directory ,
-    prefix/unusual#? directory ,/unusual, name?#
+    prefix/unusual#? "directory ',
+    prefix/unusual#? "directory ',/unusual, 'name?#"
 
 GUFI Tree:
     prefix
@@ -264,8 +264,8 @@ GUFI Tree:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual#? directory ,
-    prefix/unusual#? directory ,/unusual, name?#
+    prefix/unusual#? "directory ',
+    prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # pipe directly from dir2trace
 $ gufi_dir2trace -n 4 "prefix" "-" 2>/dev/null | gufi_trace2index -n 4 "-" "search"
@@ -297,8 +297,8 @@ Source Directory:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual#? directory ,
-    prefix/unusual#? directory ,/unusual, name?#
+    prefix/unusual#? "directory ',
+    prefix/unusual#? "directory ',/unusual, 'name?#"
 
 GUFI Tree:
     prefix
@@ -319,8 +319,8 @@ GUFI Tree:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual#? directory ,
-    prefix/unusual#? directory ,/unusual, name?#
+    prefix/unusual#? "directory ',
+    prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # create index with a directory containing a lot of files 
 $ gufi_trace2index -d "|" big.dir.trace "big.dir.index"
@@ -374,8 +374,8 @@ prefix/leaf_directory/leaf_file2|uid|gid
 prefix/leaf_directory|uid|gid
 prefix/old_file|uid|gid
 prefix/repeat_name|uid|gid
-prefix/unusual#? directory ,/unusual, name?#|uid|gid
-prefix/unusual#? directory ,|uid|gid
+prefix/unusual#? "directory ',/unusual, 'name?#"|uid|gid
+prefix/unusual#? "directory ',|uid|gid
 prefix|uid|gid
 
 # paths containing a delimiter

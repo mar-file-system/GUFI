@@ -49,8 +49,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ parallel_find -n 2 "prefix/1MB"
 prefix/1MB
@@ -92,8 +92,8 @@ prefix//leaf_directory/leaf_file1
 prefix//leaf_directory/leaf_file2
 prefix//old_file
 prefix//repeat_name
-prefix//unusual#? directory ,
-prefix//unusual#? directory ,/unusual, name?#
+prefix//unusual#? "directory ',
+prefix//unusual#? "directory ',/unusual, 'name?#"
 prefix/1MB
 prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/directory_symlink/directory_symlink
@@ -123,7 +123,7 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # print escape characters
 $ parallel_find -n 2 --format '\a\b\f\t\v\\\r\n\cshould not show\n' "prefix" | head -n 1 | hexlify.py
@@ -153,14 +153,14 @@ prefix 1 prefix empty_directory prefix/empty_directory empty_directory 775 drwxr
 prefix 1 prefix leaf_directory prefix/leaf_directory leaf_directory 775 drwxrwxr-x d
 prefix 1 prefix old_file prefix/old_file old_file 664 -rw-rw-r-- f
 prefix 1 prefix repeat_name prefix/repeat_name repeat_name 664 -rw-rw-r-- f
-prefix 1 prefix unusual#? directory , prefix/unusual#? directory , unusual#? directory , 775 drwxrwxr-x d
+prefix 1 prefix unusual#? "directory ', prefix/unusual#? "directory ', unusual#? "directory ', 775 drwxrwxr-x d
 prefix 2 prefix/directory executable prefix/directory/executable directory/executable 777 -rwxrwxrwx f
 prefix 2 prefix/directory readonly prefix/directory/readonly directory/readonly 444 -r--r--r-- f
 prefix 2 prefix/directory subdirectory prefix/directory/subdirectory directory/subdirectory 775 drwxrwxr-x d
 prefix 2 prefix/directory writable prefix/directory/writable directory/writable 666 -rw-rw-rw- f
 prefix 2 prefix/leaf_directory leaf_file1 prefix/leaf_directory/leaf_file1 leaf_directory/leaf_file1 664 -rw-rw-r-- f
 prefix 2 prefix/leaf_directory leaf_file2 prefix/leaf_directory/leaf_file2 leaf_directory/leaf_file2 664 -rw-rw-r-- f
-prefix 2 prefix/unusual#? directory , unusual, name?# prefix/unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 664 -rw-rw-r-- f
+prefix 2 prefix/unusual#? "directory ', unusual, 'name?#" prefix/unusual#? "directory ',/unusual, 'name?#" unusual#? "directory ',/unusual, 'name?#" 664 -rw-rw-r-- f
 prefix 3 prefix/directory/subdirectory repeat_name prefix/directory/subdirectory/repeat_name directory/subdirectory/repeat_name 664 -rw-rw-r-- f
 
 # print path % directives for symlinks
@@ -191,8 +191,8 @@ prefix/////leaf_directory/leaf_file1
 prefix/////leaf_directory/leaf_file2
 prefix/////old_file
 prefix/////repeat_name
-prefix/////unusual#? directory ,
-prefix/////unusual#? directory ,/unusual, name?#
+prefix/////unusual#? "directory ',
+prefix/////unusual#? "directory ',/unusual, 'name?#"
 
 # multiple starting paths
 $ parallel_find -n 2 "prefix/directory/" "prefix/directory/subdirectory"
@@ -227,8 +227,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # empty path
 $ parallel_find -n 2 ""

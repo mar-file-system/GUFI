@@ -48,8 +48,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_ls prefix
 1KB
@@ -60,7 +60,7 @@ file_symlink
 leaf_directory
 old_file
 repeat_name
-unusual#? directory ,
+unusual#? "directory ',
 
 $ gufi_ls prefix -a
 .hidden
@@ -72,7 +72,7 @@ file_symlink
 leaf_directory
 old_file
 repeat_name
-unusual#? directory ,
+unusual#? "directory ',
 
 $ gufi_ls prefix -A
 .hidden
@@ -84,7 +84,7 @@ file_symlink
 leaf_directory
 old_file
 repeat_name
-unusual#? directory ,
+unusual#? "directory ',
 
 $ gufi_ls prefix -G
 1KB
@@ -95,7 +95,7 @@ file_symlink
 leaf_directory
 old_file
 repeat_name
-unusual#? directory ,
+unusual#? "directory ',
 
 $ gufi_ls prefix -h
 1KB
@@ -106,7 +106,7 @@ file_symlink
 leaf_directory
 old_file
 repeat_name
-unusual#? directory ,
+unusual#? "directory ',
 
 $ gufi_ls prefix -i | sort -n
 0 old_file
@@ -115,7 +115,7 @@ $ gufi_ls prefix -i | sort -n
 9 file_symlink
 13 leaf_directory
 14 repeat_name
-16 unusual#? directory ,
+16 unusual#? "directory ',
 1024 1KB
 1048576 1MB
 
@@ -136,11 +136,11 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ gufi_ls prefix -r
-unusual#? directory ,
+unusual#? "directory ',
 repeat_name
 old_file
 leaf_directory
@@ -166,7 +166,7 @@ old_file
 $ gufi_ls prefix -t
 1MB
 1KB
-unusual#? directory ,
+unusual#? "directory ',
 repeat_name
 leaf_directory
 file_symlink
@@ -175,7 +175,7 @@ directory
 old_file
 
 $ gufi_ls prefix -ar
-unusual#? directory ,
+unusual#? "directory ',
 repeat_name
 old_file
 leaf_directory
@@ -187,8 +187,8 @@ directory
 .hidden
 
 $ gufi_ls prefix -arR
-prefix/unusual#? directory ,/unusual, name?#
-prefix/unusual#? directory ,
+prefix/unusual#? "directory ',/unusual, 'name?#"
+prefix/unusual#? "directory ',
 prefix/repeat_name
 prefix/old_file
 prefix/leaf_directory/leaf_file2
@@ -225,7 +225,7 @@ file_symlink
 leaf_directory
 old_file
 repeat_name
-unusual#? directory ,
+unusual#? "directory ',
 
 $ sqlite3 "prefix/db.db" "DELETE FROM entries WHERE name == 'backup~';"
 
@@ -388,7 +388,7 @@ drwxrwxr-x 0 1001 1001 8 Jan 1 1970 empty_directory
 lrwxrwxrwx 0 1001 1001 9 Jan 1 1970 file_symlink -> prefix/1KB
 drwxrwxr-x 0 1001 1001 13 Jan 1 1970 leaf_directory
 -rw-rw-r-- 0 1001 1001 14 Jan 1 1970 repeat_name
-drwxrwxr-x 0 1001 1001 16 Jan 1 1970 unusual#? directory ,
+drwxrwxr-x 0 1001 1001 16 Jan 1 1970 unusual#? "directory ',
 -rw-rw-r-- 0 1001 1001 1024 Jan 1 1970 1KB
 -rw-rw-r-- 0 1001 1001 1048576 Jan 13 1970 1MB
 
@@ -400,7 +400,7 @@ drwxrwxr-x 0 1001 1001 8 Jan 1 1970 empty_directory
 lrwxrwxrwx 0 1001 1001 9 Jan 1 1970 file_symlink -> prefix/1KB
 drwxrwxr-x 0 1001 1001 13 Jan 1 1970 leaf_directory
 -rw-rw-r-- 0 1001 1001 14 Jan 1 1970 repeat_name
-drwxrwxr-x 0 1001 1001 16 Jan 1 1970 unusual#? directory ,
+drwxrwxr-x 0 1001 1001 16 Jan 1 1970 unusual#? "directory ',
 -rw-rw-r-- 0 1001 1001 1024 Jan 1 1970 1KB
 -rw-rw-r-- 0 1001 1001 1048576 Jan 13 1970 1MB
 
@@ -410,7 +410,7 @@ leaf_file1
 leaf_file2
 readonly
 subdirectory
-unusual, name?#
+unusual, 'name?#"
 writable
 
 $ gufi_ls --block-size=YiB 2>&1 | tail -n 1
@@ -433,7 +433,7 @@ file_symlink
 leaf_directory
 old_file
 repeat_name
-unusual#? directory ,
+unusual#? "directory ',
 
 $ gufi_ls --skip "skip.bad" prefix
 Error: Cannot open skip file "skip.bad"

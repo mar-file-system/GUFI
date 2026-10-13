@@ -73,6 +73,8 @@ OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <vector>
 
+#include <sqlite3.h>
+
 #include "QueuePerThreadPool.h"
 #include "config.h"
 #include "dbutils.h"
@@ -285,7 +287,7 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
 
         // query the database for the current entry
         char sql[MAXSQL];
-        snprintf(sql, MAXSQL, "SELECT mode, uid, gid FROM entries WHERE name == '%s';", bufbase);
+        sqlite3_snprintf(MAXSQL, sql, "SELECT mode, uid, gid FROM entries WHERE name == %Q;", bufbase);
         CallbackArgs ca;
         char *err = nullptr;
         if (sqlite3_exec(db, sql, callback, &ca, &err) != SQLITE_OK) {

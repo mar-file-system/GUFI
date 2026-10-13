@@ -572,12 +572,12 @@ clean_index() {
         "${INDEX}"
 
     # set parent pinodes
-    "${SQLITE3}" "${INDEX}/db.db"                        "UPDATE summary SET pinode = '18';"
-    "${SQLITE3}" "${INDEX}/directory/db.db"              "UPDATE summary SET pinode = '17';"
-    "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE summary SET pinode = '7';"
-    "${SQLITE3}" "${INDEX}/empty_directory/db.db"        "UPDATE summary SET pinode = '17';"
-    "${SQLITE3}" "${INDEX}/leaf_directory/db.db"         "UPDATE summary SET pinode = '17';"
-    "${SQLITE3}" "${INDEX}/unusual#? directory ,/db.db"  "UPDATE summary SET pinode = '17';"
+    "${SQLITE3}" "${INDEX}/db.db"                          "UPDATE summary SET pinode = '18';"
+    "${SQLITE3}" "${INDEX}/directory/db.db"                "UPDATE summary SET pinode = '17';"
+    "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db"   "UPDATE summary SET pinode = '7';"
+    "${SQLITE3}" "${INDEX}/empty_directory/db.db"          "UPDATE summary SET pinode = '17';"
+    "${SQLITE3}" "${INDEX}/leaf_directory/db.db"           "UPDATE summary SET pinode = '17';"
+    "${SQLITE3}" "${INDEX}/unusual#? \"directory ',/db.db" "UPDATE summary SET pinode = '17';"
 
     if [[ "${ACTUAL}" == "1" ]]
     then

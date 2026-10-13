@@ -35,7 +35,7 @@ prefix/directory/subdirectory|d
 prefix/directory|d
 prefix/empty_directory|d
 prefix/leaf_directory|d
-prefix/unusual#? directory ,|d
+prefix/unusual#? "directory ',|d
 prefix|d
 
 # Still no treesummary table
@@ -74,7 +74,7 @@ WARNING: Not [re]generating tree-summary table with '-X'
 prefix/directory|d
 prefix/empty_directory|d
 prefix/leaf_directory|d
-prefix/unusual#? directory ,|d
+prefix/unusual#? "directory ',|d
 prefix|d
 
 # Generate treesummary table in prefix
@@ -92,8 +92,8 @@ prefix
 prefix/directory
 prefix/leaf_directory
 
-# Add 100 files to summary.totfiles in prefix/unusual#? directory ,
-$ sqlite3 "prefix/unusual#? directory ,/db.db" "UPDATE summary SET totfiles = 100;"
+# Add 100 files to summary.totfiles in prefix/unusual#? "directory ',
+$ sqlite3 "prefix/unusual#? \"directory ',/db.db" "UPDATE summary SET totfiles = 100;"
 
 # Regenerate treesummary table in prefix
 $ gufi_treesummary "prefix"
@@ -126,7 +126,7 @@ $ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE totxattr != 0;" -S
 prefix 1
 prefix/empty_directory 0
 prefix/leaf_directory 6
-prefix/unusual#? directory , 0
+prefix/unusual#? "directory ', 0
 
 # Bad path
 $ gufi_treesummary "prefix/1KB"

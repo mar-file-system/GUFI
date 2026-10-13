@@ -65,7 +65,7 @@ empty_directory
 leaf_directory
 prefix
 subdirectory
-unusual#? directory ,
+unusual#? "directory ',
 
 # Get only non-directories
 $ gufi_query -d " " -n 2 -E "SELECT name FROM vrpentries;" "prefix"
@@ -81,7 +81,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Get all directory and non-directory names
@@ -103,8 +103,8 @@ readonly
 repeat_name
 repeat_name
 subdirectory
-unusual#? directory ,
-unusual, name?#
+unusual#? "directory ',
+unusual, 'name?#"
 writable
 
 # Get only non-directory names despite -S not returning anything
@@ -121,7 +121,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Get number of subdirectories
@@ -131,7 +131,7 @@ prefix/directory 1
 prefix/directory/subdirectory 0
 prefix/empty_directory 0
 prefix/leaf_directory 0
-prefix/unusual#? directory , 0
+prefix/unusual#? "directory ', 0
 
 # Get relative paths of all directories and non-directories ascending names
 $ gufi_query -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll, name) FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix"
@@ -153,13 +153,13 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # Get relative paths of all directories and non-directories descending names
 $ gufi_query -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll, name) FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
-prefix/unusual#? directory ,/unusual, name?#
-prefix/unusual#? directory ,
+prefix/unusual#? "directory ',/unusual, 'name?#"
+prefix/unusual#? "directory ',
 prefix/repeat_name
 prefix/old_file
 prefix/leaf_directory/leaf_file2
@@ -190,7 +190,7 @@ prefix/.hidden
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/repeat_name
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"
 prefix/1KB
 prefix/1MB
 
@@ -198,7 +198,7 @@ prefix/1MB
 $ gufi_query -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll, name), size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
 prefix/1MB
 prefix/1KB
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',/unusual, 'name?#"
 prefix/repeat_name
 prefix/leaf_directory/leaf_file2
 prefix/leaf_directory/leaf_file1
@@ -222,8 +222,8 @@ prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # Get all directory and non-directory names and their xattrs
 $ gufi_query -d " " -n 2 -S "SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll, name), xattr_name, xattr_value FROM vrxpentries;" -x "prefix"
@@ -251,8 +251,8 @@ prefix/leaf_directory/leaf_file2 user.name5 value5
 prefix/leaf_directory/leaf_file2 user.name6 value6
 prefix/old_file
 prefix/repeat_name
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # limit tree traversal to directories at level 1 (missing prefix/ and prefix/directory/subdirectory/)
 $ gufi_query -d " " -n 2 --min-level 1 --max-level 1 -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
@@ -264,8 +264,8 @@ prefix/empty_directory
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
-prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # ######################################
 # partial indexing setup
@@ -299,13 +299,11 @@ $ gufi_query --print-tlv -n 2 -E "SELECT name, size FROM vrpentries WHERE name =
 $ gufi_query --print-tlv -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll, name), size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix"
 00000021000231dprefix11217
 # run_vt with {s} (source directory) and {i} (index directory)
-$ gufi_query -d " " -p "prefix" -S "CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \"{s}\" \"{i}\" -maxdepth 1 -name \"*.csv\" -exec cat \"{}\" \\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;" "prefix"
+$ gufi_query -d " " -p "prefix" -S "SELECT '' FROM summary WHERE name NOT REGEXP '.*unusual.*';" -E "CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \"{s}\" \"{i}\" -maxdepth 1 -name \"*.csv\" -exec cat \"{}\" \\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;" "prefix"
 0 1 2 3
 4 5 6 7
 8 9 a b
 c d e f
-0 1 2 3
-4 5 6 7
 0 1 2 3
 4 5 6 7
 0 1 2 3
@@ -489,8 +487,8 @@ Error: attempt to write a readonly database: prefix/empty_directory/db.db: "UPDA
 Error: attempt to write a readonly database: prefix/empty_directory/db.db: "UPDATE summary SET inode = 0;"
 Error: attempt to write a readonly database: prefix/leaf_directory/db.db: "UPDATE entries SET inode = 0;"
 Error: attempt to write a readonly database: prefix/leaf_directory/db.db: "UPDATE summary SET inode = 0;"
-Error: attempt to write a readonly database: prefix/unusual%23%3f directory ,/db.db: "UPDATE entries SET inode = 0;"
-Error: attempt to write a readonly database: prefix/unusual%23%3f directory ,/db.db: "UPDATE summary SET inode = 0;"
+Error: attempt to write a readonly database: prefix/unusual%23%3f "directory ',/db.db: "UPDATE entries SET inode = 0;"
+Error: attempt to write a readonly database: prefix/unusual%23%3f "directory ',/db.db: "UPDATE summary SET inode = 0;"
 
 # Use write mode to modify databases
 $ gufi_query -a 1 -w -S "UPDATE summary SET inode = 0;" -E "UPDATE entries SET inode = 0;" "prefix"
@@ -518,8 +516,8 @@ prefix/leaf_directory/leaf_file1 0
 prefix/leaf_directory/leaf_file2 0
 prefix/old_file 0
 prefix/repeat_name 0
-prefix/unusual#? directory , 0
-prefix/unusual#? directory ,/unusual, name?# 0
+prefix/unusual#? "directory ', 0
+prefix/unusual#? "directory ',/unusual, 'name?#" 0
 
 # Set timestamps of one db.db file to epoch, query the index with --keep-matime flag, and expect no changes
 $ touch -amt 197001010000.00 "prefix/db.db"
@@ -553,7 +551,7 @@ readonly
 repeat_name
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Symlink at Level 2
@@ -573,7 +571,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Missing database file

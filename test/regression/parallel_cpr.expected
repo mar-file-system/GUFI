@@ -32,8 +32,8 @@ prefix/leaf_directory/leaf_file1                    prefix/leaf_directory/leaf_f
 prefix/leaf_directory/leaf_file2                    prefix/leaf_directory/leaf_file2
 prefix/old_file                                     prefix/old_file
 prefix/repeat_name                                  prefix/repeat_name
-prefix/unusual#? directory ,                        prefix/unusual#? directory ,
-prefix/unusual#? directory ,/unusual, name?#        prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? "directory ',                      prefix/unusual#? "directory ',
+prefix/unusual#? "directory ',/unusual, 'name?#"    prefix/unusual#? "directory ',/unusual, 'name?#"
 
 $ rm -rf "copy"
 
@@ -82,8 +82,8 @@ user.name6="value6"                                 user.name6="value6"
 
 $ compare xattrs of "prefix/old_file"
 $ compare xattrs of "prefix/repeat_name"
-$ compare xattrs of "prefix/unusual#? directory ,"
-$ compare xattrs of "prefix/unusual#? directory ,/unusual, name?#"
+$ compare xattrs of "prefix/unusual#? "directory ',"
+$ compare xattrs of "prefix/unusual#? "directory ',/unusual, 'name?#""
 # Copy to similar name
 $ parallel_cpr "prefix"   "prefix2"
 

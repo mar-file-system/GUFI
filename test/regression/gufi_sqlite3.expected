@@ -55,7 +55,7 @@ $ echo "SELECT size, path || '/' || name FROM gufi_vt_pentries('prefix') ORDER B
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -72,7 +72,7 @@ $ echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', E='SELECT path() ||
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -95,7 +95,7 @@ prefix/leaf_directory/leaf_file2|user.name5|value5
 prefix/leaf_directory/leaf_file2|user.name6|value6
 prefix/old_file||
 prefix/repeat_name||
-prefix/unusual#? directory ,/unusual, name?#||
+prefix/unusual#? "directory ',/unusual, 'name?#"||
 
 # bad SQL
 $ (echo "CREATE TABLE;") | gufi_sqlite3

@@ -20,7 +20,7 @@ $ pugsql "queries" "NULL_thread_count"
 [('name', 'readonly')]
 [('name', 'repeat_name')]
 [('name', 'repeat_name')]
-[('name', 'unusual, name?#')]
+[('name', 'unusual, \'name?#"')]
 [('name', 'writable')]
 
 ------------------------------------------------
@@ -42,7 +42,7 @@ $ pugsql "queries" "entries"
 [('modetotxt(mode)', '-r--r--r--'), ('name', 'readonly'), ('size', 2), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:02 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 5), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:05 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 14), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:14 UTC 1970')]
-[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, name?#'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, \'name?#"'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-rw-'), ('name', 'writable'), ('size', 3), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:03 UTC 1970')]
 
 ------------------------------------------------
@@ -64,7 +64,7 @@ $ pugsql "queries" "no_thread_count"
 [('name', 'readonly')]
 [('name', 'repeat_name')]
 [('name', 'repeat_name')]
-[('name', 'unusual, name?#')]
+[('name', 'unusual, \'name?#"')]
 [('name', 'writable')]
 
 ------------------------------------------------
@@ -95,7 +95,7 @@ $ pugsql "queries" "pentries"
 [('modetotxt(mode)', '-r--r--r--'), ('name', 'readonly'), ('size', 2), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:02 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 5), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:05 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 14), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:14 UTC 1970')]
-[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, name?#'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, \'name?#"'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-rw-'), ('name', 'writable'), ('size', 3), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:03 UTC 1970')]
 
 ------------------------------------------------
@@ -110,7 +110,7 @@ $ pugsql "queries" "size_gt_10"
 [('name', 'leaf_file1'), ('size', 11)]
 [('name', 'leaf_file2'), ('size', 12)]
 [('name', 'repeat_name'), ('size', 14)]
-[('name', 'unusual, name?#'), ('size', 15)]
+[('name', 'unusual, \'name?#"'), ('size', 15)]
 
 ------------------------------------------------
 
@@ -139,7 +139,7 @@ $ pugsql "queries" "summary"
 [('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'leaf_directory'), ('size', 13), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:13 UTC 1970')]
 [('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'prefix'), ('size', 17), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:17 UTC 1970')]
 [('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'subdirectory'), ('size', 6), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:06 UTC 1970')]
-[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'unusual#? directory ,'), ('size', 16), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:16 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'unusual#? "directory \','), ('size', 16), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:16 UTC 1970')]
 
 ------------------------------------------------
 
@@ -183,7 +183,7 @@ $ pugsql "queries" "vrpentries"
 [('modetotxt(mode)', '-r--r--r--'), ('name', 'readonly'), ('size', 2), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:02 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 5), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:05 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-r--'), ('name', 'repeat_name'), ('size', 14), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:14 UTC 1970')]
-[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, name?#'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
+[('modetotxt(mode)', '-rw-rw-r--'), ('name', 'unusual, \'name?#"'), ('size', 15), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:15 UTC 1970')]
 [('modetotxt(mode)', '-rw-rw-rw-'), ('name', 'writable'), ('size', 3), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:03 UTC 1970')]
 
 ------------------------------------------------
@@ -198,6 +198,6 @@ $ pugsql "queries" "vrsummary"
 [('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'leaf_directory'), ('size', 13), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:13 UTC 1970')]
 [('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'prefix'), ('size', 17), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:17 UTC 1970')]
 [('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'subdirectory'), ('size', 6), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:06 UTC 1970')]
-[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'unusual#? directory ,'), ('size', 16), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:16 UTC 1970')]
+[('modetotxt(mode)', 'drwxrwxr-x'), ('name', 'unusual#? "directory \','), ('size', 16), ("strftime('%a %b %d %H:%M:%S UTC %Y', mtime)", 'Thu Jan 01 00:00:16 UTC 1970')]
 
 ------------------------------------------------

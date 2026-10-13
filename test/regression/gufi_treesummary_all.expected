@@ -36,7 +36,7 @@ prefix/directory 1 3 1 4 1
 prefix/directory/subdirectory 0 1 1 1 1
 prefix/empty_directory 0 0 0 0 0
 prefix/leaf_directory 0 2 0 2 0
-prefix/unusual#? directory , 0 1 0 1 0
+prefix/unusual#? "directory ', 0 1 0 1 0
 
 
 # Generate treesummary tables in all directories
@@ -49,7 +49,7 @@ prefix/directory 1 3 1 4 1
 prefix/directory/subdirectory 0 1 1 1 1
 prefix/empty_directory 0 0 0 0 0
 prefix/leaf_directory 0 2 0 2 0
-prefix/unusual#? directory , 0 1 0 1 0
+prefix/unusual#? "directory ', 0 1 0 1 0
 
 # Don't regenerate treesummary tables
 $ gufi_treesummary_all --dont-reprocess "prefix"

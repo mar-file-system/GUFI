@@ -19,7 +19,7 @@ empty_directory|8|drwxrwxr-x|Thu Jan 01 00:00:08 UTC 1970
 leaf_directory|13|drwxrwxr-x|Thu Jan 01 00:00:13 UTC 1970
 prefix|17|drwxrwxr-x|Thu Jan 01 00:00:17 UTC 1970
 subdirectory|6|drwxrwxr-x|Thu Jan 01 00:00:06 UTC 1970
-unusual#? directory ,|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
+unusual#? "directory ',|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
 
 # Query entries
 $ gufi_vt_py "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_entries('prefix') ORDER BY name ASC, size ASC;"
@@ -36,7 +36,7 @@ old_file|0|-rw-rw-r--|Thu Jan 01 00:00:00 UTC 1970
 readonly|2|-r--r--r--|Thu Jan 01 00:00:02 UTC 1970
 repeat_name|5|-rw-rw-r--|Thu Jan 01 00:00:05 UTC 1970
 repeat_name|14|-rw-rw-r--|Thu Jan 01 00:00:14 UTC 1970
-unusual, name?#|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
+unusual, 'name?#"|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
 writable|3|-rw-rw-rw-|Thu Jan 01 00:00:03 UTC 1970
 
 # Query pentries
@@ -54,7 +54,7 @@ old_file|0|-rw-rw-r--|Thu Jan 01 00:00:00 UTC 1970
 readonly|2|-r--r--r--|Thu Jan 01 00:00:02 UTC 1970
 repeat_name|5|-rw-rw-r--|Thu Jan 01 00:00:05 UTC 1970
 repeat_name|14|-rw-rw-r--|Thu Jan 01 00:00:14 UTC 1970
-unusual, name?#|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
+unusual, 'name?#"|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
 writable|3|-rw-rw-rw-|Thu Jan 01 00:00:03 UTC 1970
 
 # Query vrsummary
@@ -65,7 +65,7 @@ empty_directory|8|drwxrwxr-x|Thu Jan 01 00:00:08 UTC 1970
 leaf_directory|13|drwxrwxr-x|Thu Jan 01 00:00:13 UTC 1970
 prefix|17|drwxrwxr-x|Thu Jan 01 00:00:17 UTC 1970
 subdirectory|6|drwxrwxr-x|Thu Jan 01 00:00:06 UTC 1970
-unusual#? directory ,|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
+unusual#? "directory ',|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
 
 # Query vrpentries
 $ gufi_vt_py "SELECT name, size, modetotxt(mode), strftime('%a %b %d %H:%M:%S UTC %Y', mtime) FROM gufi_vt_vrpentries('prefix') ORDER BY name ASC, size ASC;"
@@ -82,7 +82,7 @@ old_file|0|-rw-rw-r--|Thu Jan 01 00:00:00 UTC 1970
 readonly|2|-r--r--r--|Thu Jan 01 00:00:02 UTC 1970
 repeat_name|5|-rw-rw-r--|Thu Jan 01 00:00:05 UTC 1970
 repeat_name|14|-rw-rw-r--|Thu Jan 01 00:00:14 UTC 1970
-unusual, name?#|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
+unusual, 'name?#"|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
 writable|3|-rw-rw-rw-|Thu Jan 01 00:00:03 UTC 1970
 
 # Query with WHERE size < 10
@@ -104,7 +104,7 @@ SQL: SELECT name, size FROM gufi_vt_pentries('prefix', 2) WHERE size > 10 ORDER 
 leaf_file1|11
 leaf_file2|12
 repeat_name|14
-unusual, name?#|15
+unusual, 'name?#"|15
 
 # Paths
 $ gufi_vt_py "SELECT path, epath, fpath, rpath FROM gufi_vt_pentries('prefix', 2) WHERE name == '.hidden';"
@@ -146,7 +146,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # NULL arguments (not an error)
@@ -164,6 +164,6 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 

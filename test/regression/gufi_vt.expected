@@ -25,7 +25,7 @@ empty_directory|8|drwxrwxr-x|Thu Jan 01 00:00:08 UTC 1970
 leaf_directory|13|drwxrwxr-x|Thu Jan 01 00:00:13 UTC 1970
 prefix|17|drwxrwxr-x|Thu Jan 01 00:00:17 UTC 1970
 subdirectory|6|drwxrwxr-x|Thu Jan 01 00:00:06 UTC 1970
-unusual#? directory ,|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
+unusual#? "directory ',|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
 
 # Query entries
 $ (
@@ -44,7 +44,7 @@ old_file|0|-rw-rw-r--|Thu Jan 01 00:00:00 UTC 1970
 readonly|2|-r--r--r--|Thu Jan 01 00:00:02 UTC 1970
 repeat_name|5|-rw-rw-r--|Thu Jan 01 00:00:05 UTC 1970
 repeat_name|14|-rw-rw-r--|Thu Jan 01 00:00:14 UTC 1970
-unusual, name?#|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
+unusual, 'name?#"|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
 writable|3|-rw-rw-rw-|Thu Jan 01 00:00:03 UTC 1970
 
 # Query pentries
@@ -64,7 +64,7 @@ old_file|0|-rw-rw-r--|Thu Jan 01 00:00:00 UTC 1970
 readonly|2|-r--r--r--|Thu Jan 01 00:00:02 UTC 1970
 repeat_name|5|-rw-rw-r--|Thu Jan 01 00:00:05 UTC 1970
 repeat_name|14|-rw-rw-r--|Thu Jan 01 00:00:14 UTC 1970
-unusual, name?#|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
+unusual, 'name?#"|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
 writable|3|-rw-rw-rw-|Thu Jan 01 00:00:03 UTC 1970
 
 # Query vrsummary
@@ -77,7 +77,7 @@ empty_directory|8|drwxrwxr-x|Thu Jan 01 00:00:08 UTC 1970
 leaf_directory|13|drwxrwxr-x|Thu Jan 01 00:00:13 UTC 1970
 prefix|17|drwxrwxr-x|Thu Jan 01 00:00:17 UTC 1970
 subdirectory|6|drwxrwxr-x|Thu Jan 01 00:00:06 UTC 1970
-unusual#? directory ,|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
+unusual#? "directory ',|16|drwxrwxr-x|Thu Jan 01 00:00:16 UTC 1970
 
 # Query vrpentries
 $ (
@@ -96,7 +96,7 @@ old_file|0|-rw-rw-r--|Thu Jan 01 00:00:00 UTC 1970
 readonly|2|-r--r--r--|Thu Jan 01 00:00:02 UTC 1970
 repeat_name|5|-rw-rw-r--|Thu Jan 01 00:00:05 UTC 1970
 repeat_name|14|-rw-rw-r--|Thu Jan 01 00:00:14 UTC 1970
-unusual, name?#|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
+unusual, 'name?#"|15|-rw-rw-r--|Thu Jan 01 00:00:15 UTC 1970
 writable|3|-rw-rw-rw-|Thu Jan 01 00:00:03 UTC 1970
 
 # Query with WHERE size < 10
@@ -122,7 +122,7 @@ $ (
 leaf_file1|11
 leaf_file2|12
 repeat_name|14
-unusual, name?#|15
+unusual, 'name?#"|15
 
 # Paths
 $ (
@@ -172,7 +172,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # NULL arguments (not an error)
@@ -192,7 +192,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # ######################################
@@ -214,7 +214,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -234,7 +234,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -254,7 +254,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 d|directory
@@ -262,7 +262,7 @@ d|empty_directory
 d|leaf_directory
 d|prefix
 d|subdirectory
-d|unusual#? directory ,
+d|unusual#? "directory ',
 
 # Multiple indexes
 $ (
@@ -287,7 +287,7 @@ $ (
 7|prefix/directory
 8|prefix/empty_directory
 13|prefix/leaf_directory
-16|prefix/unusual#? directory ,
+16|prefix/unusual#? "directory ',
 
 # min_level/max_level + remote
 $ (
@@ -297,7 +297,7 @@ $ (
 7|prefix/directory
 8|prefix/empty_directory
 13|prefix/leaf_directory
-16|prefix/unusual#? directory ,
+16|prefix/unusual#? "directory ',
 
 # Run IF
 $ (
@@ -315,7 +315,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -335,7 +335,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -355,7 +355,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -375,7 +375,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -395,7 +395,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -415,7 +415,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -435,7 +435,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -455,7 +455,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -481,7 +481,7 @@ prefix/leaf_directory/leaf_file2|user.name5|value5
 prefix/leaf_directory/leaf_file2|user.name6|value6
 prefix/old_file||
 prefix/repeat_name||
-prefix/unusual#? directory ,/unusual, name?#||
+prefix/unusual#? "directory ',/unusual, 'name?#"||
 
 # Get source paths
 $ (
@@ -499,7 +499,7 @@ $ (
 11|source/prefix/leaf_directory/leaf_file1
 12|source/prefix/leaf_directory/leaf_file2
 14|source/prefix/repeat_name
-15|source/prefix/unusual#? directory ,/unusual, name?#
+15|source/prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|source/prefix/1KB
 1048576|source/prefix/1MB
 
@@ -519,7 +519,7 @@ $ (
 11|source/prefix/leaf_directory/leaf_file1
 12|source/prefix/leaf_directory/leaf_file2
 14|source/prefix/repeat_name
-15|source/prefix/unusual#? directory ,/unusual, name?#
+15|source/prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|source/prefix/1KB
 1048576|source/prefix/1MB
 
@@ -545,7 +545,7 @@ $ (
 2|prefix/directory/subdirectory
 3|prefix/empty_directory
 4|prefix/leaf_directory
-5|prefix/unusual#? directory ,
+5|prefix/unusual#? "directory ',
 
 # Remote gufi_vt without aggregation
 $ (
@@ -563,7 +563,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -581,7 +581,7 @@ Each line is one argv[i]:
 1|prefix/directory/writable
 1|prefix/leaf_directory/leaf_file1
 1|prefix/leaf_directory/leaf_file2
-1|prefix/unusual#? directory ,/unusual, name?#
+1|prefix/unusual#? "directory ',/unusual, 'name?#"
 2|prefix/directory/subdirectory/directory_symlink
 2|prefix/directory/subdirectory/repeat_name
 
@@ -634,7 +634,7 @@ $ (
 11|prefix/leaf_directory/leaf_file1
 12|prefix/leaf_directory/leaf_file2
 14|prefix/repeat_name
-15|prefix/unusual#? directory ,/unusual, name?#
+15|prefix/unusual#? "directory ',/unusual, 'name?#"
 1024|prefix/1KB
 1048576|prefix/1MB
 
@@ -648,7 +648,7 @@ prefix/directory|7|7.0|1099511627776|prefix/directory
 prefix/directory/subdirectory|6|6.0|1099511627776|prefix/directory/subdirectory
 prefix/empty_directory|8|8.0|1099511627776|prefix/empty_directory
 prefix/leaf_directory|13|13.0|1099511627776|prefix/leaf_directory
-prefix/unusual#? directory ,|16|16.0|1099511627776|prefix/unusual#? directory ,
+prefix/unusual#? "directory ',|16|16.0|1099511627776|prefix/unusual#? "directory ',
 
 # Force bad integer values
 $ (
@@ -660,7 +660,7 @@ prefix/directory
 prefix/directory/subdirectory
 prefix/empty_directory
 prefix/leaf_directory
-prefix/unusual#? directory ,
+prefix/unusual#? "directory ',
 
 # Force bad float values
 $ (
@@ -672,7 +672,7 @@ prefix/directory
 prefix/directory/subdirectory
 prefix/empty_directory
 prefix/leaf_directory
-prefix/unusual#? directory ,
+prefix/unusual#? "directory ',
 
 # dir_match_uid/gid without values
 $ (
@@ -701,7 +701,7 @@ Each line is one argv[i]:
 1|prefix/directory/writable
 1|prefix/leaf_directory/leaf_file1
 1|prefix/leaf_directory/leaf_file2
-1|prefix/unusual#? directory ,/unusual, name?#
+1|prefix/unusual#? "directory ',/unusual, 'name?#"
 2|prefix/directory/subdirectory/directory_symlink
 2|prefix/directory/subdirectory/repeat_name
 
@@ -725,7 +725,7 @@ Each line is one argv[i]:
 1|prefix/directory/writable
 1|prefix/leaf_directory/leaf_file1
 1|prefix/leaf_directory/leaf_file2
-1|prefix/unusual#? directory ,/unusual, name?#
+1|prefix/unusual#? "directory ',/unusual, 'name?#"
 2|prefix/directory/subdirectory/directory_symlink
 2|prefix/directory/subdirectory/repeat_name
 
@@ -756,7 +756,7 @@ Each line is one argv[i]:
 1|prefix/directory/writable
 1|prefix/leaf_directory/leaf_file1
 1|prefix/leaf_directory/leaf_file2
-1|prefix/unusual#? directory ,/unusual, name?#
+1|prefix/unusual#? "directory ',/unusual, 'name?#"
 2|prefix/directory/subdirectory/directory_symlink
 2|prefix/directory/subdirectory/repeat_name
 
@@ -780,7 +780,7 @@ Each line is one argv[i]:
 1|prefix/directory/writable
 1|prefix/leaf_directory/leaf_file1
 1|prefix/leaf_directory/leaf_file2
-1|prefix/unusual#? directory ,/unusual, name?#
+1|prefix/unusual#? "directory ',/unusual, 'name?#"
 2|prefix/directory/subdirectory/directory_symlink
 2|prefix/directory/subdirectory/repeat_name
 
@@ -801,7 +801,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Good Q and I but nothing actually happens (no template db is attached) + remote
@@ -821,7 +821,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Good external_attach and I but nothing actually happens (no template db is attached)
@@ -841,7 +841,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Good external_attach and I but nothing actually happens (no template db is attached) + remote
@@ -861,7 +861,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Good external_copy and I but nothing actually happens
@@ -881,7 +881,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Good external_copy and I but nothing actually happens + remote
@@ -901,7 +901,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # LIKE
@@ -1058,7 +1058,7 @@ old_file
 readonly
 repeat_name
 repeat_name
-unusual, name?#
+unusual, 'name?#"
 writable
 
 # Zero thread count
@@ -1189,7 +1189,7 @@ Error: spath() requires source path (-p): prefix/db.db: "SELECT spath(sname, sro
 Error: spath() requires source path (-p): prefix/directory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 Error: spath() requires source path (-p): prefix/directory/subdirectory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 Error: spath() requires source path (-p): prefix/leaf_directory/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
-Error: spath() requires source path (-p): prefix/unusual%23%3f directory ,/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
+Error: spath() requires source path (-p): prefix/unusual%23%3f "directory ',/db.db: "SELECT spath(sname, sroll, name) AS srcpath, size FROM vrpentries;"
 
 # Bad verbose (path_list == NULL is not an error)
 $ (

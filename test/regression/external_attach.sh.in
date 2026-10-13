@@ -129,10 +129,10 @@ setup() {
     (
         echo "${FACTION1_DB}"
     ) > "${SRCDIR}/leaf_directory/${EXTERNAL_GUFI}"
-    # ${SRCDIR}/unusual#? directory , has a faction2 db and 1 match
+    # ${SRCDIR}/unusual#? "directory ', has a faction2 db and 1 match
     (
         echo "${FACTION2_DB}"
-    ) > "${SRCDIR}/unusual#? directory ,/${EXTERNAL_GUFI}"
+    ) > "${SRCDIR}/unusual#? \"directory ',/${EXTERNAL_GUFI}"
 
     echo "#########################################"
     run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
@@ -158,8 +158,8 @@ setup() {
     run_no_sort "${SQLITE3} \"${SRCDIR}/directory/subdirectory/${FACTION2_DB}\" \"${FACTION2_CREATE_TABLE}\""
     run_no_sort "${SQLITE3} \"${SRCDIR}/directory/subdirectory/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('subdirectory', 'd', 'faction2 subdirectory');\""
     echo "#########################################"
-    run_no_sort "${SQLITE3} \"${SRCDIR}/unusual#? directory ,/${FACTION2_DB}\" \"${FACTION2_CREATE_TABLE}\""
-    run_no_sort "${SQLITE3} \"${SRCDIR}/unusual#? directory ,/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('unusual, name?#', 'f', 'faction2 unusual, name?#');\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/unusual#? \\\"directory ',/${FACTION2_DB}\" \"${FACTION2_CREATE_TABLE}\""
+    run_no_sort "${SQLITE3} \"${SRCDIR}/unusual#? \\\"directory ',/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('unusual, ''name?#\"\"', 'f', 'faction2 unusual, ''name?#\"\"');\""
     echo "#########################################"
     echo
 
@@ -181,29 +181,29 @@ fix_index() {
     echo "Clean up index"
 
     # fix timestamps
-    "${SQLITE3}" "${INDEXROOT}/db.db"                        "UPDATE summary SET mtime = '17';"
-    "${SQLITE3}" "${INDEXROOT}/directory/db.db"              "UPDATE summary SET mtime = '7';"
-    "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE summary SET mtime = '6';"
-    "${SQLITE3}" "${INDEXROOT}/leaf_directory/db.db"         "UPDATE summary SET mtime = '13';"
-    "${SQLITE3}" "${INDEXROOT}/unusual#? directory ,/db.db"  "UPDATE summary SET mtime = '16';"
+    "${SQLITE3}" "${INDEXROOT}/db.db"                          "UPDATE summary SET mtime = '17';"
+    "${SQLITE3}" "${INDEXROOT}/directory/db.db"                "UPDATE summary SET mtime = '7';"
+    "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db"   "UPDATE summary SET mtime = '6';"
+    "${SQLITE3}" "${INDEXROOT}/leaf_directory/db.db"           "UPDATE summary SET mtime = '13';"
+    "${SQLITE3}" "${INDEXROOT}/unusual#? \"directory ',/db.db" "UPDATE summary SET mtime = '16';"
 
     clean_index "${INDEXROOT}" 0
 
     # fix pinode in external_dbs
-    run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                        \"UPDATE external_dbs_pwd SET pinode = '17';\""
-    run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"              \"UPDATE external_dbs_pwd SET pinode = '7';\""
-    run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"UPDATE external_dbs_pwd SET pinode = '6';\""
-    run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"         \"UPDATE external_dbs_pwd SET pinode = '13';\""
-    run_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\"  \"UPDATE external_dbs_pwd SET pinode = '16';\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                            \"UPDATE external_dbs_pwd SET pinode = '17';\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"                  \"UPDATE external_dbs_pwd SET pinode = '7';\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\"     \"UPDATE external_dbs_pwd SET pinode = '6';\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"             \"UPDATE external_dbs_pwd SET pinode = '13';\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/unusual#? \\\"directory ',/db.db\" \"UPDATE external_dbs_pwd SET pinode = '16';\""
 
     # output from these point to the source tree, not the index
     # (output was mangled with test text cleanup)
     SELECT_EXTERNAL_DBS="SELECT pinode, filename FROM external_dbs;"
-    run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                        \"${SELECT_EXTERNAL_DBS}\""
-    run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"              \"${SELECT_EXTERNAL_DBS}\""
-    run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"${SELECT_EXTERNAL_DBS}\""
-    run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"         \"${SELECT_EXTERNAL_DBS}\""
-    run_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\"  \"${SELECT_EXTERNAL_DBS}\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                            \"${SELECT_EXTERNAL_DBS}\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"                  \"${SELECT_EXTERNAL_DBS}\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\"     \"${SELECT_EXTERNAL_DBS}\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"             \"${SELECT_EXTERNAL_DBS}\""
+    run_sort "${SQLITE3} \"${INDEXROOT}/unusual#? \\\"directory ',/db.db\" \"${SELECT_EXTERNAL_DBS}\""
 
     echo "# insert an external db that should not show up in queries"
     run_no_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\" \"INSERT INTO external_dbs_pwd (type, filename) VALUES ('user_db', 'this should not show up when querying');\""

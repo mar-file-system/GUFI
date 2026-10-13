@@ -18,8 +18,8 @@ f inode pinode prefix/leaf_directory/leaf_file1
 f inode pinode prefix/leaf_directory/leaf_file2
 f inode pinode prefix/old_file
 f inode pinode prefix/repeat_name
-d inode pinode prefix/unusual#? directory ,
-f inode pinode prefix/unusual#? directory ,/unusual, name?#
+d inode pinode prefix/unusual#? "directory ',
+f inode pinode prefix/unusual#? "directory ',/unusual, 'name?#"
 
 # Generate some changes
 $ gen_fs_changes -n 2 --ops 20 --create 1 --move 1 --delete 1 --dir 1 --nondir 1 --paths "paths" > "ops" 2>/dev/null

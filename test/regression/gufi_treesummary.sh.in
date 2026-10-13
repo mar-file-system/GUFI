@@ -134,8 +134,8 @@ echo "# Three treesummary tables"
 query
 echo
 
-echo "# Add 100 files to summary.totfiles in ${INDEXROOT}/unusual#? directory ,"
-run_no_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\" \"UPDATE summary SET totfiles = 100;\""
+echo "# Add 100 files to summary.totfiles in ${INDEXROOT}/unusual#? \"directory ',"
+run_no_sort "${SQLITE3} \"${INDEXROOT}/unusual#? \\\"directory ',/db.db\" \"UPDATE summary SET totfiles = 100;\""
 
 echo "# Regenerate treesummary table in ${INDEXROOT}" | replace
 remove_extra "${GUFI_TREESUMMARY} \"${INDEXROOT}\""
