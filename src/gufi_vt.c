@@ -1307,7 +1307,8 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     addqueryfuncs(tempdb);
     addqueryfuncs_with_context(tempdb, &ctx);
 
-    if (plugins_thread_init(&in.plugins, tempdb) != in.plugins.count) {
+    /* single setup path for this vtable instance, so slot 0 */
+    if (plugins_thread_init(&in.plugins, tempdb, 0) != in.plugins.count) {
         closedb(tempdb);
         plugins_global_exit(&in.plugins, &in);
         plugins_destroy(&in.plugins);
@@ -1411,7 +1412,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     }
 
     plugins_ctx_exit(&in.plugins, tempdb, 0);
-    plugins_thread_exit(&in.plugins, tempdb);
+    plugins_thread_exit(&in.plugins, tempdb, 0);
     plugins_global_exit(&in.plugins, &in);
     plugins_destroy(&in.plugins);
 

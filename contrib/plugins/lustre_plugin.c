@@ -247,7 +247,8 @@ static void track_file_stripes(struct stripe_tracker *s,
 /*
  * Set up initial state for tracking Lustre stripe info.
  */
-void *db_init(void *ptr) {
+void *db_init(void *ptr, void *thread_data) {
+    (void) thread_data;
     PCS_t *pcs = (PCS_t *) ptr;
     sqlite3 *db = pcs->db;
 

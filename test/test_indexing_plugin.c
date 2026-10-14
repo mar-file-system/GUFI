@@ -94,7 +94,8 @@ static void cleanup_state(struct state *p) {
 /*
  * Set up initial state for test plugin.
  */
-static void *db_init(void *ptr) {
+static void *db_init(void *ptr, void *thread_data) {
+    (void) thread_data;
     PCS_t *pcs = (PCS_t *) ptr;
     sqlite3 *db = pcs->db;
 

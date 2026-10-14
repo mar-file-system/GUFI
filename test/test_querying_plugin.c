@@ -85,18 +85,21 @@ static int global_bad_init(struct input *in) {
     return 1;
 }
 
-static int thread_init(sqlite3 *db) {
+static int thread_init(sqlite3 *db, void **thread_data) {
     (void) db;
+    (void) thread_data;
     return 0;
 }
 
-static int thread_bad_init(sqlite3 *db) {
+static int thread_bad_init(sqlite3 *db, void **thread_data) {
     (void) db;
+    (void) thread_data;
     fprintf(stderr, "Error: test_querying_plugin: Bad thread initialization\n");
     return 1;
 }
 
-static void *db_init(void *ptr) {
+static void *db_init(void *ptr, void *thread_data) {
+    (void) thread_data;
     sqlite3 *db = (sqlite3 *) ptr;
 
     /* do some "setup" */
@@ -123,8 +126,9 @@ static void db_exit(void *ptr, void *user_data) {
     }
 }
 
-static void thread_exit(sqlite3 *db) {
+static void thread_exit(sqlite3 *db, void *thread_data) {
     (void) db;
+    (void) thread_data;
 }
 
 static void global_exit(struct input *in) {

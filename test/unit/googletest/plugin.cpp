@@ -92,11 +92,21 @@ static int test_global_init(struct input *in) {
     return !!in;
 }
 
-static int test_thread_init(sqlite3 *db) {
+/* What thread_init hands out, and what the later hooks were handed back.
+   Static rather than captured so the plain C function pointers can reach
+   them -- this is what proves per-thread state survives from thread_init
+   into ctx_init, which is the point of the hook. */
+static std::size_t test_thread_state = 0;
+static void *test_ctx_saw_thread_data = nullptr;
+static void *test_thread_exit_saw_thread_data = nullptr;
+
+static int test_thread_init(sqlite3 *db, void **thread_data) {
+    *thread_data = &test_thread_state;
     return !!db;
 }
 
-static void *test_ctx_init(void *ptr) {
+static void *test_ctx_init(void *ptr, void *thread_data) {
+    test_ctx_saw_thread_data = thread_data;
     return ptr; /* ptr and user_data are the same */
 }
 
@@ -123,7 +133,9 @@ static void test_post_process_file(void *, void *user_data) {
 
 static void test_ctx_exit(void *, void *) {}
 
-static void test_thread_exit(sqlite3 *) {}
+static void test_thread_exit(sqlite3 *, void *thread_data) {
+    test_thread_exit_saw_thread_data = thread_data;
+}
 
 static void test_global_exit(struct input *) {}
 
@@ -175,21 +187,31 @@ TEST(plugins, good) {
 
     // fail
     EXPECT_EQ(plugins_global_init(&plugins, reinterpret_cast<struct input *>(&plugins)), (std::size_t) 0);
-    EXPECT_EQ(plugins_thread_init(&plugins, reinterpret_cast<sqlite3 *>     (&plugins)), (std::size_t) 0);
+    EXPECT_EQ(plugins_thread_init(&plugins, reinterpret_cast<sqlite3 *>  (&plugins), 0), (std::size_t) 0);
+    /* the failing plugin's state must not be kept */
+    EXPECT_EQ(plugins.thread_data[0][0], nullptr);
 
     // ctx
     std::size_t value = 0;
 
     // success
     EXPECT_EQ(plugins_global_init(&plugins, nullptr),  count);
-    plugins_thread_init      (&plugins, nullptr);
+    plugins_thread_init      (&plugins, nullptr, 0);
+    /* thread_init's out-param is kept per (thread, plugin) ... */
+    EXPECT_EQ(plugins.thread_data[0][0], &test_thread_state);
     plugins_ctx_init         (&plugins, &value,  0);
+    /* ... and handed to ctx_init, which runs once per DIRECTORY and so
+       cannot hold anything itself. */
+    EXPECT_EQ(test_ctx_saw_thread_data, &test_thread_state);
     plugins_pre_process_dir  (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
     plugins_pre_process_file (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
     plugins_post_process_dir (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
     plugins_post_process_file(&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
     plugins_ctx_exit         (&plugins, nullptr, 0); // nullptr should be &value, but intentially not passing in
-    plugins_thread_exit      (&plugins, nullptr);
+    plugins_thread_exit      (&plugins, nullptr, 0);
+    /* and handed back on the way out, so the plugin can free it */
+    EXPECT_EQ(test_thread_exit_saw_thread_data, &test_thread_state);
+    EXPECT_EQ(plugins.thread_data[0][0], nullptr);
     plugins_global_exit      (&plugins, nullptr);
     EXPECT_EQ(value, (std::size_t) 4);
 
