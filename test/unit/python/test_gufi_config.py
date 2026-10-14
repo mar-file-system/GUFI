@@ -114,10 +114,9 @@ class TestLocalConfig(unittest.TestCase):
     def test_iterable(self):
         try:
             config = gufi_config.Local(build_config(self.pairs) + ['', '#'])
+            self.check_values(config)
         except Exception as err: # pylint: disable=broad-except
             self.fail('Reading good local configuration raised: {0}'.format(err))
-
-        self.check_values(config)
 
     def test_missing(self):
         for key in TestLocalConfig.default:
@@ -157,10 +156,9 @@ class TestRemoteConfig(unittest.TestCase):
     def test_iterable(self):
         try:
             config = gufi_config.Remote(build_config(self.pairs) + ['', '#'])
+            self.check_values(config)
         except Exception as err: # pylint: disable=broad-except
             self.fail('Reading good remote configuration raised: {0}'.format(err))
-
-        self.check_values(config)
 
     def test_missing(self):
         for key in TestRemoteConfig.default:
