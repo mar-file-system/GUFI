@@ -439,7 +439,8 @@ static int presidio_global_init(struct input *in) {
     return 0;
 }
 
-static int presidio_thread_init(sqlite3 *db) {
+static int presidio_thread_init(sqlite3 *db, void **thread_data) {
+    (void) thread_data;
     CURL *curl = curl_easy_init();
     if (!curl) {
         fprintf(stderr, "curl_easy_init() failed\n");

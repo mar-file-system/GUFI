@@ -114,13 +114,26 @@ struct plugin_operations {
     int (*global_init)(struct input *in);
 
     /*
-     * One-time initialization of a database instance when each thread
-     * is being set up
+     * One-time per-thread initialization.
      *
-     * Generally expected to be used to define SQLite3 UDFs that do
-     * not need context
+     * `db` is the thread's database handle in tools that have one
+     * (gufi_query, gufi_vt). It is NULL in tools whose databases are
+     * per-DIRECTORY rather than per-thread -- gufi_dir2index -- so a
+     * plugin that dereferences it must tolerate NULL.
+     *
+     * Commonly used to define SQLite3 UDFs that need no context. May also
+     * return state through `thread_data`, which GUFI keeps for the life of
+     * the thread and hands back to ctx_init() and thread_exit(). That is
+     * the only hook whose lifetime spans directories within one thread:
+     * ctx_init() runs once per directory, so anything it allocates dies
+     * with the directory.
+     *
+     * Return 0 for success, non-0 for error. The error contract is why
+     * this takes an out-param rather than returning the pointer the way
+     * ctx_init() does -- ctx_init cannot fail, this can, and NULL is a
+     * legitimate "no state".
      */
-    int (*thread_init)(sqlite3 *db);
+    int (*thread_init)(sqlite3 *db, void **thread_data);
 
     /*
      * Returns whether a directory should be processed and/or
@@ -132,8 +145,12 @@ struct plugin_operations {
      * Give the user an opportunity to initialize any state for the
      * current context. The returned pointer is passed to all
      * subsequent operations as `user_data`.
+     *
+     * `thread_data` is whatever thread_init() returned for the calling
+     * thread, so per-directory state can reach a per-thread cache. It is
+     * NULL if the plugin has no thread_init or returned nothing.
      */
-    void *(*ctx_init)(void *ptr);
+    void *(*ctx_init)(void *ptr, void *thread_data);
 
     /*
      * Provide an entry's stat metadata from the plugin's own data
@@ -169,8 +186,9 @@ struct plugin_operations {
     /* Clean up any state for the current context */
     void (*ctx_exit)(void *ptr, void *user_data);
 
-    /* Clean up any thread_init state */
-    void (*thread_exit)(sqlite3 *db);
+    /* Clean up any thread_init state. `thread_data` is whatever
+       thread_init() returned for this thread. */
+    void (*thread_exit)(sqlite3 *db, void *thread_data);
 
     /*
      * One-time cleanup
@@ -200,7 +218,8 @@ struct plugins {
     size_t count;
     size_t initialized;      /* number of plugins to call global_exit() on */
     size_t nthreads;
-    void ***user_data;       /* user_data[thread id][plugin index] */
+    void ***user_data;       /* user_data[thread id][plugin index]   -- per DIRECTORY, from ctx_init  */
+    void ***thread_data;     /* thread_data[thread id][plugin index] -- per THREAD, from thread_init */
 };
 
 /* DOES NOT call load_plugin_library() */
@@ -232,7 +251,7 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted);
  *         successfully initialized plugins, and return error
  */
 size_t             plugins_global_init      (struct plugins* plugins, struct input *in);
-size_t             plugins_thread_init      (struct plugins *plugins, sqlite3 *db);
+size_t             plugins_thread_init      (struct plugins *plugins, sqlite3 *db, const size_t tid);
 plugin_dir_action  plugins_dir_action       (struct plugins* plugins, void* ctx);
 void               plugins_ctx_init         (struct plugins* plugins, void* ctx, const size_t tid);
 /*
@@ -247,7 +266,12 @@ plugin_file_action plugins_pre_process_file (struct plugins* plugins, void* ctx,
 void               plugins_post_process_dir (struct plugins* plugins, void* ctx, const size_t tid);
 void               plugins_post_process_file(struct plugins* plugins, void* ctx, const size_t tid);
 void               plugins_ctx_exit         (struct plugins* plugins, void* ctx, const size_t tid);
-void               plugins_thread_exit      (struct plugins *plugins, sqlite3 *db);
+void               plugins_thread_exit      (struct plugins *plugins, sqlite3 *db, const size_t tid);
+
+/* Tear down the first `inited` thread slots, newest first. For callers
+   that set up one slot per thread in a loop -- including one whose loop
+   failed part way and must unwind only what it created. */
+void               plugins_thread_exit_all  (struct plugins *plugins, sqlite3 *db, const size_t inited);
 void               plugins_global_exit      (struct plugins* plugins, struct input *in);
 
 /* common plugin ptr struct (don't have to use; here to reduce duplicate struct definitions) */

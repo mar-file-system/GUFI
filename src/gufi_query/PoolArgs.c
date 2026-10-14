@@ -243,7 +243,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         }
 
         /* do thread db setup once at the top */
-        if (plugins_thread_init(&in->plugins, ta->outdb) != in->plugins.count) {
+        if (plugins_thread_init(&in->plugins, ta->outdb, i) != in->plugins.count) {
             break;
         }
 
@@ -302,7 +302,7 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
     for(size_t i = 0; i < allocated; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
 
-        plugins_thread_exit(&pa->in->plugins, ta->outdb);
+        plugins_thread_exit(&pa->in->plugins, ta->outdb, i);
 
         closedb(ta->outdb);
 

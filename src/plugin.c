@@ -160,11 +160,39 @@ struct plugins *plugins_init(struct plugins *plugins, const size_t count, const 
         }
     }
 
+    /* Per-THREAD slots, the same shape as user_data's per-DIRECTORY slots. */
+    void ***thread_data = calloc(nthreads, sizeof(*plugins->thread_data));
+    if (!thread_data) {
+        for(size_t i = nthreads; i > 0; i--) {
+            free(user_data[i - 1]);
+        }
+        free(user_data);
+        return NULL;
+    }
+
+    if (count) {
+        for(size_t i = 0; i < nthreads; i++) {
+            thread_data[i] = calloc(count, sizeof(**thread_data));
+            if (!thread_data[i]) {
+                for(size_t j = i; j > 0; j--) {
+                    free(thread_data[j - 1]);
+                }
+                free(thread_data);
+                for(size_t j = nthreads; j > 0; j--) {
+                    free(user_data[j - 1]);
+                }
+                free(user_data);
+                return NULL;
+            }
+        }
+    }
+
     plugins->plugins = calloc(count, sizeof(*plugins->plugins));
     plugins->count = count;
     plugins->initialized = 0;
     plugins->nthreads = nthreads;
     plugins->user_data = user_data;
+    plugins->thread_data = thread_data;
 
     return plugins;
 }
@@ -179,9 +207,12 @@ void plugins_destroy(struct plugins *plugins) {
 
     for(size_t i = plugins->nthreads; i > 0; i--) {
         free(plugins->user_data[i - 1]);
+        free(plugins->thread_data[i - 1]);
     }
     free(plugins->user_data);
     plugins->user_data = NULL;
+    free(plugins->thread_data);
+    plugins->thread_data = NULL;
     plugins->nthreads = 0;
     plugins->initialized = 0;
     plugins->count = 0;
@@ -228,20 +259,25 @@ size_t plugins_global_init(struct plugins *plugins, struct input *in) {
     return plugins->initialized;
 }
 
-size_t plugins_thread_init(struct plugins *plugins, sqlite3 *db) {
+size_t plugins_thread_init(struct plugins *plugins, sqlite3 *db, const size_t tid) {
     /* Not checking arguments */
 
     size_t i = 0;
     for(i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->thread_init) {
-            if (plugins->plugins[i]->ops->thread_init(db) != 0) {
+            void *thread_data = NULL;
+            if (plugins->plugins[i]->ops->thread_init(db, &thread_data) != 0) {
+                /* Unwind the plugins that DID initialize, handing each back
+                   its own state so it can release it. */
                 for(size_t j = i; j > 0; j--) {
                     if (plugins->plugins[j - 1]->ops->thread_exit) {
-                        plugins->plugins[j - 1]->ops->thread_exit(db);
+                        plugins->plugins[j - 1]->ops->thread_exit(db, plugins->thread_data[tid][j - 1]);
                     }
+                    plugins->thread_data[tid][j - 1] = NULL;
                 }
                 break;
             }
+            plugins->thread_data[tid][i] = thread_data;
         }
     }
 
@@ -270,7 +306,8 @@ void plugins_ctx_init(struct plugins *plugins, void *ctx, const size_t tid) {
 
     for(size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->ctx_init) {
-            plugins->user_data[tid][i] = plugins->plugins[i]->ops->ctx_init(ctx);
+            plugins->user_data[tid][i] =
+                plugins->plugins[i]->ops->ctx_init(ctx, plugins->thread_data[tid][i]);
         }
     }
 }
@@ -355,13 +392,25 @@ void plugins_ctx_exit(struct plugins *plugins, void *ctx, const size_t tid) {
     /* not zero-ing, but all user_data[i] should be invalid at this point */
 }
 
-void plugins_thread_exit(struct plugins *plugins, sqlite3 *db) {
+void plugins_thread_exit_all(struct plugins *plugins, sqlite3 *db, const size_t inited) {
+    /* Not checking arguments */
+
+    /* Newest slot first, mirroring the order plugins_thread_init set them up
+       in. `inited` rather than nthreads so a caller whose init loop failed
+       part way can tear down exactly what it created. */
+    for(size_t i = inited; i > 0; i--) {
+        plugins_thread_exit(plugins, db, i - 1);
+    }
+}
+
+void plugins_thread_exit(struct plugins *plugins, sqlite3 *db, const size_t tid) {
     /* Not checking arguments */
 
     for(size_t i = plugins->count; i > 0; i--) {
         if (plugins->plugins[i - 1]->ops->thread_exit) {
-            plugins->plugins[i - 1]->ops->thread_exit(db);
+            plugins->plugins[i - 1]->ops->thread_exit(db, plugins->thread_data[tid][i - 1]);
         }
+        plugins->thread_data[tid][i - 1] = NULL;
     }
 }
 

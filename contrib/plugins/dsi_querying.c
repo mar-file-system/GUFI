@@ -160,7 +160,8 @@ static int dsi_querying_global_init(struct input *in) {
     return 0;
 }
 
-static int dsi_querying_thread_init(sqlite3 *db) {
+static int dsi_querying_thread_init(sqlite3 *db, void **thread_data) {
+    (void) thread_data; /* no per-thread state; UDFs only */
     if ((sqlite3_create_function(db,   "dsi_collection_name", 1, SQLITE_UTF8,
                                  NULL, &dsi_collection_name,  NULL, NULL) != SQLITE_OK) ||
         (sqlite3_create_function(db,   "dsi_uuid",            2, SQLITE_UTF8,

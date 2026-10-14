@@ -220,7 +220,8 @@ static int gen_types(struct input *in) {
         }
 
         plugins_ctx_init(&in->plugins, db, 0);
-        plugins_thread_init(&in->plugins, db);
+        /* gen_types() is one-off setup on a single thread, so slot 0. */
+        plugins_thread_init(&in->plugins, db, 0);
 
         if (str_exists(&in->sql.setup_res_col_types)) {
             char *err = NULL;
@@ -277,7 +278,7 @@ static int gen_types(struct input *in) {
         }
 
         plugins_ctx_exit(&in->plugins, db, 0);
-        plugins_thread_exit(&in->plugins, db);
+        plugins_thread_exit(&in->plugins, db, 0);
 
         closedb(global_db);
         closedb(db);

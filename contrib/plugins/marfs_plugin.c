@@ -794,7 +794,8 @@ static void marfs_ctx_exit(void* ptr, void* plugin_user_data) {
     free(ctx);
 }
 
-static void* marfs_ctx_init(void* ptr) {
+static void* marfs_ctx_init(void* ptr, void* thread_data) {
+    (void) thread_data;
     PCS_t* pcs = ptr;
     sqlite3* db = pcs->db;
 

@@ -436,7 +436,37 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         rc = EXIT_FAILURE;
+        QPTPool_destroy(ctx);
         goto free_xattr;
+    }
+
+    /* Per-thread plugin setup: one slot per worker, on this thread, after the
+     * pool exists but before any work is enqueued -- so no worker can reach a
+     * slot while it is being filled.
+     *
+     * AFTER QPTPool_start, not before, because that is where maxthreads is
+     * validated. A loop over an unvalidated maxthreads hangs: `-n
+     * 18446744073709551615` is a real test case, and iterating it is
+     * effectively forever. (gufi_query gets away with looping first only
+     * because PoolArgs_init calloc()s maxthreads structures and fails.)
+     *
+     * db is NULL here, unlike gufi_query (ta->outdb) and gufi_vt (tempdb),
+     * because this tool has no per-thread database: its databases are created
+     * per DIRECTORY, in processdir. A plugin that uses thread_init only to
+     * register UDFs on that handle has nothing to do here, which is
+     * presumably why this call was never wired up. Plugins that want a
+     * per-thread cache now have somewhere to put it.
+     */
+    size_t thread_inited = 0;
+    for(; thread_inited < pa.in.maxthreads; thread_inited++) {
+        if (plugins_thread_init(&pa.in.plugins, NULL, thread_inited) != pa.in.plugins.count) {
+            fprintf(stderr, "Error: Failed to initialize plugins for thread %zu\n",
+                    thread_inited);
+            plugins_thread_exit_all(&pa.in.plugins, NULL, thread_inited);
+            rc = EXIT_FAILURE;
+            QPTPool_destroy(ctx);
+            goto free_xattr;
+        }
     }
 
     fprintf(stderr, "Creating GUFI tree %s with %zu threads\n", pa.index_parent.data, pa.in.maxthreads);
@@ -497,6 +527,8 @@ int main(int argc, char *argv[]) {
     }
 
     QPTPool_destroy(ctx);
+
+    plugins_thread_exit_all(&pa.in.plugins, NULL, thread_inited);
 
     uint64_t total_dirs = 0;
     uint64_t total_nondirs = 0;
