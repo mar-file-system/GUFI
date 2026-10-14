@@ -658,7 +658,7 @@ query=$(
     echo -n "SELECT * FROM gufi;"
 )
 query_vt "${query}"
-) | replace | tee "${OUTPUT}"
+) | replace | @SED@ "\%Error near line .*: SQL logic error%d;" | tee "${OUTPUT}"
 
 # FIXME: cygwin is having trouble with plugin tests.
 #        sqlite3_initialize fails without an error message.

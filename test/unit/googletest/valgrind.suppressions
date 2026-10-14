@@ -36,6 +36,44 @@
 }
 {
    <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:read
+   fun:read_size
+   fun:QPTPool_generic_alloc_and_deserialize
+   fun:_ZN59QueuePerThreadPool_generic_alloc_and_deserialize_error_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:write
+   fun:write_size
+   fun:QPTPool_generic_serialize_and_free
+   fun:_ZN56QueuePerThreadPool_generic_serialize_and_free_error_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:write
+   fun:write_size
+   fun:write_swap
+   fun:QPTPool_enqueue_here
+   fun:_ZN28QueuePerThreadPool_swap_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:write
+   fun:write_size
+   fun:write_swap
+   fun:QPTPool_enqueue_here
+   fun:_ZN36QueuePerThreadPool_enqueue_here_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
    Memcheck:Leak
    match-leak-kinds: reachable
    fun:malloc
@@ -63,4 +101,76 @@
    match-leak-kinds: reachable
    ...
    fun:getgrgid_r@@GLIBC_2.2.5
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdNotClosed
+   fun:dup
+   fun:_ZN24parse_cmd_line_help_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdNotClosed
+   fun:dup
+   fun:_ZN25parse_cmd_line_debug_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdNotClosed
+   fun:dup
+   fun:_ZN25print_help_null_opts_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:write
+   ...
+   fun:print_help
+   fun:_ZN25print_help_null_opts_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:write
+   ...
+   fun:parse_cmd_line
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:fstat
+   fun:split_file
+   fun:enqueue_traces
+   fun:_ZN26enqueue_traces_bad_fd_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:close
+   fun:close_template_db
+   fun:_ZN27template_db_bad_inputs_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:read
+   fun:getline_fd
+   fun:getline_fd_stream
+   fun:_ZN22getline_fd_stream_Test8TestBodyEv
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdBadUse
+   fun:read
+   fun:read_size
+   fun:_ZN20write_read_size_Test8TestBodyEv
+   ...
 }

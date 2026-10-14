@@ -70,6 +70,8 @@ OUTPUT="presidio_plugin.out"
 # see contrib/CI/presidio.sh
 
 (
+    export LD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite3/lib:${LD_LIBRARY_PATH}"
+
     echo "# set some osstext1"
     run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'name = Gufi Devs' WHERE name == '1KB';\""
     run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"UPDATE entries SET osstext1 = 'email = gufi-lanl@lanl.gov' WHERE name == '1MB';\""

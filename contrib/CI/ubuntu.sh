@@ -67,17 +67,17 @@ set -e
 TZ=America/Denver
 ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-apt update
+apt-get update
 
 # actions/cache dependencies
-apt -y install \
+apt-get -y install \
     gzip \
     nodejs \
     tar \
     zstd
 
 # install libraries
-apt -y install \
+apt-get -y install \
     libattr1-dev \
     libfuse-dev \
     libomp-dev \
@@ -85,7 +85,7 @@ apt -y install \
     zlib1g-dev
 
 # install required packages
-apt -y install \
+apt-get -y install \
     attr \
     autoconf \
     bsdmainutils \
@@ -101,7 +101,7 @@ apt -y install \
     util-linux
 
 # packages for marfs
-apt -y install \
+apt-get -y install \
     automake \
     libfuse-dev \
     libopenmpi-dev \
@@ -113,10 +113,10 @@ apt -y install \
 . /etc/os-release
 if [[ "${VERSION_ID}" =~ 26.* ]]
 then
-    apt -y install libstdc++-16-dev
+    apt-get -y install libstdc++-16-dev
 fi
 
 # packages for presidio
-apt -y install \
+apt-get -y install \
     libcjson-dev \
     libcurl4-openssl-dev

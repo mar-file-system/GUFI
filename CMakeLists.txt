@@ -257,7 +257,7 @@ elseif (UNIX)
 endif()
 
 # this is the first CPACK_RPM_PACKAGE_REQUIRES
-set(CPACK_RPM_PACKAGE_REQUIRES "sqlite3 >= 3.43.1")
+set(CPACK_RPM_PACKAGE_REQUIRES "sqlite-libs")
 
 # Python3.9+ is required
 find_package(Python3 3.9 COMPONENTS Interpreter REQUIRED)
@@ -448,16 +448,10 @@ if (DEP_AI)
   # copy dependencies into packages
   install(FILES
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
+    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
+    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}"
     DESTINATION "${LIB}"
-    COMPONENT Local
-    EXCLUDE_FROM_ALL # do not copy if running 'make install'
-  )
-  install(CODE
-    "
-    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}\")
-    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}\")
-    "
     COMPONENT Local
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
   )
@@ -471,16 +465,10 @@ if (DEP_AI)
   )
   install(FILES
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
+    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
+    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}"
     DESTINATION "${REMOTE_LIB}"
-    COMPONENT Remote
-    EXCLUDE_FROM_ALL # do not copy if running 'make install'
-    )
-  install(CODE
-    "
-    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}\")
-    file(CREATE_LINK \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}\" \"${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}\")
-    "
     COMPONENT Remote
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
   )

@@ -69,9 +69,9 @@ details.
 \section{Build From Source}
 \subsection{Dependencies}
 While macOS comes with some software for building code, much of it is
-set up in ways that make building GUFI difficult, if not
+set up in ways that make building and using GUFI difficult, if not
 impossible. Instead, \texttt{brew} packages should be used. The script
-\texttt{contrib/CI/macos.h} should be used to install the
+\texttt{contrib/CI/macos.sh} should be used to install the
 dependencies. The very last line of output from the script contains
 extra paths to permanently add to your \texttt{PATH} variable.
 
@@ -79,7 +79,7 @@ extra paths to permanently add to your \texttt{PATH} variable.
 First create a build directory under the repository root
 directory. This guide will create \texttt{build}. \texttt{cd} into it.
 \\\\
-\texttt{cmake}, which was installed by \texttt{contrib/CI/macos.h},
+\texttt{cmake}, which was installed by \texttt{contrib/CI/macos.sh},
 should be run first to configure the build. \texttt{cmake} tends to
 pick up \texttt{AppleClang} for the C and C++ compilers, so explicitly
 override them with the environment variables \texttt{CC} and

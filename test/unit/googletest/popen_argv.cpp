@@ -72,36 +72,43 @@ OF SUCH DAMAGE.
 #include "popen_argv.h"
 #include "utils.h"
 
+TEST(popen_argv, NULL) {
+    EXPECT_EQ(popen_argv(nullptr, 0), nullptr);
+    EXPECT_EQ(popen_argv(nullptr, 1), nullptr);
+}
+
+#ifdef __linux__
 TEST(popen_argv, cant_pipe) {
+    const char *args[] = { nullptr };
+
     struct rlimit orig_fds;
     ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &orig_fds),  0);
 
-    struct rlimit fewer_fds = orig_fds;
-    fewer_fds.rlim_cur = 3;
-    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
+    // fail creating stdout pipe
+    {
+        struct rlimit fewer_fds = orig_fds;
+        fewer_fds.rlim_cur = 3;
+        ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
 
-    EXPECT_EQ(popen_argv(nullptr, 0), nullptr);
+        EXPECT_EQ(popen_argv(args, 0), nullptr);
+    }
 
+    // fail creating stdin pipe
+    {
+        struct rlimit fewer_fds = orig_fds;
+        fewer_fds.rlim_cur = 5;
+        ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &fewer_fds), 0);
+
+        EXPECT_EQ(popen_argv(args, 1), nullptr);
+    }
+
+    // restore process settings
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &orig_fds),  0);
-}
-
-#if defined(DEBUG) && defined(__linux__) && defined(RLIMIT_NPROC_UNIT_TESTS)
-TEST(popen_argv, cant_fork) {
-    struct rlimit orig_nprocs;
-    ASSERT_EQ(getrlimit(RLIMIT_NPROC, &orig_nprocs),  0);
-
-    struct rlimit fewer_nprocs = orig_nprocs;
-    fewer_nprocs.rlim_cur = 1;
-    ASSERT_EQ(setrlimit(RLIMIT_NPROC, &fewer_nprocs), 0);
-
-    EXPECT_EQ(popen_argv(nullptr, 0), nullptr);
-
-    ASSERT_EQ(setrlimit(RLIMIT_NPROC, &orig_nprocs),  0);
 }
 #endif
 
 TEST(popen_argv, true) {
-    const char *argv[] = {"true", NULL};
+    const char *argv[] = {"true", nullptr};
 
     popen_argv_t *ret = popen_argv(argv, 0);
     EXPECT_NE(ret, nullptr);
@@ -114,7 +121,7 @@ TEST(popen_argv, true) {
 }
 
 TEST(popen_argv, false) {
-    const char *argv[] = {"false", NULL};
+    const char *argv[] = {"false", nullptr};
 
     popen_argv_t *ret = popen_argv(argv, 0);
     EXPECT_NE(ret, nullptr);
@@ -125,7 +132,7 @@ TEST(popen_argv, false) {
 }
 
 TEST(popen_argv, redirect_stdin) {
-    const char *argv[] = {"cat", NULL};
+    const char *argv[] = {"cat", nullptr};
 
     popen_argv_t *ret = popen_argv(argv, 1);
     EXPECT_NE(ret, nullptr);

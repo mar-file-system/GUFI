@@ -305,8 +305,17 @@ run_no_sort "${GUFI_QUERY} -I \"SELECT abc;\" --no-print-sql-on-err \"${SEARCH}\
 echo "# error message without SQL"
 run_no_sort "${GUFI_QUERY} -E \"SELECT abc;\" --no-print-sql-on-err \"${SEARCH}\" 2>&1 | @GREP@ \"Error:\" | sort | head -n 1"
 
-echo "# Bad global db set up"
-run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --global-db \"CREATE TABLE;\" \"\" -E \"SELECT rpath(sname, sroll, name), inode FROM vrpentries;\" \"${INDEXROOT}\""
+echo "# Bad global db create"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --global-db \"CREATE TABLE;\" \"INSERT INTO global VALUES (1);\" -E \"SELECT rpath(sname, sroll, name), inode FROM vrpentries;\" \"${INDEXROOT}\""
+
+echo "# Bad global db create"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --no-print-sql-on-err --global-db \"CREATE TABLE;\" \"INSERT INTO global VALUES (1);\" -E \"SELECT rpath(sname, sroll, name), inode FROM vrpentries;\" \"${INDEXROOT}\""
+
+echo "# Bad global db insert"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --global-db \"CREATE TABLE global(i INT);\" \"INSERT INTO;\" -E \"SELECT rpath(sname, sroll, name), inode FROM vrpentries;\" \"${INDEXROOT}\""
+
+echo "# Bad global db insert"
+run_sort "${GUFI_QUERY} -d \" \" -n ${THREADS} --no-print-sql-on-err --global-db \"CREATE TABLE global(i INT);\" \"INSERT INTO;\" -E \"SELECT rpath(sname, sroll, name), inode FROM vrpentries;\" \"${INDEXROOT}\""
 ) 2>&1 | tee "${OUTPUT}"
 
 echo "# Print terse debug timestamps (not part of expected results)"

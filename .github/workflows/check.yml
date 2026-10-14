@@ -149,7 +149,7 @@ jobs:
       run:  cmake --version
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DRLIMIT_NPROC_UNIT_TESTS=Off
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -194,7 +194,7 @@ jobs:
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY=/tmp
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY=${{ github.workspace }}
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
@@ -285,7 +285,9 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run:  ctest --output-on-failure -E "import|query_multiple_remotes"
+      run:  |
+        sudo sysctl -w kernel.yama.ptrace_scope=0
+        ctest --output-on-failure -E "import|query_multiple_remotes"
 
   TSAN:
     needs: [ShellCheck, Pylint]

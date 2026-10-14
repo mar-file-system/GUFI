@@ -246,6 +246,8 @@ static void presidio_analyze(sqlite3_context *context, int argc, sqlite3_value *
     if (rc == 0) {
         sqlite3_result_text(context, analysis.data, analysis.len, SQLITE_TRANSIENT);
     }
+
+    free(analysis.data);
 }
 
 /*

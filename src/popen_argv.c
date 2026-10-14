@@ -111,11 +111,12 @@ popen_argv_t *popen_argv(const char **argv, const int redirect_stdin) {
         return NULL;
     }
 
-    if (pid == 0) {     /* child */
-        close(to_parent[0]);  /* child does not read parent's output */
-        close(to_child[1]);   /* child does not write to parent's input */
+    if (pid == 0) {               /* child */
+        close(to_parent[0]);      /* child does not read parent's output */
 
         if (redirect_stdin) {
+            close(to_child[1]);   /* child does not write to parent's input */
+
             /* replace stdin */
             if (dup2(to_child[0], STDIN_FILENO) != STDIN_FILENO) {
                 const int err = errno;
@@ -139,7 +140,9 @@ popen_argv_t *popen_argv(const char **argv, const int redirect_stdin) {
 
         /* do not need original pipe end points */
         close(to_parent[1]);
-        close(to_child[0]);
+        if (redirect_stdin) {
+            close(to_child[0]);
+        }
 
         /* run the command */
         if (execvp(argv[0], (char **) argv) != 0) {
@@ -153,7 +156,9 @@ popen_argv_t *popen_argv(const char **argv, const int redirect_stdin) {
     }
     else {
         close(to_parent[1]);
-        close(to_child[0]);
+        if (redirect_stdin) {
+            close(to_child[0]);
+        }
     }
 
     /* parent */
@@ -179,7 +184,9 @@ int popen_argv_close(popen_argv_t *ret) {
 
     int rc = -1;
 
-    close(ret->fds[0]);
+    if (ret->fds[0] > -1) {
+        close(ret->fds[0]);
+    }
 
     int status = 0;
     if (waitpid(ret->pid, &status, 0) != 0) {

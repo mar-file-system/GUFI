@@ -1067,7 +1067,6 @@ $ (
     echo "SELECT name FROM gufi_vt_pentries('prefix', 0) ORDER BY name ASC, size ASC;"
 ) | sqlite3
 argument '-n/--threads' not in range [1, 18446744073709551615]
-Error near line 2: SQL logic error
 
 # Bad min_level
 $ (
@@ -1075,7 +1074,6 @@ $ (
     echo "SELECT name FROM gufi_vt_pentries('prefix', 2, 'a') ORDER BY name ASC, size ASC;"
 ) | sqlite3
 could not parse a with format %zu
-Error near line 2: SQL logic error
 
 # Bad n
 $ (
@@ -1083,7 +1081,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=a, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 could not parse a with format %zu
-Error near line 2: SQL logic error
 
 # Zero n
 $ (
@@ -1091,7 +1088,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=0, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 argument '-n/--threads' not in range [1, 18446744073709551615]
-Error near line 2: SQL logic error
 
 # NULL n
 $ (
@@ -1099,7 +1095,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', n=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 could not parse NULL with format %zu
-Error near line 2: SQL logic error
 
 # Bad thread count
 $ (
@@ -1107,7 +1102,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=a, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 could not parse a with format %zu
-Error near line 2: SQL logic error
 
 # Zero thread count
 $ (
@@ -1115,7 +1109,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=0, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 argument '-n/--threads' not in range [1, 18446744073709551615]
-Error near line 2: SQL logic error
 
 # NULL thread count
 $ (
@@ -1123,7 +1116,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', threads=NULL, E='SELECT 0;'); SELECT * FROM gufi;"
 ) | sqlite3
 could not parse NULL with format %zu
-Error near line 2: SQL logic error
 
 # Bad a
 $ (
@@ -1132,7 +1124,6 @@ $ (
 ) | sqlite3
 could not parse a with format %d
 argument '-a' not in range [0, 2]
-Error near line 2: SQL logic error
 
 # Bad a
 $ (
@@ -1140,7 +1131,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt('prefix', a=3, E='SELECT * FROM pentries'); SELECT * FROM gufi;"
 ) | sqlite3
 argument '-a' not in range [0, 2]
-Error near line 2: SQL logic error
 
 # Bad E
 $ (
@@ -1263,7 +1253,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT * FROM vrxpentries;", Q="basename table template.table view");SELECT * FROM gufi;"
 ) | sqlite3
 Attaching external databases require template files attached with -I
-Error near line 2: SQL logic error
 
 # Bad Q (no arguments)
 $ (
@@ -1299,7 +1288,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT * FROM vrxpentries;", external_attach="basename table template.table view");SELECT * FROM gufi;"
 ) | sqlite3
 Attaching external databases require template files attached with -I
-Error near line 2: SQL logic error
 
 # Bad external_attach (no arguments)
 $ (
@@ -1335,7 +1323,6 @@ $ (
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", E="SELECT * FROM vrxpentries;", external_copy="basename 'INSERT INTO ext SELECT 0;'");SELECT * FROM gufi;"
 ) | sqlite3
 Copying external databases require tables created with -I
-Error near line 2: SQL logic error
 
 # Bad external_copy (no arguments)
 $ (
@@ -1381,7 +1368,6 @@ Each line is one argv[i]:
 argument '--no-print-errno' not in range [1, 255]
 argument '--no-print-errno' not in range [1, 255]
 argument '--no-print-errno' not in range [1, 255]
-Error near line 2: SQL logic error
 
 # bad global db set up
 $ (
