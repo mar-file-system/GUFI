@@ -68,10 +68,11 @@ set -e
 OUTPUT="verifytraceintree.out"
 
 # column indicies for awk (1 based)
+# name=1, type=2, dev=3, inode=4, mode=5, ...
 AWK_TYPE=2
-AWK_MODE=4
-AWK_UID=6
-AWK_GID=7
+AWK_MODE=5
+AWK_UID=7
+AWK_GID=8
 
 NEXT_UID=$((UID + 1))
 NEXT_GID=$((GID + 1))

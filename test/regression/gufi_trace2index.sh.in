@@ -222,7 +222,7 @@ run_sort "${GUFI_QUERY} -d \"${DELIM}\" -n ${THREADS} -S \"SELECT rpath(sname, s
 echo "# link containing a delimiter"
 (
     @GREP@ "^0006prefix${DELIM}"              "${TRACE}"
-    @GREP@ "^0013prefix/file_symlink${DELIM}" "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" "{ \$14=\"0004${DELIM}${DELIM}${DELIM}${DELIM}\" ; print }"
+    @GREP@ "^0013prefix/file_symlink${DELIM}" "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" "{ \$15=\"0004${DELIM}${DELIM}${DELIM}${DELIM}\" ; print }"
 ) > "${MODIFIED_TRACE}"
 rm -rf "${SEARCH}"
 "${GUFI_TRACE2INDEX}" -d "${DELIM}" -n ${THREADS} "${MODIFIED_TRACE}" "${SEARCH}" > /dev/null 2>&1

@@ -98,7 +98,14 @@ extern "C" {
 #define ENTRIES           "entries"
 #define ENTRIES_SCHEMA(name, extra_cols)                                \
     "CREATE TABLE " name "(" extra_cols                                 \
-    "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, "       \
+    /* st_ino identifies an entry only within one filesystem, so an index   \
+       that spans more than one needs st_dev alongside it. dev precedes      \
+       inode to match the order of struct stat.                              \
+                                                                            \
+       PENTRIES_ROLLUP_SCHEMA must keep dev in the same ordinal position:    \
+       the pentries view UNIONs the two, and SQLite requires equal arity     \
+       and matching order. gufi_vt declares its own copy of this list. */    \
+    "name TEXT, type TEXT, dev INT64, inode TEXT, mode INT64, nlink INT64, " \
     "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "   \
     "atime INT64, mtime INT64, ctime INT64, "                           \
     "linkname TEXT, xattr_names BLOB, crtime INT64, "                   \
@@ -146,7 +153,8 @@ extern const char VRSUMMARY_CREATE[];
 #define PENTRIES_ROLLUP   "pentries_rollup"
 #define PENTRIES_ROLLUP_SCHEMA(name)                                     \
     "CREATE TABLE " name "("                                             \
-    "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, "        \
+    /* dev/inode order must match ENTRIES_SCHEMA -- see the note there */  \
+    "name TEXT, type TEXT, dev INT64, inode TEXT, mode INT64, nlink INT64, " \
     "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "    \
     "atime INT64, mtime INT64, ctime INT64, "                            \
     "linkname TEXT, xattr_names BLOB, crtime INT64, "                    \

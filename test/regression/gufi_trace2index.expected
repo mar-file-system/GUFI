@@ -458,8 +458,8 @@ Total Files:         0
 # file delimiter not found
 $ gufi_trace2index -d "|" -n 4 "badtrace" "search"
 Creating GUFI tree search with 4 threads
-Error: Line at offset 56 does not have a delimiter
-Scout encountered bad line ending at "badtrace" offset 74
+Error: Line at offset 58 does not have a delimiter
+Scout encountered bad line ending at "badtrace" offset 76
 Dirs:                0 (0 empty)
 Files:               0
 Total:               0
