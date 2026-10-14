@@ -125,6 +125,7 @@ run_sort "${GUFI_FIND} -name  'directory*'"       # glob on file name
 run_sort "${GUFI_FIND} -name  'file*'"            # glob on file name
 run_sort "${GUFI_FIND} -newer '${REFERENCE}'"     # missing old_file
 run_sort "${GUFI_FIND} -path  '*directory*'"
+run_sort "${GUFI_FIND} -path  '*subdirectory/repeat_name'"
 run_sort "${GUFI_FIND} -perm 444"                 # directory/readonly
 run_sort "${GUFI_FIND} -perm=-4000"               # directory/executable
 run_sort "${GUFI_FIND} -perm=-2000"               # directory

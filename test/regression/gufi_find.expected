@@ -278,6 +278,9 @@ prefix/leaf_directory/leaf_file2
 prefix/unusual#? "directory ',
 prefix/unusual#? "directory ',/unusual, 'name?#"
 
+$ gufi_find -path  '*subdirectory/repeat_name'
+prefix/directory/subdirectory/repeat_name
+
 $ gufi_find -perm 444
 prefix/directory/readonly
 

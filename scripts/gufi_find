@@ -317,8 +317,12 @@ def build_where(args, table, basename, root_uid=0, root_gid=0):
     # if args.nouser is True:
 
     if args.path is not None:
-        where += [' OR '.join(['(rpath(sname, sroll) GLOB \'{0}\')'.format(path)
-                               for path in args.path])]
+        if table in gufi_common.SUMMARY_NAMES:
+            where += [' OR '.join(['(rpath(sname, sroll) GLOB \'{0}\')'.format(path)
+                                   for path in args.path])]
+        elif table in gufi_common.ENTRIES_NAMES:
+            where += [' OR '.join(['(rpath(sname, sroll, name) GLOB \'{0}\')'.format(path)
+                                   for path in args.path])]
 
     if args.perm is not None:
         if args.perm[0] is None:   # exact match
