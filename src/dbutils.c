@@ -84,7 +84,7 @@ const char ENTRIES_CREATE[] =
 
 const char ENTRIES_INSERT[] =
     "INSERT INTO " ENTRIES " VALUES ("
-    "@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, "
+    "@name, @type, @dev, @inode, @mode, @nlink, @uid, @gid, @size, "
     "@blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @crtime, "
     "@ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2"
     ");";
@@ -141,7 +141,7 @@ const char PENTRIES_ROLLUP_CREATE[] =
 
 const char PENTRIES_ROLLUP_INSERT[] =
     "INSERT INTO " PENTRIES_ROLLUP " VALUES ("
-    "@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, "
+    "@name, @type, @dev, @inode, @mode, @nlink, @uid, @gid, @size, "
     "@blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @crtime, "
     "@ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2, "
     "@pinode, @ppinode"
@@ -609,18 +609,19 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     char *zpino = sqlite3_mprintf("%" PRIu64, pwork->pinode);
     sqlite3_bind_text(res,  1,  name, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,  2,  &ed->type, 1, SQLITE_STATIC);
-    sqlite3_bind_text(res,  3,  zino,  -1, SQLITE_STATIC);
-    sqlite3_bind_int64(res, 4,  pwork->statuso.st_mode);
-    sqlite3_bind_int64(res, 5,  pwork->statuso.st_nlink);
-    sqlite3_bind_int64(res, 6,  pwork->statuso.st_uid);
-    sqlite3_bind_int64(res, 7,  pwork->statuso.st_gid);
-    sqlite3_bind_int64(res, 8,  pwork->statuso.st_size);
-    sqlite3_bind_int64(res, 9,  pwork->statuso.st_blksize);
-    sqlite3_bind_int64(res, 10, pwork->statuso.st_blocks);
-    sqlite3_bind_int64(res, 11, pwork->statuso.st_atime);
-    sqlite3_bind_int64(res, 12, pwork->statuso.st_mtime);
-    sqlite3_bind_int64(res, 13, pwork->statuso.st_ctime);
-    sqlite3_bind_text(res,  14, ed->linkname, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(res, 3,  (sqlite3_int64) pwork->statuso.st_dev);
+    sqlite3_bind_text(res,  4,  zino,  -1, SQLITE_STATIC);
+    sqlite3_bind_int64(res, 5,  pwork->statuso.st_mode);
+    sqlite3_bind_int64(res, 6,  pwork->statuso.st_nlink);
+    sqlite3_bind_int64(res, 7,  pwork->statuso.st_uid);
+    sqlite3_bind_int64(res, 8,  pwork->statuso.st_gid);
+    sqlite3_bind_int64(res, 9,  pwork->statuso.st_size);
+    sqlite3_bind_int64(res, 10, pwork->statuso.st_blksize);
+    sqlite3_bind_int64(res, 11, pwork->statuso.st_blocks);
+    sqlite3_bind_int64(res, 12, pwork->statuso.st_atime);
+    sqlite3_bind_int64(res, 13, pwork->statuso.st_mtime);
+    sqlite3_bind_int64(res, 14, pwork->statuso.st_ctime);
+    sqlite3_bind_text(res,  15, ed->linkname, -1, SQLITE_STATIC);
 
     /* only insert xattr names */
     char xattr_names[MAXXATTR];
@@ -628,16 +629,18 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     if (xattr_names_len < 0) {
          xattr_names_len = 0;
     }
-    sqlite3_bind_blob64(res, 15, xattr_names, xattr_names_len, SQLITE_STATIC);
+    sqlite3_bind_blob64(res, 16, xattr_names, xattr_names_len, SQLITE_STATIC);
 
-    sqlite3_bind_int64(res, 16, pwork->crtime);
-    sqlite3_bind_int64(res, 17, ed->ossint1);
-    sqlite3_bind_int64(res, 18, ed->ossint2);
-    sqlite3_bind_int64(res, 19, ed->ossint3);
-    sqlite3_bind_int64(res, 20, ed->ossint4);
-    sqlite3_bind_text(res,  21, ed->osstext1, -1, SQLITE_STATIC);
-    sqlite3_bind_text(res,  22, ed->osstext2, -1, SQLITE_STATIC);
-    sqlite3_bind_text(res,  23, zpino,        -1, SQLITE_STATIC);
+    sqlite3_bind_int64(res, 17, pwork->crtime);
+    sqlite3_bind_int64(res, 18, ed->ossint1);
+    sqlite3_bind_int64(res, 19, ed->ossint2);
+    sqlite3_bind_int64(res, 20, ed->ossint3);
+    sqlite3_bind_int64(res, 21, ed->ossint4);
+    sqlite3_bind_text(res,  22, ed->osstext1, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,  23, ed->osstext2, -1, SQLITE_STATIC);
+    /* entries has 23 parameters; this binds the 24th for statements that do
+       have a pinode (a no-op otherwise). */
+    sqlite3_bind_text(res,  24, zpino,     -1, SQLITE_STATIC);
 
     const int error = sqlite3_step(res);
     if (error != SQLITE_DONE) {

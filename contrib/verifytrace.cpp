@@ -91,13 +91,13 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
         return false;
     }
 
-    // need at least 23 columns
+    // need at least 24 columns
     const std::size_t columns = std::count(line.begin(), line.end(), delim);
-    if (columns < 23) {
+    if (columns < 24) {
         std::cerr << "Error: Not enough columns: " << line << std::endl;
         return false;
     }
-    else if (columns > 23) {
+    else if (columns > 24) {
         std::cerr << "Warning: Too many columns: " << line << std::endl;
     }
 
@@ -115,15 +115,20 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
 
     const std::string parent = line.substr(PATH_PREFIX_LEN, len - PATH_PREFIX_LEN);
 
-    // find the inode (1 column after type)
-    const std::string::size_type second_delim = first_delim + 2;
-    const std::string::size_type third_delim = line.find(delim, second_delim + 1);
-    const std::string inode = line.substr(second_delim + 1, third_delim - second_delim - 1);
+    // find the inode (2 columns after type: dev sits between them)
+    const std::string::size_type type_delim = first_delim + 2;
+    const std::string::size_type dev_delim   = line.find(delim, type_delim + 1);
+    const std::string::size_type inode_delim = line.find(delim, dev_delim + 1);
+    const std::string inode = line.substr(dev_delim + 1, inode_delim - dev_delim - 1);
 
-    // find the pinode
-    static const std::size_t pinode_col = 22;
-    std::string::size_type pinode_pos = third_delim + 1;
-    for(size_t i = 3; (i < pinode_col) && (pinode_pos < std::string::npos); i++) {
+    // find the pinode, the 24th column (1-based):
+    //   name type dev inode mode nlink uid gid size blksize blocks
+    //   atime mtime ctime linkname xattrs crtime ossint1..4 osstext1..2 pinode
+    // This walk starts at the beginning of column 5, so it needs the
+    // delimiters from 5 up to the one before pinode.
+    static const std::size_t pinode_col = 24;
+    std::string::size_type pinode_pos = inode_delim + 1;
+    for(size_t i = 4; (i < pinode_col - 1) && (pinode_pos < std::string::npos); i++) {
         pinode_pos = line.find(delim, pinode_pos + 1);
     }
     pinode_pos++;
@@ -160,7 +165,7 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
             return false;
         }
 
-        // need at least 23 columns
+        // need at least 24 columns
         const int child_columns = std::count(line.begin(), line.end(), delim);
         if (line[child_first_delim + 1] == 'e') {
             if (child_columns != 3) {
@@ -170,11 +175,11 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
             continue;
         }
 
-        if (child_columns < 23) {
+        if (child_columns < 24) {
             std::cerr << "Error: Not enough columns: " << line << std::endl;
             return false;
         }
-        else if (child_columns > 23) {
+        else if (child_columns > 24) {
             std::cerr << "Warning: Too many columns: " << line << std::endl;
         }
 
@@ -205,8 +210,10 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
             return false;
         }
 
+        /* this walk starts at the beginning of the line, so it needs every
+           delimiter up to the one before pinode */
         std::string::size_type child_pinode_pos = 0;
-        for(size_t i = 0; (i < pinode_col) && (child_pinode_pos < std::string::npos); i++) {
+        for(size_t i = 0; (i < pinode_col - 1) && (child_pinode_pos < std::string::npos); i++) {
             child_pinode_pos = line.find(delim, child_pinode_pos + 1);
         }
         child_pinode_pos++;

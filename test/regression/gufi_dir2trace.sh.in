@@ -113,7 +113,7 @@ echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 # count separators
 # shellcheck disable=SC2016
 columns=$(@SED@ "\%^.*${DELIM}e${DELIM}$%d;" "${TRACES[@]}" | tr -dc "^|\n" | @AWK@ '{ print length }' | sort | uniq)
-echo "Expecting 23 columns per row. Got ${columns}."
+echo "Expecting 24 columns per row. Got ${columns}."
 
 # compare names
 src=$(find "${SRCDIR}" | sort)
