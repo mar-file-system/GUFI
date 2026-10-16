@@ -150,7 +150,7 @@ typedef struct RollupExternalXattrsArgs {
 /* common back portion of SQL */
 #define ROLLUP_ONE_SUBDIR_BACK                                          \
     ", "                                                                \
-    "sub.type, sub.inode, sub.mode, sub.nlink, "                        \
+    "sub.type, sub.dev, sub.inode, sub.mode, sub.nlink, "               \
     "sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, "             \
     "sub.atime, sub.mtime, sub.ctime, "                                 \
     "sub.linkname, sub.xattr_names, sub.crtime, "                       \

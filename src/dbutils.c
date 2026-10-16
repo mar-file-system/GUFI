@@ -97,7 +97,7 @@ static const char SUMMARY_INSERT[] =
     "INSERT INTO " SUMMARY " VALUES ("
 
     /* directory */
-    "@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, "
+    "@name, @type, @dev, @inode, @mode, @nlink, @uid, @gid, @size, "
     "@blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @crtime, "
 
     /* summary */
@@ -780,70 +780,71 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
 
     sqlite3_bind_text(res,   1,  path,  -1, SQLITE_STATIC);
     sqlite3_bind_text(res,   2,  &ed->type, 1, SQLITE_STATIC);
-    sqlite3_bind_text(res,   3,  zino,  -1, SQLITE_STATIC);
-    sqlite3_bind_int64(res,  4,  pwork->statuso.st_mode);
-    sqlite3_bind_int64(res,  5,  pwork->statuso.st_nlink);
-    sqlite3_bind_int64(res,  6,  pwork->statuso.st_uid);
-    sqlite3_bind_int64(res,  7,  pwork->statuso.st_gid);
-    sqlite3_bind_int64(res,  8,  pwork->statuso.st_size);
-    sqlite3_bind_int64(res,  9,  pwork->statuso.st_blksize);
-    sqlite3_bind_int64(res,  10, pwork->statuso.st_blocks);
-    sqlite3_bind_int64(res,  11, pwork->statuso.st_atime);
-    sqlite3_bind_int64(res,  12, pwork->statuso.st_mtime);
-    sqlite3_bind_int64(res,  13, pwork->statuso.st_ctime);
-    sqlite3_bind_text(res,   14, ed->linkname, -1, SQLITE_STATIC);
-    sqlite3_bind_blob64(res, 15, xattrnames, xattrnames_len, SQLITE_STATIC);
-    sqlite3_bind_int64(res,  16, pwork->crtime);
-    sqlite3_bind_int64(res,  17, su->totfiles);
-    sqlite3_bind_int64(res,  18, su->totlinks);
-    sqlite3_bind_int64(res,  19, su->minuid);
-    sqlite3_bind_int64(res,  20, su->maxuid);
-    sqlite3_bind_int64(res,  21, su->mingid);
-    sqlite3_bind_int64(res,  22, su->maxgid);
-    sqlite3_bind_int64(res,  23, su->minsize);
-    sqlite3_bind_int64(res,  24, su->maxsize);
-    sqlite3_bind_int64(res,  25, su->totzero);
-    sqlite3_bind_int64(res,  26, su->totltk);
-    sqlite3_bind_int64(res,  27, su->totmtk);
-    sqlite3_bind_int64(res,  28, su->totltm);
-    sqlite3_bind_int64(res,  29, su->totmtm);
-    sqlite3_bind_int64(res,  30, su->totmtg);
-    sqlite3_bind_int64(res,  31, su->totmtt);
-    sqlite3_bind_int64(res,  32, su->totsize);
-    sqlite3_bind_int64(res,  33, su->minctime);
-    sqlite3_bind_int64(res,  34, su->maxctime);
-    sqlite3_bind_int64(res,  35, su->totctime);
-    sqlite3_bind_int64(res,  36, su->minmtime);
-    sqlite3_bind_int64(res,  37, su->maxmtime);
-    sqlite3_bind_int64(res,  38, su->totmtime);
-    sqlite3_bind_int64(res,  39, su->minatime);
-    sqlite3_bind_int64(res,  40, su->maxatime);
-    sqlite3_bind_int64(res,  41, su->totatime);
-    sqlite3_bind_int64(res,  42, su->minblocks);
-    sqlite3_bind_int64(res,  43, su->maxblocks);
-    sqlite3_bind_int64(res,  44, su->totblocks);
-    sqlite3_bind_int64(res,  45, su->totxattr);
-    sqlite3_bind_int64(res,  46, 0); /* depth */
-    sqlite3_bind_int64(res,  47, su->mincrtime);
-    sqlite3_bind_int64(res,  48, su->maxcrtime);
-    sqlite3_bind_int64(res,  49, su->totcrtime);
-    sqlite3_bind_int64(res,  50, su->minossint1);
-    sqlite3_bind_int64(res,  51, su->maxossint1);
-    sqlite3_bind_int64(res,  52, su->totossint1);
-    sqlite3_bind_int64(res,  53, su->minossint2);
-    sqlite3_bind_int64(res,  54, su->maxossint2);
-    sqlite3_bind_int64(res,  55, su->totossint2);
-    sqlite3_bind_int64(res,  56, su->minossint3);
-    sqlite3_bind_int64(res,  57, su->maxossint3);
-    sqlite3_bind_int64(res,  58, su->totossint3);
-    sqlite3_bind_int64(res,  59, su->minossint4);
-    sqlite3_bind_int64(res,  60, su->maxossint4);
-    sqlite3_bind_int64(res,  61, su->totossint4);
-    sqlite3_bind_int64(res,  62, 0); /* rectype */
-    sqlite3_bind_text(res,   63, zpino, -1, SQLITE_STATIC);
-    sqlite3_bind_int64(res,  64, 1); /* isroot */
-    sqlite3_bind_int64(res,  65, 0); /* canrollup */
-    sqlite3_bind_int64(res,  66, 0); /* isrolledup */
+    sqlite3_bind_int64(res,  3,  (sqlite3_int64) pwork->statuso.st_dev);
+    sqlite3_bind_text(res,   4,  zino,  -1, SQLITE_STATIC);
+    sqlite3_bind_int64(res,  5,  pwork->statuso.st_mode);
+    sqlite3_bind_int64(res,  6,  pwork->statuso.st_nlink);
+    sqlite3_bind_int64(res,  7,  pwork->statuso.st_uid);
+    sqlite3_bind_int64(res,  8,  pwork->statuso.st_gid);
+    sqlite3_bind_int64(res,  9,  pwork->statuso.st_size);
+    sqlite3_bind_int64(res,  10, pwork->statuso.st_blksize);
+    sqlite3_bind_int64(res,  11, pwork->statuso.st_blocks);
+    sqlite3_bind_int64(res,  12, pwork->statuso.st_atime);
+    sqlite3_bind_int64(res,  13, pwork->statuso.st_mtime);
+    sqlite3_bind_int64(res,  14, pwork->statuso.st_ctime);
+    sqlite3_bind_text(res,   15, ed->linkname, -1, SQLITE_STATIC);
+    sqlite3_bind_blob64(res, 16, xattrnames, xattrnames_len, SQLITE_STATIC);
+    sqlite3_bind_int64(res,  17, pwork->crtime);
+    sqlite3_bind_int64(res,  18, su->totfiles);
+    sqlite3_bind_int64(res,  19, su->totlinks);
+    sqlite3_bind_int64(res,  20, su->minuid);
+    sqlite3_bind_int64(res,  21, su->maxuid);
+    sqlite3_bind_int64(res,  22, su->mingid);
+    sqlite3_bind_int64(res,  23, su->maxgid);
+    sqlite3_bind_int64(res,  24, su->minsize);
+    sqlite3_bind_int64(res,  25, su->maxsize);
+    sqlite3_bind_int64(res,  26, su->totzero);
+    sqlite3_bind_int64(res,  27, su->totltk);
+    sqlite3_bind_int64(res,  28, su->totmtk);
+    sqlite3_bind_int64(res,  29, su->totltm);
+    sqlite3_bind_int64(res,  30, su->totmtm);
+    sqlite3_bind_int64(res,  31, su->totmtg);
+    sqlite3_bind_int64(res,  32, su->totmtt);
+    sqlite3_bind_int64(res,  33, su->totsize);
+    sqlite3_bind_int64(res,  34, su->minctime);
+    sqlite3_bind_int64(res,  35, su->maxctime);
+    sqlite3_bind_int64(res,  36, su->totctime);
+    sqlite3_bind_int64(res,  37, su->minmtime);
+    sqlite3_bind_int64(res,  38, su->maxmtime);
+    sqlite3_bind_int64(res,  39, su->totmtime);
+    sqlite3_bind_int64(res,  40, su->minatime);
+    sqlite3_bind_int64(res,  41, su->maxatime);
+    sqlite3_bind_int64(res,  42, su->totatime);
+    sqlite3_bind_int64(res,  43, su->minblocks);
+    sqlite3_bind_int64(res,  44, su->maxblocks);
+    sqlite3_bind_int64(res,  45, su->totblocks);
+    sqlite3_bind_int64(res,  46, su->totxattr);
+    sqlite3_bind_int64(res,  47, 0); /* depth */
+    sqlite3_bind_int64(res,  48, su->mincrtime);
+    sqlite3_bind_int64(res,  49, su->maxcrtime);
+    sqlite3_bind_int64(res,  50, su->totcrtime);
+    sqlite3_bind_int64(res,  51, su->minossint1);
+    sqlite3_bind_int64(res,  52, su->maxossint1);
+    sqlite3_bind_int64(res,  53, su->totossint1);
+    sqlite3_bind_int64(res,  54, su->minossint2);
+    sqlite3_bind_int64(res,  55, su->maxossint2);
+    sqlite3_bind_int64(res,  56, su->totossint2);
+    sqlite3_bind_int64(res,  57, su->minossint3);
+    sqlite3_bind_int64(res,  58, su->maxossint3);
+    sqlite3_bind_int64(res,  59, su->totossint3);
+    sqlite3_bind_int64(res,  60, su->minossint4);
+    sqlite3_bind_int64(res,  61, su->maxossint4);
+    sqlite3_bind_int64(res,  62, su->totossint4);
+    sqlite3_bind_int64(res,  63, 0); /* rectype */
+    sqlite3_bind_text(res,   64, zpino, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(res,  65, 1); /* isroot */
+    sqlite3_bind_int64(res,  66, 0); /* canrollup */
+    sqlite3_bind_int64(res,  67, 0); /* isrolledup */
 
     sqlite3_step(res);
     sqlite3_reset(res);
