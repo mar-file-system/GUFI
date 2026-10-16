@@ -29,7 +29,7 @@ Total Files:         15
 
 Expecting 2 trace files. Found 2.
 Expecting 21 lines. Got 21.
-Expecting 23 columns per row. Got 23.
+Expecting 24 columns per row. Got 24.
 Source Directory:
     prefix
     prefix/.hidden

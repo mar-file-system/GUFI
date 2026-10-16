@@ -91,6 +91,7 @@ OF SUCH DAMAGE.
  * --------------------------------------------------------------------
  * name        char *         4 hex character big endian length + name of entry from the starting path
  * type        char           d[irectory], f[ile], or [sym]l[ink]
+ * dev         dev_t          Stored into struct stat
  * inode       ino_t          Stored into struct stat
  * mode        mode_t         Stored into struct stat
  * nlink       nlink_t        Stored into struct stat
@@ -140,6 +141,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
     count += fwrite(&delim, 1, 1, file);
     count += fwrite(&ed->type, 1, 1, file);
     count += fwrite(&delim, 1, 1, file);
+    count += fprintf(file, "%" STAT_dev    "%c", work->statuso.st_dev,     delim);
     count += fprintf(file, "%" STAT_ino    "%c", work->statuso.st_ino,     delim);
     count += fprintf(file, "%" STAT_mode   "%c", work->statuso.st_mode,    delim);
     count += fprintf(file, "%" STAT_nlink  "%c", work->statuso.st_nlink,   delim);
@@ -194,6 +196,7 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
     write_with_resize(buf, size, offset, "%s%c",               work->name + prefix_len,  delim);
 
     write_with_resize(buf, size, offset, "%c%c",               ed->type,                 delim);
+    write_with_resize(buf, size, offset, "%" STAT_dev    "%c", work->statuso.st_dev,     delim);
     write_with_resize(buf, size, offset, "%" STAT_ino    "%c", work->statuso.st_ino,     delim);
     write_with_resize(buf, size, offset, "%" STAT_mode   "%c", work->statuso.st_mode,    delim);
     write_with_resize(buf, size, offset, "%" STAT_nlink  "%c", work->statuso.st_nlink,   delim);
@@ -325,6 +328,12 @@ int linetowork(char *line, const size_t len, const char delim,
 
     if (ed->type == 'e') {
         return 0;
+    }
+
+    /* Traces written before dev was added do not carry it; --old-trace-format
+       says so, and st_dev is left 0. */
+    if (!old_format) {
+        p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_dev, &new_work->statuso.st_dev);
     }
 
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%" STAT_ino,    &new_work->statuso.st_ino);

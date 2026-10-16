@@ -96,45 +96,52 @@ extern "C" {
 /* contains all file and link metadata for the current directory */
 /* prefer pentries over entries */
 #define ENTRIES           "entries"
-#define ENTRIES_SCHEMA(name, extra_cols)                                \
-    "CREATE TABLE " name "(" extra_cols                                 \
-    "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, "       \
-    "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "   \
-    "atime INT64, mtime INT64, ctime INT64, "                           \
-    "linkname TEXT, xattr_names BLOB, crtime INT64, "                   \
-    "ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, "      \
-    "osstext1 TEXT, osstext2 TEXT"                                      \
+#define ENTRIES_SCHEMA(name, extra_cols)                                     \
+    "CREATE TABLE " name "(" extra_cols                                      \
+    /* st_ino identifies an entry only within one filesystem, so an index    \
+       that spans more than one needs st_dev alongside it. dev precedes      \
+       inode to match the order of struct stat.                              \
+                                                                             \
+       PENTRIES_ROLLUP_SCHEMA must keep dev in the same ordinal position:    \
+       the pentries view UNIONs the two, and SQLite requires equal arity     \
+       and matching order. gufi_vt declares its own copy of this list. */    \
+    "name TEXT, type TEXT, dev INT64, inode TEXT, mode INT64, nlink INT64, " \
+    "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "        \
+    "atime INT64, mtime INT64, ctime INT64, "                                \
+    "linkname TEXT, xattr_names BLOB, crtime INT64, "                        \
+    "ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, "           \
+    "osstext1 TEXT, osstext2 TEXT"                                           \
     ");"
 extern const char ENTRIES_CREATE[];
 extern const char ENTRIES_INSERT[];
 
 /* directory metadata + aggregate data */
 #define SUMMARY           "summary"
-#define SUMMARY_SCHEMA(name, extra_cols)                                \
-    "CREATE TABLE " name "(" extra_cols                                 \
-    "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, "       \
-    "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "   \
-    "atime INT64, mtime INT64, ctime INT64, "                           \
-    "linkname TEXT, xattr_names BLOB, crtime INT64, "                   \
-    "totfiles INT64, totlinks INT64, "                                  \
-    "minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, "          \
-    "minsize INT64, maxsize INT64, totzero INT64, "                     \
-    "totltk INT64, totmtk INT64, "                                      \
-    "totltm INT64, totmtm INT64, "                                      \
-    "totmtg INT64, totmtt INT64, "                                      \
-    "totsize INT64, "                                                   \
-    "minctime INT64, maxctime INT64, totctime INT64, "                  \
-    "minmtime INT64, maxmtime INT64, totmtime INT64, "                  \
-    "minatime INT64, maxatime INT64, totatime INT64, "                  \
-    "minblocks INT64, maxblocks INT64, totblocks INT16, "               \
-    "totxattr INT64, depth INT64, "                                     \
-    "mincrtime INT64, maxcrtime INT64, totcrtime INT64, "               \
-    "minossint1 INT64, maxossint1 INT64, totossint1 INT64, "            \
-    "minossint2 INT64, maxossint2 INT64, totossint2 INT64, "            \
-    "minossint3 INT64, maxossint3 INT64, totossint3 INT64, "            \
-    "minossint4 INT64, maxossint4 INT64, totossint4 INT64, "            \
-    "rectype INT64, pinode TEXT, isroot INT64, "                        \
-    "canrollup INT64, isrolledup INT64"                                 \
+#define SUMMARY_SCHEMA(name, extra_cols)                                     \
+    "CREATE TABLE " name "(" extra_cols                                      \
+    "name TEXT, type TEXT, dev INT64, inode TEXT, mode INT64, nlink INT64, " \
+    "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "        \
+    "atime INT64, mtime INT64, ctime INT64, "                                \
+    "linkname TEXT, xattr_names BLOB, crtime INT64, "                        \
+    "totfiles INT64, totlinks INT64, "                                       \
+    "minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, "               \
+    "minsize INT64, maxsize INT64, totzero INT64, "                          \
+    "totltk INT64, totmtk INT64, "                                           \
+    "totltm INT64, totmtm INT64, "                                           \
+    "totmtg INT64, totmtt INT64, "                                           \
+    "totsize INT64, "                                                        \
+    "minctime INT64, maxctime INT64, totctime INT64, "                       \
+    "minmtime INT64, maxmtime INT64, totmtime INT64, "                       \
+    "minatime INT64, maxatime INT64, totatime INT64, "                       \
+    "minblocks INT64, maxblocks INT64, totblocks INT16, "                    \
+    "totxattr INT64, depth INT64, "                                          \
+    "mincrtime INT64, maxcrtime INT64, totcrtime INT64, "                    \
+    "minossint1 INT64, maxossint1 INT64, totossint1 INT64, "                 \
+    "minossint2 INT64, maxossint2 INT64, totossint2 INT64, "                 \
+    "minossint3 INT64, maxossint3 INT64, totossint3 INT64, "                 \
+    "minossint4 INT64, maxossint4 INT64, totossint4 INT64, "                 \
+    "rectype INT64, pinode TEXT, isroot INT64, "                             \
+    "canrollup INT64, isrolledup INT64"                                      \
     ");"
 extern const char SUMMARY_CREATE[];
 
@@ -144,15 +151,16 @@ extern const char VRSUMMARY_CREATE[];
 
 /* pentries pulled from children */
 #define PENTRIES_ROLLUP   "pentries_rollup"
-#define PENTRIES_ROLLUP_SCHEMA(name)                                     \
-    "CREATE TABLE " name "("                                             \
-    "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, "        \
-    "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "    \
-    "atime INT64, mtime INT64, ctime INT64, "                            \
-    "linkname TEXT, xattr_names BLOB, crtime INT64, "                    \
-    "ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, "       \
-    "osstext1 TEXT, osstext2 TEXT, "                                     \
-    "pinode TEXT, ppinode TEXT"                                          \
+#define PENTRIES_ROLLUP_SCHEMA(name)                                         \
+    "CREATE TABLE " name "("                                                 \
+    /* dev/inode order must match ENTRIES_SCHEMA -- see the note there */    \
+    "name TEXT, type TEXT, dev INT64, inode TEXT, mode INT64, nlink INT64, " \
+    "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "        \
+    "atime INT64, mtime INT64, ctime INT64, "                                \
+    "linkname TEXT, xattr_names BLOB, crtime INT64, "                        \
+    "ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, "           \
+    "osstext1 TEXT, osstext2 TEXT, "                                         \
+    "pinode TEXT, ppinode TEXT"                                              \
     ");"
 extern const char PENTRIES_ROLLUP_CREATE[];
 extern const char PENTRIES_ROLLUP_INSERT[];

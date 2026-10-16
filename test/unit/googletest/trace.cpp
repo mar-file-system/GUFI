@@ -106,6 +106,7 @@ static struct work *get_work(struct entry_data *ed) {
     struct work *new_work        = new_work_with_name(nullptr, 0, "name", 4);
     ed->type                     = 't';
     snprintf(ed->linkname, sizeof(ed->linkname), "link");
+    new_work->statuso.st_dev     = 0xba98;
     new_work->statuso.st_ino     = 0xfedc;
     new_work->statuso.st_mode    = 0777;
     new_work->statuso.st_nlink   = 2048;
@@ -135,6 +136,7 @@ static int new_format(char *line, const std::size_t size, struct work *work, str
                                "%" PATH_PREFIX_FORMAT
                                "%s%c"
                                "%c%c"
+                               "%" STAT_dev "%c"
                                "%" STAT_ino "%c"
                                "%" STAT_mode "%c"
                                "%" STAT_nlink "%c"
@@ -151,6 +153,7 @@ static int new_format(char *line, const std::size_t size, struct work *work, str
                                work->name_len,
                                work->name,               delim,
                                ed->type,                 delim,
+                               work->statuso.st_dev,     delim,
                                work->statuso.st_ino,     delim,
                                work->statuso.st_mode,    delim,
                                work->statuso.st_nlink,   delim,
@@ -309,6 +312,9 @@ TEST(trace, linetowork) {
 
     COMPARE(src, &src_ed, work, &ed);
 
+    /* the current format carries dev */
+    EXPECT_EQ(work->statuso.st_dev, src->statuso.st_dev);
+
     EXPECT_STREQ(ed.xattrs.pairs[0].name,  EXPECTED_XATTRS.pairs[0].name);
     EXPECT_STREQ(ed.xattrs.pairs[0].value, EXPECTED_XATTRS.pairs[0].value);
     EXPECT_STREQ(ed.xattrs.pairs[1].name,  EXPECTED_XATTRS.pairs[1].name);
@@ -418,6 +424,10 @@ TEST(old_trace, linetowork) {
     EXPECT_EQ(linetowork(line, len, delim, &work, &ed, 1), 0);
 
     COMPARE(src, &src_ed, work, &ed);
+
+    /* An old-format trace carries no dev, so it reads back as 0 rather
+       than the source's value -- that is what --old-trace-format means. */
+    EXPECT_EQ(work->statuso.st_dev, (dev_t) 0);
 
     EXPECT_STREQ(ed.xattrs.pairs[0].name,  EXPECTED_XATTRS.pairs[0].name);
     EXPECT_STREQ(ed.xattrs.pairs[0].value, EXPECTED_XATTRS.pairs[0].value);
