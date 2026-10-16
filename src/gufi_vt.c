@@ -768,7 +768,7 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
 #define VRSUMMARY_SCHEMA(name, extra_cols)                                        \
     "CREATE TABLE " name "(" extra_cols                                           \
     "dname TEXT, sname TEXT, sroll INT64, srollsubdirs INT64, "                   \
-    "name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, "                 \
+    "name TEXT, type TEXT, dev INT64, inode TEXT, mode INT64, nlink INT64, "      \
     "uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, "             \
     "atime INT64, mtime INT64, ctime INT64, "                                     \
     "linkname TEXT, xattr_names BLOB, "                                           \
