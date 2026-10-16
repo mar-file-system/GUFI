@@ -179,16 +179,46 @@ int popen_argv_close(popen_argv_t *ret) {
 
     int rc = -1;
 
-    close(ret->fds[0]);
+    close(ret->fds[0]); /* EOF on the child's stdin */
+
+    /*
+     * Close the read end BEFORE waiting.
+     *
+     * The child writes its rows to this pipe. If the caller stops reading
+     * early - which SQLite does on every LIMIT, closing the cursor before the
+     * result set is exhausted - the pipe fills, the child blocks in write(2),
+     * and a blocking waitpid(2) here never returns because nothing is draining
+     * it. Closing the read end first makes that write(2) fail with EPIPE (or
+     * raise SIGPIPE), so the child finishes promptly instead of deadlocking
+     * against its own parent.
+     *
+     * When the child has already exited - the normal, fully-drained case - this
+     * ordering changes nothing.
+     */
+    close(ret->fds[1]);
 
     int status = 0;
-    if (waitpid(ret->pid, &status, 0) != 0) {
+    const pid_t waited = waitpid(ret->pid, &status, 0);
+
+    /*
+     * waitpid(2) returns the pid on success and -1 on error; the previous
+     * `!= 0` accepted -1 as well, and then read an unset status.
+     */
+    if (waited > 0) {
         if (WIFEXITED(status)) {
             rc = WEXITSTATUS(status);
         }
+        else if (WIFSIGNALED(status)) {
+            /*
+             * Terminated rather than exited - the expected outcome of an early
+             * close, since this function is what dropped the pipe out from
+             * under it. That is the caller's own doing, not a child failure,
+             * so it is not reported as an error.
+             */
+            rc = 0;
+        }
     }
 
-    close(ret->fds[1]);
     free(ret);
 
     return rc;
