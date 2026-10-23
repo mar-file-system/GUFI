@@ -170,7 +170,7 @@ jobs:
   PKG:
     strategy:
       matrix:
-        os: [ "macos-15", "macos-26", "xcode-27" ]
+        os: [ "macos-15", "macos-26", "xcode-27", "macos-15-intel", "macos-26-intel" ]
 
     runs-on: ${{ matrix.os }}
 
@@ -200,7 +200,7 @@ jobs:
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
 
-    - name: Build and Test Server PKG
+    - name: Build and Test Primary PKG
       run:  contrib/CI/pkg.sh
       working-directory: ${{ github.workspace }}/build
 
