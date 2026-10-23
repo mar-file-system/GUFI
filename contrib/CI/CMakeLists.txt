@@ -82,3 +82,5 @@ elseif (UNIX)
   configure_file(rpm_pre_uninstall.sh.in rpm_pre_uninstall.sh @ONLY)
   configure_file(rpms.sh.in rpms.sh @ONLY)
 endif()
+
+configure_file(licenses.sh.in licenses.sh @ONLY)

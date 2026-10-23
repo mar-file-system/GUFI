@@ -67,6 +67,12 @@ set -e
 # environment such as the GitHub Actions runner. This
 # script will overwrite existing configuration files.
 
+# install wget for license downloader
+brew install -y wget
+# shellcheck disable=SC2155
+export PATH="$(brew --prefix wget)/bin:${PATH}"
+"@CMAKE_CURRENT_BINARY_DIR@/licenses.sh"
+
 # need SQLite3 CLI
 export PATH="@DEP_INSTALL_PREFIX@/sqlite3/bin:${PATH}"
 
@@ -95,8 +101,13 @@ sudo chown "${USER}" "${pkg}"
 mv "${pkg}" "${remote}"
 
 # list the files
+echo "Contents of ${local}"
 pkgutil --payload-files "${local}" | sort
+echo
+
+echo "Contents of ${remote}"
 pkgutil --payload-files "${remote}" | sort
+echo
 
 # install the primary PKG
 sudo installer -verbose -pkg "${local}" -target /

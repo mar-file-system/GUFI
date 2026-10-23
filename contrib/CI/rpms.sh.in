@@ -63,6 +63,10 @@
 
 set -e
 
+# install wget for license downloader
+dnf install -y wget
+"@CMAKE_CURRENT_BINARY_DIR@/licenses.sh"
+
 # install rpmbuild
 dnf install -y rpm-build
 

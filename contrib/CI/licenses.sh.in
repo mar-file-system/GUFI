@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+# download licenses of dependencies
+
+set -e
+
+# put licenses here
+LICENSES="@CMAKE_BINARY_DIR@/licenses"
+mkdir -p "${LICENSES}"
+
+# sqlite3-pcre is public domain
+# download pcre2 license
+pcre2="${LICENSES}/pcre2-LICENSE.md"
+if [[ ! -f "${pcre2}" ]]; then
+    wget https://raw.githubusercontent.com/PCRE2Project/pcre2/refs/heads/main/LICENCE.md -O "${pcre2}"
+fi
+
+# sqlite-vec licenses
+vec_apache="${LICENSES}/sqlite-vec-LICENSE-APACHE"
+if [[ ! -f "${vec_apache}" ]]; then
+    wget https://raw.githubusercontent.com/asg017/sqlite-vec/refs/heads/main/LICENSE-APACHE -O "${vec_apache}"
+fi
+
+vec_mit="${LICENSES}/sqlite-vec-LICENSE-MIT"
+if [[ ! -f "${vec_mit}" ]]; then
+    wget https://raw.githubusercontent.com/asg017/sqlite-vec/refs/heads/main/LICENSE-MIT -O "${vec_mit}"
+fi
+
+# sqlite-lembed licenses
+lembed="${LICENSES}/sqlite-lembed"
+if [[ ! -f "${lembed}" ]]; then
+    (
+        echo "sqlite-lembed does not have a license file in the repository."
+        echo "However, the sqlite-dist.toml file (https://github.com/asg017/sqlite-lembed/blob/main/sqlite-dist.toml) lists the licenses as MIT OR Apache."
+        echo "See the license for sqlite-vec, as they are the same licenses from the same author."
+    ) > "${lembed}"
+fi
+
+llama_cpp="${LICENSES}/llama.cpp-LICENSE"
+if [[ ! -f "${llama_cpp}" ]]; then
+    wget https://raw.githubusercontent.com/ggml-org/llama.cpp/refs/heads/master/LICENSE -O "${llama_cpp}"
+fi
+
+openmp="${LICENSES}/openmp-LICENSE.TXT"
+if [[ ! -f "${openmp}" ]]; then
+    wget https://raw.githubusercontent.com/llvm/llvm-project/refs/heads/main/openmp/LICENSE.TXT -O "${openmp}"
+fi
+
+jemalloc="${LICENSES}/jemalloc-COPYING"
+if [[ ! -f "${jemalloc}" ]]; then
+    wget https://raw.githubusercontent.com/jemalloc/jemalloc/refs/heads/dev/COPYING -O "${jemalloc}"
+fi
