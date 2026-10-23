@@ -66,6 +66,7 @@
 set -e
 
 PATCH_SQLITE3_OPEN="$1"
+SYSTEM="$2"
 
 # Assume all paths exist
 
@@ -102,4 +103,8 @@ if [[ ! -d "${sqlite3_prefix}" ]]; then
     fi
     make -j "${THREADS}"
     make install
+
+    if [[ "${SYSTEM}" == "MAC" ]]; then
+        install_name_tool -id "@rpath/libsqlite3.dylib" "${sqlite3_prefix}/lib/libsqlite3.dylib"
+    fi
 fi

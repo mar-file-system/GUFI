@@ -83,6 +83,7 @@ apk add \
     linux-headers \
     openmp-dev \
     pcre2-dev \
+    pcre2-static \
     zlib-dev
 
 # install required packages
