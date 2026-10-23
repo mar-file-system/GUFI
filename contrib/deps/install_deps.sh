@@ -140,16 +140,23 @@ then
     exit 1
 fi
 
-# dependency download path
-mkdir -p "$1"
-DOWNLOAD_DIR=$(realpath "$1")
+# where GUFI is being built
+CMAKE_BINARY_DIR="$1"
 
+# dependency download path
 mkdir -p "$2"
-BUILD_DIR=$(realpath "$2")
+DOWNLOAD_DIR=$(realpath "$2")
+
+mkdir -p "$3"
+BUILD_DIR=$(realpath "$3")
 
 # dependency install path
-mkdir -p "$3"
-INSTALL_DIR=$(realpath "$3")
+mkdir -p "$4"
+INSTALL_DIR=$(realpath "$4")
+
+# place to put dependency license files for packages
+LICENSES="${CMAKE_BINARY_DIR}/licenses"
+mkdir -p "${LICENSES}"
 
 export SCRIPT_PATH
 export DOWNLOAD_DIR
@@ -157,6 +164,7 @@ export BUILD_DIR
 export INSTALL_DIR
 export CMAKE
 export THREADS
+export LICENSES
 
 echo "Installing SQLite3"
 source "${SCRIPT_PATH}/sqlite3.sh" "${PATCH_SQLITE3_OPEN}" "${SYSTEM}"

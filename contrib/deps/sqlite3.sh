@@ -107,4 +107,6 @@ if [[ ! -d "${sqlite3_prefix}" ]]; then
     if [[ "${SYSTEM}" == "MAC" ]]; then
         install_name_tool -id "@rpath/libsqlite3.dylib" "${sqlite3_prefix}/lib/libsqlite3.dylib"
     fi
+
+    # SQLite3 is public domain
 fi

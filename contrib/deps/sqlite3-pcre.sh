@@ -92,4 +92,11 @@ if [[ ! -d "${pcre_prefix}" ]]; then
     fi
     make -j "${THREADS}"
     make install
+
+    # sqlite3-pcre is public domain
+    # download pcre2 license
+    pcre2_license="${LICENSES}/pcre2-LICENSE.md"
+    if [[ ! -f "${pcre2_license}" ]]; then
+        wget https://raw.githubusercontent.com/PCRE2Project/pcre2/refs/heads/main/LICENCE.md -O "${pcre2_license}"
+    fi
 fi

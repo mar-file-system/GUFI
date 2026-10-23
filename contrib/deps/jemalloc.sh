@@ -89,4 +89,7 @@ if [[ ! -d "${jemalloc_prefix}" ]]; then
     fi
     make -j "${THREADS}"
     make -i install
+
+    # copy license to build directory
+    cp -f "${jemalloc_build}/COPYING" "${LICENSES}/jemalloc-COPYING"
 fi

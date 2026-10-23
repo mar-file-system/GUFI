@@ -247,6 +247,9 @@ set(REMOTE_BIN "${BIN}" CACHE STRING "Directory to install remote executables at
 set(REMOTE_LIB "${LIB}" CACHE STRING "Directory to install remote libraries at")
 set(REMOTE_MAN "${MAN}" CACHE STRING "Directory to install remote man pages at")
 
+# directory to place dependency licenses into
+set(LICENSES "share/licenses") # not modifiable by user
+
 # dynamically loaded module extension
 if (DARWIN)
   set(EXT "dylib")
@@ -414,7 +417,7 @@ if (DEP_AI)
     ${DEP_OPTIONS} --OMP "-DOpenMP_ROOT=\"${OpenMP_ROOT}\""
   )
 endif()
-add_custom_target(install_dependencies ALL COMMAND "${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh" ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
+add_custom_target(install_dependencies ALL COMMAND "${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh" ${DEP_OPTIONS} "${CMAKE_BINARY_DIR}" "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
 # copy dependencies into packages
 if (DARWIN)
@@ -449,6 +452,19 @@ install(FILES
   EXCLUDE_FROM_ALL # do not copy if running 'make install'
 )
 
+install(FILES
+  "${CMAKE_BINARY_DIR}/licenses/pcre2-LICENSE.md"
+  DESTINATION "${LICENSES}"
+  COMPONENT Local
+  EXCLUDE_FROM_ALL # do not copy if running 'make install'
+)
+install(FILES
+  "${CMAKE_BINARY_DIR}/licenses/pcre2-LICENSE.md"
+  DESTINATION "${LICENSES}"
+  COMPONENT Remote
+  EXCLUDE_FROM_ALL # do not copy if running 'make install'
+)
+
 if (DEP_AI)
   # copy dependencies into packages
   install(FILES
@@ -458,6 +474,16 @@ if (DEP_AI)
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}"
     ${OpenMP_omp_LIBRARY}
     DESTINATION "${LIB}"
+    COMPONENT Local
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+  install(FILES
+    "${CMAKE_BINARY_DIR}/licenses/sqlite-vec-LICENSE-APACHE"
+    "${CMAKE_BINARY_DIR}/licenses/sqlite-vec-LICENSE-MIT"
+    "${CMAKE_BINARY_DIR}/licenses/sqlite-lembed"
+    "${CMAKE_BINARY_DIR}/licenses/llama.cpp-LICENSE"
+    "${CMAKE_BINARY_DIR}/licenses/openmp-LICENSE.TXT"
+    DESTINATION "${LICENSES}"
     COMPONENT Local
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
   )
@@ -476,6 +502,16 @@ if (DEP_AI)
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}"
     ${OpenMP_omp_LIBRARY}
     DESTINATION "${REMOTE_LIB}"
+    COMPONENT Remote
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+  install(FILES
+    "${CMAKE_BINARY_DIR}/licenses/sqlite-vec-LICENSE-APACHE"
+    "${CMAKE_BINARY_DIR}/licenses/sqlite-vec-LICENSE-MIT"
+    "${CMAKE_BINARY_DIR}/licenses/sqlite-lembed"
+    "${CMAKE_BINARY_DIR}/licenses/llama.cpp-LICENSE"
+    "${CMAKE_BINARY_DIR}/licenses/openmp-LICENSE.TXT"
+    DESTINATION "${LICENSES}"
     COMPONENT Remote
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
   )
@@ -599,6 +635,18 @@ if (DEP_USE_JEMALLOC)
     )
   endif()
 
+  install(FILES
+    "${CMAKE_BINARY_DIR}/licenses/jemalloc-COPYING"
+    DESTINATION "${LICENSES}"
+    COMPONENT Local
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
+  install(FILES
+    "${CMAKE_BINARY_DIR}/licenses/jemalloc-COPYING"
+    DESTINATION "${LICENSES}"
+    COMPONENT Remote
+    EXCLUDE_FROM_ALL # do not copy if running 'make install'
+  )
   install(DIRECTORY
     "${DEP_INSTALL_PREFIX}/jemalloc/lib/" # keep trailing slash
     DESTINATION "${LIB}"

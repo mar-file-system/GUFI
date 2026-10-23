@@ -105,4 +105,8 @@ if [[ ! -f "${vec_prefix}/lib/libsqlite_vec0.a" ]]; then
             ;;
     esac
     ln -sfv "${vec_prefix}/lib/vec0.${EXT}" "${vec_prefix}/lib/libvec0.${EXT}"
+
+    # copy licenses to build directory
+    cp -f "${vec_build}/LICENSE-APACHE" "${LICENSES}/sqlite-vec-LICENSE-APACHE"
+    cp -f "${vec_build}/LICENSE-MIT"    "${LICENSES}/sqlite-vec-LICENSE-MIT"
 fi

@@ -89,4 +89,6 @@ if [[ ! -d "${googletest_prefix}" ]]; then
     fi
     make -j "${THREADS}"
     make install
+
+    # not bundled into RPMs/PKGs, so not copying license
 fi

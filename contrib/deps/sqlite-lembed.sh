@@ -133,6 +133,15 @@ if [[ ! -f "${lembed_prefix}/lib/libsqlite_lembed0.a" ]]; then
     make -j "${THREADS}"
     make -j "${THREADS}" install
 
+    # copy license to build directory
+    cp -f "${llama_build}/LICENSE" "${LICENSES}/llama.cpp-LICENSE"
+
+    # download openmp license
+    openmp_license="${LICENSES}/openmp-LICENSE.TXT"
+    if [[ ! -f "${openmp_license}" ]]; then
+        wget https://raw.githubusercontent.com/llvm/llvm-project/refs/heads/main/openmp/LICENSE.TXT -O "${openmp_license}"
+    fi
+
     cd "${lembed_build}"
     touch .build
     sed -i "s%@DEP_INSTALL_PREFIX@%${INSTALL_DIR}%g;" Makefile
@@ -153,4 +162,11 @@ if [[ ! -f "${lembed_prefix}/lib/libsqlite_lembed0.a" ]]; then
             ;;
     esac
     ln -sfv "${lembed_prefix}/lib/lembed0.${EXT}" "${lembed_prefix}/lib/liblembed0.${EXT}"
+
+    # license notice
+    (
+        echo "sqlite-lembed does not have a license file in the repository."
+        echo "However, the sqlite-dist.toml file (https://github.com/asg017/sqlite-lembed/blob/main/sqlite-dist.toml) lists the licenses as MIT OR Apache."
+        echo "See the license for sqlite-vec, as they are the same licenses from the same author."
+    ) > "${LICENSES}/sqlite-lembed"
 fi
