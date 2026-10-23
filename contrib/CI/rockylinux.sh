@@ -79,6 +79,7 @@ dnf -y --enablerepo=devel install \
     fuse-devel \
     libattr-devel \
     pcre2-devel \
+    pcre2-static \
     sqlite-devel \
     zlib-devel
 

@@ -348,7 +348,12 @@ endif()
 # Need pthread
 find_package(Threads REQUIRED)
 
-pkg_search_module(PCRE2 REQUIRED libpcre2-8)
+pkg_search_module(PCRE2 STATIC REQUIRED libpcre2-8)
+if (CYGWIN)
+  set(PCRE2_LIB ${PCRE2_LDFLAGS})
+else()
+  set(PCRE2_LIB "${PCRE2_LIBRARY_DIRS}/libpcre2-8.a")
+endif()
 add_definitions(-DPCRE2_CODE_UNIT_WIDTH=8) # needed by external_copy.h
 set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, pcre2")
 
@@ -451,6 +456,7 @@ if (DEP_AI)
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}"
+    ${OpenMP_omp_LIBRARY}
     DESTINATION "${LIB}"
     COMPONENT Local
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
@@ -468,6 +474,7 @@ if (DEP_AI)
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}"
+    ${OpenMP_omp_LIBRARY}
     DESTINATION "${REMOTE_LIB}"
     COMPONENT Remote
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
@@ -572,7 +579,7 @@ set(COMMON_LIBRARIES
   GUFI
   "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a"
   "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a"
-  ${PCRE2_LDFLAGS}
+  ${PCRE2_LIB}
 )
 
 if (ZLIB_FOUND)
@@ -623,8 +630,6 @@ set(QPTPOOL_STACK_SIZE 0 CACHE STRING "QueuePerThreadPool Stack Size")
 
 option(ALLOW_DB_WRITES "Whether or not to allow gufi_query to write to databases" On)
 
-include(CheckSymbolExists)
-
 # use statx if it is available
 include(CheckSymbolExists)
 set(CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
@@ -667,7 +672,7 @@ function(add_ai target vec_basename lembed_basename)
       -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml OpenMP::OpenMP_C
     )
 
-    if (DARWIN OR CYGWIN)
+    if (CYGWIN)
       target_link_libraries("${target}"
         -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
       )

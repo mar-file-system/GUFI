@@ -78,6 +78,7 @@ dnf -y install \
 dnf -y install \
     libattr-devel \
     pcre2-devel \
+    pcre2-static \
     zlib-devel
 
 # install required packages
