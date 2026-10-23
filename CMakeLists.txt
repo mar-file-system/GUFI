@@ -623,8 +623,6 @@ set(QPTPOOL_STACK_SIZE 0 CACHE STRING "QueuePerThreadPool Stack Size")
 
 option(ALLOW_DB_WRITES "Whether or not to allow gufi_query to write to databases" On)
 
-include(CheckSymbolExists)
-
 # use statx if it is available
 include(CheckSymbolExists)
 set(CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")

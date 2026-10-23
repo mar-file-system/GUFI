@@ -159,7 +159,7 @@ export CMAKE
 export THREADS
 
 echo "Installing SQLite3"
-source "${SCRIPT_PATH}/sqlite3.sh" "${PATCH_SQLITE3_OPEN}"
+source "${SCRIPT_PATH}/sqlite3.sh" "${PATCH_SQLITE3_OPEN}" "${SYSTEM}"
 
 echo "Installing sqlite3-pcre"
 source "${SCRIPT_PATH}/sqlite3-pcre.sh"
