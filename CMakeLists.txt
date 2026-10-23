@@ -665,7 +665,7 @@ function(add_ai target vec_basename lembed_basename)
       -L"${DEP_INSTALL_PREFIX}/llama.cpp/lib" llama ggml-cpu ggml-base ggml OpenMP::OpenMP_C
     )
 
-    if (DARWIN OR CYGWIN)
+    if (CYGWIN)
       target_link_libraries("${target}"
         -L"${DEP_INSTALL_PREFIX}/sqlite3/lib" sqlite3 # only needed to make sure definitions exist - not actually linked?
       )
