@@ -138,6 +138,7 @@ int PoolArgs_init(struct PoolArgs *pa) {
     }
 
     pa->ctx = QPTPool_init(pa->in.maxthreads, pa);
+    QPTPool_set_stop_on_error(pa->ctx);
     if (QPTPool_start(pa->ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         return 1;
@@ -159,8 +160,9 @@ int PoolArgs_init(struct PoolArgs *pa) {
     return 0;
 }
 
-void PoolArgs_fini(struct PoolArgs *pa) {
+int PoolArgs_fini(struct PoolArgs *pa) {
     QPTPool_stop(pa->ctx);
+    const int rc = QPTPool_stopped_on_error(pa->ctx);
     QPTPool_destroy(pa->ctx);
     pthread_cond_destroy(&pa->cond);
     pthread_mutex_destroy(&pa->mutex);
@@ -176,4 +178,5 @@ void PoolArgs_fini(struct PoolArgs *pa) {
     close_template_db(&pa->xattr);
     close_template_db(&pa->db);
     input_fini(&pa->in);
+    return rc;
 }

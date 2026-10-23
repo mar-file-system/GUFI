@@ -163,7 +163,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
-        rc = 1;
+        rc = (errno != ENOENT); /* if the directory no longer exists, not an error */
         goto cleanup;
     }
 
