@@ -223,7 +223,7 @@ static int compare_and_update(struct PoolArgs *pa,
     }
 
     pthread_mutex_lock(&mutex);
-    while (counter) {
+    while (counter && !QPTPool_errored(pa->ctx)) {
         pthread_cond_wait(&cond, &mutex);
     }
     pthread_mutex_unlock(&mutex);
@@ -549,7 +549,7 @@ int main(int argc, char *argv[]) {
     cleanup_parking_lot(pa.parking_lot.data, created_parking_lot);
 
   cleanup:
-    PoolArgs_fini(&pa);
+    rc |= PoolArgs_fini(&pa);
 
     clock_gettime(CLOCK_MONOTONIC, &rt.end);
     fprintf(stderr, "Overall runtime:                      %.2Lfs\n", sec(nsec(&rt)));
