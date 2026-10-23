@@ -266,7 +266,7 @@ target_link_libraries(gufi_vt
   # have a package) in order for gufi_vt to be usable if using rpm
   # installed files
   "${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.${EXT}"
-  pcre2-8
+  ${PCRE2_LDFLAGS}
 )
 
 set_property(TARGET gufi_vt APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3/lib")
