@@ -177,6 +177,9 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      MACOSX_DEPLOYMENT_TARGET: 14.0
+
     steps:
     - uses: actions/checkout@main
       with:
