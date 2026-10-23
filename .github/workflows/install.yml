@@ -207,8 +207,14 @@ jobs:
       run:  contrib/CI/pkg.sh
       working-directory: ${{ github.workspace }}/build
 
-    - name: Upload PKGs
+    - name: Upload ARM PKGs
       uses: softprops/action-gh-release@master
       if:   startsWith(github.ref, 'refs/tags/') && (matrix.os == 'xcode-27')
+      with:
+        files: ${{ github.workspace }}/build/*.pkg
+
+    - name: Upload Intel PKGs
+      uses: softprops/action-gh-release@master
+      if:   startsWith(github.ref, 'refs/tags/') && (matrix.os == 'macos-26-intel')
       with:
         files: ${{ github.workspace }}/build/*.pkg
