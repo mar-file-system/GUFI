@@ -250,6 +250,9 @@ uint64_t QPTPool_wait_mem_lte(QPTPool_ctx_t *pool, const uint64_t count);
 /* Wait for all in-memory and swapped work to be processed and do not clean up threads */
 void QPTPool_wait(QPTPool_ctx_t *ctx);
 
+/* call while QPTPool is running to see if stop_on_error == 1 and error has been set by a thread */
+int QPTPool_errored(QPTPool_ctx_t *ctx);
+
 /*
  * Join threads after all threads have stopped
  *

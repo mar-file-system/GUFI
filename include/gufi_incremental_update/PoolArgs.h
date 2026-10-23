@@ -127,6 +127,6 @@ struct PoolArgs {
 };
 
 int PoolArgs_init(struct PoolArgs *pa);
-void PoolArgs_fini(struct PoolArgs *pa);
+int PoolArgs_fini(struct PoolArgs *pa);
 
 #endif
