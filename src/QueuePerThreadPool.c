@@ -1198,6 +1198,18 @@ void QPTPool_wait(QPTPool_ctx_t *ctx) {
     #endif
 }
 
+int QPTPool_errored(QPTPool_ctx_t *ctx) {
+    if (!ctx || !ctx->pool->stop_on_error) {
+        return 0;
+    }
+
+    pthread_mutex_lock(&ctx->pool->mutex);
+    const int rc = ctx->pool->errored;
+    pthread_mutex_unlock(&ctx->pool->mutex);
+
+    return rc;
+}
+
 static void QPTPool_stop_threads(QPTPool_ctx_t *ctx, const size_t started) {
     QPTPool_t *pool = ctx->pool;
 
