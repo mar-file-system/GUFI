@@ -428,6 +428,7 @@ if (DARWIN)
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
     PATTERN "libsqlite3.*"
     PATTERN "libsqlite3.*a" EXCLUDE
+    PATTERN "pkgconfig" EXCLUDE
   )
   install(DIRECTORY
     "${DEP_INSTALL_PREFIX}/sqlite3/lib/" # keep trailing slash
@@ -436,6 +437,7 @@ if (DARWIN)
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
     PATTERN "libsqlite3.*"
     PATTERN "libsqlite3.*a" EXCLUDE
+    PATTERN "pkgconfig" EXCLUDE
   )
 endif()
 
@@ -690,9 +692,7 @@ else()
   message(STATUS "statx(2) not found. Falling back to lstat(2).")
 endif()
 
-if (DARWIN)
-  set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
-else()
+if (NOT DARWIN)
   set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 endif()
 

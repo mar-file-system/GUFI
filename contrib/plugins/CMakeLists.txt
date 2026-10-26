@@ -83,6 +83,10 @@ add_library(dsi_querying SHARED
 target_link_libraries(dsi_querying
   "${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.${EXT}"
 )
+set_property(TARGET dsi_querying APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3/lib")
+set_property(TARGET dsi_querying APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${LIB}")  # package install
+set_property(TARGET dsi_querying APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${REMOTE_LIB}")  # package install
+
 add_dependencies(dsi_querying install_dependencies)
 install(TARGETS dsi_querying DESTINATION "${LIB}" COMPONENT Local)
 install(TARGETS dsi_querying DESTINATION "${REMOTE_LIB}" COMPONENT Remote EXCLUDE_FROM_ALL)

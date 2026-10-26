@@ -61,21 +61,8 @@
 
 
 if (DARWIN)
-  configure_file(pkg.sh.in pkg.sh @ONLY)
+  configure_file(pkgs.sh.in pkgs.sh @ONLY)
   configure_file(pkg_readme.txt.in pkg_readme.txt @ONLY)
-  configure_file(pkg_uninstall.sh.in pkg_uninstall.sh @ONLY)
-
-  # the uninstaller is placed in share so that it does not show up via PATH
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/pkg_uninstall.sh"
-    RENAME "gufi_uninstall.sh"
-    DESTINATION share
-    COMPONENT Local
-  )
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/pkg_uninstall.sh"
-    RENAME "gufi_uninstall.sh"
-    DESTINATION share
-    COMPONENT Remote
-  )
 elseif (CYGWIN)
 elseif (UNIX)
   configure_file(rpm_post_install.sh.in rpm_post_install.sh @ONLY)

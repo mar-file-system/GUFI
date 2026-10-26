@@ -1,30 +1,24 @@
 After installing this .pkg:
 
 If installed for everyone:
-    export DYLD_LIBRARY_PATH="@CPACK_PACKAGING_INSTALL_PREFIX@/lib:${DYLD_LIBRARY_PATH}"
-
+    INSTALL_PATH="/Applications"
 If installed for only yourself:
-    export PATH="${HOME}@CPACK_PACKAGING_INSTALL_PREFIX@/bin:${PATH}"
-    export DYLD_LIBRARY_PATH="${HOME}@CPACK_PACKAGING_INSTALL_PREFIX@/lib:${DYLD_LIBRARY_PATH}"
+    INSTALL_PATH="${HOME}/Applications"
+
+export PATH="${INSTALL_PATH}/bin:${PATH}"
+export DYLD_LIBRARY_PATH="${INSTALL_PATH}/lib:${DYLD_LIBRARY_PATH}"
 
 If user facing scripts (gufi_find, gufi_ls, etc.) are required,
 
-If installed for everyone:
-    export PYTHONPATH="@CPACK_PACKAGING_INSTALL_PREFIX@/lib:${PYTHONPATH}"
+    create ${INSTALL_PATH}/etc/config from ${INSTALL_PATH}/etc/config.example and modify it
+
+Then,
+
+    export PYTHONPATH="${INSTALL_PATH}/lib:${PYTHONPATH}"
 
 or move
 
-    @CPACK_PACKAGING_INSTALL_PREFIX@/lib/gufi_common.py
-    @CPACK_PACKAGING_INSTALL_PREFIX@/lib/gufi_config.py
-
-to another directory and add that directory to PYTHONPATH
-
-If installed for only yourself:
-    export PYTHONPATH="${HOME}@CPACK_PACKAGING_INSTALL_PREFIX@/lib:${PYTHONPATH}"
-
-or move
-
-    ${HOME}@CPACK_PACKAGING_INSTALL_PREFIX@/lib/gufi_common.py
-    ${HOME}@CPACK_PACKAGING_INSTALL_PREFIX@/lib/gufi_config.py
+    ${INSTALL_PATH}/lib/gufi_common.py
+    ${INSTALL_PATH}/lib/gufi_config.py
 
 to another directory and add that directory to PYTHONPATH

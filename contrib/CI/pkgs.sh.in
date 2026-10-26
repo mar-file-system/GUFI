@@ -78,6 +78,11 @@ export PATH="@DEP_INSTALL_PREFIX@/sqlite3/bin:${PATH}"
 
 arch="$(uname --machine)"
 
+# hardcoded for macOS
+INSTALL_PREFIX="/Applications"
+CONFIG="${INSTALL_PREFIX}/etc/config"
+CONFIG_PARENT="$(dirname ${CONFIG})"
+
 # make the PKGs
 # doing in 2 steps because productbuild likes to
 # merge all components into a monolithic PKG
@@ -87,7 +92,7 @@ arch="$(uname --machine)"
 sudo cpack -G productbuild -DCPACK_COMPONENTS_ALL=Local -B "@CMAKE_BINARY_DIR@"
 pkg="GUFI-@CMAKE_PROJECT_VERSION@-Darwin.pkg"
 local="gufi-@CMAKE_PROJECT_VERSION@.macOS.${arch}.pkg"
-sudo rm -rf @CPACK_PACKAGING_INSTALL_PREFIX@/etc/GUFI # this assumes GUFI wasn't previously installed
+sudo rm -rf "${CONFIG_PARENT}"
 sudo chown "${USER}" "${pkg}"
 mv "${pkg}" "${local}"
 
@@ -96,7 +101,7 @@ mv "${pkg}" "${local}"
 sudo cpack -G productbuild -DCPACK_COMPONENTS_ALL=Remote -B "@CMAKE_BINARY_DIR@"
 pkg="GUFI-@CMAKE_PROJECT_VERSION@-Darwin.pkg"
 remote="gufi-remote-@CMAKE_PROJECT_VERSION@.macOS.${arch}.pkg"
-sudo rm -rf @CPACK_PACKAGING_INSTALL_PREFIX@/etc/GUFI
+sudo rm -rf "${CONFIG_PARENT}"
 sudo chown "${USER}" "${pkg}"
 mv "${pkg}" "${remote}"
 
@@ -109,16 +114,18 @@ echo "Contents of ${remote}"
 pkgutil --payload-files "${remote}" | sort
 echo
 
-# install the primary PKG
+# install the primary PKG into the root device
 sudo installer -verbose -pkg "${local}" -target /
 
 # set up environment
-INSTALL_PREFIX="@CPACK_PACKAGING_INSTALL_PREFIX@"
 export PATH="${INSTALL_PREFIX}/bin:${PATH}"
 export DYLD_LIBRARY_PATH="${INSTALL_PREFIX}/lib:${DYLD_LIBRARY_PATH}"
 export PYTHONPATH="${INSTALL_PREFIX}/lib:${PYTHONPATH}"
 
 # GitHub macOS runner does not run as root, so test_install.sh would fail on copy
-sudo cp "$(dirname @CONFIG@)/config.example" "@CONFIG@"
+sudo cp "${CONFIG_PARENT}/config.example" "${CONFIG}"
 
-"@CMAKE_BINARY_DIR@/contrib/test_install.sh" "${INSTALL_PREFIX}" "@CONFIG@" 2>&1
+# fix config path
+sudo "$(brew --prefix gnu-sed)/libexec/gnubin/sed" -i "s%^PATH = .*%PATH = '${CONFIG}'%g;" "${INSTALL_PREFIX}/lib/gufi_config.py"
+
+"@CMAKE_BINARY_DIR@/contrib/test_install.sh" "${INSTALL_PREFIX}" "${CONFIG}" 2>&1

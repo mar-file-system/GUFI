@@ -63,14 +63,20 @@
 include(ProcessorCount)
 ProcessorCount(CORES)
 
-set(CONFIG_DEFAULT "/etc/GUFI/config")
+if (DARWIN)
+  set(CONFIG_DEFAULT "etc/config")
+else()
+  set(CONFIG_DEFAULT "/etc/GUFI/config")
+endif()
 
 function(config_file config type comp)
   set("${config}" "${CONFIG_DEFAULT}" CACHE FILEPATH "Where high level GUFI tools will look for the ${type} configuration")
 
-  # path must be absolute
-  if (NOT IS_ABSOLUTE "${${config}}")
-    message(FATAL_ERROR "${config} must be set to absolute path")
+  if (NOT DARWIN)
+    # path must be absolute
+    if (NOT IS_ABSOLUTE "${${config}}")
+      message(FATAL_ERROR "${config} must be set to absolute path")
+    endif()
   endif()
 
   # if the path already exists, make sure it is a regular file
@@ -87,24 +93,18 @@ function(config_file config type comp)
   # get the parent path of the config for placing example configuration
   cmake_path(GET "${config}" PARENT_PATH CONFIG_PARENT)
 
+  set(config_file "${CMAKE_BINARY_DIR}/${type}.example")
+
   # copy the example config
   set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-  configure_file("${type}.example.in" "${CMAKE_BINARY_DIR}/${type}.example" @ONLY)
+  configure_file("${type}.example.in" "${config_file}" @ONLY)
   unset(INSTALL_PREFIX)
 
-  # make install the config
-  if (comp STREQUAL "Local")
-    install(FILES "${CMAKE_BINARY_DIR}/${type}.example"
-      DESTINATION "${CONFIG_PARENT}"
-      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
-      COMPONENT Local)
-  else()
-    install(FILES "${CMAKE_BINARY_DIR}/${type}.example"
+  install(FILES "${config_file}"
       DESTINATION "${CONFIG_PARENT}"
       PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
       COMPONENT "${comp}"
-      EXCLUDE_FROM_ALL)
-  endif()
+  )
 endfunction()
 
 config_file(CONFIG        "config" Local)

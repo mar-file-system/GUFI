@@ -189,7 +189,7 @@ jobs:
       run:  cmake --build ${{ github.workspace }}/build -j
 
     - name: Build and Test Primary PKG
-      run:  contrib/CI/pkg.sh
+      run:  contrib/CI/pkgs.sh
       working-directory: ${{ github.workspace }}/build
 
     - name: Upload ARM PKGs
