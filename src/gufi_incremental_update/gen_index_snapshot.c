@@ -100,14 +100,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct GenSnapshot *index = (struct GenSnapshot *) data;
     struct work *work = index->work; /* no compression */
 
-    DIR *dir = opendir(work->name);
+    DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
-        const int err = errno;
-        if (err != ENOENT) { /* new directory in source tree but not yet in index */
-            fprintf(stderr, "Error: Could not open directory \"%s\": %s (%d)\n",
-                    work->name, strerror(err), err);
-        }
-        rc = 1;
+        rc = (errno != ENOENT); /* if the directory no longer exists, not an error */
         goto cleanup;
     }
 
