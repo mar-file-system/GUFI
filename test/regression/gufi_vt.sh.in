@@ -427,6 +427,13 @@ query=$(
 )
 query_vt "${query}"
 
+echo "# Specify gufi_query path"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", gufi_query=\"${GUFI_QUERY}\", E=\"SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;\");"
+    echo -n "SELECT fullpath FROM gufi ORDER BY fullpath ASC;"
+)
+query_vt "${query}"
+
 echo "# ######################################"
 echo "# errors"
 

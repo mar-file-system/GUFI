@@ -114,11 +114,14 @@ const sqlite3_api_routines *SQLITE_API_ROUTINES = NULL;
  * See the respective comments below for details.
  */
 
+static const char *GUFI_QUERY = "gufi_query";
+
 typedef struct gufi_query_cmd {
     str_t remote_cmd;         /* command to send this run to a remote host (i.e. ssh); prefixes gufi_query command */
     sll_t remote_args;        /* list of str_t that are single arguments to remote_cmd (i.e. user@remote) */
     int verbose;              /* print gufi_query command */
 
+    str_t gufi_query;         /* command to run; defaults to gufi_query */
     str_t threads;            /* number of threads in string form to avoid converting back and forth */
     str_t a;                  /* gufi_query -a <0|1|2> */
     str_t min_level;          /* defaults to 0; set to non-0 if index root should be used with path list */
@@ -163,6 +166,7 @@ typedef struct gufi_query_cmd {
 static void gq_cmd_init(gq_cmd_t *cmd) {
     memset(cmd, 0, sizeof(*cmd));
     sll_init(&cmd->remote_args);
+    cmd->gufi_query.data = (char *) GUFI_QUERY;
     sll_init(&cmd->plugins);
     sll_init(&cmd->no_print_errno);
     sll_init(&cmd->indexroots);
@@ -246,7 +250,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         size_t len = 0;
 
         write_with_resize(&flat, &size, &len,
-                          "gufi_query ");
+                          "%s ", cmd->gufi_query.data);
         write_with_resize(&flat, &size, &len,
                           "--print-tlv ");
         write_with_resize(&flat, &size, &len,
@@ -357,7 +361,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
 
-        argv[argc++] = "gufi_query";
+        argv[argc++] = cmd->gufi_query.data;
         argv[argc++] = "--print-tlv";
         argv[argc++] = "-x";
 
@@ -885,6 +889,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  * Most arguments should be key=value pairs. The allowed keys are:
  *     remote_cmd              = '<command to forward this run of gufi_query to a remote (e.g. ssh)>'
  *     remote_arg              = '<single argv[i] passed to remote_cmd before gufi_query (e.g. user@remote)>'
+ *     gufi_query              = <gufi_query executable> (if not found in PATH)
  *     n or threads            =  <positive integer>
  *     a                       =  <0|1|2> (see gufi_query)
  *     min_level               =  <non-negative integer>
@@ -1170,6 +1175,9 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         }
         else if (strncmp(key, "path_list", 10) == 0) {
             set_refstr(&cmd.path_list, value);
+        }
+        else if (strncmp(key, "gufi_query", 11) == 0) {
+            set_refstr(&cmd.gufi_query, value);
         }
         else if (strncmp(key, "remote_cmd", 11) == 0) {
             set_refstr(&cmd.remote_cmd, value);
