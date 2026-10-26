@@ -107,11 +107,6 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-${{ matrix.img }}
-
     - name: Install Marfs & ISA-L
       if:   matrix.img != 'alpine:edge'
       run:  contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
@@ -151,11 +146,6 @@ jobs:
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
 
-    - uses: actions/cache@main
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ matrix.os }}
-
     - name: Configure CMake
       run:  CC="$(brew --prefix llvm)/bin/clang" CXX="$(brew --prefix llvm)/bin/clang++" cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_OSX_SYSROOT=macosx
 
@@ -192,18 +182,6 @@ jobs:
 
     - name: Install Python Packages
       run:  python3 -m pip install -r contrib/CI/requirements.txt
-
-    - uses: actions/cache@main
-      with:
-        path: D:\cygwin
-        key:  ${{ runner.os }}-cygwin
-
-    - name: Fix Cache
-      run: >-
-           mkdir -p /usr/local/sqlite-vec/lib /usr/local/sqlite-lembed/lib &&
-           ln -sfv /usr/local/sqlite-vec/lib/vec0.dll /usr/local/sqlite-vec/lib/libvec0.dll &&
-           ln -sfv /usr/local/sqlite-lembed/lib/lembed0.dll /usr/local/sqlite-lembed/lib/liblembed0.dll
-      shell: "C:\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
 
     - name: Set Up Git
       run: >-

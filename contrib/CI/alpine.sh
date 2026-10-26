@@ -67,13 +67,6 @@ set -e
 
 apk update
 
-# actions/cache dependencies
-apk add \
-    gzip \
-    nodejs \
-    tar \
-    zstd
-
 # install libraries
 apk add \
     attr-dev \
