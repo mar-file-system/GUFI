@@ -113,7 +113,15 @@ static int process_external(struct input *in, void *args,
                             const long long int pinode,
                             const char *filename) {
     (void) pinode;
-    externaltofile((FILE *) args, in->delim, filename);
+    struct NondirArgs *nda = (struct NondirArgs *) args;
+    if (nda->fp == stdout) {
+        write_with_resize(&nda->pipe.buf, &nda->pipe.size, &nda->pipe.offset,
+                          "%" PATH_PREFIX_FORMAT "%s%ce%c\n",
+                          strlen(filename), filename, in->delim, in->delim);
+    }
+    else {
+        externaltofile(nda->fp, in->delim, filename);
+    }
     return 0;
 }
 
@@ -134,7 +142,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
 
     if (strncmp(entry->name + entry->name_len - entry->basename_len,
                 EXTERNAL_DB_USER_FILE, EXTERNAL_DB_USER_FILE_LEN + 1) == 0) {
-        external_read_file(nda->in, entry, process_external, nda->fp);
+        external_read_file(nda->in, entry, process_external, nda);
     }
 
     return 0;
@@ -400,5 +408,5 @@ int main(int argc, char *argv[]) {
 
     dump_memory_usage(stderr);
 
-    return EXIT_SUCCESS;
+    return rc;
 }

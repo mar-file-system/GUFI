@@ -44,7 +44,7 @@ $ (
     echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='/etc/GUFI/config', cols='col0, col1');"
     echo "SELECT * FROM output;"
 ) | sqlite3
-/etc/GUFI/config: Permission denied
+Error near line 3: SQL logic error
 # Missing Argument Name
 $ (
     echo ".load run_vt"

@@ -108,7 +108,7 @@ static int copy_str_and_counter_callback(void *args, int count, char **data, cha
     StrCounter_t *sc = (StrCounter_t *) args;
     copy_columns_callback(sc->strs, count, data, columns);
     sc->count++;
-    return 0;
+    return (sc->count > 1);
 }
 
 static int pull_from_db(sqlite3 *db, const char *columns, const size_t col_count,
@@ -130,6 +130,7 @@ static int pull_from_db(sqlite3 *db, const char *columns, const size_t col_count
 
     if (rc != SQLITE_OK) {
         for(size_t i = 0; i < col_count; i++) {
+            free(results[i]);
             results[i] = NULL;
         }
         return 1;
@@ -262,6 +263,7 @@ static str_t *read_file(sqlite3_context *context, const char *path) {
         close(fd);
         return NULL;
     }
+    /* check len <= SIZE_MAX - 1? */
 
     if (lseek(fd, 0, SEEK_SET) != 0) {
         const int err = errno;
@@ -321,6 +323,14 @@ static SpreadTreeExtdbCache_t *cache_extdb(sqlite3_context *context, trie_t *cac
 
     char extdb_path[] = "template.XXXXXX";
     int extdb_fd = mkstemp(extdb_path);
+
+    if (extdb_fd < 0) {
+        const int err = errno;
+        fprintf(stderr, "Warning: Could not create template file \"%s\": %s (%d)\n",
+                extdb_path, strerror(err), err);
+        str_free(schema);
+        return NULL;
+    }
 
     /* create the external database template file with shell */
     {
@@ -517,8 +527,7 @@ static int set_up_extdb(sqlite3_context *context, const char *prefix,
             }
 
             /* if the file does not exist, create it */
-
-            const int extdb_fd = open(extdb_path, O_CREAT | O_WRONLY);
+            const int extdb_fd = open(extdb_path, O_CREAT | O_WRONLY, S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
             if (extdb_fd < 0) {
                 const int err = errno;
                 char *errmsg = sqlite3_mprintf("Could not create external database \"%s\": %s (%d)",
@@ -660,7 +669,7 @@ static void spread_to_external(sqlite3_context *context, int argc, sqlite3_value
     /* get data from extdbprefix.db */
     char *extdbprefix[] = { NULL, NULL, NULL, NULL, };
     if (pull_from_db(db, "spread_top, gen_shard_path, extdb_schema, shard_to_extdb",
-                     2, EXTDB, "prefix", prefix, extdbprefix, &err) != 0) {
+                     4, EXTDB, "prefix", prefix, extdbprefix, &err) != 0) {
         char *errmsg = sqlite3_mprintf("Could not data from extdb: %s", err);
         sqlite3_result_error(context, errmsg, -1);
         sqlite3_free(errmsg);

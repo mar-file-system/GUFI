@@ -266,6 +266,13 @@ log_hist_t *log_hist_parse(const char *str) {
                 return NULL;
             }
 
+            if (bucket >= hist->count) {
+                fprintf(stderr, "Warning: Ignoring invalid bucket count: %zu (max %zu)\n",
+                        bucket, hist->count - 1);
+                total_read += read;
+                continue;
+            }
+
             hist->buckets[bucket] = count;
             total_read += read;
         }
@@ -395,6 +402,13 @@ mode_hist_t *mode_hist_parse(const char *str) {
             (str[total_read + read - 1] != ';')) {
             mode_hist_free(hist);
             return NULL;
+        }
+
+        if (bucket >= 512) {
+            fprintf(stderr, "Warning: Ignoring invalid bucket count: %u (max 511)\n",
+                    bucket);
+            total_read += read;
+            continue;
         }
 
         hist->buckets[bucket] = count;

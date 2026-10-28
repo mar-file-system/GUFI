@@ -63,6 +63,7 @@
 
 import argparse
 import os
+import re
 import sys
 
 from gufi_common import SQLITE3_TEXT
@@ -99,21 +100,23 @@ def getfattr(args, indexroot, dirname, nondirname):
 
     if not args.recursive:
         # make sure name matches
-        S_where += [' OR '.join(['(name REGEXP \'^{0}$\')'.format(os.path.basename(dirname))])]
+        S_where += [' OR '.join(['(name REGEXP \'^{0}$\')'.format(gufi_common.single_quotes(re.escape(os.path.basename(dirname))))])]
 
         # only get the original summary
         S_where += ['isroot == 1']
 
         if nondirname:
-            E_where += [' OR '.join(['(name REGEXP \'^{0}$\')'.format(nondirname)])]
+            E_where += [' OR '.join(['(name REGEXP \'^{0}$\')'.format(gufi_common.single_quotes(re.escape(nondirname)))])]
 
     if args.name:
         # name uses exact match
-        S_where += ['CAST(xattr_name AS {1}) == CAST(\'{0}\' AS {1})'.format(args.name, SQLITE3_TEXT)]
-        E_where += ['CAST(xattr_name AS {1}) == CAST(\'{0}\' AS {1})'.format(args.name, SQLITE3_TEXT)]
+        name = gufi_common.single_quotes(args.name)
+        S_where += ['CAST(xattr_name AS {1}) == CAST(\'{0}\' AS {1})'.format(name, SQLITE3_TEXT)]
+        E_where += ['CAST(xattr_name AS {1}) == CAST(\'{0}\' AS {1})'.format(name, SQLITE3_TEXT)]
     else:
-        S_where += ['xattr_name REGEXP \'{0}\''.format(args.pattern)]
-        E_where += ['xattr_name REGEXP \'{0}\''.format(args.pattern)]
+        pattern = gufi_common.single_quotes(args.pattern)
+        S_where += ['xattr_name REGEXP \'{0}\''.format(pattern)]
+        E_where += ['xattr_name REGEXP \'{0}\''.format(pattern)]
 
     query_args = [
         '-x',

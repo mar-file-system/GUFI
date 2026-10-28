@@ -111,8 +111,8 @@ static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userdat
 
     str->data = data;
     memcpy(str->data + str->len, ptr, cp);
-    str->data[cp] = '\0';
     str->len += cp;
+    str->data[str->len] = '\0';
 
     return cp;
 }
@@ -125,6 +125,11 @@ static int do_curl(CURL *curl, const char *url,
     curl_easy_setopt(curl, CURLOPT_URL, url);
 
     struct curl_slist *headers = curl_slist_append(NULL, "Content-Type: application/json");
+    if (!headers) {
+        sqlite3_result_error(context, "Failed to allocate cURL slist", -1);
+        return 1;
+    }
+
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload);
@@ -144,11 +149,15 @@ static int do_curl(CURL *curl, const char *url,
     }
 
     long http_code = 0;
-    if (curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code) == CURLE_OK) {
+    res = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    if (res == CURLE_OK) {
         if (http_code >= 400) {
             char err[1024];
             if (response->len) {
-                response->data[response->len - 1] = '\0'; /* remove trailing newline */
+                /* remove trailing newline */
+                if (response->data[response->len - 1] == '\n') {
+                    response->data[response->len - 1] = '\0';
+                }
                  snprintf(err, sizeof(err),
                           "Request returned with HTTP code %ld: %s",
                           http_code, response->data);
@@ -159,14 +168,22 @@ static int do_curl(CURL *curl, const char *url,
                          http_code);
             }
             sqlite3_result_error(context, err, -1);
-            free(response->data);
-            response->data = NULL;
-            response->len = 0;
-            return 1;
+            goto error;
         }
+    }
+    else {
+        sqlite3_result_error(context, curl_easy_strerror(res), -1);
+        goto error;
     }
 
     return 0;
+
+  error:
+    free(response->data);
+    response->data = NULL;
+    response->len = 0;
+    return 1;
+
 }
 
 /*
@@ -193,8 +210,8 @@ static int presidio_analyzer(CURL *curl, const char *url,
      */
     const size_t payload_len =
         2 +
-        13 + text_len + 2 +
-        18 + lang_len + 2 +
+        13 + text_len + 3 +
+        17 + lang_len + 2 +
         1;
     char *json_payload = malloc(payload_len + 1);
     snprintf(json_payload, payload_len + 1,
@@ -369,9 +386,8 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
         sqlite3_result_error(context, "text field is not a string", -1);
     }
 
-    cJSON_Delete(json);
-
   cleanup:
+    cJSON_Delete(json);
     free(anonymized_response.data);
 }
 

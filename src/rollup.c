@@ -86,8 +86,8 @@ int get_permissions_callback(void *args, int count, char **data, char **columns)
 int get_permissions(sqlite3 *db, const char *name, struct Permissions *perms) {
     char *err = NULL;
     if (sqlite3_exec(db,
-                     "SELECT mode, uid, gid "
-                     "FROM " SUMMARY, get_permissions_callback, perms, &err) != SQLITE_OK) {
+                     "SELECT mode, uid, gid FROM " SUMMARY " WHERE isroot == 1;",
+                     get_permissions_callback, perms, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Could not get permissions of \"%s\": %s\n",
                                   name, err);
         return -1;
@@ -172,8 +172,7 @@ static int count_pwd(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
     size_t *xattr_count = (size_t *) args;
-    sscanf(data[0], "%zu", xattr_count); /* skip check */
-    return 0;
+    return (sscanf(data[0], "%zu", xattr_count) != 1);
 }
 
 /* Delete all entries in the XATTR_ROLLUP table */
@@ -201,7 +200,6 @@ int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
     int rc = 0;
 
     sqlite3 *db = opendb(fullpath, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
-
     if (db) {
         char *err_msg = NULL;
         size_t xattr_count = 0;
@@ -223,9 +221,13 @@ int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
             sqlite_print_err_and_free(err_msg, stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n", fullpath, err_msg);
             rc = 1;
         }
+
+        closedb(db);
+    }
+    else {
+        rc = 1; /* db file is not missing but could not be opened */
     }
 
-    closedb(db);
     free(fullpath);
 
     return rc;
@@ -359,6 +361,7 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
     if (sqlite3_exec(xattr_db, insert, NULL, NULL, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Failed to copy \"%s\" xattrs into " XATTRS_ROLLUP " of %s: %s\n",
                                   child_xattr_db_name, xattr_db_name, err);
+        rc = 1;
     }
 
     detachdb(child_xattr_db_name, xattr_db, attachname, 1, NULL);
@@ -435,7 +438,9 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
     int isrolledup = 0;
     switch(check_isrolledup) {
         case ISROLLEDUP_CHECK:
-            get_isrolledup(db, &isrolledup);
+            if (get_isrolledup(db, &isrolledup) != 0) {
+                return 1;
+            }
             break;
         case ISROLLEDUP_KNOWN_YES:
             isrolledup = 1;
@@ -561,7 +566,11 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
         if (sqlite3_exec(child_db, TREESUMMARY_EXISTS,
                          treesummary_exists_callback, &trecs, &err) == SQLITE_OK) {
             zeroit(&sum);
-            querytsdb(dirname, &sum, child_db, !(trecs < 1));
+            if (querytsdb(dirname, &sum, child_db, !(trecs < 1)) < 0) {
+                closedb(child_db);
+                free(child_dbname);
+                return 1;
+            }
             tsumit(&sum, &tsum);
         }
         else {
@@ -595,7 +604,9 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
 
     /* add summary data from this directory */
     zeroit(&sum);
-    querytsdb(dirname, &tsum, db, 0);
+    if (querytsdb(dirname, &tsum, db, 0) < 0) {
+        return 1;
+    }
     tsumit(&sum, &tsum);
     tsum.totsubdirs--;
 

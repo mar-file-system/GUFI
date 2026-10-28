@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 
 #include "pcre.h"
 
+#include "config.h"
 #include "dbutils.h"
 #include "external_attach.h"
 #include "histogram.h"
@@ -447,11 +448,11 @@ int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
     if (sqlite3_prepare_v2(db, sqlstmt, -1, &res, NULL) != SQLITE_OK) {
         sqlite_print_err_and_free(NULL, stderr, "SQL error on query: %s: %s, err: %s\n",
                                   sqlstmt, name, sqlite3_errmsg(db));
-        return 1;
+        return -1;
     }
 
     int rows = 0;
-    while (sqlite3_step(res) != SQLITE_DONE) {
+    while (sqlite3_step(res) == SQLITE_ROW) {
         struct sum curr;
         zeroit(&curr);
 
@@ -531,8 +532,9 @@ int startdb(sqlite3 *db)
     char *err = NULL;
     if (sqlite3_exec(db, "BEGIN TRANSACTION;", NULL , NULL, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "begin transaction issue %s\n", err);
+        return 1;
     }
-    return !err;
+    return 0;
 }
 
 int stopdb(sqlite3 *db)
@@ -540,8 +542,9 @@ int stopdb(sqlite3 *db)
     char *err = NULL;
     if (sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "end transaction issue %s\n", err);
+        return 1;
     }
-    return !err;
+    return 0;
 }
 
 void closedb(sqlite3 *db)
@@ -605,8 +608,8 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     int rc = 0;
 
     char *name  = pwork->name + pwork->name_len - pwork->basename_len;
-    char *zino  = sqlite3_mprintf("%" PRIu64, pwork->statuso.st_ino);
-    char *zpino = sqlite3_mprintf("%" PRIu64, pwork->pinode);
+    char *zino  = sqlite3_mprintf("%" STAT_ino, pwork->statuso.st_ino);
+    char *zpino = sqlite3_mprintf("%" STAT_ino, pwork->pinode);
     sqlite3_bind_text(res,  1,  name, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,  2,  &ed->type, 1, SQLITE_STATIC);
     sqlite3_bind_int64(res, 3,  (sqlite3_int64) pwork->statuso.st_dev);
@@ -699,7 +702,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
     if (rollin_score) {
         insertdbgo_xattrs_avail(pwork, ed, xattrs_res);
     }
-    /* can't roll in, so nepwork external dbs */
+    /* can't roll in, so create external dbs */
     else {
         struct xattr_db *xattr_uid_db = NULL;
         struct xattr_db *xattr_gid_db = NULL;
@@ -772,8 +775,8 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
         return 1;
     }
 
-    char *zino      = sqlite3_mprintf("%" PRIu64, pwork->statuso.st_ino);
-    char *zpino     = sqlite3_mprintf("%" PRIu64, pwork->pinode);
+    char *zino  = sqlite3_mprintf("%" STAT_ino, pwork->statuso.st_ino);
+    char *zpino = sqlite3_mprintf("%" STAT_ino, pwork->pinode);
 
     char xattrnames[MAXXATTR] = "\x00";
     const ssize_t xattrnames_len = xattr_get_names(&ed->xattrs, xattrnames, sizeof(xattrnames), XATTRDELIM);
@@ -869,7 +872,10 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     char *ip[2] = {NULL, NULL};
     if (sqlite3_exec(sdb, "SELECT inode, pinode FROM " SUMMARY " WHERE isroot == 1;",
                      copy_columns_callback, ip, &err) != SQLITE_OK) {
-        sqlite_print_err_and_free(err, stderr, "Could not get inode from %s: %s\n", SUMMARY, err);
+        sqlite_print_err_and_free(err, stderr, "Could not get inodes from %s: %s\n",
+                                  SUMMARY, err);
+        free(ip[1]);
+        free(ip[0]);
         return 1;
     }
 
@@ -941,6 +947,13 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     return !!err;
 }
 
+static void clean_up_xattr_db(struct xattr_db *xdb, const char *filename) {
+    sqlite3_finalize(xdb->res);
+    closedb(xdb->db);
+    free(xdb);
+    remove(filename);
+}
+
 struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  const char *path, const size_t path_len,
                                  struct input *in,
@@ -993,7 +1006,7 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
     xdb->st.st_gid = gid;
 
     if (copy_template(tdb, filename, xdb->st.st_uid, xdb->st.st_gid, NULL) != 0) {
-        destroy_xattr_db(xdb);
+        clean_up_xattr_db(xdb, filename);
         return NULL;
     }
 
@@ -1003,13 +1016,17 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
     }
 
     xdb->db = opendb(filename, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
-
     if (!xdb->db) {
-        destroy_xattr_db(xdb);
+        clean_up_xattr_db(xdb, filename);
         return NULL;
     }
 
     xdb->res = insertdbprep(xdb->db, XATTRS_PWD_INSERT);
+    if (!xdb->res) {
+        clean_up_xattr_db(xdb, filename);
+        return NULL;
+    }
+
     return xdb;
 }
 

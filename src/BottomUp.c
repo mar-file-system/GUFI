@@ -333,6 +333,16 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
             ed.parent_fd = dir_fd;
 
             if (fstatat_wrapper(&child, &ed, ua->nofollow_symlink, 1, NULL) != 0) {
+                closedir(dir);
+                sll_destroy(&bu->subdirs, bottomup_destroy);
+                sll_destroy(&bu->subnondirs, bottomup_destroy);
+                pthread_mutex_destroy(&bu->refs.mutex);
+                if (bu->parent) {
+                    QPTPool_enqueue(ctx, ascend_to_top, bu->parent); /* reduce parent counter */
+                }
+                else {
+                    bottomup_destroy(bu);
+                }
                 return 1;
             }
 
@@ -417,7 +427,13 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
     else {
         sll_destroy(&bu->subdirs, bottomup_destroy);
         sll_destroy(&bu->subnondirs, bottomup_destroy);
-        bottomup_destroy(bu);
+        pthread_mutex_destroy(&bu->refs.mutex);
+        if (bu->parent) {
+            QPTPool_enqueue(ctx, ascend_to_top, bu->parent); /* reduce parent counter */
+        }
+        else {
+            bottomup_destroy(bu);
+        }
     }
 
     return desc_rc;
@@ -513,7 +529,7 @@ static int parallel_bottomup_enqueue_subdirs(QPTPool_ctx_t *ctx,
     char *line = NULL;
     size_t n = 0;
     ssize_t got = 0;
-    while ((got = getline(&line, &n, file)) != -1) {
+    while ((got = getline(&line, &n, file)) > 1) {
         /* remove trailing CRLF */
         const size_t line_len = trailing_non_match_index(line, got, "\r\n", 2);
 
@@ -524,6 +540,8 @@ static int parallel_bottomup_enqueue_subdirs(QPTPool_ctx_t *ctx,
             if (new_alt_pathname(root, root->name, root->name_len, NULL, 0)) {
                 fprintf(stderr, "%s could not fit into ALT_NAME buffer\n", root->name);
                 bottomup_destroy(root);
+                free(line);
+                fclose(file);
                 return -1;
             }
         }
@@ -534,6 +552,8 @@ static int parallel_bottomup_enqueue_subdirs(QPTPool_ctx_t *ctx,
 
         QPTPool_enqueue(ctx, descend_to_bottom, root);
     }
+
+    /* ignore getline failures */
 
     free(line);
     fclose(file);

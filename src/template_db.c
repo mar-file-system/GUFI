@@ -112,7 +112,9 @@ int create_dbdb_tables(const char *name, sqlite3 *db, void *args) {
 int close_template_db(struct template_db *tdb) {
     /* Not checking argument */
 
-    close(tdb->fd);
+    if (tdb->fd > -1) {
+        close(tdb->fd);
+    }
     return init_template_db(tdb);
 }
 
@@ -141,6 +143,9 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
     }
 
     sqlite3 *db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0, create_tables, NULL);
+    if (!db) {
+        return -1;
+    }
 
     /*
      * open before sqlite3_close to prevent potential race
@@ -151,7 +156,7 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
     sqlite3_close(db);
 
     /* no need for the file to remain on the filesystem */
-    remove(name);
+    remove(name); /* not checking for error */
 
     if (tdb->fd == -1) {
         fprintf(stderr, "Could not open template file '%s'\n", name);
@@ -159,6 +164,13 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
     }
 
     tdb->size = lseek(tdb->fd, 0, SEEK_END);
+    if (tdb->size == (off_t) -1) {
+        fprintf(stderr, "Could not lseek template file '%s'\n", name);
+        close(tdb->fd);
+        tdb->fd = -1;
+        return -1;
+    }
+
     return !tdb->size;
 }
 
@@ -213,7 +225,7 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
 
     const int src_db = tdb->fd;
 
-    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+    const int dst_db = open(dst, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     if (dst_db < 0) {
         *err = errno;
         fprintf(stderr, "Error: copy_template \"%s\": %s (%d)\n", dst, strerror(*err), *err);

@@ -143,29 +143,46 @@ static int run(run_args_t *args,
 static int run_read_row(run_vtab_cursor *pCur) {
     run_vtab *pVtab = (run_vtab *) pCur->base.pVtab;
 
-    const ssize_t len = getline(&pCur->row, &pCur->row_alloc, pCur->output);
+    ssize_t len = getline(&pCur->row, &pCur->row_alloc, pCur->output);
     if (len < 1) {
         return 1;
     }
 
-    pCur->row[len - 1] = '\0';
-    pCur->len = len - 1; /* remove newline */
-    if (pCur->row[pCur->len - 1] == '\r') {
-        pCur->row[len - 1] = '\0';
-        pCur->len--;     /* remove carriage return */
+
+    if (pCur->row[len - 1] == '\n') {
+        len--; /* remove newline */
     }
+
+    if (len > 0) {
+        if (pCur->row[len - 1] == '\r') {
+            len--; /* remove carriage return */
+        }
+    }
+
+    pCur->len = len;
+    pCur->row[len] = '\0';
 
     /* using col_count to not scan row to get column count */
     pCur->cols = calloc(pVtab->args.col_count, sizeof(refstr_t));
 
     char *saveptr = NULL;
     char *ptr = strtok_r(pCur->row, pVtab->args.delim, &saveptr);
+    if (!ptr) {
+        free(pCur->cols);
+        pCur->cols = NULL;
+        pCur->len = 0;
+        return 1;
+    }
+
     pCur->cols[0].data = ptr;
     pCur->cols[0].len  = strlen(ptr);
 
     for(size_t c = 1; c < pVtab->args.col_count; c++) {
         ptr = strtok_r(NULL, pVtab->args.delim, &saveptr);
         if (!ptr) {
+            free(pCur->cols);
+            pCur->cols = NULL;
+            pCur->len = 0;
             return 1;
         }
         pCur->cols[c].data = ptr;
@@ -290,7 +307,7 @@ static int run_vtConnect(sqlite3 *db,
     if (snprintf(schema, sizeof(schema),
                  "CREATE TABLE X(%.*s);", /* SQL injection should fail due to columns being processed by sqlite3_declare_vtab */
                  (int) cols.len, cols.data) >= (ssize_t) sizeof(schema)) {
-        *pzErr = sqlite3_mprintf("Cols argument too long: %s", cols);
+        *pzErr = sqlite3_mprintf("Cols argument too long: %s", cols.data);
         return SQLITE_CONSTRAINT;
     }
 
@@ -303,9 +320,9 @@ static int run_vtConnect(sqlite3 *db,
         memset(pNew, 0, sizeof(*pNew));
         pNew->args = args;
         /* sqlite3_vtab_config(db, SQLITE_VTAB_DIRECTONLY); */
+        *ppVtab = &pNew->base;
     }
 
-    *ppVtab = &pNew->base;
     return rc;
 }
 
@@ -344,6 +361,10 @@ static int run_vtOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor) {
 
 static int run_vtClose(sqlite3_vtab_cursor *cur) {
     run_vtab_cursor *pCur = (run_vtab_cursor *) cur;
+    if (pCur->output) {
+        pclose(pCur->output);
+        pCur->output = NULL;
+    }
     free(pCur->cols);
     pCur->cols = NULL;
     free(pCur->row);
@@ -373,7 +394,12 @@ static int run_vtFilter(sqlite3_vtab_cursor *cur,
     pCur->cols = NULL;
 
     /* wait for first row */
-    run_read_row(pCur);
+    if (run_read_row(pCur) != 0) {
+        pclose(pCur->output);
+        pCur->output = NULL;
+        pCur->len = 0;
+        return SQLITE_ERROR;
+    }
 
     return SQLITE_OK;
 }
@@ -403,8 +429,10 @@ static int run_vtEof(sqlite3_vtab_cursor *cur) {
 
     const int eof = (pCur->len < 1);
     if (eof) {
-        pclose(pCur->output);
-        pCur->output = NULL;
+        if (pCur->output) {
+            pclose(pCur->output); /* ignore errors? */
+            pCur->output = NULL;
+        }
     }
 
     return eof;

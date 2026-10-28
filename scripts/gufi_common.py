@@ -315,6 +315,10 @@ def get_group(group):
         return get_gid(group)
 # ###############################################
 
+def single_quotes(value):
+    '''Replace single quotes with 2 single quotes for SQLite 3'''
+    return value.replace('\'', '\'\'')
+
 # add this to summary queries to handle rollups
 ROLLUP_SUMMARY_WHERE = '''
     CASE level()
@@ -369,7 +373,7 @@ def build_query(select, tables, where=None, group_by=None,
     if order_by and len(order_by):
         query += ' ORDER BY {0}'.format(', '.join(order_by))
 
-    if num_results:
+    if num_results is not None:
         query += ' LIMIT {0}'.format(num_results)
 
     if extra:

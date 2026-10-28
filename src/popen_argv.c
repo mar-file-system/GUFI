@@ -205,7 +205,10 @@ int popen_argv_close(popen_argv_t *ret) {
     close(ret->fds[1]);
 
     int status = 0;
-    const pid_t waited = waitpid(ret->pid, &status, 0);
+    pid_t waited = 0;
+    do {
+        waited = waitpid(ret->pid, &status, 0);
+    } while ((waited < 0) && (errno == EINTR));
 
     /*
      * waitpid(2) returns the pid on success and -1 on error; the previous

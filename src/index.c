@@ -144,7 +144,7 @@ static int index_nondir(struct work *entry, struct entry_data *ed, void *args) {
         }
 
         if (in->process_xattrs) {
-            insertdbgo_xattrs(in, &inda->work->statuso, entry, ed,
+            insertdbgo_xattrs(in, &entry->statuso, entry, ed,
                               &inda->xattr_db_list, inda->temp_xattr,
                               inda->topath->data, inda->topath->len,
                               inda->xattrs_res, inda->xattr_files_res);

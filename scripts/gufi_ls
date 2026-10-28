@@ -62,6 +62,7 @@
 
 
 import argparse
+import re
 import sys
 
 from gufi_common import SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_ASC, SQLITE3_DESC
@@ -91,6 +92,7 @@ def select_time(args, name):
     return [style]
 
 def build_select(args, indexroot):
+    # pylint: disable=too-many-branches
     '''Build the SELECT portion of the query on the initial scan of entries'''
     select = []
 
@@ -100,7 +102,10 @@ def build_select(args, indexroot):
         select += ['inode']
 
     if args.size:
-        select += ['blocks']
+        if args.human_readable or args.block_size:
+            select += select_size(args, '(blocks * 512)')
+        else:
+            select += ['blocks']
 
     if args.recursive:
         display_name = 'substr(fullpath, {0})'.format(len(indexroot) + 2)
@@ -145,7 +150,7 @@ def build_where(args, name=None):
     where = []
 
     if name:
-        where = ['name REGEXP \'^{0}$\''.format(name)]
+        where = ['name REGEXP \'^{0}$\''.format(gufi_common.single_quotes(re.escape(name)))]
     else:
         # pylint: disable=anomalous-backslash-in-string
 
@@ -339,7 +344,7 @@ def gen_cmd(config, args, paths):
                                 None)
 
     # need to pad columns
-    if args.long_listing or args.numeric_uid_gid:
+    if args.long_listing or args.numeric_uid_gid or args.full_time:
         # columns before padding
         RESULTS = 'results'
         RESULTS_SCHEMA = ''

@@ -198,6 +198,8 @@ ssize_t setup_directory_skip(trie_t *skip, const char *filename) {
     }
     free(line);
 
+    /* ignore read errors - use what was read */
+
     fclose(skipfile);
 
     return count;
@@ -718,13 +720,16 @@ int parse_cmd_line(int                  argc,
                 break;
 
             case FLAG_GLOBAL_DB_SHORT:
-                {
+                if ((argc - optind) > 0) {
                     INSTALL_STR(&in->global_db.create, optarg);
 
                     optarg = argv[optind];
                     INSTALL_STR(&in->global_db.insert, optarg);
 
                     optarg = argv[++optind];
+                }
+                else {
+                    retval = -1;
                 }
                 break;
 
@@ -816,7 +821,7 @@ int parse_cmd_line(int                  argc,
                 break;
 
             case FLAG_EXTERNAL_ATTACH_SHORT:
-                {
+                if ((argc - optind) > 2) {
                     eas_t *eas = calloc(1, sizeof(*eas));
 
                     INSTALL_STR(&eas->basename, optarg);
@@ -834,10 +839,13 @@ int parse_cmd_line(int                  argc,
 
                     sll_push_back(&in->external_attach.setup, eas);
                 }
+                else {
+                    retval = -1;
+                }
                 break;
 
             case FLAG_EXTERNAL_COPY_SHORT:
-                {
+                if ((argc - optind) > 0) {
                     ecs_t *ecs = calloc(1, sizeof(*ecs));
 
                     INSTALL_STR(&ecs->basename_pattern, optarg);
@@ -854,6 +862,9 @@ int parse_cmd_line(int                  argc,
                         retval = -1;
                         free(ecs);
                     }
+                }
+                else {
+                    retval = -1;
                 }
                 break;
 

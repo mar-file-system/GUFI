@@ -148,15 +148,17 @@ static int cpr_file(QPTPool_ctx_t *ctx, void *data) {
     }
 
     if (copyfd(src_fd, 0, dst_fd, 0, st->st_size) != st->st_size) {
+        close(dst_fd);
         print_error_and_goto("Could not copy file", work->name, free_name);
     }
-
-    rc = set_xattrs(dst.data, &ed->xattrs);
-    xattrs_cleanup(&ed->xattrs);
 
     close(dst_fd);
 
   free_name:
+    rc = set_xattrs(dst.data, &ed->xattrs);
+
+    xattrs_cleanup(&ed->xattrs);
+
     free(dst.data);
 
     close(src_fd);

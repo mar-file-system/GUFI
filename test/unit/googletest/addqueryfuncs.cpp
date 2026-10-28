@@ -448,6 +448,7 @@ TEST(addqueryfuncs, blocksize) {
     }
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize('', '');",      copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* non-integer size argument */
+    EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize('abc', 'B');",  copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* bad size argument */
     EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize('abc', '');",   copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* missing size argument */
     EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'i');",      copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* single bad character */
     EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'iB');",     copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* 1st character isn't valid */
@@ -564,6 +565,7 @@ TEST(addqueryfuncs, strop) {
 
     char *err = nullptr;
 
+    // bad command
     EXPECT_EQ(sqlite3_exec(db, "SELECT strop('');", copy_columns_callback, &output, &err), SQLITE_ERROR);
     EXPECT_NE(err, nullptr);
     free(output);
@@ -571,8 +573,9 @@ TEST(addqueryfuncs, strop) {
     sqlite3_free(err);
     err = nullptr;
 
-    EXPECT_EQ(sqlite3_exec(db, "SELECT strop('echo');", copy_columns_callback, &output, &err), SQLITE_ERROR);
-    EXPECT_NE(err, nullptr);
+    // empty output is valid so long as it ends in a newline
+    EXPECT_EQ(sqlite3_exec(db, "SELECT strop('echo');", copy_columns_callback, &output, &err), SQLITE_OK);
+    EXPECT_EQ(err, nullptr);
     free(output);
     output = nullptr;
     sqlite3_free(err);

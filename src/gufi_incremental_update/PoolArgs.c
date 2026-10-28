@@ -89,9 +89,9 @@ static int setup_suspect_file(struct PoolArgs *pa) {
         }
 
         /* read suspect file and insert inodes into tries depending on type */
-        char inode_str[32];  /* inode in string form */
-        char type;           /* d/f/l */
-        while (fscanf(f, "%s %c", inode_str, &type) == 2) {
+        char inode_str[32] = {0}; /* inode in string form */
+        char type;                /* d/f/l */
+        while (fscanf(f, "%31s %c", inode_str, &type) == 2) {
             ino_t inode = 0;
             if (sscanf(inode_str, "%" STAT_ino, &inode) != 1) {
                 continue;

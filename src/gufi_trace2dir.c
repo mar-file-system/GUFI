@@ -100,8 +100,11 @@ static int process_entries(str_t *tree_parent,
             if (fd < 0) {
                 const int err = errno;
                 fprintf(stderr, "Error opening file %s: %d\n", path, err);
+                goto done;
             }
-            close(fd);
+            else {
+                close(fd);
+            }
 
             set_metadata(path, &entry->statuso, &ed->xattrs);
 
@@ -122,6 +125,7 @@ static int process_entries(str_t *tree_parent,
         /*     return 1; */
     }
 
+  done:
     free(path);
 
     return 0;

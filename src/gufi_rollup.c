@@ -118,7 +118,9 @@ struct PoolArgs {
 
 /* compare function for qsort */
 static int compare_size_t(const void *lhs, const void *rhs) {
-    return (*(size_t *) lhs - *(size_t *) rhs);
+    const size_t l = *(const size_t *) lhs;
+    const size_t r = *(const size_t *) rhs;
+    return (l > r) - (l < r);
 }
 
 #define sll_dir_stats(name, all, var, width)                                     \
@@ -733,8 +735,12 @@ static int do_rollup(struct RollUp *rollup,
             }
         }
 
-        bottomup_collect_treesummary(dst, rollup->data.name, &rollup->data.subdirs, ISROLLEDUP_KNOWN_YES,
-                                     rollup->data.st.st_uid, rollup->data.st.st_uid, NULL);
+        if (bottomup_collect_treesummary(dst, rollup->data.name, &rollup->data.subdirs,
+                                         ISROLLEDUP_KNOWN_YES,
+                                         rollup->data.st.st_uid, rollup->data.st.st_gid,
+                                         NULL) != 0) {
+            return -1;
+        }
     }
 
     return rc;
@@ -840,13 +846,29 @@ static int rollup_ascend(void *args) {
                     time_t crtime = 0; /* unused */
                     if (lstat_wrapper(dir->data.name, &dir->data.st, &crtime,
                                       &dir->data.stat_called, 1, NULL) != 0) {
+                        closedb(dst);
+                        free(ds->path);
+                        free(ds);
                         return 1;
                     }
                 }
 
-                bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs, ISROLLEDUP_KNOWN_NO,
-                                             dir->data.st.st_uid, dir->data.st.st_gid, NULL);
+                if (bottomup_collect_treesummary(dst, dir->data.name, &dir->data.subdirs,
+                                                 ISROLLEDUP_KNOWN_NO,
+                                                 dir->data.st.st_uid, dir->data.st.st_gid,
+                                                 NULL) != 0) {
+                    closedb(dst);
+                    free(ds->path);
+                    free(ds);
+                    return 1;
+                }
             }
+        }
+        else {
+            closedb(dst);
+            sll_push_back(&stats[id].not_rolled_up, ds);
+            stats[id].remaining++;
+            return 1;
         }
     }
     else if (in->dont_reprocess && dir->rolledup) {

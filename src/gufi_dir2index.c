@@ -168,7 +168,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         pa->total_nondirs[id] += ctrs.nondirs_processed;
     }
 
-    closedir(dir);
+    if (dir) {
+        closedir(dir);
+    }
     free(work);
 
     return rc;
@@ -190,12 +192,10 @@ static int create_intermediate_paths(const str_t *index_parent, char *path) {
         struct stat st;
         if (stat(path, &st) != 0) { /* stat(2) not lstat(2) */
             const int err = errno;
-            if (err != ENOENT) {
-                fprintf(stderr, "Error: Cannot stat directory \"%s\": %s (%d)\n",
-                        path, strerror(err), err);
-                *p = '/';
-                return 1;
-            }
+            fprintf(stderr, "Error: Cannot stat directory \"%s\": %s (%d)\n",
+                    path, strerror(err), err);
+            *p = '/';
+            return 1;
         }
 
         if (!S_ISDIR(st.st_mode)) {
@@ -333,9 +333,9 @@ static int validate_source(str_t *index_parent, const char *path, struct work **
 
     char *expathout = realpath(expathtst, NULL);
     if (expathout)  {
-        char *expathin = realpath(new_work->root_parent.data, NULL);
+        char *expathin = realpath(new_work->root_parent.data, NULL); /* allow for failures */
 
-        if (!strcmp(expathin, expathout)) {
+        if (expathin && !strcmp(expathin, expathout)) {
             fprintf(stderr,"You are putting the index dbs in input directory\n");
         }
 
