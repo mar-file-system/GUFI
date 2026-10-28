@@ -191,11 +191,14 @@ TEST(gufi_query, aggregate_outputs) {
     in.outname.len = strlen(in.outname.data);
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* directory, not file */
 
+    #ifndef __CYGWIN__
+    // cygwin does not react well to opening a directory as a file
     in.output = OUTDB;
     in.outname.data = (char *) "@CMAKE_BINARY_DIR@";
     in.outname.len = strlen(in.outname.data);
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* directory, not file */
 
+    // FIXME: Window's ntdll conflicts with cygwin
     in.output = OUTDB;
     in.outname.data = (char *) SQLITE_MEMORY;
     in.outname.len = strlen(in.outname.data);
@@ -205,6 +208,7 @@ TEST(gufi_query, aggregate_outputs) {
     in.sql.init_agg.data = (char *) "CREATE TABLE aggregate(id INT);";
     EXPECT_EQ(aggregate_init(&agg, &in), &agg);
     EXPECT_NE(agg.db, nullptr);
+    #endif
 
     aggregate_fin(&agg, &in);
 }

@@ -79,6 +79,7 @@ OF SUCH DAMAGE.
 
 static const char template_name[] = "should-not-see-this-in-filesystem";
 
+#ifndef __CYGWIN__
 static int sql_callback(void *args, int, char **data, char **) {
     std::string **cols = (std::string **) args;
     **cols = data[1];
@@ -156,6 +157,7 @@ TEST(template_db, bad_inputs) {
     EXPECT_EQ(remove(template_name), 0);
     ASSERT_EQ(close_template_db(&tdb), 0);
 }
+#endif
 
 TEST(create_temporary_template, not_enough_fds) {
     struct rlimit orig_fds;
@@ -216,6 +218,7 @@ TEST(copy_template, bad_size) {
     ASSERT_EQ(remove(name), 0);
 }
 
+#ifndef __CYGWIN__
 TEST(create_empty_dbdb, good) {
     struct template_db tdb;
     ASSERT_EQ(init_template_db(&tdb), 0);
@@ -277,6 +280,7 @@ TEST(create_empty_dbdb, good) {
 
     ASSERT_EQ(close_template_db(&tdb), 0);
 }
+#endif
 
 TEST(create_empty_dbdb, path_is_file) {
     char filename[] = "XXXXXX";

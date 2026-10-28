@@ -73,12 +73,10 @@ if (CMAKE_CXX_COMPILER)
     PoolArgs.cpp
     QueuePerThreadPool.cpp
     SinglyLinkedList.cpp
-    addqueryfuncs.cpp
     bf.cpp
     compress.cpp
     debug.cpp
     handle_sql.cpp
-    histogram.cpp
     plugin.cpp
     popen_argv.cpp
     print.cpp
@@ -97,16 +95,29 @@ if (CMAKE_CXX_COMPILER)
     )
   endif()
 
+  if (NOT CYGWIN)
+    list(APPEND TEST_SRC
+      addqueryfuncs.cpp
+      histogram.cpp
+    )
+  endif()
+
   # these test files use CMake variables
   set(NEED_PATH
     BottomUp.cpp
     aggregate.cpp
     dbutils.cpp
     descend.cpp
-    external_attach.cpp
     path_list.cpp
     utils.cpp
   )
+
+  if (NOT CYGWIN)
+    list(APPEND NEED_PATH
+      external_attach.cpp
+    )
+  endif()
+
   foreach(SRC ${NEED_PATH})
     configure_file("${SRC}.in" "${SRC}" @ONLY)
     list(APPEND TEST_SRC

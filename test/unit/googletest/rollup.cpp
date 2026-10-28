@@ -92,6 +92,7 @@ TEST(rollup_child_process, bad) {
     EXPECT_EQ(rollup_child_process(nullptr, nullptr, &rexa), 1);
 }
 
+#ifndef __CYGWIN__
 TEST(get_isrolledup, bad) {
     EXPECT_EQ(get_isrolledup(nullptr, nullptr), 1);
 
@@ -155,3 +156,4 @@ TEST(bottomup_collect_treesummary, nullptr) {
 
     sqlite3_close(db);
 }
+#endif

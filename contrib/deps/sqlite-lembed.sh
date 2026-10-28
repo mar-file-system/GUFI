@@ -108,10 +108,19 @@ if [[ ! -f "${lembed_prefix}/lib/libsqlite_lembed0.a" ]]; then
     cd "${llama_build}"
     mkdir -p build
     cd build
-    if [[ "${SYSTEM}" == "CYGWIN" ]]; then
-        # shellcheck disable=SC2089
-        CYGWIN_FLAGS="-DCMAKE_CXX_FLAGS=-D_GNU_SOURCE"
-    fi
+    case "${SYSTEM}" in
+        "MAC")
+            EXTRA_FLAGS=(
+                -DGGML_METAL=Off
+            )
+            ;;
+        "CYGWIN")
+            EXTRA_FLAGS=(
+                -DCMAKE_C_FLAGS="-U_WIN32 -D_GNU_SOURCE"
+                -DCMAKE_CXX_FLAGS="-U_WIN32 -DGNU_SOURCE"
+            )
+            ;;
+    esac
 
     # RPATH only finds the location of llama.so and not its dependencies,
     # so set CMAKE_SHARED_LINKER_FLAGS to find llama.so's dependencies
@@ -122,13 +131,11 @@ if [[ ! -f "${lembed_prefix}/lib/libsqlite_lembed0.a" ]]; then
       -DGGML_BUILD_EXAMPLES=Off \
       -DGGML_BUILD_TESTS=Off \
       -DGGML_CCACHE=Off \
-      -DGGML_METAL=On \
-      -DGGML_METAL_EMBED_LIBRARY=On \
       -DLLAMA_BUILD_EXAMPLES=Off \
       -DLLAMA_BUILD_SERVER=Off \
       -DLLAMA_BUILD_TESTS=Off \
       ${OMP_FLAGS} \
-      ${CYGWIN_FLAGS}
+      "${EXTRA_FLAGS[@]}"
 
     make -j "${THREADS}"
     make -j "${THREADS}" install

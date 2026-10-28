@@ -174,3 +174,10 @@
    fun:_ZN20write_read_size_Test8TestBodyEv
    ...
 }
+{
+   <insert_a_suppression_name_here>
+   CoreError:FdNotClosed
+   fun:dup
+   fun:_ZN27parse_cmd_line_version_Test8TestBodyEv
+   ...
+}

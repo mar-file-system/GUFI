@@ -36,6 +36,21 @@ index 793b8fee7..0becb7afb 100644
          cache_directory = std::getenv("LOCALAPPDATA");
  #elif defined(__EMSCRIPTEN__)
          GGML_ABORT("not implemented on this platform");
+diff --git a/common/console.cpp b/common/console.cpp
+index 36f645f33..9c321b81b 100644
+--- a/common/console.cpp
++++ b/common/console.cpp
+@@ -1,3 +1,10 @@
++// need to define before ANY headers are included
++#if defined(__CYGWIN__)
++#ifndef _XOPEN_SOURCE
++#define _XOPEN_SOURCE 700
++#endif
++#endif
++
+ #include "console.h"
+ #include "log.h"
+ #include <vector>
 diff --git a/common/download.cpp b/common/download.cpp
 index d6d47b2d2..7cbec87d6 100644
 --- a/common/download.cpp
@@ -63,18 +78,6 @@ index cb6638833..e37c56af3 100644
  
          if (
              (CCID STREQUAL "Clang"      AND CCVER VERSION_GREATER_EQUAL 3.8.0) OR
-diff --git a/ggml/src/CMakeLists.txt b/ggml/src/CMakeLists.txt
-index 3e48860bf..15add0d9c 100644
---- a/ggml/src/CMakeLists.txt
-+++ b/ggml/src/CMakeLists.txt
-@@ -450,7 +450,6 @@ ggml_add_backend(BLAS)
- ggml_add_backend(CANN)
- ggml_add_backend(CUDA)
- ggml_add_backend(HIP)
--ggml_add_backend(METAL)
- ggml_add_backend(MUSA)
- ggml_add_backend(RPC)
- ggml_add_backend(VirtGPU)
 diff --git a/scripts/get-flags.mk b/scripts/get-flags.mk
 index a742766d1..19e6118f0 100644
 --- a/scripts/get-flags.mk

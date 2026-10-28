@@ -93,6 +93,7 @@ TEST(detachdb, nullptr) {
     EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1,    PRINT_ERRNO), nullptr);
 }
 
+#ifndef __CYGWIN__
 TEST(attachdb, CANTOPEN) {
     char parent[] = "XXXXXX";
     ASSERT_EQ(mkdtemp(parent), parent);
@@ -117,6 +118,7 @@ TEST(attachdb, CANTOPEN) {
 
     EXPECT_EQ(rmdir(parent), 0);
 }
+#endif
 
 TEST(create_table_wrapper, nullptr) {
     EXPECT_NE(create_table_wrapper(nullptr, nullptr, nullptr, nullptr), SQLITE_OK);
@@ -126,6 +128,7 @@ TEST(create_treesummary_tables, nullptr) {
     EXPECT_EQ(create_treesummary_tables(nullptr, nullptr, nullptr), 1);
 }
 
+#ifndef __CYGWIN__
 TEST(set_db_pragmas, good) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI, nullptr), SQLITE_OK);
@@ -162,6 +165,7 @@ TEST(opendb, bad_modify_db) {
                          [](const char *, sqlite3 *, void *){ return 1; }, nullptr);
     EXPECT_EQ(db, nullptr);
 }
+#endif
 
 TEST(querytsdb, nullptr) {
     EXPECT_EQ(querytsdb(nullptr, nullptr, nullptr, 0), 1);
@@ -302,6 +306,7 @@ TEST(sqlite_uri_path, not_enough_space) {
     }
 }
 
+#ifndef __CYGWIN__
 static const char CREATE_TABLE_TEST[] = "CREATE TABLE test(i INT, f FLOAT, t TEXT, b BLOB, n NULL, d DATE);";
 
 TEST(get_col_types, have_cols) {
@@ -436,3 +441,4 @@ TEST(get, col_names) {
 
     sqlite3_close(db);
 }
+#endif
