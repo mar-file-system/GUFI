@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -149,7 +150,16 @@ int main(int argc, char *argv[]) {
                 break;
             }
         }
+
         free(line);
+
+        if (ferror(stdin)) {
+            fprintf(stderr, "Error: Could not read SQL from standard input: %s\n",
+                    strerror(errno));
+            closedb(db);
+            input_fini(&in);
+            return EXIT_FAILURE;
+        }
     }
     else {
         /* in.pos.argv[0] would have been the file name */

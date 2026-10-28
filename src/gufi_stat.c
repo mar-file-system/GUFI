@@ -137,6 +137,10 @@ static int print_callback(void * args, int count, char **data, char **columns) {
     while (*f) {
         if (*f == '\\') {        /* handle escape sequences */
             unsigned char escape = *f++;
+            if (!*f) {
+                fwrite("\\", sizeof(char), 1, out);
+                break;
+            }
             switch (*f) {
                 case 'a':
                     escape = '\x07';

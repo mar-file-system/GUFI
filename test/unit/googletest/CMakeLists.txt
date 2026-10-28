@@ -129,6 +129,9 @@ if (CMAKE_CXX_COMPILER)
   if (CYGWIN)
     target_compile_definitions(unit_tests PUBLIC _GNU_SOURCE)
   endif()
+  # cannot figure out if directories exist at configure time because
+  # neither will exist the first time until after googletest is
+  # compiled and installed
   target_link_libraries(unit_tests -L"${DEP_INSTALL_PREFIX}/googletest/lib" -L"${DEP_INSTALL_PREFIX}/googletest/lib64" gtest ${COMMON_LIBRARIES})
   add_ai(unit_tests "libsqlite_vec0.a" "libsqlite_lembed0.a")
 

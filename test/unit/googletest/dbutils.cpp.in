@@ -168,8 +168,8 @@ TEST(opendb, bad_modify_db) {
 #endif
 
 TEST(querytsdb, nullptr) {
-    EXPECT_EQ(querytsdb(nullptr, nullptr, nullptr, 0), 1);
-    EXPECT_EQ(querytsdb(nullptr, nullptr, nullptr, 1), 1);
+    EXPECT_EQ(querytsdb(nullptr, nullptr, nullptr, 0), -1);
+    EXPECT_EQ(querytsdb(nullptr, nullptr, nullptr, 1), -1);
 }
 
 TEST(startdb, nullptr) {

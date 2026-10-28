@@ -38,6 +38,10 @@ $ (echo "CREATE TABLE new_table(i INT);"; echo "INSERT INTO new_table VALUES (6)
 7
 6
 
+# stdin without a trailing newline
+$ printf 'SELECT 1;' | gufi_sqlite3
+1
+
 # directory as db
 $ gufi_sqlite3 "search"
 Error: Could not open database file "search"

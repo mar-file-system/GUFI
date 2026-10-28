@@ -110,6 +110,9 @@ run_no_sort "(echo \"CREATE TABLE new_table(i INT);\";" \
             "echo \"SELECT * FROM new_table ORDER BY i DESC;\") |" \
             "${GUFI_SQLITE3}"
 
+echo "# stdin without a trailing newline"
+run_no_sort "printf 'SELECT 1;' | ${GUFI_SQLITE3}"
+
 echo "# directory as db"
 run_no_sort "${GUFI_SQLITE3} \"${SEARCH}\""
 

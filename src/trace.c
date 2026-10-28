@@ -688,6 +688,12 @@ int scout_trace(QPTPool_ctx_t *ctx, void *data) {
     }
 
     /* handle the last work item */
+    if (len < -1) {
+        row_destroy(&work);
+        rc = 1;
+        goto done;
+    }
+
     dir_count++;
     /* external dbs do not contribute to entry count, but are needed to loop correctly when processing directory */
     empty += !work->entries;

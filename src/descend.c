@@ -260,8 +260,14 @@ int descend(QPTPool_ctx_t *ctx,
             /* non directories */
             else if (S_ISLNK(child->statuso.st_mode)) {
                 child_ed.type = 'l';
-                const ssize_t link_len = readlink(child->name, child_ed.linkname, sizeof(child_ed.linkname));
-                /* check for error? */
+                const ssize_t link_len = readlink(child->name, child_ed.linkname, sizeof(child_ed.linkname) - 1);
+                if (link_len < 0) {
+                    const int err = errno;
+                    fprintf(stderr, "Warning: Could not read link: \"%s\": %s (%d)\n",
+                            child->name, strerror(err), err);
+                    free(child);
+                    continue;
+                }
                 child_ed.linkname[link_len] = '\0';
             }
             else if (S_ISREG(child->statuso.st_mode)) {

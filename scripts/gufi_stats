@@ -577,11 +577,13 @@ def total_dircount(_config, args, where):
         '-S', 'INSERT INTO {0} {1}'.format(INTERMEDIATE_NAME,
                                            build_query(['NULL', 'name', 'uid', '1 as count'],
                                                        [VRSUMMARY],
-                                                       where +
-                                                       [] if args.cumulative else [gufi_common.ROLLUP_SUMMARY_WHERE],
-                                                       group_by,
-                                                       ['count {0}'.format(ORDER[args.order]),
-                                                        'uid {0}'.format(ORDER[args.order])],
+                                                        where + (
+                                                            [] if args.cumulative
+                                                            else [gufi_common.ROLLUP_SUMMARY_WHERE]
+                                                        ),
+                                                        group_by,
+                                                        ['count {0}'.format(ORDER[args.order]),
+                                                         'uid {0}'.format(ORDER[args.order])],
                                                        args.num_results,
                                                        None)),
 
@@ -1037,7 +1039,7 @@ def duplicate_names(config, args, where):
                                                        None,
                                                        None)),
 
-        '-G', 'SELECT lhs.name, lhs.path FROM {0} AS lhs INNER JOIN (SELECT DISTINCT name, type, size FROM {0} GROUP BY name, type, size HAVING COUNT(*) > 1) AS rhs ON ((lhs.name == rhs.name) AND (lhs.type == rhs.type) AND (lhs.size == rhs.size)) ORDER BY lhs.name'.format(AGGREGATE_NAME) + ('LIMIT {0}'.format(args.num_results) if args.num_results else '')
+         '-G', 'SELECT lhs.name, lhs.path FROM {0} AS lhs INNER JOIN (SELECT DISTINCT name, type, size FROM {0} GROUP BY name, type, size HAVING COUNT(*) > 1) AS rhs ON ((lhs.name == rhs.name) AND (lhs.type == rhs.type) AND (lhs.size == rhs.size)) ORDER BY lhs.name'.format(AGGREGATE_NAME) + (' LIMIT {0}'.format(args.num_results) if args.num_results is not None else '')
 
     ]
 
@@ -1060,7 +1062,7 @@ def uidgid_size(config, args, uidgid, where):
 
     columns = [uidgid, 'size', 'name']
 
-    if args.num_results:
+    if args.num_results is not None:
         where += ['rownum <= {0}'.format(args.num_results)]
 
     def partition(table):
@@ -1125,7 +1127,7 @@ def uid_size(config, args, where):
 def gid_size(config, args, where):
     return uidgid_size(config, args, 'gid', where)
 
-def size_bins(args, base, type): # pylint: disable=redefined-builtin
+def size_bins(args, base, type, where): # pylint: disable=redefined-builtin
     '''
     Gets histogram of sizes
     bins are [b^n, b^(n+1))
@@ -1156,7 +1158,7 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
         '-E', 'INSERT INTO {0} {1}'.format(INTERMEDIATE_NAME,
                                            build_query(E_path + ['CASE WHEN {0} == 0 THEN -1 ELSE CAST(FLOOR(LOG({1}, {0})) AS {2}) END'.format(field, base, SQLITE3_INTEGER)],
                                                        table,
-                                                       ['type == \'{0}\''.format(type)],
+                                                        where + ['type == \'{0}\''.format(type)],
                                                        None, # cannot GROUP BY here because value would be aggregate
                                                        None,
                                                        None,
@@ -1189,19 +1191,19 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
 
     return queries
 
-def filesize_log2_bins(_config, args, _where):
-    return size_bins(args, 2, 'f')
+def filesize_log2_bins(_config, args, where):
+    return size_bins(args, 2, 'f', where)
 
-def filesize_log1024_bins(_config, args, _where):
-    return size_bins(args, 1024, 'f')
+def filesize_log1024_bins(_config, args, where):
+    return size_bins(args, 1024, 'f', where)
 
-def dirfilecount_log2_bins(_config, args, _where):
-    return size_bins(args, 2, 'd')
+def dirfilecount_log2_bins(_config, args, where):
+    return size_bins(args, 2, 'd', where)
 
-def dirfilecount_log1024_bins(_config, args, _where):
-    return size_bins(args, 1024, 'd')
+def dirfilecount_log1024_bins(_config, args, where):
+    return size_bins(args, 1024, 'd', where)
 
-def size_bins_hist(args, base, type): # pylint: disable=redefined-builtin
+def size_bins_hist(args, base, type, where): # pylint: disable=redefined-builtin
     '''
     Gets histogram of sizes
     bins are [b^n, b^(n+1))
@@ -1239,7 +1241,7 @@ def size_bins_hist(args, base, type): # pylint: disable=redefined-builtin
                                            build_query(E_path +
                                                        ['log_hist({0}, {1}, {2})'.format(field, base, buckets)],
                                                        table,
-                                                       ['type == \'{0}\''.format(type)],
+                                                        where + ['type == \'{0}\''.format(type)],
                                                        None, # cannot GROUP BY here because value would be aggregate
                                                        None,
                                                        None,
@@ -1270,20 +1272,20 @@ def size_bins_hist(args, base, type): # pylint: disable=redefined-builtin
 
     return queries
 
-def filesize_log2_bins_hist(_config, args, _where):
-    return size_bins_hist(args, 2, 'f')
+def filesize_log2_bins_hist(_config, args, where):
+    return size_bins_hist(args, 2, 'f', where)
 
-def filesize_log1024_bins_hist(_config, args, _where):
-    return size_bins_hist(args, 1024, 'f')
+def filesize_log1024_bins_hist(_config, args, where):
+    return size_bins_hist(args, 1024, 'f', where)
 
-def dirfilecount_log2_bins_hist(_config, args, _where):
-    return size_bins_hist(args, 2, 'd')
+def dirfilecount_log2_bins_hist(_config, args, where):
+    return size_bins_hist(args, 2, 'd', where)
 
-def dirfilecount_log1024_bins_hist(_config, args, _where):
-    return size_bins_hist(args, 1024, 'd')
+def dirfilecount_log1024_bins_hist(_config, args, where):
+    return size_bins_hist(args, 1024, 'd', where)
 
 # do binning here
-def age_bins(args, time_name, type):  # pylint: disable=redefined-builtin
+def age_bins(args, time_name, type, where):  # pylint: disable=redefined-builtin
     '''
     Gets histogram of ages of timestamps relative to a reference time
 
@@ -1344,7 +1346,7 @@ def age_bins(args, time_name, type):  # pylint: disable=redefined-builtin
         '-E', 'INSERT INTO {0} {1}'.format(INTERMEDIATE_NAME,
                                            build_query(E_path + [bucket_sql],
                                                        table,
-                                                       ['type == \'{0}\''.format(type)],
+                                                        where + ['type == \'{0}\''.format(type)],
                                                        None,
                                                        None,
                                                        None,
@@ -1375,26 +1377,26 @@ def age_bins(args, time_name, type):  # pylint: disable=redefined-builtin
 
     return queries
 
-def file_age_atime(_config, args, _where):
-    return age_bins(args, 'atime', 'f')
+def file_age_atime(_config, args, where):
+    return age_bins(args, 'atime', 'f', where)
 
-def file_age_mtime(_config, args, _where):
-    return age_bins(args, 'mtime', 'f')
+def file_age_mtime(_config, args, where):
+    return age_bins(args, 'mtime', 'f', where)
 
-def file_age_ctime(_config, args, _where):
-    return age_bins(args, 'ctime', 'f')
+def file_age_ctime(_config, args, where):
+    return age_bins(args, 'ctime', 'f', where)
 
-def dir_age_atime(_config, args, _where):
-    return age_bins(args, 'atime', 'd')
+def dir_age_atime(_config, args, where):
+    return age_bins(args, 'atime', 'd', where)
 
-def dir_age_mtime(_config, args, _where):
-    return age_bins(args, 'mtime', 'd')
+def dir_age_mtime(_config, args, where):
+    return age_bins(args, 'mtime', 'd', where)
 
-def dir_age_ctime(_config, args, _where):
-    return age_bins(args, 'ctime', 'd')
+def dir_age_ctime(_config, args, where):
+    return age_bins(args, 'ctime', 'd', where)
 
 # use internal histogram functionality
-def age_bins_hist(args, time_name, type):  # pylint: disable=redefined-builtin
+def age_bins_hist(args, time_name, type, where):  # pylint: disable=redefined-builtin
     '''
     Gets histogram of ages of timestamps relative to a reference time
 
@@ -1421,7 +1423,7 @@ def age_bins_hist(args, time_name, type):  # pylint: disable=redefined-builtin
         '-E', 'INSERT INTO {0} {1}'.format(INTERMEDIATE_NAME,
                                            build_query(E_path + ['time_hist({0}, {1})'.format(time_name, args.reftime)],
                                                        table,
-                                                       ['type == \'{0}\''.format(type)],
+                                                        where + ['type == \'{0}\''.format(type)],
                                                        None,
                                                        None,
                                                        None,
@@ -1452,23 +1454,23 @@ def age_bins_hist(args, time_name, type):  # pylint: disable=redefined-builtin
 
     return queries
 
-def file_age_atime_hist(_config, args, _where):
-    return age_bins_hist(args, 'atime', 'f')
+def file_age_atime_hist(_config, args, where):
+    return age_bins_hist(args, 'atime', 'f', where)
 
-def file_age_mtime_hist(_config, args, _where):
-    return age_bins_hist(args, 'mtime', 'f')
+def file_age_mtime_hist(_config, args, where):
+    return age_bins_hist(args, 'mtime', 'f', where)
 
-def file_age_ctime_hist(_config, args, _where):
-    return age_bins_hist(args, 'ctime', 'f')
+def file_age_ctime_hist(_config, args, where):
+    return age_bins_hist(args, 'ctime', 'f', where)
 
-def dir_age_atime_hist(_config, args, _where):
-    return age_bins_hist(args, 'atime', 'd')
+def dir_age_atime_hist(_config, args, where):
+    return age_bins_hist(args, 'atime', 'd', where)
 
-def dir_age_mtime_hist(_config, args, _where):
-    return age_bins_hist(args, 'mtime', 'd')
+def dir_age_mtime_hist(_config, args, where):
+    return age_bins_hist(args, 'mtime', 'd', where)
 
-def dir_age_ctime_hist(_config, args, _where):
-    return age_bins_hist(args, 'ctime', 'd')
+def dir_age_ctime_hist(_config, args, where):
+    return age_bins_hist(args, 'ctime', 'd', where)
 
 def unique_col_count(args, col, table, where):
     '''

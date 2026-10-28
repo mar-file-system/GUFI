@@ -229,7 +229,9 @@ static int process_entries(void *args, int count, char **data, char **columns) {
                 const int err = errno;
                 fprintf(stderr, "Error opening file %s: %d\n", entry, err);
             }
-            close(fd);
+            else {
+                close(fd);
+            }
 
             struct xattrs xattrs;
             xattrs_setup(&xattrs);

@@ -314,7 +314,18 @@ int dupdir(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
     if (mkdir(path, mode) != 0) {
         const int err = errno;
         if (err == ENOENT) {
-            mkpath(path, mode, uid, gid);
+            if (mkpath(path, mode, uid, gid) != 0) {
+                const int mkpath_err = errno;
+                /* Another worker may have created the path concurrently. */
+                if (mkpath_err != EEXIST) {
+                    return mkpath_err;
+                }
+
+                struct stat st;
+                if ((lstat(path, &st) != 0) || !S_ISDIR(st.st_mode)) {
+                    return mkpath_err;
+                }
+            }
         }
         else if (err == EEXIST) {
             struct stat st;
@@ -1039,7 +1050,7 @@ int write_with_resize(char **buf, size_t *size, size_t *offset,
     int written = 0;
     if (!*buf) {
         /* do not offset into NULL pointer */
-        written = vsnprintf(*buf, 0, fmt, args);
+        written = vsnprintf(NULL, 0, fmt, args);
     }
     else {
         written = vsnprintf(*buf + *offset, *size - *offset, fmt, args);

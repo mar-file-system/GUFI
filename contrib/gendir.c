@@ -165,7 +165,9 @@ static int generate_level(QPTPool_ctx_t * ctx, void * data) {
         if (fd < 0) {
             fprintf(stderr, "open failed for %s: %d %s\n", name, errno, strerror(errno));
         }
-        close(fd);
+        else {
+            close(fd);
+        }
     }
 
     free(dir);
@@ -227,7 +229,9 @@ int main(int argc, char * argv[]) {
         fprintf(stderr, "Could not allocate root work: %s\n", argv[2]);
         return 1;
     }
-    memcpy(root->name, argv[1], strlen(argv[1]));
+
+    /* may truncate */
+    SNFORMAT_S(root->name, sizeof(root->name), 1, argv[1], strlen(argv[1]));
 
     if (dupdir(root->name, DIR_PERMS, geteuid(), getegid()) != 0) {
         fprintf(stderr, "mkdir failed for %s: %d %s\n", root->name, errno, strerror(errno));

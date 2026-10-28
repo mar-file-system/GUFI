@@ -200,7 +200,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
         if (sqlite3_runvt_init(ta->outdb, &err, NULL) != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr, "Error: Could not initialize runvt: %s\n", err);
-            return 1;
+            break;
         }
 
         /* create empty xattr tables to UNION to */

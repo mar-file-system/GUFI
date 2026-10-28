@@ -84,6 +84,12 @@ OF SUCH DAMAGE.
  * run starting at --min-level instead of walking to --min-level first
  */
 int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_ctx_t *ctx) {
+    if (!root) {
+        fprintf(stderr,
+                "Error: A root directory is required with --path-list\n");
+        return 1;
+    }
+
     FILE *file = fopen(in->path_list.data, "r");
     if (!file) {
         const int err = errno;
@@ -159,6 +165,8 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_ctx_t *ctx) {
 
         QPTPool_enqueue(ctx, processdir, subtree_root);
     }
+
+    /* ignore getline failures */
 
     free(line);
     fclose(file);

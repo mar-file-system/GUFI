@@ -170,14 +170,26 @@ static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value *
     const char *fmt = (char *) sqlite3_value_text(argv[0]); /* format    */
     const time_t t = sqlite3_value_int64(argv[1]);          /* timestamp */
 
+    if (!fmt) {
+        sqlite3_result_null(context);
+        return;
+    }
+
     char buf[MAXSTRFTIME];
+    size_t len = 0;
     #ifdef LOCALTIME_R
     struct tm tm;
-    strftime(buf, sizeof(buf), fmt, localtime_r(&t, &tm));
+    len = strftime(buf, sizeof(buf), fmt, localtime_r(&t, &tm));
     #else
-    strftime(buf, sizeof(buf), fmt, localtime(&t));
+    len = strftime(buf, sizeof(buf), fmt, localtime(&t));
     #endif
-    sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
+
+    if (len == 0) {
+        sqlite3_result_null(context);
+        return;
+    }
+
+    sqlite3_result_text(context, buf, (int) len, SQLITE_TRANSIENT);
 }
 
 /*
@@ -203,6 +215,11 @@ static void intcat(sqlite3_context *context, int argc, sqlite3_value **argv) {
     static const double itQ = 1000ULL * 1000ULL * 1000ULL * 1000ULL * 1000ULL * 1000ULL;
 
     const char *intin_s = (const char *) sqlite3_value_text(argv[0]);
+
+    if (!intin_s) {
+        sqlite3_result_error(context, "Bad size", -1);
+        return;
+    }
 
     double intin = 0;
     if (sscanf(intin_s, "%lf", &intin) != 1) {
@@ -268,6 +285,11 @@ static void bytecat(sqlite3_context *context, int argc, sqlite3_value **argv) {
 
     const char *bytein_s = (const char *) sqlite3_value_text(argv[0]);
 
+    if (!bytein_s) {
+        sqlite3_result_error(context, "Bad size", -1);
+        return;
+    }
+
     double bytein = 0;
     if (sscanf(bytein_s, "%lf", &bytein) != 1) {
         sqlite3_result_error(context, "Bad size", -1);
@@ -332,6 +354,11 @@ static void agecat(sqlite3_context *context, int argc, sqlite3_value **argv) {
     static const double secinD = seciny * 10;
 
     const char *timein_s = (const char *) sqlite3_value_text(argv[0]);
+
+    if (!timein_s) {
+        sqlite3_result_error(context, "Bad size", -1);
+        return;
+    }
 
     double timein;
     if (sscanf(timein_s, "%lf", &timein) != 1) {
@@ -404,6 +431,11 @@ static void epochtoage(sqlite3_context *context, int argc, sqlite3_value **argv)
     const char *timein_s = (const char *) sqlite3_value_text(argv[0]);
     const char *unit_s   = (const char *) sqlite3_value_text(argv[1]);
 
+    if (!timein_s || !unit_s) {
+        sqlite3_result_error(context, "Bad timestamp or unit", -1);
+        return;
+    }
+
     double timein;
     if (sscanf(timein_s, "%lf", &timein) != 1) {
         sqlite3_result_error(context, "Bad size", -1);
@@ -469,7 +501,7 @@ static void hostname(sqlite3_context *context, int argc, sqlite3_value **argv)
 }
 
 /* uint64_t goes up to E */
-static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E'};
+static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E', '\0'};
 
 /*
  * Returns the number of blocks required to store a given size
@@ -490,13 +522,26 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 
     const char *size_s = (const char *) sqlite3_value_text(argv[0]);
     const char *unit_s = (const char *) sqlite3_value_text(argv[1]);
-    const size_t unit_s_len = strlen(unit_s);
 
-    uint64_t size = 0;
-    if (sscanf(size_s, "%" PRIu64, &size) != 1) {
+    if (!size_s) {
         sqlite3_result_error(context, "Bad blocksize size", -1);
         return;
     }
+
+    uint64_t size = 0;
+    int read = 0;
+    if ((sscanf(size_s, "%" PRIu64 "%n", &size, &read) != 1) ||
+        (((size_t) read) != strlen(size_s))) {
+        sqlite3_result_error(context, "Bad blocksize size", -1);
+        return;
+    }
+
+    if (!unit_s) {
+        sqlite3_result_error(context, "Bad blocksize unit", -1);
+        return;
+    }
+
+    const size_t unit_s_len = strlen(unit_s);
 
     /* whether or not a coefficent was found - affects printing */
     uint64_t unit_size = 0;
@@ -557,7 +602,7 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
         }
 
         int found = 0;
-        for(size_t i = 0; i < sizeof(SIZE); i++) {
+        for(size_t i = 0; i < (sizeof(SIZE) - 1); i++) {
             unit_size *= multiplier;
             if (unit[0] == SIZE[i]) {
                 found = 1;
@@ -593,13 +638,19 @@ static void human_readable_size(sqlite3_context *context, int argc, sqlite3_valu
     const char *size_s = (const char *) sqlite3_value_text(argv[0]);
     double size = 0;
 
+    if (!size_s) {
+        sqlite3_result_error(context, "Bad size", -1);
+        return;
+    }
+
     if (sscanf(size_s, "%lf", &size) != 1) {
         sqlite3_result_error(context, "Bad size", -1);
         return;
     }
 
     size_t unit_index = 0;
-    while (size >= 1024) {
+    while (((unit_index + 1) < sizeof(SIZE)) &&
+           (size >= 1024)) {
         size /= 1024;
         unit_index++;
     }
@@ -673,6 +724,12 @@ static void rpad(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
     char *value = (char *) sqlite3_value_text(argv[0]);
+
+    if (!value) {
+        sqlite3_result_null(context);
+        return;
+    }
+
     const size_t value_len = strlen(value);
     const int pad_len = sqlite3_value_int(argv[1]);
 
@@ -718,7 +775,13 @@ static int lineop(sqlite3_context *context, const char *cmd, char **line, size_t
 
     size_t alloc = 0;
     ssize_t len = getline(line, &alloc, p);
-    pclose(p);
+
+    if (pclose(p) != 0) {
+        static const char ERR_PREFIX[] = "lineop: command failed";
+        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX), cmd);
+        free(*line);
+        return -1;
+    }
 
     if (len < 0) {
         static const char ERR_PREFIX[] = "lineop: failed to read result of";
@@ -727,16 +790,10 @@ static int lineop(sqlite3_context *context, const char *cmd, char **line, size_t
         return -1;
     }
 
-    /* only newline, so no value */
-    if (len == 1) {
-        static const char ERR_PREFIX[] = "lineop: did not get result from";
-        return_error(context, ERR_PREFIX, sizeof(ERR_PREFIX), cmd);
-        free(*line);
-        return -1;
+    /* remove newline(s) */
+    while (len && ((*line)[len - 1] == '\n')) {
+        (*line)[--len] = '\0';
     }
-
-    /* remove newline */
-    (*line)[--len] = '\0';
     *line_len = len;
 
     return 0;
@@ -809,7 +866,7 @@ static void blobop(sqlite3_context *context, int argc, sqlite3_value **argv) {
             if (!new_buf) {
                 sqlite3_result_error_nomem(context);
                 free(data);
-                pclose(p);
+                pclose(p); /* ignore errors */
                 return;
             }
 
@@ -818,10 +875,9 @@ static void blobop(sqlite3_context *context, int argc, sqlite3_value **argv) {
     }
 
     const int read_error = ferror(p);
+    const int rc = pclose(p);
 
-    pclose(p);
-
-    if (read_error) {
+    if (read_error || (rc != 0)) {
         sqlite3_result_error_code(context, SQLITE_ERROR);
         free(data);
         return;
@@ -908,12 +964,15 @@ static void median_step(sqlite3_context *context, int argc, sqlite3_value **argv
         sll_init(data);
     }
 
-    const double value = sqlite3_value_double(argv[0]);
-    sll_push_back(data, (void *) (uintptr_t) value);
+    double *value = malloc(sizeof(*value));
+    *value = sqlite3_value_double(argv[0]);
+    sll_push_back(data, value);
 }
 
 static int cmp_double(const void *lhs, const void *rhs) {
-    return * (double *) lhs - * (double *) rhs;
+    const double l = *(const double *) lhs;
+    const double r = *(const double *) rhs;
+    return (l > r) - (l < r);
 }
 
 static void median_final(sqlite3_context *context) {
@@ -928,12 +987,12 @@ static void median_final(sqlite3_context *context) {
         goto cleanup;
     }
     else if (count == 1) {
-        median = (double) (uintptr_t) sll_node_data(sll_head_node(data));
+        median = * (double *) sll_node_data(sll_head_node(data));
         goto ret_median;
     }
     else if (count == 2) {
-        median = ((double) (uintptr_t) sll_node_data(sll_head_node(data)) +
-                  (double) (uintptr_t) sll_node_data(sll_tail_node(data))) / 2.0;
+        median = (* (double *) sll_node_data(sll_head_node(data)) +
+                  * (double *) sll_node_data(sll_tail_node(data))) / 2.0;
         goto ret_median;
     }
 
@@ -942,7 +1001,7 @@ static void median_final(sqlite3_context *context) {
     double *arr = malloc(count * sizeof(double));
     size_t i = 0;
     sll_loop(data, node) {
-        arr[i++] = (double) (uintptr_t) sll_node_data(node);
+        arr[i++] = * (double *) sll_node_data(node);
     }
 
     qsort(arr, count, sizeof(double), cmp_double);
@@ -964,7 +1023,7 @@ static void median_final(sqlite3_context *context) {
     sqlite3_result_double(context, median);
 
   cleanup:
-    sll_destroy(data, NULL);
+    sll_destroy(data, free);
 }
 
 /* return the directory you are currently in */

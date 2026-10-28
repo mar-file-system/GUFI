@@ -93,7 +93,11 @@ def get_blocksize(value):
         exponent = gufi_common.SIZE_EXPONENTS[prefix]
         units -= 1 # remove unit prefix
 
-    return int(str_val[:units]) * (multiplier ** exponent)
+    coefficient = str_val[:units]
+    if coefficient in ('', '+'):
+        coefficient = '1'
+
+    return int(coefficient) * (multiplier ** exponent)
 
 def parse_args(argv):
     parser = argparse.ArgumentParser('gufi_du', description='GUFI version of du', add_help=False)
@@ -158,7 +162,7 @@ def nondir(args, name):
         '--max-level', '0',
         '-E', 'SELECT level(), 1, {0}, rpath(sname, sroll, name) FROM {1} WHERE name == \'{2}\';'.format(E_col,
                                                                                                          gufi_common.VRPENTRIES,
-                                                                                                         name),
+                                                                                                         gufi_common.single_quotes(name)),
     ]
 
 # no flags

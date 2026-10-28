@@ -128,7 +128,7 @@ static int get_uidgid_callback(void *args, int count, char **data, char **column
     st->st_size++; /* doing ++ instead of = 1 just in case this is somehow called multiple times */
 
     return !((sscanf(data[0], "%" STAT_uid, &st->st_uid) == 1) &&
-             (sscanf(data[0], "%" STAT_gid, &st->st_gid) == 1));
+             (sscanf(data[1], "%" STAT_gid, &st->st_gid) == 1));
 }
 
 static int treesummary_ascend(void *args) {

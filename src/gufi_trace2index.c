@@ -110,6 +110,7 @@ static void process_nondir(sqlite3 *db, char *line, const size_t len,
     struct entry_data row_ed = {0};
 
     if (linetowork(line, len, nda->pa->in.delim, &row, &row_ed, nda->pa->in.old_trace_format) != 0) {
+        xattrs_cleanup(&row_ed.xattrs);
         return;
     }
 
@@ -161,6 +162,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
     /* parse the directory data */
     if (linetowork(w->line, w->len, in->delim, &dir, &ed, in->old_trace_format) != 0) {
+        xattrs_cleanup(&ed.xattrs);
         row_destroy(&w);
         return 1;
     }
@@ -186,6 +188,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                 nda.topath, strerror(err), err);
         free(nda.topath);
         free(dir);
+        xattrs_cleanup(&ed.xattrs);
         row_destroy(&w);
         return (err == ENOSPC);
     }
@@ -226,7 +229,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
                     break;
                 }
 
-                process_nondir(db, line, size, &nda);
+                process_nondir(db, line, len, &nda);
             }
             free(line); /* reuse line and only alloc+free once */
         }
@@ -254,6 +257,9 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         xattrs_cleanup(&ed.xattrs);
 
         closedb(db); /* don't set to nullptr */
+    }
+    else {
+        xattrs_cleanup(&ed.xattrs);
     }
 
     free(nda.topath);

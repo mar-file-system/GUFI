@@ -241,6 +241,11 @@ TEST(addqueryfuncs, strftime) {
     free(output);
     output = nullptr;
 
+    /* NULL format must not crash */
+    EXPECT_EQ(sqlite3_exec(db, "SELECT strftime(NULL, 0);",
+                           copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_EQ(output, nullptr);
+
     sqlite3_close(db);
 }
 
@@ -262,6 +267,9 @@ TEST(addqueryfuncs, intcat) {
                                         copy_columns_callback, nullptr, nullptr), SQLITE_OK);
 
                  EXPECT_NE(sqlite3_exec(db, "SELECT intcat(-1);",
+                                        copy_columns_callback, nullptr, nullptr), SQLITE_OK);
+
+                 EXPECT_NE(sqlite3_exec(db, "SELECT intcat(NULL);",
                                         copy_columns_callback, nullptr, nullptr), SQLITE_OK);
              });
 }
@@ -286,6 +294,9 @@ TEST(addqueryfuncs, bytecat) {
 
                  EXPECT_NE(sqlite3_exec(db, "SELECT bytecat(-1);",
                                         copy_columns_callback, nullptr, nullptr), SQLITE_OK);
+
+                 EXPECT_NE(sqlite3_exec(db, "SELECT bytecat(NULL);",
+                                        copy_columns_callback, nullptr, nullptr), SQLITE_OK);
              });
 }
 
@@ -299,6 +310,9 @@ TEST(addqueryfuncs, agecat) {
     char *output = nullptr;
 
     EXPECT_NE(sqlite3_exec(db, "SELECT agecat('abc');",
+                           copy_columns_callback, &output, nullptr), SQLITE_OK);
+
+    EXPECT_NE(sqlite3_exec(db, "SELECT agecat(NULL);",
                            copy_columns_callback, &output, nullptr), SQLITE_OK);
 
     char sql[MAXSQL];
@@ -342,6 +356,11 @@ TEST(addqueryfuncs, epochtoage) {
     char *output = nullptr;
 
     EXPECT_NE(sqlite3_exec(db, "SELECT epochtoage('abc', 's');",
+                           copy_columns_callback, &output, nullptr), SQLITE_OK);
+
+    EXPECT_NE(sqlite3_exec(db, "SELECT epochtoage(NULL, 's');",
+                           copy_columns_callback, &output, nullptr), SQLITE_OK);
+    EXPECT_NE(sqlite3_exec(db, "SELECT epochtoage(0, NULL);",
                            copy_columns_callback, &output, nullptr), SQLITE_OK);
 
     char sql[MAXSQL];
@@ -448,6 +467,9 @@ TEST(addqueryfuncs, blocksize) {
     }
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize('', '');",      copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* non-integer size argument */
+    EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize(NULL, 'K');",   copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* NULL size argument */
+    EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize(1, NULL);",     copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* NULL unit argument */
+    EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize('abc', 'B');",  copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* bad size argument */
     EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize('abc', '');",   copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* missing size argument */
     EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'i');",      copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* single bad character */
     EXPECT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'iB');",     copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* 1st character isn't valid */
@@ -496,6 +518,7 @@ TEST(addqueryfuncs, human_readable_size) {
 
     EXPECT_EQ(sqlite3_exec(db, "SELECT human_readable_size('');",    copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* empty input */
     EXPECT_EQ(sqlite3_exec(db, "SELECT human_readable_size('abc');", copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* non-integer input */
+    EXPECT_EQ(sqlite3_exec(db, "SELECT human_readable_size(NULL);",  copy_columns_callback, nullptr, nullptr), SQLITE_ERROR); /* NULL input */
 
     sqlite3_close(db);
 }
@@ -543,9 +566,14 @@ TEST(addqueryfuncs, rpad) {
                  // input is longer than requested padding - return entire input (don't cut)
                  char *output = NULL;
                  EXPECT_EQ(sqlite3_exec(db, "SELECT rpad('abcde', 3);", copy_columns_callback, &output, nullptr), SQLITE_OK);
-                 EXPECT_STREQ(output, "abcde");
-                 free(output);
-             });
+                  EXPECT_STREQ(output, "abcde");
+                  free(output);
+
+                  output = nullptr;
+                  EXPECT_EQ(sqlite3_exec(db, "SELECT rpad(NULL, 3);",
+                                         copy_columns_callback, &output, nullptr), SQLITE_OK);
+                  EXPECT_EQ(output, nullptr);
+              });
 }
 
 TEST(addqueryfuncs, strop) {
@@ -564,6 +592,7 @@ TEST(addqueryfuncs, strop) {
 
     char *err = nullptr;
 
+    // bad command
     EXPECT_EQ(sqlite3_exec(db, "SELECT strop('');", copy_columns_callback, &output, &err), SQLITE_ERROR);
     EXPECT_NE(err, nullptr);
     free(output);
@@ -571,8 +600,9 @@ TEST(addqueryfuncs, strop) {
     sqlite3_free(err);
     err = nullptr;
 
-    EXPECT_EQ(sqlite3_exec(db, "SELECT strop('echo');", copy_columns_callback, &output, &err), SQLITE_ERROR);
-    EXPECT_NE(err, nullptr);
+    // empty output is valid so long as it ends in a newline
+    EXPECT_EQ(sqlite3_exec(db, "SELECT strop('echo');", copy_columns_callback, &output, &err), SQLITE_OK);
+    EXPECT_EQ(err, nullptr);
     free(output);
     output = nullptr;
     sqlite3_free(err);
