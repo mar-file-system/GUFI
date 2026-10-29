@@ -100,6 +100,7 @@ if (MARFS_PREFIX)
   add_library(marfs_plugin SHARED
     marfs_plugin.c
     "${CMAKE_SOURCE_DIR}/src/str.c"
+    "${CMAKE_SOURCE_DIR}/src/utils.c"
   )
   target_include_directories(marfs_plugin SYSTEM PUBLIC "${MARFS_PREFIX}" "${LIBXML2_INCLUDE_DIRS}")
   target_link_libraries(marfs_plugin PUBLIC marfs)
