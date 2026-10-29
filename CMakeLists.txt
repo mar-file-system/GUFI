@@ -80,7 +80,7 @@ if (CMAKE_BINARY_DIR STREQUAL CMAKE_INSTALL_PREFIX)
   message(FATAL_ERROR "Refusing to install into build directory \"${CMAKE_BINARY_DIR}\"")
 endif()
 
-project(GUFI VERSION 0.7.0 LANGUAGES C)
+project(GUFI VERSION 0.8.0 LANGUAGES C)
 
 if (APPLE)
   if (NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
