@@ -95,7 +95,7 @@ static int process_entries(str_t *tree_parent,
     switch (ed->type) {
         case 'f':
             ;
-            int fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, entry->statuso.st_mode);
+            int fd = secure_openat(AT_FDCWD, path, O_WRONLY | O_CREAT | O_TRUNC, entry->statuso.st_mode);
             if (fd < 0) {
                 const int err = errno;
                 fprintf(stderr, "Error opening file %s: %d\n", path, err);

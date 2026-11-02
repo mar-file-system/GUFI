@@ -90,7 +90,7 @@ int gqw_process_path_list(struct input *in, gqw_t *root, QPTPool_ctx_t *ctx) {
         return 1;
     }
 
-    FILE *file = fopen(in->path_list.data, "r");
+    FILE *file = secure_fopen(in->path_list.data, "r", 0);
     if (!file) {
         const int err = errno;
         fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",

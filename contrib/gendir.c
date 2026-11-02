@@ -161,7 +161,8 @@ static int generate_level(QPTPool_ctx_t * ctx, void * data) {
         SNPRINTF(name, MAXPATH, "%s/f.%zu", dir->name, i);
 
         // overwrite any existing data
-        const int fd = open(name, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        const int fd = secure_openat(AT_FDCWD, name, O_RDWR | O_CREAT | O_EXCL | O_TRUNC,
+                                     S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         if (fd < 0) {
             fprintf(stderr, "open failed for %s: %d %s\n", name, errno, strerror(errno));
         }

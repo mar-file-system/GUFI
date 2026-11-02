@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 #include "popen_argv.h"
 #include "str.h"
 #include "template_db.h"
+#include "utils.h"
 
 #include "gufi_query/spread_tree.h"
 
@@ -243,7 +244,7 @@ static void create_spread(sqlite3_context *context, int argc, sqlite3_value **ar
 }
 
 static str_t *read_file(sqlite3_context *context, const char *path) {
-    int fd = open(path, O_RDONLY);
+    int fd = secure_openat(AT_FDCWD, path, O_RDONLY, 0);
     if (fd < 0) {
         const int err = errno;
         char *errmsg = sqlite3_mprintf("Could not open file \"%s\": %s (%d)",
@@ -527,7 +528,7 @@ static int set_up_extdb(sqlite3_context *context, const char *prefix,
             }
 
             /* if the file does not exist, create it */
-            const int extdb_fd = open(extdb_path, O_CREAT | O_WRONLY, S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP);
+            const int extdb_fd = secure_openat(AT_FDCWD, extdb_path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
             if (extdb_fd < 0) {
                 const int err = errno;
                 char *errmsg = sqlite3_mprintf("Could not create external database \"%s\": %s (%d)",

@@ -79,6 +79,97 @@ OF SUCH DAMAGE.
 #include "str.h"
 #include "utils.h"
 
+int secure_openat(const int dirfd, const char *path,
+                  const int flags, const mode_t perms) {
+    if (!path) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    return openat(dirfd, path, flags | O_CLOEXEC, perms);
+}
+
+FILE *secure_fopen(const char *path, const char *mode, const mode_t perms) {
+    /* Supports r, r+, w, w+, wx, w+x, and wx+; a and b modes are not handled. */
+    if (!path || !mode) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    const size_t mode_len = strlen(mode);
+    if ((mode_len < 1) || (mode_len > 3) ||
+        ((mode[0] != 'r') && (mode[0] != 'w'))) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    int flags = 0;
+    int plus = 0;
+    int exclusive = 0;
+    for (size_t i = 1; i < mode_len; i++) {
+        if (mode[i] == '+') {
+            if (plus) {
+                errno = EINVAL;
+                return NULL;
+            }
+            plus = 1;
+        }
+        else if (mode[i] == 'x') {
+            if (exclusive) {
+                errno = EINVAL;
+                return NULL;
+            }
+            exclusive = 1;
+        }
+        else {
+            errno = EINVAL;
+            return NULL;
+        }
+    }
+
+    switch (mode[0]) {
+        case 'r':
+            if (exclusive) {
+                errno = EINVAL;
+                return NULL;
+            }
+            flags |= plus ? O_RDWR : O_RDONLY;
+            break;
+        case 'w':
+            flags |= (plus ? O_RDWR : O_WRONLY) | O_CREAT | O_TRUNC;
+            if (exclusive) {
+                flags |= O_EXCL;
+            }
+            break;
+        default:
+            errno = EINVAL;
+            return NULL;
+    }
+
+    const int fd = secure_openat(AT_FDCWD, path, flags, perms);
+    if (fd < 0) {
+        return NULL;
+    }
+
+    char stream_mode[3] = {mode[0], '\0', '\0'};
+    if (plus) {
+        stream_mode[1] = '+';
+    }
+
+    FILE *file = fdopen(fd, stream_mode);
+    if (!file) {
+        const int saved_errno = errno;
+        close(fd);
+        if (exclusive) {
+            remove(path);
+        }
+        errno = saved_errno;
+        return NULL;
+    }
+
+    return file;
+}
+
 uint64_t get_queue_limit(const uint64_t target_memory_footprint, const uint64_t nthreads) {
     /* not set */
     if (target_memory_footprint == 0) {
@@ -793,7 +884,7 @@ void set_metadata(const char *path, struct stat *st,
 
 void dump_memory_usage(FILE *out) {
     #if defined(DEBUG) && defined(__linux__)
-    int fd = open("/proc/self/status", O_RDONLY);
+    int fd = secure_openat(AT_FDCWD, "/proc/self/status", O_RDONLY, 0);
     if (fd < 0) {
         perror("Could not open /proc/self/status");
         return;

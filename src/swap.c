@@ -87,7 +87,7 @@ static int swap_open(const char *prefix, const size_t id) {
     SNPRINTF(name, sizeof(name), "%s%jd.swap.%" PRIu64, prefix, (intmax_t) getpid(), id);
 
     /* not using O_TMPFILE to avoid needing _GNU_SOURCE */
-    const int fd = open(name, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR);
+    const int fd = secure_openat(AT_FDCWD, name, O_RDWR | O_CREAT | O_TRUNC | O_EXCL, S_IRUSR | S_IWUSR);
     if (fd < 0) {
         const int err = errno;
         fprintf(stderr, "Error: Could not open %s: %s (%d)\n",

@@ -85,6 +85,12 @@ extern "C" {
 /* Wrapper around snprintf to catch issues and print them to stderr */
 int SNPRINTF(char *str, size_t size, const char *format, ...);
 
+/* Open a path securely and return its file descriptor */
+int secure_openat(int dirfd, const char *path, int flags, mode_t perms);
+
+/* Open a path securely and return a FILE * */
+FILE *secure_fopen(const char *path, const char *mode, mode_t perms);
+
 /* Equivalent to snprintf printing only strings. Variadic arguments
    should be pairs of strings and their lengths (to try to prevent
    unnecessary calls to strlen). Make sure to typecast the lengths

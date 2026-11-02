@@ -224,7 +224,7 @@ static int process_entries(void *args, int count, char **data, char **columns) {
             char *xattr_names = data[9];
             sscanf(data[10], "%zu",         &xattr_names_len);
 
-            const int fd = open(entry, O_WRONLY | O_TRUNC | O_CREAT, st.st_mode);
+            const int fd = secure_openat(AT_FDCWD, entry, O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, st.st_mode);
             if (fd < 0) {
                 const int err = errno;
                 fprintf(stderr, "Error opening file %s: %d\n", entry, err);

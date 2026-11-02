@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "external_attach.h"
+#include "utils.h"
 
 /*
  * attachname, mode, uid, and gid are not strictly necessary but can be useful
@@ -209,7 +210,7 @@ size_t external_read_file(struct input *in,
                           struct work *child,
                           external_process_db_f func,
                           void *args) {
-    int extdb_list = open(child->name, O_RDONLY);
+    int extdb_list = secure_openat(AT_FDCWD, child->name, O_RDONLY, 0);
     if (extdb_list < 0) {
         const int err = errno;
         fprintf(stderr, "Error: Could not open user external database list in %s: %s (%d)\n",

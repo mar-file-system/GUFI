@@ -103,7 +103,7 @@ FILE **outfiles_init(const str_t *prefix, const size_t count) {
             }
         }
 
-        if (!(files[i] = fopen(outname, "w"))) {
+        if (!(files[i] = secure_fopen(outname, "w", S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH))) {
             outfiles_fin(files, i);
             fprintf(stderr, "Could not open output file %s\n", outname);
             free(outname);

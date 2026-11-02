@@ -518,7 +518,7 @@ static int parallel_bottomup_enqueue_subdirs(QPTPool_ctx_t *ctx,
     struct UserArgs *ua = NULL;
     QPTPool_get_args(ctx, (void **) &ua);
 
-    FILE *file = fopen(path_list->data, "r");
+    FILE *file = secure_fopen(path_list->data, "r", 0);
     if (!file) {
         const int err = errno;
         fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",

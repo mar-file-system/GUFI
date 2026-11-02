@@ -135,14 +135,14 @@ static int cpr_file(QPTPool_ctx_t *ctx, void *data) {
         }
     }
 
-    const int src_fd = open(work->name, O_RDONLY);
+    const int src_fd = secure_openat(AT_FDCWD, work->name, O_RDONLY, 0);
     if (src_fd < 0) {
         print_error_and_goto("Could not open file", work->name, cleanup);
     }
 
     const str_t dst = create_dst_name(&pa->dst, work);
 
-    const int dst_fd = open(dst.data, O_CREAT | O_WRONLY | O_TRUNC, st->st_mode);
+    const int dst_fd = secure_openat(AT_FDCWD, dst.data, O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, st->st_mode);
     if (dst_fd < 0) {
         print_error_and_goto("Could not open file", dst.data, free_name);
     }

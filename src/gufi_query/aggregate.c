@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "print.h"
+#include "utils.h"
 
 #include "gufi_query/aggregate.h"
 #include "gufi_query/PoolArgs.h"
@@ -114,7 +115,7 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
 
         /* only open a final file if OUTFILE */
         if (in->output == OUTFILE) {
-            aggregate->outfile = fopen(in->outname.data, "w");
+            aggregate->outfile = secure_fopen(in->outname.data, "w", S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
             if (!aggregate->outfile) {
                 fprintf(stderr, "Error: Could not open output file %s\n", in->outname.data);
                 free(dbname);

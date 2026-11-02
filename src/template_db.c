@@ -151,7 +151,7 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
      * open before sqlite3_close to prevent potential race
      * condition where file is deleted before being reopened
      */
-    tdb->fd = open(name, O_RDONLY);
+    tdb->fd = secure_openat(AT_FDCWD, name, O_RDONLY, 0);
 
     sqlite3_close(db);
 
@@ -224,7 +224,7 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
     }
 
     const int src_db = tdb->fd;
-    const int dst_db = open(dst, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+    const int dst_db = secure_openat(AT_FDCWD, dst, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
     if (dst_db < 0) {
         *err = errno;

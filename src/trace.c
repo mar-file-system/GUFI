@@ -414,7 +414,7 @@ int *open_traces(char **trace_names, size_t trace_count) {
         }
 
         for(size_t i = 0; i < trace_count; i++) {
-            traces[i] = open(trace_names[i], O_RDONLY);
+            traces[i] = secure_openat(AT_FDCWD, trace_names[i], O_RDONLY, 0);
             if (traces[i] < 0) {
                 const int err = errno;
                 fprintf(stderr, "Could not open \"%s\": %s (%d)\n", trace_names[i], strerror(err), err);

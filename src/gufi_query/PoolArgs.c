@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 
 #include "extensions.h"
 #include "plugin.h"
+#include "utils.h"
 
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/external_attach.h"
@@ -270,7 +271,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
                 const size_t len = snprintf(NULL, 0, "%s.%zu", in->outname.data, i);
                 char *outname = malloc(len + 1);
                 SNPRINTF(outname, len + 1, "%s.%zu", in->outname.data, i);
-                ta->outfile = fopen(outname, "w");
+                ta->outfile = secure_fopen(outname, "w", S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
                 if (!ta->outfile) {
                     fprintf(stderr, "Error: Could not open output file \"%s\"\n", outname);
                     free(outname);

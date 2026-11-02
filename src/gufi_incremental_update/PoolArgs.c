@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include "config.h"
 #include "plugin.h"
 #include "trie.h"
+#include "utils.h"
 
 #include "gufi_incremental_update/PoolArgs.h"
 
@@ -82,7 +83,7 @@ static int setup_suspect_file(struct PoolArgs *pa) {
     pa->suspects.fl.max = 0;
 
     if (str_exists(&pa->in.suspect.filename)) {
-        FILE *f = fopen(pa->in.suspect.filename.data, "r"); /* --suspect-file */
+        FILE *f = secure_fopen(pa->in.suspect.filename.data, "r", 0); /* --suspect-file */
         if(!f) {
             fprintf(stderr, "Can't open suspect file %s\n", pa->in.suspect.filename.data);
             return 1;

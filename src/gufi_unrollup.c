@@ -234,7 +234,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
 static int enqueue_subtree_roots(struct input *in, struct Unrollup *root,
                                  QPTPool_ctx_t *ctx, QPTPool_f func) {
-    FILE *file = fopen(in->path_list.data, "r");
+    FILE *file = secure_fopen(in->path_list.data, "r", 0);
     if (!file) {
         const int err = errno;
         fprintf(stderr, "could not open directory list file \"%s\": %s (%d)\n",

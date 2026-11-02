@@ -172,7 +172,7 @@ ssize_t setup_directory_skip(trie_t *skip, const char *filename) {
     }
 
     /* add user defined directory names to skip */
-    FILE *skipfile = fopen(filename, "r");
+    FILE *skipfile = secure_fopen(filename, "r", 0);
     if (!skipfile) {
         fprintf(stderr, "Error: Cannot open skip file \"%s\"\n", filename);
         return -1;

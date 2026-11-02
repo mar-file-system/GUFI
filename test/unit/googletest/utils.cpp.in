@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <cerrno>
 #include <climits>
 #include <cstdio>
 #include <cstring>
@@ -80,6 +81,115 @@ OF SUCH DAMAGE.
 
 static const uint64_t    PRINT_ERRNO[4] = {0x00000000ULL, 0x00000000ULL, 0x00000000ULL, 0x00000000ULL};
 static const uint64_t NO_PRINT_ERRNO[4] = {0xffffffffULL, 0xffffffffULL, 0xffffffffULL, 0xffffffffULL};
+
+TEST(secure_openat, descriptor) {
+    // Open an existing file and verify the descriptor is close-on-exec.
+    char filename[] = "XXXXXX";
+    const int temp = mkstemp(filename);
+    ASSERT_GE(temp, 0);
+    // Close the temporary descriptor before reopening it through secure_openat.
+    ASSERT_EQ(close(temp), 0);
+
+    const int fd = secure_openat(AT_FDCWD, filename, O_RDONLY, 0);
+    ASSERT_GE(fd, 0);
+
+    int descriptor_flags = fcntl(fd, F_GETFD);
+    ASSERT_GE(descriptor_flags, 0);
+    // The descriptor must be marked close-on-exec.
+    EXPECT_NE(descriptor_flags & FD_CLOEXEC, 0);
+
+    // The descriptor and temporary file must be cleaned up.
+    EXPECT_EQ(close(fd), 0);
+    EXPECT_EQ(remove(filename), 0);
+}
+
+TEST(secure_fopen, modes) {
+    // Verify read, read/write, truncate/write, and read/write-truncate modes.
+    char filename[] = "XXXXXX";
+    const int temp = mkstemp(filename);
+    ASSERT_GE(temp, 0);
+    // Seed the file so read and truncation behavior can be checked.
+    ASSERT_EQ(write(temp, "x", 1), 1);
+    ASSERT_EQ(close(temp), 0);
+
+    FILE *file = secure_fopen(filename, "r", 0);
+    ASSERT_NE(file, nullptr);
+    // Read mode preserves the existing contents.
+    EXPECT_EQ(fgetc(file), 'x');
+    EXPECT_EQ(fclose(file), 0);
+
+    file = secure_fopen(filename, "r+", S_IRUSR | S_IWUSR);
+    ASSERT_NE(file, nullptr);
+    // Read/write mode can read and replace existing contents.
+    EXPECT_EQ(fgetc(file), 'x');
+    ASSERT_EQ(fseek(file, 0, SEEK_SET), 0);
+    EXPECT_NE(fputc('y', file), EOF);
+    EXPECT_EQ(fclose(file), 0);
+
+    file = secure_fopen(filename, "w+", S_IRUSR | S_IWUSR);
+    ASSERT_NE(file, nullptr);
+    // Read/write truncate mode starts empty and supports round-trip I/O.
+    EXPECT_EQ(fgetc(file), EOF);
+    EXPECT_NE(fputs("wplus", file), EOF);
+    ASSERT_EQ(fseek(file, 0, SEEK_SET), 0);
+    char contents[6] = {};
+    EXPECT_EQ(fread(contents, 1, 5, file), 5U);
+    EXPECT_STREQ(contents, "wplus");
+    EXPECT_EQ(fclose(file), 0);
+
+    file = secure_fopen(filename, "w", S_IRUSR | S_IWUSR);
+    ASSERT_NE(file, nullptr);
+    // Write mode truncates and rewrites the existing file.
+    EXPECT_NE(fputs("test", file), EOF);
+    EXPECT_EQ(fclose(file), 0);
+
+    struct stat st = {};
+    ASSERT_EQ(stat(filename, &st), 0);
+    // Confirm that the final file contains only the replacement data.
+    EXPECT_EQ(st.st_size, (off_t) 4);
+
+    // Remove the test file.
+    EXPECT_EQ(remove(filename), 0);
+}
+
+TEST(secure_fopen, unsupported_modes) {
+    // Reject append and binary modes, and accept exclusive write creation.
+    const char filename[] = "secure-fopen-unsupported";
+    for (const char *mode : {"a", "a+", "rb", "wb", "rx", "", "rrrr", "r++", "rxx"}) {
+        errno = 0;
+        // Unsupported, empty, and duplicate mode modifiers are rejected.
+        EXPECT_EQ(secure_fopen(filename, mode, S_IRUSR | S_IWUSR), nullptr);
+        EXPECT_EQ(errno, EINVAL);
+    }
+
+    // A null path is rejected before attempting to open a file.
+    errno = 0;
+    EXPECT_EQ(secure_openat(AT_FDCWD, nullptr, O_RDONLY, 0), -1);
+    EXPECT_EQ(errno, EINVAL);
+
+    // A null path is also rejected by the stream wrapper.
+    errno = 0;
+    EXPECT_EQ(secure_fopen(nullptr, "r", 0), nullptr);
+    EXPECT_EQ(errno, EINVAL);
+
+    char exclusive_filename[] = "XXXXXX";
+    const int temp = mkstemp(exclusive_filename);
+    ASSERT_GE(temp, 0);
+    ASSERT_EQ(close(temp), 0);
+    ASSERT_EQ(remove(exclusive_filename), 0);
+
+    FILE *file = secure_fopen(exclusive_filename, "wx", S_IRUSR | S_IWUSR);
+    ASSERT_NE(file, nullptr);
+    // Exclusive write mode creates a new file successfully.
+    EXPECT_EQ(fclose(file), 0);
+
+    errno = 0;
+    // A second exclusive open must fail because the file already exists.
+    EXPECT_EQ(secure_fopen(exclusive_filename, "w+x", S_IRUSR | S_IWUSR), nullptr);
+    EXPECT_EQ(errno, EEXIST);
+    // Remove the exclusive-mode test file.
+    EXPECT_EQ(remove(exclusive_filename), 0);
+}
 
 TEST(SNPRINTF, bad) {
     char buf[1];
