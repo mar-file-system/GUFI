@@ -201,7 +201,7 @@ typedef struct gufi_vtab_cursor {
     popen_argv_t *output;
     char *row;             /* current row */
     size_t len;            /* length of current row */
-    int col_count;
+    size_t col_count;
     struct column *cols;
 
     sqlite_int64 rowid;    /* current row id */
@@ -495,7 +495,8 @@ static const size_t TLoL = sizeof(char) + sizeof(char);
 /* read TLV rows terminated by newline - this only works because type is in the range [1, 5] */
 static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
     size_t row_len = 0;
-    int col_count = 0;
+    /* Lengths and allocation bounds use size_t to avoid signed comparisons. */
+    size_t col_count = 0;
 
     #define ROW_PREFIX_LEN TLV_ROW_LEN_LEN + TLV_COL_COUNT_LEN
 
@@ -531,11 +532,21 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
         goto error;
     }
 
-    /* int column count */
-    if (sscanf(row_prefix + TLV_ROW_LEN_LEN, TLV_COL_COUNT_READ_FMT, (unsigned int *) &col_count) != 1) {
+    /* column count */
+    unsigned int encoded_col_count = 0;
+    if (sscanf(row_prefix + TLV_ROW_LEN_LEN, TLV_COL_COUNT_READ_FMT,
+               &encoded_col_count) != 1) {
         const int err = errno;
         pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not parse column count from \"%s\": %s (%d)",
                                                     row_prefix + TLV_ROW_LEN_LEN, strerror(err), err);
+        goto error;
+    }
+    /* Convert the fixed-width encoded count once it has been parsed safely. */
+    col_count = encoded_col_count;
+
+    if (row_len < ROW_PREFIX_LEN) {
+        pCur->base.pVtab->zErrMsg = sqlite3_mprintf(
+            "Error: Row length is smaller than its prefix");
         goto error;
     }
 
@@ -545,9 +556,24 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
     /* buf does not contain row prefix */
     buf = malloc(row_len + 1); /* allow for NULL terminator */
     curr = buf;
+
+    if ((row_len != 0) && (col_count > (row_len / TLoL))) {
+        pCur->base.pVtab->zErrMsg = sqlite3_mprintf(
+            "Error: Column count exceeds row length");
+        goto error;
+    }
+
     cols = malloc(col_count * sizeof(*cols));
 
-    for(int i = 0; i < col_count; i++) {
+    /* Use the unsigned count consistently while walking column data. */
+    for(size_t i = 0; i < col_count; i++) {
+        const size_t used = curr - buf;
+        if ((used > row_len) || ((row_len - used) < TLoL)) {
+            pCur->base.pVtab->zErrMsg = sqlite3_mprintf(
+                "Error: Column header exceeds row length");
+            goto error;
+        }
+
         /* column start points to type */
         cols[i].start = curr - buf;
 
@@ -555,21 +581,38 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
         const size_t tlol = read_size(fd, curr, TLoL);
         if (tlol != TLoL) {
             const int err = errno;
-            pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not read type and length of column length %d: %s (%d)",
+            pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not read type and length of column length %zu: %s (%d)",
                                                         i, strerror(err), err);
             goto error;
         }
         *curr -= '0';                /* remove '0' from the type char */
 
         curr++;                      /* move to length of length */
-        const char len_of_len = *curr - '0';
+        const unsigned char encoded_len_of_len = *curr;
+        if ((encoded_len_of_len < '1') ||
+            (encoded_len_of_len > '9')) {
+            pCur->base.pVtab->zErrMsg = sqlite3_mprintf(
+                "Error: Invalid column length header");
+            goto error;
+        }
+
+        const size_t len_of_len = encoded_len_of_len - '0';
 
         curr++;                      /* move to length */
 
+        const size_t length_offset = curr - buf;
+        if ((length_offset > row_len) ||
+            ((row_len - length_offset) < len_of_len)) {
+            pCur->base.pVtab->zErrMsg = sqlite3_mprintf(
+                "Error: Column length exceeds row length");
+            goto error;
+        }
+
         /* read length */
-        if (read_size(fd, curr, len_of_len) != len_of_len) {
+        const ssize_t length_read = read_size(fd, curr, len_of_len);
+        if ((length_read < 0) || ((size_t) length_read != len_of_len)) {
             const int err = errno;
-            pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not read length of column %d: %s (%d)",
+            pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not read length of column %zu: %s (%d)",
                                                         i, strerror(err), err);
             goto error;
         }
@@ -585,18 +628,26 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
         /* parse length */
         if (sscanf(curr, TLV_COL_LEN_READ_FMT, &cols[i].len) != 1) {
             const int err = errno;
-            pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not parse length of column %d from \"%s\": %s (%d)",
+            pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not parse length of column %zu from \"%s\": %s (%d)",
                                                         i, curr, strerror(err), err);
             goto error;
         }
 
         curr += len_of_len;          /* to go to start of value */
 
-        const size_t v = read_size(fd, curr, cols[i].len);
-        if (v != cols[i].len) {
+        const size_t value_offset = curr - buf;
+        if ((value_offset > row_len) ||
+            (cols[i].len > (row_len - value_offset))) {
+            pCur->base.pVtab->zErrMsg = sqlite3_mprintf(
+                "Error: Column value exceeds row length");
+            goto error;
+        }
+
+        const ssize_t value_read = read_size(fd, curr, cols[i].len);
+        if ((value_read < 0) || ((size_t) value_read != cols[i].len)) {
             const int err = errno;
-            pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not read %zu octets. Got %zu: %s (%d)",
-                                                        cols[i].len, v, strerror(err), err);
+            pCur->base.pVtab->zErrMsg = sqlite3_mprintf("Error: Could not read %zu octets. Got %zd: %s (%d)",
+                                                        cols[i].len, value_read, strerror(err), err);
             goto error;
         }
 
@@ -604,6 +655,12 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
         cols[i].data = curr - buf - cols[i].start;
 
         curr += cols[i].len;
+    }
+
+    if ((size_t) (curr - buf) != row_len) {
+        pCur->base.pVtab->zErrMsg = sqlite3_mprintf(
+            "Error: Column data does not consume the complete row");
+        goto error;
     }
 
     pCur->row = buf;
@@ -1668,7 +1725,14 @@ static int gufi_vtColumn(sqlite3_vtab_cursor *cur,
      * of the selected column is past what is available in this row,
      * return NULL
      */
-    const int idx = N - (pVtab->fixed_schema?GUFI_VT_ARGS_COUNT:0);
+    const int fixed_columns = pVtab->fixed_schema ? GUFI_VT_ARGS_COUNT : 0;
+    /* SQLite supplies a signed column index; validate it before conversion. */
+    if (N < fixed_columns) {
+        sqlite3_result_null(ctx);
+        return SQLITE_OK;
+    }
+
+    const size_t idx = (size_t) (N - fixed_columns);
     if (idx >= pCur->col_count) {
         sqlite3_result_null(ctx);
         return SQLITE_OK;
