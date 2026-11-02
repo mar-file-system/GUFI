@@ -474,11 +474,16 @@ endif()
 
 if (DEP_AI)
   # copy dependencies into packages
+  set(VEC_LINK "${CMAKE_BINARY_DIR}/libvec0.${EXT}")
+  set(LEMBED_LINK "${CMAKE_BINARY_DIR}/liblembed0.${EXT}")
+  file(CREATE_LINK "vec0.${EXT}" "${VEC_LINK}" SYMBOLIC)
+  file(CREATE_LINK "lembed0.${EXT}" "${LEMBED_LINK}" SYMBOLIC)
+
   install(FILES
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
-    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
-    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}"
+    "${VEC_LINK}"
+    "${LEMBED_LINK}"
     ${OpenMP_omp_LIBRARY}
     DESTINATION "${LIB}"
     COMPONENT Local
@@ -506,14 +511,14 @@ if (DEP_AI)
   )
   install(FILES
     "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/vec0.${EXT}"
-    "${DEP_INSTALL_PREFIX}/sqlite-vec/lib/libvec0.${EXT}"
     "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/lembed0.${EXT}"
-    "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib/liblembed0.${EXT}"
+    "${VEC_LINK}"
+    "${LEMBED_LINK}"
     ${OpenMP_omp_LIBRARY}
     DESTINATION "${REMOTE_LIB}"
     COMPONENT Remote
     EXCLUDE_FROM_ALL # do not copy if running 'make install'
-    )
+  )
   if (PACKAGE_LICENSES)
     install(FILES
       "${CMAKE_BINARY_DIR}/licenses/sqlite-vec-LICENSE-APACHE"
