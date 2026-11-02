@@ -62,12 +62,12 @@ OF SUCH DAMAGE.
 
 
 
-#include <sqlite3.h>
 #include <string.h>
+
+#include <sqlite3.h>
 
 #include "SinglyLinkedList.h"
 #include "dbutils.h"
-#include "external_attach.h"
 #include "external_copy.h"
 #include "print.h"
 #include "rollup.h"

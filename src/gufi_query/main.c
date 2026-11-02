@@ -68,13 +68,10 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include "OutputBuffers.h"
 #include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "compress.h"
-#include "print.h"
 #include "utils.h"
 
 #include "gufi_query/aggregate.h"

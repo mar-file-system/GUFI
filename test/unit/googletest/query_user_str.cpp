@@ -64,15 +64,16 @@ OF SUCH DAMAGE.
 
 #include <cstdio>
 #include <cstring>
-#include <sqlite3.h>
 #include <string>
 
 #include <gtest/gtest.h>
+#include <sqlite3.h>
 
 #include "SinglyLinkedList.h"
+#include "trie.h"
+
 #include "gufi_query/query_replacement.h"
 #include "gufi_query/query_user_strs.h"
-#include "trie.h"
 
 static const char        FORMAT[]        = "A{A}B{BC}C{DEF}D";
 static const std::size_t FORMAT_START[]  = {1, 5, 10};

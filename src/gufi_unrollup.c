@@ -67,13 +67,10 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
-#include "debug.h"
-#include "external_attach.h"
 #include "rollup.h"
 #include "utils.h"
 

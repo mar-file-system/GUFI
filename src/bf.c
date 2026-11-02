@@ -77,8 +77,6 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "config.h"
-#include "dbutils.h"
-#include "debug.h"
 #include "external_attach.h"
 #include "external_copy.h"
 #include "plugin.h"

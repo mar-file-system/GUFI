@@ -68,7 +68,6 @@ OF SUCH DAMAGE.
 #endif
 
 #include "dbutils.h"
-#include "plugin.h"
 
 #include "gufi_query/PoolArgs.h"
 

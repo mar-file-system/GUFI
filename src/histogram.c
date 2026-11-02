@@ -67,7 +67,6 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #include "SinglyLinkedList.h"
-#include "bf.h"
 #include "histogram.h"
 #include "str.h"
 #include "trie.h"

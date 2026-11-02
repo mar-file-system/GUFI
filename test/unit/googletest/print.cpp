@@ -64,10 +64,10 @@ OF SUCH DAMAGE.
 
 #include <cstdio>
 #include <cstring>
-#include <sqlite3.h>
 #include <string>
 
 #include <gtest/gtest.h>
+#include <sqlite3.h>
 
 #include "print.h"
 

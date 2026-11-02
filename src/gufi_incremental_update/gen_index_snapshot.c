@@ -70,7 +70,6 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "config.h"
 #include "dbutils.h"
-#include "debug.h"
 #include "descend.h"
 #include "str.h"
 

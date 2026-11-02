@@ -71,7 +71,6 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
-#include <unistd.h>
 
 #include "bf.h"
 #include "dbutils.h"

@@ -63,11 +63,8 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
-#include <sqlite3.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "utils.h"
 
 #include "gufi_query/query_user_strs.h"
 

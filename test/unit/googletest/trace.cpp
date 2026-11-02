@@ -62,14 +62,14 @@ OF SUCH DAMAGE.
 
 
 
-#include <gtest/gtest.h>
-
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
 
 #include <cstdio>
 #include <unistd.h>
+
+#include <gtest/gtest.h>
 
 #include "config.h"
 #include "trace.h"

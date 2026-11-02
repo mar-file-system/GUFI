@@ -71,7 +71,6 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "BottomUp.h"
-#include "debug.h"
 #include "utils.h"
 
 /* Remove non-directory entries while descending */

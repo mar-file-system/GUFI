@@ -73,8 +73,9 @@ OF SUCH DAMAGE.
 
 extern "C" {
 
-#include "gufi_query/PoolArgs.h"
 #include "print.h"
+
+#include "gufi_query/PoolArgs.h"
 
 }
 

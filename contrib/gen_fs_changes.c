@@ -75,7 +75,6 @@ OF SUCH DAMAGE.
 #include "SinglyLinkedList.h"
 #include "config.h"
 #include "debug.h"
-#include "descend.h"
 #include "trie.h"
 #include "utils.h"
 

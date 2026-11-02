@@ -68,7 +68,7 @@ OF SUCH DAMAGE.
 #include <stddef.h>
 #include <stdio.h>
 
-#include <str.h>
+#include "str.h"
 
 /* allocate the array of FILE * and open files */
 FILE **outfiles_init(const str_t *prefix, const size_t count);

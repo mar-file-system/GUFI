@@ -63,10 +63,9 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "trace.h"
 #include "utils.h"
 #include "xattrs.h"
 

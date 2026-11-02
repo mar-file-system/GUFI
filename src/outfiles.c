@@ -65,7 +65,6 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-#include "bf.h"
 #include "outfiles.h"
 #include "utils.h"
 

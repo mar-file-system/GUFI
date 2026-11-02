@@ -73,11 +73,8 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "QueuePerThreadPool.h"
-#include "SinglyLinkedList.h"
 #include "bf.h"
 #include "debug.h"
-#include "dbutils.h"
-#include "external_attach.h"
 #include "index.h"
 #include "path_list.h"
 #include "plugin.h"

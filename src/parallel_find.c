@@ -71,7 +71,6 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include "OutputBuffers.h"
 #include "QueuePerThreadPool.h"

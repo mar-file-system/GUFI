@@ -62,8 +62,8 @@ OF SUCH DAMAGE.
 
 
 
-#include <errno.h>
 #include <dirent.h>
+#include <errno.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -73,7 +73,6 @@ OF SUCH DAMAGE.
 #include "descend.h"
 #include "plugin.h"
 #include "str.h"
-#include "template_db.h"
 #include "utils.h"
 
 #include "gufi_incremental_update/PoolArgs.h"

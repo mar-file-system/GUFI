@@ -71,11 +71,9 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "dbutils.h"
 #include "debug.h"
 #include "external_attach.h"
 #include "outfiles.h"

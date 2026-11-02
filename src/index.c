@@ -65,7 +65,6 @@ OF SUCH DAMAGE.
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "QueuePerThreadPool.h"
 #include "dbutils.h"

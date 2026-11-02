@@ -76,7 +76,6 @@ OF SUCH DAMAGE.
 #include <utime.h>
 
 #include "config.h"
-#include "external_attach.h"
 #include "str.h"
 #include "utils.h"
 

@@ -63,9 +63,6 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
-#include <grp.h>
-#include <math.h>
-#include <pwd.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,8 +71,6 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "external_attach.h"
-#include "histogram.h"
-#include "rollup.h"
 #include "trie.h"
 
 const char ENTRIES_CREATE[] =

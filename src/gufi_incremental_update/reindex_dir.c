@@ -68,10 +68,8 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "config.h"
-#include "dbutils.h"
 #include "index.h"
 #include "plugin.h"
-#include "template_db.h"
 
 #include "gufi_incremental_update/incremental_update.h"
 
