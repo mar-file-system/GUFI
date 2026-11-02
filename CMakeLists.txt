@@ -362,7 +362,6 @@ else()
   set(PCRE2_LIB "${PCRE2_LIBRARY_DIRS}/libpcre2-8.a")
 endif()
 add_definitions(-DPCRE2_CODE_UNIT_WIDTH=8) # needed by external_copy.h
-set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, pcre2")
 
 # Download and build all non-system dependencies
 set(DEP_DOWNLOAD_PREFIX    "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE PATH   "Location of dependency sources")
