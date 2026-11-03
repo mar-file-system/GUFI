@@ -105,13 +105,17 @@ def run_slurm(args, target, cmd):
 def handle_slurm_procs(args, jobids):
     after = ':'.join(jobid for jobid in jobids if jobid)
 
+    wait_cmd = [args.sbatch,
+                '--nodes=1',
+                '--nodelist={0}'.format(args.hosts[1])]
+    if len(after) != 0:
+        wait_cmd += ['--dependency', 'after:' + after]
+    wait_cmd += ['--wait', '/dev/stdin']
+
     # pylint: disable=consider-using-with
-    wait = subprocess.Popen([args.sbatch, '--nodes=1', '--nodelist={0}'.format(args.hosts[1])] +
-                            ['--dependency', 'after:' + after] if len(after) != 0 else [] +
-                            ['--wait', '/dev/stdin'],
+    wait = subprocess.Popen(wait_cmd,
                             stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE, # not used
-                            shell=True)
+                            stdout=subprocess.PIPE)
 
     # split shebang so shellcheck script doesn't see this
     wait.communicate(input=' '.join(['#!/usr/bin/env', 'bash']).encode('utf-8'))
