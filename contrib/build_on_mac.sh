@@ -76,6 +76,7 @@ export PATH="$(brew --prefix flock)/bin:${PATH}"
 export PATH="$(brew --prefix gnu-sed)/libexec/gnubin:${PATH}"
 export PATH="$(brew --prefix gpatch)/libexec/gnubin:${PATH}"
 export PATH="$(brew --prefix grep)/libexec/gnubin:${PATH}"
+export PATH="$(brew --prefix make)/libexec/gnubin:${PATH}"
 export PATH="$(brew --prefix python3)/bin:${PATH}"
 
 mkdir -p build
