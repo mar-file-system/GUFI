@@ -751,11 +751,18 @@ function(add_ai target vec_basename lembed_basename)
 
     # make install
     set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
-    set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
     set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
-    set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
     set_property(TARGET "${target}" APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA_LIB}")
-    set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA_LIB}")
+    if (DARWIN)
+      # Installed executables are in bin/ and libraries are in lib/.
+      set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "@loader_path/../lib")
+      # Installed modules, such as gufi_vt, are alongside their dependencies.
+      set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "@loader_path")
+    else()
+      set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-vec/lib")
+      set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite-lembed/lib")
+      set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/llama.cpp/${LLAMA_LIB}")
+    endif()
 
     # package install (all libraries go to the same install path)
     set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/lib")

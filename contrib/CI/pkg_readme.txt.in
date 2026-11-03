@@ -6,7 +6,6 @@ If installed for only yourself:
     INSTALL_PATH="${HOME}/Applications"
 
 export PATH="${INSTALL_PATH}/bin:${PATH}"
-export DYLD_LIBRARY_PATH="${INSTALL_PATH}/lib:${DYLD_LIBRARY_PATH}"
 
 If user facing scripts (gufi_find, gufi_ls, etc.) are required,
 

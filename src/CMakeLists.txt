@@ -270,9 +270,13 @@ target_link_libraries(gufi_vt
 )
 
 set_property(TARGET gufi_vt APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3/lib")
-set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3/lib")  # make install
 set_property(TARGET gufi_vt APPEND PROPERTY BUILD_RPATH   "${DEP_INSTALL_PREFIX}/sqlite3-pcre")
-set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre") # make install
+if (DARWIN)
+  set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "@loader_path")
+else()
+  set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3/lib")
+  set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${DEP_INSTALL_PREFIX}/sqlite3-pcre")
+endif()
 set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${LIB}")  # package install
 set_property(TARGET gufi_vt APPEND PROPERTY INSTALL_RPATH "${CPACK_PACKAGING_INSTALL_PREFIX}/${REMOTE_LIB}")  # package install
 

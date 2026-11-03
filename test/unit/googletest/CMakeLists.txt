@@ -134,12 +134,6 @@ if (CMAKE_CXX_COMPILER)
 
   add_test(NAME unit_tests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/unit_tests" --gtest_shuffle
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-  if (CYGWIN)
-    if (DEP_AI)
-      set_property(TEST unit_tests APPEND PROPERTY ENVIRONMENT "PATH=${DEP_INSTALL_PREFIX}/llama.cpp/bin:$ENV{PATH}"
-    )
-    endif()
-  endif()
   if (FSANITIZE)
     set_property(TEST unit_tests APPEND PROPERTY ENVIRONMENT "ASAN_OPTIONS=allocator_may_return_null=1")
     set_property(TEST unit_tests APPEND PROPERTY ENVIRONMENT "TSAN_OPTIONS=allocator_may_return_null=1")
