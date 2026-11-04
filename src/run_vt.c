@@ -77,7 +77,7 @@ SQLITE_EXTENSION_INIT1
  * commands and generate virtual tables with arbitrary result
  * columns. In order to achieve this, users MUST run "CREATE VIRTUAL
  * TABLE" to create the virtual table before querying it. The virtual
- * table should preferrably be created in the temp namespace:
+ * table should preferably be created in the temp namespace:
  *
  *     CREATE VIRTUAL TABLE temp.output
  *     USING run_vt(cmd='find -name "*.c" -printf "%f %s\n"', cols='name, size');

@@ -86,21 +86,25 @@ version
 .It Fl n, -threads\ <threads>
 number of threads
 .It Fl -min-level\ <min level>
-minmum level to go down
+minimum level to go down
 .It Fl -max-level\ <max level>
 maximum level to go down
-.It -path-list\ <filename>
+.It Fl -path-list\ <filename>
 File containing paths at single level to index (not including starting path). Must also use --min-level
 .It Fl x, -index-xattrs
 index xattrs
 .It Fl -skip-file\ <filename>
 file containing directory names to skip
-.It Fl q
+.It Fl q, -external-attach-validate
 check that external databases are valid before tracking during indexing
 .It Fl -plugin\ <entrypoint>:<path>
 plugin library for modifying tree processing
+.It Fl -use-exact-path
+create the index under the exact source path that was passed in instead of just the basename
 .It Fl -target-memory\ <bytes>
 target memory utilization (soft limit)
+.It Fl -swap-prefix\ <path>
+File name prefix for swap files
 .It Fl -subdir-limit\ <count>
 Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed serially
 .It Fl -compress

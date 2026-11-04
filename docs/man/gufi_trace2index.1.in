@@ -88,6 +88,8 @@ version
 number of threads
 .It Fl d, -delim\ <c>
 delimiter (one char)  [use 'x' for 0x1E]
+.It Fl -old-trace-format
+read old format traces
 .It Fl -target-memory\ <bytes>
 target memory utilization (soft limit)
 .It Fl -swap-prefix\ <path>

@@ -89,7 +89,7 @@ version
 .It Fl n, -threads\ <threads>
 number of threads
 .It Fl -min-level\ <min level>
-minmum level to go down
+minimum level to go down
 .It Fl -max-level\ <max level>
 maximum level to go down
 .It Fl -path-list\ <filename>
@@ -98,8 +98,10 @@ File containing paths at single level to index (not including starting path). Mu
 index xattrs
 .It Fl -skip-file\ <filename>
 file containing directory names to skip
-.It Fl q
+.It Fl q, -external-attach-validate
 check that external databases are valid before tracking during indexing
+.It Fl -use-exact-path
+create the output paths under the exact source path that was passed in instead of just the basename
 .It Fl d, -delim\ <delim>
 delimiter (one char)  [use 'x' for 0x1E]
 .It Fl -target-memory\ <bytes>

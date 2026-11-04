@@ -238,7 +238,7 @@ Could not stat source directory "": No such file or directory (2)
 Total Dirs:          0
 Total Files:         0
 
-# nonexistant trace directory
+# nonexistent trace directory
 $ gufi_dir2trace -d "|" -n 2 "" "baddir/trace"
 Could not open output file baddir/trace.0
 

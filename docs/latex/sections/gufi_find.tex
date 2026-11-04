@@ -110,7 +110,7 @@ not matter.
   -group gname & File belongs to group gname (numeric group ID allowed) \\
   \hline
   -iname pattern & Like -name, but the match is case insensitive (uses
-  regex, not glob) \\
+  a regular expression, not a glob) \\
   \hline
   -inum n & File has inode number n. It is normally easier to use the
   -samefile test instead \\
@@ -135,6 +135,8 @@ not matter.
   -readable & Matches files which are readable \\
   \hline
   -regex pattern & File name matches regular expression pattern \\
+  \hline
+  -perm mode & File's permission bits (no prefix, - or /) (octal mode) \\
   \hline
   -samefile name & File refers to the same inode as name \\
   \hline

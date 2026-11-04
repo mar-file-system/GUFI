@@ -112,7 +112,7 @@ static int printits(struct input *in, struct work *pwork, struct entry_data *ed,
   /* fwrite(ed->xattrs, sizeof(char), ed->xattrs_len, out); */
   fprintf(out,"%c",in->delim);
 
-  /* this one is for create time which posix doesnt have */
+  /* this one is for create time which POSIX doesn't have */
   fprintf(out,"%c", in->delim);
   /* moved this to end because we would like to use this for input to gufi_trace2index load from file */
   fprintf(out, "%" STAT_ino "%c", pwork->pinode, in->delim);

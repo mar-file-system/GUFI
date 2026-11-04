@@ -78,7 +78,7 @@ is a wrapper around
 .Xr gufi_query 1 , which performs queries on the contents of a GUFI tree in a parallel manner. The queries that are passed into
 .Xr gufi_query 1 are predefined pieces that are deterministically combined.
 
-The input arguments and output are intended to be reminicent of GNU
+The input arguments and output are intended to be reminiscent of GNU
 .Xr find 1 . The double dash flags at the bottom are GUFI extensions.
 
 One major difference between
@@ -101,10 +101,14 @@ Descend at most levels (a non-negative integer) levels of directories below the 
 Do not apply any tests or actions at levels less than levels (a non-negative integer). mindepth 1 means process all files except the command line arguments.
 .It Fl amin\ n
 File was last accessed n minutes ago.
+.It Fl anewer\ file
+File was last accessed more recently than file was modified.
 .It Fl atime\ n
 File was last accessed n*24 hours ago.
 .It Fl cmin\ n
 File's status was last changed n minutes ago.
+.It Fl cnewer\ file
+File's status was last changed more recently than file was modified.
 .It Fl ctime\ n
 File's status was last changed n*24 hours ago.
 .It Fl empty
@@ -118,9 +122,11 @@ File's numeric group ID is n.
 .It Fl group\ gname
 File belongs to group gname (numeric group ID allowed).
 .It Fl iname\ pattern
-Like name, but the match is case insensitive.
+Like -name, but the match is case insensitive (uses a regular expression, not a glob).
 .It Fl inum\ n
 File has inode number n. It is normally easier to use the -samefile test instead.
+.It Fl iregex\ pattern
+Like -regex, but the match is case insensitive.
 .It Fl links\ n
 File has n links.
 .It Fl lname\ pattern
@@ -137,6 +143,10 @@ File was modified more recently than file.
 File name matches shell pattern pattern.
 .It Fl readable
 Matches files which are readable.
+.It Fl regex\ pattern
+File name matches regular expression pattern.
+.It Fl perm\ mode
+File's permission bits (no prefix, -, or /) (octal mode).
 .It Fl samefile\ name
 File refers to the same inode as name.
 .It Fl size\ n

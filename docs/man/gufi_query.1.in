@@ -126,6 +126,10 @@ minimum level to go down
 maximum level to go down
 .It Fl -path-list\ <filename>
 File containing paths at single level to index (not including starting path). Must also use --min-level
+.It Fl -dir-match-uid[=uid]
+only traverse directories owned by uid; without a value, use the effective user ID
+.It Fl -dir-match-gid[=gid]
+only traverse directories owned by gid; without a value, use the effective group ID
 .It Fl p, -path\ <path>
 Source path prefix for %s in SQL
 .It Fl x, -query-xattrs
@@ -146,7 +150,7 @@ file containing directory names to skip
 delimiter (one char)  [use 'x' for 0x1E]
 .It Fl -newline\ <c>
 character used to separate lines (default: '\n') [use 0 for NULL character]
-.It Fl --suppress-newline
+.It Fl -suppress-newline
 do not print the line separator
 .It Fl o, -output-file\ <out_fname>
 output file (one-per-thread, with thread-id suffix)
@@ -155,11 +159,15 @@ output DB
 .It Fl -print-tlv
 prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
 .It Fl -setup-res-col-types\ <SQL>
-SQL statement(s) for seting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv
+SQL statement(s) for setting up a temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv
 .It Fl -terse
 print the information in terse form
 .It Fl -output-buffer-size\ <bytes>
 size of each thread's output buffer in bytes
+.It Fl -no-print-errno\ <int>
+errno value in the range 1 through 255 whose messages should not be printed; may be repeated
+.It Fl -no-print-sql-on-err
+do not print SQL with error messages
 .It Fl -target-memory\ <bytes>
 target memory utilization (soft limit)
 .It Fl -swap-prefix\ <path>

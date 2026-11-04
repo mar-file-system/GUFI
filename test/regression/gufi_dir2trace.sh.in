@@ -179,7 +179,7 @@ echo "# empty source path"
 rm "${TRACES[@]}"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${TRACE}\""
 
-echo "# nonexistant trace directory"
+echo "# nonexistent trace directory"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${NEWDIR}/baddir/${TRACE}\"" | @SED@ "s%${NEWDIR}/%%g;"
 
 echo "# skip file"

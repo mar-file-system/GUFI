@@ -61,9 +61,8 @@
 
 
 \subsection{\querydbs}
-\querydbs was once its own C program, but has been converted to a
-wrapper around \gufisqlite. Features available in \gufisqlite imply
-their availablility in \querydbs.
+\querydbs is a Python wrapper that queries GUFI result databases. It
+accepts a table name, SQL statement, and one or more database paths.
 \querydbs attaches all database files it is given into a single view
 for querying. All tables in the provided database files should have
 the same name and schema. For tables called \texttt{table}, the view

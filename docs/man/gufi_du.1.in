@@ -92,7 +92,7 @@ If a treesummary table is not available,
     Warning: Did not get any results from gufi_query.
     Does "<input path>" have treesummary data?
 
-The input arguments and output are intended to be reminicent of GNU
+The input arguments and output are intended to be reminiscent of GNU
 .Xr du 1 .
 
 .Sh OPTIONS

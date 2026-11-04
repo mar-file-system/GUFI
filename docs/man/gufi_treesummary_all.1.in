@@ -72,7 +72,7 @@
 GUFI_tree
 
 .Sh DESCRIPTION
-Walk to the bottom of a GUFI tree and compute treesumary tables for each directory while ascending.
+Walk to the bottom of a GUFI tree and compute treesummary tables for each directory while ascending.
 
 .Sh OPTIONS
 .Bl -tag -width -indent
@@ -92,8 +92,6 @@ maximum level to go down
 File containing paths at single level to index (not including starting path). Must also use --min-level
 .It Fl -dont-reprocess
 if a directory was previously processed, skip descending the subtree
-.It Fl -suspect-time\ <s>
-time in seconds since epoch for suspect comparision
 .El
 
 .Sh EXIT STATUS

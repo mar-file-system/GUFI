@@ -159,13 +159,13 @@ may call \gufiquery, but might not be able to use it properly.
   -{}-print-tlv & prefix row with 1 int column count and each column with 1 octet type and 1 size\_t length \\
   \hline
   -{}-setup-res-col-types \textless SQL\textgreater & SQL statement(s)
-  for seting up temporary environment to make
+  for setting up a temporary environment to make
   namespaces/tables/columns available for getting result column types
   when calling --print-tlv \\
   \hline
   -{}-terse & print the information in terse form \\
   \hline
-  -{}-print-eacces & print messages when errno is EACCES \\
+  -{}-no-print-errno \textless int\textgreater & errno value in the range 1--255 whose messages should not be printed; may be repeated \\
   \hline
   -{}-no-print-sql-on-err & do not print SQL with error messages \\
   \hline

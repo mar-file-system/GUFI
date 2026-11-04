@@ -348,7 +348,7 @@ static int check_stanza(QPTPool_ctx_t *ctx, void *data) {
     return rc;
 }
 
-// find first occurance of the delimiter
+// find first occurrence of the delimiter
 static std::string::size_type parsefirst(const char delim, struct StanzaStart *work) {
     return (work->first_delim = work->line.find(delim));
 }

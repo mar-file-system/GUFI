@@ -119,10 +119,16 @@ Each line of the suspect file contains an inode followed by one of the character
 3: All directories, files, and links have their mtime and ctime compared with the suspect time
 .It Fl -suspect-time\ <s>
 time in seconds since epoch for suspect comparison
-.It Fl x, -xattrs
+.It Fl x, -index-xattrs
 process xattrs if you are creating GUFI dbs of suspect directories
 .It Fl -compress
 compress work items
+.It Fl -max-subtrees\ <count>
+maximum number of subtrees to process in parallel
+.It Fl -keep-artifacts\ <path>
+place update artifacts in an existing directory instead of deleting them automatically
+.It Fl -process-subtrees
+try to find and operate on subtrees instead of operating on the entire tree at once
 
 .It GUFI_tree         GUFI tree
 .It tree              source tree

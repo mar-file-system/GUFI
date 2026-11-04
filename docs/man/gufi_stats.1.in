@@ -93,7 +93,7 @@ return cumulative values
 sort output (if applicable)
 .It Fl -num-results\ n
 first n results
-.It Fl -uid, --user\ u
+.It Fl -uid\ u, -user\ u
 restrict to user
 .It Fl -reftime REFTIME
 time used to compare timestamps with

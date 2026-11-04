@@ -86,7 +86,7 @@ incremental update performed by the \gufiincrementalupdate executable.
   \hline
   -n, -{}-threads \textless n\textgreater & number of threads (default: 1) \\
   \hline
-  -{}-suspect-stat \textless n\textgreater & if an entry is suspect,
+  -{}-suspect-stat & if an entry is suspect,
   stat it to get timestamps to compare against suspecttime \\
   \hline
   -{}-suspect-file \textless path\textgreater & suspect input file \\
@@ -95,11 +95,17 @@ incremental update performed by the \gufiincrementalupdate executable.
   suspects, 1 suspect file\_dfl, 3 suspect stat\_dfl) \\
   \hline
   -{}-suspect-time \textless s\textgreater & time in seconds since epoch
-  for suspect comparision \\
+  for suspect comparison \\
   \hline
   -x, -{}-index-xattrs & index xattrs \\
   \hline
   -{}-compress & compress work items \\
+  \hline
+  -{}-max-subtrees \textless count\textgreater & maximum number of subtrees to process in parallel \\
+  \hline
+  -{}-keep-artifacts \textless path\textgreater & place update artifacts in an existing directory instead of deleting them automatically \\
+  \hline
+  -{}-process-subtrees & try to find and operate on subtrees instead of the entire tree at once \\
   \hline
 \end{longtable}
 

@@ -78,7 +78,7 @@ is a wrapper around
 .Xr gufi_query 1 , which performs queries on the contents of a GUFI tree in a parallel manner. The queries that are passed into
 .Xr gufi_query 1 are predefined pieces that are deterministically combined.
 
-The input arguments and output are intended to be reminicent of GNU
+The input arguments and output are intended to be reminiscent of GNU
 .Xr ls 1 .
 
 .Sh OPTIONS
@@ -106,6 +106,8 @@ with -l and -s, print sizes like 1K 234M 2G etc.
 print the index number of each file
 .It Fl l
 use a long listing format
+.It Fl n, -numeric-uid-gid
+like -l, but list numeric user and group IDs
 .It Fl r, -reverse
 reverse order while sorting
 .It Fl R, -recursive

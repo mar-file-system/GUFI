@@ -125,7 +125,7 @@ static int check_at_top(const str_t *path) {
         return 1;
     }
 
-    /* check for existance of rows in summary table */
+    /* check for existence of rows in summary table */
     size_t count = 0;
     char *err = NULL;
     if (sqlite3_exec(db, "SELECT COUNT(*) FROM " SUMMARY ";",

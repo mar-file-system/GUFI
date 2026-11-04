@@ -204,7 +204,7 @@ def schedule_subtrees(args, dir_count, group_size, groups, subtree_cmd):
         for i, target in enumerate(targets):
             filename = gen_filename(i) # files not mapped to targets are ignored
 
-            # not checking for existance of file - if it doesn't exist, -D will fail
+            # not checking for existence of file - if it doesn't exist, -D will fail
 
             print('    Range {0}: Contents of {1} on {2}'.format(i, filename, target))
 
@@ -315,7 +315,7 @@ def dir_arg(path):
 
     return path
 
-# argparse type for nonexistant directories (i.e. target directories)
+# argparse type for nonexistent directories (i.e. target directories)
 def new_dir_arg(path):
     return os.path.realpath(path)
 

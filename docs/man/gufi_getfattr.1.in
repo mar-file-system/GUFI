@@ -77,7 +77,7 @@
 is a wrapper around
 .Xr gufi_query 1 , which performs queries on the contents of a GUFI tree in a parallel manner.
 
-The input arguments and output are intended to be reminicent of
+The input arguments and output are intended to be reminiscent of
 .Xr getfattr 1 with --no-defereence --physical always set.
 
 .Sh OPTIONS
@@ -99,7 +99,7 @@ of namespaces.
 .It Fl -only-values
 Dump out the raw extended attribute value(s) without encoding them
 .It Fl R -recursive
-List the atttributes of all files and directories recursively
+List the attributes of all files and directories recursively
 .It Fl -delim\ c
 Delimiter separating output columns
 .It Fl -skip-file\ filename
