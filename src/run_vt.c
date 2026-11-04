@@ -68,6 +68,10 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #include <sqlite3ext.h>
+#ifdef RUN_VT_EMBEDDED
+#undef SQLITE_EXTENSION_INIT1
+#define SQLITE_EXTENSION_INIT1 extern const sqlite3_api_routines *sqlite3_api;
+#endif
 SQLITE_EXTENSION_INIT1
 
 /*

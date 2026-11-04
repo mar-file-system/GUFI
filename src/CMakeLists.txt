@@ -225,6 +225,16 @@ endif()
 set_property(TARGET gufi_query PROPERTY ENABLE_EXPORTS TRUE)
 
 # build custom SQLite virtual tables
+add_library(run_vt_core OBJECT
+  run_vt.c
+)
+
+add_dependencies(run_vt_core install_dependencies)
+
+# Compile the embedded copy to share gufi_vt's SQLite API pointer.
+target_compile_definitions(run_vt_core PRIVATE RUN_VT_EMBEDDED)
+set_target_properties(run_vt_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 add_library(gufi_vt MODULE
   gufi_vt.c
 
@@ -247,9 +257,9 @@ add_library(gufi_vt MODULE
   trie.c
   utils.c
   xattrs.c
+  $<TARGET_OBJECTS:run_vt_core>
 )
 set_property(TARGET gufi_vt PROPERTY PREFIX "")
-target_compile_definitions(gufi_vt PUBLIC GUFI_VT=1)
 
 if (DARWIN)
   # https://gitlab.kitware.com/cmake/cmake/-/issues/21189

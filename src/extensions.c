@@ -76,13 +76,10 @@ int augment_db(sqlite3 *db, const sqlite3_api_routines *pApi) {
 
     char *err = NULL;
 
-    /* FIXME: figure out how to link with gufi_vt */
-    #ifndef GUFI_VT
     if (sqlite3_runvt_init(db, &err, pApi) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Could not initialize runvt: %s\n", err);
         return 1;
     }
-    #endif
 
     #if HAVE_AI
     /* load the sqlite-vec extension */
