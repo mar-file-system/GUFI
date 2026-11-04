@@ -335,15 +335,17 @@ int set_db_pragmas(sqlite3 *db) {
     /* no errors will be returned by the PRAGMA itself */
 
     return !(sqlite3_exec(db,
-                        /* https://www.sqlite.org/pragma.html#pragma_journal_mode */
-                        "PRAGMA journal_mode = OFF;"
+                          "PRAGMA trusted_schema = ON;"
 
-                        /* https://www.sqlite.org/pragma.html#pragma_page_size */
-                        /* The page size must be a power of two between 512 and 65536 inclusive. */
-                        "PRAGMA page_size = 65536;"
+                          /* https://www.sqlite.org/pragma.html#pragma_journal_mode */
+                          "PRAGMA journal_mode = OFF;"
 
-                        ,
-                        NULL, NULL, NULL) == SQLITE_OK);
+                          /* https://www.sqlite.org/pragma.html#pragma_page_size */
+                          /* The page size must be a power of two between 512 and 65536 inclusive. */
+                          "PRAGMA page_size = 65536;"
+
+                          ,
+                          NULL, NULL, NULL) == SQLITE_OK);
 }
 
 sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
