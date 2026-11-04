@@ -254,7 +254,6 @@ static int check_entries_count(struct PoolArgs *pa, struct work *work, size_t *c
     if (sqlite3_exec(db, sql, get_size_t, &entries, &err) != SQLITE_OK) {
         sqlite_print_err_and_free(err, stderr, "Error: Could not get entries count from \"%s\": %s\n",
                                   work->name, err);
-        closedb(db);
         pa->stats[id].not_rolledup++;
         return -1;
     }
@@ -264,7 +263,6 @@ static int check_entries_count(struct PoolArgs *pa, struct work *work, size_t *c
      * roll up this directory and instead keep going down
      */
     if (entries > pa->in.rollup.entries_limit) {
-        closedb(db);
         (*counter)++;
         pa->stats[id].not_rolledup++;
 
@@ -836,7 +834,10 @@ static int compare_subdirs(const void *lhs, const void *rhs) {
 }
 
 static int compare_runtimes(const void *lhs, const void *rhs) {
-    return (* (long double *) lhs) - (* (long double *) rhs);
+    const long double l = *(const long double *) lhs;
+    const long double r = *(const long double *) rhs;
+
+    return (l > r) - (l < r);
 }
 
 static void compute_stats(struct PoolArgs *pa) {
