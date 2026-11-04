@@ -64,7 +64,7 @@ OF SUCH DAMAGE.
 
 #include <atomic>
 #include <inttypes.h>
-#include <pthread.h> // macOS doesn't seem to like std::mutex
+#include <mutex>
 #include <sys/resource.h>
 
 #include <gtest/gtest.h>
@@ -444,8 +444,7 @@ TEST(QueuePerThreadPool, enqueue_swappable) {
 #endif
 
 TEST(QueuePerThreadPool, wait_mem) {
-    // macOS doesn't seem to like std::mutex
-    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    std::mutex mutex;
 
     QPTPool_ctx_t *ctx = QPTPool_init(THREADS, &mutex);
     ASSERT_NE(ctx, nullptr);
@@ -457,10 +456,9 @@ TEST(QueuePerThreadPool, wait_mem) {
     for(uint64_t i = 0; i < PUSH; i++) {
         QPTPool_enqueue(ctx,
                         [](QPTPool_ctx_t *ctx, void *data) -> int {
-                            pthread_mutex_t *mutex = reinterpret_cast<pthread_mutex_t *>(QPTPool_get_args_internal(ctx));
-                            pthread_mutex_lock(mutex);
+                            std::mutex *mutex = static_cast<std::mutex *>(QPTPool_get_args_internal(ctx));
+                            std::lock_guard<std::mutex> lock(*mutex);
                             increment_counter(ctx, data);
-                            pthread_mutex_unlock(mutex);
                             return 0;
                     }, &counter);
     }
@@ -607,8 +605,7 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
 
     work_item w{};
 
-    // macOS doesn't seem to like std::mutex
-    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    std::mutex mutex;
 
     QPTPool_ctx_t *ctx = QPTPool_init(2, &mutex);
     ASSERT_NE(ctx, nullptr);
@@ -616,7 +613,7 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
     ASSERT_EQ(QPTPool_start(ctx), 0);
 
     // the first work item will be placed in src, but can be processed by any thread
-    pthread_mutex_lock(&mutex);
+    std::unique_lock<std::mutex> lock(mutex);
     EXPECT_EQ(QPTPool_enqueue(ctx,
                               [](QPTPool_ctx_t *ctx, void *data) -> int {
                                   work_item *w = static_cast<work_item *>(data);
@@ -624,9 +621,8 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
                                   increment_counter(ctx, &w->counter);
 
                                   // first work item is prevented from completing, blocking the thread
-                                  pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(QPTPool_get_args_internal(ctx));
-                                  pthread_mutex_lock(mutex);
-                                  pthread_mutex_unlock(mutex);
+                                  std::mutex *mutex = static_cast<std::mutex *>(QPTPool_get_args_internal(ctx));
+                                  std::unique_lock<std::mutex> lock(*mutex);
                                   return 0;
                               }, &w), QPTPool_enqueue_WAIT);
 
@@ -674,7 +670,7 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
     }
 
     // unlock thread src so that it can complete
-    pthread_mutex_unlock(&mutex);
+    lock.unlock();
 
     QPTPool_stop(ctx);
 
@@ -696,19 +692,22 @@ TEST(QueuePerThreadPool, steal_waiting) {
 TEST(QueuePerThreadPool, steal_claimed) {
     struct work_item {
         work_item(std::atomic_uint64_t &counter)
-            :  mutex(PTHREAD_MUTEX_INITIALIZER),
-               tid(0),
+            :  tid(0),
                counter(counter)
             {}
 
-        // macOS doesn't seem to like std::mutex
-        pthread_mutex_t mutex;
+        std::mutex mutex;
         std::size_t tid;
         std::atomic_uint64_t &counter;
     };
 
     std::atomic_uint64_t counter = 0;
     work_item wi[] = {counter, counter};
+    // Keep both worker mutexes locked until the stealing checks release them.
+    std::unique_lock<std::mutex> held[] = {
+        std::unique_lock<std::mutex>(wi[0].mutex),
+        std::unique_lock<std::mutex>(wi[1].mutex),
+    };
 
     QPTPool_ctx_t *ctx = QPTPool_init(2, nullptr);
     ASSERT_NE(ctx, nullptr);
@@ -719,16 +718,12 @@ TEST(QueuePerThreadPool, steal_claimed) {
         w->tid = QPTPool_get_id(ctx);
         increment_counter(ctx, &w->counter);
 
-        pthread_mutex_lock(&w->mutex);
-        pthread_mutex_unlock(&w->mutex);
+        std::unique_lock<std::mutex> lock(w->mutex);
         return 0;
     };
 
     for(std::size_t i = 0; i < 2; i++) {
         work_item &w = wi[i];
-
-        // prevent first work item in each thread from completing
-        pthread_mutex_lock(&w.mutex);
 
         // each work item should be run by the target thread because
         // both threads start having work and both will block, so
@@ -766,7 +761,7 @@ TEST(QueuePerThreadPool, steal_claimed) {
 
     // let the work item in thread 1 complete so that thread 1
     // steals the first item from thread 0's claimed queue
-    pthread_mutex_unlock(&wi[1].mutex);
+    held[1].unlock();
 
     // wait for the stolen work item to finish
     while (counter < 3) {
@@ -774,7 +769,7 @@ TEST(QueuePerThreadPool, steal_claimed) {
     }
 
     // let thread 0 finish
-    pthread_mutex_unlock(&wi[0].mutex);
+    held[0].unlock();
 
     QPTPool_stop(ctx);
 
