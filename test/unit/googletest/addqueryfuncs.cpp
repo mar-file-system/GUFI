@@ -224,6 +224,7 @@ TEST(addqueryfuncs, strftime) {
 
     const char fmt[] = "%a %A %b %B %c %C %d %D %e %F %g %G %h %H %I %j %m %M %n %p %r %R %S %t %T %u %U %V %w %W %x %X %y %Y %z %Z %%";
 
+    // Capture the reference time once so SQL and expected formatting agree.
     const time_t now = time(nullptr);
 
     char query[MAXSQL] = {};
@@ -317,7 +318,8 @@ TEST(addqueryfuncs, agecat) {
 
     char sql[MAXSQL];
 
-    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) + 1);
+    const time_t now = time(nullptr);
+    snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", now + 1);
     EXPECT_NE(sqlite3_exec(db, sql,
                            copy_columns_callback, &output, nullptr), SQLITE_OK);
 
@@ -334,7 +336,7 @@ TEST(addqueryfuncs, agecat) {
     };
 
     for(std::pair <int, const char *> const &test : tests) {
-        snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", time(nullptr) + test.first);
+        snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", now + test.first);
         EXPECT_EQ(sqlite3_exec(db, sql,
                                copy_columns_callback, &output, nullptr), SQLITE_OK);
         EXPECT_STREQ(output, test.second);
@@ -365,7 +367,8 @@ TEST(addqueryfuncs, epochtoage) {
 
     char sql[MAXSQL];
 
-    snprintf(sql, sizeof(sql), "SELECT epochtoage(%ld, 's');", time(nullptr) + 1);
+    const time_t now = time(nullptr);
+    snprintf(sql, sizeof(sql), "SELECT epochtoage(%ld, 's');", now + 1);
     EXPECT_NE(sqlite3_exec(db, sql,
                            copy_columns_callback, &output, nullptr), SQLITE_OK);
     free(output);
@@ -373,7 +376,7 @@ TEST(addqueryfuncs, epochtoage) {
 
     for(const char unit : {'s', 'm', 'h', 'd', 'w', 'M', 'y', 'D', '-'}) {
         /* test 0 */
-        snprintf(sql, sizeof(sql), "SELECT epochtoage(%ld, '%c');", time(nullptr), unit);
+        snprintf(sql, sizeof(sql), "SELECT epochtoage(%ld, '%c');", now, unit);
         EXPECT_EQ(sqlite3_exec(db, sql,
                                copy_columns_callback, &output, nullptr), SQLITE_OK);
         EXPECT_STREQ(output, "0");

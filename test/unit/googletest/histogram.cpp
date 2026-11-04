@@ -307,6 +307,16 @@ TEST(histogram, log) {
     EXPECT_EQ(log_hist_parse("0;0;0;0:0"),  nullptr);
 }
 
+TEST(histogram, log_invalid_bucket) {
+    // Invalid serialized bucket indexes are ignored instead of indexing past the array.
+    log_hist_t *hist = log_hist_parse("2;2;0;0;3:7;");
+    ASSERT_NE(hist, nullptr);
+    ASSERT_NE(hist->buckets, nullptr);
+    EXPECT_EQ(hist->buckets[0], (std::size_t) 0);
+    EXPECT_EQ(hist->buckets[1], (std::size_t) 0);
+    log_hist_free(hist);
+}
+
 TEST(histogram, mode) {
     // C++20 is not required, so not using Designated Initializers
     std::size_t buckets[01000];
@@ -396,6 +406,15 @@ TEST(histogram, mode) {
         EXPECT_NE(sqlite3_exec(db, "SELECT mode_hist_combine('a');",
                                copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
         EXPECT_EQ(hist_str, nullptr);
+
+        // A valid empty histogram can be combined without producing an error.
+        EXPECT_EQ(sqlite3_exec(db, "INSERT INTO hist VALUES ('');",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        EXPECT_EQ(sqlite3_exec(db, "SELECT mode_hist_combine(str) FROM hist WHERE str == '';",
+                               copy_columns_callback, &hist_str, nullptr), SQLITE_OK);
+        EXPECT_NE(hist_str, nullptr);
+        free(hist_str);
+        hist_str = nullptr;
     }
 
     sqlite3_close(db);
@@ -404,6 +423,19 @@ TEST(histogram, mode) {
     EXPECT_EQ(mode_hist_parse("777:"),   nullptr);
     EXPECT_EQ(mode_hist_parse("777:0"),  nullptr);
     EXPECT_EQ(mode_hist_parse("1000:1"), nullptr);
+}
+
+TEST(histogram, mode_malformed) {
+    // Malformed serialized mode data must be rejected before indexing buckets.
+    EXPECT_EQ(mode_hist_parse("not-a-mode"), nullptr);
+}
+
+TEST(histogram, mode_max_bucket) {
+    // The highest valid mode bucket is preserved during parsing.
+    mode_hist_t *hist = mode_hist_parse("777:9;");
+    ASSERT_NE(hist, nullptr);
+    EXPECT_EQ(hist->buckets[0777], (std::size_t) 9);
+    mode_hist_free(hist);
 }
 
 TEST(histogram, time) {
@@ -554,6 +586,66 @@ TEST(histogram, time) {
     EXPECT_EQ(time_hist_parse("0;5:0"),    nullptr);
     EXPECT_EQ(time_hist_parse("0;5:0;"),   nullptr);
     EXPECT_EQ(time_hist_parse("0;1:0;0"),  nullptr);
+}
+
+TEST(histogram, time_empty) {
+    // An empty time histogram uses the compact zero-record representation.
+    time_hist_t *hist = time_hist_parse("0;");
+    ASSERT_NE(hist, nullptr);
+    EXPECT_EQ(hist->ref, (time_t) 0);
+    time_hist_free(hist);
+}
+
+TEST(histogram, time_last_bucket) {
+    // An elapsed time beyond the defined ranges belongs in the final bucket.
+    time_hist_t *hist = time_hist_parse("0;630720001:2;");
+    ASSERT_NE(hist, nullptr);
+    EXPECT_EQ(hist->buckets[TIME_BUCKETS_COUNT - 1], (std::size_t) 2);
+    time_hist_free(hist);
+}
+
+TEST(histogram, time_invalid_bucket) {
+    // Unknown serialized time buckets are rejected instead of silently mapped.
+    EXPECT_EQ(time_hist_parse("0;12345:1;"), nullptr);
+}
+
+TEST(histogram, time_valid_bucket) {
+    // A defined time boundary is mapped to its corresponding bucket.
+    time_hist_t *hist = time_hist_parse("10;60:3;");
+    ASSERT_NE(hist, nullptr);
+    EXPECT_EQ(hist->ref, (time_t) 10);
+    EXPECT_EQ(hist->buckets[2], (std::size_t) 3);
+    time_hist_free(hist);
+}
+
+TEST(histogram, time_combine_zero_left_reference) {
+    // A zero left reference adopts the incoming histogram reference.
+    sqlite3 *db = nullptr;
+    setup_db(&db);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hist (str TEXT); INSERT INTO hist VALUES ('0;1:2;');",
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+    char *output = nullptr;
+    ASSERT_EQ(sqlite3_exec(db, "SELECT time_hist_combine(str) FROM hist;",
+                           copy_columns_callback, &output, nullptr), SQLITE_OK);
+    ASSERT_NE(output, nullptr);
+    EXPECT_STREQ(output, "0;1:2;");
+    free(output);
+    sqlite3_close(db);
+}
+
+TEST(histogram, time_combine_zero_right_reference) {
+    // A zero incoming reference leaves the existing reference unchanged.
+    sqlite3 *db = nullptr;
+    setup_db(&db);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hist (str TEXT); INSERT INTO hist VALUES ('10;1:2;'), ('0;1:3;');",
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+    char *output = nullptr;
+    ASSERT_EQ(sqlite3_exec(db, "SELECT time_hist_combine(str) FROM hist;",
+                           copy_columns_callback, &output, nullptr), SQLITE_OK);
+    ASSERT_NE(output, nullptr);
+    EXPECT_STREQ(output, "10;1:5;");
+    free(output);
+    sqlite3_close(db);
 }
 
 static const std::string CATEGORIES[] = {
@@ -783,6 +875,21 @@ TEST(histogram, category) {
     EXPECT_EQ(category_hist_parse("1;3:cat"),    nullptr);
     EXPECT_EQ(category_hist_parse("1;3:cat:"),   nullptr);
     EXPECT_EQ(category_hist_parse("1;3:cat:0"),  nullptr);
+}
+
+TEST(histogram, category_duplicate) {
+    // Repeated categories are counted together and sorted consistently.
+    category_hist_t *hist = category_hist_parse("1;4:same:2;");
+    ASSERT_NE(hist, nullptr);
+    EXPECT_EQ(hist->count, (std::size_t) 1);
+    EXPECT_STREQ(hist->buckets[0].name, "same");
+    EXPECT_EQ(hist->buckets[0].count, (std::size_t) 2);
+    category_hist_free(hist);
+}
+
+TEST(histogram, category_invalid) {
+    // Malformed category records are rejected before allocation is exposed.
+    EXPECT_EQ(category_hist_parse("not-a-category"), nullptr);
 }
 
 static const std::string EXTENSIONS[] = {

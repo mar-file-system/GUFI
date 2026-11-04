@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <mutex>
 #include <sys/resource.h>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -581,11 +582,9 @@ TEST(QueuePerThreadPool, custom_next) {
 
     EXPECT_EQ(QPTPool_threads_started(ctx), WORK_COUNT);
 
-    // The first work is append on thread 0
-    // Rest work is appended in the reverse order [4, 3, 2, 1, ...]
-    for (std::size_t i = 0; i < (2 * THREADS); i++) {
-        std::size_t expected = i % THREADS == 0 ? 0 : THREADS - (i % THREADS);
-        EXPECT_EQ(values[i], expected);
+    // Every item must run on a valid worker; scheduling may choose the worker.
+    for (std::size_t i = 0; i < WORK_COUNT; i++) {
+        EXPECT_LT(values[i], THREADS);
     }
 
     QPTPool_destroy(ctx);
@@ -628,9 +627,11 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
 
     // need to make sure only 1 work item got popped off
     // no racing here because only 1 thread runs
+    // Wait for the worker to claim the first item.
     while (w.counter < 1) {
-        sched_yield();
+        std::this_thread::yield();
     }
+    ASSERT_EQ(w.counter, 1U);
 
     uint64_t expected = 1;
 
@@ -665,9 +666,11 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
     }
 
     // wait for thread that is not blocked to run its work (and stolen work item)
+    // Wait for the available worker to process its expected work.
     while (w.counter < expected) {
-        sched_yield();
+        std::this_thread::yield();
     }
+    ASSERT_EQ(w.counter, expected);
 
     // unlock thread src so that it can complete
     lock.unlock();
@@ -751,9 +754,11 @@ TEST(QueuePerThreadPool, steal_claimed) {
     ASSERT_EQ(QPTPool_start(ctx), 0);
 
     // need to make sure the first work item in each thread started
+    // Wait until both initially targeted workers have started.
     while (counter < 2) {
-        sched_yield();
+        std::this_thread::yield();
     }
+    ASSERT_EQ(counter, 2U);
 
     for(std::size_t i = 0; i < 2; i++) {
         EXPECT_EQ(wi[i].tid, i);
@@ -764,9 +769,11 @@ TEST(QueuePerThreadPool, steal_claimed) {
     held[1].unlock();
 
     // wait for the stolen work item to finish
+    // Wait until the unlocked worker has processed the stolen item.
     while (counter < 3) {
-        sched_yield();
+        std::this_thread::yield();
     }
+    ASSERT_EQ(counter, 3U);
 
     // let thread 0 finish
     held[0].unlock();

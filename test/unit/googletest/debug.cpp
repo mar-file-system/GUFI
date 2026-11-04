@@ -73,6 +73,8 @@ TEST(debug, since_epoch) {
 
     struct timespec ts = { 1, 0 };
     EXPECT_EQ(since_epoch(&ts), nsecs_per_sec);
+    // A null timestamp uses the monotonic clock fallback.
+    EXPECT_GT(since_epoch(nullptr), (uint64_t) 0);
 }
 
 TEST(debug, nsec) {

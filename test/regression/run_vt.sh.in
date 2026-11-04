@@ -105,6 +105,18 @@ run_vt() {
     echo "# Row ID"
     run_vt "cmd='echo \"col0 col1\"', cols='col0, col1'" "SELECT rowid, col0, col1 FROM output;"
 
+    # Exercise cursor advancement across multiple output rows.
+    echo "# Multiple Rows"
+    run_vt "cmd='printf \"col0 col1\\ncol2 col3\\n\"', cols='col0, col1'"
+
+    # Exercise removal of a carriage return before column parsing.
+    echo "# Carriage Return"
+    run_vt "cmd='printf \"col0 col1\\r\\n\"', cols='col0, col1'"
+
+    # Exercise parsing a final row that has no newline terminator.
+    echo "# No Trailing Newline"
+    run_vt "cmd='printf \"col0 col1\"', cols='col0, col1'"
+
     set +e
 
     echo "# Bad Command"
@@ -120,6 +132,18 @@ run_vt() {
 
     echo "# Empty cols"
     run_vt "cmd='echo', cols=''"
+
+    # Exercise rejection of an empty first row.
+    echo "# Empty Row"
+    run_vt "cmd='printf \"\\n\"', cols='col0'"
+
+    # Exercise end-of-file before any row is available.
+    echo "# Empty Output"
+    run_vt "cmd='printf \"\"', cols='col0'"
+
+    # Exercise rejection of a row with fewer columns than declared.
+    echo "# Missing Column"
+    run_vt "cmd='echo col0', cols='col0, col1'"
 
     echo "# Bad Argument Name"
     run_vt "cmd='echo \"col0 col1\"', cols='col0, col1', b=''"

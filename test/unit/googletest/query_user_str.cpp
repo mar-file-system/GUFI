@@ -96,6 +96,46 @@ TEST(query_user_str, no_replace) {
     cleanup_replacements(&fmts);
 }
 
+TEST(query_user_str, malformed) {
+    // Empty and unterminated placeholders must not be recorded for replacement.
+    const char empty[] = "A{}B";
+    str_t empty_sql = REFSTR(empty, sizeof(empty) - 1);
+    sll_t empty_fmts;
+    EXPECT_EQ(save_replacements(&empty_sql, &empty_fmts), (std::size_t) 0);
+    cleanup_replacements(&empty_fmts);
+
+    const char unterminated[] = "A{key";
+    str_t unterminated_sql = REFSTR(unterminated, sizeof(unterminated) - 1);
+    sll_t unterminated_fmts;
+    EXPECT_EQ(save_replacements(&unterminated_sql, &unterminated_fmts), (std::size_t) 0);
+    cleanup_replacements(&unterminated_fmts);
+}
+
+TEST(query_user_str, missing_key) {
+    // A recorded placeholder without a trie value must fail replacement.
+    str_t sql = REFSTR("A{missing}B", sizeof("A{missing}B") - 1);
+    sll_t fmts;
+    ASSERT_EQ(save_replacements(&sql, &fmts), (std::size_t) 1);
+
+    trie_t *user_strs = trie_alloc();
+    char *buf = nullptr;
+    EXPECT_EQ(replace_sql(&sql, &fmts, user_strs, &buf), -1);
+    EXPECT_EQ(buf, nullptr);
+
+    trie_free(user_strs);
+    cleanup_replacements(&fmts);
+}
+
+TEST(query_user_str, free_sql) {
+    // The original SQL is borrowed, while a replacement buffer is owned.
+    const char original[] = "SQL";
+    free_sql((char *) original, original);
+
+    char *allocated = strdup(original);
+    ASSERT_NE(allocated, nullptr);
+    free_sql(allocated, original);
+}
+
 TEST(query_user_str, even) {
     str_t sql = REFSTR(FORMAT, sizeof(FORMAT) - 2); // ends on user string
 

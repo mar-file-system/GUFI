@@ -38,6 +38,31 @@ $ (
 ) | sqlite3
 0|col0|col1
 
+# Multiple Rows
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='printf "col0 col1\ncol2 col3\n"', cols='col0, col1');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+col0|col1
+col2|col3
+
+# Carriage Return
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='printf "col0 col1\r\n"', cols='col0, col1');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+col0|col1
+
+# No Trailing Newline
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='printf "col0 col1"', cols='col0, col1');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+col0|col1
+
 # Bad Command
 $ (
     echo ".load run_vt"
@@ -71,6 +96,30 @@ $ (
 ) | sqlite3
 Error near line 2: Missing output columns
 Parse error near line 3: no such table: output
+
+# Empty Row
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='printf "\n"', cols='col0');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Error near line 3: SQL logic error
+
+# Empty Output
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='printf ""', cols='col0');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Error near line 3: SQL logic error
+
+# Missing Column
+$ (
+    echo ".load run_vt"
+    echo "CREATE VIRTUAL TABLE temp.output USING run_vt(cmd='echo col0', cols='col0, col1');"
+    echo "SELECT * FROM output;"
+) | sqlite3
+Error near line 3: SQL logic error
 
 # Bad Argument Name
 $ (

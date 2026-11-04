@@ -107,6 +107,65 @@ TEST(xattrs, alloc) {
     EXPECT_EQ(xattrs_alloc(&xattrs), 1);
 }
 
+TEST(xattrs, setup_cleanup) {
+    // Setup clears all bookkeeping, and cleanup safely handles empty storage.
+    struct xattrs xattrs = {};
+    ASSERT_EQ(xattrs_setup(&xattrs), 0);
+    EXPECT_EQ(xattrs.pairs, nullptr);
+    EXPECT_EQ(xattrs.count, (std::size_t) 0);
+    xattrs_cleanup(&xattrs);
+    xattrs_cleanup(&xattrs);
+}
+
+TEST(xattrs, can_rollin) {
+    // Exercise the public-permission rules and the fallback rejection path.
+    struct stat parent = {};
+    struct stat entry = {};
+
+    entry.st_mode = 0004;
+    EXPECT_EQ(xattr_can_rollin(&parent, &entry), 1);
+
+    parent.st_mode = 0666;
+    entry.st_mode = 0;
+    EXPECT_EQ(xattr_can_rollin(&parent, &entry), 4);
+
+    parent.st_mode = 0660;
+    parent.st_gid = entry.st_gid = 2;
+    entry.st_uid = parent.st_uid + 1;
+    EXPECT_EQ(xattr_can_rollin(&parent, &entry), 4);
+
+    parent.st_mode = 0600;
+    parent.st_uid = entry.st_uid = 1;
+    entry.st_gid = parent.st_gid + 1;
+    EXPECT_EQ(xattr_can_rollin(&parent, &entry), 4);
+
+    parent.st_mode = 0;
+    EXPECT_EQ(xattr_can_rollin(&parent, &entry), 0);
+}
+
+TEST(xattrs, remove) {
+    // Remove multiple matching pairs, compact the array, and handle no match.
+    struct xattr pairs[] = {
+        {{'f', 'i', 'r', 's', 't'}, 5, {'o', 'n', 'e'}, 3},
+        {{'f', 'i', 'r', 's', 't'}, 5, {'o', 'n', 'e',  'x'}, 4},
+        {{'s', 'e', 'c', 'o', 'n', 'd'}, 6, {'t', 'w', 'o'}, 3},
+    };
+    struct xattrs xattrs = {pairs, 16, 26, 3};
+
+    EXPECT_EQ(xattr_remove(&xattrs, "first", 5), 2U);
+    EXPECT_EQ(xattrs.count, 1U);
+    EXPECT_EQ(xattrs.name_len, 6U);
+    EXPECT_EQ(xattrs.len, 9U);
+    EXPECT_STREQ(xattrs.pairs[0].name, "second");
+
+    EXPECT_EQ(xattr_remove(&xattrs, "second", 6), 1U);
+    EXPECT_EQ(xattrs.count, 0U);
+    EXPECT_EQ(xattrs.name_len, 0U);
+    EXPECT_EQ(xattrs.len, 0U);
+
+    EXPECT_EQ(xattr_remove(&xattrs, "missing", 7), 0U);
+}
+
 TEST(xattrs, get) {
     char name[] = "XXXXXX";
     const int fd = mkstemp(name);
@@ -149,6 +208,16 @@ TEST(xattrs, get_names) {
     // not enough buffer space
     EXPECT_EQ(xattr_get_names(&EXPECTED_XATTRS, names, 0, XATTRDELIM),
               (ssize_t) -1);
+
+    char exact[sizeof(EXPECTED_STR)];
+    // Exact capacity is sufficient for all names and separators.
+    EXPECT_EQ(xattr_get_names(&EXPECTED_XATTRS, exact, sizeof(exact), XATTRDELIM),
+              (ssize_t) EXPECTED_STR_LEN);
+    EXPECT_EQ(memcmp(exact, EXPECTED_STR, EXPECTED_STR_LEN), 0);
+
+    // An empty xattr set requires no output space.
+    const struct xattrs empty = {nullptr, 0, 0, 0};
+    EXPECT_EQ(xattr_get_names(&empty, names, 0, XATTRDELIM), (ssize_t) 0);
 }
 
 TEST(xattrs, to_file) {
@@ -166,6 +235,25 @@ TEST(xattrs, to_file) {
     fclose(file);
 
     EXPECT_EQ(memcmp(line, EXPECTED_STR, EXPECTED_STR_LEN), 0);
+
+    char *buffer = nullptr;
+    size_t size = 0;
+    size_t offset = 0;
+    // Buffer serialization grows dynamically and preserves the encoded bytes.
+    EXPECT_EQ(xattrs_to_buffer(&buffer, &size, &offset, &EXPECTED_XATTRS, XATTRDELIM), 0);
+    ASSERT_NE(buffer, nullptr);
+    EXPECT_EQ(offset, EXPECTED_STR_LEN);
+    EXPECT_EQ(memcmp(buffer, EXPECTED_STR, EXPECTED_STR_LEN), 0);
+    free(buffer);
+
+    struct xattrs empty = {nullptr, 0, 0, 0};
+    char empty_line[32] = {};
+    // A zero-pair record still emits both fixed-width headers.
+    file = fmemopen(empty_line, sizeof(empty_line), "w");
+    ASSERT_NE(file, nullptr);
+    EXPECT_EQ(xattrs_to_file(file, &empty, XATTRDELIM), 8);
+    EXPECT_EQ(fclose(file), 0);
+    EXPECT_STREQ(empty_line, "00040000");
 }
 
 TEST(xattrs, from_line) {
@@ -247,6 +335,14 @@ TEST(xattrs, from_line) {
         EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, XATTRDELIM, 0),
                   line + line_len);
         EXPECT_EQ(xattrs.count, EXPECTED_XATTRS.count); // still got expected count
+        xattrs_cleanup(&xattrs);
+
+        // serialized data with no pairs
+        char empty[] = "00000000";
+        EXPECT_EQ(xattrs_from_line(empty, empty + sizeof(empty) - 1,
+                                   &xattrs, XATTRDELIM, 0),
+                  empty + sizeof(empty) - 1);
+        EXPECT_EQ(xattrs.count, (std::size_t) 0);
         xattrs_cleanup(&xattrs);
     }
 }

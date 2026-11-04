@@ -179,7 +179,7 @@ TEST(copy_template, not_enough_fds) {
     // need name of an a non-existent file
     char name[] = "XXXXXX";
     const int fd = mkstemp(name);
-    ASSERT_GT(fd, 0);
+    ASSERT_GE(fd, 0);
     ASSERT_EQ(close(fd), 0);
 
     struct rlimit orig_fds;
@@ -204,7 +204,7 @@ TEST(copy_template, bad_size) {
     // need name of an a non-existent file
     char name[] = "XXXXXX";
     const int fd = mkstemp(name);
-    ASSERT_GT(fd, 0);
+    ASSERT_GE(fd, 0);
 
     struct template_db tdb;
     tdb.fd = fd;

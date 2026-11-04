@@ -235,6 +235,20 @@ TEST(trace, worktofile) {
     free(work);
 }
 
+TEST(trace, externaltofile) {
+    // Verify serialization of an external path and its empty metadata fields.
+    char buf[128] = {};
+    FILE *file = fmemopen(buf, sizeof(buf), "w");
+    ASSERT_NE(file, nullptr);
+
+    const int written = externaltofile(file, delim, "path");
+    const char expected[] = {'0', '0', '0', '4', 'p', 'a', 't', 'h', delim, 'e', delim, '\n'};
+    ASSERT_EQ(written, (int) sizeof(expected));
+    ASSERT_EQ(fflush(file), 0);
+    EXPECT_EQ(memcmp(buf, expected, sizeof(expected)), 0);
+    EXPECT_EQ(fclose(file), 0);
+}
+
 TEST(trace, worktobuffer) {
     struct entry_data ed;
     struct work *work = get_work(&ed);
@@ -265,6 +279,20 @@ TEST(trace, worktobuffer) {
     EXPECT_EQ(worktobuffer(&buf,    &size,   &offset, delim, 0, nullptr, &ed),     -1);
     EXPECT_EQ(worktobuffer(&buf,    &size,   &offset, delim, 0, work,    nullptr), -1);
 
+    free(buf);
+    free(work);
+}
+
+TEST(trace, worktobuffer_offset) {
+    // Verify serialization appends after an existing buffer prefix.
+    struct entry_data ed;
+    struct work *work = get_work(&ed);
+    char *buf = nullptr;
+    size_t size = 0;
+    size_t offset = 17;
+
+    EXPECT_GT(worktobuffer(&buf, &size, &offset, delim, 0, work, &ed), 0);
+    EXPECT_GE(offset, 17U);
     free(buf);
     free(work);
 }

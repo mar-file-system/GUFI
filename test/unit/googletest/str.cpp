@@ -114,6 +114,13 @@ TEST(str, free_reference) {
     str_free(str);
 }
 
+TEST(str, free_void) {
+    // The convenience destructor accepts a generic pointer to an owned string.
+    str_t *str = str_alloc(4);
+    ASSERT_NE(str, nullptr);
+    str_free_void(str);
+}
+
 TEST(str, exists) {
     str_t *str = (str_t *) calloc(1, sizeof(*str));
     EXPECT_EQ(str_exists(str), 0); // not pointing to anything
@@ -127,5 +134,14 @@ TEST(str, exists) {
     str->data = nullptr;
     EXPECT_EQ(str_exists(str), 0); // length but no buffer
 
+    str_free(str);
+}
+
+TEST(str, alloc_empty) {
+    // Empty strings still allocate a terminator and remain reusable.
+    str_t *str = str_alloc(0);
+    ASSERT_NE(str, nullptr);
+    EXPECT_EQ(str->len, (std::size_t) 0);
+    EXPECT_STREQ(str->data, "");
     str_free(str);
 }
