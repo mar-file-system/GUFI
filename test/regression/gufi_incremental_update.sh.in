@@ -79,7 +79,19 @@ BADDIR=$(mktemp -d "XXXXXX") # this gets removed instantly
 # shellcheck disable=SC2153
 SEARCH2="${SEARCH}2"
 
+DIFF_FLAGS=""
+
+# shellcheck disable=SC2050
+if [[ "@DIFF@" =~ .*colordiff ]]
+then
+    DIFF_FLAGS="--color=never"
+fi
+
 cleanup() {
+    if [[ -e "${SRCDIR}/b" ]]
+    then
+        chmod 775 "${SRCDIR}/b"
+    fi
     rm -rf "${PARKING_LOT}" "${FULL_INDEX}" "${SUSPECT_FILE}" "${ARTIFACTS_DIR}" "${BADDIR}" "${SEARCH2}"
     rm -f "${SRCDIR}/../db.db" # in-place update creates the parent db.db
 }
@@ -571,6 +583,60 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 -n 184467440737095
 # this prints a different message in cygwin
 echo "# parking lot with file in path segment"
 run_no_sort "${GUFI_INCREMENTAL_UPDATE} -x --suspect-method 3 \"${INDEXROOT}\" \"${SRCDIR}\" \"${GUFI_INCREMENTAL_UPDATE}/parking_lot\" > /dev/null"
+
+if [[ "$(id -u)" -ne 0 ]]
+then
+    echo "#####################################"
+    echo "# opendir failure does not delete indexed directories"
+    echo "# based on https://github.com/mar-file-system/GUFI/issues/219"
+    rm -rf "${SRCDIR}" "${SEARCH}"
+
+    echo "# create source tree with an inaccessible directory"
+    mkdir -p "${SRCDIR}/a" "${SRCDIR}/b/deep"
+    chmod 775 "${SRCDIR}" "${SRCDIR}/a" "${SRCDIR}/b" "${SRCDIR}/b/deep"
+    echo 1 > "${SRCDIR}/a/f"
+    echo 2 > "${SRCDIR}/b/f"
+    echo 3 > "${SRCDIR}/b/deep/g"
+    find "${SRCDIR}"
+
+    echo "# get index original version of source tree"
+    "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
+
+    PREFIX_INODE=$(stat -c "%i" "${SRCDIR}")
+    before=$("${GUFI_QUERY}" \
+             -d "${DELIM}" \
+             -S "SELECT rpath(sname, sroll), mode, uid, gid FROM vrsummary;" \
+             -E "SELECT rpath(sname, sroll, name), mode, uid, gid FROM vrpentries;" \
+             "${INDEXROOT}" | sort | @SED@ "s%$(id -u)${DELIM}$(id -g)%uid${DELIM}gid%g;")
+    chmod 000 "${SRCDIR}/b"
+
+    if ! find "${SRCDIR}/b" -mindepth 1 -maxdepth 1 -print >/dev/null 2>&1
+    then
+        echo "# incremental update must fail when a directory cannot be opened"
+        mkdir "${PARKING_LOT}"
+        set +e
+        out=$("${GUFI_INCREMENTAL_UPDATE}" -n "${THREADS}" -x \
+              --suspect-method 3 --suspect-time 0 "${INDEXROOT}" "${SRCDIR}" \
+              "${PARKING_LOT}" 2>&1)
+        rc=$?
+        set -e
+        echo "${out}" | @SED@ "s%${PREFIX_INODE}%0%g"
+        if [[ "${rc}" -eq 0 ]]
+        then
+            echo "Expected incremental update to fail when opendir fails" 1>&2
+            exit 1
+        fi
+
+        echo "# verify the index was not modified"
+        after=$("${GUFI_QUERY}" \
+                -d "${DELIM}" \
+                -S "SELECT rpath(sname, sroll), mode, uid, gid FROM vrsummary;" \
+                -E "SELECT rpath(sname, sroll, name), mode, uid, gid FROM vrpentries;" \
+                "${INDEXROOT}" | sort | @SED@ "s%$(id -u)${DELIM}$(id -g)%uid${DELIM}gid%g;")
+        @DIFF@ ${DIFF_FLAGS} <(echo "${before}") <(echo "${after}")
+        echo
+    fi
+fi
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_incremental_update.expected "${OUTPUT}"
 rm "${OUTPUT}"

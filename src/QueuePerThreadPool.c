@@ -354,6 +354,7 @@ static size_t process_work(QPTPool_ctx_t *ctx, QPTPoolThreadData_t *tw) {
             if (ctx->pool->stop_on_error) {
                 pthread_mutex_lock(&ctx->pool->mutex);
                 ctx->pool->errored = 1;
+                pthread_cond_broadcast(&ctx->pool->cv);
                 pthread_mutex_unlock(&ctx->pool->mutex);
                 break; /* unprocessed work is freed during QPTPool_destroy */
             }
@@ -1173,6 +1174,14 @@ void QPTPool_wait(QPTPool_ctx_t *ctx) {
      * out so that pool->swapped is stable
      */
     QPTPool_wait_mem(ctx);
+
+    /*
+     * if the pool stopped on error, do not continue waiting;
+     * unprocessed claimed items will never decrement incomplete
+     */
+    if (QPTPool_errored(ctx)) {
+        return;
+    }
 
     #ifdef QPTPOOL_SWAP
     pthread_mutex_lock(&pool->mutex);
