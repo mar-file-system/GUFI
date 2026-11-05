@@ -81,8 +81,7 @@ trap cleanup_exit EXIT
 
 cleanup
 
-# shellcheck disable=SC2188
-> "${EMPTY_PLUGIN}"
+: > "${EMPTY_PLUGIN}"
 
 (
 # remove preexisting indicies

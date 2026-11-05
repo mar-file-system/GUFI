@@ -122,7 +122,7 @@ query
 echo
 
 echo "# Traversed paths (4 - ${INDEXROOT}/directory/subdirectory is not walked again)"
-#shellcheck disable=SC2016
+# shellcheck disable=SC2016
 keep_paths "${GUFI_TREESUMMARY} -P --dry-run -d \"|\" \"${INDEXROOT}\""
 echo
 

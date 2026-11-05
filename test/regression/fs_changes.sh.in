@@ -125,9 +125,9 @@ do
         stat -c "%i d" "${parent}" 2> /dev/null || true
     fi
 done < <(
-    # shellcheck disable=2016
+    # shellcheck disable=SC2016
     @GREP@ "move"   "${OPS}" | @AWK@ -F "|" -v OFS="${DELIM}" '{ print $2, $3 }'
-    # shellcheck disable=2016
+    # shellcheck disable=SC2016
     @GREP@ "delete" "${OPS}" | @AWK@ -F "|" -v OFS="${DELIM}" '{ print $2, $3 }'
 ) | sort -u > "${DELETES}"
 
@@ -172,9 +172,9 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --suspect-method 1 --suspe
 
 echo "# Difference between indexes"
 echo "$ @DIFF@ <(echo \${new_index}) <(echo \${updated_index})" | replace
-# shellcheck disable=2046
+# shellcheck disable=SC2046
 new_index=$(eval $(query "${SEARCH2}/${BASENAME}") | sort -t "${DELIM}" -k 2)
-# shellcheck disable=2046
+# shellcheck disable=SC2046
 updated_index=$(eval $(query "${INDEXROOT}") | sort -t "${DELIM}" -k 2)
 set +e
 @DIFF@ <(echo "${new_index}" | @SED@ "s%${SEARCH2}/%%g;") <(echo "${updated_index}" | @SED@ "s%${SEARCH}/%%g;") && echo

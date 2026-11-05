@@ -445,9 +445,7 @@ run_sort() {
 
     echo "$" "$@"                                  2>&1 | replace
     # shellcheck disable=SC2294
-    out=$(eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@" 2>&1)
-    # shellcheck disable=SC2181
-    if [[ "$?" -eq 0 ]]
+    if out=$(eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@" 2>&1)
     then
         echo -n "${out}" | replace | sort
     else

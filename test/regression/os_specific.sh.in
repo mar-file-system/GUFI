@@ -141,13 +141,11 @@ case "@CMAKE_SYSTEM_NAME@" in
                 dst=$(echo "${path}" | @SED@ "s%^${1}%${2}%g;")
 
                 # list all xattrs of original file and copy one at a time
-                # shellcheck disable=SC2215
-                @XATTR@ "$1" | while read -r name
+                while IFS= read -r name
                 do
-                    # shellcheck disable=SC2215
                     value=$(@XATTR@ -p "${name}" "$1")
                     @XATTR@ -w "${name}" "${value}" "${dst}"
-                done
+                done < <(@XATTR@ "$1")
             done
         }
 
