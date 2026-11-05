@@ -276,6 +276,7 @@ static int compare_and_update(struct PoolArgs *pa,
 }
 
 static int find_top(QPTPool_ctx_t *ctx, void *data) {
+    int rc = 0;
     struct PoolArgs *pa = NULL;
     QPTPool_get_args(ctx, (void **) &pa);
 
@@ -283,6 +284,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
 
     DIR *dir = opendir_wrapper(tree->name, NULL);
     if (!dir) {
+        rc = (errno != ENOENT); /* if the directory no longer exists, not an error */
         goto free_work;
     }
 
@@ -328,7 +330,7 @@ static int find_top(QPTPool_ctx_t *ctx, void *data) {
   free_work:
     free(tree);
 
-    return 0;
+    return rc;
 }
 
 static int handle_artifacts_dir(struct PoolArgs *pa, const int created_parking_lot) {
