@@ -410,6 +410,23 @@ process_subtrees="$1" # do not quote when used
 
 (
     echo "#####################################"
+    echo "# run from a working directory outside the source parent"
+    setup_index_and_update_complex_tree "${SEARCH}"
+    mkdir "${SEARCH}/elsewhere"
+    # stdout output is structured and cannot be sorted for consistent order, so it is discarded
+    echo "# Update the index using relative paths from outside the source parent"
+    out=$(cd "${SEARCH}/elsewhere" &&
+          run_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} -x ${process_subtrees} --suspect-method 3 --suspect-stat \"../${BASENAME}\" \"../../${BASENAME}\" \"../${PARKING_LOT}\" > /dev/null" | replace_inodes)
+    echo "${out}" | head -n 1
+    echo "${out}" | tail -n +2 | sort
+    echo
+    check_incremental_update | replace_inodes
+    echo "#####################################"
+    echo
+)
+
+(
+    echo "#####################################"
     echo "# pass in paths with extra slashes (same test as suspect method 3 with more complex tree)"
     setup_index_and_update_complex_tree "${SEARCH}"
 

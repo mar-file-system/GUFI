@@ -103,6 +103,7 @@ struct SuspectInodes {
 
 struct PoolArgs {
     struct input in;
+    str_t source_parent;      /* parent directory of the source tree */
     str_t parking_lot;        /* directory to place update db.dbs and directories */
     str_t artifacts;          /* place artifacts under this directory (defaults to parking_lot and are deleted at end if not changed) */
     struct template_db db;    /* (optimization) db.db with empty tables for copying when creating update db.dbs */

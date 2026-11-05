@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <dirent.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -467,6 +468,25 @@ int main(int argc, char *argv[]) {
      */
     struct GenSnapshot tree = {0};
     if ((rc = validate_source(&argv_index, &index, &argv_tree, &tree, &pa.same)) == 0) {
+        char *real_tree = realpath(argv_tree.data, NULL);
+        if (!real_tree) {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not get realpath of \"%s\": %s (%d)\n",
+                    argv_tree.data, strerror(err), err);
+            rc = 1;
+            goto cleanup_pl;
+        }
+
+        /*
+         * Keep the canonical parent so source paths remain valid if the
+         * update is run from a different working directory.
+         */
+        const size_t real_tree_len = strlen(real_tree);
+        pa.source_parent.data = real_tree;
+        pa.source_parent.len = dirname_len(real_tree, real_tree_len);
+        pa.source_parent.free = free;
+        real_tree = NULL; /* ownership transferred to pa.source_parent */
+
         if (pa.in.process_subtrees) {
             /* get tops of all subtrees that changed */
             struct start_end ft;

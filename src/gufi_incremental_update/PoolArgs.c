@@ -171,6 +171,7 @@ void PoolArgs_fini(struct PoolArgs *pa) {
         }
         free(pa->tops);
     }
+    str_free_existing(&pa->source_parent);
     plugins_global_exit(&pa->in.plugins, &pa->in);
     trie_free(pa->suspects.fl.inodes);
     trie_free(pa->suspects.dir.inodes);

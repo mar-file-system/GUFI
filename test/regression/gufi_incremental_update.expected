@@ -334,6 +334,81 @@ prefix|16893|uid|gid
 #####################################
 
 #####################################
+# run from a working directory outside the source parent
+# create source tree
+$ find "prefix"
+prefix
+prefix/A
+prefix/A/B
+prefix/A/B/D
+prefix/A/B/E
+prefix/A/C
+prefix/A/C/F
+prefix/A/C/G
+prefix/A/C/G/H
+prefix/A/C/G/H/I
+prefix/A/C/G/H/I/J
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI tree search with 1 threads
+Total Dirs:          11
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/A
+prefix/A/B
+prefix/A/B/D
+prefix/A/B/D/C
+prefix/A/B/E
+prefix/A/B/E/F
+prefix/A/B/E/F/G
+prefix/A/B/E/F/G/H
+prefix/A/B/E/F/G/H/renamed_I
+prefix/A/B/E/F/G/H/renamed_I/J
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI tree updated-index with 1 threads
+Total Dirs:          11
+Total Non-Dirs:      0
+
+# Update the index using relative paths from outside the source parent
+$ gufi_incremental_update -n 2 -x  --suspect-method 3 --suspect-stat "../prefix" "../../prefix" "../parking_lot" > /dev/null
+
+# State of updated index created with gufi_dir2index
+prefix/A/B/D/C|16893|uid|gid
+prefix/A/B/D|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I/J|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I|16893|uid|gid
+prefix/A/B/E/F/G/H|16893|uid|gid
+prefix/A/B/E/F/G|16893|uid|gid
+prefix/A/B/E/F|16893|uid|gid
+prefix/A/B/E|16893|uid|gid
+prefix/A/B|16893|uid|gid
+prefix/A|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/A/B/D/C|16893|uid|gid
+prefix/A/B/D|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I/J|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I|16893|uid|gid
+prefix/A/B/E/F/G/H|16893|uid|gid
+prefix/A/B/E/F/G|16893|uid|gid
+prefix/A/B/E/F|16893|uid|gid
+prefix/A/B/E|16893|uid|gid
+prefix/A/B|16893|uid|gid
+prefix/A|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
 # pass in paths with extra slashes (same test as suspect method 3 with more complex tree)
 # create source tree
 $ find "prefix"
@@ -742,6 +817,81 @@ Total Non-Dirs:      0
 
 # Update the original index via incremental update
 $ gufi_incremental_update -n 2 -x --process-subtrees --suspect-method 3 --suspect-stat "prefix" "prefix" "parking_lot" > /dev/null
+
+# State of updated index created with gufi_dir2index
+prefix/A/B/D/C|16893|uid|gid
+prefix/A/B/D|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I/J|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I|16893|uid|gid
+prefix/A/B/E/F/G/H|16893|uid|gid
+prefix/A/B/E/F/G|16893|uid|gid
+prefix/A/B/E/F|16893|uid|gid
+prefix/A/B/E|16893|uid|gid
+prefix/A/B|16893|uid|gid
+prefix/A|16893|uid|gid
+prefix|16893|uid|gid
+
+# State of incrementally updated index
+prefix/A/B/D/C|16893|uid|gid
+prefix/A/B/D|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I/J|16893|uid|gid
+prefix/A/B/E/F/G/H/renamed_I|16893|uid|gid
+prefix/A/B/E/F/G/H|16893|uid|gid
+prefix/A/B/E/F/G|16893|uid|gid
+prefix/A/B/E/F|16893|uid|gid
+prefix/A/B/E|16893|uid|gid
+prefix/A/B|16893|uid|gid
+prefix/A|16893|uid|gid
+prefix|16893|uid|gid
+
+# Compare index states
+
+#####################################
+
+#####################################
+# run from a working directory outside the source parent
+# create source tree
+$ find "prefix"
+prefix
+prefix/A
+prefix/A/B
+prefix/A/B/D
+prefix/A/B/E
+prefix/A/C
+prefix/A/C/F
+prefix/A/C/G
+prefix/A/C/G/H
+prefix/A/C/G/H/I
+prefix/A/C/G/H/I/J
+
+# get index original version of source tree
+$ gufi_dir2index prefix search
+Creating GUFI tree search with 1 threads
+Total Dirs:          11
+Total Non-Dirs:      0
+
+# modify source tree
+$ find "prefix"
+prefix
+prefix/A
+prefix/A/B
+prefix/A/B/D
+prefix/A/B/D/C
+prefix/A/B/E
+prefix/A/B/E/F
+prefix/A/B/E/F/G
+prefix/A/B/E/F/G/H
+prefix/A/B/E/F/G/H/renamed_I
+prefix/A/B/E/F/G/H/renamed_I/J
+
+# run gufi_dir2index on the updated tree to serve as the expected results
+$ gufi_dir2index prefix updated-index
+Creating GUFI tree updated-index with 1 threads
+Total Dirs:          11
+Total Non-Dirs:      0
+
+# Update the index using relative paths from outside the source parent
+$ gufi_incremental_update -n 2 -x --process-subtrees --suspect-method 3 --suspect-stat "../prefix" "../../prefix" "../parking_lot" > /dev/null
 
 # State of updated index created with gufi_dir2index
 prefix/A/B/D/C|16893|uid|gid

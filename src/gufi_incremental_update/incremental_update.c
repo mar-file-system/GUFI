@@ -600,8 +600,17 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
              * instead of actually deleting it. Not sure how to handle
              * with suspect time.
              */
-            struct work *work = new_work_with_name(NULL, 0, ud->treepath.data, ud->treepath.len);
-            work->basename_len = ud->treepath.len - dirname_len(ud->treepath.data, ud->treepath.len);
+
+            /*
+             * treepath is relative to the source parent; use its canonical
+             * parent so lstat and opendir do not depend on the cwd.
+             */
+            char *source_path = NULL;
+            const size_t source_path_len = SNFORMAT_S_ALLOC(&source_path, 2,
+                                                            pa->source_parent.data, pa->source_parent.len,
+                                                            ud->treepath.data, ud->treepath.len);
+            struct work *work = new_work_with_name(NULL, 0, source_path, source_path_len);
+            work->basename_len = source_path_len - dirname_len(source_path, source_path_len);
 
             /* inode is already known, but need to lstat for remaining values */
             if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
@@ -612,6 +621,7 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
                     const int rc = reindex_dir(ctx, work, &ed, dir);
                     closedir(dir);
                     free(work);
+                    free(source_path);
 
                     if (rc < 0) {
                         free_ud(ud);
@@ -623,6 +633,7 @@ static int apply_update(QPTPool_ctx_t *ctx, void *data) {
             }
 
             free(work);
+            free(source_path);
         }
         else {
             /* some other error */
