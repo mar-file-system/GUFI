@@ -280,7 +280,7 @@ int main(int argc, char *argv[])
         FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_PATH_LIST,
         FLAG_PATH, FLAG_XATTRS, FLAG_QUERY_XATTRS,
         FLAG_EXTERNAL_ATTACH, FLAG_EXTERNAL_COPY,
-        FLAG_PLUGIN,
+        FLAG_INTERNAL_COPY, FLAG_PLUGIN,
 
         /* miscellaneous flags */
         #if ALLOW_DB_WRITES

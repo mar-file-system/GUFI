@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "external_attach.h"
 #include "external_copy.h"
+#include "internal_copy.h"
 
 static const std::string exec = "exec"; // argv[0]
 
@@ -144,6 +145,10 @@ static const std::string external_attach_arg3        = "view";
 static const std::string external_copy               = "--external-copy";
 static const std::string external_copy_arg0          = ".*";
 static const std::string external_copy_arg1          = "INSERT INTO ext SELECT 1;";
+static const std::string internal_copy               = "--internal-copy";
+static const std::string internal_copy_arg0          = "name";
+static const std::string internal_copy_arg1          = "SQL";
+static const std::string internal_copy_arg2          = "schema";
 
 static bool operator==(const str_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -277,6 +282,16 @@ static void check_input(const int /* argc */, const char **argv,
             EXPECT_EQ(ecs->basename_pattern.data,             external_copy_arg0);
             EXPECT_EQ(ecs->sql.data,                          external_copy_arg1);
         }
+
+        {
+            sll_node_t *head = sll_head_node(&in->internal_copy.setup);
+            ASSERT_NE(head,                                   nullptr);
+            ics_t *ics = (ics_t *) sll_node_data(head);
+            ASSERT_NE(ics,                                    nullptr);
+            EXPECT_EQ(ics->name.data,                         internal_copy_arg0);
+            EXPECT_EQ(ics->sql.data,                          internal_copy_arg1);
+            EXPECT_EQ(ics->schema.data,                       internal_copy_arg2);
+        }
     }
     else {
         const std::string empty = "";
@@ -320,6 +335,7 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->path_list.len,                          (std::size_t) 0);
         EXPECT_EQ(sll_get_size(&in->external_attach.setup),   (std::size_t) 0);
         EXPECT_EQ(sll_get_size(&in->external_copy.setup),     (std::size_t) 0);
+        EXPECT_EQ(sll_get_size(&in->internal_copy.setup),     (std::size_t) 0);
     }
 }
 
@@ -394,7 +410,8 @@ TEST(parse_cmd_line, debug) {
         #ifdef HAVE_ZLIB
         FLAG_COMPRESS,
         #endif
-        FLAG_EXTERNAL_ATTACH_VALIDATE, FLAG_EXTERNAL_ATTACH, FLAG_EXTERNAL_COPY,
+        FLAG_EXTERNAL_ATTACH_VALIDATE, FLAG_EXTERNAL_ATTACH,
+        FLAG_EXTERNAL_COPY, FLAG_INTERNAL_COPY,
         FLAG_END
     };
 
@@ -453,6 +470,7 @@ TEST(parse_cmd_line, debug) {
         external_attach_validate.c_str(),
         external_attach.c_str(), external_attach_arg0.c_str(), external_attach_arg1.c_str(), external_attach_arg2.c_str(), external_attach_arg3.c_str(),
         external_copy.c_str(), external_copy_arg0.c_str(), external_copy_arg1.c_str(),
+        internal_copy.c_str(), internal_copy_arg0.c_str(), internal_copy_arg1.c_str(), internal_copy_arg2.c_str(),
         nullptr,
     };
 
@@ -531,7 +549,7 @@ TEST(parse_cmd_line, options) {
         FLAG_FORMAT, FLAG_ROLLUP_LIMIT, FLAG_ROLLUP_DELETE_BELOW, FLAG_SKIP_FILE,
         FLAG_NO_PRINT_ERRNO, FLAG_TARGET_MEMORY, FLAG_SUBDIR_LIMIT,
         FLAG_SWAP_PREFIX, FLAG_PATH_LIST, FLAG_EXTERNAL_ATTACH,
-        FLAG_EXTERNAL_COPY,
+        FLAG_EXTERNAL_COPY, FLAG_INTERNAL_COPY,
         FLAG_END
     };
 
@@ -571,6 +589,7 @@ TEST(parse_cmd_line, options) {
         path_list.c_str(), path_list_arg.c_str(),
         external_attach.c_str(), external_attach_arg0.c_str(), external_attach_arg1.c_str(), external_attach_arg2.c_str(), external_attach_arg3.c_str(),
         external_copy.c_str(), external_copy_arg0.c_str(), external_copy_arg1.c_str(),
+        internal_copy.c_str(), internal_copy_arg0.c_str(), internal_copy_arg1.c_str(), internal_copy_arg2.c_str(),
         nullptr,
     };
 

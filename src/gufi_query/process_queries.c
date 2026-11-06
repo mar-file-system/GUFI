@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include "SinglyLinkedList.h"
 #include "dbutils.h"
 #include "external_copy.h"
+#include "internal_copy.h"
 #include "print.h"
 #include "rollup.h"
 #include "str.h"
@@ -143,6 +144,56 @@ static void maybe_copy_external(sqlite3 *db, struct input *in,
     }
 
     free(clean_path);
+}
+
+/* duplicate function */
+static int count_rows(void *args, int count, char **data, char **columns) {
+    (void) count;
+    (void) data;
+    (void) columns;
+
+    PrintArgs_t *print = (PrintArgs_t *) args;
+    print->rows++;
+    return 0;
+}
+
+/* find tables/views and pull data from them  */
+static int pull_internal_names(sqlite3 *db, struct input *in) {
+    sll_loop(&in->internal_copy.setup, node) {
+        ics_t *ics = (ics_t *) sll_node_data(node);
+
+        char *sql = sqlite3_mprintf("SELECT name FROM %s.sqlite_master WHERE name == %Q;",
+                                    ATTACH_NAME, ics->name.data);
+
+        PrintArgs_t pa = {0};
+        char *err = NULL;
+        int rc = sqlite3_exec(db, sql, count_rows, &pa, &err);
+        sqlite3_free(sql);
+
+        /* find the table/view */
+        if (rc != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr,
+                                     "Warning: Errored while trying to find name \"%s\": %s\n",
+                                      ics->name.data, err);
+            continue;
+        }
+
+        /* make sure the name exists */
+        if (pa.rows != 1) { /* FIXME: checking > 1 is probably not needed */
+            continue;
+        }
+
+        /* run the user supplied SQL */
+        if (sqlite3_exec(db, ics->sql.data, NULL, NULL, &err) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr,
+                                      "Warning: Errored while running SQL for \"%s\": %s\n",
+                                      ics->name.data, err);
+        }
+
+        /* ics->schema is not used here */
+    }
+
+    return 0;
 }
 
 /* Push the subdirectories in the current directory onto the queue */
@@ -319,6 +370,13 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
                                       "Warning: Could not create subdirs_walked function: %s (%d)\n",
                                       sqlite3_errmsg(db), sqlite3_errcode(db));
         }
+
+        /*
+         * pull in data from non-standard internal databases
+         *
+         * continue whether or not they succeed (?)
+         */
+        pull_internal_names(db, in);
 
         if (str_exists(&in->sql.sum)) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */

@@ -355,6 +355,10 @@ extern "C" {
 #define FLAG_EXTERNAL_COPY_LONG "external-copy"
 #define FLAG_EXTERNAL_COPY {FLAG_EXTERNAL_COPY_LONG, required_argument, NULL, FLAG_EXTERNAL_COPY_SHORT}
 
+#define FLAG_INTERNAL_COPY_SHORT (FLAG_GROUP_EXTDB + 1)
+#define FLAG_INTERNAL_COPY_LONG "internal-copy"
+#define FLAG_INTERNAL_COPY {FLAG_INTERNAL_COPY_LONG, required_argument, NULL, FLAG_INTERNAL_COPY_SHORT}
+
 /* required at the end of every flag list */
 #define FLAG_END {NULL, 0, NULL, 0}
 
@@ -632,6 +636,10 @@ struct input {
     struct {
         sll_t setup;     /* list of ecs_t */
     } external_copy;
+
+    struct {
+        sll_t setup;     /* list of ics_t */
+    } internal_copy;
 
     /* prefix of swap files */
     str_t swap_prefix;

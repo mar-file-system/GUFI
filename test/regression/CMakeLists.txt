@@ -197,6 +197,7 @@ set(OTHERS
   gufi_find_outliers
   gufi_incremental_update
   gufi_jail
+  internal_copy
   longitudinal_snapshot
   parallel_cpr
   parallel_find

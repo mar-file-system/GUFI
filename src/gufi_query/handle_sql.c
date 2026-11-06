@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "extensions.h"
+#include "internal_copy.h"
 #include "template_db.h"
 
 #include "gufi_query/PoolArgs.h"
@@ -155,6 +156,14 @@ static int validate(struct input *in) {
         }
     }
 
+    /* --internal-copy requires -I */
+    if (sll_get_size(&in->internal_copy.setup)) {
+        if (!str_exists(&in->sql.init)) {
+            fprintf(stderr, "Copying internal databases require tables created with -I\n");
+            return -1;
+        }
+    }
+
     return 0;
 }
 
@@ -238,6 +247,19 @@ static int gen_types(struct input *in) {
 
         /* if not aggregating, get types for T, S, and E */
         if (!str_exists(&in->sql.init_agg)) {
+            /* create non-standard internal tables so they can be pulled from */
+            sll_loop(&in->internal_copy.setup, node) {
+                ics_t *ics = (ics_t *) sll_node_data(node);
+
+                char *err = NULL;
+                if (sqlite3_exec(db, ics->schema.data, NULL, NULL, &err) != SQLITE_OK) {
+                    sqlite_print_err_and_free(err, stderr,
+                                              "Error: Failed to set up internal table for getting result column types: %s\n",
+                                              err);
+                    goto error;
+                }
+            }
+
             /*
              * Types for all available SQL must be generated even if
              * only one produces the final results. If this is not

@@ -79,6 +79,7 @@ OF SUCH DAMAGE.
 #include "config.h"
 #include "external_attach.h"
 #include "external_copy.h"
+#include "internal_copy.h"
 #include "plugin.h"
 #include "utils.h"
 
@@ -135,6 +136,7 @@ struct input *input_init(struct input *in) {
 
         sll_init(&in->external_attach.setup);
         sll_init(&in->external_copy.setup);
+        sll_init(&in->internal_copy.setup);
 
         in->swap_prefix.data = (char *) DEFAULT_SWAP_PREFIX;
         in->swap_prefix.len  = 0;
@@ -153,6 +155,7 @@ void input_fini(struct input *in) {
         free(in->types.ent);
         free(in->types.sum);
         free(in->types.tsum);
+        sll_destroy(&in->internal_copy.setup,   free);
         sll_destroy(&in->external_copy.setup,   ecs_free);
         sll_destroy(&in->external_attach.setup, free);
         trie_free(in->skip);
@@ -298,6 +301,11 @@ void print_help(const char* prog_name,
             case FLAG_EXTERNAL_COPY_SHORT:               printf("      --external-copy \n"
                                                                 "        <basename pattern>\n"
                                                                 "        <SQL>                       Copy data from external databases in current directory into an in-memory table created in -I"); break;
+            case FLAG_INTERNAL_COPY_SHORT:               printf("      --internal-copy\n"
+                                                                "         <table name>\n"
+                                                                "         <SQL>\n"
+                                                                "         <schema>\n"
+                                                                "         schema SQL is only required when using --print-tlv (such as when using gufi_vt). Pass in empty strings otherwise"); break;
 
             default:                                     printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
@@ -411,6 +419,13 @@ void show_input(struct input* in, int retval) {
         ecs_t *ecs = (ecs_t *) sll_node_data(node);
         printf("in.external_copy.setup[%zu]   = ('%s', '%s')\n",
                i++, ecs->basename_pattern.data, ecs->sql.data);
+    }
+    printf("\n");
+
+    sll_loop(&in->internal_copy.setup, node) {
+        ics_t *ics = (ics_t *) sll_node_data(node);
+        printf("in.internal_copy.setup[%zu]   = ('%s', '%s', '%s')\n",
+               i++, ics->name.data, ics->sql.data, ics->schema.data);
     }
     printf("\n");
 
@@ -866,6 +881,28 @@ int parse_cmd_line(int                  argc,
                 }
                 break;
 
+            case FLAG_INTERNAL_COPY_SHORT:
+                if ((argc - optind) > 1) {
+                    ics_t *ics = calloc(1, sizeof(*ics));
+
+                    INSTALL_STR(&ics->name, optarg);
+
+                    optarg = argv[optind];
+                    INSTALL_STR(&ics->sql, optarg);
+
+                    optarg = argv[++optind];
+                    INSTALL_STR(&ics->schema, optarg);
+
+                    optarg = argv[++optind];
+
+                    sll_push_back(&in->internal_copy.setup, ics);
+                }
+                else {
+                    retval = -1;
+                }
+
+                break;
+
             case '?':
                 /* getopt_long prints an error message and returns '?' when there is a problem. */
                 retval = -1;
@@ -893,6 +930,16 @@ int parse_cmd_line(int                  argc,
     }
 
     if (in->types.print_tlv) {
+        sll_loop(&in->internal_copy.setup, node) {
+            ics_t *ics = (ics_t *) sll_node_data(node);
+            if (ics->schema.len == 0) {
+                fprintf(stderr, "--print-tlv is enabled - schema SQL (3rd argument) of --internal-copy \"%s\" is required\n", ics->name.data);
+                retval = -1;
+
+                /* don't break - print each error */
+            }
+        }
+
         if (in->output != STDOUT) {
             fprintf(stderr, "--print-tlv cannot be combined with -O or -o\n");
             retval = -1;
