@@ -82,13 +82,6 @@ OUTPUT="internal_copy.out"
     echo "# run on original tree - no internal tables found so no results"
     run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"${I}\" --internal-copy \"${TABLE}\" \"${SQL}\" \"\" -S \"SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\" \"${INDEXROOT}\""
 
-    echo "# again, with gufi_vt"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_copy=\"${TABLE} ${SQL} ${SCHEMA}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
-        echo -n "SELECT name, i, j FROM gufi;"
-         )
-    gufi_vt "${query}"
-
     echo "# set up one db.db with a nonstandard internal table"
     (
         echo "${SCHEMA}"
@@ -98,13 +91,6 @@ OUTPUT="internal_copy.out"
 
     echo "# only one directory has internal data to join with"
     run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"${I}\" --internal-copy \"${TABLE}\" \"${SQL}\" \"\" -S \"SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\" \"${INDEXROOT}\""
-
-    echo "# again, with gufi_vt"
-    query=$(
-        echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_copy=\"${TABLE} ${SQL} ${SCHEMA}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
-        echo -n "SELECT name, i, j FROM gufi;"
-         )
-    gufi_vt "${query}"
 
     echo "# missing schema when --print-tlv is enabled"
     run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"${I}\" --print-tlv --internal-copy \"${TABLE}\" \"${SQL}\" \"\" -S \"SELECT rpath(sname, sroll), i, j FROM vrsummary LEFT JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\" \"${INDEXROOT}\" 2>&1 | head -n 1"

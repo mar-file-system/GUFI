@@ -434,6 +434,39 @@ query=$(
 )
 query_vt "${query}"
 
+# per-thread table where copied data is placed
+I="CREATE TABLE copied(i int, j TEXT);"
+
+# name of the internal table
+TABLE="internal"
+
+# SQL for inserting into table created by -I
+SQL="INSERT INTO copied SELECT i, j FROM ${TABLE};"
+
+# schema for telling gufi_vt what is in the internal table
+SCHEMA="CREATE TABLE ${TABLE} (j TEXT, i INT);"
+
+echo "# run on original tree - no internal tables found so no results"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_copy=\"${TABLE} ${SQL} ${SCHEMA}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+    echo -n "SELECT name, i, j FROM gufi;"
+)
+gufi_vt "${query}"
+
+echo "# set up one db.db with a nonstandard internal table"
+(
+    echo "${SCHEMA}"
+    echo "INSERT INTO ${TABLE} VALUES ('7', 1234);"
+) | "${SQLITE3}" "${INDEXROOT}/directory/db.db"
+echo
+
+echo "# only one directory has internal data to join with"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_copy=\"${TABLE} ${SQL} ${SCHEMA}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+    echo -n "SELECT name, i, j FROM gufi;"
+)
+gufi_vt "${query}"
+
 echo "# ######################################"
 echo "# errors"
 
