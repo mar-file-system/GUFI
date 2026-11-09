@@ -448,7 +448,7 @@ COPY_SQL="INSERT INTO copied SELECT i, j FROM tree.${TABLE};"
 
 echo "# run on original tree - no internal tables found so no results"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_copy=\"${TEST_SQL} ${COPY_SQL}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_test=\"${TEST_SQL}\", internal_copy=\"${COPY_SQL}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
     echo -n "SELECT name, i, j FROM gufi;"
 )
 gufi_vt "${query}"
@@ -462,7 +462,21 @@ echo
 
 echo "# only one directory has internal data to join with"
 query=$(
-    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_copy=\"${TEST_SQL} ${COPY_SQL}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_test=\"${TEST_SQL}\", internal_copy=\"${COPY_SQL}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+    echo -n "SELECT name, i, j FROM gufi;"
+)
+gufi_vt "${query}"
+
+echo "# normal internal-copy use case"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_test=\"${TEST_SQL}\", internal_copy=\"${COPY_SQL}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+    echo -n "SELECT name, i, j FROM gufi;"
+)
+gufi_vt "${query}"
+
+echo "# test and copy arguments separated by another argument"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_test=\"${TEST_SQL}\", I=\"${I}\", internal_copy=\"${COPY_SQL}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
     echo -n "SELECT name, i, j FROM gufi;"
 )
 gufi_vt "${query}"
@@ -696,6 +710,36 @@ echo "# bad global db set up"
 query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", global_db_create=\"CREATE TABLE;\", E=\"INSERT INTO out SELECT rpath(sname, sroll, name), inode FROM vrpentries;\");"
     echo -n "SELECT * FROM gufi;"
+)
+query_vt "${query}"
+
+echo "# multiple test SQLs before a copy SQL"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_test=\"${TEST_SQL}\", internal_test=\"${TEST_SQL}\", internal_copy=\"${COPY_SQL}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+)
+query_vt "${query}"
+
+echo "# copy before test is an input error"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_copy=\"${COPY_SQL}\", I=\"${I}\", internal_test=\"${TEST_SQL}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+)
+query_vt "${query}"
+
+echo "# copy without test is an input error"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_copy=\"${COPY_SQL}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+)
+query_vt "${query}"
+
+echo "# multiple copy SQLs after a test SQL"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_test=\"${TEST_SQL}\", internal_copy=\"${COPY_SQL}\", internal_copy=\"${COPY_SQL}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
+)
+query_vt "${query}"
+
+echo "# multiple copy SQLs before a test SQL"
+query=$(
+    echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", internal_copy=\"${COPY_SQL}\", internal_copy=\"${COPY_SQL}\", internal_test=\"${TEST_SQL}\", I=\"${I}\", S=\"SELECT rpath(sname, sroll) AS name, i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\");"
 )
 query_vt "${query}"
 ) | replace | @SED@ "\%Error near line .*: SQL logic error%d;" | tee "${OUTPUT}"

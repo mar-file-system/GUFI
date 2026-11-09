@@ -987,7 +987,8 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     p                       = '<source path for use with spath()>'
  *     Q or external_attach    = '<basename> <table> <template>.<table> <view>'
  *     external_copy           = '<basename pattern> <SQL>'
- *     internal_copy           = '<Test SQL> <Copy SQL> ' # make sure <Test SQL> ends with a semicolon
+ *     internal_test            = '<SQL>'
+ *     internal_copy            = '<SQL>'
  *     plugin                  = '<entrypoint>:<gufi_query plugin library path>'
  *     no_print_errno          = errno number (range: [1, 255])
  *     index                   = '<path>' (can also pass in without the key)
@@ -1006,6 +1007,8 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *                 - plugin
  *                 - Q or external_attach
  *                 - external_copy
+ *                 - internal_test
+ *                 - internal_copy
  *                 - index
  *     - At least one of T, S, or E must be passed in
  *     - When determining the virtual table's schema, there are two separate cases:
@@ -1143,40 +1146,28 @@ static int parse_external_copy_args(sll_t *external_copy, char *arg) {
     return 0;
 }
 
-/* parse internal_copy='<Test SQL> <Copy SQL>' */
-static int parse_internal_copy_args(sll_t *internal_copy, char *arg) {
-    /* remove surrounding quotes */
-    str_t arg_str;
-    set_refstr(&arg_str, arg);
+/* add one half of an internal-copy pair */
+static int parse_internal_copy_arg(sll_t *internal_copy, ics_t **latest,
+                                   char *arg, const int test) {
+    ics_t *ics = sll_get_size(internal_copy)?
+        (ics_t *) sll_node_data(sll_tail_node(internal_copy)) : NULL;
 
-    char *copy = NULL;
-    char *test = strtok_r(arg_str.data, ";", &copy);
+    if (test) {
+        if (ics && !str_exists(&ics->copy)) {
+            return -1;
+        }
 
-    if (!test || !copy) {
+        ics = calloc(1, sizeof(*ics));
+        sll_push_back(internal_copy, ics);
+    }
+    else if (!ics || str_exists(&ics->copy)) {
         return -1;
     }
 
-    ics_t *ics = calloc(1, sizeof(*ics));
-
-    /* do not accidentally strip trailing quotes */
-    ics->test.data = test;
-    ics->test.len  = strlen(test);
-    ics->test.free = NULL;
-
-    /* do not accidentally strip trailing quotes */
-    ics->copy.data = copy;
-    ics->copy.len  = strlen(copy);
-    ics->copy.free = NULL;
-
-    if (!str_exists(&ics->test) ||
-        !str_exists(&ics->copy)) {
-        free(ics);
-        return -1;
-    }
-
-    sll_push_back(internal_copy, ics);
-
-    return 0;
+    str_t *dst = test?&ics->test:&ics->copy;
+    set_refstr(dst, arg);
+    *latest = ics;
+    return str_exists(dst)?0:-1;
 }
 
 static int gufi_vtpu_xConnect(sqlite3 *db,
@@ -1185,6 +1176,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                               sqlite3_vtab **ppVtab,
                               char **pzErr) {
     gq_cmd_t cmd;
+    ics_t *latest_internal_copy = NULL;
     gq_cmd_init(&cmd);
 
     set_refstr(&cmd.threads, (char *) ONE_THREAD);
@@ -1318,8 +1310,15 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             }
         }
         else if (strncmp(key, "internal_copy", 14) == 0) {
-            if (parse_internal_copy_args(&cmd.internal_copy, value) != 0) {
-                *pzErr = sqlite3_mprintf("Bad internal copy database args");
+            if (parse_internal_copy_arg(&cmd.internal_copy, &latest_internal_copy, value, 0) != 0) {
+                *pzErr = sqlite3_mprintf("Bad internal copy SQL");
+                gq_cmd_destroy(&cmd);
+                return SQLITE_MISUSE;
+            }
+        }
+        else if (strncmp(key, "internal_test", 14) == 0) {
+            if (parse_internal_copy_arg(&cmd.internal_copy, &latest_internal_copy, value, 1) != 0) {
+                *pzErr = sqlite3_mprintf("Bad internal test SQL");
                 gq_cmd_destroy(&cmd);
                 return SQLITE_MISUSE;
             }
@@ -1350,6 +1349,14 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             gq_cmd_destroy(&cmd);
             return SQLITE_CONSTRAINT;
         }
+    }
+
+    if (latest_internal_copy &&
+        (!str_exists(&latest_internal_copy->test) ||
+         !str_exists(&latest_internal_copy->copy))) {
+        *pzErr = sqlite3_mprintf("Each internal_test must have a matching internal_copy");
+        gq_cmd_destroy(&cmd);
+        return SQLITE_MISUSE;
     }
 
     if (!sll_get_size(&cmd.indexroots) && !str_exists(&cmd.path_list)) {
