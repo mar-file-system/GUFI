@@ -347,10 +347,9 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         sll_loop(&cmd->internal_copy, node) {
             ics_t *ics = (ics_t *) sll_node_data(node);
             write_with_resize(&flat, &size, &len,
-                              "--internal-copy '%s' '%s' '%s' ",
-                              ics->name.data,
-                              ics->sql.data,
-                              ics->schema.data);
+                              "--internal-copy '%s' '%s' ",
+                              ics->test.data,
+                              ics->copy.data);
         }
 
         sll_loop(&cmd->indexroots, node) {
@@ -369,7 +368,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         max_argc += sll_get_size(&cmd->plugins) * 2;
         max_argc += sll_get_size(&cmd->external_attach) * 5;
         max_argc += sll_get_size(&cmd->external_copy) * 3;
-        max_argc += sll_get_size(&cmd->internal_copy) * 4;
+        max_argc += sll_get_size(&cmd->internal_copy) * 3;
         max_argc += sll_get_size(&cmd->indexroots);
 
         argv = calloc(max_argc + 1, sizeof(argv[0]));
@@ -469,9 +468,8 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         sll_loop(&cmd->internal_copy, node) {
             ics_t *ics = (ics_t *) sll_node_data(node);
             argv[argc++] = "--internal-copy";
-            argv[argc++] = ics->name.data;
-            argv[argc++] = ics->sql.data;
-            argv[argc++] = ics->schema.data;
+            argv[argc++] = ics->test.data;
+            argv[argc++] = ics->copy.data;
         }
 
         sll_loop(&cmd->indexroots, node) {
@@ -989,7 +987,7 @@ gufi_vt_xConnect(VRPENTRIES,  VRP, 0, 0, 1, 1)
  *     p                       = '<source path for use with spath()>'
  *     Q or external_attach    = '<basename> <table> <template>.<table> <view>'
  *     external_copy           = '<basename pattern> <SQL>'
- *     internal_copy           = '<table> <SQL> <schema>' # make sure SQL ends with a semicolon
+ *     internal_copy           = '<Test SQL> <Copy SQL> ' # make sure <Test SQL> ends with a semicolon
  *     plugin                  = '<entrypoint>:<gufi_query plugin library path>'
  *     no_print_errno          = errno number (range: [1, 255])
  *     index                   = '<path>' (can also pass in without the key)
@@ -1145,29 +1143,33 @@ static int parse_external_copy_args(sll_t *external_copy, char *arg) {
     return 0;
 }
 
-/* parse internal_copy='<name> <SQL> <schema>' */
+/* parse internal_copy='<Test SQL> <Copy SQL>' */
 static int parse_internal_copy_args(sll_t *internal_copy, char *arg) {
     /* remove surrounding quotes */
     str_t arg_str;
     set_refstr(&arg_str, arg);
 
-    char *saveptr = NULL;
-    char *name = strtok_r(arg_str.data, " ", &saveptr);
-    char *sql = strtok_r(NULL,          ";", &saveptr);
-    char *schema = saveptr;
+    char *copy = NULL;
+    char *test = strtok_r(arg_str.data, ";", &copy);
 
-    if (!name || !sql || !schema) {
+    if (!test || !copy) {
         return -1;
     }
 
     ics_t *ics = calloc(1, sizeof(*ics));
-    set_refstr(&ics->name, name);
-    set_refstr(&ics->sql,  sql);
-    set_refstr(&ics->schema, schema);
 
-    if (!str_exists(&ics->name) ||
-        !str_exists(&ics->sql) ||
-        !str_exists(&ics->schema)) {
+    /* do not accidentally strip trailing quotes */
+    ics->test.data = test;
+    ics->test.len  = strlen(test);
+    ics->test.free = NULL;
+
+    /* do not accidentally strip trailing quotes */
+    ics->copy.data = copy;
+    ics->copy.len  = strlen(copy);
+    ics->copy.free = NULL;
+
+    if (!str_exists(&ics->test) ||
+        !str_exists(&ics->copy)) {
         free(ics);
         return -1;
     }
@@ -1476,17 +1478,6 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     /* if not aggregating, get types for T, S, or E */
     if (!str_exists(&cmd.K)) {
         int rc = -1; /* get_cols returns 0 or 1, so -1 means SQL was not provided */
-
-        /* create non-standard internal tables so they can be pulled from */
-        sll_loop(&cmd.internal_copy, node) {
-            ics_t *ics = (ics_t *) sll_node_data(node);
-
-            char *err = NULL;
-            if (sqlite3_exec(tempdb, ics->schema.data, NULL, NULL, &err) != SQLITE_OK) {
-                rc = 1;
-                goto done;
-            }
-        }
 
         if (str_exists(&cmd.T) && !str_exists(&cmd.S) && !str_exists(&cmd.E)) {
             rc = get_cols(tempdb, &cmd.T, &types, &names, &lens, &cols);

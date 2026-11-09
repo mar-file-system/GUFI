@@ -157,40 +157,32 @@ static int count_rows(void *args, int count, char **data, char **columns) {
     return 0;
 }
 
-/* find tables/views and pull data from them  */
-static int pull_internal_names(sqlite3 *db, struct input *in) {
+static int pull_internal(sqlite3 *db, struct input *in) {
     sll_loop(&in->internal_copy.setup, node) {
         ics_t *ics = (ics_t *) sll_node_data(node);
 
-        char *sql = sqlite3_mprintf("SELECT name FROM %s.sqlite_master WHERE name == %Q;",
-                                    ATTACH_NAME, ics->name.data);
-
         PrintArgs_t pa = {0};
         char *err = NULL;
-        int rc = sqlite3_exec(db, sql, count_rows, &pa, &err);
-        sqlite3_free(sql);
 
-        /* find the table/view */
-        if (rc != SQLITE_OK) {
+        /* check if the actual SQL should run */
+        if (sqlite3_exec(db, ics->test.data, count_rows, &pa, &err) != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr,
-                                     "Warning: Errored while trying to find name \"%s\": %s\n",
-                                      ics->name.data, err);
+                                     "Warning: Errored while trying testing internal table/view \"%s\": %s\n",
+                                      ics->test.data, err);
             continue;
         }
 
-        /* make sure the name exists */
-        if (pa.rows != 1) { /* FIXME: checking > 1 is probably not needed */
+        /* don't run the actual SQL if there were no rows */
+        if (pa.rows == 0) {
             continue;
         }
 
-        /* run the user supplied SQL */
-        if (sqlite3_exec(db, ics->sql.data, NULL, NULL, &err) != SQLITE_OK) {
+        /* run the copy SQL */
+        if (sqlite3_exec(db, ics->copy.data, NULL, NULL, &err) != SQLITE_OK) {
             sqlite_print_err_and_free(err, stderr,
                                       "Warning: Errored while running SQL for \"%s\": %s\n",
-                                      ics->name.data, err);
+                                      ics->copy.data, err);
         }
-
-        /* ics->schema is not used here */
     }
 
     return 0;
@@ -376,7 +368,7 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
          *
          * continue whether or not they succeed (?)
          */
-        pull_internal_names(db, in);
+        pull_internal(db, in);
 
         if (str_exists(&in->sql.sum)) {
             recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */

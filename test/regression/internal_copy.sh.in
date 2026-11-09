@@ -73,27 +73,24 @@ OUTPUT="internal_copy.out"
     # name of the internal table
     TABLE="internal"
 
-    # SQL for inserting into table created by -I
-    SQL="INSERT INTO copied SELECT i, j FROM ${TABLE};"
+    # SQL for testing if COPY_SQL should be run
+    TEST_SQL="SELECT name FROM tree.sqlite_master WHERE name == '${TABLE}';"
 
-    # schema for telling gufi_vt what is in the internal table
-    SCHEMA="CREATE TABLE ${TABLE} (j TEXT, i INT);"
+    # SQL for inserting into table created by -I
+    COPY_SQL="INSERT INTO copied SELECT i, j FROM tree.${TABLE};"
 
     echo "# run on original tree - no internal tables found so no results"
-    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"${I}\" --internal-copy \"${TABLE}\" \"${SQL}\" \"\" -S \"SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\" \"${INDEXROOT}\""
+    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"${I}\" --internal-copy \"${TEST_SQL}\" \"${COPY_SQL}\" -S \"SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\" \"${INDEXROOT}\""
 
     echo "# set up one db.db with a nonstandard internal table"
     (
-        echo "${SCHEMA}"
+        echo "CREATE TABLE ${TABLE} (j TEXT, i INT);"
         echo "INSERT INTO ${TABLE} VALUES ('7', 1234);"
     ) | "${SQLITE3}" "${INDEXROOT}/directory/db.db"
     echo
 
     echo "# only one directory has internal data to join with"
-    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"${I}\" --internal-copy \"${TABLE}\" \"${SQL}\" \"\" -S \"SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\" \"${INDEXROOT}\""
-
-    echo "# missing schema when --print-tlv is enabled"
-    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"${I}\" --print-tlv --internal-copy \"${TABLE}\" \"${SQL}\" \"\" -S \"SELECT rpath(sname, sroll), i, j FROM vrsummary LEFT JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\" \"${INDEXROOT}\" 2>&1 | head -n 1"
+    run_no_sort "${GUFI_QUERY} -d \"${DELIM}\" -I \"${I}\" --internal-copy \"${TEST_SQL}\" \"${COPY_SQL}\" -S \"SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;\" \"${INDEXROOT}\""
 ) | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/internal_copy.expected "${OUTPUT}"

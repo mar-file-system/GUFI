@@ -1,13 +1,9 @@
 # run on original tree - no internal tables found so no results
-$ gufi_query -d "|" -I "CREATE TABLE copied(i int, j TEXT);" --internal-copy "internal" "INSERT INTO copied SELECT i, j FROM internal;" "" -S "SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;" "prefix"
+$ gufi_query -d "|" -I "CREATE TABLE copied(i int, j TEXT);" --internal-copy "SELECT name FROM tree.sqlite_master WHERE name == 'internal';" "INSERT INTO copied SELECT i, j FROM tree.internal;" -S "SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;" "prefix"
 
 # set up one db.db with a nonstandard internal table
 
 # only one directory has internal data to join with
-$ gufi_query -d "|" -I "CREATE TABLE copied(i int, j TEXT);" --internal-copy "internal" "INSERT INTO copied SELECT i, j FROM internal;" "" -S "SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;" "prefix"
+$ gufi_query -d "|" -I "CREATE TABLE copied(i int, j TEXT);" --internal-copy "SELECT name FROM tree.sqlite_master WHERE name == 'internal';" "INSERT INTO copied SELECT i, j FROM tree.internal;" -S "SELECT rpath(sname, sroll), i, j FROM vrsummary JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;" "prefix"
 prefix/directory|1234|7
-
-# missing schema when --print-tlv is enabled
-$ gufi_query -d "|" -I "CREATE TABLE copied(i int, j TEXT);" --print-tlv --internal-copy "internal" "INSERT INTO copied SELECT i, j FROM internal;" "" -S "SELECT rpath(sname, sroll), i, j FROM vrsummary LEFT JOIN copied ON vrsummary.inode == copied.j; DELETE FROM copied;" "prefix" 2>&1 | head -n 1
---print-tlv is enabled - schema SQL (3rd argument) of --internal-copy "internal" is required
 

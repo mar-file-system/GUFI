@@ -72,9 +72,18 @@ extern "C" {
 #endif
 
 typedef struct internal_copy_setup {
-    str_t name;      /* table/view name */
-    str_t sql;       /* SQL to pull from this table/view */
-    str_t schema;    /* SQl used to create this table/view */
+    /*
+     * Test SQL - if this SQL returns at least one
+     * row, run the actual SQL. Results from this SQL
+     * are not printed
+     */
+    str_t test;
+
+    /*
+     * SQL to copy data from an internal
+     * table/view to a table created by -I
+    */
+    str_t copy;
 } ics_t;
 
 #ifdef __cplusplus

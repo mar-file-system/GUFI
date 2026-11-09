@@ -146,9 +146,8 @@ static const std::string external_copy               = "--external-copy";
 static const std::string external_copy_arg0          = ".*";
 static const std::string external_copy_arg1          = "INSERT INTO ext SELECT 1;";
 static const std::string internal_copy               = "--internal-copy";
-static const std::string internal_copy_arg0          = "name";
-static const std::string internal_copy_arg1          = "SQL";
-static const std::string internal_copy_arg2          = "schema";
+static const std::string internal_copy_arg0          = "Test SQL";
+static const std::string internal_copy_arg1          = "Copy SQL";
 
 static bool operator==(const str_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
@@ -288,9 +287,8 @@ static void check_input(const int /* argc */, const char **argv,
             ASSERT_NE(head,                                   nullptr);
             ics_t *ics = (ics_t *) sll_node_data(head);
             ASSERT_NE(ics,                                    nullptr);
-            EXPECT_EQ(ics->name.data,                         internal_copy_arg0);
-            EXPECT_EQ(ics->sql.data,                          internal_copy_arg1);
-            EXPECT_EQ(ics->schema.data,                       internal_copy_arg2);
+            EXPECT_EQ(ics->test.data,                         internal_copy_arg0);
+            EXPECT_EQ(ics->copy.data,                         internal_copy_arg1);
         }
     }
     else {
@@ -470,7 +468,7 @@ TEST(parse_cmd_line, debug) {
         external_attach_validate.c_str(),
         external_attach.c_str(), external_attach_arg0.c_str(), external_attach_arg1.c_str(), external_attach_arg2.c_str(), external_attach_arg3.c_str(),
         external_copy.c_str(), external_copy_arg0.c_str(), external_copy_arg1.c_str(),
-        internal_copy.c_str(), internal_copy_arg0.c_str(), internal_copy_arg1.c_str(), internal_copy_arg2.c_str(),
+        internal_copy.c_str(), internal_copy_arg0.c_str(), internal_copy_arg1.c_str(),
         nullptr,
     };
 
@@ -589,7 +587,7 @@ TEST(parse_cmd_line, options) {
         path_list.c_str(), path_list_arg.c_str(),
         external_attach.c_str(), external_attach_arg0.c_str(), external_attach_arg1.c_str(), external_attach_arg2.c_str(), external_attach_arg3.c_str(),
         external_copy.c_str(), external_copy_arg0.c_str(), external_copy_arg1.c_str(),
-        internal_copy.c_str(), internal_copy_arg0.c_str(), internal_copy_arg1.c_str(), internal_copy_arg2.c_str(),
+        internal_copy.c_str(), internal_copy_arg0.c_str(), internal_copy_arg1.c_str(),
         nullptr,
     };
 

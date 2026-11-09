@@ -302,10 +302,9 @@ void print_help(const char* prog_name,
                                                                 "        <basename pattern>\n"
                                                                 "        <SQL>                       Copy data from external databases in current directory into an in-memory table created in -I"); break;
             case FLAG_INTERNAL_COPY_SHORT:               printf("      --internal-copy\n"
-                                                                "         <table name>\n"
-                                                                "         <SQL>\n"
-                                                                "         <schema>\n"
-                                                                "         schema SQL is only required when using --print-tlv (such as when using gufi_vt). Pass in empty strings otherwise"); break;
+                                                                "         <Test SQL>\n"
+                                                                "         <Copy SQL>\n"
+                                                                "         Test SQL should return at least one row in order to indicate that the Copy SQL should be run. Results from Test SQL are not printed"); break;
 
             default:                                     printf("print_help(): unrecognized option '%c'", (char)options->val); break;
         }
@@ -424,8 +423,8 @@ void show_input(struct input* in, int retval) {
 
     sll_loop(&in->internal_copy.setup, node) {
         ics_t *ics = (ics_t *) sll_node_data(node);
-        printf("in.internal_copy.setup[%zu]   = ('%s', '%s', '%s')\n",
-               i++, ics->name.data, ics->sql.data, ics->schema.data);
+        printf("in.internal_copy.setup[%zu]   = ('%s', '%s')\n",
+               i++, ics->test.data, ics->copy.data);
     }
     printf("\n");
 
@@ -848,7 +847,7 @@ int parse_cmd_line(int                  argc,
                     optarg = argv[++optind];
                     INSTALL_STR(&eas->view, optarg);
 
-                    optarg = argv[++optind];
+                    ++optind;
 
                     sll_push_back(&in->external_attach.setup, eas);
                 }
@@ -866,7 +865,7 @@ int parse_cmd_line(int                  argc,
                     optarg = argv[optind];
                     INSTALL_STR(&ecs->sql, optarg);
 
-                    optarg = argv[++optind];
+                    ++optind;
 
                     if (ecs_compile(ecs) == 0) {
                         sll_push_back(&in->external_copy.setup, ecs);
@@ -882,18 +881,15 @@ int parse_cmd_line(int                  argc,
                 break;
 
             case FLAG_INTERNAL_COPY_SHORT:
-                if ((argc - optind) > 1) {
+                if ((argc - optind) > 0) {
                     ics_t *ics = calloc(1, sizeof(*ics));
 
-                    INSTALL_STR(&ics->name, optarg);
+                    INSTALL_STR(&ics->test, optarg);
 
                     optarg = argv[optind];
-                    INSTALL_STR(&ics->sql, optarg);
+                    INSTALL_STR(&ics->copy, optarg);
 
-                    optarg = argv[++optind];
-                    INSTALL_STR(&ics->schema, optarg);
-
-                    optarg = argv[++optind];
+                    ++optind;
 
                     sll_push_back(&in->internal_copy.setup, ics);
                 }
@@ -930,16 +926,6 @@ int parse_cmd_line(int                  argc,
     }
 
     if (in->types.print_tlv) {
-        sll_loop(&in->internal_copy.setup, node) {
-            ics_t *ics = (ics_t *) sll_node_data(node);
-            if (ics->schema.len == 0) {
-                fprintf(stderr, "--print-tlv is enabled - schema SQL (3rd argument) of --internal-copy \"%s\" is required\n", ics->name.data);
-                retval = -1;
-
-                /* don't break - print each error */
-            }
-        }
-
         if (in->output != STDOUT) {
             fprintf(stderr, "--print-tlv cannot be combined with -O or -o\n");
             retval = -1;
