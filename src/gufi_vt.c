@@ -142,6 +142,7 @@ typedef struct gufi_query_cmd {
      * default GUFI to allow for result column types to be discovered
      */
     str_t setup_res_col_type;
+    str_t types;
 
     str_t I;
     str_t T;
@@ -164,6 +165,20 @@ typedef struct gufi_query_cmd {
     sll_t indexroots;         /* list of index roots to pass to gufi_query */
 } gq_cmd_t;
 
+/*
+ * Fixed-schema virtual-table argument columns precede result columns in each
+ * declared schema. Metadata sent to gufi_query must skip these hidden inputs.
+ */
+#define GUFI_VT_ARGS_INDEXROOT       0
+#define GUFI_VT_ARGS_THREADS         1
+#define GUFI_VT_ARGS_MIN_LEVEL       2
+#define GUFI_VT_ARGS_MAX_LEVEL       3
+#define GUFI_VT_ARGS_PATH_LIST       4
+#define GUFI_VT_ARGS_VERBOSE         5
+#define GUFI_VT_ARGS_REMOTE_CMD      6
+#define GUFI_VT_ARGS_REMOTE_ARGS     7
+#define GUFI_VT_ARGS_COUNT           8
+
 static void gq_cmd_init(gq_cmd_t *cmd) {
     memset(cmd, 0, sizeof(*cmd));
     sll_init(&cmd->remote_args);
@@ -177,6 +192,8 @@ static void gq_cmd_init(gq_cmd_t *cmd) {
 }
 
 static void gq_cmd_destroy(gq_cmd_t *cmd) {
+    /* Dynamic and fixed-schema connectors allocate the serialized metadata. */
+    str_free_existing(&cmd->types);
     sll_destroy(&cmd->internal_copy, free);        /* list of allocated ics_t */
     sll_destroy(&cmd->external_copy, ecs_free);    /* list of allocated ecs_t */
     sll_destroy(&cmd->external_attach, free);      /* list of allocated eas_t */
@@ -185,6 +202,118 @@ static void gq_cmd_destroy(gq_cmd_t *cmd) {
     sll_destroy(&cmd->plugins, NULL);              /* list of references to argv[i] */
     sll_destroy(&cmd->remote_args, free);          /* list of allocated str_t */
     /* not freeing cmd here */
+}
+
+/* Map SQLite declared-type affinity to the type tags used by TLV output. */
+static int declared_type(const char *type) {
+    if (!type) {
+        return SQLITE_NULL;
+    }
+    if (strstr(type, "INT")) {
+        return SQLITE_INTEGER;
+    }
+    if (strstr(type, "CHAR") || strstr(type, "CLOB") || strstr(type, "TEXT")) {
+        return SQLITE_TEXT;
+    }
+    if (strstr(type, "BLOB")) {
+        return SQLITE_BLOB;
+    }
+    if (strstr(type, "REAL") || strstr(type, "FLOA") || strstr(type, "DOUB")) {
+        return SQLITE_FLOAT;
+    }
+    return SQLITE_NULL;
+}
+
+static int fixed_schema_metadata(const char *schema, const char *table,
+                                 str_t *metadata, char **pzErr) {
+    sqlite3 *db = NULL;
+    sqlite3_stmt *stmt = NULL;
+    char *sql = NULL;
+    int rc = SQLITE_ERROR;
+
+    /*
+     * Reuse SQLite's schema parser instead of maintaining a second list of
+     * names and affinities for every gufi_vt_* table.
+     */
+    if (sqlite3_open(":memory:", &db) != SQLITE_OK) {
+        *pzErr = sqlite3_mprintf("Could not open temporary metadata database");
+        goto done;
+    }
+
+    char *err = NULL;
+    if (sqlite3_exec(db, schema, NULL, NULL, &err) != SQLITE_OK) {
+        *pzErr = sqlite3_mprintf("Could not create temporary metadata table: %s", err);
+        sqlite3_free(err);
+        goto done;
+    }
+
+    sql = sqlite3_mprintf("SELECT * FROM \"%w\"", table);
+    if (!sql || (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)) {
+        *pzErr = sqlite3_mprintf("Could not inspect fixed virtual table schema");
+        goto done;
+    }
+
+    const int total = sqlite3_column_count(stmt);
+
+    /* Hidden invocation arguments are local to gufi_vt and are not output. */
+    const int cols = total - GUFI_VT_ARGS_COUNT;
+    if ((cols < 0) || (cols > 0xffff)) {
+        *pzErr = sqlite3_mprintf("Invalid fixed virtual table column count");
+        goto done;
+    }
+
+    /* Count prefix: four hexadecimal digits followed by a colon. */
+    size_t metadata_len = 5;
+    for (int c = GUFI_VT_ARGS_COUNT; c < total; c++) {
+        const size_t name_len = strlen(sqlite3_column_name(stmt, c));
+
+        /* Each descriptor adds a seven-byte header and the column name. */
+        if ((name_len > 0xffff) || (metadata_len > (SIZE_MAX - 7 - name_len))) {
+            *pzErr = sqlite3_mprintf("Fixed virtual table column metadata is too long");
+            goto done;
+        }
+        metadata_len += 7 + name_len;
+    }
+
+    metadata->data = malloc(metadata_len + 1);
+    if (!metadata->data) {
+        *pzErr = sqlite3_mprintf("Could not allocate fixed virtual table metadata");
+        goto done;
+    }
+    metadata->data[metadata_len] = '\0';
+    metadata->len = metadata_len;
+    metadata->free = free;
+
+    /* Serialize the format consumed by gufi_query/handle_sql.c. */
+    size_t offset = (size_t) SNPRINTF(metadata->data, metadata_len + 1,
+                                      "%04x:", (unsigned int) cols);
+    for (int c = GUFI_VT_ARGS_COUNT; c < total; c++) {
+        const char *name = sqlite3_column_name(stmt, c);
+        const size_t name_len = strlen(name);
+        const int type = declared_type(sqlite3_column_decltype(stmt, c));
+        offset += (size_t) SNPRINTF(metadata->data + offset,
+                                    metadata_len - offset + 1,
+                                    "%c:%04zx:", (char) ('0' + type), name_len);
+        memcpy(metadata->data + offset, name, name_len);
+        offset += name_len;
+    }
+
+    if (offset != metadata_len) {
+        *pzErr = sqlite3_mprintf("Could not encode fixed virtual table metadata");
+        goto done;
+    }
+
+    rc = SQLITE_OK;
+
+  done:
+    sqlite3_finalize(stmt);
+    sqlite3_free(sql);
+    sqlite3_close(db);
+    /* On error, leave the caller with an empty, safely destructible string. */
+    if (rc != SQLITE_OK) {
+        str_free_existing(metadata);
+    }
+    return rc;
 }
 
 typedef struct gufi_vtab {
@@ -254,8 +383,12 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
 
         write_with_resize(&flat, &size, &len,
                           "%s ", cmd->gufi_query.data);
+        /*
+         * remote_cmd receives one flattened shell command, but --print-tlv
+         * and its metadata remain separate shell words.
+         */
         write_with_resize(&flat, &size, &len,
-                          "--print-tlv ");
+                          "--print-tlv '%s' ", cmd->types.data);
         write_with_resize(&flat, &size, &len,
                           "-x ");
 
@@ -363,7 +496,8 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
     else {
         /* can keep arguments separate */
 
-        max_argc = 37; /* 3 fixed args, 16 pairs of flags, 2 single argv flags */
+        /* --print-tlv and metadata occupy two of the four fixed arguments. */
+        max_argc = 38; /* 4 fixed args, 16 pairs of flags, 2 single argv flags */
         max_argc += sll_get_size(&cmd->no_print_errno) * 2;
         max_argc += sll_get_size(&cmd->plugins) * 2;
         max_argc += sll_get_size(&cmd->external_attach) * 5;
@@ -374,7 +508,9 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         argv = calloc(max_argc + 1, sizeof(argv[0]));
 
         argv[argc++] = cmd->gufi_query.data;
+        /* Keep the option and required metadata in separate argv entries. */
         argv[argc++] = "--print-tlv";
+        argv[argc++] = cmd->types.data;
         argv[argc++] = "-x";
 
         #define set_argv(argc, argv, flag, refstr)  \
@@ -810,17 +946,6 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
  * recreated here, and thus all columns are accessible.
  */
 
-/* positional arguments */
-#define GUFI_VT_ARGS_INDEXROOT       0
-#define GUFI_VT_ARGS_THREADS         1
-#define GUFI_VT_ARGS_MIN_LEVEL       2
-#define GUFI_VT_ARGS_MAX_LEVEL       3
-#define GUFI_VT_ARGS_PATH_LIST       4
-#define GUFI_VT_ARGS_VERBOSE         5
-#define GUFI_VT_ARGS_REMOTE_CMD      6
-#define GUFI_VT_ARGS_REMOTE_ARGS     7
-#define GUFI_VT_ARGS_COUNT           8
-
 #define GUFI_VT_ARG_COLUMNS          "indexroot TEXT HIDDEN,   " \
                                      "threads INT64 HIDDEN,    " \
                                      "min_level INT64 HIDDEN,  " \
@@ -916,29 +1041,34 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
     "FROM " name ";"                                                              \
 
 /* generate xConnect function for each virtual table */
-#define gufi_vt_xConnect(name, abbrev, t, s, e, vr)                               \
-    static int gufi_vt_ ##abbrev ##Connect(sqlite3 *db,                           \
-                                           void *pAux,                            \
-                                           int argc, const char * const *argv,    \
-                                           sqlite3_vtab **ppVtab,                 \
-                                           char **pzErr) {                        \
-        /* this is what the virtual table looks like */                           \
-        /* the schema is fixed for this function */                               \
-        const char schema[] =                                                     \
-            name ##_SCHEMA(name, GUFI_VT_ALL_COLUMNS);                            \
-                                                                                  \
-        static const char select_from[]    = SELECT_FROM(name);                   \
-        static const char select_from_vr[] = SELECT_FROM_VR(name);                \
-                                                                                  \
-        /* fixed queries */                                                       \
-        gq_cmd_t cmd;                                                             \
-        gq_cmd_init(&cmd);                                                        \
-        set_refstr(&cmd.T, (char *) (t?select_from:NULL));                        \
-        set_refstr(&cmd.S, (char *) (s?(vr?select_from_vr:select_from):NULL));    \
-        set_refstr(&cmd.E, (char *) (e?(vr?select_from_vr:select_from):NULL));    \
-                                                                                  \
-        return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,                \
-                              schema, &cmd, 1);                                   \
+#define gufi_vt_xConnect(name, abbrev, t, s, e, vr)                                 \
+    static int gufi_vt_ ##abbrev ##Connect(sqlite3 *db,                             \
+                                           void *pAux,                              \
+                                           int argc, const char * const *argv,      \
+                                           sqlite3_vtab **ppVtab,                   \
+                                           char **pzErr) {                          \
+        /* this is what the virtual table looks like */                             \
+        /* the schema is fixed for this function */                                 \
+        const char schema[] =                                                       \
+            name ##_SCHEMA(name, GUFI_VT_ALL_COLUMNS);                              \
+                                                                                    \
+        static const char select_from[]    = SELECT_FROM(name);                     \
+        static const char select_from_vr[] = SELECT_FROM_VR(name);                  \
+                                                                                    \
+        /* fixed queries */                                                         \
+        gq_cmd_t cmd;                                                               \
+        gq_cmd_init(&cmd);                                                          \
+        set_refstr(&cmd.T, (char *) (t?select_from:NULL));                          \
+        set_refstr(&cmd.S, (char *) (s?(vr?select_from_vr:select_from):NULL));      \
+        set_refstr(&cmd.E, (char *) (e?(vr?select_from_vr:select_from):NULL));      \
+        /* gufi_query must receive metadata even though this schema is fixed. */    \
+        if (fixed_schema_metadata(schema, name, &cmd.types, pzErr) != SQLITE_OK) {  \
+            gq_cmd_destroy(&cmd);                                                   \
+            return SQLITE_ERROR;                                                    \
+        }                                                                           \
+                                                                                    \
+        return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,                  \
+                              schema, &cmd, 1);                                     \
     }
 
 /* generate xConnect for each table/view */
@@ -1377,15 +1507,15 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     }
 
     if (plugins_check_type(&in.plugins, PLUGIN_QUERY) != in.plugins.count) {
-        plugins_destroy(&in.plugins);
         gq_cmd_destroy(&cmd);
+        /* input_fini owns final destruction of in.plugins. */
         input_fini(&in);
         return SQLITE_CONSTRAINT;
     }
 
     if (plugins_global_init(&in.plugins, &in) != in.plugins.count) {
-        plugins_destroy(&in.plugins);
         gq_cmd_destroy(&cmd);
+        /* Avoid destroying plugins twice; input_fini performs that cleanup. */
         input_fini(&in);
         return SQLITE_CONSTRAINT;
     }
@@ -1404,7 +1534,6 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     sqlite3 *global_db = NULL;
     if (set_up_global_db(&cmd.global_db.create, NULL, &global_db, SQLITE_API_ROUTINES, 0) != 0) {
         closedb(tempdb);
-        plugins_destroy(&in.plugins);
         gq_cmd_destroy(&cmd);
         input_fini(&in);
         return SQLITE_CONSTRAINT;
@@ -1416,7 +1545,6 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
                           GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
             closedb(global_db);
             closedb(tempdb);
-            plugins_destroy(&in.plugins);
             gq_cmd_destroy(&cmd);
             input_fini(&in);
             return SQLITE_CONSTRAINT;
@@ -1448,7 +1576,6 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     if (plugins_thread_init(&in.plugins, tempdb, 0) != in.plugins.count) {
         closedb(tempdb);
         plugins_global_exit(&in.plugins, &in);
-        plugins_destroy(&in.plugins);
         gq_cmd_destroy(&cmd);
         input_fini(&in);
         return SQLITE_CONSTRAINT;
@@ -1524,7 +1651,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
   done:
     ;
-    char schema[MAXSQL];
+    char *schema = NULL;
 
     if (!*pzErr) {
         static const char *SQL_TYPES[] = {
@@ -1536,25 +1663,119 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
             "NULL"
         };
 
-        /* construct the schema for the virtual table */
-        char *ptr = schema + SNPRINTF(schema, sizeof(schema), "CREATE TABLE x(");
-        for (int c = 0; c < cols; c++) {
-            ptr += SNPRINTF(ptr, sizeof(schema) - (ptr - schema), "\"%s\" %s, ",
-                            names[c], SQL_TYPES[types[c]]);
-            free(names[c]);
-        }
-        ptr -= 2; /* remove trailing ", " */
-        SNPRINTF(ptr, sizeof(schema) - (ptr - schema), ");");
+        /*
+         * Build two representations of the result columns from the single
+         * discovery performed above:
+         *
+         * 1. schema is passed to sqlite3_declare_vtab() for the local
+         *    virtual table.
+         * 2. cmd.types is passed to gufi_query as the argument following
+         *    --print-tlv so gufi_query does not discover the columns again.
+         *
+         * Metadata starts with a four-hex-digit column count and a colon.
+         */
+        size_t metadata_len = 5;
 
-        free(lens);
-        free(names);
-        free(types);
+        /* Include the fixed CREATE TABLE prefix and suffix, but not the NUL. */
+        size_t schema_len = sizeof("CREATE TABLE x(") - 1 + sizeof(");") - 1;
+
+        /* The metadata format reserves exactly four hex digits for the count. */
+        if (cols > 0xffff) {
+            *pzErr = sqlite3_mprintf("Too many result columns");
+        }
+        for (int c = 0; c < cols; c++) {
+            /* Column-name lengths also occupy exactly four hex digits. */
+            if (lens[c] > 0xffff) {
+                *pzErr = sqlite3_mprintf("Result column name is too long");
+                break;
+            }
+
+            /*
+             * Each metadata descriptor contains a seven-byte header:
+             *
+             *     <type>:<four-hex-digit-name-length>:
+             *
+             * The fixed-width header makes the metadata unambiguous even
+             * when a column name contains separators.
+             */
+            if (metadata_len > (SIZE_MAX - 7 - lens[c])) {
+                *pzErr = sqlite3_mprintf("Result column metadata is too long");
+                break;
+            }
+            metadata_len += 7 + lens[c];
+
+            const size_t type_len = strlen(SQL_TYPES[types[c]]);
+
+            /* Account for the quoted name, space, type, comma, and space. */
+            if (schema_len > (SIZE_MAX - lens[c] - type_len - 5)) {
+                *pzErr = sqlite3_mprintf("Result schema is too long");
+                break;
+            }
+            schema_len += lens[c] + type_len + 5; /* quotes, space, comma, space */
+        }
+
+        /* Allocate the complete declaration before writing any of it. */
+        if (!*pzErr) {
+            schema = malloc(schema_len + 1);
+            if (!schema) {
+                *pzErr = sqlite3_mprintf("Could not allocate result schema");
+            }
+        }
+
+        /* Construct the schema consumed by sqlite3_declare_vtab(). */
+        if (!*pzErr) {
+            char *ptr = schema + SNPRINTF(schema, schema_len + 1, "CREATE TABLE x(");
+            for(int c = 0; c < cols; c++) {
+                ptr += SNPRINTF(ptr, schema_len - (size_t) (ptr - schema) + 1,
+                                "\"%s\" %s, ", names[c], SQL_TYPES[types[c]]);
+            }
+            ptr -= 2; /* remove trailing ", " */
+            SNPRINTF(ptr, schema_len - (size_t) (ptr - schema) + 1, ");");
+        }
+
+        /* Allocate metadata together with its terminating NUL for argv. */
+        if (!*pzErr) {
+            cmd.types.data = malloc(metadata_len + 1);
+            if (!cmd.types.data) {
+                *pzErr = sqlite3_mprintf("Could not allocate result column metadata");
+            }
+            else {
+                cmd.types.data[metadata_len] = '\0';
+                cmd.types.len = metadata_len;
+                cmd.types.free = free;
+            }
+        }
+
+        /* Serialize the count followed by each type/name descriptor. */
+        if (!*pzErr) {
+            size_t metadata_offset = (size_t) SNPRINTF(cmd.types.data, cmd.types.len + 1,
+                                                        "%04x:", (unsigned int) cols);
+            for (int c = 0; c < cols; c++) {
+                metadata_offset += (size_t) SNPRINTF(cmd.types.data + metadata_offset,
+                                                     cmd.types.len - metadata_offset + 1,
+                                                     "%c:%04zx:", (char) ('0' + types[c]), lens[c]);
+                memcpy(cmd.types.data + metadata_offset, names[c], lens[c]);
+                metadata_offset += lens[c];
+            }
+
+            if (metadata_offset != metadata_len) {
+                *pzErr = sqlite3_mprintf("Could not encode result column metadata");
+            }
+        }
     }
+
+    for (int c = 0; c < cols; c++) {
+        free(names[c]);
+    }
+    free(lens);
+    free(names);
+    free(types);
 
     plugins_ctx_exit(&in.plugins, tempdb, 0);
     plugins_thread_exit(&in.plugins, tempdb, 0);
     plugins_global_exit(&in.plugins, &in);
-    plugins_destroy(&in.plugins);
+
+    /* input_fini below performs the one final plugins_destroy call. */
 
     closedb(global_db);
 
@@ -1562,10 +1783,14 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     input_fini(&in);
 
     if (!*pzErr) {
-        return gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
-                              schema, &cmd, 0);
+        /* gufi_vtConnect copies cmd, so schema can be released afterwards. */
+        const int rc = gufi_vtConnect(db, pAux, argc, argv, ppVtab, pzErr,
+                                      schema, &cmd, 0);
+        free(schema);
+        return rc;
     }
 
+    free(schema);
     gq_cmd_destroy(&cmd);
     return SQLITE_ERROR;
 }

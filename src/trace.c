@@ -375,10 +375,10 @@ int linetowork(char *line, const size_t len, const char delim,
     q++;
 
     p = q; q = split(p, &delim, 1, end); sscanf(p, "%ld", &new_work->crtime);
-    p = q; q = split(p, &delim, 1, end); ed->ossint1 = atol(p);
-    p = q; q = split(p, &delim, 1, end); ed->ossint2 = atol(p);
-    p = q; q = split(p, &delim, 1, end); ed->ossint3 = atol(p);
-    p = q; q = split(p, &delim, 1, end); ed->ossint4 = atol(p);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%d", &ed->ossint1);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%d", &ed->ossint2);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%d", &ed->ossint3);
+    p = q; q = split(p, &delim, 1, end); sscanf(p, "%d", &ed->ossint4);
 
     p = q;
     if (old_format) {
@@ -396,7 +396,7 @@ int linetowork(char *line, const size_t len, const char delim,
         read_prefixed("osstext2", ed->osstext2, OSSTEXT_PREFIX_FORMAT, OSSTEXT_PREFIX_LEN);
     }
 
-    p = q; split(p, &delim, 1, end); new_work->pinode = atol(p);
+    p = q; split(p, &delim, 1, end); sscanf(p, "%" STAT_ino, &new_work->pinode);
 
     new_work->basename_len = new_work->name_len - trailing_match_index(new_work->name, new_work->name_len, "/", 1);
 

@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include <time.h>
 
 #include "bf.h"
+#include "config.h"
 #include "dbutils.h"
 #include "utils.h"
 
@@ -111,8 +112,13 @@ static int print_callback(void * args, int count, char **data, char **columns) {
 
     FILE *out = ca->out;
     const char *f = ca->format;
+    int read;
 
-    const mode_t mode = atoi(data[6]);
+    mode_t mode;
+    if ((sscanf(data[6], "%" STAT_mode "%n", &mode, &read) != 1) ||
+        (read != (int) strlen(data[6]))) {
+        mode = 0;
+    }
 
     time_t atime = atoi(data[9]);
     struct tm atm;
@@ -323,7 +329,12 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     break;
                 case 'G': /* group name of owner */
                     {
-                        struct group *gr = getgrgid(atoi(data[8]));
+                        gid_t gid;
+                        if ((sscanf(data[8], "%" STAT_gid "%n", &gid, &read) != 1) ||
+                            (read != (int) strlen(data[8]))) {
+                            gid = 0;
+                        }
+                        struct group *gr = getgrgid(gid);
                         const char *group = gr?gr->gr_name:UNKNOWN;
                         fprintf(out, line, group);
                     }
@@ -375,7 +386,12 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     break;
                 case 'U': /* user name of owner */
                     {
-                        struct passwd *pw = getpwuid(atoi(data[7]));
+                        uid_t uid;
+                        if ((sscanf(data[7], "%" STAT_uid "%n", &uid, &read) != 1) ||
+                            (read != (int) strlen(data[7]))) {
+                            uid = 0;
+                        }
+                        struct passwd *pw = getpwuid(uid);
                         const char *user = pw?pw->pw_name:UNKNOWN;
                         fprintf(out, line, user);
                     }

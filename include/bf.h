@@ -187,7 +187,7 @@ extern "C" {
 
 #define FLAG_PRINT_TLV_SHORT (FLAG_GROUP_MISC + 2)
 #define FLAG_PRINT_TLV_LONG "print-tlv"
-#define FLAG_PRINT_TLV {FLAG_PRINT_TLV_LONG, no_argument, NULL, FLAG_PRINT_TLV_SHORT}
+#define FLAG_PRINT_TLV {FLAG_PRINT_TLV_LONG, required_argument, NULL, FLAG_PRINT_TLV_SHORT}
 
 #define FLAG_SETUP_RES_COL_TYPES_SHORT (FLAG_GROUP_MISC + 3)
 #define FLAG_SETUP_RES_COL_TYPES_LONG "setup-res-col-types"
@@ -509,10 +509,10 @@ struct input {
      * if outputting to STDOUT or OUTFILE, get list of
      * types of final output to prefix columns with
      *
-     * set up by gufi_query but cleaned up by input_fini
+     * supplied by gufi_vt and cleaned up by input_fini
      */
     struct {
-        int print_tlv;
+        str_t print_tlv; /* column types supplied by gufi_vt */
 
         /* set if not aggregating */
         int *tsum;

@@ -77,11 +77,11 @@ $ gufi_query_multiple_remotes -E "SELECT rpath(sname, sroll, name) AS fullpath F
 Each line is one argv[i]:
     ssh \
         remote1 \
-        gufi_query --print-tlv -x --threads 1 -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" search
+        gufi_query --print-tlv '0001:5:0008:fullpath' -x --threads 1 -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" search
 Each line is one argv[i]:
     ssh \
         remote2 \
-        gufi_query --print-tlv -x --threads 1 -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" search
+        gufi_query --print-tlv '0001:5:0008:fullpath' -x --threads 1 -E "SELECT rpath(sname, sroll, name) AS fullpath FROM vrpentries;" search
 Aggregate results with:
     SELECT * FROM (SELECT * FROM vt0 UNION ALL SELECT * FROM vt1) ORDER BY fullpath ASC LIMIT 1;
 
@@ -96,7 +96,7 @@ Each line is one argv[i]:
         -w \
         remote1,remote2 \
         -N \
-        gufi_query --print-tlv -x --threads 1 -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" search
+        gufi_query --print-tlv '0001:5:0019:rpath(sname, sroll, name)' -x --threads 1 -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" search
 Aggregate results with:
     SELECT * FROM vt LIMIT 1;
 

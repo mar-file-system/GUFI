@@ -246,7 +246,7 @@ void print_help(const char* prog_name,
 
             case FLAG_MIN_LEVEL_SHORT:                   printf("      --min-level <n>               minimum level to go down"); break;
             case FLAG_MAX_LEVEL_SHORT:                   printf("      --max-level <n>               maximum level to go down"); break;
-            case FLAG_PRINT_TLV_SHORT:                   printf("      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
+            case FLAG_PRINT_TLV_SHORT:                   printf("      --print-tlv <metadata>        prefix row with column count and column type/length metadata"); break;
             case FLAG_SETUP_RES_COL_TYPES_SHORT:         printf("      --setup-res-col-types <SQL>   SQL statement(s) for setting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv"); break;
             case FLAG_KEEP_MATIME_SHORT:                 printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
             case FLAG_SKIP_FILE_SHORT:                   printf("      --skip-file <filename>        file containing directory names to skip"); break;
@@ -345,7 +345,7 @@ void show_input(struct input* in, int retval) {
 
     printf("in.min_level                = %zu\n",           in->min_level);
     printf("in.max_level                = %zu\n",           in->max_level);
-    printf("in.types.prefix             = %d\n",            in->types.print_tlv);
+    printf("in.types.print_tlv          = '%s'\n",          in->types.print_tlv.data);
     printf("in.keep_matime              = %d\n",            in->keep_matime);
     printf("in.skip_count               = %zu\n",           in->skip_count);
     printf("in.dry_run                  = %d\n",            in->dry_run);
@@ -632,7 +632,7 @@ int parse_cmd_line(int                  argc,
                 break;
 
             case FLAG_PRINT_TLV_SHORT:
-                in->types.print_tlv = 1;
+                INSTALL_STR(&in->types.print_tlv, optarg);
                 break;
 
             case FLAG_SETUP_RES_COL_TYPES_SHORT:
@@ -931,7 +931,7 @@ int parse_cmd_line(int                  argc,
         retval = -(in->min_level > in->max_level);
     }
 
-    if (in->types.print_tlv) {
+    if (str_exists(&in->types.print_tlv)) {
         if (in->output != STDOUT) {
             fprintf(stderr, "--print-tlv cannot be combined with -O or -o\n");
             retval = -1;

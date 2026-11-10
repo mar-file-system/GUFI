@@ -101,6 +101,7 @@ static const std::string force                       = "--force";
 static const std::string min_level                   = "--min-level"; static const std::string min_level_arg = "1";
 static const std::string max_level                   = "--max-level"; static const std::string max_level_arg = "1";
 static const std::string print_tlv                   = "--print-tlv";
+static const std::string print_tlv_arg               = "0001:3:0004:name";
 static const std::string setup_res_col_types         = "--setup-res-col-types"; static const std::string setup_res_col_types_arg = "setup-res-col-types arg";
 static const std::string keep_matime                 = "--keep-matime";
 static const std::string skip_file                   = "--skip-file"; static const std::string skip_file_arg = "file name";
@@ -201,7 +202,6 @@ static void check_input(const int /* argc */, const char **argv,
     EXPECT_EQ(in->process_xattrs,                             flags);
     EXPECT_EQ(in->printdir,                                   flags);
     EXPECT_EQ(in->force,                                      flags);
-    EXPECT_EQ(in->types.print_tlv,                            flags);
     EXPECT_EQ(in->suspect.stat,                               flags);
     EXPECT_EQ(in->keep_matime,                                flags);
     EXPECT_EQ(in->open_flags,                                 flags?SQLITE_OPEN_READWRITE:SQLITE_OPEN_READONLY);
@@ -224,6 +224,7 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->maxthreads,                             (std::size_t) 1);
         EXPECT_EQ(in->process_sql,                            process_sql);
         EXPECT_EQ(in->delim,                                  '|');
+        EXPECT_EQ(in->types.print_tlv,                        flags?print_tlv_arg:std::string(""));
         // not checking -o and -O here
         EXPECT_EQ(in->sql.setup_res_col_types,                setup_res_col_types_arg);
         EXPECT_EQ(in->sql.init,                               I_arg);
@@ -296,6 +297,7 @@ static void check_input(const int /* argc */, const char **argv,
 
         EXPECT_EQ(in->maxthreads,                             (std::size_t) 1);
         EXPECT_EQ(in->delim,                                  fielddelim);
+        EXPECT_EQ(in->types.print_tlv,                        flags?print_tlv_arg:empty);
         EXPECT_EQ(in->output,                                 STDOUT);
         EXPECT_EQ(in->outname,                                empty);
         EXPECT_EQ(in->sql.setup_res_col_types,                empty);
@@ -421,7 +423,7 @@ TEST(parse_cmd_line, debug) {
         a.c_str(), a_arg.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
-        print_tlv.c_str(),
+        print_tlv.c_str(), print_tlv_arg.c_str(),
         setup_res_col_types.c_str(), setup_res_col_types_arg.c_str(),
         I.c_str(), I_arg.c_str(),
         T.c_str(), T_arg.c_str(),
@@ -509,7 +511,7 @@ TEST(parse_cmd_line, flags) {
         x.c_str(),
         P.c_str(),
         force.c_str(),
-        print_tlv.c_str(),
+        print_tlv.c_str(), print_tlv_arg.c_str(),
         suspect_stat.c_str(),
         keep_matime.c_str(),
         w.c_str(),
@@ -825,7 +827,7 @@ TEST(parse_cmd_line, print_tlv) {
     {
         const char *argv[] = {
             exec.c_str(),
-            print_tlv.c_str(),
+            print_tlv.c_str(), print_tlv_arg.c_str(),
             nullptr,
         };
 
@@ -833,7 +835,7 @@ TEST(parse_cmd_line, print_tlv) {
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), argc);
-        EXPECT_EQ(in.types.print_tlv, 1);
+        EXPECT_EQ(in.types.print_tlv.data, print_tlv_arg);
         input_fini(&in);
     }
 
@@ -841,7 +843,7 @@ TEST(parse_cmd_line, print_tlv) {
     {
         const char *argv[] = {
             exec.c_str(),
-            print_tlv.c_str(),
+            print_tlv.c_str(), print_tlv_arg.c_str(),
             o.c_str(), o_arg.c_str(),
             nullptr,
         };
@@ -857,7 +859,7 @@ TEST(parse_cmd_line, print_tlv) {
     {
         const char *argv[] = {
             exec.c_str(),
-            print_tlv.c_str(),
+            print_tlv.c_str(), print_tlv_arg.c_str(),
             O.c_str(), O_arg.c_str(),
             nullptr,
         };

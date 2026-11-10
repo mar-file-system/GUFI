@@ -46,7 +46,7 @@ options:
       --suppress-newline            do not print the line separator
   -o, --output-file <out_fname>     output file (one-per-thread, with thread-id suffix)
   -O, --output-db <out_DB>          output DB
-      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
+      --print-tlv <metadata>        prefix row with column count and column type/length metadata
       --setup-res-col-types <SQL>   SQL statement(s) for setting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv
       --terse                       print the information in terse form
       --no-print-errno <int>        one errno value (e.g. 2 for ENOENT; range: [1, 255]) to not print errors for when encounted. Use multiple times to hide multiple error message types
@@ -297,10 +297,10 @@ prefix/directory/writable
 prefix/empty_directory
 
 # Output TLV columns (no aggregation)
-$ gufi_query --print-tlv -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix"
+$ gufi_query --print-tlv "0002:3:0004:name1:0004:size" -n 2 -E "SELECT name, size FROM vrpentries WHERE name == '.hidden';" "prefix"
 0000001b0002317.hidden11210
 # Output TLV columns (with aggregation)
-$ gufi_query --print-tlv -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll, name), size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix"
+$ gufi_query --print-tlv "0002:3:0004:path1:0004:size" -d " " -n 2 -a 1 -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT rpath(sname, sroll), size FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll, name), size FROM vrpentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path, size FROM aggregate ORDER BY path ASC LIMIT 1;" "prefix"
 00000021000231dprefix11217
 # run_vt with {s} (source directory) and {i} (index directory)
 $ gufi_query -d " " -p "prefix" -S "SELECT '' FROM summary WHERE name NOT REGEXP '.*unusual.*';" -E "CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \"{s}\" \"{i}\" -maxdepth 1 -name \"*.csv\" -exec cat \"{}\" \\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;" "prefix"
@@ -613,4 +613,3 @@ Error: Could not insert into global db tables with "INSERT INTO;": near ";": syn
 # Bad global db insert
 $ gufi_query -d " " -n 2 --no-print-sql-on-err --global-db "CREATE TABLE global(i INT);" "INSERT INTO;" -E "SELECT rpath(sname, sroll, name), inode FROM vrpentries;" "prefix"
 Error: Could not insert into global db tables: near ";": syntax error
-

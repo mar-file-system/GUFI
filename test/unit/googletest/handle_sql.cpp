@@ -84,7 +84,7 @@ TEST(handle_sql, no_aggregation) {
 
     struct input in;
     ASSERT_EQ(input_init(&in), &in);
-    in.types.print_tlv = 1;
+    in.types.print_tlv = REFSTR("0001:3:0004:name", (std::size_t) 16);
 
     for (const char *S : {(const char *) nullptr, S_GOOD, S_BAD}) {
         in.sql.sum.data = S?(char *) S:nullptr;
@@ -94,10 +94,8 @@ TEST(handle_sql, no_aggregation) {
             in.sql.ent.data = E?(char *) E:nullptr;
             in.sql.ent.len = E?strlen(E):0;
 
-            /* Bad SQL -> return -1 */
-            const int expected = -((S == S_BAD) || (E == E_BAD));
-
-            EXPECT_EQ(handle_sql(&in), expected);
+            /* SQL is executed later; handle_sql only installs supplied types. */
+            EXPECT_EQ(handle_sql(&in), 0);
 
             free(in.types.ent);
             in.types.ent = nullptr;
@@ -114,7 +112,7 @@ TEST(handle_sql, no_aggregation) {
 TEST(handle_sql, aggregation) {
     struct input in;
     ASSERT_EQ(input_init(&in), &in);
-    in.types.print_tlv = 1;
+    in.types.print_tlv = REFSTR("0001:3:0004:name", (std::size_t) 16);
 
     const char I[]      = "CREATE TABLE;";
     const char J[]      = "INSERT INTO";
@@ -128,16 +126,87 @@ TEST(handle_sql, aggregation) {
 
     in.sql.init_agg = REFSTR(K_GOOD, strlen(K_GOOD));
     in.sql.agg = REFSTR(G_GOOD, strlen(G_GOOD));
-    EXPECT_EQ(handle_sql(&in), -1);
+    EXPECT_EQ(handle_sql(&in), 0);
 
     free(in.types.agg);
     in.types.agg = nullptr;
 
     in.sql.agg = REFSTR(G_BAD, strlen(G_BAD));
-    EXPECT_EQ(handle_sql(&in), -1);
+    EXPECT_EQ(handle_sql(&in), 0);
 
     in.sql.init_agg = REFSTR(K_BAD, strlen(K_BAD));
-    EXPECT_EQ(handle_sql(&in), -1);
+    EXPECT_EQ(handle_sql(&in), 0);
 
+    input_fini(&in);
+}
+
+TEST(handle_sql, invalid_print_tlv) {
+    const char *invalid[] = {
+        "000g:3:0004:name",  /* invalid count */
+        "0001:",             /* truncated descriptor */
+        "0001-3:0004:name",  /* missing count separator */
+        "0001:6:0004:name",  /* invalid type */
+        "0001:3:000g:name",  /* invalid length */
+        "0001:3:0004Xname",  /* missing length separator */
+        "0001:3:0005:name",  /* truncated column name */
+        "0001:3:0004:namex", /* trailing data */
+    };
+
+    for (const char *metadata : invalid) {
+        struct input in;
+        ASSERT_EQ(input_init(&in), &in);
+        in.types.print_tlv = REFSTR(metadata, strlen(metadata));
+        in.sql.sum = REFSTR("SELECT 1", (std::size_t) 8);
+
+        EXPECT_EQ(handle_sql(&in), -1) << metadata;
+        input_fini(&in);
+    }
+}
+
+TEST(handle_sql, print_tlv_modes) {
+    const char metadata[] = "0001:3:0004:name";
+
+    for (const char *sql : {"tsum", "sum", "ent", "agg"}) {
+        struct input in;
+        ASSERT_EQ(input_init(&in), &in);
+        in.types.print_tlv = REFSTR(metadata, (std::size_t) 16);
+
+        if (!strcmp(sql, "tsum")) {
+            in.sql.tsum = REFSTR("SELECT 1", (std::size_t) 8);
+        }
+        else if (!strcmp(sql, "sum")) {
+            in.sql.sum = REFSTR("SELECT 1", (std::size_t) 8);
+        }
+        else if (!strcmp(sql, "ent")) {
+            in.sql.ent = REFSTR("SELECT 1", (std::size_t) 8);
+        }
+        else {
+            in.sql.init = REFSTR("CREATE TABLE x(i INT)", (std::size_t) 21);
+            in.sql.intermediate = REFSTR("INSERT INTO x", (std::size_t) 13);
+            in.sql.init_agg = REFSTR("CREATE TABLE agg(i INT)", (std::size_t) 24);
+            in.sql.agg = REFSTR("SELECT i FROM agg", (std::size_t) 17);
+        }
+
+        EXPECT_EQ(handle_sql(&in), 0) << sql;
+        int *types = in.types.tsum;
+        if (!strcmp(sql, "sum")) {
+            types = in.types.sum;
+        }
+        else if (!strcmp(sql, "ent")) {
+            types = in.types.ent;
+        }
+        else if (!strcmp(sql, "agg")) {
+            types = in.types.agg;
+        }
+        ASSERT_NE(types, nullptr);
+        EXPECT_EQ(types[0], SQLITE_TEXT);
+        EXPECT_EQ(types[1], SQLITE_NULL);
+        input_fini(&in);
+    }
+
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    in.types.print_tlv = REFSTR("0000:", (std::size_t) 5);
+    EXPECT_EQ(handle_sql(&in), 0);
     input_fini(&in);
 }
