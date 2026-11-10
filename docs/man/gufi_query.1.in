@@ -156,10 +156,16 @@ do not print the line separator
 output file (one-per-thread, with thread-id suffix)
 .It Fl O, -output-db\ <out_DB>
 output DB
-.It Fl -print-tlv
-prefix row with 1 int column count and each column with 1 octet type and 1 size_t length
+.It Fl -print-tlv-tsum
+prefix row with 1 int column count and each column with 1 octet type and 1 size_t length for treesummary output
+.It Fl -print-tlv-sum
+prefix row with 1 int column count and each column with 1 octet type and 1 size_t length for summary output
+.It Fl -print-tlv-ent
+prefix row with 1 int column count and each column with 1 octet type and 1 size_t length for entries output
+.It Fl -print-tlv-agg
+prefix row with 1 int column count and each column with 1 octet type and 1 size_t length for aggregation output
 .It Fl -setup-res-col-types\ <SQL>
-SQL statement(s) for setting up a temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv
+SQL statement(s) for setting up a temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv-* flags
 .It Fl -terse
 print the information in terse form
 .It Fl -output-buffer-size\ <bytes>

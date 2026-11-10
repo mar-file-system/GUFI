@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "dbutils.h"
 #include "extensions.h"
@@ -167,143 +168,131 @@ static int validate(struct input *in) {
     return 0;
 }
 
-static int gen_types(struct input *in) {
-    sqlite3 *db = NULL;
-    sqlite3 *global_db = NULL;
+static int *parse_tlv_types(const str_t *tlv) {
+    /*
+     * The print-TLV metadata is a sequence of column descriptors:
+     *
+     *     <4 hex digit column count>:<type digit>:<4 hex digit length>:<column name>...
+     *
+     * The column names are consumed by the caller that constructs the
+     * virtual-table schema. gufi_query only needs the type digits here.
+     *
+     * Each query type (T/S/E/G) has its own metadata string, so each
+     * gets its own independently allocated type array. This avoids
+     * assuming all queries produce the same column types.
+     */
+    if (!str_exists(tlv)) {
+        return NULL;
+    }
 
-    /* generate types if necessary */
-    if ((in->types.print_tlv == 1) && ((in->output == STDOUT) || (in->output == OUTFILE))) {
-        /* have to create temporary db since there is no guarantee of a db yet */
-        db = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-                    0, 1, create_dbdb_tables, NULL);
-        if (!db) {
-            return -1;
+    const char *ptr = tlv->data;
+    const char *end = ptr + tlv->len;
+    unsigned int count = 0;
+    char count_text[5] = {0};
+    if ((end - ptr) < 5 || ptr[4] != ':') {
+        return NULL;
+    }
+    memcpy(count_text, ptr, 4);
+    int count_read = 0;
+    if ((sscanf(count_text, "%4x%n", &count, &count_read) != 1) ||
+        (count_read != 4)) {
+        return NULL;
+    }
+    ptr += 5;
+
+    int *types = calloc(count, sizeof(*types));
+    if (!types) {
+        return NULL;
+    }
+    for (size_t i = 0; i < count; i++) {
+        types[i] = SQLITE_NULL;
+    }
+
+    for (unsigned int column = 0; column < count; column++) {
+        /* Read one descriptor: a 7-byte header (type, separators, four
+         * hexadecimal length digits), then its column name. */
+        if ((end - ptr) < 7 || (ptr[0] < '1') || (ptr[0] > '5') || (ptr[1] != ':')) {
+            free(types);
+            return NULL;
         }
 
-        if (set_up_global_db(&in->global_db.create, NULL, &global_db,
-                             NULL, in->no_print_sql_on_err) != 0) {
-            closedb(db);
-            return -1;
+        /* Four hexadecimal digits plus a terminating NUL hold the name length. */
+        char length[5] = {0};
+        memcpy(length, ptr + 2, 4);
+        if (ptr[6] != ':') {
+            free(types);
+            return NULL;
         }
 
-        /* attach to the db after initializing the global db */
-        if (!attachdb_raw(GUFI_QUERY_GLOBAL_DB_FILENAME, db,
-                          GUFI_QUERY_GLOBAL_DB_ATTACHNAME, 1, NULL)) {
-            closedb(global_db);
-            closedb(db);
-            return -1;
+        size_t name_len = 0;
+        int length_read = 0;
+        if ((sscanf(length, "%4zx%n", &name_len, &length_read) != 1) ||
+            (length_read != 4) ||
+            (name_len > (size_t) (end - ptr - 7))) {
+            free(types);
+            return NULL;
         }
 
-        int cols = 0; /* discarded */
+        types[column] = ptr[0] - '0';
+        ptr += 7 + name_len; /* skip the header and fixed-length column name */
+    }
 
-        struct work work;
-        aqfctx_t ctx = {
-            .in = in,
-            .work = &work,
-        };
-        if (in->process_xattrs) {
-            create_xattr_tables(SQLITE_MEMORY, db, NULL);
+    if (ptr != end) {
+        free(types);
+        return NULL;
+    }
 
-            size_t count = 0; /* unused */
-            setup_xattrs_views(in, db, &work, &count);
-        }
+    return types;
+}
 
-        addqueryfuncs(db);
-        augment_db(db, NULL);
-        addqueryfuncs_with_context(db, &ctx);
-
-        if (str_exists(&in->sql.init)) {
-            char *err = NULL;
-            if (sqlite3_exec(db, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr,
-                                          "Error: Failed to set up table for getting result column types: %s\n",
-                                          err);
-                goto error;
+static int set_print_tlv_types(struct input *in) {
+    /* Aggregation has one final output query. */
+    if (str_exists(&in->sql.init_agg)) {
+        if (str_exists(&in->types.print_tlv_agg)) {
+            in->types.agg = parse_tlv_types(&in->types.print_tlv_agg);
+            if (!in->types.agg) {
+                return 1;
             }
         }
+        return 0;
+    }
 
-        if (str_exists(&in->sql.tsum)) {
-            if (create_table_wrapper(SQLITE_MEMORY, db, TREESUMMARY, TREESUMMARY_CREATE) != SQLITE_OK) {
-                goto error;
-            }
+    /* Non-aggregated T/S/E rows each get their own types from their own metadata. */
+    if (str_exists(&in->sql.tsum) && str_exists(&in->types.print_tlv_tsum)) {
+        in->types.tsum = parse_tlv_types(&in->types.print_tlv_tsum);
+        if (!in->types.tsum) {
+            return 1;
         }
-
-        /* gen_types() is one-off setup on a single thread, so slot 0. */
-        if (plugins_thread_init(&in->plugins, db, 0) != in->plugins.count) {
-            goto error;
+    }
+    if (str_exists(&in->sql.sum) && str_exists(&in->types.print_tlv_sum)) {
+        in->types.sum = parse_tlv_types(&in->types.print_tlv_sum);
+        if (!in->types.sum) {
+            return 1;
         }
-
-        plugins_ctx_init(&in->plugins, db, 0);
-
-        if (str_exists(&in->sql.setup_res_col_types)) {
-            char *err = NULL;
-            if (sqlite3_exec(db, in->sql.setup_res_col_types.data, NULL, NULL, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr,
-                                          "Error: Failed to set up table for getting result column types: %s\n",
-                                          err);
-                goto error;
-            }
+    }
+    if (str_exists(&in->sql.ent) && str_exists(&in->types.print_tlv_ent)) {
+        in->types.ent = parse_tlv_types(&in->types.print_tlv_ent);
+        if (!in->types.ent) {
+            return 1;
         }
-
-        /* if not aggregating, get types for T, S, and E */
-        if (!str_exists(&in->sql.init_agg)) {
-            /*
-             * Types for all available SQL must be generated even if
-             * only one produces the final results. If this is not
-             * done, results will contain output without types,
-             * causing gufi_vt to parse lines incorrectly.
-             *
-             * Due to get_col_types using sqlite3_prepare_v2, multiple
-             * SQL in a single T/S/E option must SELECT first and do
-             * other operations afterwards.
-             */
-            if (str_exists(&in->sql.tsum)) {
-                if (get_col_types(db, &in->sql.tsum, &in->types.tsum, &cols) != 0) {
-                    goto error;
-                }
-            }
-            if (str_exists(&in->sql.sum)) {
-                if (get_col_types(db, &in->sql.sum,  &in->types.sum,  &cols) != 0) {
-                    goto error;
-                }
-            }
-            if (str_exists(&in->sql.ent)) {
-                if (get_col_types(db, &in->sql.ent,  &in->types.ent,  &cols) != 0) {
-                    goto error;
-                }
-            }
-        }
-        /* types for G */
-        else {
-            /* run -K so -G can pull the final columns */
-            char *err = NULL;
-            if (sqlite3_exec(db, in->sql.init_agg.data, NULL, NULL, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr,
-                                          "Error: -K SQL failed while getting columns types: %s\n",
-                                          err);
-                goto error;
-            }
-
-            if (get_col_types(db, &in->sql.agg, &in->types.agg, &cols) != 0) {
-                goto error;
-            }
-        }
-
-        plugins_ctx_exit(&in->plugins, db, 0);
-        plugins_thread_exit(&in->plugins, db, 0);
-
-        closedb(global_db);
-        closedb(db);
     }
 
     return 0;
+}
 
-  error:
-    plugins_ctx_exit(&in->plugins, db, 0);
-    plugins_thread_exit(&in->plugins, db, 0);
-    closedb(global_db);
-    closedb(db);
-    return -1;
+static int gen_types(struct input *in) {
+    if ((in->output != STDOUT) && (in->output != OUTFILE)) {
+        return 0;
+    }
+
+    if (!str_exists(&in->types.print_tlv_tsum) &&
+        !str_exists(&in->types.print_tlv_sum) &&
+        !str_exists(&in->types.print_tlv_ent) &&
+        !str_exists(&in->types.print_tlv_agg)) {
+        return 0;
+    }
+
+    return set_print_tlv_types(in)?-1:0;
 }
 
 static int sql_formatting(struct input *in) {

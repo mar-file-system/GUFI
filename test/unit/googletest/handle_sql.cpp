@@ -77,36 +77,25 @@ extern "C" {
 
 TEST(handle_sql, no_aggregation) {
     // not testing treesummary for now
-    const char S_GOOD[] = "SELECT name FROM " SUMMARY ";";
-    const char S_BAD[]  = "INSERT INTO " SUMMARY "(name) VALUES ('');";
-    const char E_GOOD[] = "SELECT name FROM " ENTRIES ";";
-    const char E_BAD[]  = "INSERT INTO " ENTRIES "(name) VALUES ('');";
+    const char S[] = "SELECT name FROM " SUMMARY ";";
+    const char E[] = "SELECT name FROM " ENTRIES ";";
 
     struct input in;
     ASSERT_EQ(input_init(&in), &in);
-    in.types.print_tlv = 1;
+    in.types.print_tlv_ent = REFSTR("0001:3:0004:name", (std::size_t) 16);
 
-    for (const char *S : {(const char *) nullptr, S_GOOD, S_BAD}) {
-        in.sql.sum.data = S?(char *) S:nullptr;
-        in.sql.sum.len = S?strlen(S):0;
+    in.sql.sum.data = (char *) S;
+    in.sql.sum.len = strlen(S);
 
-        for (const char *E : {(const char *) nullptr, E_GOOD, E_BAD}) {
-            in.sql.ent.data = E?(char *) E:nullptr;
-            in.sql.ent.len = E?strlen(E):0;
+    in.sql.ent.data = (char *) E;
+    in.sql.ent.len = strlen(E);
 
-            /* Bad SQL -> return -1 */
-            const int expected = -((S == S_BAD) || (E == E_BAD));
+    /* SQL is executed later; handle_sql only installs supplied types. */
+    EXPECT_EQ(handle_sql(&in), 0);
 
-            EXPECT_EQ(handle_sql(&in), expected);
-
-            free(in.types.ent);
-            in.types.ent = nullptr;
-            free(in.types.sum);
-            in.types.sum = nullptr;
-            free(in.types.tsum);
-            in.types.tsum = nullptr;
-        }
-    }
+    EXPECT_EQ(in.types.tsum,   nullptr); // doesn't exist
+    EXPECT_EQ(in.types.sum,    nullptr); // no metadata provided
+    EXPECT_EQ(in.types.ent[0], SQLITE_TEXT);
 
     input_fini(&in);
 }
@@ -114,30 +103,200 @@ TEST(handle_sql, no_aggregation) {
 TEST(handle_sql, aggregation) {
     struct input in;
     ASSERT_EQ(input_init(&in), &in);
-    in.types.print_tlv = 1;
+    in.types.print_tlv_agg = REFSTR("0001:3:0004:name", (std::size_t) 16);
 
-    const char I[]      = "CREATE TABLE;";
-    const char J[]      = "INSERT INTO";
-    const char K_GOOD[] = "CREATE TABLE agg(i INT)";
-    const char K_BAD[]  = "CREATE TABLE";
-    const char G_GOOD[] = "SELECT i FROM agg";
-    const char G_BAD[]  = "INSERT INT agg (i) VALUES (0);";
+    const char I[] = "CREATE TABLE;";
+    const char J[] = "INSERT INTO";
+    const char K[] = "CREATE TABLE agg(i INT)";
+    const char G[] = "SELECT i FROM agg";
 
     in.sql.init = REFSTR(I, strlen(I));
     in.sql.intermediate = REFSTR(J, strlen(J));
 
-    in.sql.init_agg = REFSTR(K_GOOD, strlen(K_GOOD));
-    in.sql.agg = REFSTR(G_GOOD, strlen(G_GOOD));
-    EXPECT_EQ(handle_sql(&in), -1);
+    in.sql.init_agg = REFSTR(K, strlen(K));
+    in.sql.agg = REFSTR(G, strlen(G));
+    EXPECT_EQ(handle_sql(&in), 0);
 
-    free(in.types.agg);
-    in.types.agg = nullptr;
+    EXPECT_EQ(in.types.agg[0], SQLITE_TEXT);
 
-    in.sql.agg = REFSTR(G_BAD, strlen(G_BAD));
-    EXPECT_EQ(handle_sql(&in), -1);
+    input_fini(&in);
+}
 
-    in.sql.init_agg = REFSTR(K_BAD, strlen(K_BAD));
-    EXPECT_EQ(handle_sql(&in), -1);
+TEST(handle_sql, invalid_print_tlv_ent) {
+    const char *invalid[] = {
+        "000g:3:0004:name",  /* invalid count */
+        "0001:",             /* truncated descriptor */
+        "0001-3:0004:name",  /* missing count separator */
+        "0001:6:0004:name",  /* invalid type */
+        "0001:3:000g:name",  /* invalid length */
+        "0001:3:0004Xname",  /* missing length separator */
+        "0001:3:0005:name",  /* truncated column name */
+        "0001:3:0004:namex", /* trailing data */
+    };
 
+    for (const char *metadata : invalid) {
+        struct input in;
+        ASSERT_EQ(input_init(&in), &in);
+        in.types.print_tlv_ent = REFSTR(metadata, strlen(metadata));
+        in.sql.ent = REFSTR("SELECT 1", (std::size_t) 8);
+
+        EXPECT_EQ(handle_sql(&in), -1) << metadata;
+        input_fini(&in);
+    }
+}
+
+TEST(handle_sql, aggregation_no_metadata) {
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    // no print_tlv_agg metadata
+
+    const char I[] = "CREATE TABLE;";
+    const char J[] = "INSERT INTO";
+    const char K[] = "CREATE TABLE agg(i INT)";
+    const char G[] = "SELECT i FROM agg";
+
+    in.sql.init = REFSTR(I, strlen(I));
+    in.sql.intermediate = REFSTR(J, strlen(J));
+
+    in.sql.init_agg = REFSTR(K, strlen(K));
+    in.sql.agg = REFSTR(G, strlen(G));
+    EXPECT_EQ(handle_sql(&in), 0);
+
+    // types.agg stays nullptr since no metadata was provided
+    EXPECT_EQ(in.types.agg, nullptr);
+
+    input_fini(&in);
+}
+
+TEST(handle_sql, tsum_no_metadata) {
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    // no print_tlv_tsum metadata
+
+    const char T[] = "SELECT * FROM treesummary;";
+    in.sql.tsum = REFSTR(T, strlen(T));
+
+    EXPECT_EQ(handle_sql(&in), 0);
+
+    // types.tsum stays nullptr since no metadata was provided
+    EXPECT_EQ(in.types.tsum, nullptr);
+
+    input_fini(&in);
+}
+
+TEST(handle_sql, sum_no_metadata) {
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    // no print_tlv_sum metadata
+
+    const char S[] = "SELECT * FROM summary;";
+    in.sql.sum = REFSTR(S, strlen(S));
+
+    EXPECT_EQ(handle_sql(&in), 0);
+
+    // types.sum stays nullptr since no metadata was provided
+    EXPECT_EQ(in.types.sum, nullptr);
+
+    input_fini(&in);
+}
+
+TEST(handle_sql, ent_no_metadata) {
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    // no print_tlv_ent metadata
+
+    const char E[] = "SELECT * FROM entries;";
+    in.sql.ent = REFSTR(E, strlen(E));
+
+    EXPECT_EQ(handle_sql(&in), 0);
+
+    // types.ent stays nullptr since no metadata was provided
+    EXPECT_EQ(in.types.ent, nullptr);
+
+    input_fini(&in);
+}
+
+TEST(handle_sql, output_not_stdout) {
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    in.output = OUTDB; // not STDOUT or OUTFILE
+
+    // validate() requires -I when output is OUTDB
+    in.sql.init = REFSTR("CREATE TABLE x(i INT);", (std::size_t) 21);
+
+    // metadata provided but output is not STDOUT/OUTFILE, so gen_types returns 0
+    in.types.print_tlv_ent = REFSTR("0001:3:0004:name", (std::size_t) 16);
+    in.sql.ent = REFSTR("SELECT * FROM entries;", (std::size_t) 22);
+
+    EXPECT_EQ(handle_sql(&in), 0);
+
+    // types.ent stays nullptr since gen_types returned early
+    EXPECT_EQ(in.types.ent, nullptr);
+
+    input_fini(&in);
+}
+
+TEST(handle_sql, print_tlv_modes) {
+    for (const char *sql : {"tsum", "sum", "ent", "agg"}) {
+        struct input in;
+        ASSERT_EQ(input_init(&in), &in);
+
+        if (!strncmp(sql, "tsum", (std::size_t) 4)) {
+            in.types.print_tlv_tsum = REFSTR("0001:3:0004:name", (std::size_t) 16);
+            in.sql.tsum         = REFSTR("SELECT 1", (std::size_t) 8);
+        }
+        else if (!strncmp(sql, "sum", (std::size_t) 4)) {
+            in.types.print_tlv_sum = REFSTR("0001:3:0004:name", (std::size_t) 16);
+            in.sql.sum          = REFSTR("SELECT 1", (std::size_t) 8);
+        }
+        else if (!strncmp(sql, "ent", (std::size_t) 4)) {
+            in.types.print_tlv_ent = REFSTR("0001:3:0004:name", (std::size_t) 16);
+            in.sql.ent          = REFSTR("SELECT 1", (std::size_t) 8);
+        }
+        else {
+            in.types.print_tlv_agg = REFSTR("0001:3:0004:name", (std::size_t) 16);
+            in.sql.init         = REFSTR("CREATE TABLE x(i INT)", (std::size_t) 21);
+            in.sql.intermediate = REFSTR("INSERT INTO x", (std::size_t) 13);
+            in.sql.init_agg     = REFSTR("CREATE TABLE agg(i INT)", (std::size_t) 24);
+            in.sql.agg          = REFSTR("SELECT i FROM agg", (std::size_t) 17);
+        }
+
+        EXPECT_EQ(handle_sql(&in), 0) << sql;
+
+        int *types = nullptr;
+        if (!strncmp(sql, "tsum", (std::size_t) 4)) {
+            types = in.types.tsum;
+        }
+        else if (!strncmp(sql, "sum", (std::size_t) 4)) {
+            types = in.types.sum;
+        }
+        else if (!strncmp(sql, "ent", (std::size_t) 4)) {
+            types = in.types.ent;
+        }
+        else if (!strncmp(sql, "agg", (std::size_t) 4)) {
+            types = in.types.agg;
+        }
+        ASSERT_NE(types, nullptr);
+        EXPECT_EQ(types[0], SQLITE_TEXT);
+
+        if (strncmp(sql, "tsum", (std::size_t) 4)) {
+            EXPECT_EQ(in.types.tsum, nullptr);
+        }
+        if (strncmp(sql, "sum", (std::size_t) 4)) {
+            EXPECT_EQ(in.types.sum, nullptr);
+        }
+        if (strncmp(sql, "ent", (std::size_t) 4)) {
+            EXPECT_EQ(in.types.ent, nullptr);
+        }
+        if (strncmp(sql, "agg", (std::size_t) 4)) {
+            EXPECT_EQ(in.types.agg, nullptr);
+        }
+
+        input_fini(&in);
+    }
+
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    EXPECT_EQ(handle_sql(&in), 0);
     input_fini(&in);
 }

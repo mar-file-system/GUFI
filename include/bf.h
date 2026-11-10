@@ -185,79 +185,91 @@ extern "C" {
 #define FLAG_MAX_LEVEL_LONG "max-level"
 #define FLAG_MAX_LEVEL {FLAG_MAX_LEVEL_LONG, required_argument, NULL, FLAG_MAX_LEVEL_SHORT}
 
-#define FLAG_PRINT_TLV_SHORT (FLAG_GROUP_MISC + 2)
-#define FLAG_PRINT_TLV_LONG "print-tlv"
-#define FLAG_PRINT_TLV {FLAG_PRINT_TLV_LONG, no_argument, NULL, FLAG_PRINT_TLV_SHORT}
+#define FLAG_PRINT_TLV_TSUM_SHORT (FLAG_GROUP_MISC + 2)
+#define FLAG_PRINT_TLV_TSUM_LONG "print-tlv-tsum"
+#define FLAG_PRINT_TLV_TSUM {FLAG_PRINT_TLV_TSUM_LONG, required_argument, NULL, FLAG_PRINT_TLV_TSUM_SHORT}
 
-#define FLAG_SETUP_RES_COL_TYPES_SHORT (FLAG_GROUP_MISC + 3)
+#define FLAG_PRINT_TLV_SUM_SHORT (FLAG_GROUP_MISC + 3)
+#define FLAG_PRINT_TLV_SUM_LONG "print-tlv-sum"
+#define FLAG_PRINT_TLV_SUM {FLAG_PRINT_TLV_SUM_LONG, required_argument, NULL, FLAG_PRINT_TLV_SUM_SHORT}
+
+#define FLAG_PRINT_TLV_ENT_SHORT (FLAG_GROUP_MISC + 4)
+#define FLAG_PRINT_TLV_ENT_LONG "print-tlv-ent"
+#define FLAG_PRINT_TLV_ENT {FLAG_PRINT_TLV_ENT_LONG, required_argument, NULL, FLAG_PRINT_TLV_ENT_SHORT}
+
+#define FLAG_PRINT_TLV_AGG_SHORT (FLAG_GROUP_MISC + 5)
+#define FLAG_PRINT_TLV_AGG_LONG "print-tlv-agg"
+#define FLAG_PRINT_TLV_AGG {FLAG_PRINT_TLV_AGG_LONG, required_argument, NULL, FLAG_PRINT_TLV_AGG_SHORT}
+
+#define FLAG_SETUP_RES_COL_TYPES_SHORT (FLAG_GROUP_MISC + 6)
 #define FLAG_SETUP_RES_COL_TYPES_LONG "setup-res-col-types"
 #define FLAG_SETUP_RES_COL_TYPES {FLAG_SETUP_RES_COL_TYPES_LONG, required_argument, NULL, FLAG_SETUP_RES_COL_TYPES_SHORT}
 
-#define FLAG_KEEP_MATIME_SHORT (FLAG_GROUP_MISC + 4)
+#define FLAG_KEEP_MATIME_SHORT (FLAG_GROUP_MISC + 7)
 #define FLAG_KEEP_MATIME_LONG "keep-matime"
 #define FLAG_KEEP_MATIME {FLAG_KEEP_MATIME_LONG, no_argument, NULL, FLAG_KEEP_MATIME_SHORT}
 
-#define FLAG_SKIP_FILE_SHORT (FLAG_GROUP_MISC + 5)
+#define FLAG_SKIP_FILE_SHORT (FLAG_GROUP_MISC + 8)
 #define FLAG_SKIP_FILE_LONG "skip-file"
 #define FLAG_SKIP_FILE {FLAG_SKIP_FILE_LONG, required_argument, NULL, FLAG_SKIP_FILE_SHORT}
 
-#define FLAG_DRY_RUN_SHORT (FLAG_GROUP_MISC + 6)
+#define FLAG_DRY_RUN_SHORT (FLAG_GROUP_MISC + 9)
 #define FLAG_DRY_RUN_LONG "dry-run"
 #define FLAG_DRY_RUN {FLAG_DRY_RUN_LONG, no_argument, NULL, FLAG_DRY_RUN_SHORT}
 
-#define FLAG_PLUGIN_SHORT (FLAG_GROUP_MISC + 7)
+#define FLAG_PLUGIN_SHORT (FLAG_GROUP_MISC + 10)
 #define FLAG_PLUGIN_LONG "plugin"
 #define FLAG_PLUGIN {FLAG_PLUGIN_LONG, required_argument, NULL, FLAG_PLUGIN_SHORT}
 
-#define FLAG_PATH_LIST_SHORT (FLAG_GROUP_MISC + 8)
+#define FLAG_PATH_LIST_SHORT (FLAG_GROUP_MISC + 11)
 #define FLAG_PATH_LIST_LONG "path-list"
 #define FLAG_PATH_LIST {FLAG_PATH_LIST_LONG, required_argument, NULL, FLAG_PATH_LIST_SHORT}
 
-#define FLAG_FORMAT_SHORT (FLAG_GROUP_MISC + 9)
+#define FLAG_FORMAT_SHORT (FLAG_GROUP_MISC + 12)
 #define FLAG_FORMAT_LONG "format"
 #define FLAG_FORMAT {FLAG_FORMAT_LONG, required_argument, NULL, FLAG_FORMAT_SHORT}
 
-#define FLAG_TERSE_SHORT (FLAG_GROUP_MISC + 10)
+#define FLAG_TERSE_SHORT (FLAG_GROUP_MISC + 13)
 #define FLAG_TERSE_LONG "terse"
 #define FLAG_TERSE {FLAG_TERSE_LONG, no_argument, NULL, FLAG_TERSE_SHORT}
 
-#define FLAG_DONT_REPROCESS_SHORT (FLAG_GROUP_MISC + 11)
+#define FLAG_DONT_REPROCESS_SHORT (FLAG_GROUP_MISC + 14)
 #define FLAG_DONT_REPROCESS_LONG "dont-reprocess"
 #define FLAG_DONT_REPROCESS {FLAG_DONT_REPROCESS_LONG, no_argument, NULL, FLAG_DONT_REPROCESS_SHORT}
 
-#define FLAG_NEWLINE_SHORT (FLAG_GROUP_MISC + 12)
+#define FLAG_NEWLINE_SHORT (FLAG_GROUP_MISC + 15)
 #define FLAG_NEWLINE_LONG "newline"
 #define FLAG_NEWLINE {FLAG_NEWLINE_LONG, required_argument, NULL, FLAG_NEWLINE_SHORT}
 
-#define FLAG_SUPPRESS_NEWLINE_SHORT (FLAG_GROUP_MISC + 13)
+#define FLAG_SUPPRESS_NEWLINE_SHORT (FLAG_GROUP_MISC + 16)
 #define FLAG_SUPPRESS_NEWLINE_LONG "suppress-newline"
 #define FLAG_SUPPRESS_NEWLINE {FLAG_SUPPRESS_NEWLINE_LONG, no_argument, NULL, FLAG_SUPPRESS_NEWLINE_SHORT}
 
-#define FLAG_DIR_MATCH_UID_SHORT (FLAG_GROUP_MISC + 14)
+#define FLAG_DIR_MATCH_UID_SHORT (FLAG_GROUP_MISC + 17)
 #define FLAG_DIR_MATCH_UID_LONG "dir-match-uid"
 #define FLAG_DIR_MATCH_UID {FLAG_DIR_MATCH_UID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_UID_SHORT}
 
-#define FLAG_DIR_MATCH_GID_SHORT (FLAG_GROUP_MISC + 15)
+#define FLAG_DIR_MATCH_GID_SHORT (FLAG_GROUP_MISC + 18)
 #define FLAG_DIR_MATCH_GID_LONG "dir-match-gid"
 #define FLAG_DIR_MATCH_GID {FLAG_DIR_MATCH_GID_LONG, optional_argument, NULL, FLAG_DIR_MATCH_GID_SHORT}
 
-#define FLAG_NO_PRINT_ERRNO_SHORT (FLAG_GROUP_MISC + 16)
+#define FLAG_NO_PRINT_ERRNO_SHORT (FLAG_GROUP_MISC + 19)
 #define FLAG_NO_PRINT_ERRNO_LONG "no-print-errno"
 #define FLAG_NO_PRINT_ERRNO {FLAG_NO_PRINT_ERRNO_LONG, required_argument, NULL, FLAG_NO_PRINT_ERRNO_SHORT}
 
-#define FLAG_NO_PRINT_SQL_ON_ERR_SHORT (FLAG_GROUP_MISC + 17)
+#define FLAG_NO_PRINT_SQL_ON_ERR_SHORT (FLAG_GROUP_MISC + 20)
 #define FLAG_NO_PRINT_SQL_ON_ERR_LONG "no-print-sql-on-err"
 #define FLAG_NO_PRINT_SQL_ON_ERR {FLAG_NO_PRINT_SQL_ON_ERR_LONG, no_argument, NULL, FLAG_NO_PRINT_SQL_ON_ERR_SHORT}
 
-#define FLAG_OLD_TRACE_FORMAT_SHORT (FLAG_GROUP_MISC + 18)
+#define FLAG_OLD_TRACE_FORMAT_SHORT (FLAG_GROUP_MISC + 21)
 #define FLAG_OLD_TRACE_FORMAT_LONG "old-trace-format"
 #define FLAG_OLD_TRACE_FORMAT {FLAG_OLD_TRACE_FORMAT_LONG, no_argument, NULL, FLAG_OLD_TRACE_FORMAT_SHORT}
 
-#define FLAG_USE_EXACT_PATH_SHORT (FLAG_GROUP_MISC + 19)
+#define FLAG_USE_EXACT_PATH_SHORT (FLAG_GROUP_MISC + 22)
 #define FLAG_USE_EXACT_PATH_LONG "use-exact-path"
 #define FLAG_USE_EXACT_PATH {FLAG_USE_EXACT_PATH_LONG, no_argument, NULL, FLAG_USE_EXACT_PATH_SHORT}
 
-#define FLAG_GLOBAL_DB_SHORT (FLAG_GROUP_MISC + 20)
+#define FLAG_GLOBAL_DB_SHORT (FLAG_GROUP_MISC + 23)
 #define FLAG_GLOBAL_DB_LONG "global-db"
 #define FLAG_GLOBAL_DB {FLAG_GLOBAL_DB_LONG, required_argument, NULL, FLAG_GLOBAL_DB_SHORT}
 
@@ -509,10 +521,14 @@ struct input {
      * if outputting to STDOUT or OUTFILE, get list of
      * types of final output to prefix columns with
      *
-     * set up by gufi_query but cleaned up by input_fini
+     * supplied by gufi_vt and cleaned up by input_fini
      */
     struct {
-        int print_tlv;
+        /* column types supplied by gufi_vt, one per query type */
+        str_t print_tlv_tsum; /* treesummary (--print-tlv-tsum) */
+        str_t print_tlv_sum;  /* summary (--print-tlv-sum) */
+        str_t print_tlv_ent;  /* entries (--print-tlv-ent) */
+        str_t print_tlv_agg;  /* aggregation (--print-tlv-agg) */
 
         /* set if not aggregating */
         int *tsum;

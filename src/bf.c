@@ -246,8 +246,11 @@ void print_help(const char* prog_name,
 
             case FLAG_MIN_LEVEL_SHORT:                   printf("      --min-level <n>               minimum level to go down"); break;
             case FLAG_MAX_LEVEL_SHORT:                   printf("      --max-level <n>               maximum level to go down"); break;
-            case FLAG_PRINT_TLV_SHORT:                   printf("      --print-tlv                   prefix row with 1 int column count and each column with 1 octet type and 1 size_t length"); break;
-            case FLAG_SETUP_RES_COL_TYPES_SHORT:         printf("      --setup-res-col-types <SQL>   SQL statement(s) for setting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv"); break;
+            case FLAG_PRINT_TLV_TSUM_SHORT:              printf("      --print-tlv-tsum <metadata>   treesummary column type/length metadata"); break;
+            case FLAG_PRINT_TLV_SUM_SHORT:               printf("      --print-tlv-sum <metadata>    summary column type/length metadata"); break;
+            case FLAG_PRINT_TLV_ENT_SHORT:               printf("      --print-tlv-ent <metadata>    entries column type/length metadata"); break;
+            case FLAG_PRINT_TLV_AGG_SHORT:               printf("      --print-tlv-agg <metadata>    aggregation column type/length metadata"); break;
+            case FLAG_SETUP_RES_COL_TYPES_SHORT:         printf("      --setup-res-col-types <SQL>   SQL statement(s) for setting up temporary environment to make namespaces/tables/columns available for getting result column types when calling --print-tlv-* flags"); break;
             case FLAG_KEEP_MATIME_SHORT:                 printf("      --keep-matime                 Keep mtime and atime same on the database files"); break;
             case FLAG_SKIP_FILE_SHORT:                   printf("      --skip-file <filename>        file containing directory names to skip"); break;
             case FLAG_DRY_RUN_SHORT:                     printf("      --dry-run                     Dry run"); break;
@@ -345,7 +348,10 @@ void show_input(struct input* in, int retval) {
 
     printf("in.min_level                = %zu\n",           in->min_level);
     printf("in.max_level                = %zu\n",           in->max_level);
-    printf("in.types.prefix             = %d\n",            in->types.print_tlv);
+    printf("in.types.print_tlv_tsum     = '%s'\n",          in->types.print_tlv_tsum.data);
+    printf("in.types.print_tlv_sum      = '%s'\n",          in->types.print_tlv_sum.data);
+    printf("in.types.print_tlv_ent      = '%s'\n",          in->types.print_tlv_ent.data);
+    printf("in.types.print_tlv_agg      = '%s'\n",          in->types.print_tlv_agg.data);
     printf("in.keep_matime              = %d\n",            in->keep_matime);
     printf("in.skip_count               = %zu\n",           in->skip_count);
     printf("in.dry_run                  = %d\n",            in->dry_run);
@@ -631,8 +637,20 @@ int parse_cmd_line(int                  argc,
                 INSTALL_SIZE(&in->max_level, optarg, (size_t) 0, (size_t) -1, "--max-level", &retval);
                 break;
 
-            case FLAG_PRINT_TLV_SHORT:
-                in->types.print_tlv = 1;
+            case FLAG_PRINT_TLV_TSUM_SHORT:
+                INSTALL_STR(&in->types.print_tlv_tsum, optarg);
+                break;
+
+            case FLAG_PRINT_TLV_SUM_SHORT:
+                INSTALL_STR(&in->types.print_tlv_sum, optarg);
+                break;
+
+            case FLAG_PRINT_TLV_ENT_SHORT:
+                INSTALL_STR(&in->types.print_tlv_ent, optarg);
+                break;
+
+            case FLAG_PRINT_TLV_AGG_SHORT:
+                INSTALL_STR(&in->types.print_tlv_agg, optarg);
                 break;
 
             case FLAG_SETUP_RES_COL_TYPES_SHORT:
@@ -923,19 +941,24 @@ int parse_cmd_line(int                  argc,
     /* original list of plugin strings is no longer needed */
     sll_destroy(&plugins, NULL);
 
+    /* --print-tlv-* cannot be combined with -O or -o */
+    if (retval == 0) {
+        if ((str_exists(&in->types.print_tlv_tsum) ||
+             str_exists(&in->types.print_tlv_sum) ||
+             str_exists(&in->types.print_tlv_ent) ||
+             str_exists(&in->types.print_tlv_agg)) &&
+            (in->output != STDOUT)) {
+            fprintf(stderr, "--print-tlv-* cannot be combined with -O or -o\n");
+            retval = -1;
+        }
+    }
+
     /*
      * if there were no other errors,
      * make sure min_level <= max_level
      */
     if (retval == 0) {
         retval = -(in->min_level > in->max_level);
-    }
-
-    if (in->types.print_tlv) {
-        if (in->output != STDOUT) {
-            fprintf(stderr, "--print-tlv cannot be combined with -O or -o\n");
-            retval = -1;
-        }
     }
 
     in->pos.argc = argc - optind;

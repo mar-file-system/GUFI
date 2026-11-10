@@ -100,8 +100,11 @@ static const std::string filter_type                 = "--filter-type"; static c
 static const std::string force                       = "--force";
 static const std::string min_level                   = "--min-level"; static const std::string min_level_arg = "1";
 static const std::string max_level                   = "--max-level"; static const std::string max_level_arg = "1";
-static const std::string print_tlv                   = "--print-tlv";
 static const std::string setup_res_col_types         = "--setup-res-col-types"; static const std::string setup_res_col_types_arg = "setup-res-col-types arg";
+static const std::string print_tlv_tsum              = "--print-tlv-tsum"; static const std::string print_tlv_tsum_arg = "0001:3:0004:name";
+static const std::string print_tlv_sum               = "--print-tlv-sum"; static const std::string print_tlv_sum_arg = "0001:3:0004:name";
+static const std::string print_tlv_ent               = "--print-tlv-ent"; static const std::string print_tlv_ent_arg = "0001:3:0004:name";
+static const std::string print_tlv_agg               = "--print-tlv-agg"; static const std::string print_tlv_agg_arg = "0001:3:0004:name";
 static const std::string keep_matime                 = "--keep-matime";
 static const std::string skip_file                   = "--skip-file"; static const std::string skip_file_arg = "file name";
 static const std::string dry_run                     = "--dry-run";
@@ -201,7 +204,6 @@ static void check_input(const int /* argc */, const char **argv,
     EXPECT_EQ(in->process_xattrs,                             flags);
     EXPECT_EQ(in->printdir,                                   flags);
     EXPECT_EQ(in->force,                                      flags);
-    EXPECT_EQ(in->types.print_tlv,                            flags);
     EXPECT_EQ(in->suspect.stat,                               flags);
     EXPECT_EQ(in->keep_matime,                                flags);
     EXPECT_EQ(in->open_flags,                                 flags?SQLITE_OPEN_READWRITE:SQLITE_OPEN_READONLY);
@@ -224,6 +226,10 @@ static void check_input(const int /* argc */, const char **argv,
         EXPECT_EQ(in->maxthreads,                             (std::size_t) 1);
         EXPECT_EQ(in->process_sql,                            process_sql);
         EXPECT_EQ(in->delim,                                  '|');
+        EXPECT_EQ(in->types.print_tlv_tsum,                   print_tlv_tsum_arg);
+        EXPECT_EQ(in->types.print_tlv_sum,                    print_tlv_sum_arg);
+        EXPECT_EQ(in->types.print_tlv_ent,                    print_tlv_ent_arg);
+        EXPECT_EQ(in->types.print_tlv_agg,                    print_tlv_agg_arg);
         // not checking -o and -O here
         EXPECT_EQ(in->sql.setup_res_col_types,                setup_res_col_types_arg);
         EXPECT_EQ(in->sql.init,                               I_arg);
@@ -296,6 +302,10 @@ static void check_input(const int /* argc */, const char **argv,
 
         EXPECT_EQ(in->maxthreads,                             (std::size_t) 1);
         EXPECT_EQ(in->delim,                                  fielddelim);
+        EXPECT_EQ(in->types.print_tlv_tsum,                   empty);
+        EXPECT_EQ(in->types.print_tlv_sum,                    empty);
+        EXPECT_EQ(in->types.print_tlv_ent,                    empty);
+        EXPECT_EQ(in->types.print_tlv_agg,                    empty);
         EXPECT_EQ(in->output,                                 STDOUT);
         EXPECT_EQ(in->outname,                                empty);
         EXPECT_EQ(in->sql.setup_res_col_types,                empty);
@@ -393,7 +403,7 @@ TEST(parse_cmd_line, debug) {
     const struct option opts[] = {
         FLAG_DEBUG, FLAG_XATTRS, FLAG_PRINTDIR,
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE, FLAG_FORCE,
-        FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV, FLAG_SETUP_RES_COL_TYPES,
+        FLAG_OUTPUT_FILE, FLAG_OUTPUT_DB, FLAG_PRINT_TLV_TSUM, FLAG_PRINT_TLV_SUM, FLAG_PRINT_TLV_ENT, FLAG_PRINT_TLV_AGG, FLAG_SETUP_RES_COL_TYPES,
         FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM, FLAG_SQL_ENT, FLAG_SQL_FIN,
         FLAG_SUSPECT_STAT, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
         FLAG_SUSPECT_TIME, FLAG_MAX_SUBTREES, FLAG_KEEP_ARTIFACTS,
@@ -421,7 +431,10 @@ TEST(parse_cmd_line, debug) {
         a.c_str(), a_arg.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
-        print_tlv.c_str(),
+        print_tlv_tsum.c_str(), print_tlv_tsum_arg.c_str(),
+        print_tlv_sum.c_str(), print_tlv_sum_arg.c_str(),
+        print_tlv_ent.c_str(), print_tlv_ent_arg.c_str(),
+        print_tlv_agg.c_str(), print_tlv_agg_arg.c_str(),
         setup_res_col_types.c_str(), setup_res_col_types_arg.c_str(),
         I.c_str(), I_arg.c_str(),
         T.c_str(), T_arg.c_str(),
@@ -491,7 +504,7 @@ TEST(parse_cmd_line, debug) {
 
 TEST(parse_cmd_line, flags) {
     const struct option opts[] = {
-        FLAG_XATTRS, FLAG_PRINTDIR, FLAG_FORCE, FLAG_PRINT_TLV,
+        FLAG_XATTRS, FLAG_PRINTDIR, FLAG_FORCE, FLAG_PRINT_TLV_TSUM, FLAG_PRINT_TLV_SUM, FLAG_PRINT_TLV_ENT, FLAG_PRINT_TLV_AGG,
         FLAG_SUSPECT_STAT, FLAG_KEEP_MATIME, FLAG_READ_WRITE,
         FLAG_TERSE, FLAG_DRY_RUN, FLAG_DONT_REPROCESS,
         FLAG_NO_PRINT_SQL_ON_ERR, FLAG_OLD_TRACE_FORMAT,
@@ -509,7 +522,6 @@ TEST(parse_cmd_line, flags) {
         x.c_str(),
         P.c_str(),
         force.c_str(),
-        print_tlv.c_str(),
         suspect_stat.c_str(),
         keep_matime.c_str(),
         w.c_str(),
@@ -539,7 +551,8 @@ TEST(parse_cmd_line, flags) {
 TEST(parse_cmd_line, options) {
     const struct option opts[] = {
         FLAG_PROCESS_SQL, FLAG_THREADS, FLAG_DELIM, FLAG_FILTER_TYPE,
-        FLAG_SETUP_RES_COL_TYPES, FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM,
+        FLAG_SETUP_RES_COL_TYPES, FLAG_PRINT_TLV_TSUM, FLAG_PRINT_TLV_SUM, FLAG_PRINT_TLV_ENT, FLAG_PRINT_TLV_AGG,
+        FLAG_SQL_INIT, FLAG_SQL_TSUM, FLAG_SQL_SUM,
         FLAG_SQL_ENT, FLAG_SQL_FIN, FLAG_SUSPECT_FILE, FLAG_SUSPECT_METHOD,
         FLAG_SUSPECT_TIME, FLAG_MAX_SUBTREES, FLAG_KEEP_ARTIFACTS, FLAG_PATH,
         FLAG_FILTER_TYPE, FLAG_MIN_LEVEL, FLAG_MAX_LEVEL, FLAG_SQL_INTERM,
@@ -556,6 +569,10 @@ TEST(parse_cmd_line, options) {
         a.c_str(), a_arg.c_str(),
         n.c_str(), n_arg.c_str(),
         d.c_str(), d_arg.c_str(),
+        print_tlv_tsum.c_str(), print_tlv_tsum_arg.c_str(),
+        print_tlv_sum.c_str(), print_tlv_sum_arg.c_str(),
+        print_tlv_ent.c_str(), print_tlv_ent_arg.c_str(),
+        print_tlv_agg.c_str(), print_tlv_agg_arg.c_str(),
         setup_res_col_types.c_str(), setup_res_col_types_arg.c_str(),
         I.c_str(), I_arg.c_str(),
         T.c_str(), T_arg.c_str(),
@@ -813,9 +830,9 @@ TEST(parse_cmd_line, output_arguments) {
     }
 }
 
-TEST(parse_cmd_line, print_tlv) {
+TEST(parse_cmd_line, print_tlv_tsum) {
     const struct option opt[] = {
-        FLAG_PRINT_TLV,
+        FLAG_PRINT_TLV_TSUM,
         FLAG_OUTPUT_FILE,
         FLAG_OUTPUT_DB,
         FLAG_END
@@ -825,7 +842,7 @@ TEST(parse_cmd_line, print_tlv) {
     {
         const char *argv[] = {
             exec.c_str(),
-            print_tlv.c_str(),
+            print_tlv_tsum.c_str(), print_tlv_tsum_arg.c_str(),
             nullptr,
         };
 
@@ -833,7 +850,7 @@ TEST(parse_cmd_line, print_tlv) {
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), argc);
-        EXPECT_EQ(in.types.print_tlv, 1);
+        EXPECT_EQ(in.types.print_tlv_tsum.data, print_tlv_tsum_arg);
         input_fini(&in);
     }
 
@@ -841,7 +858,7 @@ TEST(parse_cmd_line, print_tlv) {
     {
         const char *argv[] = {
             exec.c_str(),
-            print_tlv.c_str(),
+            print_tlv_tsum.c_str(), print_tlv_tsum_arg.c_str(),
             o.c_str(), o_arg.c_str(),
             nullptr,
         };
@@ -857,7 +874,7 @@ TEST(parse_cmd_line, print_tlv) {
     {
         const char *argv[] = {
             exec.c_str(),
-            print_tlv.c_str(),
+            print_tlv_tsum.c_str(), print_tlv_tsum_arg.c_str(),
             O.c_str(), O_arg.c_str(),
             nullptr,
         };
@@ -870,9 +887,135 @@ TEST(parse_cmd_line, print_tlv) {
     }
 }
 
+TEST(parse_cmd_line, print_tlv_sum_o) {
+    const struct option opt[] = {
+        FLAG_PRINT_TLV_SUM,
+        FLAG_OUTPUT_FILE,
+        FLAG_END
+    };
+
+    const char *argv[] = {
+        exec.c_str(),
+        print_tlv_sum.c_str(), print_tlv_sum_arg.c_str(),
+        o.c_str(), o_arg.c_str(),
+        nullptr,
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
+
+    struct input in;
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
+    input_fini(&in);
+}
+
+TEST(parse_cmd_line, print_tlv_sum_O) {
+    const struct option opt[] = {
+        FLAG_PRINT_TLV_SUM,
+        FLAG_OUTPUT_DB,
+        FLAG_END
+    };
+
+    const char *argv[] = {
+        exec.c_str(),
+        print_tlv_sum.c_str(), print_tlv_sum_arg.c_str(),
+        O.c_str(), O_arg.c_str(),
+        nullptr,
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
+
+    struct input in;
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
+    input_fini(&in);
+}
+
+TEST(parse_cmd_line, print_tlv_ent_o) {
+    const struct option opt[] = {
+        FLAG_PRINT_TLV_ENT,
+        FLAG_OUTPUT_FILE,
+        FLAG_END
+    };
+
+    const char *argv[] = {
+        exec.c_str(),
+        print_tlv_ent.c_str(), print_tlv_ent_arg.c_str(),
+        o.c_str(), o_arg.c_str(),
+        nullptr,
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
+
+    struct input in;
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
+    input_fini(&in);
+}
+
+TEST(parse_cmd_line, print_tlv_ent_O) {
+    const struct option opt[] = {
+        FLAG_PRINT_TLV_ENT,
+        FLAG_OUTPUT_DB,
+        FLAG_END
+    };
+
+    const char *argv[] = {
+        exec.c_str(),
+        print_tlv_ent.c_str(), print_tlv_ent_arg.c_str(),
+        O.c_str(), O_arg.c_str(),
+        nullptr,
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
+
+    struct input in;
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
+    input_fini(&in);
+}
+
+TEST(parse_cmd_line, print_tlv_agg_o) {
+    const struct option opt[] = {
+        FLAG_PRINT_TLV_AGG,
+        FLAG_OUTPUT_FILE,
+        FLAG_END
+    };
+
+    const char *argv[] = {
+        exec.c_str(),
+        print_tlv_agg.c_str(), print_tlv_agg_arg.c_str(),
+        o.c_str(), o_arg.c_str(),
+        nullptr,
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
+
+    struct input in;
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
+    input_fini(&in);
+}
+
+TEST(parse_cmd_line, print_tlv_agg_O) {
+    const struct option opt[] = {
+        FLAG_PRINT_TLV_AGG,
+        FLAG_OUTPUT_DB,
+        FLAG_END
+    };
+
+    const char *argv[] = {
+        exec.c_str(),
+        print_tlv_agg.c_str(), print_tlv_agg_arg.c_str(),
+        O.c_str(), O_arg.c_str(),
+        nullptr,
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
+
+    struct input in;
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), -1);
+    input_fini(&in);
+}
+
 TEST(parse_cmd_line, no_print_errno) {
     const struct option opt[] = {
-        FLAG_PRINT_TLV,
+        FLAG_PRINT_TLV_TSUM,
         FLAG_NO_PRINT_ERRNO,
         FLAG_END
     };
