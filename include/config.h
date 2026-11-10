@@ -17,7 +17,7 @@ See LICENSE.txt in top-level directory for license terms.
 
 
 
-// members of struct stat have sizes that vary between OSX/Linux
+/* members of struct stat have sizes that vary between OSX/Linux */
 #if defined(__APPLE__)
 #  define STAT_dev    "d"
 #  define STAT_ino    "llu"
@@ -29,8 +29,8 @@ See LICENSE.txt in top-level directory for license terms.
 #  define STAT_bsize  "d"
 #  define STAT_blocks "lld"
 
-// typedef uint32_t  STAT_size_t;
-//#  define STAT_size_t  uint32_t
+/* typedef uint32_t  STAT_size_t; */
+/*#  define STAT_size_t  uint32_t */
 
 #elif defined(__linux__)
 #  define STAT_dev    "lu"
@@ -43,8 +43,8 @@ See LICENSE.txt in top-level directory for license terms.
 #  define STAT_bsize  "ld"
 #  define STAT_blocks "ld"
 
-// typedef size_t    STAT_size_t;
-//#  define STAT_size_t  size_t
+/* typedef size_t    STAT_size_t; */
+/*#  define STAT_size_t  size_t */
 
 #elif defined(__CYGWIN__)
 

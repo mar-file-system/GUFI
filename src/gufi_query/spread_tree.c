@@ -115,7 +115,7 @@ static int copy_str_and_counter_callback(void *args, int count, char **data, cha
 static int pull_from_db(sqlite3 *db, const char *columns, const size_t col_count,
                         const char *table, const char *match_column, const char *match_value,
                         char **results, char **err) {
-    for(size_t i = 0; i < col_count; i++) {
+    for (size_t i = 0; i < col_count; i++) {
         results[i] = NULL;
     }
 
@@ -130,7 +130,7 @@ static int pull_from_db(sqlite3 *db, const char *columns, const size_t col_count
     sqlite3_free(sql);
 
     if (rc != SQLITE_OK) {
-        for(size_t i = 0; i < col_count; i++) {
+        for (size_t i = 0; i < col_count; i++) {
             free(results[i]);
             results[i] = NULL;
         }
@@ -139,7 +139,7 @@ static int pull_from_db(sqlite3 *db, const char *columns, const size_t col_count
 
     if (sc.count != 1) {
         *err = sqlite3_mprintf("Did not get exactly one set of results");
-        for(size_t i = 0; i < col_count; i++) {
+        for (size_t i = 0; i < col_count; i++) {
             free(results[i]);
             results[i] = NULL;
         }
@@ -161,7 +161,7 @@ static int run_cmd(const char **cmd, char **res, char **err, const int expect_ou
 
     if (input_count) {
         const int in = popen_argv_in(p);
-        for(size_t i = 0; i < input_count; i++) {
+        for (size_t i = 0; i < input_count; i++) {
             if (write_size(in, input[i]->data, input[i]->len) != (ssize_t) input[i]->len) {
                 *err = sqlite3_mprintf("Could not write to %s", cmd[0]);
                 popen_argv_close(p);

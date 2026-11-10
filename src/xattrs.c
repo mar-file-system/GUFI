@@ -71,7 +71,7 @@ OF SUCH DAMAGE.
 
 #define XATTR_COLS_CREATE "(inode TEXT, name TEXT, value TEXT)"
 
-const char XATTRDELIM = '\x1F';     // ASCII Unit Separator
+const char XATTRDELIM = '\x1F'; /* ASCII Unit Separator */
 
 const char XATTRS_PWD_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_PWD ";"
                                  "CREATE TABLE " XATTRS_PWD XATTR_COLS_CREATE ";";
@@ -162,8 +162,10 @@ void xattrs_cleanup(struct xattrs *xattrs) {
 /* ************************************************** */
 /* in-memory xattr manipulation */
 
-// xattr_remove will find and remove any xattrs that match the provided name.
-// It returns the number of xattrs that were removed.
+/*
+ * xattr_remove will find and remove any xattrs that match the provided name.
+ * It returns the number of xattrs that were removed.
+ */
 size_t xattr_remove(struct xattrs *xattrs, const char *name, const size_t name_len) {
     size_t removed = 0;
 
@@ -227,7 +229,7 @@ int xattrs_get(const char *path, struct xattrs *xattrs) {
     xattrs_alloc(xattrs);
 
     offset = 0;
-    for(size_t i = 0; i < xattrs->count;) {
+    for (size_t i = 0; i < xattrs->count;) {
         struct xattr *xattr = &xattrs->pairs[i];
         const char *name = name_list + offset;
         const ssize_t name_len = strlen(name);
@@ -271,7 +273,7 @@ ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, 
     }
 
     size_t offset = 0;
-    for(size_t i = 0; i < xattrs->count; i++) {
+    for (size_t i = 0; i < xattrs->count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
         offset += SNFORMAT_S(buf + offset, buf_len - offset, 2,
                              xattr->name, xattr->name_len,
@@ -301,7 +303,7 @@ int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char delim) {
 
     /* not checking xattrs->pairs */
 
-    for(size_t i = 0; i < xattrs->count; i++) {
+    for (size_t i = 0; i < xattrs->count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
         written += fwrite(xattr->name, 1, xattr->name_len, file);
         written += fwrite(&delim, 1, 1, file);
@@ -329,7 +331,7 @@ int xattrs_to_buffer(char **buf, size_t *size, size_t *offset,
 
     /* not checking xattrs->pairs */
 
-    for(size_t i = 0; i < xattrs->count; i++) {
+    for (size_t i = 0; i < xattrs->count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
         write_with_resize(buf, size, offset, "%s%c", xattr->name, delim);
         write_with_resize(buf, size, offset, "%s%c", xattr->value, delim);
@@ -346,7 +348,7 @@ char *xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, cons
 
     if (old_format) {
         /* count delimiters */
-        for(char *curr = start; curr != end; curr++) {
+        for (char *curr = start; curr != end; curr++) {
             if (*curr == delim) {
                 xattrs->count++;
             }
@@ -395,7 +397,7 @@ char *xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, cons
     xattrs->count = 0;
 
     /* extract pairs */
-    for(size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
 
         char *next = split(start, &delim, 1, end);

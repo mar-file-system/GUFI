@@ -61,6 +61,8 @@
 
 
 
+set -e
+
 # default program for generating a shard's path in a spread tree
 
 if [[ "$#" -lt 6 ]]

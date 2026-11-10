@@ -102,7 +102,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
     }
 
     size_t row_len = 0;
-    for(int i = 0; i < count; i++) {
+    for (int i = 0; i < count; i++) {
         lens[i] = 0;
         if (data[i]) {
             lens[i] = strlen(data[i]);
@@ -157,7 +157,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             fprintf(print->outfile, TLV_COL_COUNT_WRITE_FMT, (unsigned int) count);
         }
 
-        for(int i = 0; i < last; i++) {
+        for (int i = 0; i < last; i++) {
             if (types) {
                 /* write column type */
                 const char col_type = types[i] + '0';
@@ -225,7 +225,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             filled += TLV_COL_COUNT_LEN;
         }
 
-        for(int i = 0; i < last; i++) {
+        for (int i = 0; i < last; i++) {
             if (types) {
                 /* write column type */
                 buf[filled] = types[i] + '0';
@@ -301,7 +301,7 @@ int print_uncached(void *args, int count, char **data, char **columns) {
         pthread_mutex_lock(print->mutex);
     }
 
-    for(int i = 0; i < count; i++ ) {
+    for (int i = 0; i < count; i++ ) {
         if (data[i]) {
             fprintf(print->outfile, "%s", data[i]);
         }

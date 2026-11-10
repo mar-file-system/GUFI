@@ -124,7 +124,7 @@ struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size
         return NULL;
     }
 
-    for(size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         if (!OutputBuffer_init(&obufs->buffers[i], capacity)) {
             OutputBuffers_destroy(obufs);
             return NULL;
@@ -139,7 +139,7 @@ size_t OutputBuffers_flush_to_single(struct OutputBuffers *obufs, FILE *out) {
     /* Not checking arguments */
 
     size_t octets = 0;
-    for(size_t i = 0; i < obufs->count; i++) {
+    for (size_t i = 0; i < obufs->count; i++) {
         octets += OutputBuffer_flush(&obufs->buffers[i], out);
     }
 
@@ -152,7 +152,7 @@ size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out) 
     /* Not checking arguments */
 
     size_t octets = 0;
-    for(size_t i = 0; i < obufs->count; i++) {
+    for (size_t i = 0; i < obufs->count; i++) {
         const size_t written = OutputBuffer_flush(&obufs->buffers[i], out[i]);
         fflush(out[i]);
         if ((written < obufs->buffers[i].filled) &&
@@ -168,7 +168,7 @@ size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out) 
 void OutputBuffers_destroy(struct OutputBuffers *obufs) {
     if (obufs) {
         if (obufs->buffers) {
-            for(size_t i = 0; i < obufs->count; i++) {
+            for (size_t i = 0; i < obufs->count; i++) {
                 OutputBuffer_destroy(&obufs->buffers[i]);
             }
 

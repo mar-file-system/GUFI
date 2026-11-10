@@ -380,11 +380,13 @@ static void process_file(void *ptr, void *user_data) {
         struct lov_user_md_v1 *v1= (struct lov_user_md_v1 *) layout_info;
         stripe_array = v1->lmm_objects;
         stripe_count = v1->lmm_stripe_count;
-    } else if (layout_info->lmm_magic == LOV_USER_MAGIC_V3) {
+    }
+    else if (layout_info->lmm_magic == LOV_USER_MAGIC_V3) {
         struct lov_user_md_v3 *v3= (struct lov_user_md_v3 *) layout_info;
         stripe_array = v3->lmm_objects;
         stripe_count = v3->lmm_stripe_count;
-    } else {
+    }
+    else {
         fprintf(stderr, "lustre plugin: unknown layout format on file %s: %d\n", path, layout_info->lmm_magic);
         goto out;
     }

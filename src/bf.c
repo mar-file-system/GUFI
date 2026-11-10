@@ -113,19 +113,19 @@ struct input *input_init(struct input *in) {
         }
         in->delim                   = fielddelim;
         in->newline                 = linesep;
-        in->maxthreads              = 1;                      // don't default to zero threads
+        in->maxthreads              = 1;                      /* don't default to zero threads */
         in->dir_match.uid           = geteuid();              /* always successful */
         in->dir_match.gid           = getegid();              /* always successful */
         in->process_sql             = RUN_ON_ROW;
         in->suspect.time            = time(NULL);             /* time_set is still 0 */
         in->max_subtrees            = 1;
-        in->max_level               = -1;                     // default to all the way down
+        in->max_level               = -1;                     /* default to all the way down */
         sll_init(&in->sql_format.tsum);
         sll_init(&in->sql_format.sum);
         sll_init(&in->sql_format.ent);
         in->output                  = STDOUT;
         in->output_buffer_size      = 4096;
-        in->open_flags              = SQLITE_OPEN_READONLY;   // default to read-only opens
+        in->open_flags              = SQLITE_OPEN_READONLY;   /* default to read-only opens */
         in->rollup.delete_below     = -1;
         in->rollup.attach_flag      = SQLITE_OPEN_READONLY;
         in->skip                    = trie_alloc();
@@ -314,7 +314,7 @@ void print_help(const char* prog_name,
     printf("\n");
 }
 
-// DEBUGGING
+/* DEBUGGING */
 void show_input(struct input* in, int retval) {
     printf("in.printed_version          = %d\n",            in->printed_version);
     printf("in.printdir                 = %d\n",            in->printdir);
@@ -350,7 +350,7 @@ void show_input(struct input* in, int retval) {
     printf("in.skip_count               = %zu\n",           in->skip_count);
     printf("in.dry_run                  = %d\n",            in->dry_run);
 
-    for(size_t i = 0; i < in->plugins.count; i++) {
+    for (size_t i = 0; i < in->plugins.count; i++) {
         printf("in.plugins[%zu]               = '%s'\n",    i, in->plugins.plugins[i]->filename);
     }
 
@@ -440,7 +440,8 @@ char *build_getopt_str(const struct option *options) {
             len++;
             if (opt->has_arg == required_argument) {
                 len++;
-            } else if (opt->has_arg == optional_argument) {
+            }
+            else if (opt->has_arg == optional_argument) {
                 len += 2;
             }
         }
@@ -454,7 +455,8 @@ char *build_getopt_str(const struct option *options) {
             *ptr++ = (char) opt->val;
             if (opt->has_arg == required_argument) {
                 *ptr++ = ':';
-            } else if (opt->has_arg == optional_argument) {
+            }
+            else if (opt->has_arg == optional_argument) {
                 *ptr++ = ':';
                 *ptr++ = ':';
             }
@@ -464,20 +466,22 @@ char *build_getopt_str(const struct option *options) {
     return getopt_str;
 }
 
-// process command-line options
-//
-// <positional_args_help_str> is a string like "input_dir to_dir"
-//    which is placed after "[options]" in the output produced for the '-h'
-//    option.  In other words, you end up with a picture of the
-//    command-line, for the help text.
-//
-// Do not call this function multiple times without calling
-//    input_fini between calls.
-//
-// return: -1 for error.  Otherwise, we return the index of the first
-//    positional argument in <argv>.  This allows the caller to do a custom
-//    parse of the remaining arguments as required (positional) args.
-//
+/*
+ * process command-line options
+ *
+ * <positional_args_help_str> is a string like "input_dir to_dir"
+ *    which is placed after "[options]" in the output produced for the '-h'
+ *    option.  In other words, you end up with a picture of the
+ *    command-line, for the help text.
+ *
+ * Do not call this function multiple times without calling
+ *    input_fini between calls.
+ *
+ * return: -1 for error.  Otherwise, we return the index of the first
+ *    positional argument in <argv>.  This allows the caller to do a custom
+ *    parse of the remaining arguments as required (positional) args.
+ *
+ */
 int parse_cmd_line(int                  argc,
                    char*                argv[],
                    const struct option* options,
@@ -498,16 +502,16 @@ int parse_cmd_line(int                  argc,
     int ch;
     setenv("POSIXLY_CORRECT", "1", 1); /* don't check errors? */
     optind = 0;                        /* man 3 getopt_long */
-    while ( (ch = getopt_long(argc, argv, getopt_str, options, NULL)) != -1) {
+    while ((ch = getopt_long(argc, argv, getopt_str, options, NULL)) != -1) {
         switch (ch) {
 
-            case FLAG_HELP_SHORT:               // help
+            case FLAG_HELP_SHORT:               /* help */
                 print_help(argv[0], options, positional_args_help_str);
                 in->helped = 1;
                 retval = -2;
                 break;
 
-            case FLAG_DEBUG_SHORT:               // show parsed inputs
+            case FLAG_DEBUG_SHORT:               /* show parsed inputs */
                 show = 1;
                 retval = -2;
                 break;
@@ -517,7 +521,7 @@ int parse_cmd_line(int                  argc,
                 in->printed_version = 1;
                 break;
 
-            case FLAG_PRINTDIR_SHORT:               // print dirs?
+            case FLAG_PRINTDIR_SHORT:               /* print dirs? */
                 in->printdir = 1;
                 break;
 
@@ -552,19 +556,19 @@ int parse_cmd_line(int                  argc,
                 INSTALL_STR(&in->outname, optarg);
                 break;
 
-            case FLAG_SQL_INIT_SHORT:               // SQL initializations
+            case FLAG_SQL_INIT_SHORT:               /* SQL initializations */
                 INSTALL_STR(&in->sql.init, optarg);
                 break;
 
-            case FLAG_SQL_TSUM_SHORT:               // SQL for tree-summary
+            case FLAG_SQL_TSUM_SHORT:               /* SQL for tree-summary */
                 INSTALL_STR(&in->sql.tsum, optarg);
                 break;
 
-            case FLAG_SQL_SUM_SHORT:               // SQL for summary
+            case FLAG_SQL_SUM_SHORT:               /* SQL for summary */
                 INSTALL_STR(&in->sql.sum, optarg);
                 break;
 
-            case FLAG_SQL_ENT_SHORT:               // SQL for entries
+            case FLAG_SQL_ENT_SHORT:               /* SQL for entries */
                 INSTALL_STR(&in->sql.ent, optarg);
                 break;
 
@@ -580,7 +584,7 @@ int parse_cmd_line(int                  argc,
                 INSTALL_STR(&in->sql.agg, optarg);
                 break;
 
-            case FLAG_SQL_FIN_SHORT:               // SQL clean-up
+            case FLAG_SQL_FIN_SHORT:               /* SQL clean-up */
                 INSTALL_STR(&in->sql.fin, optarg);
                 break;
 
@@ -919,8 +923,10 @@ int parse_cmd_line(int                  argc,
     /* original list of plugin strings is no longer needed */
     sll_destroy(&plugins, NULL);
 
-    // if there were no other errors,
-    // make sure min_level <= max_level
+    /*
+     * if there were no other errors,
+     * make sure min_level <= max_level
+     */
     if (retval == 0) {
         retval = -(in->min_level > in->max_level);
     }
@@ -939,10 +945,12 @@ int parse_cmd_line(int                  argc,
         return -1;
     }
 
-    // caller requires given number of positional args, after the options.
-    // <optind> is the number of argv[] values that were recognized as options.
-    // NOTE: caller may have custom options ovf their own, so returning a
-    //       value > n_positional is okay (?)
+    /*
+     * caller requires given number of positional args, after the options.
+     * <optind> is the number of argv[] values that were recognized as options.
+     * NOTE: caller may have custom options ovf their own, so returning a
+     *       value > n_positional is okay (?)
+     */
     if ((retval == -1)
         || ((argc - optind) < n_positional)) {
         if (!in->helped && !bad_skipfile) {
@@ -952,9 +960,10 @@ int parse_cmd_line(int                  argc,
         retval = -1;
     }
 
-    // DEBUGGING:
-    if (show)
+    /* DEBUGGING: */
+    if (show) {
         show_input(in, retval);
+    }
 
     return (retval ? retval : optind);
 }
@@ -1017,7 +1026,8 @@ struct work *new_work_with_name(const char *prefix, const size_t prefix_len,
     if (prefix_len == 0) {
         w->name_len = SNFORMAT_S(w->name, name_total + 1, 1,
                                  basename, basename_len);
-    } else {
+    }
+    else {
         w->name_len = SNFORMAT_S(w->name, name_total + 1, 3,
                                  prefix, prefix_len,
                                  "/", (size_t) 1,

@@ -80,7 +80,7 @@ int aggregate_init(Aggregate_t *aggregate, const size_t threads, const char *nam
     aggregate->dbs = calloc(threads, sizeof(aggregate->dbs[0]));
 
     char dbname[MAXPATH];
-    for(size_t i = 0; i < threads; i++) {
+    for (size_t i = 0; i < threads; i++) {
         SNPRINTF(dbname, MAXPATH, INTERMEDIATE_ATTACH_FORMAT, i + offset);
 
         aggregate->dbs[i] = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
@@ -121,7 +121,7 @@ void aggregate_intermediate(Aggregate_t *aggregate, const size_t threads, const 
      * failure to attach is not an error - the data is simply not accessible
      */
     char dbname[MAXPATH];
-    for(size_t i = 0; i < threads; i++) {
+    for (size_t i = 0; i < threads; i++) {
         SNPRINTF(dbname, MAXPATH, INTERMEDIATE_ATTACH_FORMAT, i + offset);
 
         if (attachdb_raw(dbname, aggregate->agg, INTERMEDIATE_ATTACH_NAME, 1, NULL)) {
@@ -143,7 +143,7 @@ void aggregate_fin(Aggregate_t *aggregate, const size_t threads) {
     }
 
     if (aggregate->dbs) {
-        for(size_t i = 0; i < threads; i++) {
+        for (size_t i = 0; i < threads; i++) {
             closedb(aggregate->dbs[i]);
         }
 

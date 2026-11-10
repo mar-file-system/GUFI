@@ -260,7 +260,7 @@ static void print_parallel_tlv_actual(const bool use_len) {
     EXPECT_EQ((std::size_t) col_count, COL_COUNT);
     curr += TLV_COL_COUNT_LEN;
 
-    for(std::size_t i = 0; i < COL_COUNT; i++) {
+    for (std::size_t i = 0; i < COL_COUNT; i++) {
         // type
         const char type = *curr - '0';
         EXPECT_EQ(type, (char) TYPES[i]);
@@ -330,8 +330,8 @@ static void print_uncached_test(const char **data, const std::size_t count,
 }
 
 TEST(print, uncached) {
-    for(bool lock : {false, true}) {
-        for(bool suppress_newline : {false, true}) {
+    for (bool lock : {false, true}) {
+        for (bool suppress_newline : {false, true}) {
             {
                 const char *data[] = {"abcd", "efgh"};
                 const std::size_t len = 4 + 1 + 4;

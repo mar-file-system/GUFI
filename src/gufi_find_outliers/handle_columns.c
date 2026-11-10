@@ -457,7 +457,7 @@ static const Group_t GROUPS[] = {
 static const size_t GROUP_COUNT = sizeof(GROUPS) / sizeof(GROUPS[0]);
 
 const str_t *handle_group(const char *name, const size_t len) {
-    for(size_t i = 0; i < GROUP_COUNT; i++) {
+    for (size_t i = 0; i < GROUP_COUNT; i++) {
         const Group_t *g = &GROUPS[i];
         if (g->name.len == len) {
             if (strncmp(g->name.data, name, len) == 0) {

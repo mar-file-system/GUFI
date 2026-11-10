@@ -74,7 +74,7 @@ size_t save_replacements(const str_t *sql, sll_t *idx) {
     /* idx should not already have nodes */
     sll_init(idx);
 
-    for(size_t i = 0; i < sql->len; i++) {
+    for (size_t i = 0; i < sql->len; i++) {
         switch (sql->data[i]) {
             case USER_STR_START:
                 save_user_str(idx, sql, &i);

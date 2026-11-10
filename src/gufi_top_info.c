@@ -170,7 +170,7 @@ static int add(sqlite3 *db, int argc, char **argv) {
     size_t vals_size = 0;
     size_t vals_len = 0;
 
-    for(int i = 0; i < argc; i += 2) {
+    for (int i = 0; i < argc; i += 2) {
         const char *key = argv[i];
         const char *val = argv[i + 1];
 
@@ -218,7 +218,7 @@ static int set(sqlite3 *db, int argc, char **argv) {
     size_t changes_size = 0;
     size_t changes_len = 0;
 
-    for(int i = 1; i < argc; i += 2) {
+    for (int i = 1; i < argc; i += 2) {
         const char *key = argv[i];
         const char *val = argv[i + 1];
 
@@ -254,7 +254,7 @@ static int set(sqlite3 *db, int argc, char **argv) {
 static int del(sqlite3 *db, int argc, char **argv) {
     int rc = 0;
 
-    for(int i = 0; i < argc; i++) {
+    for (int i = 0; i < argc; i++) {
         char sql[MAXSQL];
         SNPRINTF(sql, sizeof(sql), "DELETE FROM " TOP_INFO_TABLE " WHERE rowid == %s;",
                  argv[i]);
@@ -280,7 +280,7 @@ static int show(sqlite3 *db, int argc, char **argv) {
     size_t cols_size = 0;
     size_t cols_len = 0;
 
-    for(int i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         write_with_resize(&cols, &cols_size, &cols_len, " %s, ", argv[i]);
     }
 
@@ -324,7 +324,7 @@ static int print_headers(void *args, int count, char **data, char **columns) {
 
     count--;
 
-    for(int i = 0; i < count; i++ ) {
+    for (int i = 0; i < count; i++ ) {
         fprintf(print->outfile, "%s%c", columns[i], print->delim);
     }
     fprintf(print->outfile, "%s\n", columns[count]);

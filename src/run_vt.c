@@ -180,7 +180,7 @@ static int run_read_row(run_vtab_cursor *pCur) {
     pCur->cols[0].data = ptr;
     pCur->cols[0].len  = strlen(ptr);
 
-    for(size_t c = 1; c < pVtab->args.col_count; c++) {
+    for (size_t c = 1; c < pVtab->args.col_count; c++) {
         ptr = strtok_r(NULL, pVtab->args.delim, &saveptr);
         if (!ptr) {
             free(pCur->cols);
@@ -241,7 +241,7 @@ static int run_vtConnect(sqlite3 *db,
     memset(&cols, 0, sizeof(cols));
 
     /* parse args */
-    for(int i = 3; i < argc; i++) {
+    for (int i = 3; i < argc; i++) {
         char *saveptr = NULL;
         char *key   = strtok_r((char *) argv[i], "=", &saveptr);
         char *value = strtok_r(NULL, "=", &saveptr);
@@ -298,7 +298,7 @@ static int run_vtConnect(sqlite3 *db,
 
     /* count number of columns (not messing with db) */
     args.col_count = 0;
-    for(size_t i = 0; i < cols.len; i++) {
+    for (size_t i = 0; i < cols.len; i++) {
         args.col_count += (cols.data[i] == ',');
     }
     if (cols.data[cols.len - 1] != ',') {
@@ -317,9 +317,11 @@ static int run_vtConnect(sqlite3 *db,
     /* set up the virtual table */
     run_vtab *pNew = NULL;
     const int rc = sqlite3_declare_vtab(db, schema);
-    if(rc == SQLITE_OK){
+     if (rc == SQLITE_OK) {
         pNew = (run_vtab *)sqlite3_malloc( sizeof(*pNew) );
-        if( pNew==0 ) return SQLITE_NOMEM;
+         if ( pNew==0 ) {
+             return SQLITE_NOMEM;
+         }
         memset(pNew, 0, sizeof(*pNew));
         pNew->args = args;
         /* sqlite3_vtab_config(db, SQLITE_VTAB_DIRECTONLY); */
@@ -356,7 +358,9 @@ static int run_vtDisconnect(sqlite3_vtab *pVtab) {
 static int run_vtOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor) {
     (void) p;
     run_vtab_cursor *pCur = sqlite3_malloc( sizeof(*pCur) );
-    if( pCur==0 ) return SQLITE_NOMEM;
+     if ( pCur==0 ) {
+         return SQLITE_NOMEM;
+     }
     memset(pCur, 0, sizeof(*pCur));
     *ppCursor = &pCur->base;
     return SQLITE_OK;

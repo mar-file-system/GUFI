@@ -330,7 +330,7 @@ TEST(get_col_types, have_cols) {
     const int expected[] = { SQLITE_INTEGER, SQLITE_FLOAT, SQLITE_TEXT, SQLITE_BLOB, SQLITE_NULL, SQLITE_BLOB};
     EXPECT_EQ((std::size_t) cols, sizeof(expected) / sizeof(expected[0]));
 
-    for(std::size_t i = 0; i < (sizeof(expected) / sizeof(expected[0])); i++) {
+    for (std::size_t i = 0; i < (sizeof(expected) / sizeof(expected[0])); i++) {
         EXPECT_EQ(types[i], expected[i]);
     }
 
@@ -427,7 +427,7 @@ TEST(get, col_names) {
     EXPECT_EQ(lens[1], (std::size_t) 3);
 
     free(lens);
-    for(int i = 0; i < cols; i++) {
+    for (int i = 0; i < cols; i++) {
         free(names[i]);
     }
     free(names);

@@ -78,13 +78,13 @@ FILE **outfiles_init(const str_t *prefix, const size_t count) {
     }
 
     if (strncmp("-", prefix->data, prefix->len + 1) == 0) {
-        for(size_t i = 0; i < count; i++) {
+        for (size_t i = 0; i < count; i++) {
             files[i] = stdout;
         }
         return files;
     }
 
-    for(size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         const size_t outname_size = prefix->len + 1 + 8 * sizeof(i) + 1;
         char *outname = malloc(outname_size);
         SNPRINTF(outname, outname_size, "%s.%zu", prefix->data, i);
@@ -119,7 +119,7 @@ FILE **outfiles_init(const str_t *prefix, const size_t count) {
 /* close all output files */
 int outfiles_fin(FILE **files, const size_t end) {
     /* Not checking arguments */
-    for(size_t i = 0; i < end; i++) {
+    for (size_t i = 0; i < end; i++) {
         fflush(files[i]);
         if (files[i] != stdout) {
             fclose(files[i]);

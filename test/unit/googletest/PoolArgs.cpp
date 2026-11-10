@@ -103,7 +103,7 @@ void test_common(PoolArgs *pa) {
     EXPECT_NE(pa->in, nullptr);
     ASSERT_NE(pa->ta, nullptr);
 
-    for(size_t i = 0; i < (size_t) pa->in->maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) pa->in->maxthreads; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
         ASSERT_NE(ta, nullptr);
 
@@ -153,7 +153,7 @@ void poolargs_stdout(bool aggregate) {
     test_common(&pa);
 
     EXPECT_EQ(pa.stdout_mutex, &mutex);
-    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) in.maxthreads; i++) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in memory
@@ -194,7 +194,7 @@ TEST(PoolArgs, OUTFILE) {
     test_common(&pa);
 
     EXPECT_EQ(pa.stdout_mutex, nullptr);
-    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) in.maxthreads; i++) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in memory
@@ -210,7 +210,7 @@ TEST(PoolArgs, OUTFILE) {
     EXPECT_NO_THROW(PoolArgs_fin(&pa, in.maxthreads));
 
     // delete the files here since the filenames are not available in the previous loop
-    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) in.maxthreads; i++) {
         char filename[sizeof(outname) + 1 + UINT64_DIGITS + 1];
         snprintf(filename, sizeof(filename), "%s.%zu", in.outname.data, i);
         EXPECT_EQ(remove(filename), 0);
@@ -235,7 +235,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
     test_common(&pa);
 
     EXPECT_EQ(pa.stdout_mutex, nullptr);
-    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) in.maxthreads; i++) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in memory
@@ -251,7 +251,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
     EXPECT_NO_THROW(PoolArgs_fin(&pa, in.maxthreads));
 
     // per-thread files are not created
-    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) in.maxthreads; i++) {
         char filename[sizeof(outname) + 1 + UINT64_DIGITS];
         snprintf(filename, sizeof(filename), "%s.%zu", in.outname.data, i);
         EXPECT_EQ(remove(filename), -1);
@@ -278,7 +278,7 @@ TEST(PoolArgs, OUTDB) {
     test_common(&pa);
 
     EXPECT_EQ(pa.stdout_mutex, nullptr);
-    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) in.maxthreads; i++) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in the filesystem
@@ -295,7 +295,7 @@ TEST(PoolArgs, OUTDB) {
 
     // have to delete db files after they are closed on Windows/Cygwin
     // this also checks to make sure they are not deleted by PoolArgs_fin
-    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) in.maxthreads; i++) {
         // the per-thread database files are in the filesystem
         char dbname[sizeof(outname) + 1 + 20];
         snprintf(dbname, sizeof(dbname), "%s.%zu", in.outname.data, i);
@@ -322,7 +322,7 @@ TEST(PoolArgs, OUTDB_aggregate) {
     test_common(&pa);
 
     EXPECT_EQ(pa.stdout_mutex, nullptr);
-    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) in.maxthreads; i++) {
         ThreadArgs_t *ta = &pa.ta[i];
 
         // the per-thread database files are in memory

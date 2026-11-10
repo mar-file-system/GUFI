@@ -197,7 +197,7 @@ TEST(QueuePerThreadPool, restart) {
     QPTPool_ctx_t *ctx = QPTPool_init(THREADS, nullptr);
     ASSERT_NE(ctx, nullptr);
 
-    for(std::size_t i = 0; i < 3; i++) {
+    for (std::size_t i = 0; i < 3; i++) {
         ASSERT_EQ(QPTPool_start(ctx), 0);
         EXPECT_EQ(QPTPool_enqueue(ctx, increment_counter, &counter), QPTPool_enqueue_WAIT);
         QPTPool_stop(ctx);
@@ -218,7 +218,7 @@ TEST(QueuePerThreadPool, enqueue_external) {
 
     setup_pool(THREADS, nullptr);
 
-    for(std::size_t i = 0; i < WORK_COUNT; i++) {
+    for (std::size_t i = 0; i < WORK_COUNT; i++) {
         struct test_work *work = (struct test_work *) calloc(1, sizeof(struct test_work));
         work->value = &values[i];
         work->counter = i;
@@ -234,7 +234,7 @@ TEST(QueuePerThreadPool, enqueue_external) {
 
     QPTPool_stop(ctx);
 
-    for(std::size_t i = 0; i < WORK_COUNT; i++) {
+    for (std::size_t i = 0; i < WORK_COUNT; i++) {
         EXPECT_EQ(values[i], i);
     }
     EXPECT_EQ(QPTPool_threads_completed(ctx), WORK_COUNT);
@@ -284,7 +284,7 @@ TEST(QueuePerThreadPool, enqueue_internal) {
     QPTPool_enqueue(ctx, recursive, zero);
     QPTPool_stop(ctx);
 
-    for(std::size_t i = 0; i < WORK_COUNT; i++) {
+    for (std::size_t i = 0; i < WORK_COUNT; i++) {
         EXPECT_EQ(values[i], i);
     }
     EXPECT_EQ(QPTPool_threads_completed(ctx), WORK_COUNT);
@@ -454,7 +454,7 @@ TEST(QueuePerThreadPool, wait_mem) {
     const uint64_t WAIT = 5;
 
     std::size_t counter = 0;
-    for(uint64_t i = 0; i < PUSH; i++) {
+    for (uint64_t i = 0; i < PUSH; i++) {
         QPTPool_enqueue(ctx,
                         [](QPTPool_ctx_t *ctx, void *data) -> int {
                             std::mutex *mutex = static_cast<std::mutex *>(QPTPool_get_args_internal(ctx));
@@ -522,7 +522,7 @@ TEST(QueuePerThreadPool, wait) {
 TEST(QueuePerThreadPool, threads_started) {
     setup_pool(THREADS, nullptr);
 
-    for(std::size_t i = 0; i < WORK_COUNT; i++) {
+    for (std::size_t i = 0; i < WORK_COUNT; i++) {
         QPTPool_enqueue(ctx, return_data, (void *) (uintptr_t) 1);
     }
 
@@ -538,7 +538,7 @@ TEST(QueuePerThreadPool, threads_completed) {
     setup_pool(THREADS, nullptr);
 
 
-    for(std::size_t i = 0; i < WORK_COUNT; i++) {
+    for (std::size_t i = 0; i < WORK_COUNT; i++) {
         QPTPool_enqueue(ctx, return_data, nullptr);
     }
 
@@ -562,7 +562,7 @@ TEST(QueuePerThreadPool, custom_next) {
                                }, nullptr), 0);
     ASSERT_EQ(QPTPool_start(ctx), 0);
 
-    for(std::size_t i = 0; i < WORK_COUNT; i++) {
+    for (std::size_t i = 0; i < WORK_COUNT; i++) {
         struct test_work *work = (struct test_work *) calloc(1, sizeof(struct test_work));
         work->index = i;
         work->values = nullptr;
@@ -725,7 +725,7 @@ TEST(QueuePerThreadPool, steal_claimed) {
         return 0;
     };
 
-    for(std::size_t i = 0; i < 2; i++) {
+    for (std::size_t i = 0; i < 2; i++) {
         work_item &w = wi[i];
 
         // each work item should be run by the target thread because
@@ -760,7 +760,7 @@ TEST(QueuePerThreadPool, steal_claimed) {
     }
     ASSERT_EQ(counter, 2U);
 
-    for(std::size_t i = 0; i < 2; i++) {
+    for (std::size_t i = 0; i < 2; i++) {
         EXPECT_EQ(wi[i].tid, i);
     }
 

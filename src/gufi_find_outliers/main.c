@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
 
-    for(size_t i = 0; i < pairs; i++) {
+    for (size_t i = 0; i < pairs; i++) {
         const size_t j = 2 * i + idx;
         const char *path = argv[j];
         const char *user_col = argv[j + 1];
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
     const uint64_t thread_count = QPTPool_threads_completed(ctx);
 
     size_t opendbs = 0;
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+    for (size_t i = 0; i < pa.in.maxthreads; i++) {
         opendbs += pa.opendbs[i];
     }
 

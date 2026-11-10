@@ -119,7 +119,9 @@ static inline void set_no_print_errno(uint64_t *bitfield, const int err) {
 
 /* if bit is set, do not print error message */
 static inline int no_print_errno_set(const uint64_t *bitfield, const int err) {
-    if (!bitfield) { return 0; }
+    if (!bitfield) {
+        return 0;
+    }
     return (bitfield[err >> 6] >> (err & 0x3f)) & 1;
 }
 
@@ -131,9 +133,10 @@ int sumit(struct sum *summary, struct work *work, struct entry_data *data);
 
 int tsumit (struct sum *sumin, struct sum *smout);
 
-// given a possibly-multi-level path of directories (final component is
-// also a dir), create the parent dirs all the way down.
-//
+/*
+ * given a possibly-multi-level path of directories (final component is
+ * also a dir), create the parent dirs all the way down.
+ */
 int mkpath(char *path, const mode_t mode, const uid_t uid, const gid_t gid);
 
 int dupdir(char *path, const mode_t mode, const uid_t uid, const gid_t gid);

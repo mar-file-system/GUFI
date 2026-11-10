@@ -61,6 +61,8 @@
 
 
 
+set -e
+
 # after running contrib/CI/macos.sh, run this
 # script from the GUFI repository root
 
@@ -68,16 +70,18 @@
 # contrib/CI/macos.sh, but explicitly doing so here
 # just in case they were not
 # shellcheck disable=SC2155
-export PATH="$(brew --prefix cmake)/bin:${PATH}"
-export PATH="$(brew --prefix coreutils)/libexec/gnubin:${PATH}"
-export PATH="$(brew --prefix diffutils)/bin:${PATH}"
-export PATH="$(brew --prefix findutils)/libexec/gnubin:${PATH}"
-export PATH="$(brew --prefix flock)/bin:${PATH}"
-export PATH="$(brew --prefix gnu-sed)/libexec/gnubin:${PATH}"
-export PATH="$(brew --prefix gpatch)/libexec/gnubin:${PATH}"
-export PATH="$(brew --prefix grep)/libexec/gnubin:${PATH}"
-export PATH="$(brew --prefix make)/libexec/gnubin:${PATH}"
-export PATH="$(brew --prefix python3)/bin:${PATH}"
+{
+    export PATH="$(brew --prefix cmake)/bin:${PATH}"
+    export PATH="$(brew --prefix coreutils)/libexec/gnubin:${PATH}"
+    export PATH="$(brew --prefix diffutils)/bin:${PATH}"
+    export PATH="$(brew --prefix findutils)/libexec/gnubin:${PATH}"
+    export PATH="$(brew --prefix flock)/bin:${PATH}"
+    export PATH="$(brew --prefix gnu-sed)/libexec/gnubin:${PATH}"
+    export PATH="$(brew --prefix gpatch)/libexec/gnubin:${PATH}"
+    export PATH="$(brew --prefix grep)/libexec/gnubin:${PATH}"
+    export PATH="$(brew --prefix make)/libexec/gnubin:${PATH}"
+    export PATH="$(brew --prefix python3)/bin:${PATH}"
+}
 
 mkdir -p build
 # shellcheck disable=SC2164

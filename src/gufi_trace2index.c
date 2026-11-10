@@ -156,7 +156,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct row *w = (struct row *) data;
     const int trace = w->trace;
 
-    // TODO: based on following comment, can this be stack allocated?
+    /* TODO: based on following comment, can this be stack allocated? */
     struct work *dir = NULL; /* name and name_len are not used */
     struct entry_data ed = {0};
 
@@ -223,7 +223,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         else {
             char *line = NULL;
             size_t size = 0;
-            for(size_t i = 0; i < w->entries; i++) {
+            for (size_t i = 0; i < w->entries; i++) {
                 const ssize_t len = getline_fd_seekable(&line, &size, trace, &w->offset, GETLINE_DEFAULT_SIZE);
                 if (len < 1) {
                     break;

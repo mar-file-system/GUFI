@@ -436,7 +436,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
                                  const enum CheckIsRolledUp check_isrolledup,
                                  const uid_t uid, const gid_t gid, int *canrollup) {
     int isrolledup = 0;
-    switch(check_isrolledup) {
+    switch (check_isrolledup) {
         case ISROLLEDUP_CHECK:
             if (get_isrolledup(db, &isrolledup) != 0) {
                 return 1;

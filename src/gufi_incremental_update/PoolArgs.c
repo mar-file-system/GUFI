@@ -84,7 +84,7 @@ static int setup_suspect_file(struct PoolArgs *pa) {
 
     if (str_exists(&pa->in.suspect.filename)) {
         FILE *f = secure_fopen(pa->in.suspect.filename.data, "r", 0); /* --suspect-file */
-        if(!f) {
+        if (!f) {
             fprintf(stderr, "Can't open suspect file %s\n", pa->in.suspect.filename.data);
             return 1;
         }
@@ -149,7 +149,7 @@ int PoolArgs_init(struct PoolArgs *pa) {
         fprintf(stderr, "Error: Failed to allocate %zu per-thread lists\n", pa->in.maxthreads);
         return 1;
     }
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+    for (size_t i = 0; i < pa->in.maxthreads; i++) {
         sll_init(&pa->tops[i]);
     }
 
@@ -166,7 +166,7 @@ void PoolArgs_fini(struct PoolArgs *pa) {
     pthread_cond_destroy(&pa->cond);
     pthread_mutex_destroy(&pa->mutex);
     if (pa->tops) {
-        for(size_t i = 0; i < pa->in.maxthreads; i++) {
+        for (size_t i = 0; i < pa->in.maxthreads; i++) {
             sll_destroy(&pa->tops[i], NULL);
         }
         free(pa->tops);

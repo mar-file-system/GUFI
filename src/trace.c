@@ -407,13 +407,13 @@ int *open_traces(char **trace_names, size_t trace_count) {
     int *traces = (int *) calloc(trace_count, sizeof(int));
     if (traces) {
         if (strncmp("-", trace_names[0], strlen(trace_names[0]) + 1) == 0) {
-            for(size_t i = 0; i < trace_count; i++) {
+            for (size_t i = 0; i < trace_count; i++) {
                 traces[i] = STDIN_FILENO;
             }
             return traces;
         }
 
-        for(size_t i = 0; i < trace_count; i++) {
+        for (size_t i = 0; i < trace_count; i++) {
             traces[i] = secure_openat(AT_FDCWD, trace_names[i], O_RDONLY, 0);
             if (traces[i] < 0) {
                 const int err = errno;
@@ -428,7 +428,7 @@ int *open_traces(char **trace_names, size_t trace_count) {
 }
 
 void close_traces(int *traces, size_t trace_count) {
-    for(size_t i = 0; i < trace_count; i++) {
+    for (size_t i = 0; i < trace_count; i++) {
         if (traces[i] != STDIN_FILENO) {
             close(traces[i]);
         }
@@ -885,7 +885,7 @@ size_t enqueue_traces(char **tracenames, int *tracefds, const size_t trace_count
     sll_init(&chunks);
 
     /* split the trace files into chunks for parallel processing */
-    for(size_t i = 0; i < trace_count; i++) {
+    for (size_t i = 0; i < trace_count; i++) {
         /* copied by fill_scout_args, freed by scout_trace */
         struct ScoutTraceArgs sta = {
             .delim = delim,

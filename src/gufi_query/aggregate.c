@@ -167,7 +167,7 @@ void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input
      *
      * failure to attach is not an error - the data is simply not accessible
      */
-    for(size_t i = 0; i < in->maxthreads; i++) {
+    for (size_t i = 0; i < in->maxthreads; i++) {
         ThreadArgs_t *ta = &(pa->ta[i]);
 
         /* print all errors here, regardless of input args */

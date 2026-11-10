@@ -164,7 +164,7 @@ int main(int argc, char * argv[]) {
 
     /* if forced, a bad path is not an error, but a failed unlink/rmdir is */
     if (in.force) {
-        for(size_t i = 0; i < in.maxthreads; i++) {
+        for (size_t i = 0; i < in.maxthreads; i++) {
             if (rcs[i] != 0) {
                 rc = rcs[i];
             }

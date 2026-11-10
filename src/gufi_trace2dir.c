@@ -139,7 +139,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct row *w = (struct row *) data;
     const int trace = w->trace;
 
-    // TODO: see if there is a better way to do this
+    /* TODO: see if there is a better way to do this */
     struct work *dir = NULL; /* name and name_len are not used */
     struct entry_data ed = {0};
 
@@ -172,7 +172,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     /* create entries */
     char *line = NULL;
     size_t size = 0;
-    for(size_t i = 0; i < w->entries; i++) {
+    for (size_t i = 0; i < w->entries; i++) {
         const ssize_t len = getline_fd_seekable(&line, &size, trace, &w->offset, GETLINE_DEFAULT_SIZE);
         if (len < 1) {
             break;
@@ -181,7 +181,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         struct work *row = NULL;
         struct entry_data row_ed = {0};
 
-        // TODO: can linetowork be changed to use realloc to avoid malloc() + free() looping?
+        /* TODO: can linetowork be changed to use realloc to avoid malloc() + free() looping? */
         if (linetowork(line, len, in->delim, &row, &row_ed, in->old_trace_format) != 0) {
             xattrs_cleanup(&row_ed.xattrs);
             free(row);
@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
     struct PoolArgs pa;
     process_args_and_maybe_exit(options, 2, "trace... output_dir", &pa.in);
 
-    // parse positional args, following the options
+    /* parse positional args, following the options */
     INSTALL_STR(&pa.tree_parent, pa.in.pos.argv[pa.in.pos.argc - 1]);
 
     /* open trace files for threads to jump around in */

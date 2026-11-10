@@ -87,7 +87,7 @@ static const struct xattrs EXPECTED_XATTRS = {
 };
 
 static void check_contents(struct xattrs &xattrs) {
-    for(size_t i = 0; i < xattrs.count; i++) {
+    for (size_t i = 0; i < xattrs.count; i++) {
         struct xattr *expected_xattr = &EXPECTED_XATTRS.pairs[i];
         struct xattr *xattr = &xattrs.pairs[i];
 
@@ -172,7 +172,7 @@ TEST(xattrs, get) {
     ASSERT_NE(fd, -1);
     close(fd);
 
-    for(size_t i = 0; i < EXPECTED_XATTRS.count; i++) {
+    for (size_t i = 0; i < EXPECTED_XATTRS.count; i++) {
         struct xattr *xattr = &EXPECTED_XATTRS.pairs[i];
         ASSERT_EQ(SETXATTR(name, xattr->name, xattr->value, xattr->value_len), 0);
     }

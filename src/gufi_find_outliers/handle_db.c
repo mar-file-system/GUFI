@@ -90,7 +90,7 @@ int intermediate_dbs_init(struct PoolArgs *pa) {
         return -1;
     }
 
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+    for (size_t i = 0; i < pa->in.maxthreads; i++) {
         char dbname[MAXSQL];
         SNPRINTF(dbname, sizeof(dbname), INTERMEDIATE_DBNAME_FORMAT, i);
 
@@ -105,7 +105,7 @@ int intermediate_dbs_init(struct PoolArgs *pa) {
 }
 
 void intermediate_dbs_fini(struct PoolArgs *pa) {
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+    for (size_t i = 0; i < pa->in.maxthreads; i++) {
         sqlite3_close(pa->dbs[i]);
     }
     free(pa->dbs);
@@ -158,7 +158,7 @@ void write_results(struct PoolArgs *pa, size_t *rows) {
 
         /* combine results into one database file */
         sqlite3 *db = db_init(pa->in.outname.data);
-        for(size_t i = 0; i < pa->in.maxthreads; i++) {
+        for (size_t i = 0; i < pa->in.maxthreads; i++) {
             char dbname[MAXSQL];
             SNPRINTF(dbname, sizeof(dbname), INTERMEDIATE_DBNAME_FORMAT, i);
 
@@ -194,7 +194,7 @@ void write_results(struct PoolArgs *pa, size_t *rows) {
             .rows = 0,
         };
 
-        for(size_t i = 0; i < pa->in.maxthreads; i++) {
+        for (size_t i = 0; i < pa->in.maxthreads; i++) {
             char *err = NULL;
             if (sqlite3_exec(pa->dbs[i], "SELECT * FROM " OUTLIERS_TABLE ";",
                              print_uncached, &print, &err) != SQLITE_OK) {

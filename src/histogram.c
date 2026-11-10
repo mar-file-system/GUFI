@@ -218,7 +218,7 @@ static char *log_hist_serialize(log_hist_t *hist, sqlite3_context *context) {
     curr += SNPRINTF(serialized, size, "%zu;%zu;%zu;%zu;", hist->base, hist->count, hist->lt, hist->ge);
 
     /* add [0, count) if the count in the bucket is > 0 */
-    for(size_t i = 0; i < hist->count; i++) {
+    for (size_t i = 0; i < hist->count; i++) {
         if (hist->buckets[i]) {
             if (serialize_bucket(context, &serialized, &curr, &size,
                                  serialize_log_bucket, (void *) (uintptr_t) i, hist) != 0) {
@@ -257,7 +257,7 @@ log_hist_t *log_hist_parse(const char *str) {
     if (hist->base) {
         hist->buckets = calloc(hist->count, sizeof(hist->buckets[0]));
 
-        for(size_t total_read = read; total_read < len;) {
+        for (size_t total_read = read; total_read < len;) {
             size_t bucket, count;
             if ((sscanf(str + total_read, "%zu:%zu;%n", &bucket, &count, &read) != 2) ||
                 (str[total_read + read - 1] != ';')) {
@@ -310,7 +310,7 @@ static int log_hist_combine_inplace(log_hist_t *lhs, log_hist_t *rhs) {
 
     lhs->lt += rhs->lt;
     lhs->ge += rhs->ge;
-    for(size_t i = 0; i < lhs->count; i++) {
+    for (size_t i = 0; i < lhs->count; i++) {
         lhs->buckets[i] += rhs->buckets[i];
     }
 
@@ -375,7 +375,7 @@ static void mode_hist_final(sqlite3_context *context) {
     char *curr = serialized;
 
     /* add [000, 777] if the count in the bucket is > 0 */
-    for(size_t mode = 0; mode < 01000; mode++) {
+    for (size_t mode = 0; mode < 01000; mode++) {
         if (hist->buckets[mode]) {
             if (serialize_bucket(context, &serialized, &curr, &size,
                                  serialize_mode_bucket, (void *) (uintptr_t) mode, hist) != 0) {
@@ -392,7 +392,7 @@ mode_hist_t *mode_hist_parse(const char *str) {
     const size_t len = strlen(str);
 
     mode_hist_t *hist = calloc(1, sizeof(*hist));
-    for(size_t total_read = 0; total_read < len;) {
+    for (size_t total_read = 0; total_read < len;) {
         unsigned int bucket;
         size_t count;
         int read = 0;
@@ -418,7 +418,7 @@ mode_hist_t *mode_hist_parse(const char *str) {
 }
 
 static void mode_hist_combine_inplace(mode_hist_t *lhs, mode_hist_t *rhs) {
-    for(size_t i = 0; i < 512; i++) {
+    for (size_t i = 0; i < 512; i++) {
         lhs->buckets[i] += rhs->buckets[i];
     }
 }
@@ -466,7 +466,7 @@ static void time_hist_step(sqlite3_context *context, int argc, sqlite3_value **a
     const time_t timestamp = sqlite3_value_int64(argv[0]);
     const time_t dt = hist->ref - timestamp;
     int found = 0;
-    for(size_t i = 0; i < (TIME_BUCKETS_COUNT - 1); i++) {
+    for (size_t i = 0; i < (TIME_BUCKETS_COUNT - 1); i++) {
         if (dt < TIME_BUCKETS[i].seconds) {
             hist->buckets[i]++;
             found = 1;
@@ -500,7 +500,7 @@ static void time_hist_final(sqlite3_context *context) {
     curr += SNPRINTF(serialized, size, "%zu;", hist->ref);
 
     /* add counts if count > 0 */
-    for(size_t i = 0; i < TIME_BUCKETS_COUNT; i++) {
+    for (size_t i = 0; i < TIME_BUCKETS_COUNT; i++) {
         if (hist->buckets[i]) {
             if (serialize_bucket(context, &serialized, &curr, &size,
                                  serialize_time_bucket, (void *) (uintptr_t) i, hist) != 0) {
@@ -529,7 +529,7 @@ time_hist_t *time_hist_parse(const char *str) {
 
     hist->ref = (time_t) ref;
 
-    for(size_t total_read = read; total_read < len;) {
+    for (size_t total_read = read; total_read < len;) {
         size_t bucket, count;
         if ((sscanf(str + total_read, "%zu:%zu;%n", &bucket, &count, &read) != 2) ||
             (str[total_read + read - 1] != ';')) {
@@ -538,7 +538,7 @@ time_hist_t *time_hist_parse(const char *str) {
         }
 
         int found = 0;
-        for(size_t i = 0; i < (TIME_BUCKETS_COUNT - 1); i++) {
+        for (size_t i = 0; i < (TIME_BUCKETS_COUNT - 1); i++) {
             if ((time_t) bucket == TIME_BUCKETS[i].seconds) {
                 hist->buckets[i] = count;
                 found = 1;
@@ -573,7 +573,7 @@ static int time_hist_combine_inplace(sqlite_time_hist_t *lhs, time_hist_t *rhs) 
         return 1;
     }
 
-    for(size_t i = 0; i < TIME_BUCKETS_COUNT; i++) {
+    for (size_t i = 0; i < TIME_BUCKETS_COUNT; i++) {
         lhs->buckets[i] += rhs->buckets[i];
     }
 
@@ -705,7 +705,7 @@ static void category_hist_final(sqlite3_context *context) {
         qsort(categories, category_count, sizeof(categories[0]), category_compare);
 
         sll_destroy(&hist->categories, NULL);
-        for(i = 0; i < category_count; i++) {
+        for (i = 0; i < category_count; i++) {
             sll_push_back(&hist->categories, categories[i]);
         }
 
@@ -787,7 +787,7 @@ category_hist_t *category_hist_parse(const char *str) {
 
     hist->buckets = calloc(hist->count, sizeof(hist->buckets[0]));
 
-    for(size_t i = 0; i < hist->count; i++) {
+    for (size_t i = 0; i < hist->count; i++) {
         category_bucket_t *bucket = &hist->buckets[i];
 
         int read = 0;
@@ -824,7 +824,7 @@ category_hist_t *category_hist_parse(const char *str) {
 static void category_hist_combine_inplace(sqlite_category_hist_t *accumulator,
                                           category_hist_t *hist,
                                           int check_exists) {
-    for(size_t i = 0; i < hist->count; i++) {
+    for (size_t i = 0; i < hist->count; i++) {
         category_bucket_t *bucket = &hist->buckets[i];
 
         size_t *count = NULL;
@@ -885,7 +885,7 @@ category_hist_t *category_hist_combine(category_hist_t *lhs, category_hist_t *rh
 
 void category_hist_free(category_hist_t *hist) {
     if (hist->buckets) {
-        for(size_t i = 0; i < hist->count; i++) {
+        for (size_t i = 0; i < hist->count; i++) {
             free(hist->buckets[i].name);
         }
         free(hist->buckets);

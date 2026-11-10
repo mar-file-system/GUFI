@@ -137,7 +137,7 @@ static void get_xattrs(struct DirCallbackArgs *dcba,
         return;
     }
 
-    for(size_t i = 0; i < xattr_names_len; i++) {
+    for (size_t i = 0; i < xattr_names_len; i++) {
         if (xattr_names[i] == XATTRDELIM) {
             xattrs->count++;
         }
@@ -281,14 +281,14 @@ static int processdir(struct QPTPool_ctx * ctx, void * data) {
         goto cleanup;
     }
 
-    // get source directory info
+    /* get source directory info */
     if (lstat_wrapper(work->name, &work->statuso, &work->crtime,
                       &work->stat_called, 1, NULL) != 0) {
         rc = 1;
         goto close_dir;
     }
 
-    // create the destination directory using the source directory
+    /* create the destination directory using the source directory */
     char *topath = NULL;
     const size_t topath_len = SNFORMAT_S_ALLOC(&topath, 3,
                                                pa->dir.data, pa->dir.len,
@@ -411,34 +411,36 @@ static struct work *validate_inputs(struct PoolArgs *pa) {
 
     free(expathtst);
 
-    // get input path metadata
+    /* get input path metadata */
     struct stat src_st;
     if (lstat(pa->index.data, &src_st) != 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", pa->index.data);
         return NULL;
     }
 
-    // check that the source path is a directory
+    /* check that the source path is a directory */
     if (!S_ISDIR(src_st.st_mode)) {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", pa->index.data);
         return NULL;
     }
 
-    // check if the destination path already exists (not an error)
+    /* check if the destination path already exists (not an error) */
     struct stat dst_st;
     if (lstat(pa->dir.data, &dst_st) == 0) {
         fprintf(stderr, "\"%s\" Already exists!\n", pa->dir.data);
 
-        // if the destination path is not a directory (error)
+        /* if the destination path is not a directory (error) */
         if (!S_ISDIR(dst_st.st_mode)) {
             fprintf(stderr, "Destination path is not a directory \"%s\"\n", pa->dir.data);
             return NULL;
         }
     }
 
-    // create the source root under the destination directory using
-    // the source directory's permissions and owners
-    // this allows for the threads to not have to recursively create directories
+    /*
+     * create the source root under the destination directory using
+     * the source directory's permissions and owners
+     * this allows for the threads to not have to recursively create directories
+     */
     char *dst_path = NULL;
     SNFORMAT_S_ALLOC(&dst_path, 3,
                      pa->dir.data, pa->dir.len,
@@ -477,7 +479,7 @@ int main(int argc, char * argv[]) {
     INSTALL_STR(&pa.index, pa.in.pos.argv[0]);
     INSTALL_STR(&pa.dir,   pa.in.pos.argv[1]);
 
-    // get first work item by validating inputs
+    /* get first work item by validating inputs */
     struct work *root = validate_inputs(&pa);
     if (!root) {
         input_fini(&pa.in);

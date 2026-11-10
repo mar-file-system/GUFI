@@ -135,7 +135,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
     }
 
     size_t i = 0;
-    for(; i < in->maxthreads; i++) {
+    for (; i < in->maxthreads; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
 
         /* only create per-thread db files when not aggregating and outputting to OUTDB */
@@ -300,7 +300,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 }
 
 void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
-    for(size_t i = 0; i < allocated; i++) {
+    for (size_t i = 0; i < allocated; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
 
         plugins_thread_exit(&pa->in->plugins, ta->outdb, i);

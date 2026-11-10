@@ -152,7 +152,7 @@ TEST(histogram, serialize_bucket) {
 
 static void test_log2_hist(const std::vector <std::string> &types,
                            const std::vector <std::string> &values) {
-    for(std::string const &type : types) {
+    for (std::string const &type : types) {
         sqlite3 *db = nullptr;
         setup_db(&db);
 
@@ -160,7 +160,7 @@ static void test_log2_hist(const std::vector <std::string> &types,
         snprintf(create, sizeof(create), "CREATE TABLE test (value %s);", type.c_str());
         EXPECT_EQ(sqlite3_exec(db, create, nullptr, nullptr, nullptr), SQLITE_OK);
 
-        for(std::string const &value : values) {
+        for (std::string const &value : values) {
             insert(db, "value", value);
         }
 
@@ -347,9 +347,9 @@ TEST(histogram, mode) {
     buckets[0700] = 1;
     buckets[0755] = 2;
 
-    for(size_t mode = 0; mode < 01000; mode++) {
+    for (size_t mode = 0; mode < 01000; mode++) {
         if (buckets[mode]) {
-            for(size_t i = 0; i < buckets[mode]; i++) {
+            for (size_t i = 0; i < buckets[mode]; i++) {
                 std::stringstream s; s << mode;
                 insert(db, "mode", s.str());
             }
@@ -486,7 +486,7 @@ TEST(histogram, time) {
         free(hist_str);
     }
 
-    for(std::string const &timestamp : timestamps) {
+    for (std::string const &timestamp : timestamps) {
         insert(db, "timestamp", timestamp);
     }
 
@@ -708,7 +708,7 @@ TEST(histogram, category) {
         free(hist_str);
     }
 
-    for(std::string const &category : CATEGORIES) {
+    for (std::string const &category : CATEGORIES) {
         insert(db, "category", category);
     }
 
@@ -930,7 +930,7 @@ TEST(histogram, extension) {
         free(hist_str);
     }
 
-    for(std::string const &extension : EXTENSIONS) {
+    for (std::string const &extension : EXTENSIONS) {
         insert(db, "extension", extension);
     }
 
@@ -1051,7 +1051,7 @@ TEST(histogram, mode_count) {
 
     // multiple values, but no mode
     {
-        for(std::size_t i = 0; i < 4; i++) {
+        for (std::size_t i = 0; i < 4; i++) {
             insert(db, "category", CATEGORIES[i]);
         }
 
@@ -1071,7 +1071,7 @@ TEST(histogram, mode_count) {
 
     // one mode
     {
-        for(std::string const &category : CATEGORIES) {
+        for (std::string const &category : CATEGORIES) {
             insert(db, "category", category);
         }
 

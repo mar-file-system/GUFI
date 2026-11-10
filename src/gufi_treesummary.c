@@ -103,12 +103,10 @@ static int printits(struct input *in, struct work *pwork, struct entry_data *ed,
   fprintf(out, "%s%c", ed->linkname,in->delim);
 
 /* we need this field even if its not populated for gufi_trace2index */
-/*
-  if (ed->xattrs > 0) {
-    //printf("xattr: ");
-    fprintf(out,"%s%c",ed->xattr,in->delim);
-  }
-*/
+/* if (ed->xattrs > 0) { */
+/*   printf("xattr: "); */
+/*   fprintf(out,"%s%c",ed->xattr,in->delim); */
+/* } */
   /* fwrite(ed->xattrs, sizeof(char), ed->xattrs_len, out); */
   fprintf(out,"%c",in->delim);
 
@@ -204,7 +202,8 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
                 /* add summary data from this directory */
                 querytsdb(passmywork->name, &sum, db, 0);
-            } else {
+            }
+            else {
                 /* add treesummary data from this directory and don't descend */
                 querytsdb(passmywork->name, &sum, db, 1);
             }
@@ -228,7 +227,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 static int compute_treesummary(struct PoolArgs *pa) {
     struct sum sumout;
     zeroit(&sumout);
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+    for (size_t i = 0; i < pa->in.maxthreads; i++) {
         tsumit(&pa->sums[i], &sumout);
         sumout.totsubdirs--; /* tsumit adds 1 to totsubdirs each time it's called */
     }
@@ -261,7 +260,7 @@ static int compute_treesummary(struct PoolArgs *pa) {
         struct utimbuf utimeStruct;
         utimeStruct.actime  = st.st_atime;
         utimeStruct.modtime = st.st_mtime;
-        if(utime(dbname, &utimeStruct) != 0) {
+        if (utime(dbname, &utimeStruct) != 0) {
             const int err = errno;
             fprintf(stderr, "ERROR: utime failed with error number: %d on %s\n", err, dbname);
             free(dbname);
@@ -350,7 +349,7 @@ int main(int argc, char *argv[]) {
     }
 
     pa.sums = calloc(pa.in.maxthreads, sizeof(struct sum));
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+    for (size_t i = 0; i < pa.in.maxthreads; i++) {
         zeroit(&pa.sums[i]);
     }
 

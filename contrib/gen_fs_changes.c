@@ -308,7 +308,7 @@ static int processdirs(const size_t threads, FILE *in,
         return 1;
     }
 
-    for(size_t i = 0; i < threads; i++) {
+    for (size_t i = 0; i < threads; i++) {
         sll_init(&ptnodes[i]);
     }
 
@@ -326,7 +326,7 @@ static int processdirs(const size_t threads, FILE *in,
     QPTPool_wait(ctx);
 
     /* get total number of nodes */
-    for(size_t i = 0; i < threads; i++) {
+    for (size_t i = 0; i < threads; i++) {
         sll_loop(&ptnodes[i], node) {
             Node_t *n = sll_node_data(node);
             if (n->type == 'd') {
@@ -343,7 +343,7 @@ static int processdirs(const size_t threads, FILE *in,
     /* merge nodes into dir/nondir arrays */
     dirs->nodes = malloc(dirs->alloc * sizeof(dirs->nodes[0]));
     nondirs->nodes = malloc(nondirs->alloc * sizeof(nondirs->nodes[0]));
-    for(size_t i = 0; i < threads; i++) {
+    for (size_t i = 0; i < threads; i++) {
         sll_loop(&ptnodes[i], node) {
             Node_t *n = sll_node_data(node);
             if (n->type == 'd') {
@@ -361,7 +361,7 @@ static int processdirs(const size_t threads, FILE *in,
     QPTPool_destroy(ctx);
 
   done:
-    for(size_t i = 0; i < threads; i++) {
+    for (size_t i = 0; i < threads; i++) {
         sll_destroy(&ptnodes[i], NULL);
     }
     free(ptnodes);
@@ -377,13 +377,13 @@ static trie_t *create_connections(Nodes_t *dirs, Nodes_t *nondirs) {
      *
      * duplicate non-dir inodes are allowed to be stored in the actual Nodes_t
      */
-    for(size_t i = 0; i < dirs->count; i++) {
+    for (size_t i = 0; i < dirs->count; i++) {
         Node_t *node = dirs->nodes[i];
         trie_insert(search, node->inode.data, node->inode.len, node, NULL);
     }
 
     /* create connections */
-    for(size_t i = 0; i < dirs->count; i++) {
+    for (size_t i = 0; i < dirs->count; i++) {
         DirNode_t *node = (DirNode_t *) dirs->nodes[i];
         DirNode_t *parent = NULL;
         if (trie_search(search, node->base.pinode.data, node->base.pinode.len, (void **) &parent) == 1) {
@@ -399,7 +399,7 @@ static trie_t *create_connections(Nodes_t *dirs, Nodes_t *nondirs) {
         }
     }
 
-    for(size_t i = 0; i < nondirs->count; i++) {
+    for (size_t i = 0; i < nondirs->count; i++) {
         Node_t *node = nondirs->nodes[i];
         DirNode_t *parent = NULL;
         if (trie_search(search, node->pinode.data, node->pinode.len, (void **) &parent) == 1) {
@@ -421,7 +421,7 @@ static const char BASE62[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN
 static void random_buf(trie_t *search, char *buf, const size_t buf_len, const size_t mod) {
     memset(buf, 0, buf_len);
     do {
-        for(size_t i = 0; i < buf_len; i++) {
+        for (size_t i = 0; i < buf_len; i++) {
             buf[i] = BASE62[rand() % mod];
         }
     } while (trie_search(search, buf, buf_len, NULL));
@@ -837,7 +837,7 @@ static size_t make_changes(trie_t *search, Nodes_t *dirs, Nodes_t *nondirs,
 
     /* get number of root directories */
     size_t root_count = 0;
-    for(size_t i = 0; i < dirs->count; i++) {
+    for (size_t i = 0; i < dirs->count; i++) {
         if (((DirNode_t *) dirs->nodes[i])->isroot) {
             root_count++;
         }
@@ -1017,11 +1017,11 @@ int main(int argc, char *argv[]) {
     }
 
   cleanup:
-    for(size_t i = 0; i < nondirs.count; i++) {
+    for (size_t i = 0; i < nondirs.count; i++) {
         node_free(nondirs.nodes[i]);
     }
 
-    for(size_t i = 0; i < dirs.count; i++) {
+    for (size_t i = 0; i < dirs.count; i++) {
         node_free(dirs.nodes[i]);
     }
 

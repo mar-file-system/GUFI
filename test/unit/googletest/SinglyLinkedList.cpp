@@ -154,15 +154,15 @@ TEST(SinglyLinkedList, pop_front) {
 
     void *data = &sll;
 
-    for(size_t items = 1; items <= count; items++)  {
+    for (size_t items = 1; items <= count; items++)  {
         // push items
-        for(size_t i = 1; i <= items; i++) {
+        for (size_t i = 1; i <= items; i++) {
             sll_push_back(&sll, data);
         }
         EXPECT_EQ(sll.size, items);
 
         // pop all but the last item
-        for(size_t i = 1; i < items; i++) {
+        for (size_t i = 1; i < items; i++) {
             void *popped = sll_pop_front(&sll);
             EXPECT_EQ(popped, data);
 
@@ -215,7 +215,7 @@ TEST(SinglyLinkedList, move_append_first) {
 
         // src with items
         {
-            for(std::size_t i = 0; i < src_count; i++) {
+            for (std::size_t i = 0; i < src_count; i++) {
                 sll_push_back(&src, (void *) (uintptr_t) (i + src_start));
             }
 
@@ -257,7 +257,7 @@ TEST(SinglyLinkedList, move_append_first) {
         static const std::size_t dst_stop = 10;
         static const std::size_t dst_count = dst_stop - dst_start;
 
-        for(std::size_t i = 0; i < dst_count; i++) {
+        for (std::size_t i = 0; i < dst_count; i++) {
             sll_push_back(&dst, (void *) (uintptr_t) (i + dst_start));
         }
 
@@ -276,7 +276,7 @@ TEST(SinglyLinkedList, move_append_first) {
 
         // src with items
         {
-            for(std::size_t i = 0; i < src_count; i++) {
+            for (std::size_t i = 0; i < src_count; i++) {
                 sll_push_back(&src, (void *) (uintptr_t) (i + src_start));
             }
 
@@ -334,7 +334,7 @@ TEST(SinglyLinkedList, move_append) {
 
         // src with items
         {
-            for(std::size_t i = 0; i < src_count; i++) {
+            for (std::size_t i = 0; i < src_count; i++) {
                 sll_push_back(&src, (void *) (uintptr_t) (i + src_start));
             }
 
@@ -363,7 +363,7 @@ TEST(SinglyLinkedList, move_append) {
         static const std::size_t dst_stop = 10;
         static const std::size_t dst_count = dst_stop - dst_start;
 
-        for(std::size_t i = 0; i < dst_count; i++) {
+        for (std::size_t i = 0; i < dst_count; i++) {
             sll_push_back(&dst, (void *) (uintptr_t) (i + dst_start));
         }
 
@@ -382,7 +382,7 @@ TEST(SinglyLinkedList, move_append) {
 
         // src with items
         {
-            for(std::size_t i = 0; i < src_count; i++) {
+            for (std::size_t i = 0; i < src_count; i++) {
                 sll_push_back(&src, (void *) (uintptr_t) (i + src_start));
             }
 
@@ -485,14 +485,14 @@ TEST(SinglyLinkedList, loop) {
     // fill up queue with values
     sll_t sll;
     EXPECT_EQ(&sll, sll_init(&sll));
-    for(uint64_t i = 0; i < count; i++) {
+    for (uint64_t i = 0; i < count; i++) {
         values[i] = i;
         sll_push_back(&sll, &values[i]);
     }
 
     // check values
     std::size_t i = 0;
-    for(sll_node_t *node = sll_head_node(&sll); node; node = sll_next_node(node)) {
+    for (sll_node_t *node = sll_head_node(&sll); node; node = sll_next_node(node)) {
         EXPECT_EQ(values[i], * (int *) sll_node_data(node));
         i++;
     }

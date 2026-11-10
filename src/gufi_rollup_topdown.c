@@ -155,8 +155,8 @@ typedef struct Subtree {
 } Subtree_t;
 
 static void Subdir_free(Subdir_t *subdir, const size_t threads) {
-    for(size_t i = 0; i < threads; i++) {
-        for(Subdir_t *subsubdir = sll_pop_front(&subdir->subdirs[i]);
+    for (size_t i = 0; i < threads; i++) {
+        for (Subdir_t *subsubdir = sll_pop_front(&subdir->subdirs[i]);
             subsubdir; subsubdir = sll_pop_front(&subdir->subdirs[i])) {
             /* subsubdir->subdirs is the same as subdir->subdirs */
             Path_free(subsubdir->path);
@@ -186,7 +186,7 @@ static ThreadDB_t *tdbs_create(struct template_db *dbdb,
     /* open per-thread dbs */
     const size_t orig_len = top->path->orig.len + 1 + DBNAME_LEN + 1 + UINT64_DIGITS; /* <path>/db.db.<thread id> */
     const size_t uri_len  = top->path->uri.len  + 1 + DBNAME_LEN + 1 + UINT64_DIGITS; /* <uri>/db.db.<thread id> */
-    for(size_t i = 1; i < threads_used; i++) {
+    for (size_t i = 1; i < threads_used; i++) {
         tdbs[i].dbname = malloc(orig_len + 1);
         SNPRINTF(tdbs[i].dbname, orig_len + 1, "%s/" DBNAME ".%zu", top->path->orig.data, i);
 
@@ -201,7 +201,7 @@ static ThreadDB_t *tdbs_create(struct template_db *dbdb,
 }
 
 static void tdbs_destroy(ThreadDB_t *tdbs, const size_t threads_used) {
-    for(size_t i = 1; i < threads_used; i++) {
+    for (size_t i = 1; i < threads_used; i++) {
         closedb(tdbs[i].db);
         free(tdbs[i].uri);
         if (remove(tdbs[i].dbname) != 0) {
@@ -291,7 +291,7 @@ static void rollup_merge(QPTPool_ctx_t *ctx, Subtree_t *subtree) {
 
     if (subtree->tdbs) {
         /* merge per-thread data into db.db */
-        for(size_t i = 1; i < subtree->threads_used; i++) {
+        for (size_t i = 1; i < subtree->threads_used; i++) {
             if (!subtree->tdbs[i].db) {
                 continue;
             }
@@ -578,7 +578,7 @@ static int enqueue_rollup_copy(QPTPool_ctx_t *ctx, Subdir_t *top) {
 
     /* when this hits 0, merge per-thread staging dbs */
     size_t *subdir_count = calloc(1, sizeof(*subdir_count));
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+    for (size_t i = 0; i < pa->in.maxthreads; i++) {
         *subdir_count += sll_get_size(&top->subdirs[i]);
     }
 
@@ -619,8 +619,8 @@ static int enqueue_rollup_copy(QPTPool_ctx_t *ctx, Subdir_t *top) {
      */
     sll_t *subdirs = top->subdirs;
     size_t db_offset = 0;
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
-        for(Subdir_t *subdir = sll_pop_front(&subdirs[i]);
+    for (size_t i = 0; i < pa->in.maxthreads; i++) {
+        for (Subdir_t *subdir = sll_pop_front(&subdirs[i]);
             subdir; subdir = sll_pop_front(&subdirs[i])) {
 
             Subtree_t *subtree    = calloc(1, sizeof(*subtree));
@@ -666,7 +666,7 @@ static int prepare_rollup_copy(QPTPool_ctx_t *ctx, void *data) {
     top->root = (struct work *) data;
 
     top->subdirs = calloc(pa->in.maxthreads, sizeof(*top->subdirs));
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+    for (size_t i = 0; i < pa->in.maxthreads; i++) {
         sll_init(&top->subdirs[i]);
     }
 
@@ -847,7 +847,7 @@ static void compute_stats(struct PoolArgs *pa) {
     size_t too_many_after = 0;
     size_t top = 0;
     size_t failures = 0;
-    for(size_t i = 0; i < pa->in.maxthreads; i++) {
+    for (size_t i = 0; i < pa->in.maxthreads; i++) {
         not_rolledup += pa->stats[i].not_rolledup;
         cannot_rollup += pa->stats[i].cannot_rollup;
         too_many_before += pa->stats[i].too_many_before;
@@ -862,7 +862,7 @@ static void compute_stats(struct PoolArgs *pa) {
     long double *runtimes = calloc(top, sizeof(*runtimes));
     long double runtime_sum = 0;
     size_t idx[] = {0, 0};
-    for(size_t i = 0; i < pa->in.maxthreads + 1; i++) {
+    for (size_t i = 0; i < pa->in.maxthreads + 1; i++) {
         sll_loop(&pa->stats[i].subdirs, node) {
             const size_t sd = * (size_t *) sll_node_data(node);
             subdir_sum += sd;
@@ -884,7 +884,7 @@ static void compute_stats(struct PoolArgs *pa) {
     long double subdir_var  = 0;
     const long double runtime_mean = runtime_sum / top;
     long double runtime_var = 0;
-    for(size_t i = 0; i < top; i++) {
+    for (size_t i = 0; i < top; i++) {
         {
             const long double diff = subdirs[i] - subdir_mean;
             subdir_var += diff * diff;
@@ -967,7 +967,7 @@ int main(int argc, char *argv[]) {
         goto close_xattr_template;
     }
 
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+    for (size_t i = 0; i < pa.in.maxthreads; i++) {
         sll_init(&pa.tops[i]);
     }
 
@@ -978,7 +978,7 @@ int main(int argc, char *argv[]) {
         goto free_tops;
     }
 
-    for(size_t i = 0; i < pa.in.maxthreads + 1; i++) {
+    for (size_t i = 0; i < pa.in.maxthreads + 1; i++) {
         sll_init(&pa.stats[i].subdirs);
         sll_init(&pa.stats[i].runtimes);
     }
@@ -999,7 +999,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &runtime.start);
 
     /* enqueue each input argument to search for tops of subtrees that can roll up */
-    for(int i = 0; i < pa.in.pos.argc; i++) {
+    for (int i = 0; i < pa.in.pos.argc; i++) {
         const char *path = pa.in.pos.argv[i];
         struct work *work = new_work_with_name(NULL, 0, path, strlen(path));
         /* need actual basename length, not the entire length of the starting path */
@@ -1019,8 +1019,8 @@ int main(int argc, char *argv[]) {
      * remaining subtrees are pushed in as subtrees exit the thread
      * pool.
      */
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
-        for(Subdir_t *top = sll_pop_front(&pa.tops[i]);
+    for (size_t i = 0; i < pa.in.maxthreads; i++) {
+        for (Subdir_t *top = sll_pop_front(&pa.tops[i]);
             top; top = sll_pop_front(&pa.tops[i])) {
             pthread_mutex_lock(&pa.mutex);
 
@@ -1051,14 +1051,14 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));
 
   free_stats:
-    for(size_t i = 0; i < pa.in.maxthreads + 1; i++) {
+    for (size_t i = 0; i < pa.in.maxthreads + 1; i++) {
         sll_destroy(&pa.stats[i].runtimes, free);
         sll_destroy(&pa.stats[i].subdirs, free);
     }
     free(pa.stats);
 
   free_tops:
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+    for (size_t i = 0; i < pa.in.maxthreads; i++) {
         sll_destroy(&pa.tops[i], NULL); /* each subtree list should be empty at this point */
     }
     free(pa.tops);

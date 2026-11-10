@@ -559,7 +559,7 @@ int copy_columns_callback(void *args, int count, char **data, char **columns) {
      */
     char **strs = (char **) args;
 
-    for(int i = 0; i < count; i++) {
+    for (int i = 0; i < count; i++) {
         if (!data[i]) {
             strs[i] = NULL;
             continue;
@@ -664,7 +664,7 @@ int insertdbgo_xattrs_avail(struct work *pwork, struct entry_data *ed, sqlite3_s
     /* Not checking arguments */
 
     int error = SQLITE_DONE;
-    for(size_t i = 0; (i < ed->xattrs.count) && (error == SQLITE_DONE); i++) {
+    for (size_t i = 0; (i < ed->xattrs.count) && (error == SQLITE_DONE); i++) {
         struct xattr *xattr = &ed->xattrs.pairs[i];
 
         sqlite3_bind_int64(res, 1, pwork->statuso.st_ino);
@@ -860,7 +860,7 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid)
 {
     int depth = 0;
-    for(const char *c = name; *c; c++) {
+    for (const char *c = name; *c; c++) {
         depth += (*c == '/');
     }
 
@@ -1154,10 +1154,10 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
     size_t s = 0;
     while ((d < dst_size) && (s < *src_len)) {
         int converted = 0;
-        for(size_t i = 0; (d < dst_size) && (i < need_convert_count); i++) {
+        for (size_t i = 0; (d < dst_size) && (i < need_convert_count); i++) {
             const struct convert *ep = &need_convert[i];
             if (src[s] == ep->src) {
-                for(size_t j = 0; (d < dst_size) && (j < ep->dst_len); j++) {
+                for (size_t j = 0; (d < dst_size) && (j < ep->dst_len); j++) {
                     dst[d++] = ep->dst[j];
                 }
                 converted = 1;
@@ -1255,7 +1255,7 @@ int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols) {
 
     /* get each column's type */
     *types = malloc(*cols * sizeof(int));
-    for(int i = 0; i < *cols; i++) {
+    for (int i = 0; i < *cols; i++) {
         const char *type = sqlite3_column_decltype(stmt, i);
         if (!type) {
             (*types)[i] = SQLITE_NULL;
@@ -1302,7 +1302,7 @@ int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, i
     /* get each column's type */
     *names = malloc(*cols * sizeof(char *));
     *lens = malloc(*cols * sizeof(size_t));
-    for(int i = 0; i < *cols; i++) {
+    for (int i = 0; i < *cols; i++) {
         const char *name = sqlite3_column_name(stmt, i);
         const size_t name_len = strlen(name);
 

@@ -295,7 +295,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* enqueue input paths */
-    for(int i = 0; i < in.pos.argc; i++) {
+    for (int i = 0; i < in.pos.argc; i++) {
         size_t len = strlen(in.pos.argv[i]);
         if (!len) {
             continue;

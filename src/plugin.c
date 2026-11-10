@@ -148,10 +148,10 @@ struct plugins *plugins_init(struct plugins *plugins, const size_t count, const 
     }
 
     if (count) {
-        for(size_t i = 0; i < nthreads; i++) {
+        for (size_t i = 0; i < nthreads; i++) {
             user_data[i] = calloc(count, sizeof(**user_data));
             if (!user_data[i]) {
-                for(size_t j = i; j > 0; j--) {
+                for (size_t j = i; j > 0; j--) {
                     free(user_data[j - 1]);
                 }
                 free(user_data);
@@ -163,7 +163,7 @@ struct plugins *plugins_init(struct plugins *plugins, const size_t count, const 
     /* Per-THREAD slots, the same shape as user_data's per-DIRECTORY slots. */
     void ***thread_data = calloc(nthreads, sizeof(*plugins->thread_data));
     if (!thread_data) {
-        for(size_t i = nthreads; i > 0; i--) {
+        for (size_t i = nthreads; i > 0; i--) {
             free(user_data[i - 1]);
         }
         free(user_data);
@@ -171,14 +171,14 @@ struct plugins *plugins_init(struct plugins *plugins, const size_t count, const 
     }
 
     if (count) {
-        for(size_t i = 0; i < nthreads; i++) {
+        for (size_t i = 0; i < nthreads; i++) {
             thread_data[i] = calloc(count, sizeof(**thread_data));
             if (!thread_data[i]) {
-                for(size_t j = i; j > 0; j--) {
+                for (size_t j = i; j > 0; j--) {
                     free(thread_data[j - 1]);
                 }
                 free(thread_data);
-                for(size_t j = nthreads; j > 0; j--) {
+                for (size_t j = nthreads; j > 0; j--) {
                     free(user_data[j - 1]);
                 }
                 free(user_data);
@@ -201,11 +201,11 @@ void plugins_destroy(struct plugins *plugins) {
     /* Not checking arguments */
 
     /* stack unwind */
-    for(size_t i = plugins->count; i > 0; i--) {
+    for (size_t i = plugins->count; i > 0; i--) {
         unload_plugin_library(plugins->plugins[i - 1]);
     }
 
-    for(size_t i = plugins->nthreads; i > 0; i--) {
+    for (size_t i = plugins->nthreads; i > 0; i--) {
         free(plugins->user_data[i - 1]);
         free(plugins->thread_data[i - 1]);
     }
@@ -235,7 +235,7 @@ static int plugin_check_type(struct plugin *plugin, const plugin_type accepted) 
 size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted) {
     /* Not checking arguments */
 
-    for(size_t i = 0; i < plugins->count; i++) {
+    for (size_t i = 0; i < plugins->count; i++) {
         if (!plugin_check_type(plugins->plugins[i], accepted)) {
             return i;
         }
@@ -246,7 +246,7 @@ size_t plugins_check_type(struct plugins *plugins, const plugin_type accepted) {
 size_t plugins_global_init(struct plugins *plugins, struct input *in) {
     /* Not checking arguments */
 
-    for(size_t i = 0; i < plugins->count; i++) {
+    for (size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->global_init) {
             if (plugins->plugins[i]->ops->global_init(in) != 0) {
                 plugins_global_exit(plugins, in);
@@ -263,13 +263,13 @@ size_t plugins_thread_init(struct plugins *plugins, sqlite3 *db, const size_t ti
     /* Not checking arguments */
 
     size_t i = 0;
-    for(i = 0; i < plugins->count; i++) {
+    for (i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->thread_init) {
             void *thread_data = NULL;
             if (plugins->plugins[i]->ops->thread_init(db, &thread_data) != 0) {
                 /* Unwind the plugins that DID initialize, handing each back
                    its own state so it can release it. */
-                for(size_t j = i; j > 0; j--) {
+                for (size_t j = i; j > 0; j--) {
                     if (plugins->plugins[j - 1]->ops->thread_exit) {
                         plugins->plugins[j - 1]->ops->thread_exit(db, plugins->thread_data[tid][j - 1]);
                     }
@@ -291,7 +291,7 @@ plugin_dir_action plugins_dir_action(struct plugins* plugins, void* ctx) {
         if (plugins->plugins[i]->ops->dir_action) {
             plugin_dir_action pda = plugins->plugins[i]->ops->dir_action(ctx);
 
-            // choose the most restrictive action returned by any plugin
+            /* choose the most restrictive action returned by any plugin */
             if (pda < ret) {
                 ret = pda;
             }
@@ -304,7 +304,7 @@ plugin_dir_action plugins_dir_action(struct plugins* plugins, void* ctx) {
 void plugins_ctx_init(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 
-    for(size_t i = 0; i < plugins->count; i++) {
+    for (size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->ctx_init) {
             plugins->user_data[tid][i] =
                 plugins->plugins[i]->ops->ctx_init(ctx, plugins->thread_data[tid][i]);
@@ -320,7 +320,7 @@ int plugins_stat_file(struct plugins *plugins, void *ctx, const size_t tid) {
        stat_file NULL (the augment case, e.g. lustre/marfs) are skipped
        here and still run in process_file. Returns 1 if stat was
        provided, 0 to fall back to statx (GUFI#196). */
-    for(size_t i = 0; i < plugins->count; i++) {
+    for (size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->stat_file) {
             if (plugins->plugins[i]->ops->stat_file(ctx, plugins->user_data[tid][i])) {
                 return 1;
@@ -334,7 +334,7 @@ int plugins_stat_file(struct plugins *plugins, void *ctx, const size_t tid) {
 void plugins_pre_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 
-    for(size_t i = 0; i < plugins->count; i++) {
+    for (size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->pre_process_dir) {
             plugins->plugins[i]->ops->pre_process_dir(ctx, plugins->user_data[tid][i]);
         }
@@ -345,11 +345,11 @@ plugin_file_action plugins_pre_process_file(struct plugins *plugins, void *ctx, 
     plugin_file_action ret = PLUGIN_PROCESS_FILE;
 
 
-    for(size_t i = 0; i < plugins->count; i++) {
+    for (size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->pre_process_file) {
             plugin_file_action pda = plugins->plugins[i]->ops->pre_process_file(ctx, plugins->user_data[tid][i]);
 
-            // choose the most restrictive action returned by any plugin
+            /* choose the most restrictive action returned by any plugin */
             if (pda < ret) {
                 ret = pda;
             }
@@ -362,7 +362,7 @@ plugin_file_action plugins_pre_process_file(struct plugins *plugins, void *ctx, 
 void plugins_post_process_dir(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 
-    for(size_t i = 0; i < plugins->count; i++) {
+    for (size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->post_process_dir) {
             plugins->plugins[i]->ops->post_process_dir(ctx, plugins->user_data[tid][i]);
         }
@@ -372,7 +372,7 @@ void plugins_post_process_dir(struct plugins *plugins, void *ctx, const size_t t
 void plugins_post_process_file(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 
-    for(size_t i = 0; i < plugins->count; i++) {
+    for (size_t i = 0; i < plugins->count; i++) {
         if (plugins->plugins[i]->ops->post_process_file) {
             plugins->plugins[i]->ops->post_process_file(ctx, plugins->user_data[tid][i]);
         }
@@ -383,7 +383,7 @@ void plugins_ctx_exit(struct plugins *plugins, void *ctx, const size_t tid) {
     /* Not checking arguments */
 
     /* stack unwind */
-    for(size_t i = plugins->count; i > 0; i--) {
+    for (size_t i = plugins->count; i > 0; i--) {
         if (plugins->plugins[i - 1]->ops->ctx_exit) {
             plugins->plugins[i - 1]->ops->ctx_exit(ctx, plugins->user_data[tid][i - 1]);
         }
@@ -398,7 +398,7 @@ void plugins_thread_exit_all(struct plugins *plugins, sqlite3 *db, const size_t 
     /* Newest slot first, mirroring the order plugins_thread_init set them up
        in. `inited` rather than nthreads so a caller whose init loop failed
        part way can tear down exactly what it created. */
-    for(size_t i = inited; i > 0; i--) {
+    for (size_t i = inited; i > 0; i--) {
         plugins_thread_exit(plugins, db, i - 1);
     }
 }
@@ -406,7 +406,7 @@ void plugins_thread_exit_all(struct plugins *plugins, sqlite3 *db, const size_t 
 void plugins_thread_exit(struct plugins *plugins, sqlite3 *db, const size_t tid) {
     /* Not checking arguments */
 
-    for(size_t i = plugins->count; i > 0; i--) {
+    for (size_t i = plugins->count; i > 0; i--) {
         if (plugins->plugins[i - 1]->ops->thread_exit) {
             plugins->plugins[i - 1]->ops->thread_exit(db, plugins->thread_data[tid][i - 1]);
         }
@@ -418,7 +418,7 @@ void plugins_global_exit(struct plugins *plugins, struct input *in) {
     /* Not checking arguments */
 
     /* stack unwind */
-    for(size_t i = plugins->initialized; i > 0; i--) {
+    for (size_t i = plugins->initialized; i > 0; i--) {
         if (plugins->plugins[i - 1]->ops->global_exit) {
             plugins->plugins[i - 1]->ops->global_exit(in);
         }

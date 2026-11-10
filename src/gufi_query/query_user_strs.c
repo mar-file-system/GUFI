@@ -73,7 +73,8 @@ void save_user_str(sll_t *idx, const str_t *sql, const size_t *i) {
     size_t j = *i + 1;
 
     /* find stop character */
-    for(; (j < sql->len) && (sql->data[j] != USER_STR_END); j++);
+    for (; (j < sql->len) && (sql->data[j] != USER_STR_END); j++) {
+    }
 
     /* not found */
     if ((*i + 1) == j) {

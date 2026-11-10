@@ -133,7 +133,7 @@ struct CheckStanzaArgs {
     {}
 
     ~CheckStanzaArgs() {
-        for(std::istream *trace : traces) {
+        for (std::istream *trace : traces) {
             delete trace;
         }
     }
@@ -367,7 +367,7 @@ static int scout_function(QPTPool_ctx_t *ctx, void *data) {
 
     // open multiple copies of the trace file
     // in preparation for check_stanza threads
-    for(std::size_t i = 0; i < csa->threads; i++) {
+    for (std::size_t i = 0; i < csa->threads; i++) {
         csa->traces.push_back(new std::ifstream(filename, std::ios::binary));
         if (!*(csa->traces[i])) {
             std::cerr << "Failed to open copies of " << filename << std::endl;

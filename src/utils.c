@@ -238,13 +238,27 @@ int sumit(struct sum *summary, struct work *work, struct entry_data *ed) {
         summary->totfiles++;
         MIN_ASSIGN_LHS(summary->minsize, work->statuso.st_size);
         MAX_ASSIGN_LHS(summary->maxsize, work->statuso.st_size);
-        if (work->statuso.st_size == 0)             summary->totzero++;
-        if (work->statuso.st_size <= 1024)          summary->totltk++;
-        if (work->statuso.st_size >  1024)          summary->totmtk++;
-        if (work->statuso.st_size <= 1048576)       summary->totltm++;
-        if (work->statuso.st_size >  1048576)       summary->totmtm++;
-        if (work->statuso.st_size >  1073741824)    summary->totmtg++;
-        if (work->statuso.st_size >  1099511627776) summary->totmtt++;
+        if (work->statuso.st_size == 0) {
+            summary->totzero++;
+        }
+        if (work->statuso.st_size <= 1024) {
+            summary->totltk++;
+        }
+        if (work->statuso.st_size >  1024) {
+            summary->totmtk++;
+        }
+        if (work->statuso.st_size <= 1048576) {
+            summary->totltm++;
+        }
+        if (work->statuso.st_size >  1048576) {
+            summary->totmtm++;
+        }
+        if (work->statuso.st_size >  1073741824) {
+            summary->totmtg++;
+        }
+        if (work->statuso.st_size >  1099511627776) {
+            summary->totmtt++;
+        }
         summary->totsize += work->statuso.st_size;
 
         MIN_ASSIGN_LHS(summary->minblocks, work->statuso.st_blocks);
@@ -309,7 +323,8 @@ int tsumit(struct sum *sumin, struct sum *smout) {
         MAX_ASSIGN_LHS(smout->maxsubdirfiles, sumin->maxsubdirfiles);
         MAX_ASSIGN_LHS(smout->maxsubdirlinks, sumin->maxsubdirlinks);
         MAX_ASSIGN_LHS(smout->maxsubdirsize,  sumin->maxsubdirsize);
-    } else {
+    }
+    else {
         MAX_ASSIGN_LHS(smout->maxsubdirfiles, sumin->totfiles);
         MAX_ASSIGN_LHS(smout->maxsubdirlinks, sumin->totlinks);
         MAX_ASSIGN_LHS(smout->maxsubdirsize,  sumin->totsize);
@@ -378,9 +393,11 @@ int tsumit(struct sum *sumin, struct sum *smout) {
     return 0;
 }
 
-// given a possibly-multi-level path of directories (final component is
-// also a dir), create the parent dirs all the way down.
-//
+/*
+ * given a possibly-multi-level path of directories (final component is
+ * also a dir), create the parent dirs all the way down.
+ *
+ */
 int mkpath(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
     for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
@@ -401,7 +418,7 @@ int mkpath(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
 }
 
 int dupdir(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
-    // the writer must be able to create the index files into this directory so or in S_IWRITE
+    /* the writer must be able to create the index files into this directory so or in S_IWRITE */
     if (mkdir(path, mode) != 0) {
         const int err = errno;
         if (err == ENOENT) {
@@ -430,9 +447,11 @@ int dupdir(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
     }
     chmod(path, mode);
     chown(path, uid, gid);
-    // we dont need to set xattrs/time on the gufi directory those are in the db
-    // the gufi directory structure is there only to walk, not to provide
-    // information, the information is in the db
+    /*
+     * we dont need to set xattrs/time on the gufi directory those are in the db
+     * the gufi directory structure is there only to walk, not to provide
+     * information, the information is in the db
+     */
 
     return 0;
 }
@@ -443,7 +462,7 @@ int shortpath(const char *name, char *nameout, char *endname) {
      size_t i;
      int slashfound;
 
-     *endname = 0;              // in case there's no '/'
+     *endname = 0; /* in case there's no '/' */
      SNPRINTF(prefix, MAXPATH, "%s", name);
      i = strlen(prefix);
      pp = prefix+i;
@@ -461,8 +480,10 @@ int shortpath(const char *name, char *nameout, char *endname) {
      if (slashfound == 0) {
         SNPRINTF(endname, MAXPATH, "%s", name);
         memset(nameout, 0, 1);
-     } else
-        SNPRINTF(nameout, MAXPATH, "%s", prefix);
+      }
+      else {
+         SNPRINTF(nameout, MAXPATH, "%s", prefix);
+      }
      return 0;
 }
 
@@ -488,7 +509,7 @@ int SNPRINTF(char *str, size_t size, const char *format, ...) {
 static size_t _SNFORMAT_S(char *dst, const size_t dst_len, size_t count, va_list args) {
     size_t max_len = dst_len - 1;
 
-    for(size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         const char *src = va_arg(args, char *);
         /* size_t does not work, but solution found at */
         /* https://stackoverflow.com/a/12864069/341683 */
@@ -523,7 +544,7 @@ size_t SNFORMAT_S_ALLOC(char **dst, size_t count, ...) {
     va_copy(fwd, args);
 
     /* precompute length */
-    for(size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         (void) va_arg(args, char *);
         len += va_arg(args, unsigned int);
     }
@@ -569,7 +590,7 @@ char *modetostr(char *str, const size_t size, const mode_t mode)
 }
 
 static int loop_matches(const char c, const char *match, const size_t match_count) {
-    for(size_t i = 0; i < match_count; i++) {
+    for (size_t i = 0; i < match_count; i++) {
         if (match[i] == c) {
             return 1;
         }
@@ -643,7 +664,7 @@ char *split(char *src, const char *delim, const size_t delim_len, const char *en
     }
 
     while (src < end) {
-        for(size_t i = 0; i < delim_len; i++) {
+        for (size_t i = 0; i < delim_len; i++) {
             if (*src == delim[i]) {
                 *src = '\x00';
                 return src + 1;
@@ -861,7 +882,7 @@ void set_metadata(const char *path, struct stat *st,
                 path, strerror(err), err);
     }
 
-    for(size_t i = 0; i < xattrs->count; i++) {
+    for (size_t i = 0; i < xattrs->count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
         if (SETXATTR(path, xattr->name, xattr->value, xattr->value_len) != 0) {
             const int err = errno;

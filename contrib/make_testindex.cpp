@@ -221,12 +221,12 @@ struct Settings {
                << "\n    Permissions:     0" << std::oct << permissions << std::dec;
 
         stream << "\n    File Count Buckets:";
-        for(Bucket const & count: file_count) {
+        for (Bucket const & count: file_count) {
             stream << "\n        " << count;
         }
 
         stream << "\n    File Size Buckets:";
-        for(Bucket const & size: file_size) {
+        for (Bucket const & size: file_size) {
             stream << "\n        " << size;
         }
 
@@ -430,14 +430,14 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
 
     // rng for selecting size bucket
     std::vector <double> weights;
-    for(Bucket const &file_size : arg->settings->file_size) {
+    for (Bucket const &file_size : arg->settings->file_size) {
         weights.push_back(file_size.weight);
     }
     std::discrete_distribution <std::size_t> bucket_rng(weights.begin(), weights.end());
 
     // rng for selecting size within a bucket
     std::vector <std::normal_distribution <double> > size_rngs(arg->settings->file_size.size());
-    for(std::size_t i = 0; i < arg->settings->file_size.size(); i++) {
+    for (std::size_t i = 0; i < arg->settings->file_size.size(); i++) {
         const double mean = (arg->settings->file_size[i].max - arg->settings->file_size[i].min) / 2.0;
         const double stddev = (mean - arg->settings->file_size[i].min) / 3.0;
         size_rngs[i] = std::normal_distribution <double> (mean, stddev);
@@ -464,7 +464,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     sqlite3_exec(on_disk, "BEGIN TRANSACTION", nullptr, nullptr, nullptr);
 
     // create file entries and insert them into the database
-    for(std::size_t i = 0; i < files; i++) {
+    for (std::size_t i = 0; i < files; i++) {
         std::stringstream s;
         s << arg->path << arg->settings->path_separator << "file" << std::setw(arg->settings->leading_zeros) << std::setfill('0') << i;
 
@@ -611,7 +611,7 @@ std::size_t random_from_bucket(const std::size_t seed,
     std::vector <double> intervals(buckets.size() + 1);
     std::vector <double> weights(buckets.size());
 
-    for(std::size_t i = 0; i < buckets.size(); i++) {
+    for (std::size_t i = 0; i < buckets.size(); i++) {
         intervals[1] = i;
         weights[i] = buckets[i].weight;
     }
@@ -712,7 +712,7 @@ int generatedir(QPTPool_ctx_t * ctx, void * data) {
         }
     }
 
-    for(std::size_t i = 0; i < subdir_count; i++) {
+    for (std::size_t i = 0; i < subdir_count; i++) {
         std::stringstream s;
         s << arg->path << "/dir" << std::setw(arg->settings->leading_zeros) << std::setfill('0') << i;
 
@@ -883,13 +883,13 @@ bool create_path(std::string path, const char sep = '/') {
 
     // assume top level exists
     bool exists = true;
-    for(std::size_t i = 0; i < path.size(); i++) {
+    for (std::size_t i = 0; i < path.size(); i++) {
         if (path[i] == sep) {
             const std::string subpath = path.substr(0, i + 1);
 
             // check if the path is a directory
             struct stat st;
-            if (exists && stat(subpath.data(), &st) == 0) {
+            if (exists && stat(subpath.c_str(), &st) == 0) {
                 if (!S_ISDIR(st.st_mode)) {
                     std::cerr << subpath << " is not a directory. Skipping." << std::endl;
                     return false;
@@ -901,7 +901,7 @@ bool create_path(std::string path, const char sep = '/') {
             else if (!exists || (errno == ENOENT)) {
                 // if it doesn't, create the directory
                 exists = false;
-                if (mkdir(subpath.data(), 0777) != 0) {
+                if (mkdir(subpath.c_str(), 0777) != 0) {
                     std::cerr << "Could not create " << path << ". Skipping." << std::endl;
                     return false;
                 }
@@ -1077,7 +1077,7 @@ int main(int argc, char *argv[]) {
         });
 
     // push each subdirectory generation into the thread pool
-    for(std::size_t offset = 0; offset < settings.users; offset++) {
+    for (std::size_t offset = 0; offset < settings.users; offset++) {
         std::stringstream s;
         s << settings.top << "/user" << std::setw(settings.leading_zeros) << std::setfill('0') << settings.uid + offset;
 
@@ -1119,12 +1119,12 @@ int main(int argc, char *argv[]) {
 
     // list all directories
     std::cout << "    " << ThreadArgs::stats.size() << " + 1 directories" << std::endl;
-    for(ThreadArgs::Stats const & stat : ThreadArgs::stats) {
+    for (ThreadArgs::Stats const & stat : ThreadArgs::stats) {
         // count leaf nodes
         leaf_nodes += stat.leaf;
 
         // get file count distribution
-        for(std::size_t i = 0; i < settings.file_count.size(); i++) {
+        for (std::size_t i = 0; i < settings.file_count.size(); i++) {
             if (settings.file_count[i].in(stat.files)) {
                 file_count_histogram[i]++;
                 break;
@@ -1136,7 +1136,7 @@ int main(int argc, char *argv[]) {
               << "    Files: " << ThreadArgs::files << std::endl
               << "    Size: " << ThreadArgs::size << std::endl
               << "    File count distribution" << std::endl;
-    for(std::size_t i = 0; i < file_count_histogram.size(); i++) {
+    for (std::size_t i = 0; i < file_count_histogram.size(); i++) {
         std::cout << "        " << settings.file_count[i] << ": " << file_count_histogram[i] << std::endl;
     }
 

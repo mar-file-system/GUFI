@@ -90,7 +90,7 @@ static str_t create_dst_name(const str_t *dst_root, struct work *work) {
 
 static int set_xattrs(const char *name, struct xattrs *xattrs) {
     int rc = 0;
-    for(size_t i = 0; i < xattrs->count; i++) {
+    for (size_t i = 0; i < xattrs->count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
 
         if (SETXATTR(name, xattr->name, xattr->value, xattr->value_len) != 0) {
@@ -399,7 +399,7 @@ int main(int argc, char * argv[]) {
     }
 
     argc--;
-    for(int i = idx; i < argc; i++) {
+    for (int i = idx; i < argc; i++) {
         const char *path = argv[i];
 
         struct stat st;

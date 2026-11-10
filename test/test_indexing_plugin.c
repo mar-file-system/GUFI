@@ -153,7 +153,8 @@ static void process_file(void *ptr, void *user_data) {
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
     if (res == SQLITE_OK) {
         p->n_files += 1;
-    } else {
+    }
+    else {
         fprintf(stderr, "test plugin: process_file(): error executing statement: %d %s\n",
                 res, error);
     }
@@ -173,7 +174,8 @@ static void process_dir(void *ptr, void *user_data) {
     int res = sqlite3_exec(db, text, NULL, NULL, &error);
     if (res == SQLITE_OK) {
         p->n_dirs += 1;
-    } else {
+    }
+    else {
         fprintf(stderr, "test plugin: process_dir(): error executing statement: %d %s\n",
                 res, error);
     }

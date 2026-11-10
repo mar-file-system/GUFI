@@ -484,7 +484,7 @@ static int gufi_query(const gq_cmd_t *cmd, popen_argv_t **output, char **errmsg)
         argc--; /* argc is not used after outside of here */
 
         fprintf(stderr, "    %s \\\n", argv[0]);
-        for(int i = 1; i < argc; i++) {
+        for (int i = 1; i < argc; i++) {
             fprintf(stderr, "        %s \\\n", argv[i]);
         }
         fprintf(stderr, "        %s\n", argv[argc]);
@@ -586,7 +586,7 @@ static int gufi_query_read_row(gufi_vtab_cursor *pCur) {
     cols = malloc(col_count * sizeof(*cols));
 
     /* Use the unsigned count consistently while walking column data. */
-    for(size_t i = 0; i < col_count; i++) {
+    for (size_t i = 0; i < col_count; i++) {
         const size_t used = curr - buf;
         if ((used > row_len) || ((row_len - used) < TLoL)) {
             pCur->base.pVtab->zErrMsg = sqlite3_mprintf(
@@ -738,7 +738,9 @@ static int gufi_vtConnect(sqlite3 *db, void *pAux,
     const int rc = sqlite3_declare_vtab(db, schema);
     if (rc == SQLITE_OK) {
         pNew = (gufi_vtab *)sqlite3_malloc( sizeof(*pNew) );
-        if( pNew==0 ) return SQLITE_NOMEM;
+         if ( pNew==0 ) {
+             return SQLITE_NOMEM;
+         }
         memset(pNew, 0, sizeof(*pNew));
         pNew->cmd = *cmd; /* ownership is transferred */
         pNew->fixed_schema = fixed_schema;
@@ -1182,7 +1184,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     set_refstr(&cmd.threads, (char *) ONE_THREAD);
 
     /* parse args */
-    for(int i = 3; i < argc; i++) {
+    for (int i = 3; i < argc; i++) {
         char *value = NULL;
         char *key   = strtok_r((char *) argv[i], "=", &value);
         const size_t len = strlen(key);
@@ -1536,7 +1538,7 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
         /* construct the schema for the virtual table */
         char *ptr = schema + SNPRINTF(schema, sizeof(schema), "CREATE TABLE x(");
-        for(int c = 0; c < cols; c++) {
+        for (int c = 0; c < cols; c++) {
             ptr += SNPRINTF(ptr, sizeof(schema) - (ptr - schema), "\"%s\" %s, ",
                             names[c], SQL_TYPES[types[c]]);
             free(names[c]);
@@ -1590,7 +1592,7 @@ static int gufi_vtBestIndex(sqlite3_vtab *tab,
         int argc = 0;  /* number of input arguments */
 
         const struct sqlite3_index_constraint *constraint = pIdxInfo->aConstraint;
-        for(int i = 0; i < pIdxInfo->nConstraint; i++, constraint++) {
+        for (int i = 0; i < pIdxInfo->nConstraint; i++, constraint++) {
             if (constraint->op != SQLITE_INDEX_CONSTRAINT_EQ) {
                 continue;
             }
@@ -1621,7 +1623,9 @@ static int gufi_vtDisconnect(sqlite3_vtab *pVtab) {
 static int gufi_vtOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor) {
     (void) p;
     gufi_vtab_cursor *pCur = sqlite3_malloc( sizeof(*pCur) );
-    if( pCur==0 ) return SQLITE_NOMEM;
+     if ( pCur==0 ) {
+         return SQLITE_NOMEM;
+     }
     memset(pCur, 0, sizeof(*pCur));
     *ppCursor = &pCur->base;
     return SQLITE_OK;
@@ -1818,7 +1822,7 @@ static int gufi_vtColumn(sqlite3_vtab_cursor *cur,
     const size_t len = col->len;
     const char *value = buf + col->data;
 
-    switch(type) {
+    switch (type) {
         case SQLITE_INTEGER:
             {
                 const char orig = value[len];

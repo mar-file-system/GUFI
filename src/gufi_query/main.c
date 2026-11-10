@@ -382,7 +382,7 @@ int main(int argc, char *argv[])
     }
     else {
         /* enqueue input paths */
-        for(int i = 0; i < in.pos.argc; i++) {
+        for (int i = 0; i < in.pos.argc; i++) {
             gqw_t *work = NULL;
             if (validate_source(&in, in.pos.argv[i], &work) != 0) {
                 continue;
@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
         aggregate_fin(&aggregate, &in);
     }
 
-    for(size_t i = 0; i < in.maxthreads; i++) {
+    for (size_t i = 0; i < in.maxthreads; i++) {
         ThreadArgs_t *ta = &(pa.ta[i]);
 
         /* clear out buffered data */

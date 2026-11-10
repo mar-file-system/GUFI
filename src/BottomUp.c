@@ -131,17 +131,18 @@ struct UserArgs {
  */
 static void new_pathname(struct BottomUp *work, const char *dirname, size_t dirname_len,
                          const char *basename, size_t basename_len) {
-    size_t new_len = dirname_len; // does NOT count null terminator
+    size_t new_len = dirname_len; /* does NOT count null terminator */
 
     if (basename) {
-        new_len += basename_len + 1; // +1 for path separator
+        new_len += basename_len + 1; /* +1 for path separator */
     }
 
-    char *path = calloc(new_len + 1, sizeof(char));  // Additional +1 for null terminator
+    char *path = calloc(new_len + 1, sizeof(char)); /* Additional +1 for null terminator */
 
     if (basename) {
         SNFORMAT_S(path, new_len + 1, 3, dirname, dirname_len, "/", (size_t) 1, basename, basename_len);
-    } else {
+    }
+    else {
         strncpy(path, dirname, new_len + 1);
     }
 
@@ -163,7 +164,7 @@ static void new_pathname(struct BottomUp *work, const char *dirname, size_t dirn
  */
 static int new_alt_pathname(struct BottomUp *work, const char *dirname, size_t dirname_len,
                              const char *basename, size_t basename_len) {
-    // Alternate name may be longer than the provided dirname and basename together
+    /* Alternate name may be longer than the provided dirname and basename together */
     char *buf = NULL;
     size_t new_len = 0;
 
@@ -171,7 +172,7 @@ static int new_alt_pathname(struct BottomUp *work, const char *dirname, size_t d
         size_t orig_size = dirname_len + 1 + 3 * basename_len + 1;
         buf = malloc(orig_size);
 
-        // Assume dirname is already sanitized, only need to sanitize basename:
+        /* Assume dirname is already sanitized, only need to sanitize basename: */
         new_len = SNFORMAT_S(buf, orig_size, 2, dirname, dirname_len, "/", (size_t) 1);
 
         size_t converted_len = basename_len;
@@ -183,11 +184,12 @@ static int new_alt_pathname(struct BottomUp *work, const char *dirname, size_t d
         /*     free(buf); */
         /*     return -1; */
         /* } */
-    } else {
+    }
+    else {
         new_len = 3 * dirname_len;
         buf = malloc(new_len + 1);
 
-        // Need to sanitize dirname:
+        /* Need to sanitize dirname: */
         size_t converted_len = dirname_len;
         new_len = sqlite_uri_path(buf, new_len + 1, dirname, &converted_len);
 
@@ -347,12 +349,13 @@ static int descend_to_bottom(QPTPool_ctx_t *ctx, void *data) {
             }
 
             is_dir = S_ISDIR(child.statuso.st_mode);
-        } else if (entry->d_type == DT_DIR) {
+        }
+        else if (entry->d_type == DT_DIR) {
             is_dir = 1;
         }
 
         if (!is_dir) {
-            // For files, only keep going if asked to track them:
+            /* For files, only keep going if asked to track them: */
             if (!ua->track_non_dirs)
                 continue;
         }
@@ -627,7 +630,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
                                                          min_level, path_list, extra_args);
     }
     else {
-        for(size_t i = 0; i < root_count; i++) {
+        for (size_t i = 0; i < root_count; i++) {
             good_roots += !parallel_bottomup_enqueue(ctx, root_names[i], strlen(root_names[i]), extra_args);
         }
     }

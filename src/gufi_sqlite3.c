@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
     }
     else {
         /* in.pos.argv[0] would have been the file name */
-        for(int i = 1; i < in.pos.argc; i++) {
+        for (int i = 1; i < in.pos.argc; i++) {
             if (sqlite3_exec(db, in.pos.argv[i], print_parallel, &pa, &err) != SQLITE_OK) {
                 sqlite_print_err_and_free(err, stderr, "Error: SQL error: %s\n", err);
                 break;

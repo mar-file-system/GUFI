@@ -109,14 +109,14 @@ The number of files generated is
 
 #define DIR_PERMS (S_IRWXU | S_IRWXG | S_IRWXO)
 
-// constants to pass to threads
+/* constants to pass to threads */
 struct settings {
     size_t dirs;
     size_t files;
     size_t max_level;
 };
 
-// work for each thread
+/* work for each thread */
 struct dir {
     char name[MAXPATH];
     size_t current_level;
@@ -131,8 +131,8 @@ static int generate_level(QPTPool_ctx_t * ctx, void * data) {
         return 0;
     }
 
-    // create the subdirectories in this directory
-    for(size_t i = 0; i < settings->dirs; i++) {
+    /* create the subdirectories in this directory */
+    for (size_t i = 0; i < settings->dirs; i++) {
         struct dir * subdir = calloc(1, sizeof(struct dir));
         if (!subdir) {
             continue;
@@ -140,7 +140,7 @@ static int generate_level(QPTPool_ctx_t * ctx, void * data) {
 
         SNPRINTF(subdir->name, MAXPATH, "%s/d.%zu", dir->name, i);
 
-        // no need to recursively make upper directories because they have already been created
+        /* no need to recursively make upper directories because they have already been created */
         if (mkdir(subdir->name, DIR_PERMS) < 0) {
             if (errno != EEXIST) {
                 fprintf(stderr, "mkdir failed for %s: %d %s\n", subdir->name, errno, strerror(errno));
@@ -151,16 +151,16 @@ static int generate_level(QPTPool_ctx_t * ctx, void * data) {
 
         subdir->current_level = dir->current_level + 1;
 
-        // recurse down by placing subdirectories onto queue
+        /* recurse down by placing subdirectories onto queue */
         QPTPool_enqueue(ctx, generate_level, subdir);
     }
 
-    // create the files in this directory
+    /* create the files in this directory */
     char name[MAXPATH];
-    for(size_t i = 0; i < settings->files; i++) {
+    for (size_t i = 0; i < settings->files; i++) {
         SNPRINTF(name, MAXPATH, "%s/f.%zu", dir->name, i);
 
-        // overwrite any existing data
+        /* overwrite any existing data */
         const int fd = secure_openat(AT_FDCWD, name, O_RDWR | O_CREAT | O_EXCL | O_TRUNC,
                                      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         if (fd < 0) {
@@ -209,7 +209,7 @@ int main(int argc, char * argv[]) {
     printf("Generating into %s with %zu threads: %zu levels, %zu directories per level, %zu files per directory\n", argv[1], threads, settings.max_level, settings.dirs, settings.files);
 
     size_t sum = 1;
-    for(size_t i = 0; i < settings.max_level; i++) {
+    for (size_t i = 0; i < settings.max_level; i++) {
         sum *= settings.dirs;
     }
     sum = (sum - 1) / (settings.dirs - 1);
@@ -223,8 +223,10 @@ int main(int argc, char * argv[]) {
     struct start_end generation;
     clock_gettime(CLOCK_MONOTONIC, &generation.start);
 
-    // generate the top level
-    // each thread only generates the contents of its directory, not the directory itself
+    /*
+     * generate the top level
+     * each thread only generates the contents of its directory, not the directory itself
+     */
     struct dir * root = calloc(1, sizeof(struct dir));
     if (!root) {
         fprintf(stderr, "Could not allocate root work: %s\n", argv[2]);

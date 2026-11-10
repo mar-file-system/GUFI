@@ -892,14 +892,14 @@ TEST(parse_cmd_line, no_print_errno) {
 
         struct input in;
         EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opt, 0, "", &in), argc);
-        for(int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
             EXPECT_EQ(in.no_print_errno[i], 1ULL << 1);
         }
         input_fini(&in);
     }
 
     // pass in bad values one at a time to make sure they each fail
-    for(const char *bad_value : {"-1", "0", "256"}) {
+    for (const char *bad_value : {"-1", "0", "256"}) {
         const char *argv[] = {
             exec.c_str(),
             no_print_errno.c_str(), bad_value,
@@ -1069,7 +1069,7 @@ TEST(setup_directory_skip, file) {
         EXPECT_TRUE((bool) skip_stream);
 
         skip_stream << std::endl; // start with empty line
-        for(std::string const & skip_dir : skip_dirs) {
+        for (std::string const & skip_dir : skip_dirs) {
             skip_stream << skip_dir <<         std::endl;
             skip_stream << skip_dir << "\r" << std::endl; // duplicates
         }
@@ -1078,7 +1078,7 @@ TEST(setup_directory_skip, file) {
     trie_t *skip = trie_alloc();
     ASSERT_NE(skip, nullptr);
     EXPECT_EQ(setup_directory_skip(skip, skip_name), (ssize_t) (sizeof(skip_dirs) / sizeof(skip_dirs[0])));
-    for(std::string const & skip_dir : skip_dirs) {
+    for (std::string const & skip_dir : skip_dirs) {
         EXPECT_EQ(trie_search(skip, skip_dir.c_str(), skip_dir.size(), nullptr), 1);
     }
     trie_free(skip);

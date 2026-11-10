@@ -98,7 +98,7 @@ void *sll_node_data(const sll_node_t *node);
 
 /* convenience macro */
 #define sll_loop(sll, name)                         \
-    for(sll_node_t *name = sll_head_node((sll));    \
+    for (sll_node_t *name = sll_head_node((sll));    \
         (name);                                     \
         (name) = sll_next_node((name)))             \
 

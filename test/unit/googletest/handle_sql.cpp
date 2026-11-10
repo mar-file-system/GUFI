@@ -86,11 +86,11 @@ TEST(handle_sql, no_aggregation) {
     ASSERT_EQ(input_init(&in), &in);
     in.types.print_tlv = 1;
 
-    for(const char *S : {(const char *) nullptr, S_GOOD, S_BAD}) {
+    for (const char *S : {(const char *) nullptr, S_GOOD, S_BAD}) {
         in.sql.sum.data = S?(char *) S:nullptr;
         in.sql.sum.len = S?strlen(S):0;
 
-        for(const char *E : {(const char *) nullptr, E_GOOD, E_BAD}) {
+        for (const char *E : {(const char *) nullptr, E_GOOD, E_BAD}) {
             in.sql.ent.data = E?(char *) E:nullptr;
             in.sql.ent.len = E?strlen(E):0;
 

@@ -393,7 +393,8 @@ int process_queries(PoolArgs_t *pa, QPTPool_ctx_t *ctx,
             if (in->process_sql == RUN_TSE) {
                 recs = 1;
             }
-        } else {
+        }
+        else {
             recs = 1;
         }
 

@@ -215,7 +215,7 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                 case '4': case '5':
                 case '6': case '7':
                 case '8': case '9':
-                    for(int i = 0; i < 3; i++) {
+                    for (int i = 0; i < 3; i++) {
                         if (!(('0' <= *f) && (*f <= '9'))) {
                             break;
                         }
@@ -541,7 +541,7 @@ int main(int argc, char *argv[])
 
     /* process all input paths */
     int rc = 0;
-    for(int i = 0; i < in.pos.argc; i++) {
+    for (int i = 0; i < in.pos.argc; i++) {
         rc |= process_path(in.pos.argv[i], stdout, format);
     }
 

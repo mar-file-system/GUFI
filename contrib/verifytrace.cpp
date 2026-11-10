@@ -128,7 +128,7 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
     // delimiters from 5 up to the one before pinode.
     static const std::size_t pinode_col = 24;
     std::string::size_type pinode_pos = inode_delim + 1;
-    for(size_t i = 4; (i < pinode_col - 1) && (pinode_pos < std::string::npos); i++) {
+    for (size_t i = 4; (i < pinode_col - 1) && (pinode_pos < std::string::npos); i++) {
         pinode_pos = line.find(delim, pinode_pos + 1);
     }
     pinode_pos++;
@@ -213,7 +213,7 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
         /* this walk starts at the beginning of the line, so it needs every
            delimiter up to the one before pinode */
         std::string::size_type child_pinode_pos = 0;
-        for(size_t i = 0; (i < pinode_col - 1) && (child_pinode_pos < std::string::npos); i++) {
+        for (size_t i = 0; (i < pinode_col - 1) && (child_pinode_pos < std::string::npos); i++) {
             child_pinode_pos = line.find(delim, child_pinode_pos + 1);
         }
         child_pinode_pos++;
@@ -247,7 +247,7 @@ static std::string dirname(const std::string & path) {
 
 static std::size_t complete_tree(const Tree & tree) {
     std::size_t bad = 0;
-    for(std::pair <const std::string,
+    for (std::pair <const std::string,
                    std::pair<std::string,
                              std::string> > const & dir : tree) {
         const std::string parent_path = dirname(dir.first);
@@ -300,7 +300,7 @@ int main(int argc, char * argv[]) {
 
     const char delim = argv[1][0];
 
-    for(int i = 2; i < argc; i++) {
+    for (int i = 2; i < argc; i++) {
         std::ifstream trace(argv[i]);
         if (!trace) {
             std::cerr << "Could not open " << argv[i] << std::endl;

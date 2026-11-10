@@ -92,7 +92,7 @@ the .expected file with `cat` and a redirect, `cp`, or `mv`. The
 4. Add `<name>` to the appropriate location in [`CMakeLists.txt`](CMakeLists.txt)
 5. Modify contents of the test script
     - See [Test Script Structure](#test-script-structure)
-6. Rebuild to get the latest test script into the build directory
+6. Run `make` from the build directory to get the latest test script into the build directory
     - Will be called `<name>.sh`
 7. Run the test script
 8. If not satisfied with the tests or output, go to step 5

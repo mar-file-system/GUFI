@@ -61,9 +61,8 @@
 
 
 
-import sys
-
 import sqlite3
+import sys
 
 def run(gufi_vt_path, argv):
     with sqlite3.connect(":memory:") as conn:

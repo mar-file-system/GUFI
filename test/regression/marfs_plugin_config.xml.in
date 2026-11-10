@@ -142,7 +142,7 @@ OF SUCH DAMAGE.
                      <interactive>RM,WM,RD</interactive>
                      <batch>RM,WM,RD,WD</batch>
                   </perms>
-                  
+
                   <!-- Nested Subspace -->
                   <ns name="namespace2">
                      <quotas>

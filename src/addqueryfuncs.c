@@ -602,7 +602,7 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
         }
 
         int found = 0;
-        for(size_t i = 0; i < (sizeof(SIZE) - 1); i++) {
+        for (size_t i = 0; i < (sizeof(SIZE) - 1); i++) {
             unit_size *= multiplier;
             if (unit[0] == SIZE[i]) {
                 found = 1;

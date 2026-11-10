@@ -523,7 +523,7 @@ int main(int argc, char *argv[]) {
          * so that there are not pa.in.maxthreads in-memory dbs per
          * subtree being processed at once
          */
-        for(size_t i = 0; i < pa.in.maxthreads; i++) {
+        for (size_t i = 0; i < pa.in.maxthreads; i++) {
             sll_loop(&pa.tops[i], node) {
                 pthread_mutex_lock(&pa.mutex);
 

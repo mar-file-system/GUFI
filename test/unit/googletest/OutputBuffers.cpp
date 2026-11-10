@@ -135,7 +135,7 @@ TEST(OutputBuffers, use) {
     ASSERT_EQ(OutputBuffers_init(&obufs, buffer_count, LEN), &obufs);
     ASSERT_NE(obufs.buffers, nullptr);
 
-    for(std::size_t i = 0; i < buffer_count; i++) {
+    for (std::size_t i = 0; i < buffer_count; i++) {
         struct OutputBuffer &obuf = obufs.buffers[i];
         EXPECT_EQ(obuf.capacity, LEN);
         EXPECT_EQ(obuf.filled, (std::size_t) 0);

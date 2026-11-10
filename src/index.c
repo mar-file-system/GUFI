@@ -195,7 +195,7 @@ int index_dir(str_t *topath, const int dir2index,
 
     PCS_t pcs = {0};
 
-    // if we're in the min-max range use the result of the plugins "dir_action" to determine process_dir
+    /* if we're in the min-max range use the result of the plugins "dir_action" to determine process_dir */
     if ((in->min_level <= work->level) &&
         (work->level <= in->max_level)) {
         pcs.work = work;

@@ -88,7 +88,7 @@ static void test_str(const std::vector<std::pair <const char *, const char *> > 
 
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    for(std::pair <const char *, const char *> const &testcase : testcases) {
+    for (std::pair <const char *, const char *> const &testcase : testcases) {
         char *output = nullptr;
         EXPECT_EQ(sqlite3_exec(db, testcase.first,
                                copy_columns_callback, &output, nullptr), SQLITE_OK);
@@ -192,7 +192,7 @@ TEST(addqueryfuncs, modetotxt) {
 
     ASSERT_EQ(addqueryfuncs(db), 0);
 
-    for(mode_t perm = 0; perm < 01000; perm++) {
+    for (mode_t perm = 0; perm < 01000; perm++) {
         char query[MAXSQL] = {};
         char *output = nullptr;
         char expected[11] = {};
@@ -335,7 +335,7 @@ TEST(addqueryfuncs, agecat) {
         std::make_pair(- 60 * 60 * 24 * 365 * 10 - 1, "Decs"),
     };
 
-    for(std::pair <int, const char *> const &test : tests) {
+    for (std::pair <int, const char *> const &test : tests) {
         snprintf(sql, sizeof(sql), "SELECT agecat(%ld);", now + test.first);
         EXPECT_EQ(sqlite3_exec(db, sql,
                                copy_columns_callback, &output, nullptr), SQLITE_OK);
@@ -374,7 +374,7 @@ TEST(addqueryfuncs, epochtoage) {
     free(output);
     output = nullptr;
 
-    for(const char unit : {'s', 'm', 'h', 'd', 'w', 'M', 'y', 'D', '-'}) {
+    for (const char unit : {'s', 'm', 'h', 'd', 'w', 'M', 'y', 'D', '-'}) {
         /* test 0 */
         snprintf(sql, sizeof(sql), "SELECT epochtoage(%ld, '%c');", now, unit);
         EXPECT_EQ(sqlite3_exec(db, sql,
@@ -426,7 +426,7 @@ TEST(addqueryfuncs, blocksize) {
 
     std::size_t Bsize = 1;
     std::size_t iBsize = 1;
-    for(size_t i = 0; i < sizeof(SIZE); i++) {
+    for (size_t i = 0; i < sizeof(SIZE); i++) {
         Bsize  *= 1000;
         const std::size_t Binputs[] = {
             Bsize - 1,
@@ -441,7 +441,7 @@ TEST(addqueryfuncs, blocksize) {
             iBsize + 1
         };
 
-        for(size_t j = 0; j < 3; j++) {
+        for (size_t j = 0; j < 3; j++) {
             char query[MAXSQL] = {};
             char *output = nullptr;
             char expected[MAXPATH] = {};
@@ -506,7 +506,7 @@ TEST(addqueryfuncs, human_readable_size) {
     output = nullptr;
 
     // greater than 1K - has unit suffix
-    for(size_t i = 0; i < sizeof(SIZE); i++) {
+    for (size_t i = 0; i < sizeof(SIZE); i++) {
         char expected[MAXPATH] = {};
 
         size *= 1024;
@@ -894,7 +894,7 @@ TEST(addqueryfuncs, stdev_from_parts) {
 
     int sum_sq = 0;
     int sum = 0;
-    for(std::size_t i = 0; i < count; i++) {
+    for (std::size_t i = 0; i < count; i++) {
         sum_sq += values[i] * values[i];
         sum    += values[i];
     }
@@ -902,13 +902,13 @@ TEST(addqueryfuncs, stdev_from_parts) {
     const double mean = sum / count; // 2, no precision loss
 
     double num = 0;                  // numerator
-    for(std::size_t i = 0; i < count; i++) {
+    for (std::size_t i = 0; i < count; i++) {
         const int diff = values[i] - mean;
         num += diff * diff;
     }
 
     char sql[4096];
-    for(int sample = 0; sample < 2; sample++) {
+    for (int sample = 0; sample < 2; sample++) {
         const double expected = sqrt(num / (count - sample));
 
         SNPRINTF(sql, sizeof(sql), "SELECT stdev_from_parts(%d, %d, %zu, %d);", sum_sq, sum, count, sample);
@@ -1107,7 +1107,7 @@ TEST(addqueryfuncs_with_context, rpath) {
     ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
     // directory
-    for(int isrolledup : {0, 1}) {
+    for (int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
         SNPRINTF(query, sizeof(query), "SELECT rpath('%s', %d);", dirname, isrolledup);
 
@@ -1127,7 +1127,7 @@ TEST(addqueryfuncs_with_context, rpath) {
                "/", (std::size_t) 1,
                entry, sizeof(entry) - 1);
 
-    for(int isrolledup : {0, 1}) {
+    for (int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
         SNPRINTF(query, sizeof(query), "SELECT rpath('%s', %d, '%s');", dirname, isrolledup, entry);
 
@@ -1172,7 +1172,7 @@ TEST(addqueryfuncs_with_context, spath) {
                dirname, sizeof(dirname) - 1);
 
     // directory
-    for(int isrolledup : {0, 1}) {
+    for (int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
         SNPRINTF(query, sizeof(query), "SELECT spath('%s', %d);", dirname, isrolledup);
 
@@ -1193,7 +1193,7 @@ TEST(addqueryfuncs_with_context, spath) {
                entry, sizeof(entry) - 1);
 
     // non-directory
-    for(int isrolledup : {0, 1}) {
+    for (int isrolledup : {0, 1}) {
         char query[MAXSQL] = {};
         SNPRINTF(query, sizeof(query), "SELECT spath('%s', %d, '%s');", dirname, isrolledup, entry);
 
@@ -1261,7 +1261,7 @@ TEST(addqueryfuncs_with_context, level) {
     ctx.in = nullptr;
     ctx.work = work;
 
-    for(work->level = 0; work->level < 10; work->level++) {
+    for (work->level = 0; work->level < 10; work->level++) {
         ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
         char *output = nullptr;
@@ -1290,7 +1290,7 @@ TEST(addqueryfuncs_with_context, pinode) {
     ctx.in = nullptr;
     ctx.work = work;
 
-    for(work->level = 0; work->level < 10; work->level++) {
+    for (work->level = 0; work->level < 10; work->level++) {
         ASSERT_EQ(addqueryfuncs_with_context(db, &ctx), 0);
 
         char *output = nullptr;

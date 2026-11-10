@@ -354,7 +354,7 @@ int main(int argc, char *argv[]) {
         }
     }
     else {
-        for(int i = 0; i < pa.in.pos.argc; i++) {
+        for (int i = 0; i < pa.in.pos.argc; i++) {
             /* get first work item by validating source path */
             struct work *root = NULL;
             if (validate_source(pa.in.pos.argv[i], &root, pa.in.use_exact_path) != 0) {
@@ -382,7 +382,7 @@ int main(int argc, char *argv[]) {
     QPTPool_destroy(ctx);
 
     size_t total_files = 0;
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+    for (size_t i = 0; i < pa.in.maxthreads; i++) {
         total_files += pa.total_files[i];
     }
 

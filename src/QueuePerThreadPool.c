@@ -168,7 +168,7 @@ static inline uint64_t steal(QPTPool_t *pool, const size_t id, const size_t star
     size_t rc = 0;
     QPTPoolThreadData_t *tw = &pool->data[id];
 
-    for(size_t i = 0; i < pool->nthreads; i++) {
+    for (size_t i = 0; i < pool->nthreads; i++) {
         const size_t curr = (start + i) % pool->nthreads;
         if (curr == id) {
             continue;
@@ -428,7 +428,7 @@ static void *worker_function(void *args) {
     }
 
     /* signal all threads to loop, just in case */
-    for(size_t i = 0; i < pool->nthreads; i++) {
+    for (size_t i = 0; i < pool->nthreads; i++) {
         QPTPoolThreadData_t *data = &pool->data[i];
         pthread_mutex_lock(&data->mutex);
         pthread_cond_broadcast(&data->cv);
@@ -504,7 +504,7 @@ QPTPool_ctx_t *QPTPool_init_with_props(const size_t nthreads, void *args,
 
     /* set up thread data, but not threads */
     int bad = 0;
-    for(size_t i = 0; i < nthreads; i++) {
+    for (size_t i = 0; i < nthreads; i++) {
         QPTPoolThreadData_t *data = &pool->data[i];
 
         /* set references to pool first */
@@ -580,7 +580,7 @@ int QPTPool_set_queue_limit(QPTPool_ctx_t *ctx, const uint64_t queue_limit) {
     }
 
     /* drop old swap data no matter what the new queue limit is */
-    for(size_t i = 0; i < pool->nthreads; i++) {
+    for (size_t i = 0; i < pool->nthreads; i++) {
         QPTPoolThreadData_t *data = &pool->data[i];
         swap_stop(&data->swap);
     }
@@ -591,7 +591,7 @@ int QPTPool_set_queue_limit(QPTPool_ctx_t *ctx, const uint64_t queue_limit) {
     /* create new swap space */
     int bad = 0;
     if (pool->queue_limit) {
-        for(size_t i = 0; i < pool->nthreads; i++) {
+        for (size_t i = 0; i < pool->nthreads; i++) {
             QPTPoolThreadData_t *data = &pool->data[i];
             if (swap_restart(&data->swap, pool->swap_prefix, i) != 0) {
                 bad = 1;
@@ -621,7 +621,7 @@ int QPTPool_set_swap_prefix(QPTPool_ctx_t *ctx, const char *swap_prefix) {
 
     int bad = 0;
     if (pool->queue_limit) {
-        for(size_t i = 0; i < pool->nthreads; i++) {
+        for (size_t i = 0; i < pool->nthreads; i++) {
             QPTPoolThreadData_t *data = &pool->data[i];
             if (swap_restart(&data->swap, pool->swap_prefix, i) != 0) {
                 bad = 1;
@@ -791,7 +791,7 @@ int QPTPool_start(QPTPool_ctx_t *ctx) {
     pool->state = RUNNING;
 
     size_t started = 0;
-    for(size_t i = 0; i < pool->nthreads; i++) {
+    for (size_t i = 0; i < pool->nthreads; i++) {
         QPTPoolThreadData_t *data = &pool->data[i];
 
         if (pthread_create(&data->thread, attr, worker_function, &ctx[i]) != 0) {
@@ -1180,7 +1180,7 @@ void QPTPool_wait(QPTPool_ctx_t *ctx) {
         pthread_mutex_unlock(&pool->mutex);
 
         /* read swap in parallel */
-        for(size_t i = 0; i < pool->nthreads; i++) {
+        for (size_t i = 0; i < pool->nthreads; i++) {
             /* not swappable */
             QPTPool_enqueue_here(ctx, i, QPTPool_enqueue_WAIT,
                                  QPTPool_wait_swapped_once, NULL,
@@ -1217,14 +1217,14 @@ static void QPTPool_stop_threads(QPTPool_ctx_t *ctx, const size_t started) {
     pthread_mutex_unlock(&pool->mutex);
 
     /* force all threads out of waiting loop if they are in it */
-    for(size_t i = 0; i < pool->nthreads; i++) {
+    for (size_t i = 0; i < pool->nthreads; i++) {
         QPTPoolThreadData_t *data = &pool->data[i];
         pthread_mutex_lock(&data->mutex);
         pthread_cond_broadcast(&data->cv);
         pthread_mutex_unlock(&data->mutex);
     }
 
-    for(size_t i = 0; i < started; i++) {
+    for (size_t i = 0; i < started; i++) {
         pthread_join(pool->data[i].thread, NULL);
     }
 }
@@ -1243,7 +1243,7 @@ uint64_t QPTPool_threads_started(QPTPool_ctx_t *ctx) {
     }
 
     uint64_t sum = 0;
-    for(size_t i = 0; i < ctx->pool->nthreads; i++) {
+    for (size_t i = 0; i < ctx->pool->nthreads; i++) {
         sum += ctx->pool->data[i].threads_started;
     }
     return sum;
@@ -1255,7 +1255,7 @@ uint64_t QPTPool_threads_completed(QPTPool_ctx_t *ctx) {
     }
 
     uint64_t sum = 0;
-    for(size_t i = 0; i < ctx->pool->nthreads; i++) {
+    for (size_t i = 0; i < ctx->pool->nthreads; i++) {
         sum += ctx->pool->data[i].threads_successful;
     }
     return sum;
@@ -1268,7 +1268,7 @@ uint64_t QPTPool_work_swapped_count(QPTPool_ctx_t *ctx) {
     }
 
     uint64_t sum = 0;
-    for(size_t i = 0; i < ctx->pool->nthreads; i++) {
+    for (size_t i = 0; i < ctx->pool->nthreads; i++) {
         sum += ctx->pool->data[i].swap.total_count;
     }
     return sum;
@@ -1280,7 +1280,7 @@ size_t QPTPool_work_swapped_size(QPTPool_ctx_t *ctx) {
     }
 
     size_t sum = 0;
-    for(size_t i = 0; i < ctx->pool->nthreads; i++) {
+    for (size_t i = 0; i < ctx->pool->nthreads; i++) {
         sum += ctx->pool->data[i].swap.total_size;
     }
     return sum;
@@ -1306,7 +1306,7 @@ void QPTPool_destroy(QPTPool_ctx_t *ctx) {
 
     QPTPool_t *pool = ctx->pool;
 
-    for(size_t i = 0; i < pool->nthreads; i++) {
+    for (size_t i = 0; i < pool->nthreads; i++) {
         QPTPoolThreadData_t *data = &pool->data[i];
         data->threads_successful = 0;
         data->threads_started = 0;

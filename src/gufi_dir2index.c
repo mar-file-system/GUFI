@@ -457,7 +457,7 @@ int main(int argc, char *argv[]) {
      * per-thread cache now have somewhere to put it.
      */
     size_t thread_inited = 0;
-    for(; thread_inited < pa.in.maxthreads; thread_inited++) {
+    for (; thread_inited < pa.in.maxthreads; thread_inited++) {
         if (plugins_thread_init(&pa.in.plugins, NULL, thread_inited) != pa.in.plugins.count) {
             fprintf(stderr, "Error: Failed to initialize plugins for thread %zu\n",
                     thread_inited);
@@ -496,7 +496,7 @@ int main(int argc, char *argv[]) {
     }
     else {
         if (root_count) {
-            for(int i = 0; i < pa.in.pos.argc; i++) {
+            for (int i = 0; i < pa.in.pos.argc; i++) {
                 /* get first work item by validating source path */
                 struct work *root = NULL;
                 if (validate_source(&pa.index_parent, pa.in.pos.argv[i],
@@ -531,7 +531,7 @@ int main(int argc, char *argv[]) {
 
     uint64_t total_dirs = 0;
     uint64_t total_nondirs = 0;
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+    for (size_t i = 0; i < pa.in.maxthreads; i++) {
         total_dirs    += pa.total_dirs[i];
         total_nondirs += pa.total_nondirs[i];
     }

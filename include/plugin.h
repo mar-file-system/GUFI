@@ -84,11 +84,11 @@ typedef enum {
 } plugin_type;
 
 typedef enum {
-    // Do not process this directory and do not descend into its subdirectories
+    /* Do not process this directory and do not descend into its subdirectories */
     PLUGIN_NO_PROCESS_NO_DESCEND_DIR = 0,
-    // Do not process this directory, but still allow traversal into subdirectories
+    /* Do not process this directory, but still allow traversal into subdirectories */
     PLUGIN_NO_PROCESS_DIR = 1,
-    // Process this directory and allow normal traversal
+    /* Process this directory and allow normal traversal */
     PLUGIN_PROCESS_DIR = 2,
 } plugin_dir_action;
 

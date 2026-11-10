@@ -113,14 +113,14 @@ TEST(gufi_query, aggregate) {
     std::uniform_int_distribution <uint32_t> dist(0, std::numeric_limits<uint32_t>::max());
 
     uint64_t sum = 0;
-    for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
+    for (size_t i = 0; i < (size_t) in.maxthreads; i++) {
         ThreadArgs_t *ta = &(pa.ta[i]);
 
         // create source tables
         EXPECT_EQ(sqlite3_exec(ta->outdb, CREATE_SOURCE.c_str(), nullptr, nullptr, nullptr), SQLITE_OK);
 
         // add data to the source tables
-        for(size_t j = 0; j < row_count; j++) {
+        for (size_t j = 0; j < row_count; j++) {
             const uint32_t value = dist(gen);
 
             char sql[MAXSQL];

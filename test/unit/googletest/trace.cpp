@@ -359,13 +359,13 @@ TEST(trace, linetowork) {
     free(src);
 
     // name characters are not valid
-    for(size_t i = 0; i < PATH_PREFIX_LEN; i++) {
+    for (size_t i = 0; i < PATH_PREFIX_LEN; i++) {
         line[i] = '-';
     };
     EXPECT_EQ(linetowork(line,    rc, delim, &work,   &ed,     0), -1);
 
     // name length is too long
-    for(size_t i = 0; i < PATH_PREFIX_LEN; i++) {
+    for (size_t i = 0; i < PATH_PREFIX_LEN; i++) {
         line[i] = 'f';
     };
     EXPECT_EQ(linetowork(line,    rc, delim, &work,   &ed,     0), -1);
@@ -706,7 +706,7 @@ TEST(scout_stream, bad) {
 
     int fds[2];
 
-    for(int old_format : {0, 1}) {
+    for (int old_format : {0, 1}) {
         sta.old_format = old_format;
 
         // empty line

@@ -231,7 +231,7 @@ static void print_stanza(const char *name, sll_t *stats) {
 static void print_stats(char **paths, const int path_count,
                         struct input *in, struct RollUpStats *stats) {
     fprintf(stdout, "Roots:\n");
-    for(int i = 0; i < path_count; i++) {
+    for (int i = 0; i < path_count; i++) {
         fprintf(stdout, "    %s\n", paths[i]);
     }
     fprintf(stdout, "\n");
@@ -251,7 +251,7 @@ static void print_stats(char **paths, const int path_count,
 
     size_t remaining = 0;
 
-    for(size_t i = 0; i < in->maxthreads; i++) {
+    for (size_t i = 0; i < in->maxthreads; i++) {
         sll_move_append(&not_processed, &stats[i].not_processed);
         sll_move_append(&not_rolled_up, &stats[i].not_rolled_up);
         sll_move_append(&rolled_up,     &stats[i].rolled_up);
@@ -505,7 +505,7 @@ static int can_rollup(sqlite3 *dst, struct RollUp *rollup,
     }
 
     size_t legal = 0;
-    for(size_t i = 0; i < child_count; i++) {
+    for (size_t i = 0; i < child_count; i++) {
         legal += check_pair_permissions(&perms, &child_perms[i]);
     }
 
@@ -920,7 +920,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+    for (size_t i = 0; i < pa.in.maxthreads; i++) {
         sll_init(&pa.stats[i].not_processed);
         sll_init(&pa.stats[i].not_rolled_up);
         sll_init(&pa.stats[i].rolled_up);
