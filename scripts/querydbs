@@ -108,7 +108,8 @@ def run(argv, config_path):
 
     for i, db in enumerate(args.db):
         attach_name = '{}{}'.format(args.attach_prefix, i)
-        attach += ['ATTACH \'{}\' AS {};'.format(db, attach_name)]
+        attach += ['ATTACH \'{}\' AS {};'.format(
+            gufi_common.single_quotes(db), attach_name)]
         select += ['SELECT * FROM {}.{}'.format(attach_name, args.table_name)]
 
     # CREATE TEMP VIEW v<table_name> AS SELECT * FROM <attach_prefix><index>.<table_name> ... ;

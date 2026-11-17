@@ -82,13 +82,15 @@ void attach_extdbs(struct input *in, sqlite3 *db,
         eas_t *user = (eas_t *) sll_node_data(node);
 
         char *basename_comp = NULL;
+        str_t *esc = str_sql_escape_single_quotes(&user->basename);
+
         const size_t basename_comp_len = SNFORMAT_S_ALLOC(&basename_comp, 7,
                                                           "(pinode == '", (size_t) 12,
                                                           dir_inode, dir_inode_len,
                                                           "')", (size_t) 2,
                                                           " AND ", (size_t) 5,
                                                           "(basename(filename) == '", (size_t) 24,
-                                                          user->basename.data, user->basename.len,
+                                                          esc->data, esc->len,
                                                           "')", (size_t) 2);
 
         const str_t basename_comp_ref = REFSTR(basename_comp, basename_comp_len);
@@ -110,6 +112,7 @@ void attach_extdbs(struct input *in, sqlite3 *db,
                              external_increment_attachname, extdb_count);
 
         free(basename_comp);
+        str_free(esc);
     }
 }
 

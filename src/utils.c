@@ -79,6 +79,30 @@ OF SUCH DAMAGE.
 #include "str.h"
 #include "utils.h"
 
+str_t *str_sql_escape_single_quotes(const str_t *src) {
+    if (!src || !src->data) {
+        return NULL;
+    }
+
+    size_t escaped_len = src->len * 2 + 1;
+    str_t *escaped = str_alloc(escaped_len);
+    if (!escaped) {
+        return NULL;
+    }
+
+    size_t j = 0;
+    for (size_t i = 0; i < src->len; i++) {
+        if (src->data[i] == '\'') {
+            escaped->data[j++] = '\'';
+        }
+        escaped->data[j++] = src->data[i];
+    }
+    escaped->data[j] = '\0';
+    escaped->len = j;
+
+    return escaped;
+}
+
 int secure_openat(const int dirfd, const char *path,
                   const int flags, const mode_t perms) {
     if (!path) {
@@ -457,10 +481,10 @@ int dupdir(char *path, const mode_t mode, const uid_t uid, const gid_t gid) {
 }
 
 int shortpath(const char *name, char *nameout, char *endname) {
-     char prefix[MAXPATH];
-     char *pp;
-     size_t i;
-     int slashfound;
+     char prefix[MAXPATH] = { 0 };
+     char *pp = NULL;
+     size_t i = 0;
+     int slashfound = 0;
 
      *endname = 0; /* in case there's no '/' */
      SNPRINTF(prefix, MAXPATH, "%s", name);

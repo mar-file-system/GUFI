@@ -1315,3 +1315,18 @@ int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, i
     sqlite3_finalize(stmt);
     return 0;
 }
+
+int is_safe_identifier(const str_t *s) {
+    if (!s || !s->data || (s->len == 0)) {
+        return 0;
+    }
+    for (size_t i = 0; i < s->len; i++) {
+        char c = s->data[i];
+        if (!(((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) ||
+              ((c >= '0') && (c <= '9')) || (c == '_') || (c == '.')) ||
+            ((i == 0) && (c >= '0') && (c <= '9'))) {
+            return 0;
+        }
+    }
+    return 1;
+}

@@ -801,7 +801,6 @@ int QPTPool_start(QPTPool_ctx_t *ctx) {
 
         started++;
     }
-    pthread_mutex_unlock(&pool->mutex);
 
     #if QPTPOOL_STACK_SIZE
     pthread_attr_destroy(attr);
@@ -812,6 +811,7 @@ int QPTPool_start(QPTPool_ctx_t *ctx) {
         return 1;
     }
 
+    pthread_mutex_unlock(&pool->mutex);
     return 0;
 }
 

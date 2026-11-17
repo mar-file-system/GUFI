@@ -100,6 +100,9 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...);
 /* same as SNFORMAT_S, but allocates space for caller */
 size_t SNFORMAT_S_ALLOC(char **dst, size_t count, ...);
 
+/* escape single quotes in a str_t for safe SQL string literal embedding */
+str_t *str_sql_escape_single_quotes(const str_t *src);
+
 #define MIN_ASSIGN_LHS(lhs, rhs) if ((lhs) > (rhs)) { (lhs) = (rhs); }
 #define MAX_ASSIGN_LHS(lhs, rhs) if ((lhs) < (rhs)) { (lhs) = (rhs); }
 
@@ -113,7 +116,7 @@ static inline uint64_t max(const uint64_t lhs, const uint64_t rhs) {
 
 static inline void set_no_print_errno(uint64_t *bitfield, const int err) {
     if (bitfield) {
-        bitfield[err >> 6] |= 1 << (err & 0x3f);
+        bitfield[err >> 6] |= 1ULL << (err & 0x3f);
     }
 }
 

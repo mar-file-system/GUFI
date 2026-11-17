@@ -287,8 +287,8 @@ static int rollup_external_xattrs(void *args, int count, char **data, char **col
     const size_t filename_len   = strlen(filename);
     const char  *uid_str        = data[1];
     const char  *gid_str        = data[2];
-    uid_t uid;
-    gid_t gid;
+    uid_t uid = 0;
+    gid_t gid = 0;
 
     int rc = 0;
 

@@ -169,7 +169,7 @@ static int process_summary(void *args, int count, char **data, char **columns) {
     struct DirCallbackArgs *dcba = (struct DirCallbackArgs *) args;
 
     struct stat st;
-    int64_t t;
+    int64_t t = 0;
     size_t xattr_names_len = 0;
     const char *inode = data[0];
     /* sscanf(data[0], "%" STAT_inode, &st.st_ino); */
@@ -215,7 +215,7 @@ static int process_entries(void *args, int count, char **data, char **columns) {
         case 'f':
             ;
             struct stat st;
-            int64_t t;
+            int64_t t = 0;
             size_t xattr_names_len = 0;
             const char *inode = data[2];
             /* sscanf(data[2], "%" STAT_ino,  &st.st_ino); */

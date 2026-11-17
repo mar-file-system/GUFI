@@ -434,7 +434,7 @@ char *build_getopt_str(const struct option *options) {
     size_t len = 1; /* null terminator */
 
     for (const struct option *opt = options; opt->name != NULL; opt++) {
-        if (opt->val >= '0' && opt->val <= 'z') {
+        if ((opt->val >= '0') && (opt->val <= 'z')) {
             len++;
             if (opt->has_arg == required_argument) {
                 len++;
@@ -449,7 +449,7 @@ char *build_getopt_str(const struct option *options) {
 
     char *ptr = getopt_str;
     for (const struct option *opt = options; opt->name != NULL; opt++) {
-        if (opt->val >= '0' && opt->val <= 'z') {
+        if ((opt->val >= '0') && (opt->val <= 'z')) {
             *ptr++ = (char) opt->val;
             if (opt->has_arg == required_argument) {
                 *ptr++ = ':';
@@ -497,7 +497,7 @@ int parse_cmd_line(int                  argc,
     int show          = 0;
     int retval        = 0;
     int bad_skipfile  = 0;
-    int ch;
+    int ch = 0;
     setenv("POSIXLY_CORRECT", "1", 1); /* don't check errors? */
     optind = 0;                        /* man 3 getopt_long */
     while ((ch = getopt_long(argc, argv, getopt_str, options, NULL)) != -1) {

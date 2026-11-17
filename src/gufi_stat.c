@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include <time.h>
 
 #include "bf.h"
+#include "config.h"
 #include "dbutils.h"
 #include "utils.h"
 
@@ -323,9 +324,21 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     break;
                 case 'G': /* group name of owner */
                     {
-                        struct group *gr = getgrgid(atoi(data[8]));
-                        const char *group = gr?gr->gr_name:UNKNOWN;
-                        fprintf(out, line, group);
+                        gid_t gid;
+                        struct group gr;
+                        struct group *gr_res = NULL;
+                        char *buf = NULL;
+                        char *err_msg = NULL;
+                        size_t err_len = 0;
+                        if (sscanf(data[8], "%" STAT_gid, &gid) == 1) {
+                            getgrgid_wrapper(gid, &gr, &gr_res, &buf, &err_msg, &err_len);
+                            const char *group = gr_res?gr.gr_name:UNKNOWN;
+                            fprintf(out, line, group);
+                        }
+                        else {
+                            fprintf(out, line, data[8]);
+                        }
+                        free(buf);
                     }
                     break;
                 case 'h': /* number of hard links */
@@ -375,9 +388,21 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     break;
                 case 'U': /* user name of owner */
                     {
-                        struct passwd *pw = getpwuid(atoi(data[7]));
-                        const char *user = pw?pw->pw_name:UNKNOWN;
-                        fprintf(out, line, user);
+                        uid_t uid;
+                        struct passwd pw;
+                        struct passwd *pw_res = NULL;
+                        char *buf = NULL;
+                        char *err_msg = NULL;
+                        size_t err_len = 0;
+                        if (sscanf(data[7], "%" STAT_uid, &uid) == 1) {
+                            getpwuid_wrapper(uid, &pw, &pw_res, &buf, &err_msg, &err_len);
+                            const char *user = pw_res?pw.pw_name:UNKNOWN;
+                            fprintf(out, line, user);
+                        }
+                        else {
+                            fprintf(out, line, data[7]);
+                        }
+                        free(buf);
                     }
                     break;
                 case 'w': /* time of file birth, human-readable; - if unknown */
@@ -403,7 +428,7 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, atime_str);
                     break;
                 case 'X': /* time of last access, seconds since Epoch */
-                    SNPRINTF(atime_str, sizeof(mtime_str), "%llu", (long long unsigned int) mktime(&atm));
+                    SNPRINTF(atime_str, sizeof(atime_str), "%llu", (long long unsigned int) mktime(&atm));
                     fprintf(out, line, atime_str);
                     break;
                 case 'y': /* time of last modification, human-readable */

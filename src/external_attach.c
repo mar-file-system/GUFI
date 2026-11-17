@@ -136,6 +136,12 @@ static size_t external_create_query(char *sql,         const size_t sql_size,
     }
 
     if (extra) {
+        for (size_t i = 0; i < extra->len; i++) {
+            char c = extra->data[i];
+            if ((c == ';') || (c == '-') || (c == '#')) {
+                return len;
+            }
+        }
         len += SNFORMAT_S(sql + len, sql_size - len, 1,
                           extra->data, extra->len);
     }
@@ -295,6 +301,10 @@ int external_concatenate(sqlite3 *db,
                                                     viewname->data, viewname->len,
                                                     " AS", (size_t) 3);
 
+    if (!is_safe_identifier(viewname)) {
+        return -1;
+    }
+
     if (type) {
         /* find external databases of given type */
         char get_mappings[MAXSQL];
@@ -346,6 +356,9 @@ int external_concatenate(sqlite3 *db,
             /* if attach fails, you don't have access to the database - just continue */
             if (attachdb(clean_path, db, attachname, SQLITE_OPEN_READONLY, 0, 0)) {
                 /* SELECT * FROM <attach name>.<table name> UNION */
+                if (!is_safe_identifier(tablename)) {
+                    continue;
+                }
                 unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 6,
                                         select->data, select->len,
                                         "'", (size_t) 1,
@@ -372,6 +385,9 @@ int external_concatenate(sqlite3 *db,
                             select->data, select->len,
                             default_table->data, default_table->len,
                             ";", (size_t) 1);
+    if (!is_safe_identifier(default_table)) {
+        return -1;
+    }
 
     /* create view */
     char *err = NULL;

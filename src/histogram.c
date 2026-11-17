@@ -258,7 +258,7 @@ log_hist_t *log_hist_parse(const char *str) {
         hist->buckets = calloc(hist->count, sizeof(hist->buckets[0]));
 
         for (size_t total_read = read; total_read < len;) {
-            size_t bucket, count;
+            size_t bucket = 0, count = 0;
             if ((sscanf(str + total_read, "%zu:%zu;%n", &bucket, &count, &read) != 2) ||
                 (str[total_read + read - 1] != ';')) {
                 log_hist_free(hist);
@@ -393,8 +393,8 @@ mode_hist_t *mode_hist_parse(const char *str) {
 
     mode_hist_t *hist = calloc(1, sizeof(*hist));
     for (size_t total_read = 0; total_read < len;) {
-        unsigned int bucket;
-        size_t count;
+        unsigned int bucket = 0;
+        size_t count = 0;
         int read = 0;
         if ((sscanf(str + total_read, "%03o:%zu;%n", &bucket, &count, &read) != 2) ||
             (read == 0) ||
@@ -530,7 +530,7 @@ time_hist_t *time_hist_parse(const char *str) {
     hist->ref = (time_t) ref;
 
     for (size_t total_read = read; total_read < len;) {
-        size_t bucket, count;
+        size_t bucket = 0, count = 0;
         if ((sscanf(str + total_read, "%zu:%zu;%n", &bucket, &count, &read) != 2) ||
             (str[total_read + read - 1] != ';')) {
             time_hist_free(hist);

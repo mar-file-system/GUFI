@@ -156,8 +156,8 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
 static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc;
-    int fmode;
-    char tmode[64];
+    int fmode = 0;
+    char tmode[64] = { 0 };
     fmode = sqlite3_value_int(argv[0]);
     modetostr(tmode, sizeof(tmode), fmode);
     sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
@@ -360,7 +360,7 @@ static void agecat(sqlite3_context *context, int argc, sqlite3_value **argv) {
         return;
     }
 
-    double timein;
+    double timein = 0.0;
     if (sscanf(timein_s, "%lf", &timein) != 1) {
         sqlite3_result_error(context, "Bad size", -1);
         return;
@@ -436,7 +436,7 @@ static void epochtoage(sqlite3_context *context, int argc, sqlite3_value **argv)
         return;
     }
 
-    double timein;
+    double timein = 0.0;
     if (sscanf(timein_s, "%lf", &timein) != 1) {
         sqlite3_result_error(context, "Bad size", -1);
         return;
