@@ -267,6 +267,7 @@ jobs:
       working-directory: ${{ github.workspace }}/build
       run:  |
         sudo sysctl -w kernel.yama.ptrace_scope=0
+        sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
         ctest --output-on-failure -E "import|query_multiple_remotes"
 
   TSAN:

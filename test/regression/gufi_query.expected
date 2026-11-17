@@ -317,6 +317,17 @@ c d e f
 0 1 2 3
 4 5 6 7
 
+# run_vt in --global-db during -S
+$ gufi_query -d " " --max-level 0 -a 1 --global-db "CREATE VIRTUAL TABLE tempcsv USING run_vt(cmd='cat prefix/data.csv', cols='col0, col1, col2, col3', d=',');" "" -S "SELECT col0, col1, col2, col3 FROM tempcsv ORDER BY col0;" "prefix"
+0 1 2 3
+4 5 6 7
+
+# run_vt in --global-db during -E and -J
+$ gufi_query -d " " --max-level 0 -a 1 --global-db "CREATE VIRTUAL TABLE tempcsv USING run_vt(cmd='cat prefix/data.csv', cols='key, name', d=','); CREATE TABLE mapping(key INTEGER, name TEXT);" "INSERT INTO mapping VALUES (0, 'zero'), (1, 'one'), (2, 'two');" -I "CREATE TABLE out(key INTEGER, name TEXT);" -K "CREATE TABLE aggregate(key INTEGER, name TEXT);" -S "SELECT '' FROM summary WHERE name == '';" -E "INSERT INTO out SELECT tempcsv.key, tempcsv.name FROM tempcsv;" -J "INSERT INTO aggregate SELECT out.key, mapping.name FROM out JOIN mapping ON out.key = mapping.key;" -G "SELECT * FROM aggregate ORDER BY key;" "prefix"
+0 zero
+1 one
+2 two
+
 $ gufi_query -d " " -I "SELECT setstr('-I', 'init');" -S "SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));" -E "SELECT level(), '{-I}', {abc}, {def};" "prefix"
 0 init 1049624 5
 1 init 0 0

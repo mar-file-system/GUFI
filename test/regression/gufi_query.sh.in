@@ -152,6 +152,25 @@ echo "# run_vt with {s} (source directory) and {i} (index directory)"
 run_no_sort "${GUFI_QUERY} -d \" \" -p \"${SRCDIR}\" -S \"SELECT '' FROM summary WHERE name NOT REGEXP '.*unusual.*';\" -E \"CREATE VIRTUAL TABLE temp.csv USING run_vt(cmd='find \\\"{s}\\\" \\\"{i}\\\" -maxdepth 1 -name \\\"*.csv\\\" -exec cat \\\"{}\\\" \\\;', cols='col0, col1, col2, col3', d=','); SELECT * FROM temp.csv; DROP TABLE temp.csv;\" \"${INDEXROOT}\"" | @SED@ '\%^$%d;'
 echo
 
+echo "# run_vt in --global-db during -S"
+(
+    echo "0,1,2,3"
+    echo "4,5,6,7"
+) > "${SRC_CSV}"
+
+run_sort "${GUFI_QUERY} -d \" \" --max-level 0 -a 1 --global-db \"CREATE VIRTUAL TABLE tempcsv USING run_vt(cmd='cat ${SRCDIR}/data.csv', cols='col0, col1, col2, col3', d=',');\" \"\" -S \"SELECT col0, col1, col2, col3 FROM tempcsv ORDER BY col0;\" \"${INDEXROOT}\"" | @SED@ '\%^$%d;'
+echo
+
+echo "# run_vt in --global-db during -E and -J"
+(
+    echo "0,zero"
+    echo "1,one"
+    echo "2,two"
+) > "${SRC_CSV}"
+
+run_sort "${GUFI_QUERY} -d \" \" --max-level 0 -a 1 --global-db \"CREATE VIRTUAL TABLE tempcsv USING run_vt(cmd='cat ${SRCDIR}/data.csv', cols='key, name', d=','); CREATE TABLE mapping(key INTEGER, name TEXT);\" \"INSERT INTO mapping VALUES (0, 'zero'), (1, 'one'), (2, 'two');\" -I \"CREATE TABLE out(key INTEGER, name TEXT);\" -K \"CREATE TABLE aggregate(key INTEGER, name TEXT);\" -S \"SELECT '' FROM summary WHERE name == '';\" -E \"INSERT INTO out SELECT tempcsv.key, tempcsv.name FROM tempcsv;\" -J \"INSERT INTO aggregate SELECT out.key, mapping.name FROM out JOIN mapping ON out.key = mapping.key;\" -G \"SELECT * FROM aggregate ORDER BY key;\" \"${INDEXROOT}\"" | @SED@ '\%^$%d;'
+echo
+
 run_sort "${GUFI_QUERY} -d \" \" -I \"SELECT setstr('-I', 'init');\" -S \"SELECT setstr('abc', (SELECT totsize FROM summary)); SELECT setstr('def', (SELECT totfiles FROM summary));\" -E \"SELECT level(), '{-I}', {abc}, {def};\" \"${INDEXROOT}\"" | @SED@ '\%^$%d;'
 
 run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT thread_id();\" \"${INDEXROOT}\""

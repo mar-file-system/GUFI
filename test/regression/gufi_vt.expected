@@ -1011,6 +1011,23 @@ prefix/directory/executable|1|1|---------x
 prefix/directory/executable|1|2|--------w-
 prefix/directory/readonly|2|2|--------w-
 
+# run_vt in --global-db during -S
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, max_level=0, global_db_create="CREATE VIRTUAL TABLE tempcsv USING run_vt(cmd='cat prefix/data.csv', cols='col0, col1, col2, col3', d=',');", global_db_insert="", S="SELECT col0, col1, col2, col3 FROM tempcsv ORDER BY col0;");SELECT * FROM gufi;"
+) | sqlite3
+0|1|2|3
+4|5|6|7
+
+# run_vt in --global-db during -E and -J
+$ (
+    echo ".load gufi_vt"
+    echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", a=1, max_level=0, global_db_create="CREATE VIRTUAL TABLE tempcsv USING run_vt(cmd='cat prefix/data.csv', cols='key, name', d=','); CREATE TABLE mapping(key INTEGER, name TEXT);", global_db_insert="INSERT INTO mapping VALUES (0, 'zero'), (1, 'one'), (2, 'two');", I="CREATE TABLE out(key INTEGER, name TEXT);", K="CREATE TABLE aggregate(key INTEGER, name TEXT);", S="SELECT '' FROM summary WHERE name == '';", E="INSERT INTO out SELECT tempcsv.key, tempcsv.name FROM tempcsv;", J="INSERT INTO aggregate SELECT out.key, mapping.name FROM out JOIN mapping ON out.key = mapping.key;", G="SELECT * FROM aggregate ORDER BY key;");SELECT * FROM gufi;"
+) | sqlite3
+0|zero
+1|one
+2|two
+
 # Specify gufi_query path
 $ (
     echo ".load gufi_vt"
