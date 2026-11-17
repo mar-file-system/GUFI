@@ -534,13 +534,19 @@ static int do_create(trie_t *search, const size_t root_count, Nodes_t *dirs, Nod
 
     /* store child */
     if (type == 'd') {
+        if (!node_insert(dirs, child)) {
+            node_free(child);
+            return 1;
+        }
         sll_push_back(&parent->subdirs.list, child);
-        node_insert(dirs, child);
         trie_insert(search, child->inode.data, child->inode.len, child, NULL);
     }
     else {
+        if (!node_insert(nondirs, child)) {
+            node_free(child);
+            return 1;
+        }
         sll_push_back(&parent->nondirs.list, child);
-        node_insert(nondirs, child);
     }
 
     char *child_path = get_current_path(search, child);
