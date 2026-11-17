@@ -67,7 +67,6 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <unistd.h>
 
-#include "dbutils.h"
 #include "external_attach.h"
 #include "utils.h"
 

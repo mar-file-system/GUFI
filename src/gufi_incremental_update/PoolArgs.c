@@ -68,7 +68,6 @@ OF SUCH DAMAGE.
 
 #include "config.h"
 #include "plugin.h"
-#include "trie.h"
 #include "utils.h"
 
 #include "gufi_incremental_update/PoolArgs.h"

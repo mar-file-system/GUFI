@@ -66,12 +66,9 @@ OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <string.h>
 
-#include "QueuePerThreadPool.h"
 #include "dbutils.h"
-#include "descend.h"
 #include "external_attach.h"
 #include "index.h"
-#include "plugin.h"
 #include "xattrs.h"
 
 /*

@@ -66,7 +66,6 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-#include "dbutils.h"
 #include "print.h"
 
 #include "gufi_find_outliers/handle_db.h"

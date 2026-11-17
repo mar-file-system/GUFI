@@ -76,7 +76,11 @@ OF SUCH DAMAGE.
 #include "config.h"
 #include "dbutils.h"
 #include "external_attach.h"
+#include "index.h"
+#include "path_list.h"
+#include "plugin.h"
 #include "str.h"
+#include "template_db.h"
 #include "utils.h"
 #include "xattrs.h"
 

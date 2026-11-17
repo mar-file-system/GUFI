@@ -78,9 +78,10 @@ OF SUCH DAMAGE.
 #include "index.h"
 #include "path_list.h"
 #include "plugin.h"
-#include "template_db.h"
 #include "str.h"
+#include "template_db.h"
 #include "utils.h"
+#include "xattrs.h"
 
 struct PoolArgs {
     struct input in;

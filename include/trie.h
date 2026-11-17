@@ -65,6 +65,8 @@ OF SUCH DAMAGE.
 #ifndef TRIE_H
 #define TRIE_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

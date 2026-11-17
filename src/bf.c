@@ -69,10 +69,9 @@ OF SUCH DAMAGE.
 #include <errno.h>
 #include <inttypes.h>
 #include <pwd.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "bf.h"
@@ -80,7 +79,6 @@ OF SUCH DAMAGE.
 #include "external_attach.h"
 #include "external_copy.h"
 #include "internal_copy.h"
-#include "plugin.h"
 #include "utils.h"
 
 #define XSTR(x) #x
