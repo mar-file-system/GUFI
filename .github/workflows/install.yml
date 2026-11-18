@@ -203,3 +203,228 @@ jobs:
       if:   startsWith(github.ref, 'refs/tags/') && (matrix.os == 'macos-26-intel')
       with:
         files: ${{ github.workspace }}/build/*.pkg
+
+  wsl-build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    outputs:
+      version: ${{ steps.detect-version.outputs.version }}
+      arch: ${{ steps.detect-arch.outputs.arch }}
+
+    steps:
+    - uses: actions/checkout@main
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Install build dependencies
+      run: sudo contrib/CI/ubuntu.sh
+
+    - name: Install debootstrap
+      run: sudo apt-get install -y debootstrap
+
+    - name: Create base rootfs
+      run: |
+        CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+        sudo debootstrap --include=sudo,locales "${CODENAME}" rootfs http://archive.ubuntu.com/ubuntu/
+
+    - name: Install Python Packages
+      run: python3 -m pip install -r contrib/CI/requirements.txt
+
+    - name: Install Marfs & ISA-L
+      run: contrib/deps/marfs.sh ${{ github.workspace }}/build/builds ${{ env.DEP_INSTALL_PREFIX }} 2
+
+    - name: Configure GUFI (Local)
+      run: cmake -S . -B build ${{ env.COMMON_CONFIG }} -DCMAKE_INSTALL_PREFIX="/usr/local"
+
+    - name: Build GUFI
+      run: cmake --build build -j4
+
+    - name: Download Licenses
+      run: |
+        sudo apt-get install -y wget
+        chmod +x build/contrib/CI/licenses.sh
+        build/contrib/CI/licenses.sh
+
+    - name: Install GUFI Local into rootfs
+      run: sudo cmake --install build --component Local
+
+    - name: Copy GUFI Local to rootfs
+      run: |
+        sudo mkdir -p rootfs/usr/local
+        sudo cp -r /usr/local/* rootfs/usr/local/
+
+    - name: Test GUFI Local binaries run
+      run: |
+        for bin in gufi_query gufi_stat_bin gufi_dir2index gufi_sqlite3 gufi_du gufi_find gufi_ls gufi_stat gufi_stats; do
+          LD_LIBRARY_PATH="${{ github.workspace }}/rootfs/usr/local/lib" "${{ github.workspace }}/rootfs/usr/local/bin/${bin}" --help >/dev/null 2>&1
+        done
+
+    - name: Detect architecture
+      id: detect-arch
+      run: |
+        echo "arch=$(uname -m)" >> "$GITHUB_OUTPUT"
+        echo "ARCH=$(uname -m)" >> "$GITHUB_ENV"
+
+    - name: Detect GUFI version
+      id: detect-version
+      run: |
+        echo "version=$(echo "${{ github.ref_name }}" | sed 's/^v//')" >> "$GITHUB_OUTPUT"
+        echo "VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//')" >> "$GITHUB_ENV"
+
+    - name: Package rootfs tarball
+      run: |
+        sudo tar --numeric-owner --xattrs --acls -czf "${{ github.workspace }}/build/gufi-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz" -C "${{ github.workspace }}/rootfs" .
+
+    - name: Install GUFI Remote into rootfs-remote
+      run: sudo cmake --install build --component Remote
+
+    - name: Copy GUFI Remote to rootfs-remote
+      run: |
+        sudo mkdir -p rootfs-remote/usr/local
+        sudo cp -r /usr/local/* rootfs-remote/usr/local/
+
+    - name: Test GUFI Remote binaries run
+      run: |
+        for bin in gufi_query gufi_stat gufi_ls; do
+          LD_LIBRARY_PATH="${{ github.workspace }}/rootfs-remote/usr/local/lib" "${{ github.workspace }}/rootfs-remote/usr/local/bin/${bin}" --help >/dev/null 2>&1
+        done
+
+    - name: Package remote rootfs tarball
+      run: |
+        sudo tar --numeric-owner --xattrs --acls -czf "${{ github.workspace }}/build/gufi-remote-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz" -C "${{ github.workspace }}/rootfs-remote" .
+
+    - name: Verify GUFI binaries in rootfs
+      run: |
+        for bin in gufi_query gufi_stat_bin gufi_dir2index gufi_sqlite3; do
+          test -x "${{ github.workspace }}/rootfs/usr/local/bin/${bin}"
+        done
+        test -f "${{ github.workspace }}/rootfs/usr/local/lib/gufi_vt.so"
+
+    - name: Verify GUFI remote binaries in rootfs
+      run: |
+        for bin in gufi_query gufi_stat gufi_ls; do
+          test -x "${{ github.workspace }}/rootfs-remote/usr/local/bin/${bin}"
+        done
+        test -f "${{ github.workspace }}/rootfs-remote/usr/local/lib/gufi_vt.so"
+
+    - name: Save rootfs tarball to cache
+      uses: actions/cache/save@main
+      with:
+        path: ${{ github.workspace }}/build/gufi-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz
+        key: gufi-wsl-rootfs-${{ env.VERSION }}-${{ env.ARCH }}-${{ github.run_id }}
+
+    - name: Save remote rootfs tarball to cache
+      uses: actions/cache/save@main
+      with:
+        path: ${{ github.workspace }}/build/gufi-remote-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz
+        key: gufi-wsl-rootfs-remote-${{ env.VERSION }}-${{ env.ARCH }}-${{ github.run_id }}
+
+  wsl-test:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    needs: wsl-build
+
+    steps:
+    - name: Install Ubuntu WSL distro
+      shell: pwsh
+      run: |
+        wsl --install -d Ubuntu
+        wsl --update
+
+    - name: Detect architecture
+      shell: pwsh
+      run: |
+        $arch = (wsl -d Ubuntu uname -m).Trim()
+        echo "ARCH=$arch" >> $env:GITHUB_ENV
+
+    - name: Detect GUFI version
+      shell: pwsh
+      run: |
+        $version = '${{ github.ref_name }}'.TrimStart('v')
+        echo "VERSION=$version" >> $env:GITHUB_ENV
+
+    - name: Restore rootfs tarball from cache
+      uses: actions/cache/restore@main
+      with:
+        path: ${{ github.workspace }}\build
+        key: gufi-wsl-rootfs-${{ env.VERSION }}-${{ env.ARCH }}-${{ github.run_id }}
+
+    - name: Restore remote rootfs tarball from cache
+      uses: actions/cache/restore@main
+      with:
+        path: ${{ github.workspace }}\build
+        key: gufi-wsl-rootfs-remote-${{ env.VERSION }}-${{ env.ARCH }}-${{ github.run_id }}
+
+    - name: Fix cached tarball name
+      shell: pwsh
+      run: |
+        $cached = Get-ChildItem -Path "${{ github.workspace }}\build" -Filter "gufi-*-wsl-*.tar.gz" | Select-Object -First 1
+        if (-not $cached) {
+          Write-Error "No cached WSL tarball found in ${{ github.workspace }}\build"
+          exit 1
+        }
+        $target = "${{ github.workspace }}\build\gufi-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz"
+        if ($cached.FullName -ne $target) {
+          Copy-Item -Path $cached.FullName -Destination $target -Force
+        }
+
+    - name: Fix remote cached tarball name
+      shell: pwsh
+      run: |
+        $cached = Get-ChildItem -Path "${{ github.workspace }}\build" -Filter "gufi-remote-*-wsl-*.tar.gz" | Select-Object -First 1
+        if (-not $cached) {
+          Write-Error "No cached WSL remote tarball found in ${{ github.workspace }}\build"
+          exit 1
+        }
+        $target = "${{ github.workspace }}\build\gufi-remote-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz"
+        if ($cached.FullName -ne $target) {
+          Copy-Item -Path $cached.FullName -Destination $target -Force
+        }
+
+    - name: Test WSL import and run gufi (Local)
+      shell: pwsh
+      run: |
+        wsl --unregister GUFI-Test-Local 2>$null | Out-Null
+        wsl --import GUFI-Test-Local "${{ github.workspace }}\WSL-Test-Local" "${{ github.workspace }}\build\gufi-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz"
+        wsl -d GUFI-Test-Local --exec /usr/local/bin/gufi_query --help
+        wsl --unregister GUFI-Test-Local
+
+    - name: Test WSL import and run gufi (Remote)
+      shell: pwsh
+      run: |
+        wsl --unregister GUFI-Test-Remote 2>$null | Out-Null
+        wsl --import GUFI-Test-Remote "${{ github.workspace }}\WSL-Test-Remote" "${{ github.workspace }}\build\gufi-remote-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz"
+        wsl -d GUFI-Test-Remote --exec /usr/local/bin/gufi_query --help
+        wsl --unregister GUFI-Test-Remote
+
+    - name: Cleanup cache
+      shell: pwsh
+      run: |
+        $key = "gufi-wsl-rootfs-${{ env.VERSION }}-${{ env.ARCH }}-${{ github.run_id }}"
+        $response = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=$key" -Headers @{Authorization = "Bearer ${{ secrets.GITHUB_TOKEN }}"; Accept = "application/vnd.github+json"}
+        if ($response.actions_caches.Count -gt 0) {
+          $cacheId = $response.actions_caches[0].id
+          Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/caches/$cacheId" -Method Delete -Headers @{Authorization = "Bearer ${{ secrets.GITHUB_TOKEN }}"; Accept = "application/vnd.github+json"}
+        }
+
+    - name: Cleanup remote cache
+      shell: pwsh
+      run: |
+        $key = "gufi-wsl-rootfs-remote-${{ env.VERSION }}-${{ env.ARCH }}-${{ github.run_id }}"
+        $response = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=$key" -Headers @{Authorization = "Bearer ${{ secrets.GITHUB_TOKEN }}"; Accept = "application/vnd.github+json"}
+        if ($response.actions_caches.Count -gt 0) {
+          $cacheId = $response.actions_caches[0].id
+          Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/caches/$cacheId" -Method Delete -Headers @{Authorization = "Bearer ${{ secrets.GITHUB_TOKEN }}"; Accept = "application/vnd.github+json"}
+        }
+
+    - uses: softprops/action-gh-release@master
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: ${{ github.workspace }}\build\gufi-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz ${{ github.workspace }}\build\gufi-remote-${{ env.VERSION }}-wsl-${{ env.ARCH }}.tar.gz
