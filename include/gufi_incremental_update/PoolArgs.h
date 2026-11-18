@@ -91,6 +91,7 @@ struct GenSnapshot {
     pthread_mutex_t *mutex;
     pthread_cond_t  *cond;
     size_t          *counter;
+    size_t          *active;
 };
 
 struct SuspectInodes {

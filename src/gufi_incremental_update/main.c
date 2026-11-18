@@ -175,15 +175,22 @@ static int compare_and_update(struct PoolArgs *pa,
     pthread_cond_t cond;
     pthread_cond_init(&cond, NULL);
 
-    size_t counter = 0;
+    size_t counter = 0; /* number of work items enqueued */
+    /*
+     * number of work items enqueued AND currently processing
+     *
+     * incremented and decremented with a thread
+     */
+    size_t active = 0;
 
     /* if the index is in the tree, there is no need to get a snapshot of the index */
     if (pa->same == 0) {
         ++counter;
 
-        index->mutex = &mutex;
-        index->cond = &cond;
+        index->mutex   = &mutex;
+        index->cond    = &cond;
         index->counter = &counter;
+        index->active  = &active;
 
         /* use the tree's inode for the snapshot name (this gets overwritten by a second lstat_wrapper call) */
         index->work->statuso.st_ino = inode;
@@ -195,9 +202,10 @@ static int compare_and_update(struct PoolArgs *pa,
         rc = gen_index_snapshot(pa, inode, index);
     }
 
-    tree->mutex = &mutex;
-    tree->cond = &cond;
+    tree->mutex   = &mutex;
+    tree->cond    = &cond;
     tree->counter = &counter;
+    tree->active  = &active;
 
     /*
      * get a snapshot of the current tree
@@ -225,6 +233,20 @@ static int compare_and_update(struct PoolArgs *pa,
     pthread_mutex_lock(&mutex);
     while (counter && !QPTPool_errored(pa->ctx)) {
         pthread_cond_wait(&cond, &mutex);
+    }
+
+    /*
+     * wait for active items to clear out before freeing
+     * mutex and cond
+     *
+     * this only works because QPTPool does not process
+     * more claimed work items after it has errored, so
+     * future work will never get to use them
+     */
+    if (QPTPool_errored(pa->ctx)) {
+        while (active) {
+            pthread_cond_wait(&cond, &mutex);
+        }
     }
     pthread_mutex_unlock(&mutex);
 

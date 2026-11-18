@@ -159,6 +159,10 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
     struct GenSnapshot *tree = (struct GenSnapshot *) data;
     struct work *work = tree->work; /* no compression */
 
+    pthread_mutex_lock(tree->mutex);
+    ++(*tree->active);
+    pthread_mutex_unlock(tree->mutex);
+
     DIR *dir = opendir_wrapper(work->name, NULL);
     if (!dir) {
         rc = (errno != ENOENT); /* if the directory no longer exists, not an error */
@@ -218,6 +222,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
   cleanup:
     pthread_mutex_lock(tree->mutex);
     --(*tree->counter);
+    --(*tree->active);
     pthread_cond_broadcast(tree->cond);
     pthread_mutex_unlock(tree->mutex);
 
