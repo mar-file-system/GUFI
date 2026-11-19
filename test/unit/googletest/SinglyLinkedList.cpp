@@ -478,6 +478,141 @@ TEST(SinglyLinkedList, node_data) {
     sll_destroy(&sll, nullptr);
 }
 
+static int int_equal(const void *lhs, const void *rhs) {
+    const int *l = (const int *) lhs;
+    const int *r = (const int *) rhs;
+    return (*l != *r);
+}
+
+TEST(SinglyLinkedList, remove_empty) {
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+
+    // remove from empty list does nothing
+    int value = 42;
+    sll_remove(&sll, &value, int_equal);
+    EXPECT_EQ(sll.head, nullptr);
+    EXPECT_EQ(sll.tail, nullptr);
+    EXPECT_EQ(sll.size, (uint64_t) 0);
+
+    sll_destroy(&sll, nullptr);
+}
+
+TEST(SinglyLinkedList, remove_head) {
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+
+    int a = 1;
+    int b = 2;
+    sll_push_back(&sll, &a);
+    sll_push_back(&sll, &b);
+
+    // remove head, tail stays
+    sll_remove(&sll, &a, int_equal);
+    EXPECT_NE(sll.head, nullptr);
+    EXPECT_NE(sll.tail, nullptr);
+    EXPECT_EQ(sll.head, sll.tail);
+    EXPECT_EQ(* (int *) sll_node_data(sll.head), b);
+    EXPECT_EQ(sll.size, (uint64_t) 1);
+
+    sll_destroy(&sll, nullptr);
+}
+
+TEST(SinglyLinkedList, remove_tail) {
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+
+    int a = 1;
+    int b = 2;
+    sll_push_back(&sll, &a);
+    sll_push_back(&sll, &b);
+
+    // remove tail, head stays
+    sll_remove(&sll, &b, int_equal);
+    EXPECT_NE(sll.head, nullptr);
+    EXPECT_NE(sll.tail, nullptr);
+    EXPECT_EQ(sll.head, sll.tail);
+    EXPECT_EQ(* (int *) sll_node_data(sll.head), a);
+    EXPECT_EQ(sll.size, (uint64_t) 1);
+
+    sll_destroy(&sll, nullptr);
+}
+
+TEST(SinglyLinkedList, remove_middle) {
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+
+    int a = 1;
+    int b = 2;
+    int c = 3;
+    sll_push_back(&sll, &a);
+    sll_push_back(&sll, &b);
+    sll_push_back(&sll, &c);
+
+    // remove middle, head and tail remain
+    sll_remove(&sll, &b, int_equal);
+    EXPECT_NE(sll.head, nullptr);
+    EXPECT_NE(sll.tail, nullptr);
+    EXPECT_NE(sll.head, sll.tail);
+    EXPECT_EQ(* (int *) sll_node_data(sll.head), a);
+    EXPECT_EQ(* (int *) sll_node_data(sll.tail), c);
+    EXPECT_EQ(sll.size, (uint64_t) 2);
+
+    sll_destroy(&sll, nullptr);
+}
+
+TEST(SinglyLinkedList, remove_only) {
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+
+    int value = 42;
+    sll_push_back(&sll, &value);
+
+    // remove the only item, list becomes empty
+    sll_remove(&sll, &value, int_equal);
+    EXPECT_EQ(sll.head, nullptr);
+    EXPECT_EQ(sll.tail, nullptr);
+    EXPECT_EQ(sll.size, (uint64_t) 0);
+
+    sll_destroy(&sll, nullptr);
+}
+
+TEST(SinglyLinkedList, remove_not_present) {
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+
+    int a = 1;
+    int b = 2;
+    sll_push_back(&sll, &a);
+
+    // removing a value that is not in the list does nothing
+    sll_remove(&sll, &b, int_equal);
+    EXPECT_NE(sll.head, nullptr);
+    EXPECT_EQ(sll.head, sll.tail);
+    EXPECT_EQ(* (int *) sll_node_data(sll.head), a);
+    EXPECT_EQ(sll.size, (uint64_t) 1);
+
+    sll_destroy(&sll, nullptr);
+}
+
+TEST(SinglyLinkedList, remove_duplicates) {
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+
+    int a = 1;
+    sll_push_back(&sll, &a);
+    sll_push_back(&sll, &a);
+
+    // only the first match is removed
+    sll_remove(&sll, &a, int_equal);
+    EXPECT_NE(sll.head, nullptr);
+    EXPECT_EQ(sll.head, sll.tail);
+    EXPECT_EQ(* (int *) sll_node_data(sll.head), a);
+    EXPECT_EQ(sll.size, (uint64_t) 1);
+
+    sll_destroy(&sll, nullptr);
+}
+
 TEST(SinglyLinkedList, loop) {
     const uint64_t count = 10;
     int *values = new int[count]();

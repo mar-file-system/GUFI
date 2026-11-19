@@ -145,6 +145,37 @@ void *sll_pop_front(sll_t *sll) {
     return data;
 }
 
+void sll_remove(sll_t *sll, const void *data, int (*compare)(const void *, const void *)) {
+    /* Not checking arguments */
+
+    sll_node_t *prev = NULL;
+    sll_node_t *node = sll->head;
+
+    while (node) {
+        if (compare(node->data, data) == 0) {
+            if (prev) {
+                prev->next = node->next;
+            }
+            else {
+                sll->head = node->next;
+            }
+
+            if (sll->tail == node) {
+                sll->tail = prev;
+            }
+
+            sll->size--;
+            free(node);
+            return;
+        }
+
+        prev = node;
+        node = node->next;
+    }
+
+    return;
+}
+
 void sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n) {
     /* Not checking arguments */
 

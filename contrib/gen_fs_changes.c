@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
@@ -129,6 +130,15 @@ typedef struct {
     size_t alloc;
 } Nodes_t;
 
+/*
+ * wraps the per-thread node lists with a mutex so that multiple
+ * worker threads can safely push resolved nodes back to the lists
+ */
+typedef struct {
+    sll_t *ptnodes;
+    pthread_mutex_t mutex;
+} PtnodesCtx;
+
 static Nodes_t *node_insert(Nodes_t *nodes, Node_t *node) {
     /* index of new node is count of existing nodes */
     node->index = nodes->count;
@@ -155,6 +165,9 @@ static Nodes_t *node_insert(Nodes_t *nodes, Node_t *node) {
 static int get_pinode(QPTPool_ctx_t *ctx, void *data) {
     Node_t *node = (Node_t *) data;
 
+    PtnodesCtx *pctx = QPTPool_get_args_internal(ctx);
+    pthread_mutex_lock(&pctx->mutex);
+
     char *parent = NULL;
     size_t parent_len = node->path.len - node->basename_len;
     if (parent_len) {
@@ -172,6 +185,7 @@ static int get_pinode(QPTPool_ctx_t *ctx, void *data) {
         fprintf(stderr, "Error: Could not lstat parent of \"%s\": %s (%d)\n",
                 node->path.data, strerror(err), err);
         free(parent);
+        pthread_mutex_unlock(&pctx->mutex);
         node_free(node);
         return 1;
     }
@@ -182,9 +196,8 @@ static int get_pinode(QPTPool_ctx_t *ctx, void *data) {
     node->pinode.len = SNPRINTF(node->pinode.data, node->pinode.len, "%" STAT_ino, st.st_ino);
     node->pinode.free = free;
 
-    sll_t *ptnodes = QPTPool_get_args_internal(ctx);
-    const size_t id = QPTPool_get_id(ctx);
-    sll_push_back(&ptnodes[id], node);
+    sll_push_back(&pctx->ptnodes[0], node);
+    pthread_mutex_unlock(&pctx->mutex);
 
     return 0;
 }
@@ -280,9 +293,10 @@ static int read_trace(FILE *file, QPTPool_ctx_t *ctx) {
 
             node->pinode.data[node->pinode.len] = '\0';
 
-            sll_t *ptnodes = QPTPool_get_args_internal(ctx);
-            const size_t id = QPTPool_get_id(ctx);
-            sll_push_back(&ptnodes[id], node);
+            PtnodesCtx *pctx = QPTPool_get_args_internal(ctx);
+            pthread_mutex_lock(&pctx->mutex);
+            sll_push_back(&pctx->ptnodes[0], node);
+            pthread_mutex_unlock(&pctx->mutex);
         }
 
         line = NULL;
@@ -302,17 +316,29 @@ static int processdirs(const size_t threads, FILE *in,
 
     int rc = 0;
 
-    sll_t *ptnodes = malloc(threads * sizeof(*ptnodes));
-    if (!ptnodes) {
+    PtnodesCtx *pctx = malloc(sizeof(*pctx));
+    if (!pctx) {
+        fprintf(stderr, "Failed to allocate per-thread node list context\n");
+        return 1;
+    }
+    pctx->ptnodes = malloc(threads * sizeof(*pctx->ptnodes));
+    if (!pctx->ptnodes) {
         fprintf(stderr, "Failed to allocate per-thread node list\n");
+        free(pctx);
+        return 1;
+    }
+    if (pthread_mutex_init(&pctx->mutex, NULL) != 0) {
+        fprintf(stderr, "Failed to initialize per-thread node list mutex\n");
+        free(pctx->ptnodes);
+        free(pctx);
         return 1;
     }
 
     for (size_t i = 0; i < threads; i++) {
-        sll_init(&ptnodes[i]);
+        sll_init(&pctx->ptnodes[i]);
     }
 
-    QPTPool_ctx_t *ctx = QPTPool_init(threads, ptnodes);
+    QPTPool_ctx_t *ctx = QPTPool_init(threads, pctx);
     if (QPTPool_start(ctx) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(ctx);
@@ -327,7 +353,7 @@ static int processdirs(const size_t threads, FILE *in,
 
     /* get total number of nodes */
     for (size_t i = 0; i < threads; i++) {
-        sll_loop(&ptnodes[i], node) {
+        sll_loop(&pctx->ptnodes[i], node) {
             Node_t *n = sll_node_data(node);
             if (n->type == 'd') {
                 dirs->alloc++;
@@ -344,7 +370,7 @@ static int processdirs(const size_t threads, FILE *in,
     dirs->nodes = malloc(dirs->alloc * sizeof(dirs->nodes[0]));
     nondirs->nodes = malloc(nondirs->alloc * sizeof(nondirs->nodes[0]));
     for (size_t i = 0; i < threads; i++) {
-        sll_loop(&ptnodes[i], node) {
+        sll_loop(&pctx->ptnodes[i], node) {
             Node_t *n = sll_node_data(node);
             if (n->type == 'd') {
                 n->index = dirs->count;
@@ -362,9 +388,11 @@ static int processdirs(const size_t threads, FILE *in,
 
   done:
     for (size_t i = 0; i < threads; i++) {
-        sll_destroy(&ptnodes[i], NULL);
+        sll_destroy(&pctx->ptnodes[i], NULL);
     }
-    free(ptnodes);
+    pthread_mutex_destroy(&pctx->mutex);
+    free(pctx->ptnodes);
+    free(pctx);
 
     return rc;
 }
@@ -577,6 +605,12 @@ static int find_loop(trie_t *search, Node_t *src, Node_t *dst) {
     return 0;
 }
 
+static int inode_match(const void *lhs, const void *rhs) {
+    const Node_t *l = (const Node_t *) lhs;
+    const Node_t *r = (const Node_t *) rhs;
+    return strncmp(l->inode.data, r->inode.data, l->inode.len + 1);
+}
+
 static void delete_from_parent(trie_t *search, Node_t *node) {
     DirNode_t *parent = NULL;
     if (trie_search(search, node->pinode.data, node->pinode.len, (void **) &parent) != 1) {
@@ -587,20 +621,7 @@ static void delete_from_parent(trie_t *search, Node_t *node) {
     sll_t  *children_list = (node->type == 'd')?&parent->subdirs.list:&parent->nondirs.list;
 
     /* remove this node from the parent's list of children */
-    /*
-     * TODO: Find better way than by moving list manually.
-     *       Would store in trie, but that got crazy with inodes.
-     */
-    sll_t temp;
-    sll_init(&temp);
-    sll_loop(children_list, n) {
-        Node_t *c = sll_node_data(n);
-        if (strncmp(c->inode.data, node->inode.data, node->inode.len + 1) != 0) {
-            sll_push_back(&temp, c);
-        }
-    }
-    sll_destroy(children_list, NULL);
-    sll_move_append(children_list, &temp);
+    sll_remove(children_list, node, inode_match);
 
     return;
 }

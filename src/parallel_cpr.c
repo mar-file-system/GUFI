@@ -116,7 +116,6 @@ struct work_data {
     goto label
 
 /* copy a single file in a single thread */
-/* TODO: if file is too big, split up copy */
 static int cpr_file(QPTPool_ctx_t *ctx, void *data) {
 
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
