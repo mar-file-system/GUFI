@@ -179,7 +179,7 @@ Error: sqlite3 errored: prefix/db.db
 
 # missing extdbprefix.db
 $ gufi_query --no-print-sql-on-err --max-level 0 -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, pinode, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
-Error: Could not data from extdb: no such table: extdb: prefix/db.db
+Error: Could not get data from extdb: no such table: extdb: prefix/db.db
 
 # bad mode
 $ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, 'bad_mode', uid, gid, mtime, pinode, dmode, duid, dgid) FROM vrpentries WHERE type == 'f';" "prefix"
@@ -221,3 +221,8 @@ Error: Bad directory gid: bad_dgid: prefix/db.db
 $ gufi_query --no-print-sql-on-err --max-level 0 -I "ATTACH 'file:extdbprefix.db?mode=ro' AS extdbprefix;" -E "SELECT spread_to_external('prefix-file', 'fsid', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, pinode, dmode, duid, NULL) FROM vrpentries WHERE type == 'f';" "prefix"
 Error: Missing directory gid: prefix/db.db
 
+# Error propagation from gufi_spread_tree.sh (bad prefix)
+$ gufi_spread_tree.sh -n 1 --where "type == 'f'" --flock-dir "spread_tree.locks" "fsid.db" "extdbprefix.db" "fsid" "bad-prefix" 2>spread_tree.err > /dev/null
+
+Error: Failed to locate shard path generator
+Error: Did not get result from gufi_spread_copy_to_shard.sh: search/prefix/db.db

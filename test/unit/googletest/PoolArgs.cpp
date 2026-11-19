@@ -102,6 +102,7 @@ void setup_input(struct input *in, OutputMethod om, bool aggregate) {
 void test_common(PoolArgs *pa) {
     EXPECT_NE(pa->in, nullptr);
     ASSERT_NE(pa->ta, nullptr);
+    EXPECT_NE(pa->extdb.ready, nullptr);
 
     for (size_t i = 0; i < (size_t) pa->in->maxthreads; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
@@ -400,4 +401,20 @@ TEST(PoolArgs, bad_output_buffer_size) {
     in.output_buffer_size = (std::size_t) -1;
 
     check_poolargs_init_failed(in, &mutex);
+}
+
+TEST(PoolArgs, SetUpSetupMutexLifecycle) {
+    struct input in;
+    setup_input(&in, STDOUT, false);
+
+    PoolArgs pa;
+    ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);
+
+    // the shared spread tree trie and its protecting mutex are allocated
+    EXPECT_NE(pa.extdb.ready, nullptr);
+
+    EXPECT_NO_THROW(PoolArgs_fin(&pa, in.maxthreads));
+
+    // both are freed by PoolArgs_fin
+    EXPECT_EQ(pa.extdb.ready, nullptr);
 }

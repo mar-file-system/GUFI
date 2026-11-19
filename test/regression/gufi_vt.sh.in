@@ -722,7 +722,10 @@ query=$(
     echo -n "CREATE VIRTUAL TABLE gufi USING gufi_vt(\"${INDEXROOT}\", setup_res_col_type=\"CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));\", E=\"SELECT * FROM plugin_query_view;\");"
     echo -n "SELECT * FROM gufi;"
 )
-query_vt "${query}"
+output=$(query_vt "${query}")
+echo "$output" | head -n -2
+echo "$output" | tail -n 2 | sort
+echo
 
 echo "# Bad no_print_errno"
 query=$(

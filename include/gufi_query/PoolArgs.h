@@ -93,6 +93,11 @@ typedef struct PoolArgs {
 
     pthread_mutex_t *stdout_mutex;
 
+    struct {
+        trie_t *ready;                 /* pinode/extdb_basename -> pthread_mutex_t* for each external db (shared) */
+        pthread_mutex_t mutex;         /* protects ready lookups/inserts */
+    } extdb;
+
     char detach[MAXSQL];               /* cache SQL statement for detaching index dbs */
 } PoolArgs_t;
 

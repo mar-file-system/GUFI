@@ -66,19 +66,20 @@ set -e
 
 OUTPUT="spread_tree.out"
 
-FSID_DB="fsid.db"               # config
-FSID="fsid"                     # decided externally
+FSID_DB="fsid.db"                  # config
+FSID="fsid"                        # decided externally
 
-EXTDBPREFIX_DB="extdbprefix.db" # config
-PREFIX_FILE="prefix-file"       # decided externally
-PREFIX_LINK="prefix-link"       # decided externally
+EXTDBPREFIX_DB="extdbprefix.db"    # config
+PREFIX_FILE="prefix-file"          # decided externally
+PREFIX_LINK="prefix-link"          # decided externally
 
-EXTRACTED_DB="extracted.db"     # data from source tree
-SPREAD_TREE="spread_tree"       # decided externally
-FLOCK_DIR="spread_tree.locks"
+EXTRACTED_DB="extracted.db"        # data from source tree
+SPREAD_TREE="spread_tree"          # decided externally
+FLOCK_DIR="spread_tree.locks"      # flock directory for concurrent shard creation
+SPREAD_TREE_ERR="spread_tree.err"  # need to capture stderr in last test in a file due to pipes getting messed up
 
 cleanup() {
-    rm -rf "${FSID_DB}" "${EXTDBPREFIX_DB}" "${EXTRACTED_DB}" "${SPREAD_TREE}" "${FLOCK_DIR}"
+    rm -rf "${FSID_DB}" "${EXTDBPREFIX_DB}" "${EXTRACTED_DB}" "${SPREAD_TREE}" "${FLOCK_DIR}" "${SPREAD_TREE_ERR}"
 }
 
 cleanup_exit() {
@@ -216,6 +217,10 @@ run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file
 
 echo "# NULL dgid"
 run_no_sort "${GUFI_QUERY} --no-print-sql-on-err --max-level 0 -I \"ATTACH 'file:${EXTDBPREFIX_DB}?mode=ro' AS extdbprefix;\" -E \"SELECT spread_to_external('${PREFIX_FILE}', '${FSID}', rpath(sname, sroll, name), inode, mode, uid, gid, mtime, pinode, dmode, duid, NULL) FROM vrpentries WHERE type == 'f';\" \"${INDEX}\""
+
+echo "# Error propagation from gufi_spread_tree.sh (bad prefix)"
+run_no_sort "${SPREAD_TREE_GEN_SPREAD_TREE} -n 1 --where \"type == 'f'\" --flock-dir \"${FLOCK_DIR}\" \"${FSID_DB}\" \"${EXTDBPREFIX_DB}\" \"${FSID}\" \"bad-prefix\" 2>${SPREAD_TREE_ERR} > /dev/null" || true # quoting ${SPREAD_TREE_ERR} causes issues???
+head -n 2 "${SPREAD_TREE_ERR}"
 ) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/spread_tree.expected "${OUTPUT}"

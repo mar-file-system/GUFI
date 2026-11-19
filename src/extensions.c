@@ -137,7 +137,7 @@ int set_up_global_db(str_t *create, str_t *insert, sqlite3 **db,
         return 1;
     }
 
-    if (insert) {
+    if (insert && str_exists(insert)) {
         if (sqlite3_exec(rw_global_db, insert->data, NULL, NULL, &err) != SQLITE_OK) {
             if (!no_print_sql_on_err) {
                 sqlite_print_err_and_free(err, stderr, "Error: Could not insert into global db tables with \"%s\": %s\n",

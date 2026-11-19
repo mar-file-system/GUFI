@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -87,6 +88,19 @@ OF SUCH DAMAGE.
 /* namespaces for copying from spread tree to extdb */
 #define SPREAD_ATTACH_SHARD_NAME "shard" /* source */
 #define SPREAD_ATTACH_EXTDB_NAME "extdb" /* destination */
+
+typedef struct {
+    pthread_mutex_t *mutex;
+    int setup_done;
+    int setup_ok;
+} extdb_ready_t;
+
+static void extdb_ready_free(void *ptr) {
+    extdb_ready_t *s = (extdb_ready_t *) ptr;
+    pthread_mutex_destroy(s->mutex);
+    free(s->mutex);
+    free(s);
+}
 
 typedef struct SpreadTreeExtdbCache {
     struct template_db template;   /* cache extdb for copying with copyfd(), which calls sendfile(2) on linux */
@@ -437,7 +451,7 @@ static int chmod_chown(const char *path, const mode_t mode,
 }
 
 static int set_up_extdb(sqlite3_context *context, const char *prefix,
-                        struct PoolArgs *pa, gqw_t *gqw, trie_t *set_up,
+                        struct PoolArgs *pa, gqw_t *gqw,
                         /* const char *inode_str, */ const char *mode_str,  const char *uid_str,  const char *gid_str,
                         const char *pinode_str, /* const char *dmode_str, */ const char *duid_str, const char *dgid_str,
                         SpreadTreeExtdbCache_t *extdb_cache,
@@ -500,17 +514,43 @@ static int set_up_extdb(sqlite3_context *context, const char *prefix,
 
     const size_t key_len = strlen(key);
 
-    /* only set up external database once per directory + permission permutation */
-    if (trie_search(set_up, key, key_len, NULL) == 0) {
+    #define SET_UP_ERR(errmsg) do {                                         \
+        sqlite3_result_error(context, errmsg, -1);                          \
+        sqlite3_free(errmsg);                                               \
+        state->setup_done = 1;                                              \
+        state->setup_ok = 0;                                                \
+        pthread_mutex_unlock(state->mutex);                                 \
+        goto done;                                                          \
+    } while (0)
+
+    /*
+     * get or create the per-key mutex for this external database.
+     * mutex protects the ready lookups/inserts.
+     */
+    pthread_mutex_lock(&pa->extdb.mutex);
+    extdb_ready_t *state = NULL;
+    int should_setup = 0;
+    if (trie_search(pa->extdb.ready, key, key_len, (void **) &state) == 0) {
+        state = malloc(sizeof(*state));
+        state->mutex = malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(state->mutex, NULL);
+        state->setup_done = 0;
+        state->setup_ok = 0;
+        trie_insert(pa->extdb.ready, key, key_len, state, extdb_ready_free);
+        should_setup = 1;
+    }
+    pthread_mutex_unlock(&pa->extdb.mutex);
+
+    /* only one thread initializes this external database at a time */
+    pthread_mutex_lock(state->mutex);
+
+    if (should_setup) {
         /* make sure this external database path exists (old file or create new) */
         struct stat st;
         if (stat(extdb_path, &st) == 0) { /* stat(2), not lstat(2) */
             if (!S_ISREG(st.st_mode)) {
-                char *errmsg = sqlite3_mprintf("\"%s\" is not a file",
-                                               extdb_path);
-                sqlite3_result_error(context, errmsg, -1);
-                sqlite3_free(errmsg);
-                goto done;
+                char *errmsg = sqlite3_mprintf("\"%s\" is not a file", extdb_path);
+                SET_UP_ERR(errmsg);
             }
 
             /* check permissions/owners? */
@@ -522,9 +562,7 @@ static int set_up_extdb(sqlite3_context *context, const char *prefix,
             if (err != ENOENT) {
                 char *errmsg = sqlite3_mprintf("Could stat \"%s\" failed: %s (%d)",
                                                extdb_path, strerror(err), err);
-                sqlite3_result_error(context, errmsg, -1);
-                sqlite3_free(errmsg);
-                goto done;
+                SET_UP_ERR(errmsg);
             }
 
             /* if the file does not exist, create it */
@@ -533,9 +571,7 @@ static int set_up_extdb(sqlite3_context *context, const char *prefix,
                 const int err = errno;
                 char *errmsg = sqlite3_mprintf("Could not create external database \"%s\": %s (%d)",
                                                extdb_path, strerror(err), err);
-                sqlite3_result_error(context, errmsg, -1);
-                sqlite3_free(errmsg);
-                goto done;
+                SET_UP_ERR(errmsg);
             }
 
             /* copy the prefix cache to this specific external database */
@@ -548,10 +584,8 @@ static int set_up_extdb(sqlite3_context *context, const char *prefix,
                 const int err = errno;
                 char *errmsg = sqlite3_mprintf("Could not initialize external database \"%s\": %s (%d)",
                                                extdb_path, strerror(err), err);
-                sqlite3_result_error(context, errmsg, -1);
-                sqlite3_free(errmsg);
                 remove(extdb_path); /* ignore errors? */
-                goto done;
+                SET_UP_ERR(errmsg);
             }
 
             /* set file permissions and ownership */
@@ -573,16 +607,21 @@ static int set_up_extdb(sqlite3_context *context, const char *prefix,
             }
 
             if (rc != 0) {
-                sqlite3_result_error(context, errmsg, -1);
-                sqlite3_free(errmsg);
                 remove(extdb_path); /* ignore errors? */
-                goto done;
+                SET_UP_ERR(errmsg);
             }
         }
 
-        /* record that this external database has been set up */
-        trie_insert(set_up, key, key_len, NULL, NULL);
+        state->setup_done = 1;
+        state->setup_ok = 1;
     }
+
+    if (!state->setup_ok) {
+        pthread_mutex_unlock(state->mutex);
+        goto done;
+    }
+
+    pthread_mutex_unlock(state->mutex);
 
     /* copy data from the shard to the external database */
     {
@@ -671,7 +710,7 @@ static void spread_to_external(sqlite3_context *context, int argc, sqlite3_value
     char *extdbprefix[] = { NULL, NULL, NULL, NULL, };
     if (pull_from_db(db, "spread_top, gen_shard_path, extdb_schema, shard_to_extdb",
                      4, EXTDB, "prefix", prefix, extdbprefix, &err) != 0) {
-        char *errmsg = sqlite3_mprintf("Could not data from extdb: %s", err);
+        char *errmsg = sqlite3_mprintf("Could not get data from extdb: %s", err);
         sqlite3_result_error(context, errmsg, -1);
         sqlite3_free(errmsg);
         sqlite3_free(err);
@@ -707,10 +746,13 @@ static void spread_to_external(sqlite3_context *context, int argc, sqlite3_value
     }
 
     /* create global spread tree state */
-    set_up_extdb(context, prefix, pa, ctx->gqw, ctx->set_up,
-                 /* inode, */ mode, uid, gid,
-                 pinode, /* dmode, */ duid, dgid,
-                 extdb_cache, shard_path);
+    if (set_up_extdb(context, prefix, pa, ctx->gqw,
+                     /* inode, */ mode, uid, gid,
+                     pinode, /* dmode, */ duid, dgid,
+                     extdb_cache, shard_path) != 0) {
+        free(shard_path);
+        goto free_extdbprefix;
+    }
     /* fallthrough */
 
     free(shard_path);

@@ -188,7 +188,6 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
         .pa = pa,
         .gqw = gqw,
         .id = id,
-        .set_up = trie_alloc(),
     };
 
     DIR *dir = opendir_wrapper(gqw->work.name, in->no_print_errno);
@@ -451,7 +450,6 @@ int processdir(QPTPool_ctx_t *ctx, void *data) {
     closedir(dir);
 
   out_free:
-    trie_free(asfctx.set_up);
     free(dbpath);
     free(dbname);
     free(gqw->work.fullpath);

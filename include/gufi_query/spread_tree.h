@@ -68,7 +68,6 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 
 #include "bf.h"
-#include "trie.h"
 
 #include "gufi_query/PoolArgs.h"
 #include "gufi_query/gqw.h"
@@ -81,7 +80,6 @@ typedef struct AddSpreadFuncsContext {
     struct PoolArgs *pa;
     gqw_t *gqw;
     size_t id;         /* QPTPool thread id */
-    trie_t *set_up;    /* whether or not the external db has been set up */
 } asfctx_t;
 
 int addspreadfuncs(sqlite3 *db, asfctx_t *ctx);

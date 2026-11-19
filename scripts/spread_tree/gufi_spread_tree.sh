@@ -127,17 +127,23 @@ then
 fi
 
 # create the spread tree for entries that match
+rc=0
 gufi_query \
     --no-print-sql-on-err \
     -n "${THREADS}" \
     -I "ATTACH 'file:${FSID_DB}?mode=ro' AS fsid_config;" \
     -E "SELECT create_spread('${EXTDBPREFIX_DB}', '${PREFIX}', '${FSID}', spath(sname, sroll, name), inode, mtime, '${FLOCK_DIR}') FROM vrpentries ${WHERE};" \
     -p "${SRC}" \
-    "${INDEX}"
+    "${INDEX}" || rc=$?
 
 if [[ "${FLOCK_DIR_NEW}" -eq 1 ]]
 then
     rm -rf "${FLOCK_DIR}"
 else
     echo "\"${FLOCK_DIR}\" was not created, so not deleting" 1>&2
+fi
+
+if [[ "${rc}" -ne 0 ]]
+then
+    exit "${rc}"
 fi

@@ -112,8 +112,10 @@ fi
 # generate the shard database
 # (run dataset-specific converter)
 # previous shard database file may or may not exist; sql should drop tables if necessary
-flock -x "${FLOCK_DIR}/${PREFIX}-${FSID}-$(basename ${shard_path})" \
-      "${copy_to_shard}" "${shard_path}" "${FSID}" "${ENTRY}" "${INODE}" "${MTIME}"
+(
+    flock -x 9
+    "${copy_to_shard}" "${shard_path}" "${FSID}" "${ENTRY}" "${INODE}" "${MTIME}"
+) 9>"${FLOCK_DIR}/${PREFIX}-${FSID}-$(basename ${shard_path})"
 
 # does not print if gen_shard failed
 echo "${shard_path}"

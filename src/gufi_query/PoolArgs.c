@@ -134,6 +134,10 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         return 1;
     }
 
+    /* shared across threads for spread tree external database setup */
+    pa->extdb.ready = trie_alloc();
+    pthread_mutex_init(&pa->extdb.mutex, NULL);
+
     size_t i = 0;
     for (; i < in->maxthreads; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
@@ -323,6 +327,11 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
 
        free(ta->dbname);
     }
+
+    trie_free(pa->extdb.ready);
+    pa->extdb.ready = NULL;
+
+    pthread_mutex_destroy(&pa->extdb.mutex);
 
     free(pa->ta);
     pa->ta = NULL;
