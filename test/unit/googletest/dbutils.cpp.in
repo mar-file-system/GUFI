@@ -67,7 +67,9 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
+#include "bf.h"
 #include "dbutils.h"
+#include "plugin.h"
 #include "rollup.h"
 
 static const uint64_t    PRINT_ERRNO[4] = {0x00000000ULL, 0x00000000ULL, 0x00000000ULL, 0x00000000ULL};
@@ -439,6 +441,89 @@ TEST(get, col_names) {
     EXPECT_EQ(get_col_names(db, &sql, nullptr, nullptr, &cols), -1);
     EXPECT_EQ(cols, 0);
 
+    sqlite3_close(db);
+}
+
+TEST(setup_discovery_db, good_no_sql) {
+    // setup_discovery_db succeeds when no SQL statements are provided
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY,
+                              &db,
+                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                              nullptr), SQLITE_OK);
+
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    ASSERT_NE(plugins_init(&in.plugins, 0, 1), nullptr);
+
+    EXPECT_EQ(setup_discovery_db(db, &in), 0);
+
+    plugins_thread_exit(&in.plugins, db, 0);
+    plugins_destroy(&in.plugins);
+    input_fini(&in);
+    sqlite3_close(db);
+}
+
+TEST(setup_discovery_db, bad_init_sql) {
+    // invalid -I SQL causes setup_discovery_db to fail and clean up plugins
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY,
+                              &db,
+                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                              nullptr), SQLITE_OK);
+
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    ASSERT_NE(plugins_init(&in.plugins, 0, 1), nullptr);
+
+    in.sql.init = REFSTR("BAD SQL", 7);
+    EXPECT_EQ(setup_discovery_db(db, &in), -1);
+
+    plugins_thread_exit(&in.plugins, db, 0);
+    plugins_destroy(&in.plugins);
+    input_fini(&in);
+    sqlite3_close(db);
+}
+
+TEST(setup_discovery_db, bad_setup_res_col_types) {
+    // invalid --setup-res-col-types SQL causes setup_discovery_db to fail and clean up plugins
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY,
+                              &db,
+                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                              nullptr), SQLITE_OK);
+
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    ASSERT_NE(plugins_init(&in.plugins, 0, 1), nullptr);
+
+    in.sql.setup_res_col_types = REFSTR("BAD SQL", 7);
+    EXPECT_EQ(setup_discovery_db(db, &in), -1);
+
+    plugins_thread_exit(&in.plugins, db, 0);
+    plugins_destroy(&in.plugins);
+    input_fini(&in);
+    sqlite3_close(db);
+}
+
+TEST(setup_discovery_db, process_xattrs) {
+    // setup_discovery_db succeeds when xattr processing is enabled
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY,
+                              &db,
+                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                              nullptr), SQLITE_OK);
+
+    struct input in;
+    ASSERT_EQ(input_init(&in), &in);
+    ASSERT_NE(plugins_init(&in.plugins, 0, 1), nullptr);
+
+    in.process_xattrs = 1;
+    EXPECT_EQ(setup_discovery_db(db, &in), 0);
+
+    plugins_thread_exit(&in.plugins, db, 0);
+    plugins_destroy(&in.plugins);
+    input_fini(&in);
     sqlite3_close(db);
 }
 #endif

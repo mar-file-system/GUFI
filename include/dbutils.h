@@ -324,6 +324,9 @@ int get_col_types(sqlite3 *db, const str_t *sql, int **types, int *cols);
 /* caller frees names, names[i], and lens */
 int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, int *cols);
 
+/* Finish setting up a temp in-memory database for column discovery. */
+int setup_discovery_db(sqlite3 *db, struct input *in);
+
 /*
  * validate a str_t is a safe SQL identifier
  * returns 1 if safe, 0 otherwise

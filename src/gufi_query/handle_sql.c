@@ -194,56 +194,24 @@ static int gen_types(struct input *in) {
             return -1;
         }
 
-        int cols = 0; /* discarded */
-
         struct work work;
         aqfctx_t ctx = {
             .in = in,
             .work = &work,
         };
-        if (in->process_xattrs) {
-            create_xattr_tables(SQLITE_MEMORY, db, NULL);
-
-            size_t count = 0; /* unused */
-            setup_xattrs_views(in, db, &work, &count);
-        }
-
         addqueryfuncs(db);
         augment_db(db, NULL);
         addqueryfuncs_with_context(db, &ctx);
 
-        if (str_exists(&in->sql.init)) {
-            char *err = NULL;
-            if (sqlite3_exec(db, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr,
-                                          "Error: Failed to set up table for getting result column types: %s\n",
-                                          err);
-                goto error;
-            }
+        if (setup_discovery_db(db, in) != 0) {
+            plugins_ctx_exit(&in->plugins, db, 0);
+            plugins_thread_exit(&in->plugins, db, 0);
+            closedb(global_db);
+            closedb(db);
+            return -1;
         }
 
-        if (str_exists(&in->sql.tsum)) {
-            if (create_table_wrapper(SQLITE_MEMORY, db, TREESUMMARY, TREESUMMARY_CREATE) != SQLITE_OK) {
-                goto error;
-            }
-        }
-
-        /* gen_types() is one-off setup on a single thread, so slot 0. */
-        if (plugins_thread_init(&in->plugins, db, 0) != in->plugins.count) {
-            goto error;
-        }
-
-        plugins_ctx_init(&in->plugins, db, 0);
-
-        if (str_exists(&in->sql.setup_res_col_types)) {
-            char *err = NULL;
-            if (sqlite3_exec(db, in->sql.setup_res_col_types.data, NULL, NULL, &err) != SQLITE_OK) {
-                sqlite_print_err_and_free(err, stderr,
-                                          "Error: Failed to set up table for getting result column types: %s\n",
-                                          err);
-                goto error;
-            }
-        }
+        int cols = 0; /* discarded */
 
         /* if not aggregating, get types for T, S, and E */
         if (!str_exists(&in->sql.init_agg)) {

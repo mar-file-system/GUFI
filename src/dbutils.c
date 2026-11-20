@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 #include "config.h"
 #include "dbutils.h"
 #include "external_attach.h"
+#include "plugin.h"
 #include "trie.h"
 
 const char ENTRIES_CREATE[] =
@@ -1314,6 +1315,83 @@ int get_col_names(sqlite3 *db, const str_t *sql, char ***names, size_t **lens, i
 
     sqlite3_finalize(stmt);
     return 0;
+}
+
+/* Finish setting up a temporary in-memory database for column discovery.
+ *
+ * The caller must have already created db (via opendb()), set up and
+ * attached the global database (via set_up_global_db() and
+ * attachdb_raw()), and added query functions (via addqueryfuncs(),
+ * augment_db(), and addqueryfuncs_with_context()). This function
+ * performs the remaining setup:
+ *   - create xattr tables and views (if process_xattrs)
+ *   - initialize plugins (thread + context)
+ *   - run init SQL (-I)
+ *   - create treesummary table if needed (-T)
+ *   - run setup_res_col_types SQL
+ *
+ * On success, plugins are initialized (thread + context) and must be
+ * cleaned up by the caller with plugins_ctx_exit() and
+ * plugins_thread_exit(). On failure, partially initialized plugins are
+ * cleaned up and -1 is returned.
+ */
+int setup_discovery_db(sqlite3 *db, struct input *in) {
+    int plugins_threaded = 0;
+    int plugins_ctxed = 0;
+
+    if (in->process_xattrs) {
+        create_xattr_tables(SQLITE_MEMORY, db, NULL);
+
+        struct work work = {0}; /* unused */
+        size_t count = 0;       /* unused */
+        setup_xattrs_views(in, db, &work, &count);
+    }
+
+    /* single setup path for column discovery, so slot 0 */
+    if (plugins_thread_init(&in->plugins, db, 0) != in->plugins.count) {
+        return -1;
+    }
+    plugins_threaded = 1;
+
+    plugins_ctx_init(&in->plugins, db, 0);
+    plugins_ctxed = 1;
+
+    if (str_exists(&in->sql.init)) {
+        char *err = NULL;
+        if (sqlite3_exec(db, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr,
+                                      "Error: Failed to set up table for getting result column types: %s\n",
+                                      err);
+            goto error;
+        }
+    }
+
+    if (str_exists(&in->sql.tsum)) {
+        if (create_table_wrapper(SQLITE_MEMORY, db, TREESUMMARY, TREESUMMARY_CREATE) != SQLITE_OK) {
+            goto error;
+        }
+    }
+
+    if (str_exists(&in->sql.setup_res_col_types)) {
+        char *err = NULL;
+        if (sqlite3_exec(db, in->sql.setup_res_col_types.data, NULL, NULL, &err) != SQLITE_OK) {
+            sqlite_print_err_and_free(err, stderr,
+                                      "Error: Failed to set up table for getting result column types: %s\n",
+                                      err);
+            goto error;
+        }
+    }
+
+    return 0;
+
+  error:
+    if (plugins_ctxed) {
+        plugins_ctx_exit(&in->plugins, db, 0);
+    }
+    if (plugins_threaded) {
+        plugins_thread_exit(&in->plugins, db, 0);
+    }
+    return -1;
 }
 
 int is_safe_identifier(const str_t *s) {

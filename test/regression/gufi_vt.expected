@@ -1409,6 +1409,7 @@ $ (
     echo ".load gufi_vt"
     echo "CREATE VIRTUAL TABLE gufi USING gufi_vt("prefix", setup_res_col_type="CREATE plugin_query_view(filetype TEXT, count INTEGER, CHECK (filetype IN ('file', 'directory')));", E="SELECT * FROM plugin_query_view;");SELECT * FROM gufi;"
 ) | sqlite3
+Error: Failed to set up table for getting result column types: near "plugin_query_view": syntax error
 Parse error near line 2: no such table: gufi
 
 # Bad no_print_errno

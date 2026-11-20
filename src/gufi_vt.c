@@ -1392,10 +1392,21 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
 
     /* get result column types */
 
+    in.process_xattrs = 1;
+    in.source_prefix = cmd.p;
+    struct work work = {0}; /* unused */
+
     /* make sure all setup tables are placed into a different db */
     /* this should never fail */
     sqlite3 *tempdb = opendb(SQLITE_MEMORY, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
                              0, 0, create_dbdb_tables, NULL); /* not initializing extensions here */
+    if (!tempdb) {
+        plugins_global_exit(&in.plugins, &in);
+        plugins_destroy(&in.plugins);
+        gq_cmd_destroy(&cmd);
+        input_fini(&in);
+        return SQLITE_CONSTRAINT;
+    }
 
     sqlite3_pcre2_init(tempdb, NULL, SQLITE_API_ROUTINES);
     augment_db(tempdb, SQLITE_API_ROUTINES);
@@ -1423,20 +1434,6 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
         }
     }
 
-    create_xattr_tables(SQLITE_MEMORY, tempdb, NULL);
-
-    in.process_xattrs = 1;
-    in.source_prefix = cmd.p;
-    struct work work = {0}; /* unused */
-    size_t count = 0;       /* unused */
-    setup_xattrs_views(&in, tempdb, &work, &count);
-
-    int cols = 0;
-    int *types = NULL;
-    char **names = NULL;
-    size_t *lens = NULL;
-
-    /* this should never fail */
     aqfctx_t ctx = {
         .in = &in,
         .work = &work,
@@ -1444,45 +1441,30 @@ static int gufi_vtpu_xConnect(sqlite3 *db,
     addqueryfuncs(tempdb);
     addqueryfuncs_with_context(tempdb, &ctx);
 
+    /* copy SQL strings from cmd to in for setup_discovery_db() */
+    in.sql.init = cmd.I;
+    if (str_exists(&cmd.T)) {
+        in.sql.tsum = cmd.T;
+    }
+    in.sql.setup_res_col_types = cmd.setup_res_col_type;
+
     /* single setup path for this vtable instance, so slot 0 */
-    if (plugins_thread_init(&in.plugins, tempdb, 0) != in.plugins.count) {
-        closedb(tempdb);
+    if (setup_discovery_db(tempdb, &in) != 0) {
+        plugins_ctx_exit(&in.plugins, tempdb, 0);
+        plugins_thread_exit(&in.plugins, tempdb, 0);
         plugins_global_exit(&in.plugins, &in);
         plugins_destroy(&in.plugins);
         gq_cmd_destroy(&cmd);
         input_fini(&in);
+        closedb(global_db);
+        closedb(tempdb);
         return SQLITE_CONSTRAINT;
     }
 
-    /* run -I */
-    if (str_exists(&cmd.I)) {
-        char *err = NULL;
-        if (sqlite3_exec(tempdb, cmd.I.data, NULL, NULL, &err) != SQLITE_OK) {
-            *pzErr = sqlite3_mprintf("Running -I \"%s\" failed: %s",
-                                     cmd.I.data, err);
-            sqlite3_free(err);
-            goto done;
-        }
-    }
-
-    /* set up treesummary table (not run -T) */
-    if (str_exists(&cmd.T)) {
-        /* this should never fail */
-        create_table_wrapper(SQLITE_MEMORY, tempdb, TREESUMMARY, TREESUMMARY_CREATE);
-    }
-
-    plugins_ctx_init(&in.plugins, tempdb, 0);
-
-    /* before getting the column types, set up tables that don't exist yet in this temporary space */
-    if (str_exists(&cmd.setup_res_col_type)) {
-        char *err = NULL;
-        if (sqlite3_exec(tempdb, cmd.setup_res_col_type.data, NULL, NULL, &err) != SQLITE_OK) {
-            *pzErr = sqlite3_mprintf("Setting up results table with '%s' failed: %s",
-                                     cmd.setup_res_col_type.data, err);
-            sqlite3_free(err);
-            goto done;
-        }
-    }
+    int cols = 0;
+    int *types = NULL;
+    char **names = NULL;
+    size_t *lens = NULL;
 
     /* if not aggregating, get types for T, S, or E */
     if (!str_exists(&cmd.K)) {
