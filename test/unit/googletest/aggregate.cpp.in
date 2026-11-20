@@ -75,6 +75,7 @@ extern "C" {
 
 #include "SinglyLinkedList.h"
 #include "gufi_query/aggregate.h"
+#include "print.h"
 
 }
 
@@ -106,6 +107,14 @@ TEST(gufi_query, aggregate) {
     in.sql.intermediate       = REFSTR(J.c_str(), J.size());
     in.sql.agg                = REFSTR(G.c_str(), G.size());
     in.output_buffer_size     = 1024;
+
+    PrintArgs_t print_args = {
+        .delim = in.delim,
+        .newline = in.newline,
+        .suppress_newline = in.suppress_newline,
+    };
+    in.output_cb = print_parallel;
+    in.output_cb_arg = &print_args;
 
     PoolArgs_t pa;
     ASSERT_EQ(PoolArgs_init(&pa, &in, nullptr), 0);

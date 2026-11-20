@@ -523,6 +523,10 @@ struct input {
         int *agg;
     } types;
 
+    /* sqlite3_exec callback for SQL query execution (set by gufi_query_run) */
+    int (*output_cb)(void *, int, char **, char **);
+    void *output_cb_arg;
+
     int  printdir;
     int  helped;                   /* support parsing of per-app sub-options */
     int  printed_version;

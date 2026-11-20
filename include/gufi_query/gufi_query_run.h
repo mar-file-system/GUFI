@@ -74,6 +74,11 @@ struct input;
  * Output is delivered via output_cb() if set, otherwise it is written
  * to ta->outfile (stdout by default).
  *
+ * output_cb is used as the sqlite3_exec callback for SQL query execution,
+ * with output_cb_arg passed as the callback's user data pointer.
+ * The caller sets in->output_cb and in->output_cb_arg before calling this
+ * function.
+ *
  * This function handles ALL cleanup internally, including input_fini().
  * Callers must NOT call input_fini() or plugins_global_exit() after this
  * function returns.
@@ -82,8 +87,6 @@ struct input;
  *
  * Returns EXIT_SUCCESS or EXIT_FAILURE.
  */
-int gufi_query_run(struct input *in,
-                   int (*output_cb)(const char *data, size_t len, void *arg),
-                   void *output_cb_arg);
+int gufi_query_run(struct input *in);
 
 #endif

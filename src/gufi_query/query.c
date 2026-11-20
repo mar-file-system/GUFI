@@ -75,20 +75,19 @@ void querydb(struct work *work,
              const char *sql, const int *types,
              PoolArgs_t *pa, int id,
              int (*callback)(void *, int, char **, char**), int *rc) {
-    ThreadArgs_t *ta = &pa->ta[id];
-    PrintArgs_t args = {
-        .output_buffer = &ta->output_buffer,
-        .delim = pa->in->delim,
-        .newline = pa->in->newline,
-        .mutex = pa->stdout_mutex,
-        .outfile = ta->outfile,
-        .rows = 0,
-        .types = types,
-        .suppress_newline = pa->in->suppress_newline,
-    };
+    (void) callback;
 
+    /* start with the caller-provided PrintArgs_t, override per-thread fields */
+    PrintArgs_t args = *(PrintArgs_t *)pa->in->output_cb_arg;
+    args.output_buffer = &pa->ta[id].output_buffer;
+    args.mutex = pa->stdout_mutex;
+    args.outfile = pa->ta[id].outfile;
+    args.rows = 0;
+    args.types = types;
+
+    /* use the caller-provided output_cb for sqlite3_exec */
     char *err = NULL;
-    if (sqlite3_exec(db, sql, callback, &args, &err) != SQLITE_OK) {
+    if (sqlite3_exec(db, sql, pa->in->output_cb, &args, &err) != SQLITE_OK) {
         char *buf = present_user_path(dbname, dbname_len,
                                       &work->root_parent, work->root_basename_len, &work->orig_root);
         if (!pa->in->no_print_sql_on_err) {

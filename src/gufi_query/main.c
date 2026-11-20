@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 
 #include "bf.h"
+#include "print.h"
 #include "utils.h"
 
 #include "gufi_query/gufi_query_run.h"
@@ -125,5 +126,13 @@ int main(int argc, char *argv[])
     struct input in;
     process_args_and_maybe_exit(options, 0, "GUFI_tree...", &in);
 
-    return gufi_query_run(&in, NULL, NULL);
+    PrintArgs_t print_args = {
+        .delim = in.delim,
+        .newline = in.newline,
+        .suppress_newline = in.suppress_newline,
+    };
+    in.output_cb = print_parallel;
+    in.output_cb_arg = &print_args;
+
+    return gufi_query_run(&in);
 }

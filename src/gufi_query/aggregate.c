@@ -205,8 +205,9 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
             .suppress_newline = 0,
         };
 
+        /* use the caller-provided output_cb for sqlite3_exec */
         char *err = NULL;
-        if (sqlite3_exec(aggregate->db, in->sql.agg.data, print_parallel, &pa, &err) != SQLITE_OK) {
+        if (sqlite3_exec(aggregate->db, in->sql.agg.data, in->output_cb, &pa, &err) != SQLITE_OK) {
             if (!in->no_print_sql_on_err) {
                 sqlite_print_err_and_free(err, stderr, "Final aggregation error: \"%s\": %s\n",
                                           in->sql.agg.data, err);

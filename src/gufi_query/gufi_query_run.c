@@ -256,13 +256,7 @@ static int validate_source(struct input *in, const char *path, gqw_t **gqw) {
     return 0;
 }
 
-int gufi_query_run(struct input *in,
-                   int (*output_cb)(const char *data, size_t len, void *arg),
-                   void *output_cb_arg)
-{
-    (void) output_cb;
-    (void) output_cb_arg;
-
+int gufi_query_run(struct input *in) {
     if (plugins_check_type(&in->plugins, PLUGIN_QUERY) != in->plugins.count) {
         input_fini(in);
         return EXIT_FAILURE;
