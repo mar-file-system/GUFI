@@ -196,6 +196,7 @@ add_library(gufi_query_lib OBJECT
   gufi_query/PoolArgs.c
   gufi_query/aggregate.c
   gufi_query/external_attach.c
+  gufi_query/gufi_query_run.c
   gufi_query/gqw.c
   gufi_query/handle_sql.c
   gufi_query/process_queries.c
