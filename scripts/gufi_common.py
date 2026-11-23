@@ -574,11 +574,12 @@ def single_run(args, cmd,
     popen = run_func(cmd, stdout, stderr)
 
     # process results
-    out, err = popen.communicate()  # block until query finishes
+    with popen:
+        out, err = popen.communicate()     # block until query finishes
 
-    rc = 0
-    if popen.returncode != 0:
-        rc = 1
+        rc = 0
+        if popen.returncode != 0:
+            rc = 1
 
     return rc, out, err
 

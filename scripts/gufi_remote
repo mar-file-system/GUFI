@@ -86,10 +86,9 @@ def run(args):
      ]
 
     # run the command
-    query = subprocess.Popen(cmd) # pylint: disable=consider-using-with
-    query.communicate()           # block until query finishes
-
-    return query.returncode
+    with subprocess.Popen(cmd) as query:
+        query.communicate()  # block until query finishes
+        return query.returncode
 
 if __name__  == '__main__':
     sys.exit(run(sys.argv[1:]))

@@ -72,6 +72,14 @@ CONFIG_PATH = os.path.join(RTESTS, 'config.test')
 
 SCRIPTS = os.path.join('@CMAKE_BINARY_DIR@', 'scripts')
 
+# tool name -> [can_capture_output, path].
+#
+# can_capture_output == 1: run() returns a 3-tuple
+#     (rc, stdout, stderr) where rc is the return code and stdout/stderr
+#     are captured strings.
+# can_capture_output == 0: otherwise.
+#
+# Callers should check can_capture_output before unpacking run()'s return value.
 TOOLS = {
     'du'                     : [1, os.path.join(SCRIPTS, 'gufi_du')],
     'find'                   : [1, os.path.join(SCRIPTS, 'gufi_find')],

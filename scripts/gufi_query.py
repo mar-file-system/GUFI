@@ -80,13 +80,9 @@ def run(args, config_path, stdout=None, stderr=None):
     cmd = [config.query] + args[1:]
 
     # run the command
-    query = subprocess.Popen(cmd,       # pylint: disable=consider-using-with
-                             stdout=stdout,
-                             stderr=stderr,
-                             text=True)
-    out, err = query.communicate()      # block until query finishes
-
-    return query.returncode, out, err
+    with subprocess.Popen(cmd, stdout=stdout, stderr=stderr, text=True) as query:
+        out, err = query.communicate()  # block until query finishes
+        return query.returncode, out, err
 
 if __name__  == '__main__':
     sys.exit(run(sys.argv, gufi_config.PATH)[0])

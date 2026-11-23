@@ -126,10 +126,9 @@ def run(argv, config_path):
         print(') {} -d "{}"'.format(cmd[0], cmd[2]))
         sys.stdout.flush()
 
-    query = subprocess.Popen(cmd, stdin=subprocess.PIPE)    # pylint: disable=consider-using-with
-    query.communicate(stdin.encode())                       # block until query finishes
-
-    return query.returncode
+    with subprocess.Popen(cmd, stdin=subprocess.PIPE) as query:
+        query.communicate(stdin.encode())  # block until query finishes
+        return query.returncode
 
 if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.PATH))

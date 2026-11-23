@@ -90,13 +90,13 @@ def clock_diff(start, end):
 # wait on sbatch, not the actual job
 def run_slurm(args, target, cmd):
     # pylint: disable=consider-using-with
-    proc = subprocess.Popen([args.sbatch, '--nodes=1', '--nodelist={0}'.format(target)] + cmd,
-                            stdout=subprocess.PIPE,
-                            cwd=os.getcwd())
-    out, _ = proc.communicate()
+    with subprocess.Popen([args.sbatch, '--nodes=1', '--nodelist={0}'.format(target)] + cmd,
+                          stdout=subprocess.PIPE,
+                          cwd=os.getcwd()) as proc:
+        out, _ = proc.communicate()
 
     if proc.returncode != 0:
-        sys.stderr.write('slurm job to {0} failed with error code {1}\n', target, proc.returncode)
+        sys.stderr.write('slurm job to {0} failed with error code {1}\n'.format(target, proc.returncode))
         return None
 
     return out.split()[-1].decode()
@@ -112,13 +112,10 @@ def handle_slurm_procs(args, jobids):
         wait_cmd += ['--dependency', 'after:' + after]
     wait_cmd += ['--wait', '/dev/stdin']
 
-    # pylint: disable=consider-using-with
-    wait = subprocess.Popen(wait_cmd,
-                            stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE)
-
-    # split shebang so shellcheck script doesn't see this
-    wait.communicate(input=' '.join(['#!/usr/bin/env', 'bash']).encode('utf-8'))
+    with subprocess.Popen(wait_cmd,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE) as wait:
+        wait.communicate(input=' '.join(['#!/usr/bin/env', 'bash']).encode('utf-8'))
 
     return jobids
 
@@ -134,15 +131,16 @@ def run_ssh(args, target, cmd):
 def handle_ssh_procs(_args, procs):
     jobids = []
     for proc in procs:
-        proc.wait()
+        with proc:
+            proc.wait()
 
-        if proc.returncode != 0:
-            # args[1] only works because there are no arguments between ssh and the target
-            sys.stderr.write('ssh to {0} failed with error code {1}\n'.format(proc.args[1],
-                                                                              proc.returncode))
-            continue
+            if proc.returncode != 0:
+                # args[1] only works because there are no arguments between ssh and the target
+                sys.stderr.write('ssh to {0} failed with error code {1}\n'.format(proc.args[1],
+                                                                                  proc.returncode))
+                continue
 
-        jobids += [proc.pid]
+            jobids += [proc.pid]
 
     return jobids
 
@@ -163,10 +161,9 @@ def dirs_at_level(args, root):
     start = clock()
 
     cmd = [args.find, root, str(args.level), str(args.threads)]
-    proc = subprocess.Popen(cmd, # pylint: disable=consider-using-with
-                            stdout=subprocess.PIPE,
-                            cwd=os.getcwd())
-    dirs, _ = proc.communicate() # block until find finishes
+    with subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                          cwd=os.getcwd()) as proc:
+        dirs, _ = proc.communicate() # block until find finishes
 
     # this counts as part of processing time
     cleaned = [path.decode() for path in dirs.split(b'\n') if len(path) > 0]

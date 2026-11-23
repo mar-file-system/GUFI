@@ -61,7 +61,6 @@
 
 
 
-
 set -e
 
 # install Extra Packages for Enterprise Linux (EPEL)

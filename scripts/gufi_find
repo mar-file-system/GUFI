@@ -105,7 +105,7 @@ def numeric_arg(n):
         f = float(n)
         if not math.isfinite(f):
             raise ValueError
-    except:
+    except ValueError:
         # pylint: disable=raise-missing-from
         raise argparse.ArgumentTypeError('{0} is not valid'.format(n))
 

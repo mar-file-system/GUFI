@@ -74,7 +74,7 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
     def __init__(self, settings, config_reference=PATH):
         # path string
         if isinstance(config_reference, str):
-            with open(config_reference, 'r') as config_file: # pylint: disable=unspecified-encoding
+            with open(config_reference, 'r', encoding='utf-8') as config_file:
                 self.config = self._read_lines(settings, config_file, config_reference)
         # iterable object containing lines
         elif self._check_iterable(config_reference):
@@ -201,7 +201,7 @@ def run(args):
     parser.add_argument('path')
     args = parser.parse_args(args)
 
-    with open(args.path, 'r') as config: # pylint: disable=unspecified-encoding
+    with open(args.path, 'r', encoding='utf-8') as config:
         if args.type == 'local':
             Local(config)
         elif args.type == 'remote':

@@ -93,8 +93,8 @@ trap cleanup_exit EXIT
 cleanup
 
 query() {
-    path="$1"
-    echo "${GUFI_QUERY} -n ${THREADS} -d \"${DELIM}\" -S \"SELECT type, rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT type, rpath(sname, sroll, name) FROM vrpentries;\" \"${path}\""
+    local path="$1"
+    QUERY_CMD=("${GUFI_QUERY}" "-n" "${THREADS}" "-d" "${DELIM}" "-S" "SELECT type, rpath(sname, sroll) FROM vrsummary;" "-E" "SELECT type, rpath(sname, sroll, name) FROM vrpentries;" "${path}")
 }
 
 (
@@ -173,9 +173,11 @@ run_no_sort "${GUFI_INCREMENTAL_UPDATE} -n ${THREADS} --suspect-method 1 --suspe
 echo "# Difference between indexes"
 echo "$ @DIFF@ <(echo \${new_index}) <(echo \${updated_index})" | replace
 # shellcheck disable=SC2046
-new_index=$(eval $(query "${SEARCH2}/${BASENAME}") | sort -t "${DELIM}" -k 2)
+query "${SEARCH2}/${BASENAME}"
+new_index=$("${QUERY_CMD[@]}" | sort -t "${DELIM}" -k 2)
 # shellcheck disable=SC2046
-updated_index=$(eval $(query "${INDEXROOT}") | sort -t "${DELIM}" -k 2)
+query "${INDEXROOT}"
+updated_index=$("${QUERY_CMD[@]}" | sort -t "${DELIM}" -k 2)
 set +e
 @DIFF@ <(echo "${new_index}" | @SED@ "s%${SEARCH2}/%%g;") <(echo "${updated_index}" | @SED@ "s%${SEARCH}/%%g;") && echo
 rc="$?"
