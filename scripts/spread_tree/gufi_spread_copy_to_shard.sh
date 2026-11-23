@@ -115,7 +115,7 @@ fi
 (
     flock -x 9
     "${copy_to_shard}" "${shard_path}" "${FSID}" "${ENTRY}" "${INODE}" "${MTIME}"
-) 9>"${FLOCK_DIR}/${PREFIX}-${FSID}-$(basename ${shard_path})"
+) 9>"${FLOCK_DIR}/${PREFIX}-${FSID}-$(stat -c '%i' ${dir})-$(basename ${shard_path})"
 
 # does not print if gen_shard failed
 echo "${shard_path}"

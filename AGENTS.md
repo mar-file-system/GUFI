@@ -16,7 +16,7 @@
 
 - After changing a test source, template, or expected-output file, run `make` from the build directory before running tests. Do not rerun CMake solely to regenerate test files, and do not use CMake to build them.
 - Regression tests share a working directory and remove common paths. Never run CTest and a generated regression script concurrently.
-- Run the full suite with `ctest --test-dir <build-directory> --output-on-failure --verbose` so failures include their complete output without requiring a rerun.
+- Run the full suite with `ctest --test-dir <build-directory> --output-on-failure` so failures include their complete output without requiring a rerun.
 - Run targeted unit tests via their build-directory executables unless a different working directory is required.
 - Run every individual regression test using its corresponding generated `.sh` script in `<build-directory>/test/regression`. Use CTest only when running the full test suite.
 - If expected regression output changes, investigate all differences first. For an intentional change, verify the generated `<name>.out`, copy it to the version-controlled `test/regression/<name>.expected`, run `make` from the build directory, and rerun the test. Never edit generated output files by hand.
