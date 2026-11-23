@@ -452,8 +452,8 @@ int main(int argc, char *argv[]) {
     }
 
     /* parse positional args, following the options */
-    str_t argv_index = {0};
-    str_t argv_tree = {0};
+    str_t argv_index = NULL_STR;
+    str_t argv_tree = NULL_STR;
     INSTALL_STR(&argv_index,     pa.in.pos.argv[pa.in.pos.argc - 3]);
     INSTALL_STR(&argv_tree,      pa.in.pos.argv[pa.in.pos.argc - 2]);
     INSTALL_STR(&pa.parking_lot, pa.in.pos.argv[pa.in.pos.argc - 1]);

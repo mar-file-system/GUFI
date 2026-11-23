@@ -79,7 +79,7 @@ int reindex_dir(QPTPool_ctx_t *ctx,
                 DIR *dir) {
     struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
 
-    str_t topath = {0};
+    str_t topath = NULL_STR;
 
     /*
      * if building in-tree, use existing db.db

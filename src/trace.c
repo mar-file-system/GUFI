@@ -240,7 +240,7 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
         (chars != FMT_LEN)) {                                                       \
         fprintf(stderr, "Error: Bad %s \"%.*s\"\n", name, FMT_LEN, p);              \
         xattrs_cleanup(&ed->xattrs);                                                \
-        free(new_work);                                                             \
+        free(*work);                                                                \
         *work = NULL;                                                               \
         return -1;                                                                  \
     }                                                                               \
@@ -251,7 +251,7 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
         fprintf(stderr, "Error: %s length goes past end of line: %zu (max: %td)\n", \
                 name, len, end - q);                                                \
         xattrs_cleanup(&ed->xattrs);                                                \
-        free(new_work);                                                             \
+        free(*work);                                                                \
         *work = NULL;                                                               \
         return -1;                                                                  \
     }                                                                               \
@@ -264,7 +264,7 @@ int worktobuffer(char **buf, size_t *size, size_t *offset,
         fprintf(stderr, "Error: %s len %zu (%" FMT ") does not end at delimiter\n", \
                 name, len, len);                                                    \
         xattrs_cleanup(&ed->xattrs);                                                \
-        free(new_work);                                                             \
+        free(*work);                                                                \
         *work = NULL;                                                               \
         return -1;                                                                  \
     }                                                                               \

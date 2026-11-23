@@ -313,7 +313,7 @@ static const char CREATE_TABLE_TEST[] = "CREATE TABLE test(i INT, f FLOAT, t TEX
 
 TEST(get_col_types, have_cols) {
     sqlite3 *db = nullptr;
-    str_t str = {};
+    str_t str = NULL_STR;
     int cols = 0;
 
     ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db,
@@ -343,7 +343,7 @@ TEST(get_col_types, have_cols) {
 
 TEST(get_col_types, no_cols) {
     sqlite3 *db = nullptr;
-    str_t str = {};
+    str_t str = NULL_STR;
     int cols = 0;
 
     ASSERT_EQ(sqlite3_open_v2(SQLITE_MEMORY, &db,
@@ -366,7 +366,7 @@ TEST(get_col_types, no_cols) {
 
 TEST(get, col_types) {
     sqlite3 *db = nullptr;
-    str_t str = {};
+    str_t str = NULL_STR;
     int cols = 0;
     int *types = nullptr;
 
@@ -397,7 +397,7 @@ TEST(get, col_types) {
 
 TEST(get, col_names) {
     sqlite3 *db = nullptr;
-    str_t sql = {};
+    str_t sql = NULL_STR;
     char **names = nullptr;
     std::size_t *lens = nullptr;
     int cols = 0;

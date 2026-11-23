@@ -365,7 +365,7 @@ static int collect_ns_paths(marfs_ns* ns, str_t parent_path, namespace_pair* pat
             continue;
         }
 
-        str_t path = {0};
+        str_t path = NULL_STR;
         const size_t name_len = strlen(hn->name);
 
         if (parent_path.len == 0) {

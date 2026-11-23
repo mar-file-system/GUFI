@@ -254,7 +254,7 @@ static void presidio_analyze(sqlite3_context *context, int argc, sqlite3_value *
         lang_len = strlen(lang);
     }
 
-    str_t analysis = {0};
+    str_t analysis = NULL_STR;
     const int rc = presidio_analyzer(curl, ANALYZE_URL,
                                      text, text_len,
                                      lang, lang_len,
@@ -341,7 +341,7 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
         lang_len = strlen(lang);
     }
 
-    str_t analysis_response = {0};
+    str_t analysis_response = NULL_STR;
     if (presidio_analyzer(curl, ANALYZE_URL,
                           text, text_len,
                           lang, lang_len,
@@ -351,7 +351,7 @@ static void presidio_anonymize(sqlite3_context *context, int argc, sqlite3_value
         return;
     }
 
-    str_t anonymized_response = {0};
+    str_t anonymized_response = NULL_STR;
     const int rc = presidio_anonymizer(curl, ANONYMIZE_URL,
                                        text, text_len,
                                        &analysis_response,

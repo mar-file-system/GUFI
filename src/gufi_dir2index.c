@@ -114,7 +114,7 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
         goto done;
     }
 
-    str_t topath = {0};
+    str_t topath = NULL_STR;
 
     /*
      * allocate space for "/db.db" in topath so that an extra buffer
