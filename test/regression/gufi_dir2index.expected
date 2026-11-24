@@ -278,6 +278,7 @@ Total Dirs:          3
 Total Non-Dirs:      5
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
+prefix
 prefix/directory
 prefix/directory/executable
 prefix/directory/readonly
@@ -303,6 +304,7 @@ Total Dirs:          2
 Total Non-Dirs:      3
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
+prefix
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
@@ -364,11 +366,15 @@ Total Non-Dirs:      2
 
 $ find "prefix"
 prefix
+prefix/db.db
 prefix/directory
+prefix/directory/db.db
 prefix/directory/subdirectory
 prefix/directory/subdirectory/db.db
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll, name) FROM vrpentries;" "prefix"
+prefix
+prefix/directory
 prefix/directory/subdirectory
 prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/repeat_name

@@ -126,10 +126,17 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
      * allocate space for "/db.db" in topath so that an extra buffer
      * is not needed to switch between directory and db paths
      */
+    /*
+     * DB file placement uses the full source path in exact path mode so the
+     * index mirrors the source tree under index_parent. root_parent.len
+     * only affects DB content, not where db.db is placed.
+     */
+    const char *relpath = pa->in.use_exact_path?work->name:(work->name + work->root_parent.len);
+    const size_t relpath_len = pa->in.use_exact_path?work->name_len:(work->name_len - work->root_parent.len);
     topath.len = SNFORMAT_S_ALLOC(&topath.data, 4,
                                   pa->index_parent.data, pa->index_parent.len,
                                   "/", (size_t) 1,
-                                  work->name + work->root_parent.len, work->name_len - work->root_parent.len, /* remove prefix if not using exact path */
+                                  relpath, relpath_len,
                                   "/" DBNAME, (size_t) 1 + DBNAME_LEN);
 
     topath.free = free;
@@ -218,13 +225,9 @@ static int create_intermediate_paths(const str_t *index_parent, char *path,
         topath_len -= DBNAME_LEN + 1;
         topath[topath_len] = '\0';
 
-        int dir_exists = 0;
         if (mkdir(topath, st.st_mode) != 0) {
             const int err = errno;
-            if (err == EEXIST) {
-                dir_exists = 1;
-            }
-            else {
+            if (err != EEXIST) {
                 fprintf(stderr, "Error: Could not make \"%s\": %s (%d)\n",
                         topath, strerror(err), err);
                 free(topath);
@@ -254,35 +257,27 @@ static int create_intermediate_paths(const str_t *index_parent, char *path,
         topath_len += DBNAME_LEN + 1;
 
         /*
-         * if the directory existed before mkdir was called, check for
-         * existence of old db.db to not overwrite it if it also
-         * exists
+         * Try to create the db file exclusively. If another thread already
+         * created it, skip insertsumdb to avoid duplicate summary rows.
          */
-        int db_exists = 0;
-        if (dir_exists) {
-            /* stat db.db */
-            struct stat dbdb_st;
-            if (stat(topath, &dbdb_st) == 0) { /* follow links */
-                db_exists = 1;
-            }
-            else {
-                const int err = errno;
-                if (err != ENOENT) {
-                    fprintf(stderr, "Error: Failed to stat \"%s\": %s (%d)\n",
-                            p, strerror(err), err);
-                    return -1;
-                }
-            }
+        int db_fd = secure_openat(AT_FDCWD, topath, O_WRONLY | O_CREAT | O_EXCL,
+                                  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+        if (db_fd >= 0) {
+            close(db_fd);
         }
-
-        /*
-         * template_to_db overwrites existing files, so only
-         * create the db if it doesn't already exist
-         */
-        if (db_exists) {
+        else if (errno == EEXIST) {
+            /* another thread created this db first, skip */
             free(topath);
             *p = '/';
             continue;
+        }
+        else {
+            const int err = errno;
+            fprintf(stderr, "Error: Could not create \"%s\": %s (%d)\n",
+                    topath, strerror(err), err);
+            free(topath);
+            *p = '/';
+            return -1;
         }
 
         sqlite3 *db = template_to_db(tdb, topath, st.st_uid, st.st_gid, NULL);
@@ -335,10 +330,9 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
      * create directories up to parent with correct permissions and owners
      * so that processdir can maintain assumption that the parent directory
      * already exists
-     *
-     * empty db.db files are not created
      */
-    if (create_intermediate_paths(&pa->index_parent, subtree_root->name + subtree_root->root_parent.len,
+    const char *subtree_path = pa->in.use_exact_path?subtree_root->name:(subtree_root->name + subtree_root->root_parent.len);
+    if (create_intermediate_paths(&pa->index_parent, (char *) subtree_path,
                                   &pa->db) != 0) {
         free(subtree_root);
         return 1;
@@ -404,16 +398,24 @@ static int validate_source(str_t *index_parent, const char *path, struct work **
     struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
     new_work->root_parent.data = (char *) path;
-    new_work->root_parent.len = use_exact_path?0:dirname_len(new_work->name, new_work->name_len);
+    /*
+     * DB name column must always be the basename. root_parent.len controls
+     * basename_len, which index.c uses to strip the dirname before writing
+     * to the DB. Always compute it from dirname_len so --use-exact-path does
+     * not change what is stored.
+     */
+    new_work->root_parent.len = dirname_len(new_work->name, new_work->name_len);
     new_work->level = 0;
     new_work->basename_len = new_work->name_len - new_work->root_parent.len;
     new_work->root_basename_len = new_work->basename_len;
     new_work->orig_root.data = (char *) path;
     new_work->orig_root.len = strlen(new_work->orig_root.data);
 
-    const size_t expathtst_len = index_parent->len + 1 + new_work->name_len - new_work->root_parent.len;
+    const char *expath_src = use_exact_path?new_work->name:(new_work->root_parent.data + new_work->root_parent.len);
+    const size_t expath_src_len = use_exact_path?new_work->name_len:(new_work->name_len - new_work->root_parent.len);
+    const size_t expathtst_len = index_parent->len + 1 + expath_src_len;
     char *expathtst = malloc(expathtst_len + 1);
-    SNPRINTF(expathtst, expathtst_len + 1, "%s/%s", index_parent->data, new_work->root_parent.data + new_work->root_parent.len);
+    SNPRINTF(expathtst, expathtst_len + 1, "%s/%s", index_parent->data, expath_src);
 
     char *expathout = realpath(expathtst, NULL);
     if (expathout)  {
