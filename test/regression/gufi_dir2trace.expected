@@ -104,10 +104,11 @@ $ gufi_dir2trace -d "|" -n 2 --path-list "distributed.0" --min-level 1 "prefix" 
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
-Total Dirs:          3
+Total Dirs:          4
 Total Files:         5
 
 $ cat trace.0 trace.1 | awk -F '|' '{ print substr($1, 5) }'
+prefix
 prefix/directory
 prefix/directory/executable
 prefix/directory/readonly
@@ -129,10 +130,11 @@ $ gufi_dir2trace -d "|" -n 2 --path-list "distributed.1" --min-level 1 "prefix" 
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
-Total Dirs:          2
+Total Dirs:          3
 Total Files:         3
 
 $ cat trace.0 trace.1 | awk -F '|' '{ print substr($1, 5) }'
+prefix
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
@@ -145,12 +147,12 @@ prefix/unusual#? "directory ',/unusual, 'name?#"
 # combine partial indexing
 $ gufi_dir2trace -d "|" -n 2 --path-list "distributed.0" --min-level 1 "prefix" "first"
 Creating GUFI Traces first with 2 threads
-Total Dirs:          3
+Total Dirs:          4
 Total Files:         5
 
 $ gufi_dir2trace -d "|" -n 2 --path-list "distributed.1" --min-level 1 "prefix" "second"
 Creating GUFI Traces second with 2 threads
-Total Dirs:          2
+Total Dirs:          3
 Total Files:         3
 
 $ gufi_dir2trace -d "|" -n 2 --max-level 0 "prefix" "trace"
@@ -162,6 +164,8 @@ Total Files:         7
 
 $ cat trace.0 trace.1 first.* second.* | awk -F '|' '{ print substr($1, 5) }'
 /external/db
+prefix
+prefix
 prefix
 prefix/.hidden
 prefix/1KB

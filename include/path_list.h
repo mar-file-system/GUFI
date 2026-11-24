@@ -81,6 +81,15 @@ extern "C" {
 ssize_t process_path_list(struct input *in, struct work *root,
                           QPTPool_ctx_t *ctx, QPTPool_f func);
 
+/*
+ * invoke fn for each non-empty line in the --path-list file,
+ * optionally prefixing with root when --min-level > 0.
+ * fn borrows full_path; foreach_path_list_entry frees it after fn returns.
+ */
+ssize_t foreach_path_list_entry(struct input *in, struct work *root,
+                                int (*fn)(const char *path, size_t len, void *arg),
+                                void *arg);
+
 #ifdef __cplusplus
 }
 #endif

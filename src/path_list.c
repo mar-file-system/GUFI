@@ -72,11 +72,13 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 /*
- * attach directory paths directly to the root path and
- * run starting at --min-level instead of walking to --min-level first
+ * invoke fn for each non-empty line in the --path-list file,
+ * optionally prefixing with root when --min-level > 0.
+ * fn borrows full_path; foreach_path_list_entry frees it after fn returns.
  */
-ssize_t process_path_list(struct input *in, struct work *root,
-                          QPTPool_ctx_t *ctx, QPTPool_f func) {
+ssize_t foreach_path_list_entry(struct input *in, struct work *root,
+                                int (*fn)(const char *path, size_t len, void *arg),
+                                void *arg) {
     FILE *file = secure_fopen(in->path_list.data, "r", 0);
     if (!file) {
         const int err = errno;
@@ -85,11 +87,11 @@ ssize_t process_path_list(struct input *in, struct work *root,
         return -1;
     }
 
-    ssize_t enqueue_count = 0;
+    ssize_t count = 0;
 
     char *line = NULL;
     size_t n = 0;
-    ssize_t got = 0;
+    ssize_t got;
     while ((got = getline(&line, &n, file)) != -1) {
         /* remove trailing CRLF */
         const size_t len = trailing_non_match_index(line, got, "\r\n", 2);
@@ -99,45 +101,95 @@ ssize_t process_path_list(struct input *in, struct work *root,
         }
 
         /* if min-level == 0, do not prefix root */
-        struct work *subtree_root = new_work_with_name(in->min_level?root->name:NULL,
-                                                       in->min_level?root->name_len:0,
-                                                       line, len);
-
-        /* directory symlinks are not allowed under the root */
-        if (lstat_wrapper(subtree_root->name, &subtree_root->statuso, &subtree_root->crtime,
-                          &subtree_root->stat_called, 1, in->no_print_errno) != 0) {
-            free(subtree_root);
+        char *full_path = NULL;
+        if (in->min_level > 0 && root) {
+            SNFORMAT_S_ALLOC(&full_path, 3,
+                             root->name, root->name_len,
+                             "/", (size_t) 1,
+                             line, len);
+        }
+        else {
+            SNFORMAT_S_ALLOC(&full_path, 1, line, len);
+        }
+        if (!full_path) {
             continue;
         }
 
-        /* check that the subtree root is a directory */
-        if (!S_ISDIR(subtree_root->statuso.st_mode)) {
-            line[len] = '\0';
-            fprintf(stderr, "Error: Subtree root is not a directory \"%s\"\n",
-                    line);
-            free(subtree_root);
-            continue;
+        if (fn(full_path, strlen(full_path), arg) != 0) {
+            free(full_path);
+            free(line);
+            fclose(file);
+            return -1;
         }
+        count++;
 
-        subtree_root->orig_root = root->orig_root;
-
-        /* parent of the input path, not the subtree root */
-        subtree_root->root_parent = root->root_parent;
-
-        /* remove trailing slashes (+ 1 to keep at least 1 character) */
-        subtree_root->basename_len = subtree_root->name_len - (trailing_match_index(subtree_root->name + 1, subtree_root->name_len - 1, "/", 1) + 1);
-
-        /* go directly to --min-level */
-        subtree_root->level = in->min_level;
-
-        QPTPool_enqueue(ctx, func, subtree_root);
-
-        enqueue_count++;
+        free(full_path);
     }
 
     free(line);
     fclose(file);
-    free(root);
 
-    return enqueue_count;
+    return count;
+}
+
+struct path_list_cb_ctx {
+    struct input *in;
+    struct work *root;
+    QPTPool_ctx_t *ctx;
+    QPTPool_f func;
+};
+
+static int enqueue_path_list_entry(const char *path, size_t len, void *arg) {
+    struct path_list_cb_ctx *cb = (struct path_list_cb_ctx *) arg;
+
+    /* build a work item for the listed path itself */
+    struct work *subtree_root = new_work_with_name(cb->in->min_level?cb->root->name:NULL,
+                                                   cb->in->min_level?cb->root->name_len:0,
+                                                   path, len);
+
+    /* directory symlinks are not allowed under the root */
+    if (lstat_wrapper(subtree_root->name, &subtree_root->statuso, &subtree_root->crtime,
+                      &subtree_root->stat_called, 1, cb->in->no_print_errno) != 0) {
+        free(subtree_root);
+        return 0;
+    }
+
+    /* check that the subtree root is a directory */
+    if (!S_ISDIR(subtree_root->statuso.st_mode)) {
+        fprintf(stderr, "Error: Subtree root is not a directory \"%s\"\n", path);
+        free(subtree_root);
+        return 0;
+    }
+
+    subtree_root->orig_root = cb->root->orig_root;
+
+    /* parent of the input path, not the subtree root */
+    subtree_root->root_parent = cb->root->root_parent;
+
+    /* remove trailing slashes (+ 1 to keep at least 1 character) */
+    subtree_root->basename_len = subtree_root->name_len - (trailing_match_index(subtree_root->name + 1, subtree_root->name_len - 1, "/", 1) + 1);
+
+    /* go directly to --min-level */
+    subtree_root->level = cb->in->min_level;
+
+    QPTPool_enqueue(cb->ctx, cb->func, subtree_root);
+
+    return 0;
+}
+
+/*
+ * attach directory paths directly to the root path and
+ * run starting at --min-level instead of walking to --min-level first
+ */
+ssize_t process_path_list(struct input *in, struct work *root,
+                          QPTPool_ctx_t *ctx, QPTPool_f func) {
+    struct path_list_cb_ctx cb = {
+        .in = in,
+        .root = root,
+        .ctx = ctx,
+        .func = func,
+    };
+    ssize_t count = foreach_path_list_entry(in, root, enqueue_path_list_entry, &cb);
+    free(root);
+    return count;
 }

@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include <sys/types.h>
 
 #include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
 #include "bf.h"
 #include "debug.h"
 #include "external_attach.h"
@@ -80,6 +81,7 @@ OF SUCH DAMAGE.
 #include "path_list.h"
 #include "str.h"
 #include "trace.h"
+#include "trie.h"
 #include "utils.h"
 #include "xattrs.h"
 
@@ -144,6 +146,38 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     }
 
     return 0;
+}
+
+/* Write out stat info for each intermediate path from a --path-list entry. */
+static int process_intermediate_dir(QPTPool_ctx_t *ctx, void *data) {
+    struct work *work = (struct work *) data;
+
+    struct PoolArgs *pa = (struct PoolArgs *) QPTPool_get_args_internal(ctx);
+    struct input *in = &pa->in;
+    FILE *fp = pa->outfiles[QPTPool_get_id(ctx)];
+    struct entry_data ed = {0};
+    int rc = 0;
+
+    if (!S_ISDIR(work->statuso.st_mode)) {
+        fprintf(stderr, "Error: Intermediate path is not a directory \"%s\"\n", work->name);
+        free(work);
+        return 1;
+    }
+
+    ed.type = 'd';
+
+    if (fp == stdout) {
+        pthread_mutex_lock(pa->mutex);
+    }
+
+    worktofile(fp, in->delim, work->root_parent.len, work, &ed);
+
+    if (fp == stdout) {
+        pthread_mutex_unlock(pa->mutex);
+    }
+
+    free(work);
+    return rc;
 }
 
 /* process the work under one directory (no recursion) */
@@ -266,6 +300,120 @@ static int validate_source(const char *path, struct work **work, const int use_e
     return 0;
 }
 
+struct process_path_entry_args {
+    struct input *in;
+    struct work *root;
+    QPTPool_ctx_t *ctx;
+    QPTPool_f func;
+    trie_t *traced;
+    sll_t paths;
+};
+
+/*
+ * Process one path-list entry: trace intermediate directories (dedup via trie),
+ * then enqueue the listed path itself for the normal tree walk.
+ */
+static int process_path_entry(const char *path, size_t len, void *arg) {
+    struct process_path_entry_args *cb = (struct process_path_entry_args *) arg;
+
+    /* trace each intermediate directory between root and this path-list entry */
+    ino_t pinode = 0;
+    for (char *p = strchr((char *) path + 1, '/'); p; p = strchr(p + 1, '/')) {
+        *p = '\0';
+
+        struct stat st;
+        /* lstat, not stat - don't follow symlinks in path components */
+        if (lstat(path, &st) != 0) {
+            const int err = errno;
+            *p = '/';
+            fprintf(stderr, "Error: Cannot stat intermediate path \"%s\": %s (%d)\n",
+                    path, strerror(err), err);
+            return 1;
+        }
+
+        if (!S_ISDIR(st.st_mode)) {
+            *p = '/';
+            fprintf(stderr, "Error: Intermediate path is not a directory \"%s\"\n", path);
+            return 1;
+        }
+
+        /* skip directories already traced from a previous path-list entry */
+        if (trie_search(cb->traced, path, strlen(path), NULL) == 1) {
+            *p = '/';
+            continue;
+        }
+        trie_insert(cb->traced, path, strlen(path), NULL, NULL);
+
+        struct work *work = new_work_with_name(NULL, 0, path, strlen(path));
+
+        work->root_parent.data = NULL;
+        work->root_parent.len = dirname_len(path, strlen(path));
+        work->basename_len = work->name_len - work->root_parent.len;
+        work->statuso = st;
+        work->pinode = pinode;
+        pinode = st.st_ino;
+
+        sll_push_back(&cb->paths, work);
+
+        *p = '/';
+    }
+
+    /* enqueue the listed path itself for the normal tree walk.
+     * path already includes the root prefix from foreach_path_list_entry. */
+    struct work *subtree_root = new_work_with_name(NULL, 0, path, len);
+
+    if (lstat_wrapper(subtree_root->name, &subtree_root->statuso, &subtree_root->crtime,
+                      &subtree_root->stat_called, 1, cb->in->no_print_errno) != 0) {
+        free(subtree_root);
+        return 0;
+    }
+
+    if (!S_ISDIR(subtree_root->statuso.st_mode)) {
+        free(subtree_root);
+        return 0;
+    }
+
+    subtree_root->orig_root = cb->root->orig_root;
+    subtree_root->root_parent = cb->root->root_parent;
+    subtree_root->basename_len = subtree_root->name_len - (trailing_match_index(subtree_root->name + 1, subtree_root->name_len - 1, "/", 1) + 1);
+    subtree_root->level = cb->in->min_level;
+
+    QPTPool_enqueue(cb->ctx, cb->func, subtree_root);
+
+    return 0;
+}
+
+static int trace_intermediate_paths(struct input *in, struct work *root,
+                                    QPTPool_ctx_t *ctx, QPTPool_f func) {
+    trie_t *traced = trie_alloc();
+
+    struct process_path_entry_args cb = {
+        .in = in,
+        .root = root,
+        .ctx = ctx,
+        .func = func,
+        .traced = traced,
+    };
+    sll_init(&cb.paths);
+
+    ssize_t rc = foreach_path_list_entry(in, root, process_path_entry, &cb);
+    if (rc < 0) {
+        trie_free(traced);
+        sll_destroy(&cb.paths, free);
+        return -1;
+    }
+
+    sll_loop(&cb.paths, node) {
+        struct work *work = sll_node_data(node);
+        QPTPool_enqueue(ctx, process_intermediate_dir, work);
+    }
+    /* work items are owned by QPTPool now; process_intermediate_dir frees them */
+    sll_destroy(&cb.paths, NULL);
+    trie_free(traced);
+
+    return 0;
+}
+
 static void sub_help(void) {
     printf("dir...               walk one or more trees to produce trace file\n");
     printf("trace                prefix of trace files (<trace>.<tid>)\n");
@@ -341,12 +489,13 @@ int main(int argc, char *argv[]) {
 
     if (doing_partial_walk(&pa.in, root_count)) {
         if (root_count == 0) {
-            process_path_list(&pa.in, NULL, ctx, processdir);
+            trace_intermediate_paths(&pa.in, NULL, ctx, processdir);
         }
         else if (root_count == 1) {
             struct work *root = NULL;
             if (validate_source(pa.in.pos.argv[0], &root, pa.in.use_exact_path) == 0) {
-                process_path_list(&pa.in, root, ctx, processdir);
+                trace_intermediate_paths(&pa.in, root, ctx, processdir);
+                free(root);
             }
             else {
                 rc = EXIT_FAILURE;
