@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "dbutils.h"
 #include "debug.h"
 #include "index.h"
 #include "path_list.h"
@@ -85,7 +86,12 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
-    str_t index_parent; /* actual index is placed at <index parent>/$(basename <src>) */
+
+    /*
+     * actual index is placed at <index parent>/$(basename <src>)
+     * if --use-exact-path is set, then the index is placed at <index parent>/<src>
+     */
+    str_t index_parent;
 
     struct template_db db;
     struct template_db xattr;
@@ -176,13 +182,13 @@ static int processdir(QPTPool_ctx_t *ctx, void *data) {
 
 /*
  * Duplicate the path between the GUFI tree parent and the actual
- * index root. Although stat(2) is used to get the correct permissions
- * and owners, these directories are not being indexed, so empty db.db
- * files will not be created.
+ * index root. Empty db.db files are created.
  *
  * index_parent should have been created before calling this function
  */
-static int create_intermediate_paths(const str_t *index_parent, char *path) {
+static int create_intermediate_paths(const str_t *index_parent, char *path,
+                                     struct template_db *tdb) {
+    ino_t pinode = 0;
     for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
 
@@ -203,14 +209,22 @@ static int create_intermediate_paths(const str_t *index_parent, char *path) {
         }
 
         char *topath = NULL;
-        SNFORMAT_S_ALLOC(&topath, 3,
-                         index_parent->data, index_parent->len,
-                         "/", (size_t) 1,
-                         path, strlen(path));
+        size_t topath_len = SNFORMAT_S_ALLOC(&topath, 4,
+                                             index_parent->data, index_parent->len,
+                                             "/", (size_t) 1,
+                                             path, strlen(path),
+                                             "/" DBNAME, DBNAME_LEN + 1);
+        /* remove db.db for now */
+        topath_len -= DBNAME_LEN + 1;
+        topath[topath_len] = '\0';
 
-        if (mkdir(topath, st.st_mode) == -1) {
+        int dir_exists = 0;
+        if (mkdir(topath, st.st_mode) != 0) {
             const int err = errno;
-            if (err != EEXIST) {
+            if (err == EEXIST) {
+                dir_exists = 1;
+            }
+            else {
                 fprintf(stderr, "Error: Could not make \"%s\": %s (%d)\n",
                         topath, strerror(err), err);
                 free(topath);
@@ -218,24 +232,94 @@ static int create_intermediate_paths(const str_t *index_parent, char *path) {
                 return 1;
             }
         }
-        else {
-            if (chmod(topath, st.st_mode) != 0) {
-                const int err = errno;
-                if (err != EEXIST) {
-                    fprintf(stderr, "Warning: Could not chmod \"%s\": %s (%d)\n",
-                            topath, strerror(err), err);
-                }
+
+        if (chmod(topath, st.st_mode) != 0) {
+            const int err = errno;
+            if (err != EEXIST) {
+                fprintf(stderr, "Warning: Could not chmod \"%s\": %s (%d)\n",
+                        topath, strerror(err), err);
             }
-            if (chown(topath, st.st_uid, st.st_gid) != 0) {
+        }
+
+        if (chown(topath, st.st_uid, st.st_gid) != 0) {
+            const int err = errno;
+            if (err != EEXIST) {
+                fprintf(stderr, "Warning: Could not chown \"%s\": %s (%d)\n",
+                        topath, strerror(err), err);
+            }
+        }
+
+        /* restore db.db */
+        topath[topath_len] = '/';
+        topath_len += DBNAME_LEN + 1;
+
+        /*
+         * if the directory existed before mkdir was called, check for
+         * existence of old db.db to not overwrite it if it also
+         * exists
+         */
+        int db_exists = 0;
+        if (dir_exists) {
+            /* stat db.db */
+            struct stat dbdb_st;
+            if (stat(topath, &dbdb_st) == 0) { /* follow links */
+                db_exists = 1;
+            }
+            else {
                 const int err = errno;
-                if (err != EEXIST) {
-                    fprintf(stderr, "Warning: Could not chown \"%s\": %s (%d)\n",
-                            topath, strerror(err), err);
+                if (err != ENOENT) {
+                    fprintf(stderr, "Error: Failed to stat \"%s\": %s (%d)\n",
+                            p, strerror(err), err);
+                    return -1;
                 }
             }
         }
-        free(topath);
 
+        /*
+         * template_to_db overwrites existing files, so only
+         * create the db if it doesn't already exist
+         */
+        if (db_exists) {
+            free(topath);
+            *p = '/';
+            continue;
+        }
+
+        sqlite3 *db = template_to_db(tdb, topath, st.st_uid, st.st_gid, NULL);
+        if (!db) {
+            /* template_to_db prints errors */
+            free(topath);
+            *p = '/';
+            return -1;
+        }
+
+        /* remove db.db again */
+        topath_len -= DBNAME_LEN + 1;
+        topath[topath_len] = '\0';
+
+        const size_t basename_start = trailing_match_index(topath, topath_len, "/", 1);
+        const char *basename = topath + basename_start;
+
+        struct work work = {0};
+        work.statuso = st;
+        work.pinode = pinode;
+
+        struct entry_data ed = {0};
+        ed.type = 'd';
+        xattrs_setup(&ed.xattrs); /* duplicate zero-ing */
+
+        /* just need stat(2) data - don't actually summarize this directory */
+        struct sum sum;
+        zeroit(&sum);
+
+        insertsumdb(db, basename, &work, &ed, &sum);
+
+        closedb(db);
+
+        /* update pinode for next path segment */
+        pinode = work.statuso.st_ino;
+
+        free(topath);
         *p = '/';
     }
 
@@ -254,7 +338,8 @@ static int process_subtree_root(QPTPool_ctx_t *ctx, void *data) {
      *
      * empty db.db files are not created
      */
-    if (create_intermediate_paths(&pa->index_parent, subtree_root->name + subtree_root->root_parent.len) != 0) {
+    if (create_intermediate_paths(&pa->index_parent, subtree_root->name + subtree_root->root_parent.len,
+                                  &pa->db) != 0) {
         free(subtree_root);
         return 1;
     }
@@ -294,7 +379,8 @@ static int setup_dst(char *index_parent) {
     return 0;
 }
 
-static int validate_source(str_t *index_parent, const char *path, struct work **work, const int use_exact_path) {
+static int validate_source(str_t *index_parent, const char *path, struct work **work,
+                           const int use_exact_path, struct template_db *tdb) {
     /* get input path metadata */
     struct stat st;
     if (lstat(path, &st) != 0) {
@@ -310,7 +396,7 @@ static int validate_source(str_t *index_parent, const char *path, struct work **
     }
 
     if (use_exact_path) {
-        if (create_intermediate_paths(index_parent, (char *) path) != 0) {
+        if (create_intermediate_paths(index_parent, (char *) path, tdb) != 0) {
             return 1;
         }
     }
@@ -318,7 +404,7 @@ static int validate_source(str_t *index_parent, const char *path, struct work **
     struct work *new_work = new_work_with_name(NULL, 0, path, strlen(path));
 
     new_work->root_parent.data = (char *) path;
-    new_work->root_parent.len = use_exact_path?0:dirname_len(path, new_work->name_len);
+    new_work->root_parent.len = use_exact_path?0:dirname_len(new_work->name, new_work->name_len);
     new_work->level = 0;
     new_work->basename_len = new_work->name_len - new_work->root_parent.len;
     new_work->root_basename_len = new_work->basename_len;
@@ -487,7 +573,7 @@ int main(int argc, char *argv[]) {
         else if (root_count == 1) {
             struct work *root = NULL;
             if (validate_source(&pa.index_parent, pa.in.pos.argv[0],
-                                &root, pa.in.use_exact_path) == 0) {
+                                &root, pa.in.use_exact_path, &pa.db) == 0) {
                 process_path_list(&pa.in, root, ctx, process_subtree_root);
             }
             else {
@@ -501,7 +587,7 @@ int main(int argc, char *argv[]) {
                 /* get first work item by validating source path */
                 struct work *root = NULL;
                 if (validate_source(&pa.index_parent, pa.in.pos.argv[i],
-                                    &root, pa.in.use_exact_path) != 0) {
+                                    &root, pa.in.use_exact_path, &pa.db) != 0) {
                     continue;
                 }
 
